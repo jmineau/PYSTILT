@@ -42,7 +42,8 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   The particle columns `indx`, `time`, `long`, `lati`, and `xhgt` are
   `particle`, `age`, `lon`, `lat`, and `release_height`; `varsiwant` keeps
   HYSPLIT's codes. `age` is still minutes since release, negative on a
-  backward run. An averaging kernel's `coordinate` is `release_height`
+  backward run, and the UTC time of each row, built when the table is
+  read, is `time` (was `datetime`). An averaging kernel's `coordinate` is `release_height`
   unless set, so a footprint made with one gets a new settings folder.
 - A config declares its variants, and is checked when it loads
   (breaking). Without `variants:` a config no longer runs one variant per

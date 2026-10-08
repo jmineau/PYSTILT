@@ -152,7 +152,7 @@ def read_particles(
     Read a particle file.
 
     It needs nothing but the file: the receptor time in its metadata gives
-    the ``datetime`` column back. ``age`` and ``particle`` come back as
+    the ``time`` column (UTC) back, from ``age``. ``age`` and ``particle`` come back as
     float64, as HYSPLIT writes them. :func:`particles_metadata` reads the
     receptor and settings.
 
@@ -181,31 +181,32 @@ def read_particles(
         wanted = [
             c for c in (stored if columns is None else columns) if c != "receptor"
         ]
-        want_datetime = "datetime" in wanted or columns is None
-        data = pf.read(columns=[c for c in wanted if c in stored]).to_pandas()
+        want_time = "time" in wanted or columns is None
+        read = [c for c in wanted if c in stored]
+        if want_time and "age" in stored and "age" not in read:
+            read.append("age")  # time is built from it
+        data = pf.read(columns=read).to_pandas()
     for name in _INT_COLUMNS:
         if name in data.columns:
             data[name] = data[name].astype("float64")
-    if "datetime" in data.columns:
-        data["datetime"] = pd.to_datetime(data["datetime"])
-    elif want_datetime and "age" in data.columns:
+    if want_time and "age" in data.columns:
         meta = pf.schema_arrow.metadata or {}
         receptor = Receptor.from_json(meta[b"stilt:receptor"])
-        data["datetime"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
+        data["time"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
             data["age"].to_numpy(), unit="min"
         )
     return data
 
 
-def particles_from_table(table: pa.Table, datetime: bool = True) -> pd.DataFrame:
+def particles_from_table(table: pa.Table, time: bool = True) -> pd.DataFrame:
     """
     Return a table of many receptors' particles as one DataFrame.
 
     The table is what :meth:`stilt.output.Output.table` reads: a
     ``receptor`` column, the stored particle columns, and ``date``. The
     result has ``receptor`` first, ``age`` and ``particle`` as float64, and
-    ``datetime`` rebuilt from each receptor's time (unless *datetime* is
-    false, or there is no ``age``); ``date`` is dropped.
+    ``time`` (UTC) rebuilt from each receptor's time and ``age`` (unless
+    *time* is false, or there is no ``age``); ``date`` is dropped.
     """
     data = table.unify_dictionaries().to_pandas()
     data = data.drop(columns=["date"], errors="ignore")
@@ -215,10 +216,10 @@ def particles_from_table(table: pa.Table, datetime: bool = True) -> pd.DataFrame
     for name in _INT_COLUMNS:
         if name in data.columns:
             data[name] = data[name].astype("float64")
-    if datetime and "age" in data.columns:
+    if time and "age" in data.columns:
         times = {r: parse_receptor_id(r)[0] for r in data["receptor"].unique()}
         receptor_time = pd.to_datetime(data["receptor"].map(times))
-        data["datetime"] = receptor_time + pd.to_timedelta(
+        data["time"] = receptor_time + pd.to_timedelta(
             data["age"].to_numpy(), unit="min"
         )
     return data
@@ -235,7 +236,7 @@ def write_particles(
     """
     Write a particle table to a Parquet file that :func:`read_particles` reads alone.
 
-    ``age`` and ``particle`` are stored as int32, and ``datetime`` is left out
+    ``age`` and ``particle`` are stored as int32, and ``time`` is left out
     since it is the receptor time plus ``age``. A ``receptor`` column holds
     the receptor id, so a scan of many files can tell receptors apart. The
     receptor, the run's settings, and the met files go in the file's
@@ -267,7 +268,7 @@ def write_particles(
     ValueError
         If ``age`` or ``particle`` holds a value that is not a whole number.
     """
-    data = particles.drop(columns=["datetime", "receptor"], errors="ignore")
+    data = particles.drop(columns=["time", "receptor"], errors="ignore")
     for name in _INT_COLUMNS:
         if name in data.columns:
             values = data[name].to_numpy()

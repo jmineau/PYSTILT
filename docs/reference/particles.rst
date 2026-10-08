@@ -119,8 +119,10 @@ Columns PYSTILT adds
    ``foot`` before the near-field correction (:func:`correct_near_field`),
    when ``hnf_plume`` is on.
 
-``datetime``
-   The time of each row, in UTC, added when the table is read from a file.
+``time``
+   The time of each row, in UTC: the receptor time plus ``age``, added
+   when the table is read from a file. STILT-R's ``time`` is ``age``
+   here.
 
 Checking a table
 ----------------

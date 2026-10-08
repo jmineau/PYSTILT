@@ -155,7 +155,7 @@ column means.
      - The columns ``varsiwant`` asked HYSPLIT for, plus ``release_height`` for a
        column or multipoint receptor.
 
-``datetime`` is not stored: it is the receptor time plus ``age``.
+``time`` is not stored: it is the receptor time plus ``age``.
 
 The file's metadata (Parquet key-value metadata):
 

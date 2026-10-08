@@ -209,14 +209,14 @@ def test_plume_recipe_from_particle_tables():
         table = pd.DataFrame(
             {
                 "particle": np.repeat(np.arange(1, 51), minutes.size),
-                "time": np.tile(minutes, 50),
+                "age": np.tile(minutes, 50),
                 "lon": np.repeat(lon, minutes.size),
                 "lat": np.repeat(lat, minutes.size),
             }
         )
-        table["datetime"] = release + pd.to_timedelta(table["time"], unit="min")
-        rows.append(table[table["datetime"].between(overpass[0], overpass[1])])
+        table["time"] = release + pd.to_timedelta(table["age"], unit="min")
+        rows.append(table[table["time"].between(overpass[0], overpass[1])])
     particles = pd.concat(rows, ignore_index=True)
-    assert particles["datetime"].between(*overpass).all()
+    assert particles["time"].between(*overpass).all()
     plume = plume_polygon(particles["lon"], particles["lat"])
     assert shapely.contains_xy(plume.polygon, [SITE[0] + 0.5], [SITE[1] + 0.15])[0]

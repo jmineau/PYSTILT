@@ -150,7 +150,7 @@ def test_particles_store_time_and_index_as_int32(tmp_path):
     schema = pq.read_schema(path)
     assert str(schema.field("age").type) == "int32"
     assert str(schema.field("particle").type) == "int32"
-    assert "datetime" not in schema.names
+    assert "time" not in schema.names
     assert str(schema.field("lon").type) == "double"
 
 

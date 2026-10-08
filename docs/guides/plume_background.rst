@@ -64,7 +64,7 @@ forward with 1000 particles. In PYSTILT each release is a
 
 No footprint is needed. The plume only needs the particle tables, which
 hold each particle's position at every output step along with its
-``datetime``.
+``time``.
 
 The plume
 ---------
@@ -78,7 +78,7 @@ across all the forward runs, and outline them:
 
    window = (overpass - pd.Timedelta(minutes=3), overpass + pd.Timedelta(minutes=3))
    particles = forward.particles()
-   particles = particles[particles["datetime"].between(*window)]
+   particles = particles[particles["time"].between(*window)]
 
    plume = plume_polygon(particles["lon"], particles["lat"])
    plume.polygon      # shapely Polygon in longitude and latitude

@@ -45,7 +45,7 @@ def _particles():
             "lat": [40.0, 40.0, 40.0, 41.0, 40.0, 41.0],
             "pres": [900.0, 1000.0, 900.0, 650.0, 900.0, 820.0],
             "foot": [1.0, 0.5, 1.0, 0.5, 1.0, 0.5],
-            "datetime": pd.to_datetime(["2023-01-01 12:00", "2023-01-01 11:00"] * 3),
+            "time": pd.to_datetime(["2023-01-01 12:00", "2023-01-01 11:00"] * 3),
         }
     )
 
@@ -136,7 +136,7 @@ def test_background_samples_each_endpoint():
     assert per.name == "background"
 
 
-def test_background_time_varying_uses_the_endpoint_datetime():
+def test_background_time_varying_uses_the_endpoint_time():
     times = pd.to_datetime(["2023-01-01 11:00", "2023-01-01 12:00"])
     field = xr.concat([_field(), _field() + 1000.0], dim="time").assign_coords(
         time=times
@@ -145,8 +145,8 @@ def test_background_time_varying_uses_the_endpoint_datetime():
     per = background(_particles(), field).per_particle  # endpoints are at 11:00
 
     assert per.tolist() == [0.0, 5.0, 4.0]
-    with pytest.raises(ValueError, match="datetime"):
-        background(_particles().drop(columns="datetime"), field)
+    with pytest.raises(ValueError, match="time"):
+        background(_particles().drop(columns="time"), field)
 
 
 def test_background_vertical_dimension_must_name_a_particle_column():

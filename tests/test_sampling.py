@@ -110,7 +110,7 @@ def _particles():
             "lon": [-112.0, -111.0, -110.0, -100.0, -111.0],
             "lat": [40.0, 40.0, 41.0, 41.0, 41.0],
             "foot": [2.0, 3.0, 1.0, 5.0, 0.0],
-            "datetime": pd.to_datetime(["2023-01-01"] * 5),
+            "time": pd.to_datetime(["2023-01-01"] * 5),
         }
     )
 
@@ -123,11 +123,11 @@ def test_particles_enhancement_sums_foot_times_flux_per_particle():
     assert per_particle.name == "enhancement"
 
 
-def test_particles_enhancement_time_varying_needs_datetime():
+def test_particles_enhancement_time_varying_needs_time():
     flux = _flux().expand_dims(time=pd.to_datetime(["2023-01-01"]))
     assert _particles().stilt.enhancement(flux).tolist() == [3.0, 5.0, 0.0]
-    with pytest.raises(ValueError, match="datetime"):
-        _particles().drop(columns="datetime").stilt.enhancement(flux)
+    with pytest.raises(ValueError, match="time"):
+        _particles().drop(columns="time").stilt.enhancement(flux)
 
 
 def _footprint(point_receptor, values):

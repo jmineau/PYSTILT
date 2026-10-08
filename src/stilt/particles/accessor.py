@@ -45,7 +45,7 @@ class ParticlesAccessor:
         -------
         pandas.DataFrame
             One row per particle, with every column of the particle table.
-            ``age`` is minutes since release and ``datetime`` the UTC time.
+            ``age`` is minutes since release and ``time`` the UTC time.
         """
         p = self._particles.reset_index(drop=True)
         if p.empty:
@@ -68,7 +68,7 @@ class ParticlesAccessor:
         flux : xarray.DataArray
             Surface flux on a ``lat``/``lon`` grid, in µmol m⁻² s⁻¹ for an
             enhancement in ppm. A flux with a ``time`` dimension is taken at
-            each particle's ``datetime``. Points outside it, and missing
+            each particle's ``time``. Points outside it, and missing
             cells, count as zero flux.
 
         Returns
@@ -81,13 +81,13 @@ class ParticlesAccessor:
         ------
         ValueError
             If the flux varies in time and the particles have no
-            ``datetime`` column.
+            ``time`` column.
         """
         p = self._particles
-        times = p["datetime"].to_numpy() if "datetime" in p.columns else None
+        times = p["time"].to_numpy() if "time" in p.columns else None
         if "time" in flux.dims and times is None:
             raise ValueError(
-                "flux varies in time but the particles have no 'datetime' column."
+                "flux varies in time but the particles have no 'time' column."
             )
         sampled = sample_field(
             flux,

@@ -71,11 +71,11 @@ def _particle_background(particles: pd.DataFrame, field: xr.DataArray) -> pd.Ser
         z = ends[zdim].to_numpy(dtype=float)
     times = None
     if "time" in field.dims:
-        if "datetime" not in ends.columns:
+        if "time" not in ends.columns:
             raise ValueError(
-                "field varies in time but the particles have no 'datetime' column."
+                "field varies in time but the particles have no 'time' column."
             )
-        times = ends["datetime"].to_numpy()
+        times = ends["time"].to_numpy()
     values = sample_field(
         field, ends["lon"].to_numpy(), ends["lat"].to_numpy(), z=z, times=times
     )
@@ -188,7 +188,7 @@ def background(
         ground in meters, or a column you add, such as height above sea
         level from ``zagl + zsfc``. Rename it with, for example,
         ``field.rename(level="pres")``. A field with a ``time`` dimension is
-        sampled at the endpoint's ``datetime``.
+        sampled at the endpoint's ``time``.
     transforms : sequence, optional
         The footprint's particle transforms (``sim.variant.footprint.transforms``), so
         the background is weighted like the footprint and adds to its
