@@ -59,7 +59,7 @@ def fake_particles(receptor: PointReceptor, n: int = 50) -> pd.DataFrame:
             "foot": rng.uniform(0, 0.1, len(time)),
         }
     )
-    data["datetime"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
+    data["time"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
         data["age"], unit="min"
     )
     return data

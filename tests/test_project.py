@@ -791,15 +791,15 @@ def test_particles_reads_only_the_columns_asked_for(tmp_path):
     ]
     pd.testing.assert_frame_equal(some, every[list(some.columns)])
 
-    timed = project.particles(columns=["datetime", "foot"])
+    timed = project.particles(columns=["time", "foot"])
     assert list(timed.columns) == [
         "receptor",
         "variant",
         "realization",
-        "datetime",
+        "time",
         "foot",
     ]
-    assert (timed["datetime"] == every["datetime"]).all()
+    assert (timed["time"] == every["time"]).all()
 
     with pytest.raises(ValueError, match="No column 'height'"):
         project.particles(columns=["height"])

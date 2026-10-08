@@ -113,7 +113,7 @@ def _particles(receptor) -> pd.DataFrame:
             "foot": [1e-5],
         }
     )
-    data["datetime"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
+    data["time"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
         data["age"], unit="min"
     )
     return data

@@ -114,9 +114,10 @@ The columns you are most likely to use:
    * - ``zagl``
      - Particle height above ground, m
    * - ``age``
-     - Minutes since release (negative for a backward run; STILT-R's ``time``)
-   * - ``datetime``
-     - Time of the row, UTC
+     - Minutes since release, negative for a backward run (STILT-R's
+       ``time``)
+   * - ``time``
+     - Time of the row, UTC, built from ``age`` when the table is read
    * - ``foot``
      - The particle's influence from the surface at this step, in
        ppm per (µmol m⁻² s⁻¹)

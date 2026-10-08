@@ -32,7 +32,7 @@ v1.0**, so prefer the clean design over a compatibility shim.
 |---|---|
 | PyPI distribution | `pystilt` |
 | Import name | `stilt` (`import stilt`, never `import pystilt`) |
-| Particle columns | The core columns get plain names: `particle`, `age`, `lon`, `lat` for HYSPLIT's and STILT-R's `indx`, `time`, `long`, `lati` (mapped in `read_particle_dat`), and `release_height` for STILT-R's `xhgt`. `zagl`, `foot`, and the rest keep HYSPLIT's codes, the names `varsiwant` asks for them by (`mlht`, `samt`, ...) |
+| Particle columns | The core columns get plain names: `particle`, `age`, `lon`, `lat` for HYSPLIT's and STILT-R's `indx`, `time`, `long`, `lati` (mapped in `read_particle_dat`), and `release_height` for STILT-R's `xhgt`. `time` is the UTC time of each row, built from `age` when a table is read and never stored. `zagl`, `foot`, and the rest keep HYSPLIT's codes, the names `varsiwant` asks for them by (`mlht`, `samt`, ...) |
 | Source directory | `src/stilt/` |
 | CLI entry point | `stilt` (Typer; see `[project.scripts]`) |
 | Config | What the user writes: always a class (`ProjectConfig`, `FootprintConfig`, `ExecutionConfig`, a model's `HysplitConfig` and its met config, `MetConfig`), each next to the code that uses it |

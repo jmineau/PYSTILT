@@ -111,11 +111,26 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
     receptor = particles_metadata(path).receptor
     assert receptor.time.tzinfo is None
     assert receptor.time == aware_receptor.time
-    assert loaded["datetime"].dt.tz is None
+    assert loaded["time"].dt.tz is None
     expected = pd.Timestamp("2023-01-01 12:00") + pd.to_timedelta(
         traj["age"].to_numpy(), unit="min"
     )
-    np.testing.assert_array_equal(loaded["datetime"].to_numpy(), expected.to_numpy())
+    np.testing.assert_array_equal(loaded["time"].to_numpy(), expected.to_numpy())
+
+
+def test_read_particles_builds_time_when_only_time_is_asked_for(
+    point_receptor, tmp_path
+):
+    """``time`` is not stored; asking for it reads ``age`` to build it."""
+    params = _params(tmp_path, hnf_plume=False)
+    traj = finished(_particles_basic(), point_receptor, params)
+    path = tmp_path / "traj.parquet"
+    write_particles(path, traj, point_receptor, _settings(params), [])
+    loaded = read_particles(path, columns=["time"])
+    expected = pd.Timestamp(point_receptor.time) + pd.to_timedelta(
+        traj["age"].to_numpy(), unit="min"
+    )
+    np.testing.assert_array_equal(loaded["time"].to_numpy(), expected.to_numpy())
 
 
 def test_write_and_read_particles_round_trip(point_receptor, tmp_path):
@@ -600,7 +615,7 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
     """
     particles = finished(_particles_two_lengths(), point_receptor, _params(tmp_path))
     # As read_particles gives them.
-    particles["datetime"] = point_receptor.time + pd.to_timedelta(
+    particles["time"] = point_receptor.time + pd.to_timedelta(
         particles["age"], unit="min"
     )
 
@@ -611,7 +626,7 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
     assert ep["age"].tolist() == [-120, -30]
     assert ep.loc[0, ["lon", "lat", "zagl"]].tolist() == [-112.0, 40.6, 20.0]
     assert ep.loc[1, ["lon", "lat", "zagl"]].tolist() == [-111.8, 40.75, 15.0]
-    assert ep["datetime"].tolist() == [
+    assert ep["time"].tolist() == [
         point_receptor.time + pd.Timedelta(minutes=-120),
         point_receptor.time + pd.Timedelta(minutes=-30),
     ]

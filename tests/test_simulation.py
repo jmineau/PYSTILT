@@ -133,7 +133,7 @@ def test_reads_particles_written_under_the_same_settings(point_receptor, tmp_pat
     assert meta.receptor == point_receptor
     assert meta.settings["numpar"] == 10
     assert meta.met_files == []
-    assert "datetime" in again.particles.columns
+    assert "time" in again.particles.columns
     assert again.particles is again.particles  # kept once read
 
 

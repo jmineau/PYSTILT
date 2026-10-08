@@ -859,7 +859,7 @@ class Project:
         columns : list of str, optional
             Only these particle columns, such as ``["particle", "age",
             "lon", "lat", "foot"]``, after ``receptor``, ``variant``, and
-            ``realization``. ``datetime`` is built from ``age``. Every
+            ``realization``. ``time`` (UTC) is built from ``age``. Every
             column by default. Fewer columns read faster and take less
             memory.
 
@@ -879,11 +879,11 @@ class Project:
         directory with pyarrow, DuckDB, or polars instead.
         """
         first = ["receptor", "variant", "realization"]
-        with_datetime = columns is None or "datetime" in columns
+        with_time = columns is None or "time" in columns
         stored = None
         if columns is not None:
-            stored = [c for c in columns if c not in (*first, "datetime")]
-            if with_datetime and "age" not in stored:
+            stored = [c for c in columns if c not in (*first, "time")]
+            if with_time and "age" not in stored:
                 stored.append("age")
         frame = self._selected(sel)
         parts = []
@@ -892,7 +892,7 @@ class Project:
             present = self.output.present("particles", variant, rows["receptor"], k)
             table = self.output.table("particles", variant, present, k, stored)
             if table.num_rows:
-                part = particles_from_table(table, with_datetime).assign(variant=name)
+                part = particles_from_table(table, with_time).assign(variant=name)
                 parts.append(
                     part.assign(realization=pd.array([k] * len(part), "Int64"))
                 )

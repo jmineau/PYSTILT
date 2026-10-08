@@ -28,7 +28,7 @@ def _column(n_levels=4, per_level=200, spread=1.0, seed=0, level_spacing=500.0):
             "lat": np.full(n, 41.0),
             "release_height": release_height,
             "foot": 10.0 + spread * rng.standard_normal(n),
-            "datetime": pd.to_datetime(["2023-01-01"] * n),
+            "time": pd.to_datetime(["2023-01-01"] * n),
         }
     )
 
