@@ -29,7 +29,7 @@ that matches how your instrument samples the air.
      - ``longitudes``, ``latitudes``, ``altitudes`` (arrays)
 
 Every receptor also needs a ``time`` in UTC. A timezone-aware time is
-converted to UTC. Altitudes are in metres above ground level. Pass
+converted to UTC. Altitudes are in meters above ground level. Pass
 ``altitude_ref="msl"`` to give them above mean sea level instead.
 
 PointReceptor
@@ -46,7 +46,7 @@ sample at one height.
        time="2023-07-15 18:00:00",
        longitude=-111.848,
        latitude=40.766,
-       altitude=10.0,          # metres above ground
+       altitude=10.0,          # meters above ground
    )
 
 
@@ -200,7 +200,7 @@ Vertical weighting needs each particle's release height, the
 ``release_height`` column of the particles. HYSPLIT does not record which release point a particle came from, so PYSTILT works
 it out from the first row HYSPLIT writes for the particle. With the bundled
 HYSPLIT build, that row comes one timestep after release. By then the wind
-has moved the particle a few hundred metres, which can be more than the
+has moved the particle a few hundred meters, which can be more than the
 spacing between the points of a slant column.
 
 PYSTILT recovers release heights in this order:

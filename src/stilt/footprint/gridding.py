@@ -371,7 +371,7 @@ def _accumulate_smoothed_footprint(
         layer, rtime_val = cast(tuple[Any, Any], key)
         i = layer_index[int(layer)]
 
-        # Nearest-neighbour kernel bandwidth for this rtime.
+        # Nearest-neighbor kernel bandwidth for this rtime.
         step_w_idx = int(np.argmin(np.abs(rtimes - rtime_val)))
         step_w = float(w[step_w_idx])
         if step_w not in kernel_cache:
@@ -469,7 +469,7 @@ def calc_footprint(
     xarray.DataArray
         The footprint, named ``foot``, with dimensions ``(time, lat, lon)``
         or ``(time, y, x)`` on a projected grid. Coordinates are cell
-        centres, and ``time`` is the start of each hour. The ``.stilt``
+        centers, and ``time`` is the start of each hour. The ``.stilt``
         accessor has the methods that use it.
 
     Raises

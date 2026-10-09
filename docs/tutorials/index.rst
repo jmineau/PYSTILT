@@ -13,7 +13,7 @@ Complete worked examples, each building on :doc:`../getting_started/quickstart`.
 
 :doc:`satellite_column`
    Turn a TROPOMI methane orbit into receptors with their own averaging
-   kernels, run them, and compare modelled and observed enhancements.
+   kernels, run them, and compare modeled and observed enhancements.
 
 .. toctree::
    :maxdepth: 1

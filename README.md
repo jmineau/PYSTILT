@@ -47,7 +47,7 @@ receptor = stilt.PointReceptor(
     time="2023-07-15 18:00",   # UTC
     longitude=-111.848,
     latitude=40.766,
-    altitude=10,               # metres above ground
+    altitude=10,               # meters above ground
 )
 met = {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}
 grid = stilt.Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01)
@@ -176,7 +176,7 @@ transforms:
 
 `"column"` makes vertical columns in place of slant lines of sight. The
 [satellite tutorial](https://jmineau.github.io/PYSTILT/tutorials/satellite_column.html) goes from
-an orbit to modelled and observed enhancements.
+an orbit to modeled and observed enhancements.
 
 ## Particle transforms
 

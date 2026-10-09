@@ -553,13 +553,13 @@ MetPy user guides.
 - **Say it plainly.** No metaphors ("a dial worth turning"), no selling
   ("powerful", "seamless"), no filler ("note that", "it's worth noting").
 
-Use these words in user-facing text, and keep the internal ones on pages
-about internals:
+Use American spelling (meters, modeled, center). Use these words in
+user-facing text, and keep the internal ones on pages about internals:
 
 | Say | Not |
 |---|---|
 | settings folder | key, hash, identity |
-| transport model (in full) | model, when the weather model or a modelled value is near |
+| transport model (in full) | model, when the weather model or a modeled value is near |
 | particles (the table); run (the verb); trajectory (one particle's path) | run as a noun for the result |
 | workdir (one simulation's folder); compute root (where workdirs are made) | scratch, except the output's `scratch/` folder |
 | log, met files | provenance |
@@ -692,7 +692,7 @@ The README links to it and keeps no table of its own.
 - **Pressure weighting is derived from the particles.**
   `PressureWeighting` fits `ln p = b + a·z` to the particles' first-step
   `(zagl, pres)` and gives each distinct release height the pressure slab
-  centred on it (`particle_pwf`), split evenly among the particles released
+  centered on it (`particle_pwf`), split evenly among the particles released
   there (a multipoint receptor releases many per point). The fit is made in
   the receptor's own datum: for `altitude_ref="msl"` it uses `zagl + zsfc`
   (so `zsfc` must be in `varsiwant`) and the ground closing the bottom slab
@@ -706,7 +706,7 @@ The README links to it and keeps no table of its own.
 - **The hypsometric fit is load-bearing.** HYSPLIT's first output step is
   already one timestep of turbulence past release: on a real 1000-particle
   column, 394 of 999 adjacent particles are non-monotone in pressure versus
-  release height. Raw first-step pressures give neighbouring particles weights
+  release height. Raw first-step pressures give neighboring particles weights
   spanning 145×; the fit gives 1.49×, the true hydrostatic ratio across 3 km.
   Never "simplify" `particle_pwf` to use `pres` directly
   (`tests/integration/test_pressure_weighting.py` guards this).
@@ -721,7 +721,7 @@ The README links to it and keeps no table of its own.
   it `add_release_heights` (`particles/table.py`, a core step the worker applies
   to any model's particles, as is `correct_near_field`) finds which point of
   a multipoint receptor a particle left from, or which slab of a column;
-  `release_height` is that point's altitude or that slab's centre, never the random
+  `release_height` is that point's altitude or that slab's center, never the random
   height inside the slab.
 - **Multipoint and slant `release_height` recovery** (`_multipoint_release_heights` in
   `particles/table.py`) prefers, in order: `age = 0` rows if present (exact), a match

@@ -155,7 +155,7 @@ up each receptor's kernel:
      - kind: pressure_weighting
 
 By default the kernel's ``levels`` are release heights in the receptor's
-vertical reference, which is metres above sea level for a slant. The GGG
+vertical reference, which is meters above sea level for a slant. The GGG
 kernel is given on pressures, so set ``coordinate: pres``. If one kernel is
 close enough for a whole campaign, give it inline as ``levels`` and
 ``values`` instead of a table.

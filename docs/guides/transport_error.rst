@@ -2,12 +2,12 @@ Transport Error
 ===============
 
 A footprint says where a measurement's air came from, according to one
-meteorological analysis. The analysis has wind errors, so the modelled
+meteorological analysis. The analysis has wind errors, so the modeled
 enhancement has an error too. PYSTILT estimates it with the method of
 `Lin and Gerbig (2005) <https://doi.org/10.1029/2004GL021127>`_. You run
 the particles a second time with a random wind error added, one that has
 the statistics of the meteorology's errors. The perturbed particles spread
-further. The extra spread of the modelled enhancement across the particles
+further. The extra spread of the modeled enhancement across the particles
 is the transport-error variance. An inversion uses it as the transport part
 of each observation's model-data mismatch.
 
@@ -107,13 +107,13 @@ unperturbed run, so the noise of the estimate falls by at most a factor of
 ``variance`` is within a factor of two of its ``noise``. When ``variance``
 is far below ``noise``, check the wind-error scales instead.
 
-The modelled enhancement
+The modeled enhancement
 ------------------------
 
 The enhancement a footprint predicts for a surface flux field is the
 footprint times the flux, summed over the grid. ``flux`` is an
 :class:`xarray.DataArray` on ``lat`` and ``lon``, with an optional ``time``
-dimension. It is sampled at the footprint's cell centres, and footprint
+dimension. It is sampled at the footprint's cell centers, and footprint
 cells outside the flux field add nothing. A flux with finer cells than the
 footprint's must be put on the footprint grid first
 (:doc:`../tutorials/flux_inversion` says how).
@@ -155,7 +155,7 @@ error covariance of an inversion. If you set up the inversion with fips,
 observation (the footprint matrix times the prior covariance times its
 transpose). The square root of its diagonal is each observation's emission
 error. Add it in quadrature to the transport and retrieval errors to get
-the total error of a modelled value.
+the total error of a modeled value.
 
 The transport error
 -------------------
@@ -176,7 +176,7 @@ variant and the flux field:
                     "variance": result.variance, "noise": result.noise})
    errors = pd.DataFrame(rows).set_index("receptor")
 
-``result.variance`` is the transport-error variance of the modelled
+``result.variance`` is the transport-error variance of the modeled
 enhancement, in the enhancement's units squared. ``result.sd`` is its
 square root. The particles are weighted the way the footprint weights
 them, with the variant's transforms: the averaging kernel (including one
@@ -210,7 +210,7 @@ What the numbers mean
 ``result.levels`` shows the calculation for each release level. A point
 receptor has one level.
 
-- ``height`` is the level's mean release height in metres, and ``n`` its
+- ``height`` is the level's mean release height in meters, and ``n`` its
   number of particles.
 - ``weight`` is the level's share of the particles.
 - ``mean_orig`` and ``mean_err`` are the mean enhancement per particle
@@ -291,13 +291,13 @@ receptors.
 
 The spread between these runs is a sensitivity. To turn it into an error
 you need to know how far the meteorology's mixed-layer height is from the
-real one. One way is to compare it with radiosonde profiles, analysed with
+real one. One way is to compare it with radiosonde profiles, analyzed with
 the bulk Richardson method HYSPLIT uses by default (``kmixd: 3``).
 
 Notes
 -----
 
-- Lin and Gerbig derived their scales from variograms of analysed minus
+- Lin and Gerbig derived their scales from variograms of analyzed minus
   radiosonde winds, and got about 120 km, 4 hours, and 900 m for an 80 km
   analysis. For a 3 km model such as HRRR the horizontal scale is much
   shorter (:doc:`wind_errors`).

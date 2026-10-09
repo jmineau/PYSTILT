@@ -88,7 +88,7 @@ The columns
 -----------
 
 Vertical arrays run from the surface upward. Pressures are in hPa and
-altitudes in metres above mean sea level. Azimuths are degrees clockwise
+altitudes in meters above mean sea level. Azimuths are degrees clockwise
 from north, pointing from the ground toward the instrument or the sun. This
 is the convention :func:`~stilt.observations.slant_points` uses.
 
@@ -105,7 +105,7 @@ Every reader returns these columns:
    * - ``time``
      - UTC time of the sounding, timezone-naive.
    * - ``longitude``, ``latitude``
-     - Pixel centre or station location, degrees.
+     - Pixel center or station location, degrees.
    * - ``surface_altitude``
      - Surface (or station) altitude, m MSL.
    * - ``surface_pressure``

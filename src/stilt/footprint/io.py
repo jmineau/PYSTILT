@@ -56,7 +56,7 @@ def _footprint_array(
     geometry_hash: str | None = None,
 ) -> xr.DataArray:
     """
-    Return a footprint: *values* in ``(time, y, x)`` order, at cell centres *x* and *y*.
+    Return a footprint: *values* in ``(time, y, x)`` order, at cell centers *x* and *y*.
 
     Layer ``k`` is the hour from ``hours[k]`` hours after the receptor time,
     and is stamped there, as in STILT-R; a backward run's first hour is

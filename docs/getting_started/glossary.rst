@@ -27,7 +27,7 @@ Glossary
       A map of how much each surface grid cell influenced a measurement.
       Each value is the concentration change at the receptor per unit of
       surface emission in that cell, in ppm per (µmol m⁻² s⁻¹). Multiply by
-      an emissions map and sum to get a modelled concentration increase. In
+      an emissions map and sum to get a modeled concentration increase. In
       Python it is an :class:`xarray.DataArray`; on disk, a Parquet file of
       the cells the particles reached.
 

@@ -25,14 +25,14 @@ def nearest_cell(coords: np.ndarray, values: np.ndarray) -> np.ndarray:
     """
     Return the index of the cell nearest each value, or ``-1`` outside the cells.
 
-    Each cell reaches halfway to its neighbours. The end cells reach the
-    same distance beyond their centres. With a single cell, every finite
+    Each cell reaches halfway to its neighbors. The end cells reach the
+    same distance beyond their centers. With a single cell, every finite
     value is inside it.
 
     Parameters
     ----------
     coords : numpy.ndarray
-        Cell centres along one axis, ascending or descending.
+        Cell centers along one axis, ascending or descending.
     values : numpy.ndarray
         Positions to look up.
 

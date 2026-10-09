@@ -146,7 +146,7 @@ def _multipoint_location(
     Location id of a multipoint receptor, ``"multi_<hash>"`` (``msl`` appended above sea level).
 
     The hash covers the sorted points, with longitudes and latitudes rounded
-    to 5 decimals and altitudes to 0.01 m. A whole-metre altitude hashes as
+    to 5 decimals and altitudes to 0.01 m. A whole-meter altitude hashes as
     its integer, so ids made before heights were kept to 0.01 m still match.
     """
     lon = np.asarray(list(lons), dtype=float)
@@ -436,7 +436,7 @@ class PointReceptor(Receptor):
     longitude: float = Field(description="Longitude in degrees, from -180 to 180.")
     latitude: float = Field(description="Latitude in degrees, from -90 to 90.")
     altitude: float = Field(
-        description="Release height in metres, above ground or sea level (``altitude_ref``)."
+        description="Release height in meters, above ground or sea level (``altitude_ref``)."
     )
 
     @model_validator(mode="after")
@@ -480,9 +480,9 @@ class ColumnReceptor(Receptor):
     longitude: float = Field(description="Longitude in degrees, from -180 to 180.")
     latitude: float = Field(description="Latitude in degrees, from -90 to 90.")
     bottom: float = Field(
-        description="Bottom of the column in metres. Must be less than ``top``."
+        description="Bottom of the column in meters. Must be less than ``top``."
     )
-    top: float = Field(description="Top of the column in metres.")
+    top: float = Field(description="Top of the column in meters.")
 
     @model_validator(mode="after")
     def _check(self) -> ColumnReceptor:
@@ -553,7 +553,7 @@ class MultiPointReceptor(Receptor):
     latitudes: tuple[float, ...] = Field(
         description="Latitude of each point in degrees, from -90 to 90."
     )
-    altitudes: tuple[float, ...] = Field(description="Height of each point in metres.")
+    altitudes: tuple[float, ...] = Field(description="Height of each point in meters.")
 
     @field_validator("longitudes", "latitudes", "altitudes", mode="before")
     @classmethod
@@ -586,7 +586,7 @@ class MultiPointReceptor(Receptor):
         Location id, ``"multi_<hash>"``, ending in ``msl`` above sea level.
 
         The hash covers the sorted points, with longitudes and latitudes
-        rounded to 5 decimals and altitudes to 0.01 m. A whole-metre
+        rounded to 5 decimals and altitudes to 0.01 m. A whole-meter
         altitude hashes as its integer.
         """
         return _multipoint_location(
