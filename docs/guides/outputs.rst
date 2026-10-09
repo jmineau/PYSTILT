@@ -152,14 +152,10 @@ To open a particle file without a project:
    meta = stilt.particles.particles_metadata(path)
    meta.receptor, meta.settings, meta.met_files, meta.realization
 
-The file holds the receptor, the meteorology files it was made with, and
-the run's settings, the same ones its folder's ``_settings.yaml`` holds:
-the transport model's settings, the met's, the model build, and whether
-it is an ensemble (``ensemble: true``, with the base seed). ``realization``
-is which realization of an ensemble the file is, or ``None`` for a single
-run.
-``stilt.identity.transport_from_settings(settings)``
-rebuilds the transport model's config from them.
+The file holds the receptor, the meteorology files the run read, and the
+settings it ran with, the same ones as its folder's ``_settings.yaml``.
+``realization`` is which realization of an ensemble the file is, or
+``None`` for a single run. :doc:`../reference/layout` lists every key.
 
 Empty footprints
 ----------------
@@ -201,12 +197,11 @@ Leave the selection out to load every simulation. Any table with
 observations merged with ``sims``, or a polars or pyarrow table, and so
 does a boolean mask over ``project.simulations``.
 
-The footprints of one variant come back as one :class:`xarray.Dataset`.
-Receptors at different times line up on ``hour``, the hours after each
-receptor's time, so a backward run's first hour is -1. One footprint
-(``sim.footprint``) has ``time`` in place of ``hour``, its dimensions
-``(time, lat, lon)``. The ``time``
-coordinate says when each of a receptor's hours starts:
+The footprints of one variant come back as one :class:`xarray.Dataset`
+with dimensions ``(receptor, hour, lat, lon)``. Receptors at different
+times cannot share a time axis, so they line up on ``hour``: the hours
+after each receptor's time, where a backward run's first hour is -1. The
+``time`` coordinate gives the clock time each receptor's hours start:
 
 .. code-block:: python
 
@@ -218,9 +213,9 @@ The values are read from the files only when a computation needs them, a
 day's receptors at a time, so opening a month of footprints is quick.
 Loading them all at once takes about 35 MB per footprint on a 300 by 300
 grid over 24 hours. Select one variant first, as above; a selection of
-several raises an error. Receptors whose footprint
-is empty are listed in ``footprints.attrs["empty"]``, and those not run yet
-in ``footprints.attrs["missing"]``.
+several raises an error. Receptors whose footprint is empty are listed in
+``footprints.attrs["empty"]``, and those not run yet in
+``footprints.attrs["missing"]``.
 
 For one receptor, ``project.simulation(rid, "hrrr").footprint`` is its
 footprint as a :class:`xarray.DataArray` with absolute times, which the
@@ -267,17 +262,11 @@ To see what is left to do:
    project.status(july)       # the same, for a selection
 
 ``status()`` adds a ``particles`` and a ``footprint`` column that say
-whether each output exists. They are blank where the variant does not make
-that output. The ``state`` column is ``complete``, ``failed``,
-``interrupted`` (the run started and was stopped before it finished, by a
-time limit, preemption, or a killed process), or ``pending`` (not run
-yet). A run that stops partway leaves a log saying when and where it
-started. For a failed
-simulation, ``step``, ``reason``, and ``message`` say why. ``status()``
-reads folder listings and the failure records of failed simulations, and
-opens no result file, so it is quick on a large project. From the command
-line, ``stilt status`` prints the totals, per variant when there are
-several.
+whether each result exists, and a ``state`` column: ``complete``,
+``failed``, ``interrupted``, or ``pending``. For a failed simulation,
+``step``, ``reason``, and ``message`` say why. :doc:`checking` explains
+each state and reason. ``status()`` opens no result file, so it is quick
+on a large project.
 
 Without PYSTILT
 ---------------

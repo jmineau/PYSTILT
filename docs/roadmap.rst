@@ -121,8 +121,8 @@ Future plans
 
 In priority order:
 
-1. Readers for the instruments people bring, such as EM27/SUN and
-   MethaneAIR/MethaneSAT. Which ones come first depends on who is using
+1. Readers for the instruments people bring, such as EM27/SUN output
+   from PROFFAST and MethaneAIR/MethaneSAT. Which ones come first depends on who is using
    column receptors.
 2. A YAML form for :class:`stilt.Zones`, so the ``geometry`` footprint
    setting can name groups of cells.

@@ -152,8 +152,8 @@ column means.
        float64.
    * - ``lon``, ``lat``, ``zagl``, and the rest
      - float64
-     - The columns ``varsiwant`` asked HYSPLIT for, plus ``release_height`` for a
-       column or multipoint receptor.
+     - The columns ``varsiwant`` asked HYSPLIT for, plus ``release_height``
+       for a column or multipoint receptor.
 
 ``time`` is not stored: it is the receptor time plus ``age``.
 

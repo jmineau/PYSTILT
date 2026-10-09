@@ -27,7 +27,7 @@ Glossary
       A map of how much each surface grid cell influenced a measurement.
       Each value is the concentration change at the receptor per unit of
       surface emission in that cell, in ppm per (µmol m⁻² s⁻¹). Multiply by
-      an emissions map and sum to get a modeled concentration increase. In
+      an emissions map and sum to get a modelled concentration increase. In
       Python it is an :class:`xarray.DataArray`; on disk, a Parquet file of
       the cells the particles reached.
 
@@ -77,10 +77,9 @@ Glossary
       One folder of results in the :term:`output directory`: everything made
       with one set of settings, named after the variant that first made it
       and a short code computed from the settings, such as
-      ``settings=hrrr-b2399e``. A
-      changed setting makes a new folder and never overwrites one, and
-      projects with the same settings share a folder. ``stilt status``
-      lists them.
+      ``settings=hrrr-b2399e``. A changed setting makes a new folder and
+      never overwrites one, and projects with the same settings share a
+      folder. ``stilt status`` lists them.
 
    workdir
       The folder one simulation's transport model runs in. It is removed
@@ -157,12 +156,12 @@ Glossary
 
    backend
       Where the simulations run. The choices are ``local`` (your computer)
-      and ``slurm`` (an HPC cluster).
-      Set it in the ``execution`` section of ``config.yaml``. See
+      and ``slurm`` (an HPC cluster). Set it in the ``execution`` section
+      of ``config.yaml``. See
       :doc:`../guides/running`.
 
    empty footprint
       A simulation that ran fine but whose particles never touched the
       footprint grid, for example because the grid is too small or is not
-      upwind. PYSTILT records it as a footprint file with no cells and the
-      reason inside, and counts the simulation as finished.
+      upwind. PYSTILT writes a footprint file with no cells, marked empty,
+      and counts the simulation as complete.

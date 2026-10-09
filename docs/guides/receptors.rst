@@ -196,8 +196,8 @@ How particles are released
 Advanced: release heights for multipoint and slant receptors
 ------------------------------------------------------------
 
-Vertical weighting needs each particle's release height (``release_height``). HYSPLIT
-does not record which release point a particle came from, so PYSTILT works
+Vertical weighting needs each particle's release height, the
+``release_height`` column of the particles. HYSPLIT does not record which release point a particle came from, so PYSTILT works
 it out from the first row HYSPLIT writes for the particle. With the bundled
 HYSPLIT build, that row comes one timestep after release. By then the wind
 has moved the particle a few hundred metres, which can be more than the
@@ -205,8 +205,8 @@ spacing between the points of a slant column.
 
 PYSTILT recovers release heights in this order:
 
-1. If the HYSPLIT build writes rows at release time (``t = 0``), it uses
-   them. The result is exact.
+1. If the HYSPLIT build writes rows at release time (``age = 0``), it
+   uses them. The result is exact.
 2. If the release altitudes are all different, as they are in a slant
    column, it matches particles by height. Height changes much less than
    horizontal position over one timestep, so this is accurate to about
@@ -214,7 +214,7 @@ PYSTILT recovers release heights in this order:
 3. Otherwise it matches by horizontal position. It warns when the release
    points are closer than 1 km, because the match cannot be trusted there.
 
-A HYSPLIT change that writes ``t = 0`` rows has been sent to NOAA ARL. Until
+A HYSPLIT change that writes release-time rows has been sent to NOAA ARL. Until
 a published build includes it, you can point PYSTILT at your own build:
 
 .. code-block:: yaml
@@ -222,8 +222,8 @@ a published build includes it, you can point PYSTILT at your own build:
    # config.yaml
    exe_dir: /path/to/hysplit/exec    # directory containing hycs_std
 
-The setting is saved with each trajectory, so you can tell which build
-produced it.
+The build's version is saved with the particles, so you can tell which
+build made them.
 
 
 Working with receptors in code

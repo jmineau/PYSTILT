@@ -87,7 +87,7 @@ Step 3: Run
 
    project.run()
 
-There are 168 simulations, so this takes a while with 4 workers. You can
+There are 168 simulations, so this takes a while, four at a time. You can
 stop it at any time with Ctrl-C. Running it again picks up where it left
 off. To check progress from another terminal:
 
@@ -127,7 +127,7 @@ logarithmic.
 Next
 ----
 
-- Turn these footprints into modeled concentrations in
+- Turn these footprints into modelled concentrations in
   :doc:`flux_inversion`.
 - See :doc:`../guides/outputs` for more ways to load and plot results.
 - Run a whole year on a cluster: :doc:`../guides/slurm`.

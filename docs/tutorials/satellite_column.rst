@@ -20,9 +20,8 @@ Starting point
 --------------
 
 A project made with ``stilt init`` or :meth:`stilt.Project.init`, with HRRR
-meteorology and a footprint grid over the valley. There is no observation
-class to fill in. A Level 2 file is already a table with one row per
-sounding, and PYSTILT works on that table.
+meteorology and a footprint grid over the valley. A Level 2 file becomes
+a table with one row per sounding, and PYSTILT works on that table.
 
 Step 1: Read the soundings
 --------------------------
@@ -128,8 +127,8 @@ Step 5: Run
 
    stilt run ./xch4          # or stilt submit ./xch4 on a cluster
 
-Every way of running the transport model, Slurm included, applies each receptor's
-own kernel, because the table is part of the project.
+Every way of running, Slurm included, applies each receptor's own kernel,
+because the table is part of the project.
 
 Step 6: Compare enhancements
 ----------------------------
@@ -210,9 +209,10 @@ That air saw no fluxes in the domain, so the field alone gives it
 Your own instrument
 -------------------
 
-A new instrument needs only a reader: a function that returns a table with
-the columns of :data:`~stilt.observations.readers.schema.SOUNDING_SCHEMA`. Nothing is
-registered or subclassed. The reader handles the product's conventions,
+A new instrument needs only a reader: a function that returns a table
+with the columns of
+:data:`~stilt.observations.readers.schema.SOUNDING_SCHEMA`. The reader
+handles the product's conventions,
 such as unit conversions, quality flags, which variable holds the kernel,
 and how to rebuild the pressure grid. Every step after reading is the same.
 :doc:`../guides/readers` says which module to copy.

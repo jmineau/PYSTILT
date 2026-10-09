@@ -5,8 +5,8 @@ A column retrieval comes as a product file, such as a TROPOMI orbit, an
 OCO-2 Lite file, a TCCON site file, or a day of EM27/SUN spectra from GGG.
 The readers in :mod:`stilt.observations` turn each of these into a table
 with one row per sounding. The columns are the same for every instrument
-(:data:`~stilt.observations.readers.schema.SOUNDING_SCHEMA`), so the rest of the workflow
-(:doc:`../tutorials/satellite_column`) is too.
+(:data:`~stilt.observations.readers.schema.SOUNDING_SCHEMA`), so the rest
+of the workflow (:doc:`../tutorials/satellite_column`) is too.
 
 .. code-block:: python
 
@@ -221,13 +221,13 @@ Copy the reader module closest to your product from
 ``stilt/observations/readers/``. Use ``tropomi.py`` for a swath product and
 ``ggg.py`` for a ground station. The reader holds all of the product's
 conventions, and its output must have the columns above, which
-:data:`~stilt.observations.readers.schema.SOUNDING_SCHEMA` lists in code. Keep it a plain
-function that returns the table.
+:data:`~stilt.observations.readers.schema.SOUNDING_SCHEMA` lists in code.
+Keep it a plain function that returns the table.
 
 Add a small slice of a real file under ``tests/observations/data/products``,
 and a test that calls :func:`~stilt.observations.check_soundings` on the
 table and checks the units and that the vertical arrays start at the
-surface. ``tests/observations/data/products/make_samples.py`` shows how the existing
-slices were cut. Readers for PROFFAST EM27/SUN output, MethaneAIR, and
+surface. ``tests/observations/data/products/make_samples.py`` shows how
+the existing slices were cut. Readers for PROFFAST EM27/SUN output, MethaneAIR, and
 MethaneSAT are welcome. The maintainers have no files to write them
 against.

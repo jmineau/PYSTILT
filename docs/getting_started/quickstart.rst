@@ -127,10 +127,8 @@ direction the air came from. The map shows the footprint summed over all 24
 hours, on a log scale. Cells with more color influenced the measurement more.
 
 The footprint is an :class:`xarray.DataArray` with dimensions
-``(time, lat, lon)`` and units of ppm per (µmol m⁻² s⁻¹), one map per
-hour. Many receptors' footprints, from a project, line up on ``hour``
-after each receptor's time instead (``(receptor, hour, lat, lon)``,
-:doc:`../guides/outputs`). Sum it over time with xarray:
+``(time, lat, lon)``, one map per hour, in units of ppm per
+(µmol m⁻² s⁻¹). Sum it over time with xarray:
 
 .. code-block:: python
 
@@ -154,7 +152,7 @@ settings are the ones above:
        "./my_first_project",
        receptors=[receptor],
        mets={"hrrr": met},          # "hrrr" is a name you choose
-       variants={"hrrr": {}},       # run the settings below with met hrrr
+       variants={"hrrr": {}},       # one variant: these settings, met hrrr
        n_hours=-24,
        numpar=200,
        grid=grid,
@@ -191,13 +189,11 @@ folder.
        footprints/settings=hrrr-93278c/date=2023-07-15/202307151800_-111.848_40.766_10.parquet
        logs/settings=hrrr-a3f9c2/date=2023-07-15/202307151800_-111.848_40.766_10.log
 
-The folders are :term:`settings folders <settings folder>`, named after
-the variant, ``hrrr``, plus a short code computed from the settings it ran
-with. The
-file name is the :term:`receptor id` (time, longitude, latitude, and
-altitude), and a receptor under a variant is a :term:`simulation`. HYSPLIT's own input files, such as ``CONTROL`` and
-``SETUP.CFG``, are written to a working directory (the workdir) and
-removed when a run succeeds.
+Each folder under ``particles``, ``footprints``, and ``logs`` is a
+:term:`settings folder <settings folder>`: the variant's name, ``hrrr``,
+plus a short code made from its settings. Change a setting and the next
+run writes to a new folder, so nothing is overwritten. The file name is
+the :term:`receptor id`: the time, longitude, latitude, and altitude.
 
 Your settings and receptors are saved in the folder, so you can open the
 project again later without repeating them:

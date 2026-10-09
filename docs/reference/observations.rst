@@ -32,7 +32,7 @@ Each reader returns a table of soundings with the columns in
    ``when`` is ``always``; ``kernel``, for every product with an averaging
    kernel (all but GGG ``.oof`` files); or ``optional``, when the product
    has it. Vertical arrays run from the surface upward, pressures are in
-   hPa, altitudes in meters above sea level, and azimuths in degrees
+   hPa, altitudes in metres above sea level, and azimuths in degrees
    clockwise from north toward the instrument or the sun.
 
 .. autosummary::

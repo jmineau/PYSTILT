@@ -33,7 +33,7 @@ settings folders (:doc:`projects`). The folder itself is not recorded:
 moving a build keeps its results. A build without a ``version`` file is
 refused, since its runs could not be told apart from another build's.
 
-A build that writes each particle's release as a row at ``time = 0`` gives
+A build that writes each particle's release as a row at ``age = 0`` gives
 exact release heights for multipoint and slant receptors. The bundled
 build writes its first row one time step after release, and PYSTILT
 matches each particle to its release point from that first position
