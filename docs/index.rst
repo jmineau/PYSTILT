@@ -51,7 +51,7 @@ laptop or tens of thousands on an HPC cluster.
       :link-type: doc
 
       Complete examples. Run a week of tower footprints, turn footprints
-      into modeled concentrations, and scale up on a Slurm cluster.
+      into modelled concentrations, and scale up on a Slurm cluster.
 
    .. grid-item-card:: :fas:`right-left` Coming from STILT-R?
       :link: migration/stilt_r

@@ -28,10 +28,10 @@ hours in each time bin:
 
 The result is a DataFrame with one row per area and one column per time
 bin, labelled by the start of the bin. Footprint times are the start of
-each hour, so the bins must be closed on the left (``closed="left"``). A footprint cell that straddles two
-areas is split between them by area, so the total influence is kept. This
-is what you want before multiplying by emissions. Influence that falls
-outside every area is dropped.
+each hour, so the bins must be closed on the left (``closed="left"``). A
+footprint cell that straddles two areas is split between them by area, so
+the total influence is kept, which is what you want before multiplying by
+emissions. Influence that falls outside every area is dropped.
 
 The target can be:
 

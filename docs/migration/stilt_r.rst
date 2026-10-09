@@ -2,8 +2,10 @@ Coming From STILT-R
 ===================
 
 PYSTILT does the same science as STILT-R, and its footprints match STILT-R's
-cell by cell. The one exception is forward runs with ``hnf_plume`` on, where
-PYSTILT fixes how the plume grows (see :ref:`stilt-r-parity`).
+cell by cell. Two cases differ on purpose, both in the near-field
+correction (``hnf_plume``): forward runs, where PYSTILT fixes how the plume
+grows, and a ``veght`` above 1, which PYSTILT reads as metres above ground,
+as HYSPLIT does (see :ref:`stilt-r-parity`).
 
 What changes is where the settings live. Instead of editing variables in
 ``run_stilt.r``, you write them in ``config.yaml`` or pass them to
@@ -170,10 +172,11 @@ the cells the particles reached. ``foot.stilt.to_netcdf(path)`` writes one
 as CF NetCDF with dimensions ``(time, lat, lon)``, as STILT-R does, and
 keeps the receptor and the settings in it.
 
-A point or column receptor's id has the same form as STILT-R's simulation
-ID, and names its files: ``date=2015-07-05/201507050000_-111.8472_40.7665_21.parquet``
-in each variant's settings folder (see :doc:`../guides/projects`). A
-simulation is that id under a variant, ``201507050000_-111.8472_40.7665_21/hrrr``.
+A point receptor's id has the same form as STILT-R's simulation ID, and
+names its files in each variant's settings folder:
+``date=2015-07-05/201507050000_-111.8472_40.7665_21.parquet`` (see
+:doc:`../guides/projects`). A column receptor's id adds its bottom and top
+after the ``X``.
 
 Moving a project over
 ---------------------

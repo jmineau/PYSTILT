@@ -43,7 +43,7 @@ Step 1: the errors
 Sample the meteorology at the observations with
 `arlmet <https://github.com/jmineau/arl-met>`_. Winds in ARL files on
 projected grids are stored relative to the grid, so ask for earth-relative
-components (``earth_relative=True``, arlmet 0.1.0a8 or later). Radiosondes
+components (``earth_relative=True``). Radiosondes
 report geopotential height, so sample in metres above sea level:
 
 .. code-block:: python

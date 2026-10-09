@@ -134,7 +134,7 @@ What does not match
   ``test_forward_hnf_foot_intentionally_differs_from_r`` guards the
   difference.
 - **The HNF correction with ``veght`` above 1.** HYSPLIT reads such a
-  ``veght`` as meters above ground, and so does PYSTILT's correction.
+  ``veght`` as metres above ground, and so does PYSTILT's correction.
   STILT-R multiplies it by the mixed-layer height, which removes most of
   the footprint after the first hour
   (`uataq/stilt#142 <https://github.com/uataq/stilt/issues/142>`_). No
