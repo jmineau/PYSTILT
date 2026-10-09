@@ -128,7 +128,9 @@ def test_pwf_fit_absorbs_first_step_particle_scatter(met_dir, tmp_path):
     assert fitted_pwf.sum() == pytest.approx(raw_pwf.sum(), rel=0.05)
     # ... but only the fitted weights are smooth from particle to particle.
     assert fitted_pwf.max() / fitted_pwf.min() < 2.0
-    assert raw_pwf.max() / raw_pwf.min() > 10.0
+    # Two particles can share a first-step pressure, which gives a raw weight
+    # of zero; written without a division, that still counts as spread.
+    assert raw_pwf.min() < raw_pwf.max() / 10.0
 
 
 @integration
