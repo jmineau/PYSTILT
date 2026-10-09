@@ -27,7 +27,7 @@ hours in each time bin:
    by_cell = foot.stilt.aggregate(state, time_bins=bins)   # index == state.index
 
 The result is a DataFrame with one row per area and one column per time
-bin, labelled by the start of the bin. Footprint times are the start of
+bin, labeled by the start of the bin. Footprint times are the start of
 each hour, so the bins must be closed on the left (``closed="left"``). A
 footprint cell that straddles two areas is split between them by area, so
 the total influence is kept, which is what you want before multiplying by
@@ -44,7 +44,7 @@ The target can be:
   larger groups by label.
 
 For cells given some other way, such as an xarray grid or a list of cell
-centres, build the :class:`stilt.Grid` they lie on and select the rows you
+centers, build the :class:`stilt.Grid` they lie on and select the rows you
 need from the result.
 
 .. code-block:: python

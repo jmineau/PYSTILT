@@ -84,4 +84,4 @@ The coarsening grids, the ``dmass`` weighting, and the western-edge rule
 have no PYSTILT setting. Footprints from the two will not match cell by
 cell, most of all far from the receptor, where Jena STILT's grids are
 coarsest. Compare totals over regions (:doc:`../guides/aggregation`), or
-the modelled mole fractions, rather than single cells.
+the modeled mole fractions, rather than single cells.

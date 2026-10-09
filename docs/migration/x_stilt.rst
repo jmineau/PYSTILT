@@ -47,13 +47,13 @@ the ones that have an equivalent.
      - :func:`~stilt.observations.read_oco2`, :func:`~stilt.observations.read_tropomi_ch4`,
        :func:`~stilt.observations.read_tccon` (:doc:`/guides/readers`). For other
        products, write a reader that returns the same table.
-   * - Transport error on the modelled column (``cal.trajfoot.stat``, ``cal.trans.err``)
+   * - Transport error on the modeled column (``cal.trajfoot.stat``, ``cal.trans.err``)
      - ``error_functions/``
      - :meth:`sim.transport_error <stilt.Simulation.transport_error>` on the particles of an
        unperturbed variant and a wind-error variant
        (:doc:`/guides/transport_error`). X-STILT's separate ``outerr_`` tree
        becomes one more variant.
-   * - Modelled enhancement from an inventory (``ff.trajfoot``)
+   * - Modeled enhancement from an inventory (``ff.trajfoot``)
      - ``error_functions/``, ``run.xco2ff.sim``
      - ``foot.stilt.enhancement``, ``particles.stilt.enhancement``
    * - Wind error statistics from radiosondes and surface stations

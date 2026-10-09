@@ -157,5 +157,5 @@ Choices made here
   decide.
 - The side strips cover only the length of the padded box, so a northern
   strip does not run across the whole swath.
-- Each sounding is a point at its centre. A pixel that straddles the
-  outline counts as inside or outside by where its centre falls.
+- Each sounding is a point at its center. A pixel that straddles the
+  outline counts as inside or outside by where its center falls.

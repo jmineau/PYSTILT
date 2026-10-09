@@ -48,7 +48,7 @@ and you get the concentration increase your receptor should have seen. Do
 that for many measurements and compare with what was actually observed, and
 you can test an inventory or estimate emissions in an inversion. The
 :doc:`../tutorials/flux_inversion` tutorial covers the first step, turning
-footprints into modelled concentrations.
+footprints into modeled concentrations.
 
 What you need
 -------------

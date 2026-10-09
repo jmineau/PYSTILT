@@ -21,7 +21,7 @@ Before a run:
 After a run:
 
 - :func:`modelled_column` gives the column a retrieval would report for the
-  modelled air: enhancement, background, and the prior term.
+  modeled air: enhancement, background, and the prior term.
 - :func:`plume_polygon` and :func:`plume_background` outline a plume from a
   forward run and take the background from soundings outside it.
 

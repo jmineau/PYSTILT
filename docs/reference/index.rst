@@ -29,7 +29,7 @@ to do something, start with the :doc:`../guides/index` instead.
 
 :doc:`observations`
    Column and satellite work: product readers and their columns, sounding
-   selection, receptors from soundings, slant geometry, the modelled
+   selection, receptors from soundings, slant geometry, the modeled
    column, and plume backgrounds.
 
 :doc:`project`

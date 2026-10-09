@@ -4,7 +4,7 @@ Coming From STILT-R
 PYSTILT does the same science as STILT-R, and its footprints match STILT-R's
 cell by cell. Two cases differ on purpose, both in the near-field
 correction (``hnf_plume``): forward runs, where PYSTILT fixes how the plume
-grows, and a ``veght`` above 1, which PYSTILT reads as metres above ground,
+grows, and a ``veght`` above 1, which PYSTILT reads as meters above ground,
 as HYSPLIT does (see :ref:`stilt-r-parity`).
 
 What changes is where the settings live. Instead of editing variables in

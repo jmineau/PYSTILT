@@ -34,7 +34,7 @@ Built-in transforms
 ``averaging_kernel`` (:class:`stilt.transforms.AveragingKernel`)
    Multiplies each particle's ``foot`` by the kernel, interpolated to the
    particle's release height (``release_height``). The ``levels`` are in
-   metres in the receptor's vertical reference: above ground, or above sea level for a
+   meters in the receptor's vertical reference: above ground, or above sea level for a
    receptor built with ``altitude_ref="msl"``. For a kernel on pressure
    levels (hPa), set ``coordinate: pres``. Outside ``levels`` the kernel
    keeps its end values. Fold any instrument-specific factor, such as
@@ -50,7 +50,7 @@ Built-in transforms
    fits a hypsometric curve, :math:`\ln p = b + a z`, to the particles'
    heights and pressures at their first output step. It evaluates the curve
    at each release height to get the release pressure. Each release height
-   then stands for the slab of air centred on it, with the ground closing
+   then stands for the slab of air centered on it, with the ground closing
    the lowest slab. X-STILT gives each particle the layer below it instead,
    which leaves a particle released at the surface almost no weight.
 

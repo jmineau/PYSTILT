@@ -65,7 +65,7 @@ def _check_flux_grid(
             offset = abs(shift - round(shift))
             if offset > 0.1:
                 warnings.warn(
-                    f"The flux cell centres are {offset:.2f} of a cell from the "
+                    f"The flux cell centers are {offset:.2f} of a cell from the "
                     f"footprint's in {dim}, so each footprint cell takes one of "
                     "the two flux cells it straddles. Put the flux on the "
                     "footprint grid first for an exact sum.",
@@ -183,9 +183,9 @@ class FootprintAccessor:
 
     def enhancement(self, flux: xr.DataArray) -> xr.DataArray:
         """
-        Return the modelled enhancement at the receptor, footprint times flux summed over the grid.
+        Return the modeled enhancement at the receptor, footprint times flux summed over the grid.
 
-        The flux is taken at each footprint cell centre from the nearest
+        The flux is taken at each footprint cell center from the nearest
         flux cell (:func:`stilt.sampling.sample_field`). That is right for
         flux cells as large as the footprint's or larger. A finer flux is
         an error, since each footprint cell would take one small flux cell
@@ -193,7 +193,7 @@ class FootprintAccessor:
         grid first, as an area-weighted mean (xESMF's conservative
         regridding), or make the footprints on the flux's grid
         (``sim.calc_footprint(grid=...)``). A flux on cells of the
-        footprint's size whose centres are offset from the footprint's by
+        footprint's size whose centers are offset from the footprint's by
         more than a tenth of a cell gets a warning, since each footprint
         cell then straddles two flux cells.
 
@@ -292,7 +292,7 @@ class FootprintAccessor:
         Returns
         -------
         pandas.DataFrame
-            One row per target cell and one column per time bin, labelled
+            One row per target cell and one column per time bin, labeled
             by the bin's left edge. Rows are indexed by ``(x, y)`` for grid
             targets and by cell id for meshes and zones. Cells and bins the
             footprint does not reach are 0.

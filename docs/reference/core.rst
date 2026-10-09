@@ -114,7 +114,7 @@ What the particles give beyond the footprint
 
 The background mole fraction at a receptor, from a field sampled where
 the particles end (:doc:`/guides/background`), and the transport error of
-the modelled enhancement, from a wind-error variant
+the modeled enhancement, from a wind-error variant
 (:doc:`/guides/transport_error`). With a project they are
 ``sim.background(field)`` and ``sim.transport_error(error_sim, flux)``.
 Both weight the particles the way the footprint does.

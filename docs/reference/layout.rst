@@ -277,7 +277,7 @@ The grid
 - The number of columns is ``floor((xmax - xmin) / xres)``, and likewise
   for rows. A partial cell at the edge is dropped, so ``xmax = -110.505``
   with ``xmin = -113`` and ``xres = 0.01`` gives 249 columns.
-- Column ``i`` is centred on ``xmin + (i + 0.5) * xres``, and row ``j`` on
+- Column ``i`` is centered on ``xmin + (i + 0.5) * xres``, and row ``j`` on
   ``ymin + (j + 0.5) * yres``. Row 0 is the southern edge.
 - On a projected grid (``crs`` other than ``+proj=longlat``) the bounds are
   degrees and the resolution is in the projection's units. Only the

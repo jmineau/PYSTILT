@@ -15,7 +15,7 @@ What you'll learn
 
 - how to model enhancements from a few point sources
 - how to model enhancements from a gridded emissions inventory
-- how to compare modelled and observed concentrations
+- how to compare modeled and observed concentrations
 
 Starting point
 --------------
@@ -67,7 +67,7 @@ add them up.
            {"time": foot.stilt.receptor.time, "enhancement_ppm": (in_window * flux).sum()}
        )
 
-   modelled = pd.DataFrame(rows).set_index("time").sort_index()
+   modeled = pd.DataFrame(rows).set_index("time").sort_index()
 
 Make each window at least two footprint cells wide. A smaller window gets a
 warning, because the footprint is too coarse to say how much of a cell falls
@@ -93,13 +93,13 @@ dimension, each footprint hour uses the nearest inventory time.
        enhancement = float(foot.stilt.enhancement(inventory).sum())   # sum over hours
        rows.append({"time": foot.stilt.receptor.time, "enhancement_ppm": enhancement})
 
-   modelled = pd.DataFrame(rows).set_index("time").sort_index()
+   modeled = pd.DataFrame(rows).set_index("time").sort_index()
 
 Inventory and footprint grids
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Each footprint cell takes the flux of the inventory cell nearest its
-centre. That is right when the inventory's cells are as large as the
+center. That is right when the inventory's cells are as large as the
 footprint's or larger. Choose the footprint grid with your inventories in
 mind:
 
@@ -134,16 +134,16 @@ Comparing with observations
 
    fig, ax = plt.subplots(figsize=(12, 4))
    observed["ch4_enhancement_ppm"].plot(ax=ax, label="Observed", color="k", alpha=0.7)
-   modelled["enhancement_ppm"].plot(ax=ax, label="Modelled enhancement", color="tab:red")
+   modeled["enhancement_ppm"].plot(ax=ax, label="Modeled enhancement", color="tab:red")
    ax.legend()
    ax.set_ylabel("CH4 enhancement (ppm)")
    plt.tight_layout()
 
 PYSTILT gives only the enhancement. Before comparing, subtract a background
-from the observations, or add one to the modelled enhancement. The
+from the observations, or add one to the modeled enhancement. The
 background is the concentration of the air arriving from outside the
 domain (see :doc:`../guides/background`).
 
 This is the forward half of an inversion. An inversion goes the other
-way. It adjusts the emissions until the modelled enhancements best match
+way. It adjusts the emissions until the modeled enhancements best match
 the observations.

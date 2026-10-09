@@ -34,7 +34,7 @@ Step 1: One receptor per hour
            time=t,
            latitude=40.7665,
            longitude=-111.8472,
-           altitude=21.0,         # inlet height above ground, in metres
+           altitude=21.0,         # inlet height above ground, in meters
        )
        for t in times
    ]
@@ -127,7 +127,7 @@ logarithmic.
 Next
 ----
 
-- Turn these footprints into modelled concentrations in
+- Turn these footprints into modeled concentrations in
   :doc:`flux_inversion`.
 - See :doc:`../guides/outputs` for more ways to load and plot results.
 - Run a whole year on a cluster: :doc:`../guides/slurm`.

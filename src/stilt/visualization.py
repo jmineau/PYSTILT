@@ -64,7 +64,7 @@ def _make_ax(
 
 def _cell_lonlat(foot: xr.DataArray) -> tuple[np.ndarray, np.ndarray]:
     """
-    Return the longitude and latitude of each footprint cell centre, as 2-D arrays.
+    Return the longitude and latitude of each footprint cell center, as 2-D arrays.
 
     A footprint on a projected grid (``x`` and ``y``) is converted with its
     grid's projection, from ``foot.stilt.grid``.

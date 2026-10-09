@@ -69,7 +69,7 @@ the ground on the University of Utah campus, at 18:00 UTC on 15 July 2023:
        time="2023-07-15 18:00",   # UTC
        longitude=-111.848,
        latitude=40.766,
-       altitude=10,               # metres above ground level
+       altitude=10,               # meters above ground level
    )
 
 Step 2: Follow the particles

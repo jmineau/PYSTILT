@@ -1,9 +1,9 @@
 """
-The column a retrieval would report for the modelled air.
+The column a retrieval would report for the modeled air.
 
 A retrieval is not equally sensitive at every level, and where it is not,
-it reports its prior. To compare a modelled column with a retrieved one,
-weight the modelled profile by the averaging kernel and add the prior
+it reports its prior. To compare a modeled column with a retrieved one,
+weight the modeled profile by the averaging kernel and add the prior
 where the retrieval did not see (Wu et al., 2018, GMD,
 doi:10.5194/gmd-11-4843-2018, as in X-STILT).
 """
@@ -23,7 +23,7 @@ def modelled_column(
     prior: ArrayLike | None = None,
 ) -> float:
     """
-    Return the column-average mole fraction a retrieval would report for the modelled air.
+    Return the column-average mole fraction a retrieval would report for the modeled air.
 
     With the retrieval's averaging kernel ``A``, pressure weights ``w``, and
     prior profile ``x_prior`` on the same levels, it is::
@@ -41,7 +41,7 @@ def modelled_column(
     Parameters
     ----------
     enhancement : float
-        The modelled enhancement of the column, weighted by the kernel and
+        The modeled enhancement of the column, weighted by the kernel and
         the pressure weights, in the units of ``prior``. A flux in
         µmol m⁻² s⁻¹ gives ppm; multiply by 1000 for ppb.
     background : float

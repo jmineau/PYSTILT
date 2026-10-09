@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 #: what a transport model's run must return. ``particle`` is the particle number
 #: (1 to ``numpar``), ``age`` the minutes since release (negative for a
 #: backward run), ``lon`` and ``lat`` the position in degrees, and ``zagl``
-#: the height above ground in metres. The reference page on the particle
+#: the height above ground in meters. The reference page on the particle
 #: table says what the other columns are.
 PARTICLE_SCHEMA = pa.schema(
     [
@@ -312,7 +312,7 @@ def add_release_heights(particles: pd.DataFrame, receptor: Receptor) -> pd.DataF
     multipoint receptor that is one of its points, and ``release_height`` is that
     point's altitude. For a column receptor it is inside one of the
     ``numpar`` slabs the column is split into, and ``release_height`` is that slab's
-    centre: the slab is what the particle stands for, not the random
+    center: the slab is what the particle stands for, not the random
     height inside it. A model that writes no release row, such as the
     bundled HYSPLIT, falls back to matching: a column's particles are
     released bottom to top in ``particle`` order, and a multipoint receptor's
@@ -352,7 +352,7 @@ def _height(rows: pd.DataFrame, receptor: Receptor) -> np.ndarray | None:
 
 def _column_release_heights(p: pd.DataFrame, receptor: ColumnReceptor) -> pd.Series:
     """
-    Return each row's release height for a column receptor: the centre of its particle's slab.
+    Return each row's release height for a column receptor: the center of its particle's slab.
 
     The column is split into ``numpar`` slabs of equal depth. With release
     rows, a particle's slab is the one its release height falls in;
@@ -366,10 +366,10 @@ def _column_release_heights(p: pd.DataFrame, receptor: ColumnReceptor) -> pd.Ser
     if released is None or height is None:
         return (p["particle"] - 0.5) * step + receptor.bottom
     slab = np.clip(np.floor((height - receptor.bottom) / step), 0, numpar - 1)
-    centre = dict(
+    center = dict(
         zip(released["particle"], receptor.bottom + (slab + 0.5) * step, strict=True)
     )
-    return pd.Series(p["particle"].to_numpy(), index=p.index).map(centre.get)
+    return pd.Series(p["particle"].to_numpy(), index=p.index).map(center.get)
 
 
 def _multipoint_release_heights(

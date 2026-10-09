@@ -32,7 +32,7 @@ Each reader returns a table of soundings with the columns in
    ``when`` is ``always``; ``kernel``, for every product with an averaging
    kernel (all but GGG ``.oof`` files); or ``optional``, when the product
    has it. Vertical arrays run from the surface upward, pressures are in
-   hPa, altitudes in metres above sea level, and azimuths in degrees
+   hPa, altitudes in meters above sea level, and azimuths in degrees
    clockwise from north toward the instrument or the sun.
 
 .. autosummary::
@@ -64,10 +64,10 @@ background from the soundings beside it (:doc:`/guides/plume_background`).
    stilt.observations.plumes.kernel_density
    stilt.observations.plumes.density_polygon
 
-The modelled column
+The modeled column
 -------------------
 
-The column a retrieval would report for the modelled air: the enhancement,
+The column a retrieval would report for the modeled air: the enhancement,
 the background, and the retrieval's prior where it is not sensitive.
 
 .. autosummary::

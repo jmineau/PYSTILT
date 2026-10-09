@@ -4,7 +4,7 @@ Tutorial: A Satellite Column, Start To Finish
 A tower measurement becomes a receptor directly. A satellite sounding
 takes a few more steps: choose which soundings to run, make a receptor for
 each, and weight each one's particles with its own averaging kernel. This
-tutorial goes from a TROPOMI methane orbit over Salt Lake City to modelled
+tutorial goes from a TROPOMI methane orbit over Salt Lake City to modeled
 and observed XCH4 enhancements. The same steps work for OCO-2, TCCON, and
 EM27/SUN; only the reader changes.
 
@@ -14,7 +14,7 @@ What you'll learn
 - how to read a product and choose the soundings to run
 - how to make a receptor and a kernel table for each sounding
 - how to weight the particles with the kernel and the pressure weights
-- how to compare modelled and observed enhancements
+- how to compare modeled and observed enhancements
 
 Starting point
 --------------
@@ -134,7 +134,7 @@ Step 6: Compare enhancements
 ----------------------------
 
 The footprint, weighted by the kernel and the pressure weights, gives the
-modelled enhancement for a flux field. The observed enhancement is the
+modeled enhancement for a flux field. The observed enhancement is the
 retrieved value minus a background. Here the background is the median of
 the soundings outside the plume of a forward run
 (:doc:`../guides/plume_background`); a mole-fraction field also works
@@ -160,7 +160,7 @@ the soundings outside the plume of a forward run
            continue
        rows.append({
            "sounding_id": rec.sounding_id,
-           "modelled": 1000 * float(foot.stilt.enhancement(flux).sum()),   # ppm to ppb
+           "modeled": 1000 * float(foot.stilt.enhancement(flux).sum()),   # ppm to ppb
            "observed": soundings.loc[rec.sounding_id, "value"] - background,
        })
    compare = pd.DataFrame(rows).set_index("sounding_id")
