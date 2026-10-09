@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.particles.correct_near_field" href="_api/stilt.particles.correct_near_field.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -1045,8 +1045,8 @@ float64.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code>, <code class="docutils literal notranslate"><span class="pre">zagl</span></code>, and the rest</p></td>
 <td><p>float64</p></td>
-<td><p>The columns <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> asked HYSPLIT for, plus <code class="docutils literal notranslate"><span class="pre">release_height</span></code> for a
-column or multipoint receptor.</p></td>
+<td><p>The columns <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> asked HYSPLIT for, plus <code class="docutils literal notranslate"><span class="pre">release_height</span></code>
+for a column or multipoint receptor.</p></td>
 </tr>
 </tbody>
 </table>
@@ -1217,7 +1217,7 @@ one layer, hour 0, stamped at the receptor time, which holds the whole run.</p>
 <li><p>The number of columns is <code class="docutils literal notranslate"><span class="pre">floor((xmax</span> <span class="pre">-</span> <span class="pre">xmin)</span> <span class="pre">/</span> <span class="pre">xres)</span></code>, and likewise
 for rows. A partial cell at the edge is dropped, so <code class="docutils literal notranslate"><span class="pre">xmax</span> <span class="pre">=</span> <span class="pre">-110.505</span></code>
 with <code class="docutils literal notranslate"><span class="pre">xmin</span> <span class="pre">=</span> <span class="pre">-113</span></code> and <code class="docutils literal notranslate"><span class="pre">xres</span> <span class="pre">=</span> <span class="pre">0.01</span></code> gives 249 columns.</p></li>
-<li><p>Column <code class="docutils literal notranslate"><span class="pre">i</span></code> is centred on <code class="docutils literal notranslate"><span class="pre">xmin</span> <span class="pre">+</span> <span class="pre">(i</span> <span class="pre">+</span> <span class="pre">0.5)</span> <span class="pre">*</span> <span class="pre">xres</span></code>, and row <code class="docutils literal notranslate"><span class="pre">j</span></code> on
+<li><p>Column <code class="docutils literal notranslate"><span class="pre">i</span></code> is centered on <code class="docutils literal notranslate"><span class="pre">xmin</span> <span class="pre">+</span> <span class="pre">(i</span> <span class="pre">+</span> <span class="pre">0.5)</span> <span class="pre">*</span> <span class="pre">xres</span></code>, and row <code class="docutils literal notranslate"><span class="pre">j</span></code> on
 <code class="docutils literal notranslate"><span class="pre">ymin</span> <span class="pre">+</span> <span class="pre">(j</span> <span class="pre">+</span> <span class="pre">0.5)</span> <span class="pre">*</span> <span class="pre">yres</span></code>. Row 0 is the southern edge.</p></li>
 <li><p>On a projected grid (<code class="docutils literal notranslate"><span class="pre">crs</span></code> other than <code class="docutils literal notranslate"><span class="pre">+proj=longlat</span></code>) the bounds are
 degrees and the resolution is in the projection’s units. Only the

@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Wind Error Statistics" href="wind_errors.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -557,7 +557,7 @@
 <p>A footprint gives the enhancement, the amount the fluxes inside the domain
 add to a measurement. The measurement is that enhancement on top of the
 background, the mole fraction of the air before it entered the domain. To
-compare a modelled value with an observed one, or to subtract the
+compare a modeled value with an observed one, or to subtract the
 background from observations for an inversion, you need both.</p>
 <p>Each back-trajectory ends where its air came from. Sample a mole-fraction
 field at every particle’s endpoint, average over the particles, and you
@@ -573,7 +573,7 @@ take the background from the soundings that a city’s plume did not reach
 dimensions, and optionally <code class="docutils literal notranslate"><span class="pre">time</span></code> and one vertical dimension. Name the
 vertical dimension after the particle column it should be matched against.
 Use <code class="docutils literal notranslate"><span class="pre">pres</span></code> for pressure levels in hPa or <code class="docutils literal notranslate"><span class="pre">zagl</span></code> for height above ground
-in metres. Both are in the particle table by default. You can also add a
+in meters. Both are in the particle table by default. You can also add a
 column of your own, such as height above sea level from <code class="docutils literal notranslate"><span class="pre">zagl</span> <span class="pre">+</span> <span class="pre">zsfc</span></code>
 (add <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> to <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> to get it).</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
@@ -600,7 +600,7 @@ and lair’s <code class="docutils literal notranslate"><span class="pre">Carbon
     <span class="n">bg</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">background</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
     <span class="n">enhancement</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
     <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;receptor&quot;</span><span class="p">:</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;background&quot;</span><span class="p">:</span> <span class="n">bg</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
-                 <span class="s2">&quot;enhancement&quot;</span><span class="p">:</span> <span class="n">enhancement</span><span class="p">,</span> <span class="s2">&quot;modelled&quot;</span><span class="p">:</span> <span class="n">bg</span><span class="o">.</span><span class="n">value</span> <span class="o">+</span> <span class="n">enhancement</span><span class="p">})</span>
+                 <span class="s2">&quot;enhancement&quot;</span><span class="p">:</span> <span class="n">enhancement</span><span class="p">,</span> <span class="s2">&quot;modeled&quot;</span><span class="p">:</span> <span class="n">bg</span><span class="o">.</span><span class="n">value</span> <span class="o">+</span> <span class="n">enhancement</span><span class="p">})</span>
 </pre></div>
 </div>
 <p>The background is weighted the way the footprint is, with the variant’s
@@ -628,7 +628,7 @@ kernel, and add it in your own code.</p>
 <p>Wind errors move the endpoints as well as the path near the surface. Where
 the background field has gradients, this adds to the transport error. Pass
 the field to <code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code>, and it works with each particle’s
-modelled mole fraction, enhancement plus background:</p>
+modeled mole fraction, enhancement plus background:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">err</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;hrrr-err&quot;</span><span class="p">)</span>
 <span class="n">result</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">transport_error</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">background</span><span class="o">=</span><span class="n">field</span><span class="p">)</span>
 <span class="n">result</span><span class="o">.</span><span class="n">enhancement</span> <span class="o">-</span> <span class="n">result</span><span class="o">.</span><span class="n">background</span>   <span class="c1"># the enhancement alone</span>

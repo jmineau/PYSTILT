@@ -160,10 +160,8 @@ three variants make 300 simulations. A variant may set:
    count later only adds realizations.
 
 ``model``
-   The transport model, ``hysplit`` unless set. A model in a package of
-   its own is named by its import path. The settings record the path as
-   written, so naming the same class by another path, such as a
-   re-export, gives another settings folder.
+   The transport model, ``hysplit`` unless set. A model from another
+   package is named by its import path (:doc:`../reference/execution`).
 
 Any other setting
    Transport settings (``numpar``, ``ziscale``, turbulence, wind errors)
@@ -277,10 +275,10 @@ Reruns skip finished work
 
 Before running, PYSTILT checks which simulations are finished and runs only
 the rest. A simulation is complete when the result files its variant makes
-exist in the output directory. Today that is the particle file, and the
-footprint file when the variant has a grid. If the particle file is missing, HYSPLIT runs again, and the
-footprints of every variant that shares those particles are remade from
-the new particles.
+exist in the output directory: the particle file, and the footprint file
+when the variant has a grid. If the particle file is missing, HYSPLIT runs
+again, and the footprints of every variant that shares those particles are
+remade from the new particles.
 
 So after an interruption, a failed Slurm task, or adding a variant, run the
 project again, and only what is missing runs. To see what is not finished

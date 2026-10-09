@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Coming From Another STILT" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -526,8 +526,10 @@
   <section id="coming-from-stilt-r">
 <h1>Coming From STILT-R<a class="headerlink" href="#coming-from-stilt-r" title="Link to this heading">#</a></h1>
 <p>PYSTILT does the same science as STILT-R, and its footprints match STILT-R’s
-cell by cell. The one exception is forward runs with <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> on, where
-PYSTILT fixes how the plume grows (see <a class="reference internal" href="../development.html#stilt-r-parity"><span class="std std-ref">STILT-R parity</span></a>).</p>
+cell by cell. Two cases differ on purpose, both in the near-field
+correction (<code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>): forward runs, where PYSTILT fixes how the plume
+grows, and a <code class="docutils literal notranslate"><span class="pre">veght</span></code> above 1, which PYSTILT reads as meters above ground,
+as HYSPLIT does (see <a class="reference internal" href="../development.html#stilt-r-parity"><span class="std std-ref">STILT-R parity</span></a>).</p>
 <p>What changes is where the settings live. Instead of editing variables in
 <code class="docutils literal notranslate"><span class="pre">run_stilt.r</span></code>, you write them in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> or pass them to
 <a class="reference internal" href="../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.init()</span></code></a>. Receptors go in <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p>
@@ -727,10 +729,11 @@ in Python with pandas or <a class="reference internal" href="../reference/_api/s
 the cells the particles reached. <code class="docutils literal notranslate"><span class="pre">foot.stilt.to_netcdf(path)</span></code> writes one
 as CF NetCDF with dimensions <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>, as STILT-R does, and
 keeps the receptor and the settings in it.</p>
-<p>A point or column receptor’s id has the same form as STILT-R’s simulation
-ID, and names its files: <code class="docutils literal notranslate"><span class="pre">date=2015-07-05/201507050000_-111.8472_40.7665_21.parquet</span></code>
-in each variant’s settings folder (see <a class="reference internal" href="../guides/projects.html"><span class="doc">Projects And Variants</span></a>). A
-simulation is that id under a variant, <code class="docutils literal notranslate"><span class="pre">201507050000_-111.8472_40.7665_21/hrrr</span></code>.</p>
+<p>A point receptor’s id has the same form as STILT-R’s simulation ID, and
+names its files in each variant’s settings folder:
+<code class="docutils literal notranslate"><span class="pre">date=2015-07-05/201507050000_-111.8472_40.7665_21.parquet</span></code> (see
+<a class="reference internal" href="../guides/projects.html"><span class="doc">Projects And Variants</span></a>). A column receptor’s id adds its bottom and top
+after the <code class="docutils literal notranslate"><span class="pre">X</span></code>.</p>
 </section>
 <section id="moving-a-project-over">
 <h2>Moving a project over<a class="headerlink" href="#moving-a-project-over" title="Link to this heading">#</a></h2>

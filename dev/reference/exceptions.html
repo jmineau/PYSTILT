@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.transport.hysplit.FailureReason" href="_api/stilt.transport.hysplit.FailureReason.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -958,8 +958,8 @@ cover fails as <code class="docutils literal notranslate"><span class="pre">MET_
 <h2>Empty footprints<a class="headerlink" href="#empty-footprints" title="Link to this heading">#</a></h2>
 <p><a class="reference internal" href="_api/stilt.exceptions.EmptyFootprint.html#stilt.exceptions.EmptyFootprint" title="stilt.exceptions.EmptyFootprint"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmptyFootprint</span></code></a> is a finished result, not a
 failure. <a class="reference internal" href="_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a> raises it when no particle
-reaches the grid, and its <code class="docutils literal notranslate"><span class="pre">reason</span></code> says why. A run stores the reason in
-an empty footprint file.</p>
+reaches the grid, and a run writes a footprint file with no rows, marked
+empty (<a class="reference internal" href="layout.html"><span class="doc">Output Layout</span></a>).</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.exceptions.EmptyFootprint.html#stilt.exceptions.EmptyFootprint" title="stilt.exceptions.EmptyFootprint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stilt.exceptions.EmptyFootprint</span></code></a></p></td>

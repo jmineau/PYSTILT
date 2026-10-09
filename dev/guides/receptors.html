@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="User Guide" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -590,7 +590,7 @@ release points at one time</p></td>
 </table>
 </div>
 <p>Every receptor also needs a <code class="docutils literal notranslate"><span class="pre">time</span></code> in UTC. A timezone-aware time is
-converted to UTC. Altitudes are in metres above ground level. Pass
+converted to UTC. Altitudes are in meters above ground level. Pass
 <code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code> to give them above mean sea level instead.</p>
 <section id="pointreceptor">
 <h2>PointReceptor<a class="headerlink" href="#pointreceptor" title="Link to this heading">#</a></h2>
@@ -602,7 +602,7 @@ sample at one height.</p>
     <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00:00&quot;</span><span class="p">,</span>
     <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
     <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
-    <span class="n">altitude</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>          <span class="c1"># metres above ground</span>
+    <span class="n">altitude</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>          <span class="c1"># meters above ground</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -728,16 +728,16 @@ the first nine get 21 each and the last gets 11.</p></li>
 </section>
 <section id="advanced-release-heights-for-multipoint-and-slant-receptors">
 <h2>Advanced: release heights for multipoint and slant receptors<a class="headerlink" href="#advanced-release-heights-for-multipoint-and-slant-receptors" title="Link to this heading">#</a></h2>
-<p>Vertical weighting needs each particle’s release height (<code class="docutils literal notranslate"><span class="pre">release_height</span></code>). HYSPLIT
-does not record which release point a particle came from, so PYSTILT works
+<p>Vertical weighting needs each particle’s release height, the
+<code class="docutils literal notranslate"><span class="pre">release_height</span></code> column of the particles. HYSPLIT does not record which release point a particle came from, so PYSTILT works
 it out from the first row HYSPLIT writes for the particle. With the bundled
 HYSPLIT build, that row comes one timestep after release. By then the wind
-has moved the particle a few hundred metres, which can be more than the
+has moved the particle a few hundred meters, which can be more than the
 spacing between the points of a slant column.</p>
 <p>PYSTILT recovers release heights in this order:</p>
 <ol class="arabic simple">
-<li><p>If the HYSPLIT build writes rows at release time (<code class="docutils literal notranslate"><span class="pre">t</span> <span class="pre">=</span> <span class="pre">0</span></code>), it uses
-them. The result is exact.</p></li>
+<li><p>If the HYSPLIT build writes rows at release time (<code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>), it
+uses them. The result is exact.</p></li>
 <li><p>If the release altitudes are all different, as they are in a slant
 column, it matches particles by height. Height changes much less than
 horizontal position over one timestep, so this is accurate to about
@@ -745,14 +745,14 @@ horizontal position over one timestep, so this is accurate to about
 <li><p>Otherwise it matches by horizontal position. It warns when the release
 points are closer than 1 km, because the match cannot be trusted there.</p></li>
 </ol>
-<p>A HYSPLIT change that writes <code class="docutils literal notranslate"><span class="pre">t</span> <span class="pre">=</span> <span class="pre">0</span></code> rows has been sent to NOAA ARL. Until
+<p>A HYSPLIT change that writes release-time rows has been sent to NOAA ARL. Until
 a published build includes it, you can point PYSTILT at your own build:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># config.yaml</span>
 <span class="nt">exe_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/hysplit/exec</span><span class="w">    </span><span class="c1"># directory containing hycs_std</span>
 </pre></div>
 </div>
-<p>The setting is saved with each trajectory, so you can tell which build
-produced it.</p>
+<p>The build’s version is saved with the particles, so you can tell which
+build made them.</p>
 </section>
 <section id="working-with-receptors-in-code">
 <h2>Working with receptors in code<a class="headerlink" href="#working-with-receptors-in-code" title="Link to this heading">#</a></h2>

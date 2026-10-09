@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Your First Footprint" href="quickstart.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -537,8 +537,8 @@ other models in this format.</p>
 Applying it weights particles released at each height accordingly.</p>
 </dd>
 <dt id="term-backend">backend<a class="headerlink" href="#term-backend" title="Link to this term">#</a></dt><dd><p>Where the simulations run. The choices are <code class="docutils literal notranslate"><span class="pre">local</span></code> (your computer)
-and <code class="docutils literal notranslate"><span class="pre">slurm</span></code> (an HPC cluster).
-Set it in the <code class="docutils literal notranslate"><span class="pre">execution</span></code> section of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>. See
+and <code class="docutils literal notranslate"><span class="pre">slurm</span></code> (an HPC cluster). Set it in the <code class="docutils literal notranslate"><span class="pre">execution</span></code> section
+of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>. See
 <a class="reference internal" href="../guides/running.html"><span class="doc">Running</span></a>.</p>
 </dd>
 <dt id="term-compute-root">compute root<a class="headerlink" href="#term-compute-root" title="Link to this term">#</a></dt><dd><p>The folder the workdirs are made in, usually fast local disk: the
@@ -551,8 +551,8 @@ variant with no overrides runs them as they are.</p>
 </dd>
 <dt id="term-empty-footprint">empty footprint<a class="headerlink" href="#term-empty-footprint" title="Link to this term">#</a></dt><dd><p>A simulation that ran fine but whose particles never touched the
 footprint grid, for example because the grid is too small or is not
-upwind. PYSTILT records it as a footprint file with no cells and the
-reason inside, and counts the simulation as finished.</p>
+upwind. PYSTILT writes a footprint file with no cells, marked empty,
+and counts the simulation as complete.</p>
 </dd>
 <dt id="term-footprint">footprint<a class="headerlink" href="#term-footprint" title="Link to this term">#</a></dt><dd><p>A map of how much each surface grid cell influenced a measurement.
 Each value is the concentration change at the receptor per unit of
@@ -634,10 +634,9 @@ variant, <code class="docutils literal notranslate"><span class="pre">2023071518
 <dt id="term-settings-folder">settings folder<a class="headerlink" href="#term-settings-folder" title="Link to this term">#</a></dt><dd><p>One folder of results in the <a class="reference internal" href="#term-output-directory"><span class="xref std std-term">output directory</span></a>: everything made
 with one set of settings, named after the variant that first made it
 and a short code computed from the settings, such as
-<code class="docutils literal notranslate"><span class="pre">settings=hrrr-b2399e</span></code>. A
-changed setting makes a new folder and never overwrites one, and
-projects with the same settings share a folder. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code>
-lists them.</p>
+<code class="docutils literal notranslate"><span class="pre">settings=hrrr-b2399e</span></code>. A changed setting makes a new folder and
+never overwrites one, and projects with the same settings share a
+folder. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> lists them.</p>
 </dd>
 <dt id="term-simulation">simulation<a class="headerlink" href="#term-simulation" title="Link to this term">#</a></dt><dd><p>One receptor run under one <a class="reference internal" href="#term-variant"><span class="xref std std-term">variant</span></a>: one set of particles and
 at most one footprint. A project with 100 receptors and 3 variants has

@@ -25,7 +25,7 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 - :doc:`outputs`: load and plot footprints and particles
 - :doc:`aggregation`: sum footprints over counties, hexagons, or sources,
   and many at once into a Jacobian
-- :doc:`transport_error`: the modelled enhancement from a flux field, and
+- :doc:`transport_error`: the modeled enhancement from a flux field, and
   its transport uncertainty
 - :doc:`wind_errors`: the wind-error statistics a transport-error run needs
 - :doc:`background`: the mole fraction at the trajectory endpoints, as a
@@ -44,7 +44,7 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 - :doc:`plume_background`: a background from the soundings a forward-run
   plume did not reach
 - :doc:`../tutorials/satellite_column`: from satellite soundings to
-  receptors, kernels, and modelled enhancements
+  receptors, kernels, and modeled enhancements
 
 **HYSPLIT**
 

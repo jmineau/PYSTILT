@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../../../_static/documentation_options.js?v=8793c509"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -497,11 +497,11 @@
                   
   <h1>Source code for stilt.observations.columns</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">The column a retrieval would report for the modelled air.</span>
+<span class="sd">The column a retrieval would report for the modeled air.</span>
 
 <span class="sd">A retrieval is not equally sensitive at every level, and where it is not,</span>
-<span class="sd">it reports its prior. To compare a modelled column with a retrieved one,</span>
-<span class="sd">weight the modelled profile by the averaging kernel and add the prior</span>
+<span class="sd">it reports its prior. To compare a modeled column with a retrieved one,</span>
+<span class="sd">weight the modeled profile by the averaging kernel and add the prior</span>
 <span class="sd">where the retrieval did not see (Wu et al., 2018, GMD,</span>
 <span class="sd">doi:10.5194/gmd-11-4843-2018, as in X-STILT).</span>
 <span class="sd">&quot;&quot;&quot;</span>
@@ -523,7 +523,7 @@
     <span class="n">prior</span><span class="p">:</span> <span class="n">ArrayLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return the column-average mole fraction a retrieval would report for the modelled air.</span>
+<span class="sd">    Return the column-average mole fraction a retrieval would report for the modeled air.</span>
 
 <span class="sd">    With the retrieval&#39;s averaging kernel ``A``, pressure weights ``w``, and</span>
 <span class="sd">    prior profile ``x_prior`` on the same levels, it is::</span>
@@ -541,7 +541,7 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    enhancement : float</span>
-<span class="sd">        The modelled enhancement of the column, weighted by the kernel and</span>
+<span class="sd">        The modeled enhancement of the column, weighted by the kernel and</span>
 <span class="sd">        the pressure weights, in the units of ``prior``. A flux in</span>
 <span class="sd">        µmol m⁻² s⁻¹ gives ppm; multiply by 1000 for ppb.</span>
 <span class="sd">    background : float</span>

@@ -5,7 +5,7 @@ A transport-error run (:doc:`transport_error`) needs four numbers that
 describe the meteorology's wind errors. They are the standard deviation of
 the error and how long, how high, and how far it stays correlated.
 `Lin and Gerbig (2005) <https://doi.org/10.1029/2004GL021127>`_ derive
-them by comparing the analysed wind with observed winds. This page does the
+them by comparing the analyzed wind with observed winds. This page does the
 same for your meteorology and region. Derive your own values instead of
 copying them from another analysis or place. The correlation scales decide
 whether the perturbation has any effect at all.
@@ -13,7 +13,7 @@ whether the perturbation has any effect at all.
 What the numbers are
 --------------------
 
-For each wind component, the error at an observation is the analysed wind
+For each wind component, the error at an observation is the analyzed wind
 minus the observed wind. Its standard deviation is ``siguverr``.
 
 The correlation scales come from the variogram. At a separation ``h``, the
@@ -43,8 +43,8 @@ Step 1: the errors
 Sample the meteorology at the observations with
 `arlmet <https://github.com/jmineau/arl-met>`_. Winds in ARL files on
 projected grids are stored relative to the grid, so ask for earth-relative
-components (``earth_relative=True``, arlmet 0.1.0a8 or later). Radiosondes
-report geopotential height, so sample in metres above sea level:
+components (``earth_relative=True``). Radiosondes
+report geopotential height, so sample in meters above sea level:
 
 .. code-block:: python
 
@@ -124,7 +124,7 @@ Step 2: the scales
 takes the errors, the coordinate the separation is measured in, and a
 ``group`` label. Only points with the same label are paired. The coordinate
 can also be two columns of longitude and latitude, and the separation is
-then the great-circle distance in kilometres.
+then the great-circle distance in kilometers.
 :func:`~stilt.meteorology.fit_variogram` fits the exponential model with
 σ fixed.
 

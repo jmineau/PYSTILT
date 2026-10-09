@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Slant Columns" href="slant_columns.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -568,8 +568,8 @@ transport needs a lifetime.</p>
 from, and the project directory, and returns a new table. List transforms in
 <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, as a default or per variant, or pass them to
 <a class="reference internal" href="../reference/_api/stilt.Simulation.calc_footprint.html#stilt.Simulation.calc_footprint" title="stilt.Simulation.calc_footprint"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Simulation.calc_footprint()</span></code></a>. They run once, in order,
-starting from the unweighted particles. The transforms listed in the
-footprint config are recorded in the footprint’s netCDF file.</p>
+starting from the unweighted particles. Each footprint file records the
+transforms it was made with.</p>
 <section id="built-in-transforms">
 <h2>Built-in transforms<a class="headerlink" href="#built-in-transforms" title="Link to this heading">#</a></h2>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">transforms</span><span class="p">:</span>
@@ -583,8 +583,8 @@ footprint config are recorded in the footprint’s netCDF file.</p>
 </div>
 <dl>
 <dt><code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> (<a class="reference internal" href="../reference/_api/stilt.transforms.AveragingKernel.html#stilt.transforms.AveragingKernel" title="stilt.transforms.AveragingKernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transforms.AveragingKernel</span></code></a>)</dt><dd><p>Multiplies each particle’s <code class="docutils literal notranslate"><span class="pre">foot</span></code> by the kernel, interpolated to the
-particle’s release height, <code class="docutils literal notranslate"><span class="pre">release_height</span></code>. The <code class="docutils literal notranslate"><span class="pre">levels</span></code> are in metres in the
-receptor’s vertical reference: above ground, or above sea level for a
+particle’s release height (<code class="docutils literal notranslate"><span class="pre">release_height</span></code>). The <code class="docutils literal notranslate"><span class="pre">levels</span></code> are in
+meters in the receptor’s vertical reference: above ground, or above sea level for a
 receptor built with <code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code>. For a kernel on pressure
 levels (hPa), set <code class="docutils literal notranslate"><span class="pre">coordinate:</span> <span class="pre">pres</span></code>. Outside <code class="docutils literal notranslate"><span class="pre">levels</span></code> the kernel
 keeps its end values. Fold any instrument-specific factor, such as
@@ -598,7 +598,7 @@ weight to the thin air near the column top.</p>
 fits a hypsometric curve, <span class="math notranslate nohighlight">\(\ln p = b + a z\)</span>, to the particles’
 heights and pressures at their first output step. It evaluates the curve
 at each release height to get the release pressure. Each release height
-then stands for the slab of air centred on it, with the ground closing
+then stands for the slab of air centered on it, with the ground closing
 the lowest slab. X-STILT gives each particle the layer below it instead,
 which leaves a particle released at the surface almost no weight.</p>
 <p>A multipoint receptor releases several particles from each point. They

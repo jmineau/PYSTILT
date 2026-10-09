@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Summing Footprints: Areas And The Jacobian" href="aggregation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -556,12 +556,12 @@
   <section id="transport-error">
 <h1>Transport Error<a class="headerlink" href="#transport-error" title="Link to this heading">#</a></h1>
 <p>A footprint says where a measurement’s air came from, according to one
-meteorological analysis. The analysis has wind errors, so the modelled
+meteorological analysis. The analysis has wind errors, so the modeled
 enhancement has an error too. PYSTILT estimates it with the method of
 <a class="reference external" href="https://doi.org/10.1029/2004GL021127">Lin and Gerbig (2005)</a>. You run
 the particles a second time with a random wind error added, one that has
 the statistics of the meteorology’s errors. The perturbed particles spread
-further. The extra spread of the modelled enhancement across the particles
+further. The extra spread of the modeled enhancement across the particles
 is the transport-error variance. An inversion uses it as the transport part
 of each observation’s model-data mismatch.</p>
 <section id="run-with-wind-errors">
@@ -648,12 +648,12 @@ unperturbed run, so the noise of the estimate falls by at most a factor of
 is far below <code class="docutils literal notranslate"><span class="pre">noise</span></code>, check the wind-error scales instead.</p>
 </section>
 </section>
-<section id="the-modelled-enhancement">
-<h2>The modelled enhancement<a class="headerlink" href="#the-modelled-enhancement" title="Link to this heading">#</a></h2>
+<section id="the-modeled-enhancement">
+<h2>The modeled enhancement<a class="headerlink" href="#the-modeled-enhancement" title="Link to this heading">#</a></h2>
 <p>The enhancement a footprint predicts for a surface flux field is the
 footprint times the flux, summed over the grid. <code class="docutils literal notranslate"><span class="pre">flux</span></code> is an
 <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> on <code class="docutils literal notranslate"><span class="pre">lat</span></code> and <code class="docutils literal notranslate"><span class="pre">lon</span></code>, with an optional <code class="docutils literal notranslate"><span class="pre">time</span></code>
-dimension. It is sampled at the footprint’s cell centres, and footprint
+dimension. It is sampled at the footprint’s cell centers, and footprint
 cells outside the flux field add nothing. A flux with finer cells than the
 footprint’s must be put on the footprint grid first
 (<a class="reference internal" href="../tutorials/flux_inversion.html"><span class="doc">Tutorial: From Footprints To Concentrations</span></a> says how).</p>
@@ -690,7 +690,7 @@ error covariance of an inversion. If you set up the inversion with fips,
 observation (the footprint matrix times the prior covariance times its
 transpose). The square root of its diagonal is each observation’s emission
 error. Add it in quadrature to the transport and retrieval errors to get
-the total error of a modelled value.</p>
+the total error of a modeled value.</p>
 </section>
 <section id="the-transport-error">
 <h2>The transport error<a class="headerlink" href="#the-transport-error" title="Link to this heading">#</a></h2>
@@ -708,7 +708,7 @@ variant and the flux field:</p>
 <span class="n">errors</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">result.variance</span></code> is the transport-error variance of the modelled
+<p><code class="docutils literal notranslate"><span class="pre">result.variance</span></code> is the transport-error variance of the modeled
 enhancement, in the enhancement’s units squared. <code class="docutils literal notranslate"><span class="pre">result.sd</span></code> is its
 square root. The particles are weighted the way the footprint weights
 them, with the variant’s transforms: the averaging kernel (including one
@@ -740,7 +740,7 @@ usually within its noise.</p>
 <p><code class="docutils literal notranslate"><span class="pre">result.levels</span></code> shows the calculation for each release level. A point
 receptor has one level.</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">height</span></code> is the level’s mean release height in metres, and <code class="docutils literal notranslate"><span class="pre">n</span></code> its
+<li><p><code class="docutils literal notranslate"><span class="pre">height</span></code> is the level’s mean release height in meters, and <code class="docutils literal notranslate"><span class="pre">n</span></code> its
 number of particles.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">weight</span></code> is the level’s share of the particles.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mean_orig</span></code> and <code class="docutils literal notranslate"><span class="pre">mean_err</span></code> are the mean enhancement per particle
@@ -811,13 +811,13 @@ no such averaging and can change by tens of percent. Test it for your own
 receptors.</p>
 <p>The spread between these runs is a sensitivity. To turn it into an error
 you need to know how far the meteorology’s mixed-layer height is from the
-real one. One way is to compare it with radiosonde profiles, analysed with
+real one. One way is to compare it with radiosonde profiles, analyzed with
 the bulk Richardson method HYSPLIT uses by default (<code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code>).</p>
 </section>
 <section id="notes">
 <h2>Notes<a class="headerlink" href="#notes" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p>Lin and Gerbig derived their scales from variograms of analysed minus
+<li><p>Lin and Gerbig derived their scales from variograms of analyzed minus
 radiosonde winds, and got about 120 km, 4 hours, and 900 m for an 80 km
 analysis. For a 3 km model such as HRRR the horizontal scale is much
 shorter (<a class="reference internal" href="wind_errors.html"><span class="doc">Wind Error Statistics</span></a>).</p></li>
@@ -887,7 +887,7 @@ falls below <code class="docutils literal notranslate"><span class="pre">1/sqrt(
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#several-realizations">Several realizations</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-modelled-enhancement">The modelled enhancement</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-modeled-enhancement">The modeled enhancement</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-emission-error">The emission error</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-transport-error">The transport error</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#is-the-estimate-meaningful">Is the estimate meaningful?</a></li>

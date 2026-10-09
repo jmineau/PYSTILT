@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Output Layout" href="layout.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -1499,13 +1499,13 @@ from, and a variant may override any of them.</p>
 </section>
 <section id="config-objects">
 <h2>Config objects<a class="headerlink" href="#config-objects" title="Link to this heading">#</a></h2>
-<p>A config is what you write. <code class="docutils literal notranslate"><span class="pre">project.variants</span></code> resolves each declared
-variant into a <a class="reference internal" href="_api/stilt.config.Variant.html#stilt.config.Variant" title="stilt.config.Variant"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.config.Variant</span></code></a>: its transport settings checked by the
-model’s config class, its realizations expanded, and what the file alone
-does not say, the grid of a footprint given by a geometry and the transport
-model build.
-The <code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code> environment variable sets the scratch
-directory HYSPLIT runs in. It never changes a result.</p>
+<p>A config is what you write. <code class="docutils literal notranslate"><span class="pre">project.variants</span></code> turns each declared
+variant into a <a class="reference internal" href="_api/stilt.config.Variant.html#stilt.config.Variant" title="stilt.config.Variant"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.config.Variant</span></code></a>: its transport settings
+checked by the model’s config class, and what the file alone does not
+say, such as the grid of a footprint given by a geometry and the transport
+model build. A variant with <code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">N</span></code> stays one variant.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code> environment variable sets the compute root,
+where each run’s workdir is made. It never changes a result.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.ProjectConfig.html#stilt.ProjectConfig" title="stilt.ProjectConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ProjectConfig</span></code></a></p></td>
@@ -1534,7 +1534,9 @@ whose <code class="docutils literal notranslate"><span class="pre">config.yaml</
 They are flat, top-level keys. HYSPLIT’s are in
 <a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.html#stilt.transport.hysplit.HysplitConfig" title="stilt.transport.hysplit.HysplitConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transport.hysplit.HysplitConfig</span></code></a>, under HYSPLIT’s names (see
 <a class="reference internal" href="hysplit.html"><span class="doc">HYSPLIT Integration</span></a>). A variant that names another <code class="docutils literal notranslate"><span class="pre">model</span></code> gives that model’s
-parameters itself and inherits only the met and the footprint settings.</p>
+parameters itself, and inherits the met, the footprint settings, and the
+parameters PYSTILT reads itself (<code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">seed</span></code>, <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">veght</span></code>).</p>
 </section>
 <section id="geometry-specifications">
 <h2>Geometry specifications<a class="headerlink" href="#geometry-specifications" title="Link to this heading">#</a></h2>

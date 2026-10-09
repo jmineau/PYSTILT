@@ -67,13 +67,14 @@ The keys under ``execution:`` (:doc:`../guides/running`).
 Config objects
 --------------
 
-A config is what you write. ``project.variants`` resolves each declared
-variant into a :class:`stilt.config.Variant`: its transport settings checked by the
-model's config class, its realizations expanded, and what the file alone
-does not say, the grid of a footprint given by a geometry and the transport
-model build.
-The ``PYSTILT_COMPUTE_ROOT`` environment variable sets the scratch
-directory HYSPLIT runs in. It never changes a result.
+A config is what you write. ``project.variants`` turns each declared
+variant into a :class:`stilt.config.Variant`: its transport settings
+checked by the model's config class, and what the file alone does not
+say, such as the grid of a footprint given by a geometry and the transport
+model build. A variant with ``realizations: N`` stays one variant.
+
+The ``PYSTILT_COMPUTE_ROOT`` environment variable sets the compute root,
+where each run's workdir is made. It never changes a result.
 
 .. autosummary::
    :toctree: _api
@@ -93,7 +94,9 @@ whose ``config.yaml`` name is the ``model`` field (``hysplit`` unless set).
 They are flat, top-level keys. HYSPLIT's are in
 :class:`stilt.transport.hysplit.HysplitConfig`, under HYSPLIT's names (see
 :doc:`hysplit`). A variant that names another ``model`` gives that model's
-parameters itself and inherits only the met and the footprint settings.
+parameters itself, and inherits the met, the footprint settings, and the
+parameters PYSTILT reads itself (``n_hours``, ``seed``, ``hnf_plume``, and
+``veght``).
 
 
 Geometry specifications

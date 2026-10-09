@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../../../_static/documentation_options.js?v=8793c509"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -647,7 +647,7 @@
 <span class="sd">    Location id of a multipoint receptor, ``&quot;multi_&lt;hash&gt;&quot;`` (``msl`` appended above sea level).</span>
 
 <span class="sd">    The hash covers the sorted points, with longitudes and latitudes rounded</span>
-<span class="sd">    to 5 decimals and altitudes to 0.01 m. A whole-metre altitude hashes as</span>
+<span class="sd">    to 5 decimals and altitudes to 0.01 m. A whole-meter altitude hashes as</span>
 <span class="sd">    its integer, so ids made before heights were kept to 0.01 m still match.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">lons</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
@@ -966,7 +966,7 @@
     <span class="n">longitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Longitude in degrees, from -180 to 180.&quot;</span><span class="p">)</span>
     <span class="n">latitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Latitude in degrees, from -90 to 90.&quot;</span><span class="p">)</span>
     <span class="n">altitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Release height in metres, above ground or sea level (``altitude_ref``).&quot;</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Release height in meters, above ground or sea level (``altitude_ref``).&quot;</span>
     <span class="p">)</span>
 
     <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;after&quot;</span><span class="p">)</span>
@@ -1016,9 +1016,9 @@
     <span class="n">longitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Longitude in degrees, from -180 to 180.&quot;</span><span class="p">)</span>
     <span class="n">latitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Latitude in degrees, from -90 to 90.&quot;</span><span class="p">)</span>
     <span class="n">bottom</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Bottom of the column in metres. Must be less than ``top``.&quot;</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Bottom of the column in meters. Must be less than ``top``.&quot;</span>
     <span class="p">)</span>
-    <span class="n">top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Top of the column in metres.&quot;</span><span class="p">)</span>
+    <span class="n">top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Top of the column in meters.&quot;</span><span class="p">)</span>
 
     <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;after&quot;</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ColumnReceptor</span><span class="p">:</span>
@@ -1095,7 +1095,7 @@
     <span class="n">latitudes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Latitude of each point in degrees, from -90 to 90.&quot;</span>
     <span class="p">)</span>
-    <span class="n">altitudes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Height of each point in metres.&quot;</span><span class="p">)</span>
+    <span class="n">altitudes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Height of each point in meters.&quot;</span><span class="p">)</span>
 
     <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;longitudes&quot;</span><span class="p">,</span> <span class="s2">&quot;latitudes&quot;</span><span class="p">,</span> <span class="s2">&quot;altitudes&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
     <span class="nd">@classmethod</span>
@@ -1128,7 +1128,7 @@
 <span class="sd">        Location id, ``&quot;multi_&lt;hash&gt;&quot;``, ending in ``msl`` above sea level.</span>
 
 <span class="sd">        The hash covers the sorted points, with longitudes and latitudes</span>
-<span class="sd">        rounded to 5 decimals and altitudes to 0.01 m. A whole-metre</span>
+<span class="sd">        rounded to 5 decimals and altitudes to 0.01 m. A whole-meter</span>
 <span class="sd">        altitude hashes as its integer.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">_multipoint_location</span><span class="p">(</span>

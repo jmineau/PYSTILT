@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../../../_static/documentation_options.js?v=8793c509"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -532,7 +532,7 @@
 <span class="c1">#: what a transport model&#39;s run must return. ``particle`` is the particle number</span>
 <span class="c1">#: (1 to ``numpar``), ``age`` the minutes since release (negative for a</span>
 <span class="c1">#: backward run), ``lon`` and ``lat`` the position in degrees, and ``zagl``</span>
-<span class="c1">#: the height above ground in metres. The reference page on the particle</span>
+<span class="c1">#: the height above ground in meters. The reference page on the particle</span>
 <span class="c1">#: table says what the other columns are.</span>
 <span class="n">PARTICLE_SCHEMA</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">(</span>
     <span class="p">[</span>
@@ -824,7 +824,7 @@
 <span class="sd">    multipoint receptor that is one of its points, and ``release_height`` is that</span>
 <span class="sd">    point&#39;s altitude. For a column receptor it is inside one of the</span>
 <span class="sd">    ``numpar`` slabs the column is split into, and ``release_height`` is that slab&#39;s</span>
-<span class="sd">    centre: the slab is what the particle stands for, not the random</span>
+<span class="sd">    center: the slab is what the particle stands for, not the random</span>
 <span class="sd">    height inside it. A model that writes no release row, such as the</span>
 <span class="sd">    bundled HYSPLIT, falls back to matching: a column&#39;s particles are</span>
 <span class="sd">    released bottom to top in ``particle`` order, and a multipoint receptor&#39;s</span>
@@ -865,7 +865,7 @@
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_column_release_heights</span><span class="p">(</span><span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">ColumnReceptor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return each row&#39;s release height for a column receptor: the centre of its particle&#39;s slab.</span>
+<span class="sd">    Return each row&#39;s release height for a column receptor: the center of its particle&#39;s slab.</span>
 
 <span class="sd">    The column is split into ``numpar`` slabs of equal depth. With release</span>
 <span class="sd">    rows, a particle&#39;s slab is the one its release height falls in;</span>
@@ -879,10 +879,10 @@
     <span class="k">if</span> <span class="n">released</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">height</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">step</span> <span class="o">+</span> <span class="n">receptor</span><span class="o">.</span><span class="n">bottom</span>
     <span class="n">slab</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="n">height</span> <span class="o">-</span> <span class="n">receptor</span><span class="o">.</span><span class="n">bottom</span><span class="p">)</span> <span class="o">/</span> <span class="n">step</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">numpar</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-    <span class="n">centre</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">center</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
         <span class="nb">zip</span><span class="p">(</span><span class="n">released</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">],</span> <span class="n">receptor</span><span class="o">.</span><span class="n">bottom</span> <span class="o">+</span> <span class="p">(</span><span class="n">slab</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">step</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">index</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">centre</span><span class="o">.</span><span class="n">get</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">index</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">center</span><span class="o">.</span><span class="n">get</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_multipoint_release_heights</span><span class="p">(</span>

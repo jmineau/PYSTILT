@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Checking A Run" href="checking.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -695,14 +695,10 @@ what a transport model must write.</p>
 <span class="n">meta</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">settings</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">met_files</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">realization</span>
 </pre></div>
 </div>
-<p>The file holds the receptor, the meteorology files it was made with, and
-the run’s settings, the same ones its folder’s <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> holds:
-the transport model’s settings, the met’s, the model build, and whether
-it is an ensemble (<code class="docutils literal notranslate"><span class="pre">ensemble:</span> <span class="pre">true</span></code>, with the base seed). <code class="docutils literal notranslate"><span class="pre">realization</span></code>
-is which realization of an ensemble the file is, or <code class="docutils literal notranslate"><span class="pre">None</span></code> for a single
-run.
-<code class="docutils literal notranslate"><span class="pre">stilt.identity.transport_from_settings(settings)</span></code>
-rebuilds the transport model’s config from them.</p>
+<p>The file holds the receptor, the meteorology files the run read, and the
+settings it ran with, the same ones as its folder’s <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code>.
+<code class="docutils literal notranslate"><span class="pre">realization</span></code> is which realization of an ensemble the file is, or
+<code class="docutils literal notranslate"><span class="pre">None</span></code> for a single run. <a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a> lists every key.</p>
 </section>
 <section id="empty-footprints">
 <h2>Empty footprints<a class="headerlink" href="#empty-footprints" title="Link to this heading">#</a></h2>
@@ -739,12 +735,11 @@ project to load its results:</p>
 <code class="docutils literal notranslate"><span class="pre">receptor</span></code> and <code class="docutils literal notranslate"><span class="pre">variant</span></code> columns works as a selection, such as your
 observations merged with <code class="docutils literal notranslate"><span class="pre">sims</span></code>, or a polars or pyarrow table, and so
 does a boolean mask over <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>.</p>
-<p>The footprints of one variant come back as one <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a>.
-Receptors at different times line up on <code class="docutils literal notranslate"><span class="pre">hour</span></code>, the hours after each
-receptor’s time, so a backward run’s first hour is -1. One footprint
-(<code class="docutils literal notranslate"><span class="pre">sim.footprint</span></code>) has <code class="docutils literal notranslate"><span class="pre">time</span></code> in place of <code class="docutils literal notranslate"><span class="pre">hour</span></code>, its dimensions
-<code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>. The <code class="docutils literal notranslate"><span class="pre">time</span></code>
-coordinate says when each of a receptor’s hours starts:</p>
+<p>The footprints of one variant come back as one <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a>
+with dimensions <code class="docutils literal notranslate"><span class="pre">(receptor,</span> <span class="pre">hour,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>. Receptors at different
+times cannot share a time axis, so they line up on <code class="docutils literal notranslate"><span class="pre">hour</span></code>: the hours
+after each receptor’s time, where a backward run’s first hour is -1. The
+<code class="docutils literal notranslate"><span class="pre">time</span></code> coordinate gives the clock time each receptor’s hours start:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;hour&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>   <span class="c1"># the mean footprint</span>
 <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>                     <span class="c1"># one receptor&#39;s hours</span>
 <span class="n">footprints</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>                     <span class="c1"># and when they start</span>
@@ -754,9 +749,9 @@ coordinate says when each of a receptor’s hours starts:</p>
 day’s receptors at a time, so opening a month of footprints is quick.
 Loading them all at once takes about 35 MB per footprint on a 300 by 300
 grid over 24 hours. Select one variant first, as above; a selection of
-several raises an error. Receptors whose footprint
-is empty are listed in <code class="docutils literal notranslate"><span class="pre">footprints.attrs[&quot;empty&quot;]</span></code>, and those not run yet
-in <code class="docutils literal notranslate"><span class="pre">footprints.attrs[&quot;missing&quot;]</span></code>.</p>
+several raises an error. Receptors whose footprint is empty are listed in
+<code class="docutils literal notranslate"><span class="pre">footprints.attrs[&quot;empty&quot;]</span></code>, and those not run yet in
+<code class="docutils literal notranslate"><span class="pre">footprints.attrs[&quot;missing&quot;]</span></code>.</p>
 <p>For one receptor, <code class="docutils literal notranslate"><span class="pre">project.simulation(rid,</span> <span class="pre">&quot;hrrr&quot;).footprint</span></code> is its
 footprint as a <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> with absolute times, which the
 <code class="docutils literal notranslate"><span class="pre">foot.stilt</span></code> methods work on.</p>
@@ -791,17 +786,11 @@ site:</p>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">status()</span></code> adds a <code class="docutils literal notranslate"><span class="pre">particles</span></code> and a <code class="docutils literal notranslate"><span class="pre">footprint</span></code> column that say
-whether each output exists. They are blank where the variant does not make
-that output. The <code class="docutils literal notranslate"><span class="pre">state</span></code> column is <code class="docutils literal notranslate"><span class="pre">complete</span></code>, <code class="docutils literal notranslate"><span class="pre">failed</span></code>,
-<code class="docutils literal notranslate"><span class="pre">interrupted</span></code> (the run started and was stopped before it finished, by a
-time limit, preemption, or a killed process), or <code class="docutils literal notranslate"><span class="pre">pending</span></code> (not run
-yet). A run that stops partway leaves a log saying when and where it
-started. For a failed
-simulation, <code class="docutils literal notranslate"><span class="pre">step</span></code>, <code class="docutils literal notranslate"><span class="pre">reason</span></code>, and <code class="docutils literal notranslate"><span class="pre">message</span></code> say why. <code class="docutils literal notranslate"><span class="pre">status()</span></code>
-reads folder listings and the failure records of failed simulations, and
-opens no result file, so it is quick on a large project. From the command
-line, <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> prints the totals, per variant when there are
-several.</p>
+whether each result exists, and a <code class="docutils literal notranslate"><span class="pre">state</span></code> column: <code class="docutils literal notranslate"><span class="pre">complete</span></code>,
+<code class="docutils literal notranslate"><span class="pre">failed</span></code>, <code class="docutils literal notranslate"><span class="pre">interrupted</span></code>, or <code class="docutils literal notranslate"><span class="pre">pending</span></code>. For a failed simulation,
+<code class="docutils literal notranslate"><span class="pre">step</span></code>, <code class="docutils literal notranslate"><span class="pre">reason</span></code>, and <code class="docutils literal notranslate"><span class="pre">message</span></code> say why. <a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a> explains
+each state and reason. <code class="docutils literal notranslate"><span class="pre">status()</span></code> opens no result file, so it is quick
+on a large project.</p>
 </section>
 <section id="without-pystilt">
 <h2>Without PYSTILT<a class="headerlink" href="#without-pystilt" title="Link to this heading">#</a></h2>

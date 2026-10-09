@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../../_static/documentation_options.js?v=8793c509"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.footprint.FootprintAccessor.aggregate" href="stilt.footprint.FootprintAccessor.aggregate.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -906,8 +906,8 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="stilt.footprint.FootprintAccessor.enhancement">
 <span class="sig-prename descclassname"><span class="pre">FootprintAccessor.</span></span><span class="sig-name descname"><span class="pre">enhancement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">flux</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/footprint/accessor.html#FootprintAccessor.enhancement"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.footprint.FootprintAccessor.enhancement" title="Link to this definition">#</a></dt>
-<dd><p>Return the modelled enhancement at the receptor, footprint times flux summed over the grid.</p>
-<p>The flux is taken at each footprint cell centre from the nearest
+<dd><p>Return the modeled enhancement at the receptor, footprint times flux summed over the grid.</p>
+<p>The flux is taken at each footprint cell center from the nearest
 flux cell (<a class="reference internal" href="stilt.sampling.sample_field.html#stilt.sampling.sample_field" title="stilt.sampling.sample_field"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.sample_field()</span></code></a>). That is right for
 flux cells as large as the footprint’s or larger. A finer flux is
 an error, since each footprint cell would take one small flux cell
@@ -915,7 +915,7 @@ in place of the mean over its area: put the flux on the footprint
 grid first, as an area-weighted mean (xESMF’s conservative
 regridding), or make the footprints on the flux’s grid
 (<code class="docutils literal notranslate"><span class="pre">sim.calc_footprint(grid=...)</span></code>). A flux on cells of the
-footprint’s size whose centres are offset from the footprint’s by
+footprint’s size whose centers are offset from the footprint’s by
 more than a tenth of a cell gets a warning, since each footprint
 cell then straddles two flux cells.</p>
 <dl class="field-list simple">

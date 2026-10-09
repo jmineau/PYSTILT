@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Plume Background" href="plume_background.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -579,7 +579,7 @@ records the build’s version and runs of different builds go to different
 settings folders (<a class="reference internal" href="projects.html"><span class="doc">Projects And Variants</span></a>). The folder itself is not recorded:
 moving a build keeps its results. A build without a <code class="docutils literal notranslate"><span class="pre">version</span></code> file is
 refused, since its runs could not be told apart from another build’s.</p>
-<p>A build that writes each particle’s release as a row at <code class="docutils literal notranslate"><span class="pre">time</span> <span class="pre">=</span> <span class="pre">0</span></code> gives
+<p>A build that writes each particle’s release as a row at <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code> gives
 exact release heights for multipoint and slant receptors. The bundled
 build writes its first row one time step after release, and PYSTILT
 matches each particle to its release point from that first position

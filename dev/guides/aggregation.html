@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Footprints And Particles" href="outputs.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -576,11 +576,11 @@ hours in each time bin:</p>
 </pre></div>
 </div>
 <p>The result is a DataFrame with one row per area and one column per time
-bin, labelled by the start of the bin. Footprint times are the start of
-each hour, so the bins must be closed on the left (<code class="docutils literal notranslate"><span class="pre">closed=&quot;left&quot;</span></code>). A footprint cell that straddles two
-areas is split between them by area, so the total influence is kept. This
-is what you want before multiplying by emissions. Influence that falls
-outside every area is dropped.</p>
+bin, labeled by the start of the bin. Footprint times are the start of
+each hour, so the bins must be closed on the left (<code class="docutils literal notranslate"><span class="pre">closed=&quot;left&quot;</span></code>). A
+footprint cell that straddles two areas is split between them by area, so
+the total influence is kept, which is what you want before multiplying by
+emissions. Influence that falls outside every area is dropped.</p>
 <p>The target can be:</p>
 <ul class="simple">
 <li><p>a <a class="reference internal" href="../reference/_api/stilt.Grid.html#stilt.Grid" title="stilt.Grid"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Grid</span></code></a>. Rows follow <code class="docutils literal notranslate"><span class="pre">grid.index</span></code>, one <code class="docutils literal notranslate"><span class="pre">(lon,</span> <span class="pre">lat)</span></code>
@@ -592,7 +592,7 @@ points (<code class="docutils literal notranslate"><span class="pre">Mesh.from_w
 larger groups by label.</p></li>
 </ul>
 <p>For cells given some other way, such as an xarray grid or a list of cell
-centres, build the <a class="reference internal" href="../reference/_api/stilt.Grid.html#stilt.Grid" title="stilt.Grid"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Grid</span></code></a> they lie on and select the rows you
+centers, build the <a class="reference internal" href="../reference/_api/stilt.Grid.html#stilt.Grid" title="stilt.Grid"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Grid</span></code></a> they lie on and select the rows you
 need from the result.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sources</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">from_windows</span><span class="p">(</span>
     <span class="p">[(</span><span class="o">-</span><span class="mf">111.97</span><span class="p">,</span> <span class="mf">40.515</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mf">112.015</span><span class="p">,</span> <span class="mf">40.779</span><span class="p">)],</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;landfill&quot;</span><span class="p">,</span> <span class="s2">&quot;wwtp&quot;</span><span class="p">]</span>

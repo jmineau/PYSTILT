@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Tutorial: From Footprints To Concentrations" href="flux_inversion.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -527,7 +527,7 @@
 <p>A tower measurement becomes a receptor directly. A satellite sounding
 takes a few more steps: choose which soundings to run, make a receptor for
 each, and weight each one’s particles with its own averaging kernel. This
-tutorial goes from a TROPOMI methane orbit over Salt Lake City to modelled
+tutorial goes from a TROPOMI methane orbit over Salt Lake City to modeled
 and observed XCH4 enhancements. The same steps work for OCO-2, TCCON, and
 EM27/SUN; only the reader changes.</p>
 <section id="what-you-ll-learn">
@@ -536,15 +536,14 @@ EM27/SUN; only the reader changes.</p>
 <li><p>how to read a product and choose the soundings to run</p></li>
 <li><p>how to make a receptor and a kernel table for each sounding</p></li>
 <li><p>how to weight the particles with the kernel and the pressure weights</p></li>
-<li><p>how to compare modelled and observed enhancements</p></li>
+<li><p>how to compare modeled and observed enhancements</p></li>
 </ul>
 </section>
 <section id="starting-point">
 <h2>Starting point<a class="headerlink" href="#starting-point" title="Link to this heading">#</a></h2>
 <p>A project made with <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code> or <a class="reference internal" href="../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.init()</span></code></a>, with HRRR
-meteorology and a footprint grid over the valley. There is no observation
-class to fill in. A Level 2 file is already a table with one row per
-sounding, and PYSTILT works on that table.</p>
+meteorology and a footprint grid over the valley. A Level 2 file becomes
+a table with one row per sounding, and PYSTILT works on that table.</p>
 </section>
 <section id="step-1-read-the-soundings">
 <h2>Step 1: Read the soundings<a class="headerlink" href="#step-1-read-the-soundings" title="Link to this heading">#</a></h2>
@@ -638,13 +637,13 @@ the release height.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>run<span class="w"> </span>./xch4<span class="w">          </span><span class="c1"># or stilt submit ./xch4 on a cluster</span>
 </pre></div>
 </div>
-<p>Every way of running the transport model, Slurm included, applies each receptor’s
-own kernel, because the table is part of the project.</p>
+<p>Every way of running, Slurm included, applies each receptor’s own kernel,
+because the table is part of the project.</p>
 </section>
 <section id="step-6-compare-enhancements">
 <h2>Step 6: Compare enhancements<a class="headerlink" href="#step-6-compare-enhancements" title="Link to this heading">#</a></h2>
 <p>The footprint, weighted by the kernel and the pressure weights, gives the
-modelled enhancement for a flux field. The observed enhancement is the
+modeled enhancement for a flux field. The observed enhancement is the
 retrieved value minus a background. Here the background is the median of
 the soundings outside the plume of a forward run
 (<a class="reference internal" href="../guides/plume_background.html"><span class="doc">Plume Background</span></a>); a mole-fraction field also works
@@ -666,7 +665,7 @@ the soundings outside the plume of a forward run
         <span class="k">continue</span>
     <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
         <span class="s2">&quot;sounding_id&quot;</span><span class="p">:</span> <span class="n">rec</span><span class="o">.</span><span class="n">sounding_id</span><span class="p">,</span>
-        <span class="s2">&quot;modelled&quot;</span><span class="p">:</span> <span class="mi">1000</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>   <span class="c1"># ppm to ppb</span>
+        <span class="s2">&quot;modeled&quot;</span><span class="p">:</span> <span class="mi">1000</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>   <span class="c1"># ppm to ppb</span>
         <span class="s2">&quot;observed&quot;</span><span class="p">:</span> <span class="n">soundings</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rec</span><span class="o">.</span><span class="n">sounding_id</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">background</span><span class="p">,</span>
     <span class="p">})</span>
 <span class="n">compare</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;sounding_id&quot;</span><span class="p">)</span>
@@ -712,9 +711,10 @@ That air saw no fluxes in the domain, so the field alone gives it
 </section>
 <section id="your-own-instrument">
 <h2>Your own instrument<a class="headerlink" href="#your-own-instrument" title="Link to this heading">#</a></h2>
-<p>A new instrument needs only a reader: a function that returns a table with
-the columns of <code class="xref py py-data docutils literal notranslate"><span class="pre">SOUNDING_SCHEMA</span></code>. Nothing is
-registered or subclassed. The reader handles the product’s conventions,
+<p>A new instrument needs only a reader: a function that returns a table
+with the columns of
+<code class="xref py py-data docutils literal notranslate"><span class="pre">SOUNDING_SCHEMA</span></code>. The reader
+handles the product’s conventions,
 such as unit conversions, quality flags, which variable holds the kernel,
 and how to rebuild the pressure grid. Every step after reading is the same.
 <a class="reference internal" href="../guides/readers.html"><span class="doc">Reading Retrieval Products</span></a> says which module to copy.</p>

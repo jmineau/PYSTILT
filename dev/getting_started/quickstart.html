@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Installation" href="installation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -583,7 +583,7 @@ the ground on the University of Utah campus, at 18:00 UTC on 15 July 2023:</p>
     <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00&quot;</span><span class="p">,</span>   <span class="c1"># UTC</span>
     <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
     <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
-    <span class="n">altitude</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>               <span class="c1"># metres above ground level</span>
+    <span class="n">altitude</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>               <span class="c1"># meters above ground level</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -635,10 +635,8 @@ areas upwind of your site. Here the cells are 0.01°, about 1 km:</p>
 direction the air came from. The map shows the footprint summed over all 24
 hours, on a log scale. Cells with more color influenced the measurement more.</p>
 <p>The footprint is an <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> with dimensions
-<code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code> and units of ppm per (µmol m⁻² s⁻¹), one map per
-hour. Many receptors’ footprints, from a project, line up on <code class="docutils literal notranslate"><span class="pre">hour</span></code>
-after each receptor’s time instead (<code class="docutils literal notranslate"><span class="pre">(receptor,</span> <span class="pre">hour,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>,
-<a class="reference internal" href="../guides/outputs.html"><span class="doc">Footprints And Particles</span></a>). Sum it over time with xarray:</p>
+<code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>, one map per hour, in units of ppm per
+(µmol m⁻² s⁻¹). Sum it over time with xarray:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -655,7 +653,7 @@ settings are the ones above:</p>
     <span class="s2">&quot;./my_first_project&quot;</span><span class="p">,</span>
     <span class="n">receptors</span><span class="o">=</span><span class="p">[</span><span class="n">receptor</span><span class="p">],</span>
     <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="n">met</span><span class="p">},</span>          <span class="c1"># &quot;hrrr&quot; is a name you choose</span>
-    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="p">{}},</span>       <span class="c1"># run the settings below with met hrrr</span>
+    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="p">{}},</span>       <span class="c1"># one variant: these settings, met hrrr</span>
     <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>
     <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
     <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span>
@@ -688,13 +686,11 @@ folder.</p>
     logs/settings=hrrr-a3f9c2/date=2023-07-15/202307151800_-111.848_40.766_10.log
 </pre></div>
 </div>
-<p>The folders are <a class="reference internal" href="glossary.html#term-settings-folder"><span class="xref std std-term">settings folders</span></a>, named after
-the variant, <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>, plus a short code computed from the settings it ran
-with. The
-file name is the <a class="reference internal" href="glossary.html#term-receptor-id"><span class="xref std std-term">receptor id</span></a> (time, longitude, latitude, and
-altitude), and a receptor under a variant is a <a class="reference internal" href="glossary.html#term-simulation"><span class="xref std std-term">simulation</span></a>. HYSPLIT’s own input files, such as <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> and
-<code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code>, are written to a working directory (the workdir) and
-removed when a run succeeds.</p>
+<p>Each folder under <code class="docutils literal notranslate"><span class="pre">particles</span></code>, <code class="docutils literal notranslate"><span class="pre">footprints</span></code>, and <code class="docutils literal notranslate"><span class="pre">logs</span></code> is a
+<a class="reference internal" href="glossary.html#term-settings-folder"><span class="xref std std-term">settings folder</span></a>: the variant’s name, <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>,
+plus a short code made from its settings. Change a setting and the next
+run writes to a new folder, so nothing is overwritten. The file name is
+the <a class="reference internal" href="glossary.html#term-receptor-id"><span class="xref std std-term">receptor id</span></a>: the time, longitude, latitude, and altitude.</p>
 <p>Your settings and receptors are saved in the folder, so you can open the
 project again later without repeating them:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">&quot;./my_first_project&quot;</span><span class="p">)</span>

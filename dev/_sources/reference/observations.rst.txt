@@ -64,10 +64,10 @@ background from the soundings beside it (:doc:`/guides/plume_background`).
    stilt.observations.plumes.kernel_density
    stilt.observations.plumes.density_polygon
 
-The modelled column
+The modeled column
 -------------------
 
-The column a retrieval would report for the modelled air: the enhancement,
+The column a retrieval would report for the modeled air: the enhancement,
 the background, and the retrieval's prior where it is not sensitive.
 
 .. autosummary::

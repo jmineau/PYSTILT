@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Running" href="running.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -580,10 +580,9 @@ or scratch space.</p>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code> prints the Slurm job ID and returns once the job is
-submitted. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code> submits it too, then waits until it finishes. Each
-task runs with the
-same Python that submitted it, so there is nothing to activate inside the
-job.</p>
+submitted. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code> submits it too, then waits until it finishes.
+Each task runs with the same Python that submitted it, so there is nothing
+to activate inside the job.</p>
 </section>
 <section id="options">
 <h2>Options<a class="headerlink" href="#options" title="Link to this heading">#</a></h2>
@@ -692,9 +691,8 @@ earlier one’s logs:</p>
 </div>
 <p>with the Python that submitted it. A task reads its receptors from
 <code class="docutils literal notranslate"><span class="pre">receptors.parquet</span></code>, so it does not read and check all of
-<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> again. To rerun one task by hand, on a compute
-node, run that line with the task’s number in place of
-<code class="docutils literal notranslate"><span class="pre">$SLURM_ARRAY_TASK_ID</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> again. To rerun one task by hand, run that line on a
+compute node with the task’s number in place of <code class="docutils literal notranslate"><span class="pre">$SLURM_ARRAY_TASK_ID</span></code>.</p>
 <p>If a task fails, look in its <code class="docutils literal notranslate"><span class="pre">&lt;task&gt;.log</span></code> for problems with the task
 itself. Its first line says when and on which node it started, and the
 job and task ids; a requeued task adds another such line. Look in each

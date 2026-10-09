@@ -31,10 +31,9 @@ Then submit from the environment PYSTILT is installed in:
    stilt submit ./my_project
 
 ``stilt submit`` prints the Slurm job ID and returns once the job is
-submitted. ``stilt run`` submits it too, then waits until it finishes. Each
-task runs with the
-same Python that submitted it, so there is nothing to activate inside the
-job.
+submitted. ``stilt run`` submits it too, then waits until it finishes.
+Each task runs with the same Python that submitted it, so there is nothing
+to activate inside the job.
 
 Options
 -------
@@ -164,9 +163,8 @@ earlier one's logs:
 
 with the Python that submitted it. A task reads its receptors from
 ``receptors.parquet``, so it does not read and check all of
-``receptors.csv`` again. To rerun one task by hand, on a compute
-node, run that line with the task's number in place of
-``$SLURM_ARRAY_TASK_ID``.
+``receptors.csv`` again. To rerun one task by hand, run that line on a
+compute node with the task's number in place of ``$SLURM_ARRAY_TASK_ID``.
 
 If a task fails, look in its ``<task>.log`` for problems with the task
 itself. Its first line says when and on which node it started, and the

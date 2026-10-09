@@ -4,7 +4,7 @@ Background
 A footprint gives the enhancement, the amount the fluxes inside the domain
 add to a measurement. The measurement is that enhancement on top of the
 background, the mole fraction of the air before it entered the domain. To
-compare a modelled value with an observed one, or to subtract the
+compare a modeled value with an observed one, or to subtract the
 background from observations for an inversion, you need both.
 
 Each back-trajectory ends where its air came from. Sample a mole-fraction
@@ -23,7 +23,7 @@ The field is an :class:`xarray.DataArray` with ``lat`` and ``lon``
 dimensions, and optionally ``time`` and one vertical dimension. Name the
 vertical dimension after the particle column it should be matched against.
 Use ``pres`` for pressure levels in hPa or ``zagl`` for height above ground
-in metres. Both are in the particle table by default. You can also add a
+in meters. Both are in the particle table by default. You can also add a
 column of your own, such as height above sea level from ``zagl + zsfc``
 (add ``zsfc`` to ``varsiwant`` to get it).
 
@@ -56,7 +56,7 @@ The background at a receptor
        bg = sim.background(field)
        enhancement = float(sim.footprint.stilt.enhancement(flux).sum())
        rows.append({"receptor": sim.receptor.id, "background": bg.value,
-                    "enhancement": enhancement, "modelled": bg.value + enhancement})
+                    "enhancement": enhancement, "modeled": bg.value + enhancement})
 
 The background is weighted the way the footprint is, with the variant's
 transforms: the averaging kernel (including one from a per-receptor
@@ -86,7 +86,7 @@ With transport error
 Wind errors move the endpoints as well as the path near the surface. Where
 the background field has gradients, this adds to the transport error. Pass
 the field to ``sim.transport_error``, and it works with each particle's
-modelled mole fraction, enhancement plus background:
+modeled mole fraction, enhancement plus background:
 
 .. code-block:: python
 

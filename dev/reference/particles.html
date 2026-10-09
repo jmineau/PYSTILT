@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.sampling.nearest_cell" href="_api/stilt.sampling.nearest_cell.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -947,7 +947,7 @@ minutes, int32, and read back as float64.</p></td>
 <dl class="simple">
 <dt><code class="docutils literal notranslate"><span class="pre">foot</span></code></dt><dd><p>The particle’s sensitivity to surface fluxes accumulated over the output
 step, in ppm per (µmol m⁻² s⁻¹). It is zero while the particle is above
-<code class="docutils literal notranslate"><span class="pre">veght</span></code> of the mixed layer (or <code class="docutils literal notranslate"><span class="pre">veght</span></code> metres when that is more than
+<code class="docutils literal notranslate"><span class="pre">veght</span></code> of the mixed layer (or <code class="docutils literal notranslate"><span class="pre">veght</span></code> meters when that is more than
 1). HYSPLIT computes it as STILT-R does: the time the particle spent
 in that surface layer, divided by the air density and the depth the
 flux is mixed through. <a class="reference internal" href="_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a> adds each
@@ -1025,9 +1025,9 @@ columns above. Some that PYSTILT reads:</p>
 <section id="columns-pystilt-adds">
 <h2>Columns PYSTILT adds<a class="headerlink" href="#columns-pystilt-adds" title="Link to this heading">#</a></h2>
 <dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">release_height</span></code></dt><dd><p>Release height of each particle, in metres in the receptor’s own
+<dt><code class="docutils literal notranslate"><span class="pre">release_height</span></code></dt><dd><p>Release height of each particle, in meters in the receptor’s own
 vertical reference, for column and multipoint receptors
-(<a class="reference internal" href="_api/stilt.particles.add_release_heights.html#stilt.particles.add_release_heights" title="stilt.particles.add_release_heights"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_release_heights()</span></code></a>). For a column it is the centre of the
+(<a class="reference internal" href="_api/stilt.particles.add_release_heights.html#stilt.particles.add_release_heights" title="stilt.particles.add_release_heights"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_release_heights()</span></code></a>). For a column it is the center of the
 particle’s slab, the part of the column the particle stands for. STILT-R and
 X-STILT call it <code class="docutils literal notranslate"><span class="pre">xhgt</span></code>.</p>
 </dd>

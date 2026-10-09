@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../../_static/documentation_options.js?v=8793c509"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.observations.plumes.density_polygon" href="stilt.observations.plumes.density_polygon.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -903,7 +903,7 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="stilt.observations.modelled_column">
 <span class="sig-prename descclassname"><span class="pre">stilt.observations.</span></span><span class="sig-name descname"><span class="pre">modelled_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enhancement</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">ak</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pressure_weight</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prior</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/observations/columns.html#modelled_column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.observations.modelled_column" title="Link to this definition">#</a></dt>
-<dd><p>Return the column-average mole fraction a retrieval would report for the modelled air.</p>
+<dd><p>Return the column-average mole fraction a retrieval would report for the modeled air.</p>
 <p>With the retrieval’s averaging kernel <code class="docutils literal notranslate"><span class="pre">A</span></code>, pressure weights <code class="docutils literal notranslate"><span class="pre">w</span></code>, and
 prior profile <code class="docutils literal notranslate"><span class="pre">x_prior</span></code> on the same levels, it is:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>enhancement + background + Σ_l w_l (1 − A_l) x_prior,l
@@ -919,7 +919,7 @@ is <code class="docutils literal notranslate"><span class="pre">enhancement</spa
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>enhancement</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – The modelled enhancement of the column, weighted by the kernel and
+<li><p><strong>enhancement</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – The modeled enhancement of the column, weighted by the kernel and
 the pressure weights, in the units of <code class="docutils literal notranslate"><span class="pre">prior</span></code>. A flux in
 µmol m⁻² s⁻¹ gives ppm; multiply by 1000 for ppb.</p></li>
 <li><p><strong>background</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – The weighted background (<code class="docutils literal notranslate"><span class="pre">sim.background(field).value</span></code>). Over a

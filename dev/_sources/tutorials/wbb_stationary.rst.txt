@@ -34,7 +34,7 @@ Step 1: One receptor per hour
            time=t,
            latitude=40.7665,
            longitude=-111.8472,
-           altitude=21.0,         # inlet height above ground, in metres
+           altitude=21.0,         # inlet height above ground, in meters
        )
        for t in times
    ]
@@ -87,7 +87,7 @@ Step 3: Run
 
    project.run()
 
-There are 168 simulations, so this takes a while with 4 workers. You can
+There are 168 simulations, so this takes a while, four at a time. You can
 stop it at any time with Ctrl-C. Running it again picks up where it left
 off. To check progress from another terminal:
 

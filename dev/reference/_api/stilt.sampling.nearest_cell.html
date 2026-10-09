@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../../_static/documentation_options.js?v=8793c509"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.sampling.vertical_dim" href="stilt.sampling.vertical_dim.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -904,13 +904,13 @@
 <dt class="sig sig-object py" id="stilt.sampling.nearest_cell">
 <span class="sig-prename descclassname"><span class="pre">stilt.sampling.</span></span><span class="sig-name descname"><span class="pre">nearest_cell</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coords</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/sampling.html#nearest_cell"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.sampling.nearest_cell" title="Link to this definition">#</a></dt>
 <dd><p>Return the index of the cell nearest each value, or <code class="docutils literal notranslate"><span class="pre">-1</span></code> outside the cells.</p>
-<p>Each cell reaches halfway to its neighbours. The end cells reach the
-same distance beyond their centres. With a single cell, every finite
+<p>Each cell reaches halfway to its neighbors. The end cells reach the
+same distance beyond their centers. With a single cell, every finite
 value is inside it.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>coords</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a></span>) – Cell centres along one axis, ascending or descending.</p></li>
+<li><p><strong>coords</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a></span>) – Cell centers along one axis, ascending or descending.</p></li>
 <li><p><strong>values</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a></span>) – Positions to look up.</p></li>
 </ul>
 </dd>

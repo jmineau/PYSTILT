@@ -43,7 +43,7 @@ A footprint also needs ``foot``:
 ``foot``
    The particle's sensitivity to surface fluxes accumulated over the output
    step, in ppm per (µmol m⁻² s⁻¹). It is zero while the particle is above
-   ``veght`` of the mixed layer (or ``veght`` metres when that is more than
+   ``veght`` of the mixed layer (or ``veght`` meters when that is more than
    1). HYSPLIT computes it as STILT-R does: the time the particle spent
    in that surface layer, divided by the air density and the depth the
    flux is mixed through. :func:`stilt.calc_footprint` adds each
@@ -109,9 +109,9 @@ Columns PYSTILT adds
 --------------------
 
 ``release_height``
-   Release height of each particle, in metres in the receptor's own
+   Release height of each particle, in meters in the receptor's own
    vertical reference, for column and multipoint receptors
-   (:func:`add_release_heights`). For a column it is the centre of the
+   (:func:`add_release_heights`). For a column it is the center of the
    particle's slab, the part of the column the particle stands for. STILT-R and
    X-STILT call it ``xhgt``.
 

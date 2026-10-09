@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="../_static/documentation_options.js?v=8793c509"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Transport Error" href="transport_error.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -559,13 +559,13 @@
 describe the meteorology’s wind errors. They are the standard deviation of
 the error and how long, how high, and how far it stays correlated.
 <a class="reference external" href="https://doi.org/10.1029/2004GL021127">Lin and Gerbig (2005)</a> derive
-them by comparing the analysed wind with observed winds. This page does the
+them by comparing the analyzed wind with observed winds. This page does the
 same for your meteorology and region. Derive your own values instead of
 copying them from another analysis or place. The correlation scales decide
 whether the perturbation has any effect at all.</p>
 <section id="what-the-numbers-are">
 <h2>What the numbers are<a class="headerlink" href="#what-the-numbers-are" title="Link to this heading">#</a></h2>
-<p>For each wind component, the error at an observation is the analysed wind
+<p>For each wind component, the error at an observation is the analyzed wind
 minus the observed wind. Its standard deviation is <code class="docutils literal notranslate"><span class="pre">siguverr</span></code>.</p>
 <p>The correlation scales come from the variogram. At a separation <code class="docutils literal notranslate"><span class="pre">h</span></code>, the
 variogram is half the mean squared difference between the errors of pairs
@@ -589,8 +589,8 @@ and horizontal scales from surface stations.</p>
 <p>Sample the meteorology at the observations with
 <a class="reference external" href="https://github.com/jmineau/arl-met">arlmet</a>. Winds in ARL files on
 projected grids are stored relative to the grid, so ask for earth-relative
-components (<code class="docutils literal notranslate"><span class="pre">earth_relative=True</span></code>, arlmet 0.1.0a8 or later). Radiosondes
-report geopotential height, so sample in metres above sea level:</p>
+components (<code class="docutils literal notranslate"><span class="pre">earth_relative=True</span></code>). Radiosondes
+report geopotential height, so sample in meters above sea level:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">arlmet</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
@@ -662,7 +662,7 @@ since their heights above ground are unknown.</p>
 takes the errors, the coordinate the separation is measured in, and a
 <code class="docutils literal notranslate"><span class="pre">group</span></code> label. Only points with the same label are paired. The coordinate
 can also be two columns of longitude and latitude, and the separation is
-then the great-circle distance in kilometres.
+then the great-circle distance in kilometers.
 <a class="reference internal" href="../reference/_api/stilt.meteorology.fit_variogram.html#stilt.meteorology.fit_variogram" title="stilt.meteorology.fit_variogram"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_variogram()</span></code></a> fits the exponential model with
 σ fixed.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>

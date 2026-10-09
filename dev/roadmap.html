@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=bd4e1757"></script>
+    <script src="_static/documentation_options.js?v=8793c509"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="How PYSTILT Tracks Finished Work" href="advanced/output_state.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev295+g4bf5882bf" />
+  <meta name="docsearch:version" content="0.1.0a23.dev297+ga0a025ee8" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -638,16 +638,16 @@ feature.</p>
 <tr class="row-even"><td><p>Product readers (OCO-2/3, TROPOMI, TCCON)</p></td>
 <td><p>Implemented (see <em>Reading Retrieval Products</em>); other instruments as one module each</p></td>
 </tr>
-<tr class="row-odd"><td><p>Transport error on the modelled enhancement (<code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code>)</p></td>
+<tr class="row-odd"><td><p>Transport error on the modeled enhancement (<code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>Modelled enhancement from a flux field (<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>)</p></td>
+<tr class="row-even"><td><p>Modeled enhancement from a flux field (<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
 <tr class="row-odd"><td><p>Background from a mole-fraction field at the trajectory endpoints (<code class="docutils literal notranslate"><span class="pre">sim.background</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>The retrieval’s prior term in a modelled column (<code class="docutils literal notranslate"><span class="pre">modelled_column</span></code>)</p></td>
+<tr class="row-even"><td><p>The retrieval’s prior term in a modeled column (<code class="docutils literal notranslate"><span class="pre">modelled_column</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
 <tr class="row-odd"><td><p>Satellite-derived plume background (forward trajectories)</p></td>
@@ -656,7 +656,7 @@ feature.</p>
 <tr class="row-even"><td><p>Forward runs (positive <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>) for plume and dispersion studies</p></td>
 <td><p>Implemented (see the <em>Plume Background</em> guide)</p></td>
 </tr>
-<tr class="row-odd"><td><p>Emission-error propagation to the modelled enhancement</p></td>
+<tr class="row-odd"><td><p>Emission-error propagation to the modeled enhancement</p></td>
 <td><p>A recipe on <code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> (see the <em>Transport Error</em> guide); the
 correlated case is fips’s <code class="docutils literal notranslate"><span class="pre">prior_obs_error</span></code></p></td>
 </tr>
@@ -671,8 +671,8 @@ correlated case is fips’s <code class="docutils literal notranslate"><span cla
 <h2>Future plans<a class="headerlink" href="#future-plans" title="Link to this heading">#</a></h2>
 <p>In priority order:</p>
 <ol class="arabic simple">
-<li><p>Readers for the instruments people bring, such as EM27/SUN and
-MethaneAIR/MethaneSAT. Which ones come first depends on who is using
+<li><p>Readers for the instruments people bring, such as EM27/SUN output
+from PROFFAST and MethaneAIR/MethaneSAT. Which ones come first depends on who is using
 column receptors.</p></li>
 <li><p>A YAML form for <a class="reference internal" href="reference/_api/stilt.Zones.html#stilt.Zones" title="stilt.Zones"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Zones</span></code></a>, so the <code class="docutils literal notranslate"><span class="pre">geometry</span></code> footprint
 setting can name groups of cells.</p></li>
