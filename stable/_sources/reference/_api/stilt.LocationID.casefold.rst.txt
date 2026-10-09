@@ -1,6 +1,0 @@
-stilt.LocationID.casefold
-=========================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.casefold

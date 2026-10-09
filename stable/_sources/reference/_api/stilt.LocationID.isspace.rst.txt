@@ -1,6 +1,0 @@
-stilt.LocationID.isspace
-========================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.isspace

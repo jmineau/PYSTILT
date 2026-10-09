@@ -1,0 +1,6 @@
+﻿stilt.identity.run\_settings
+============================
+
+.. currentmodule:: stilt.identity
+
+.. autofunction:: run_settings

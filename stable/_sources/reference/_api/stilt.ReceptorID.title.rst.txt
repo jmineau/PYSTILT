@@ -1,6 +1,0 @@
-stilt.ReceptorID.title
-======================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.title

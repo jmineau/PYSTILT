@@ -1,6 +1,0 @@
-stilt.Trajectories.endpoints
-============================
-
-.. currentmodule:: stilt
-
-.. automethod:: Trajectories.endpoints

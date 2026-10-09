@@ -1,6 +1,0 @@
-stilt.ReceptorID.translate
-==========================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.translate

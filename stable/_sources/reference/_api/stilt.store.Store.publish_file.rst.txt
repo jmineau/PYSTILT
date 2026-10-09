@@ -1,6 +1,0 @@
-stilt.store.Store.publish\_file
-===============================
-
-.. currentmodule:: stilt.store
-
-.. automethod:: Store.publish_file

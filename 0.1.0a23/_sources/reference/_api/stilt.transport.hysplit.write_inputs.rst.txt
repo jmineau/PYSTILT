@@ -1,0 +1,6 @@
+﻿stilt.transport.hysplit.write\_inputs
+=====================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+.. autofunction:: write_inputs

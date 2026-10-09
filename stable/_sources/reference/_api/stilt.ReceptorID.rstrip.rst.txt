@@ -1,6 +1,0 @@
-stilt.ReceptorID.rstrip
-=======================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.rstrip

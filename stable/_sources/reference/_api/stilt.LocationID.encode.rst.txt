@@ -1,6 +1,0 @@
-stilt.LocationID.encode
-=======================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.encode

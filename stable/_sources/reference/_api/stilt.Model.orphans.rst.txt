@@ -1,6 +1,0 @@
-stilt.Model.orphans
-===================
-
-.. currentmodule:: stilt
-
-.. automethod:: Model.orphans

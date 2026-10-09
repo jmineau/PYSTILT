@@ -1,6 +1,0 @@
-stilt.collections.OutputCollection.load
-=======================================
-
-.. currentmodule:: stilt.collections
-
-.. automethod:: OutputCollection.load

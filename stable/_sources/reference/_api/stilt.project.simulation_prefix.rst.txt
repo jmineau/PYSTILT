@@ -1,6 +1,0 @@
-﻿stilt.project.simulation\_prefix
-================================
-
-.. currentmodule:: stilt.project
-
-.. autofunction:: simulation_prefix

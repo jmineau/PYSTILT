@@ -1,0 +1,6 @@
+stilt.Simulation.plot
+=====================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Simulation.plot

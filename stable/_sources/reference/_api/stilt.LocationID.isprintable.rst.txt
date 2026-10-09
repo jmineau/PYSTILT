@@ -1,6 +1,0 @@
-stilt.LocationID.isprintable
-============================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.isprintable

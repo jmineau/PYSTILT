@@ -1,6 +1,0 @@
-stilt.LocationID.format\_map
-============================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.format_map

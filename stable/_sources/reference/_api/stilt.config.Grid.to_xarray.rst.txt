@@ -1,6 +1,0 @@
-stilt.config.Grid.to\_xarray
-============================
-
-.. currentmodule:: stilt.config
-
-.. automethod:: Grid.to_xarray

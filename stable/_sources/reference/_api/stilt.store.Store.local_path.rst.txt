@@ -1,6 +1,0 @@
-stilt.store.Store.local\_path
-=============================
-
-.. currentmodule:: stilt.store
-
-.. automethod:: Store.local_path

@@ -1,6 +1,0 @@
-stilt.LocationID.upper
-======================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.upper

@@ -1,6 +1,0 @@
-stilt.config.VariantConfig.setup\_entries
-=========================================
-
-.. currentmodule:: stilt.config
-
-.. automethod:: VariantConfig.setup_entries

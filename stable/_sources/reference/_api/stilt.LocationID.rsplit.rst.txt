@@ -1,6 +1,0 @@
-stilt.LocationID.rsplit
-=======================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.rsplit

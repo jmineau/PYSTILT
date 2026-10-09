@@ -1,6 +1,0 @@
-stilt.LocationID.swapcase
-=========================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.swapcase

@@ -1,6 +1,0 @@
-stilt.MetStream.required\_files
-===============================
-
-.. currentmodule:: stilt
-
-.. automethod:: MetStream.required_files

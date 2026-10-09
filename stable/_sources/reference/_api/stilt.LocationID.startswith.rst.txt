@@ -1,6 +1,0 @@
-stilt.LocationID.startswith
-===========================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.startswith

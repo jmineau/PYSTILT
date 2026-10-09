@@ -1,6 +1,0 @@
-stilt.config.ModelConfig.realization\_seed
-==========================================
-
-.. currentmodule:: stilt.config
-
-.. automethod:: ModelConfig.realization_seed

@@ -1,6 +1,0 @@
-stilt.execution.KubernetesExecutor.start
-========================================
-
-.. currentmodule:: stilt.execution
-
-.. automethod:: KubernetesExecutor.start

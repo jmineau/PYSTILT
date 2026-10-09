@@ -1,0 +1,6 @@
+stilt.Project.add\_table
+========================
+
+.. currentmodule:: stilt
+
+.. automethod:: Project.add_table

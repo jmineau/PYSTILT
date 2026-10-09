@@ -1,6 +1,0 @@
-stilt.config.RuntimeSettings.settings\_customise\_sources
-=========================================================
-
-.. currentmodule:: stilt.config
-
-.. automethod:: RuntimeSettings.settings_customise_sources

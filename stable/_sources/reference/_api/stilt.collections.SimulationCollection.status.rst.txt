@@ -1,6 +1,0 @@
-stilt.collections.SimulationCollection.status
-=============================================
-
-.. currentmodule:: stilt.collections
-
-.. automethod:: SimulationCollection.status

@@ -1,6 +1,0 @@
-stilt.ReceptorID.capitalize
-===========================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.capitalize

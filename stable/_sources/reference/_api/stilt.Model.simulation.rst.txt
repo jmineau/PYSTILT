@@ -1,6 +1,0 @@
-stilt.Model.simulation
-======================
-
-.. currentmodule:: stilt
-
-.. automethod:: Model.simulation

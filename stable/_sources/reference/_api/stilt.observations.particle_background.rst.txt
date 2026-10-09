@@ -1,6 +1,0 @@
-﻿stilt.observations.particle\_background
-=======================================
-
-.. currentmodule:: stilt.observations
-
-.. autofunction:: particle_background

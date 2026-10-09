@@ -1,6 +1,0 @@
-stilt.LocationID.istitle
-========================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.istitle

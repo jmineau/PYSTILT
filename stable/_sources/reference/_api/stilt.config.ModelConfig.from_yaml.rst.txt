@@ -1,6 +1,0 @@
-stilt.config.ModelConfig.from\_yaml
-===================================
-
-.. currentmodule:: stilt.config
-
-.. automethod:: ModelConfig.from_yaml

@@ -1,0 +1,38 @@
+﻿stilt.transport.hysplit.HysplitModel
+====================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+
+
+
+.. class-signature:: stilt.transport.hysplit.HysplitModel
+
+
+.. class-parameters:: stilt.transport.hysplit.HysplitModel
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~HysplitModel.batched
+   ~HysplitModel.needs_workdir
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~HysplitModel.data_files
+   ~HysplitModel.run
+   ~HysplitModel.version
+
+
+

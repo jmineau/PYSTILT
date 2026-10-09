@@ -1,0 +1,41 @@
+﻿stilt.transport.hysplit.HysplitConfig
+=====================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+
+
+
+.. class-signature:: stilt.transport.hysplit.HysplitConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.transport.hysplit.HysplitConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~HysplitConfig.effective_maxpar
+   ~HysplitConfig.UNRECORDED
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~HysplitConfig.hourly_ziscale
+   ~HysplitConfig.realizations
+   ~HysplitConfig.settings
+
+
+

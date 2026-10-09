@@ -1,6 +1,0 @@
-stilt.LocationID.expandtabs
-===========================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.expandtabs

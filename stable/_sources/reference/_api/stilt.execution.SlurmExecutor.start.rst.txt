@@ -1,6 +1,0 @@
-stilt.execution.SlurmExecutor.start
-===================================
-
-.. currentmodule:: stilt.execution
-
-.. automethod:: SlurmExecutor.start

@@ -1,6 +1,0 @@
-﻿stilt.geometry.same\_crs
-========================
-
-.. currentmodule:: stilt.geometry
-
-.. autofunction:: same_crs

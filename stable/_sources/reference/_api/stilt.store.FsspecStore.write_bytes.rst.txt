@@ -1,6 +1,0 @@
-stilt.store.FsspecStore.write\_bytes
-====================================
-
-.. currentmodule:: stilt.store
-
-.. automethod:: FsspecStore.write_bytes

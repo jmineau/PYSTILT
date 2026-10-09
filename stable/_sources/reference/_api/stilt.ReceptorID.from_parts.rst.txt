@@ -1,6 +1,0 @@
-stilt.ReceptorID.from\_parts
-============================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.from_parts

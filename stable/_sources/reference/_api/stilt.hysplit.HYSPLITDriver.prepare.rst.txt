@@ -1,6 +1,0 @@
-stilt.hysplit.HYSPLITDriver.prepare
-===================================
-
-.. currentmodule:: stilt.hysplit
-
-.. automethod:: HYSPLITDriver.prepare

@@ -1,6 +1,0 @@
-stilt.ReceptorID.isdecimal
-==========================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.isdecimal

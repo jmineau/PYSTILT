@@ -1,6 +1,0 @@
-stilt.Model.remove
-==================
-
-.. currentmodule:: stilt
-
-.. automethod:: Model.remove

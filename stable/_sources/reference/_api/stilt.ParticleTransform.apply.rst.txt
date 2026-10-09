@@ -1,6 +1,0 @@
-stilt.ParticleTransform.apply
-=============================
-
-.. currentmodule:: stilt
-
-.. automethod:: ParticleTransform.apply

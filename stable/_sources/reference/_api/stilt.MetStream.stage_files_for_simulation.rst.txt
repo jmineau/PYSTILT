@@ -1,6 +1,0 @@
-stilt.MetStream.stage\_files\_for\_simulation
-=============================================
-
-.. currentmodule:: stilt
-
-.. automethod:: MetStream.stage_files_for_simulation

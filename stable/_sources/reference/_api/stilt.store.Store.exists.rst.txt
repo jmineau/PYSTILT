@@ -1,6 +1,0 @@
-stilt.store.Store.exists
-========================
-
-.. currentmodule:: stilt.store
-
-.. automethod:: Store.exists

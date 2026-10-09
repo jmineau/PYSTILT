@@ -1,6 +1,0 @@
-stilt.ReceptorID.zfill
-======================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.zfill

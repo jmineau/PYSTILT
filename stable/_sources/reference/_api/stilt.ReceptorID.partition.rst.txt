@@ -1,6 +1,0 @@
-stilt.ReceptorID.partition
-==========================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.partition

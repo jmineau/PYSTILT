@@ -1,6 +1,0 @@
-stilt.ReceptorID.splitlines
-===========================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.splitlines

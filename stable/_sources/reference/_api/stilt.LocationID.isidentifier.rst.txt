@@ -1,6 +1,0 @@
-stilt.LocationID.isidentifier
-=============================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.isidentifier

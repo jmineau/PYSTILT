@@ -1,6 +1,0 @@
-﻿stilt.geometry.check\_resolution
-================================
-
-.. currentmodule:: stilt.geometry
-
-.. autofunction:: check_resolution

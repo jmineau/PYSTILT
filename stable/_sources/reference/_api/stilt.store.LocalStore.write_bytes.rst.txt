@@ -1,6 +1,0 @@
-stilt.store.LocalStore.write\_bytes
-===================================
-
-.. currentmodule:: stilt.store
-
-.. automethod:: LocalStore.write_bytes

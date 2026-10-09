@@ -1,0 +1,6 @@
+stilt.config.Variant.run\_settings
+==================================
+
+.. currentmodule:: stilt.config
+
+.. autoproperty:: Variant.run_settings

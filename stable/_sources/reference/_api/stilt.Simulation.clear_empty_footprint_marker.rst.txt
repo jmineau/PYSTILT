@@ -1,6 +1,0 @@
-stilt.Simulation.clear\_empty\_footprint\_marker
-================================================
-
-.. currentmodule:: stilt
-
-.. automethod:: Simulation.clear_empty_footprint_marker

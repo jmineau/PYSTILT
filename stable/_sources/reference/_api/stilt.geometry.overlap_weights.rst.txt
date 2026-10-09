@@ -1,6 +1,0 @@
-﻿stilt.geometry.overlap\_weights
-===============================
-
-.. currentmodule:: stilt.geometry
-
-.. autofunction:: overlap_weights

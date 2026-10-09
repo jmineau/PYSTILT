@@ -1,6 +1,0 @@
-stilt.ReceptorID.center
-=======================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.center

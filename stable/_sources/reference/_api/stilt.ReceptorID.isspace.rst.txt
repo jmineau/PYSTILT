@@ -1,6 +1,0 @@
-stilt.ReceptorID.isspace
-========================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.isspace

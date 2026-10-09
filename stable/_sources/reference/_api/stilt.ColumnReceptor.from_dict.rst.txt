@@ -1,6 +1,0 @@
-stilt.ColumnReceptor.from\_dict
-===============================
-
-.. currentmodule:: stilt
-
-.. automethod:: ColumnReceptor.from_dict

@@ -1,6 +1,0 @@
-stilt.ReceptorID.isidentifier
-=============================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.isidentifier

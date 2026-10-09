@@ -1,6 +1,0 @@
-stilt.LocationID.rjust
-======================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.rjust

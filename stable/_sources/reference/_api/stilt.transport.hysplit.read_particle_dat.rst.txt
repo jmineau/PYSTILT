@@ -1,0 +1,6 @@
+﻿stilt.transport.hysplit.read\_particle\_dat
+===========================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+.. autofunction:: read_particle_dat

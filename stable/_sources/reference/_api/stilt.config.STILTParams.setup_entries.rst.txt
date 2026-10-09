@@ -1,6 +1,0 @@
-stilt.config.STILTParams.setup\_entries
-=======================================
-
-.. currentmodule:: stilt.config
-
-.. automethod:: STILTParams.setup_entries

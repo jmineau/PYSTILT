@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>stilt.footprint.gridding &#8212; PYSTILT 0.1.0a23</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+
+    <script src="../../../_static/documentation_options.js?v=24653ca2"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/footprint/gridding';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a23';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a23" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT 0.1.0a23</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../development.html">
+    Development
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.footprint.gridding</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for stilt.footprint.gridding</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Calculating a footprint from particles, as STILT-R&#39;s ``calc_footprint`` does.</span>
+
+<span class="sd">Footprints match STILT-R at ``rtol=1e-7`` per cell. Run the ``fidelity``</span>
+<span class="sd">tests before merging any change to this module.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.ndimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">convolve</span> <span class="k">as</span> <span class="n">_convolve</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyFootprint</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FootprintConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">FOOTPRINT_COLUMNS</span><span class="p">,</span> <span class="n">check_particles</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_grid_cell_starts</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_transforms</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">_footprint_array</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_gauss_kernel</span><span class="p">(</span><span class="n">rs</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;2D Gaussian smoothing kernel on a physical-unit grid, normalized to sum=1.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">sigma</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">sigma</span>
+    <span class="n">nx</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="n">rs</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="n">ny</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="n">rs</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nx</span><span class="p">)</span> <span class="o">-</span> <span class="n">nx</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">rs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">ny</span><span class="p">)</span> <span class="o">-</span> <span class="n">ny</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">rs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">xx</span><span class="p">,</span> <span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">&quot;ij&quot;</span><span class="p">)</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">xx</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">yy</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">m</span> <span class="o">/</span> <span class="n">m</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">w</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_interpolation_times</span><span class="p">(</span><span class="n">time_sign</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return STILT-R&#39;s interpolation times for the first 100 minutes, in minutes.&quot;&quot;&quot;</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">101</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">102</span><span class="p">,</span> <span class="mi">201</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">205</span><span class="p">,</span> <span class="mi">1001</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">times</span> <span class="o">*</span> <span class="n">time_sign</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_wrap_antimeridian_longitudes</span><span class="p">(</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Shift longitudes to 0 to 360 when the grid crosses the antimeridian.</span>
+
+<span class="sd">    Only for longitude/latitude grids. Returns ``(p, xmin, xmax, wrapped)``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">xdist</span> <span class="o">=</span> <span class="p">((</span><span class="mi">180</span> <span class="o">-</span> <span class="n">xmin</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="o">-</span><span class="mi">180</span> <span class="o">-</span> <span class="n">xmax</span><span class="p">))</span> <span class="o">%</span> <span class="mi">360</span>
+    <span class="k">if</span> <span class="n">xdist</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="o">-</span><span class="mf">180.0</span><span class="p">,</span> <span class="mf">180.0</span><span class="p">,</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">xmax</span> <span class="o">&lt;</span> <span class="n">xmin</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">xmax</span> <span class="o">&gt;</span> <span class="mi">180</span><span class="p">):</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">p</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span> <span class="o">%</span> <span class="mi">360</span><span class="p">)</span> <span class="o">+</span> <span class="mi">360</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span>
+        <span class="n">xmin</span> <span class="o">=</span> <span class="p">((</span><span class="n">xmin</span> <span class="o">%</span> <span class="mi">360</span><span class="p">)</span> <span class="o">+</span> <span class="mi">360</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span>
+        <span class="n">xmax</span> <span class="o">=</span> <span class="p">((</span><span class="n">xmax</span> <span class="o">%</span> <span class="mi">360</span><span class="p">)</span> <span class="o">+</span> <span class="mi">360</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span>
+        <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="kc">False</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_interpolate_early_timesteps</span><span class="p">(</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">time_sign</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Add interpolated positions in the first 100 minutes when particles jump grid cells.</span>
+
+<span class="sd">    Near the receptor, particles can move more than a grid cell per output</span>
+<span class="sd">    step. When the median step does, positions and ``foot`` are linearly</span>
+<span class="sd">    interpolated onto finer times (every 0.1 min to 10 min, 0.2 min to 20</span>
+<span class="sd">    min, and 0.5 min to 100 min). ``foot`` is then rescaled so each of those</span>
+<span class="sd">    three windows keeps its total, as STILT-R does.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">early</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">p</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">early</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">p</span>
+
+    <span class="c1"># Match R: per-particle median(abs(diff(lon/lat))), then median across particles.</span>
+    <span class="c1"># should_interpolate = median(dx) &gt; xres OR median(dy) &gt; yres</span>
+    <span class="n">sorted_early</span> <span class="o">=</span> <span class="n">early</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">])</span>
+    <span class="n">diffs</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">sorted_early</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)[[</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span><span class="o">.</span><span class="n">abs</span><span class="p">(),</span>
+    <span class="p">)</span>
+    <span class="n">per_particle_med</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">diffs</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">sorted_early</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="n">dx_values</span> <span class="o">=</span> <span class="n">per_particle_med</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">dy_values</span> <span class="o">=</span> <span class="n">per_particle_med</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">dx_med</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">dx_values</span><span class="p">))</span> <span class="k">if</span> <span class="n">dx_values</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">dy_med</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">dy_values</span><span class="p">))</span> <span class="k">if</span> <span class="n">dy_values</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">dx_med</span><span class="p">)</span> <span class="ow">or</span> <span class="n">dx_med</span> <span class="o">&lt;=</span> <span class="n">xres</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">dy_med</span><span class="p">)</span> <span class="ow">or</span> <span class="n">dy_med</span> <span class="o">&lt;=</span> <span class="n">yres</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">p</span>
+
+    <span class="n">t_new</span> <span class="o">=</span> <span class="n">_interpolation_times</span><span class="p">(</span><span class="n">time_sign</span><span class="p">)</span>
+
+    <span class="c1"># Store pre-interpolation foot sums per window for rescaling later.</span>
+    <span class="n">atime</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">])</span>
+    <span class="n">foot_sums</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">,</span> <span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">atime</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">20</span><span class="p">),</span> <span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">atime</span> <span class="o">&gt;</span> <span class="mi">20</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">100</span><span class="p">),</span> <span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+    <span class="p">]</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="n">_interpolate_particle_tracks</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">t_new</span><span class="o">=</span><span class="n">t_new</span><span class="p">)</span>
+    <span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Rescale foot so total influence per window matches original.</span>
+    <span class="n">atime</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">])</span>
+    <span class="n">masks</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="p">(</span><span class="n">atime</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">20</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">atime</span> <span class="o">&gt;</span> <span class="mi">20</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">100</span><span class="p">),</span>
+    <span class="p">]</span>
+    <span class="k">for</span> <span class="n">mask</span><span class="p">,</span> <span class="n">total</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">masks</span><span class="p">,</span> <span class="n">foot_sums</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="s2">&quot;foot&quot;</span><span class="p">]</span> <span class="o">*=</span> <span class="n">total</span> <span class="o">/</span> <span class="n">s</span>
+
+    <span class="k">return</span> <span class="n">p</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_interpolate_particle_tracks</span><span class="p">(</span><span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">t_new</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Interpolate lon/lat/foot for each particle on a dense time grid.&quot;&quot;&quot;</span>
+    <span class="n">frames</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">original_columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">source_time</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">target_time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">source_time</span><span class="p">,</span> <span class="n">t_new</span><span class="p">]))</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">source_time</span><span class="p">)</span>
+        <span class="n">sorted_time</span> <span class="o">=</span> <span class="n">source_time</span><span class="p">[</span><span class="n">order</span><span class="p">]</span>
+        <span class="n">unique_time</span><span class="p">,</span> <span class="n">unique_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">sorted_time</span><span class="p">,</span> <span class="n">return_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Mirror STILT-R&#39;s full_join(expand.grid(...), by = c(&quot;particle&quot;, &quot;time&quot;)):</span>
+        <span class="c1"># original rows keep every column, while inserted rows only receive the</span>
+        <span class="c1"># interpolated lon/lat/foot values below.  A later dropna() therefore</span>
+        <span class="c1"># matches R&#39;s na.omit() across all columns.</span>
+        <span class="n">expanded</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;particle&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">target_time</span><span class="p">),</span> <span class="n">number</span><span class="p">),</span>
+                <span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="n">target_time</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="n">join_group</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">join_group</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">join_group</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">expanded</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span>
+            <span class="n">join_group</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;foot&quot;</span><span class="p">]:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[</span><span class="n">order</span><span class="p">][</span><span class="n">unique_idx</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_time</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="c1"># left/right=nan matches R&#39;s na_interp: no extrapolation</span>
+                <span class="c1"># beyond the observed [min_time, max_time] range.</span>
+                <span class="n">frame</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span>
+                    <span class="n">target_time</span><span class="p">,</span> <span class="n">unique_time</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_time</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">frame</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">target_time</span><span class="p">),</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">frame</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">target_time</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">original_columns</span><span class="p">])</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">frames</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">p</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+        <span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">],</span> <span class="n">ascending</span><span class="o">=</span><span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;stable&quot;</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_project_particles_to_crs</span><span class="p">(</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Project particle positions and the grid bounds to the grid&#39;s CRS.</span>
+
+<span class="sd">    Grid bounds are given in degrees and projected along with the</span>
+<span class="sd">    particles.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
+
+    <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">,</span> <span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">p</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="n">corners_x</span><span class="p">,</span> <span class="n">corners_y</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">],</span> <span class="p">[</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">])</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">p</span><span class="p">,</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">corners_x</span><span class="p">)),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">corners_x</span><span class="p">)),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">corners_y</span><span class="p">)),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">corners_y</span><span class="p">)),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_compute_kernel_bandwidths</span><span class="p">(</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">is_longlat</span><span class="p">:</span> <span class="nb">bool</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return ``(kernel_df, w)``, the Gaussian kernel width for each ``rtime``.</span>
+
+<span class="sd">    The width grows with the spread of the particles and the time since</span>
+<span class="sd">    release, as in STILT-R. On a longitude/latitude grid it is divided by</span>
+<span class="sd">    ``cos(lat)`` so it covers the same distance at high latitudes::</span>
+
+<span class="sd">        w = smooth_factor * 0.06 * varsum**0.25 * (|rtime| / 1440)**0.5 / cos(lat)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">kernel_df</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;rtime&quot;</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">agg</span><span class="p">(</span>
+            <span class="n">long_var</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">),</span>
+            <span class="n">lati_var</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">),</span>
+            <span class="n">lat_mean</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;mean&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+        <span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">kernel_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="c1"># Single-particle / no-variance case: zero-width kernel per rtime.</span>
+        <span class="n">rtime_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;rtime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">unique</span><span class="p">()))</span>
+        <span class="n">kernel_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;rtime&quot;</span><span class="p">:</span> <span class="n">rtime_vals</span><span class="p">,</span>
+                <span class="s2">&quot;lat_mean&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">())]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">rtime_vals</span><span class="p">),</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">kernel_df</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">kernel_df</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;varsum&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;long_var&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;lati_var&quot;</span><span class="p">]</span>
+    <span class="n">di</span> <span class="o">=</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;varsum&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">**</span> <span class="mf">0.25</span>
+    <span class="n">ti</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;rtime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span> <span class="o">/</span> <span class="mi">1440</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
+    <span class="n">grid_conv</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;lat_mean&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="k">if</span> <span class="n">is_longlat</span> <span class="k">else</span> <span class="mf">1.0</span>
+    <span class="p">)</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">smooth_factor</span> <span class="o">*</span> <span class="mf">0.06</span> <span class="o">*</span> <span class="n">di</span> <span class="o">*</span> <span class="n">ti</span> <span class="o">/</span> <span class="n">grid_conv</span>
+    <span class="k">return</span> <span class="n">kernel_df</span><span class="p">,</span> <span class="n">w</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_padded_axes</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">n_lon</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">n_lat</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">xbuf</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">ybuf</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the lower cell edges of the output grid padded by *xbuf* and *ybuf* cells per side.</span>
+
+<span class="sd">    The padding, the size of the largest kernel, lets particles just outside</span>
+<span class="sd">    the grid be smoothed into it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">glong_buf</span> <span class="o">=</span> <span class="n">xmin</span> <span class="o">-</span> <span class="n">xbuf</span> <span class="o">*</span> <span class="n">xres</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_lon</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">xbuf</span><span class="p">)</span> <span class="o">*</span> <span class="n">xres</span>
+    <span class="n">glati_buf</span> <span class="o">=</span> <span class="n">ymin</span> <span class="o">-</span> <span class="n">ybuf</span> <span class="o">*</span> <span class="n">yres</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_lat</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">ybuf</span><span class="p">)</span> <span class="o">*</span> <span class="n">yres</span>
+    <span class="k">return</span> <span class="n">glong_buf</span><span class="p">,</span> <span class="n">glati_buf</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_filter_and_rasterize_particles</span><span class="p">(</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">glong_buf</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">glati_buf</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">xbufh</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">ybufh</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">time_integrate</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sum ``foot`` by padded grid cell and time step for particles on the padded grid.</span>
+
+<span class="sd">    Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,</span>
+<span class="sd">    foot, layer``, and ``layers`` holds the sorted hour indices, or ``[0]``</span>
+<span class="sd">    when ``time_integrate`` is set. Both are empty when no particle is on</span>
+<span class="sd">    the padded grid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">filtered</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">p</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">xmin</span> <span class="o">-</span> <span class="n">xbufh</span> <span class="o">*</span> <span class="n">xres</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">xmax</span> <span class="o">+</span> <span class="n">xbufh</span> <span class="o">*</span> <span class="n">xres</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">ymin</span> <span class="o">-</span> <span class="n">ybufh</span> <span class="o">*</span> <span class="n">yres</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">ymax</span> <span class="o">+</span> <span class="n">ybufh</span> <span class="o">*</span> <span class="n">yres</span><span class="p">)</span>
+        <span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">filtered</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">filtered</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="n">filtered</span><span class="p">[</span><span class="s2">&quot;loi&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span>
+            <span class="n">glong_buf</span><span class="p">,</span>
+            <span class="n">filtered</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+            <span class="n">side</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="o">-</span> <span class="mi">1</span>
+    <span class="p">)</span>
+    <span class="n">filtered</span><span class="p">[</span><span class="s2">&quot;lai&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span>
+            <span class="n">glati_buf</span><span class="p">,</span>
+            <span class="n">filtered</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+            <span class="n">side</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="o">-</span> <span class="mi">1</span>
+    <span class="p">)</span>
+    <span class="c1"># Sum foot for particles in the same cell at the same time step.</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">filtered</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">&quot;loi&quot;</span><span class="p">,</span> <span class="s2">&quot;lai&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="s2">&quot;rtime&quot;</span><span class="p">],</span> <span class="n">as_index</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+    <span class="p">)</span>
+
+    <span class="c1"># time_integrate=True collapses all steps into a single layer; otherwise</span>
+    <span class="c1"># bin into hourly layers for time-resolved output.</span>
+    <span class="n">p</span><span class="p">[</span><span class="s2">&quot;layer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">time_integrate</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">60</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">layers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;layer&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">layers</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_accumulate_smoothed_footprint</span><span class="p">(</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">layers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">n_lon_buf</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">n_lat_buf</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">rtimes</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">w</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">rs</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Grid each time step&#39;s ``foot`` on the padded grid and smooth it with a Gaussian kernel.</span>
+
+<span class="sd">    Returns an array of shape ``(n_lon_buf, n_lat_buf, n_layers)``. The</span>
+<span class="sd">    convolution covers only the bounding box of nonzero cells, which gives</span>
+<span class="sd">    the same result as the whole grid because the cells outside it are</span>
+<span class="sd">    zero.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_lon_buf</span><span class="p">,</span> <span class="n">n_lat_buf</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">kernel_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="n">layer_index</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">layer</span><span class="p">):</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">layer</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">layers</span><span class="p">)}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">&quot;layer&quot;</span><span class="p">,</span> <span class="s2">&quot;rtime&quot;</span><span class="p">],</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">layer</span><span class="p">,</span> <span class="n">rtime_val</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">key</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">layer_index</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">layer</span><span class="p">)]</span>
+
+        <span class="c1"># Nearest-neighbor kernel bandwidth for this rtime.</span>
+        <span class="n">step_w_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">rtimes</span> <span class="o">-</span> <span class="n">rtime_val</span><span class="p">)))</span>
+        <span class="n">step_w</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="n">step_w_idx</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">step_w</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kernel_cache</span><span class="p">:</span>
+            <span class="n">kernel_cache</span><span class="p">[</span><span class="n">step_w</span><span class="p">]</span> <span class="o">=</span> <span class="n">_make_gauss_kernel</span><span class="p">(</span><span class="n">rs</span><span class="p">,</span> <span class="n">step_w</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">kernel_cache</span><span class="p">[</span><span class="n">step_w</span><span class="p">]</span>
+
+        <span class="n">loi_arr</span> <span class="o">=</span> <span class="n">step</span><span class="p">[</span><span class="s2">&quot;loi&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">lai_arr</span> <span class="o">=</span> <span class="n">step</span><span class="p">[</span><span class="s2">&quot;lai&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">foot_vals</span> <span class="o">=</span> <span class="n">step</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">valid</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">loi_arr</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">loi_arr</span> <span class="o">&lt;</span> <span class="n">n_lon_buf</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">lai_arr</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">lai_arr</span> <span class="o">&lt;</span> <span class="n">n_lat_buf</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">lin_idx</span> <span class="o">=</span> <span class="n">loi_arr</span><span class="p">[</span><span class="n">valid</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_lat_buf</span> <span class="o">+</span> <span class="n">lai_arr</span><span class="p">[</span><span class="n">valid</span><span class="p">]</span>
+        <span class="n">sparse</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span>
+            <span class="n">lin_idx</span><span class="p">,</span>
+            <span class="n">weights</span><span class="o">=</span><span class="n">foot_vals</span><span class="p">[</span><span class="n">valid</span><span class="p">],</span>
+            <span class="n">minlength</span><span class="o">=</span><span class="n">n_lon_buf</span> <span class="o">*</span> <span class="n">n_lat_buf</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n_lon_buf</span><span class="p">,</span> <span class="n">n_lat_buf</span><span class="p">)</span>
+
+        <span class="n">nz_r</span><span class="p">,</span> <span class="n">nz_c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">sparse</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nz_r</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">kh_x</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="n">kh_y</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="n">r0</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">nz_r</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">kh_x</span><span class="p">)</span>
+        <span class="n">r1</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">n_lon_buf</span><span class="p">,</span> <span class="n">nz_r</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">kh_x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">c0</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">nz_c</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">kh_y</span><span class="p">)</span>
+        <span class="n">c1</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">n_lat_buf</span><span class="p">,</span> <span class="n">nz_c</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">kh_y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">foot_arr</span><span class="p">[</span><span class="n">r0</span><span class="p">:</span><span class="n">r1</span><span class="p">,</span> <span class="n">c0</span><span class="p">:</span><span class="n">c1</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">_convolve</span><span class="p">(</span>
+            <span class="n">sparse</span><span class="p">[</span><span class="n">r0</span><span class="p">:</span><span class="n">r1</span><span class="p">,</span> <span class="n">c0</span><span class="p">:</span><span class="n">c1</span><span class="p">],</span> <span class="n">k</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;constant&quot;</span><span class="p">,</span> <span class="n">cval</span><span class="o">=</span><span class="mf">0.0</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">foot_arr</span>
+
+
+<div class="viewcode-block" id="calc_footprint">
+<a class="viewcode-back" href="../../../reference/_api/stilt.calc_footprint.html#stilt.calc_footprint">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_footprint</span><span class="p">(</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">grid</span><span class="p">:</span> <span class="n">Grid</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">time_integrate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate a footprint from particles, as STILT-R&#39;s ``calc_footprint`` does.</span>
+
+<span class="sd">    The particle *transforms* are applied first, in order, so the footprint</span>
+<span class="sd">    records exactly the transforms it was made with. Near the receptor,</span>
+<span class="sd">    particle tracks are interpolated to finer times when particles cross</span>
+<span class="sd">    more than a grid cell per step. Each particle&#39;s ``foot`` is added to the</span>
+<span class="sd">    cell it is in, and each time step is smoothed with a Gaussian kernel</span>
+<span class="sd">    that widens with the particles&#39; spread and age. The sum is divided by</span>
+<span class="sd">    the number of particles and binned by hour, unless *time_integrate* is</span>
+<span class="sd">    set.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    particles : pandas.DataFrame</span>
+<span class="sd">        Particle table, such as :func:`stilt.run_trajectories` returns or</span>
+<span class="sd">        ``sim.particles``, with columns ``particle``, ``age`` (minutes since</span>
+<span class="sd">        release), ``lon``, ``lat``, and ``foot``.</span>
+<span class="sd">    receptor : Receptor</span>
+<span class="sd">        Receptor the particles were released from.</span>
+<span class="sd">    grid : Grid</span>
+<span class="sd">        Domain and resolution of the footprint. For a footprint given by a</span>
+<span class="sd">        geometry, derive it first: ``stilt.Mesh.from_spec(geometry).to_grid()``.</span>
+<span class="sd">    smooth_factor : float, default 1.0</span>
+<span class="sd">        Factor on the width of the Gaussian smoothing kernel. 0 turns</span>
+<span class="sd">        smoothing off.</span>
+<span class="sd">    time_integrate : bool, default False</span>
+<span class="sd">        Sum the footprint over time into one layer instead of hourly layers.</span>
+<span class="sd">    transforms : sequence, optional</span>
+<span class="sd">        Particle transforms applied before the footprint is calculated, as</span>
+<span class="sd">        objects or as the mappings ``config.yaml`` takes</span>
+<span class="sd">        (``{&quot;kind&quot;: &quot;pressure_weighting&quot;}``).</span>
+<span class="sd">    name : str, optional</span>
+<span class="sd">        Name of the footprint, usually the variant name.</span>
+<span class="sd">    directory : str or Path, optional</span>
+<span class="sd">        Where a relative file name in a transform&#39;s settings starts, such as</span>
+<span class="sd">        an averaging-kernel table: the project directory.</span>
+<span class="sd">    geometry_hash : str, optional</span>
+<span class="sd">        Hash of the geometry the grid was derived for</span>
+<span class="sd">        (``sim.variant.geometry_hash``), recorded with the footprint so</span>
+<span class="sd">        aggregating it onto another mesh warns.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xarray.DataArray</span>
+<span class="sd">        The footprint, named ``foot``, with dimensions ``(time, lat, lon)``</span>
+<span class="sd">        or ``(time, y, x)`` on a projected grid. Coordinates are cell</span>
+<span class="sd">        centers, and ``time`` is the start of each hour. The ``.stilt``</span>
+<span class="sd">        accessor has the methods that use it.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ImportError</span>
+<span class="sd">        If a transform is a mapping whose ``kind`` cannot be imported.</span>
+<span class="sd">    EmptyFootprint</span>
+<span class="sd">        If no particle is over the grid, or the table has none.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; grid = stilt.Grid(</span>
+<span class="sd">    ...     xmin=-113, xmax=-110.5, ymin=40, ymax=42, xres=0.01, yres=0.01</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; foot = stilt.calc_footprint(particles, receptor, grid, smooth_factor=0.5)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;A footprint needs a grid. Give one, or derive it from a geometry &quot;</span>
+            <span class="s2">&quot;with stilt.Mesh.from_spec(geometry).to_grid().&quot;</span>
+        <span class="p">)</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+    <span class="c1"># Checks the settings, and builds the transforms given as mappings.</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;grid&quot;</span><span class="p">:</span> <span class="n">grid</span><span class="p">,</span>
+            <span class="s2">&quot;smooth_factor&quot;</span><span class="p">:</span> <span class="n">smooth_factor</span><span class="p">,</span>
+            <span class="s2">&quot;time_integrate&quot;</span><span class="p">:</span> <span class="n">time_integrate</span><span class="p">,</span>
+            <span class="s2">&quot;transforms&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">transforms</span><span class="p">),</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">particles</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="n">check_particles</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">need</span><span class="o">=</span><span class="n">FOOTPRINT_COLUMNS</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">:</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">apply_transforms</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
+    <span class="n">crs</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">crs</span>
+    <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">xres</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span>
+    <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">yres</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span>
+    <span class="n">is_longlat</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span>
+    <span class="n">smooth_factor</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">smooth_factor</span>
+    <span class="n">time_integrate</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">time_integrate</span>
+
+    <span class="k">if</span> <span class="n">particles</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">EmptyFootprint</span><span class="p">()</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">n_particles</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
+    <span class="c1"># time_sign: -1 for backward runs, +1 for forward.</span>
+    <span class="n">time_sign</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">()))</span>
+
+    <span class="n">wrapped_longitude</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">is_longlat</span><span class="p">:</span>
+        <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">wrapped_longitude</span> <span class="o">=</span> <span class="n">_wrap_antimeridian_longitudes</span><span class="p">(</span>
+            <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="n">xmax</span>
+        <span class="p">)</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="n">_interpolate_early_timesteps</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">xres</span><span class="o">=</span><span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="o">=</span><span class="n">yres</span><span class="p">,</span> <span class="n">time_sign</span><span class="o">=</span><span class="n">time_sign</span><span class="p">)</span>
+
+    <span class="c1"># rtime = time elapsed since each particle&#39;s first output step.</span>
+    <span class="c1"># Used below to compute kernel bandwidth (particles spread more with time).</span>
+    <span class="n">min_abs_time</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">],</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>
+    <span class="n">p</span><span class="p">[</span><span class="s2">&quot;rtime&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">time_sign</span> <span class="o">*</span> <span class="n">min_abs_time</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_longlat</span><span class="p">:</span>
+        <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">_project_particles_to_crs</span><span class="p">(</span>
+            <span class="n">p</span><span class="p">,</span>
+            <span class="n">crs</span><span class="o">=</span><span class="n">crs</span><span class="p">,</span>
+            <span class="n">xmin</span><span class="o">=</span><span class="n">xmin</span><span class="p">,</span>
+            <span class="n">xmax</span><span class="o">=</span><span class="n">xmax</span><span class="p">,</span>
+            <span class="n">ymin</span><span class="o">=</span><span class="n">ymin</span><span class="p">,</span>
+            <span class="n">ymax</span><span class="o">=</span><span class="n">ymax</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Output grid lower-left corners for half-open extents [min, max).</span>
+    <span class="n">glong</span> <span class="o">=</span> <span class="n">_grid_cell_starts</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">xres</span><span class="p">)</span>
+    <span class="n">glati</span> <span class="o">=</span> <span class="n">_grid_cell_starts</span><span class="p">(</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">yres</span><span class="p">)</span>
+    <span class="n">n_lon</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">glong</span><span class="p">)</span>
+    <span class="n">n_lat</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">glati</span><span class="p">)</span>
+    <span class="n">rs</span> <span class="o">=</span> <span class="p">(</span><span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">)</span>
+
+    <span class="n">kernel_df</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">_compute_kernel_bandwidths</span><span class="p">(</span>
+        <span class="n">p</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="n">smooth_factor</span><span class="p">,</span> <span class="n">is_longlat</span><span class="o">=</span><span class="n">is_longlat</span>
+    <span class="p">)</span>
+    <span class="n">max_kernel</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">_make_gauss_kernel</span><span class="p">(</span><span class="n">rs</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">w</span><span class="p">)))</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])</span>
+    <span class="p">)</span>
+    <span class="n">xbuf</span><span class="p">,</span> <span class="n">ybuf</span> <span class="o">=</span> <span class="n">max_kernel</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">glong_buf</span><span class="p">,</span> <span class="n">glati_buf</span> <span class="o">=</span> <span class="n">_padded_axes</span><span class="p">(</span>
+        <span class="n">xmin</span><span class="o">=</span><span class="n">xmin</span><span class="p">,</span>
+        <span class="n">ymin</span><span class="o">=</span><span class="n">ymin</span><span class="p">,</span>
+        <span class="n">xres</span><span class="o">=</span><span class="n">xres</span><span class="p">,</span>
+        <span class="n">yres</span><span class="o">=</span><span class="n">yres</span><span class="p">,</span>
+        <span class="n">n_lon</span><span class="o">=</span><span class="n">n_lon</span><span class="p">,</span>
+        <span class="n">n_lat</span><span class="o">=</span><span class="n">n_lat</span><span class="p">,</span>
+        <span class="n">xbuf</span><span class="o">=</span><span class="n">xbuf</span><span class="p">,</span>
+        <span class="n">ybuf</span><span class="o">=</span><span class="n">ybuf</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">p</span><span class="p">,</span> <span class="n">layers</span> <span class="o">=</span> <span class="n">_filter_and_rasterize_particles</span><span class="p">(</span>
+        <span class="n">p</span><span class="p">,</span>
+        <span class="n">glong_buf</span><span class="o">=</span><span class="n">glong_buf</span><span class="p">,</span>
+        <span class="n">glati_buf</span><span class="o">=</span><span class="n">glati_buf</span><span class="p">,</span>
+        <span class="n">xbufh</span><span class="o">=</span><span class="p">(</span><span class="n">xbuf</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">ybufh</span><span class="o">=</span><span class="p">(</span><span class="n">ybuf</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">xmin</span><span class="o">=</span><span class="n">xmin</span><span class="p">,</span>
+        <span class="n">xmax</span><span class="o">=</span><span class="n">xmax</span><span class="p">,</span>
+        <span class="n">ymin</span><span class="o">=</span><span class="n">ymin</span><span class="p">,</span>
+        <span class="n">ymax</span><span class="o">=</span><span class="n">ymax</span><span class="p">,</span>
+        <span class="n">xres</span><span class="o">=</span><span class="n">xres</span><span class="p">,</span>
+        <span class="n">yres</span><span class="o">=</span><span class="n">yres</span><span class="p">,</span>
+        <span class="n">time_integrate</span><span class="o">=</span><span class="n">time_integrate</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">EmptyFootprint</span><span class="p">()</span>
+
+    <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">_accumulate_smoothed_footprint</span><span class="p">(</span>
+        <span class="n">p</span><span class="p">,</span>
+        <span class="n">layers</span><span class="o">=</span><span class="n">layers</span><span class="p">,</span>
+        <span class="n">n_lon_buf</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">glong_buf</span><span class="p">),</span>
+        <span class="n">n_lat_buf</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">glati_buf</span><span class="p">),</span>
+        <span class="n">rtimes</span><span class="o">=</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;rtime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+        <span class="n">w</span><span class="o">=</span><span class="n">w</span><span class="p">,</span>
+        <span class="n">rs</span><span class="o">=</span><span class="n">rs</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Trim the padding and normalize by the particle count.</span>
+    <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">foot_arr</span><span class="p">[</span><span class="n">xbuf</span> <span class="p">:</span> <span class="n">xbuf</span> <span class="o">+</span> <span class="n">n_lon</span><span class="p">,</span> <span class="n">ybuf</span> <span class="p">:</span> <span class="n">ybuf</span> <span class="o">+</span> <span class="n">n_lat</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/</span> <span class="n">n_particles</span>
+
+    <span class="n">values</span> <span class="o">=</span> <span class="n">foot_arr</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># (time, y, x)</span>
+    <span class="c1"># Rounded as Grid.axes rounds them, so a footprint read back from its</span>
+    <span class="c1"># file has the same coordinates as the one calculated.</span>
+    <span class="n">x_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">glong</span> <span class="o">+</span> <span class="n">xres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="n">y_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">glati</span> <span class="o">+</span> <span class="n">yres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">wrapped_longitude</span><span class="p">:</span>
+        <span class="n">unwrapped</span> <span class="o">=</span> <span class="p">((</span><span class="n">x_coords</span> <span class="o">+</span> <span class="mf">180.0</span><span class="p">)</span> <span class="o">%</span> <span class="mf">360.0</span><span class="p">)</span> <span class="o">-</span> <span class="mf">180.0</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">unwrapped</span><span class="p">)</span>
+        <span class="n">x_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">unwrapped</span><span class="p">[</span><span class="n">order</span><span class="p">],</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">values</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">order</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">_footprint_array</span><span class="p">(</span>
+        <span class="n">values</span><span class="p">,</span> <span class="n">layers</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">x_coords</span><span class="p">,</span> <span class="n">y_coords</span><span class="p">,</span> <span class="n">geometry_hash</span>
+    <span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

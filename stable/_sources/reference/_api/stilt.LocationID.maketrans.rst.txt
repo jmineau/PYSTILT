@@ -1,6 +1,0 @@
-stilt.LocationID.maketrans
-==========================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.maketrans

@@ -1,6 +1,0 @@
-stilt.store.FsspecStore.exists
-==============================
-
-.. currentmodule:: stilt.store
-
-.. automethod:: FsspecStore.exists

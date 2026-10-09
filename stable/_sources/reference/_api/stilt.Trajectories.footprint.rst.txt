@@ -1,6 +1,0 @@
-stilt.Trajectories.footprint
-============================
-
-.. currentmodule:: stilt
-
-.. automethod:: Trajectories.footprint

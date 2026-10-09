@@ -1,6 +1,0 @@
-stilt.ReceptorID.isalpha
-========================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.isalpha

@@ -1,0 +1,6 @@
+stilt.Receptor.points
+=====================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Receptor.points

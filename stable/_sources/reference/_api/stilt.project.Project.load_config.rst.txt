@@ -1,6 +1,0 @@
-stilt.project.Project.load\_config
-==================================
-
-.. currentmodule:: stilt.project
-
-.. automethod:: Project.load_config

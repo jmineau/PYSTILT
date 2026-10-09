@@ -1,6 +1,0 @@
-stilt.ReceptorID.format
-=======================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.format

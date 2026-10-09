@@ -1,6 +1,0 @@
-stilt.project.Project.save\_record
-==================================
-
-.. currentmodule:: stilt.project
-
-.. automethod:: Project.save_record

@@ -1,6 +1,0 @@
-﻿stilt.observations.backgrounds.endpoint\_weights
-================================================
-
-.. currentmodule:: stilt.observations.backgrounds
-
-.. autofunction:: endpoint_weights

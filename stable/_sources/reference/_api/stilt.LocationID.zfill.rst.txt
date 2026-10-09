@@ -1,6 +1,0 @@
-stilt.LocationID.zfill
-======================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.zfill

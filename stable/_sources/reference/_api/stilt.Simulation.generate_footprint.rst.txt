@@ -1,6 +1,0 @@
-stilt.Simulation.generate\_footprint
-====================================
-
-.. currentmodule:: stilt
-
-.. automethod:: Simulation.generate_footprint

@@ -1,6 +1,0 @@
-stilt.config.Grid.from\_geometries
-==================================
-
-.. currentmodule:: stilt.config
-
-.. automethod:: Grid.from_geometries

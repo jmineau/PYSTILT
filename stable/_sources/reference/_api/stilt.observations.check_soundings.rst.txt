@@ -1,0 +1,6 @@
+﻿stilt.observations.check\_soundings
+===================================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: check_soundings

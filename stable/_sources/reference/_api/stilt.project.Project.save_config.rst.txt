@@ -1,6 +1,0 @@
-stilt.project.Project.save\_config
-==================================
-
-.. currentmodule:: stilt.project
-
-.. automethod:: Project.save_config

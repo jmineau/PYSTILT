@@ -1,6 +1,0 @@
-stilt.LocationID.strip
-======================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.strip

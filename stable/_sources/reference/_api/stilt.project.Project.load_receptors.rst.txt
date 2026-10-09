@@ -1,6 +1,0 @@
-stilt.project.Project.load\_receptors
-=====================================
-
-.. currentmodule:: stilt.project
-
-.. automethod:: Project.load_receptors

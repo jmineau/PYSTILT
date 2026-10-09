@@ -1,6 +1,0 @@
-stilt.config.FileGeometrySpec.build
-===================================
-
-.. currentmodule:: stilt.config
-
-.. automethod:: FileGeometrySpec.build

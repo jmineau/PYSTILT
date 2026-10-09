@@ -1,6 +1,0 @@
-﻿stilt.execution.pull\_receptors
-===============================
-
-.. currentmodule:: stilt.execution
-
-.. autofunction:: pull_receptors

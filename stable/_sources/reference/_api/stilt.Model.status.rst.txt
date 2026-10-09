@@ -1,6 +1,0 @@
-stilt.Model.status
-==================
-
-.. currentmodule:: stilt
-
-.. automethod:: Model.status

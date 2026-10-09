@@ -1,6 +1,0 @@
-﻿stilt.observations.transport\_error
-===================================
-
-.. currentmodule:: stilt.observations
-
-.. autofunction:: transport_error

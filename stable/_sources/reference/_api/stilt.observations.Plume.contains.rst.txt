@@ -1,6 +1,0 @@
-stilt.observations.Plume.contains
-=================================
-
-.. currentmodule:: stilt.observations
-
-.. automethod:: Plume.contains

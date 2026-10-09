@@ -1,6 +1,0 @@
-stilt.ReceptorID.startswith
-===========================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.startswith

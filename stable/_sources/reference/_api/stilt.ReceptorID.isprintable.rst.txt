@@ -1,6 +1,0 @@
-stilt.ReceptorID.isprintable
-============================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.isprintable

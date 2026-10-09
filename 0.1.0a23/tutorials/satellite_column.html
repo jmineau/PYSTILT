@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Tutorial: A Satellite Column, Start To Finish &#8212; PYSTILT 0.1.0a23</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+
+    <script src="../_static/documentation_options.js?v=24653ca2"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'tutorials/satellite_column';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a23';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="User Guide" href="../guides/index.html" />
+    <link rel="prev" title="Tutorial: From Footprints To Concentrations" href="flux_inversion.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a23" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT 0.1.0a23</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../development.html">
+    Development
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button type="button" id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="wbb_stationary.html">Tutorial: A Week Of Tower Footprints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flux_inversion.html">Tutorial: From Footprints To Concentrations</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Tutorial: A Satellite Column, Start To Finish</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Tutorials</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Tutorial: A Satellite Column, Start To Finish</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="tutorial-a-satellite-column-start-to-finish">
+<h1>Tutorial: A Satellite Column, Start To Finish<a class="headerlink" href="#tutorial-a-satellite-column-start-to-finish" title="Link to this heading">#</a></h1>
+<p>A tower measurement becomes a receptor directly. A satellite sounding
+takes a few more steps: choose which soundings to run, make a receptor for
+each, and weight each one’s particles with its own averaging kernel. This
+tutorial goes from a TROPOMI methane orbit over Salt Lake City to modeled
+and observed XCH4 enhancements. The same steps work for OCO-2, TCCON, and
+EM27/SUN; only the reader changes.</p>
+<section id="what-you-ll-learn">
+<h2>What you’ll learn<a class="headerlink" href="#what-you-ll-learn" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>how to read a product and choose the soundings to run</p></li>
+<li><p>how to make a receptor and a kernel table for each sounding</p></li>
+<li><p>how to weight the particles with the kernel and the pressure weights</p></li>
+<li><p>how to compare modeled and observed enhancements</p></li>
+</ul>
+</section>
+<section id="starting-point">
+<h2>Starting point<a class="headerlink" href="#starting-point" title="Link to this heading">#</a></h2>
+<p>A project made with <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code> or <a class="reference internal" href="../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.init()</span></code></a>, with HRRR
+meteorology and a footprint grid over the valley. A Level 2 file becomes
+a table with one row per sounding, and PYSTILT works on that table.</p>
+</section>
+<section id="step-1-read-the-soundings">
+<h2>Step 1: Read the soundings<a class="headerlink" href="#step-1-read-the-soundings" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../reference/_api/stilt.observations.read_tropomi_ch4.html#stilt.observations.read_tropomi_ch4" title="stilt.observations.read_tropomi_ch4"><code class="xref py py-func docutils literal notranslate"><span class="pre">read_tropomi_ch4()</span></code></a> reads an orbit into a table
+with one row per pixel. Its columns are the same for every reader
+(<a class="reference internal" href="../guides/readers.html"><span class="doc">Reading Retrieval Products</span></a>). Quality flags are a pandas filter:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_tropomi_ch4</span>
+
+<span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">&quot;./xch4&quot;</span><span class="p">)</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">read_tropomi_ch4</span><span class="p">(</span>
+    <span class="s2">&quot;S5P_OFFL_L2__CH4____20231019T192749_20231019T210918_31176_03_020500_20231021T113213.nc&quot;</span><span class="p">,</span>
+    <span class="n">lon_range</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">113.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">110.5</span><span class="p">),</span> <span class="n">lat_range</span><span class="o">=</span><span class="p">(</span><span class="mf">39.5</span><span class="p">,</span> <span class="mf">42.0</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">good</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="step-2-choose-the-soundings-to-run">
+<h2>Step 2: Choose the soundings to run<a class="headerlink" href="#step-2-choose-the-soundings-to-run" title="Link to this heading">#</a></h2>
+<p>A swath over a city has more pixels than you need. X-STILT’s sampling keeps
+every pixel near the city and a thinner grid of pixels farther out, for
+the background. <a class="reference internal" href="../reference/_api/stilt.observations.group_by_overpass.html#stilt.observations.group_by_overpass" title="stilt.observations.group_by_overpass"><code class="xref py py-func docutils literal notranslate"><span class="pre">group_by_overpass()</span></code></a> labels each
+overpass, and <a class="reference internal" href="../reference/_api/stilt.observations.select_observations_spatial.html#stilt.observations.select_observations_spatial" title="stilt.observations.select_observations_spatial"><code class="xref py py-func docutils literal notranslate"><span class="pre">select_observations_spatial()</span></code></a>
+thins each one:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">group_by_overpass</span><span class="p">,</span> <span class="n">select_observations_spatial</span>
+
+<span class="n">df</span><span class="p">[</span><span class="s2">&quot;overpass&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">group_by_overpass</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">])</span>
+<span class="n">chosen</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">scene</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;overpass&quot;</span><span class="p">):</span>
+    <span class="n">keep</span> <span class="o">=</span> <span class="n">select_observations_spatial</span><span class="p">(</span>
+        <span class="n">scene</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="n">scene</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span>
+        <span class="n">site_longitude</span><span class="o">=-</span><span class="mf">111.85</span><span class="p">,</span> <span class="n">site_latitude</span><span class="o">=</span><span class="mf">40.77</span><span class="p">,</span>
+        <span class="n">near_field_dlon</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">near_field_dlat</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+        <span class="n">near_field_cols</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">near_field_rows</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+        <span class="n">background_cols</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">background_rows</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">domain_lon_range</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">113.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">110.5</span><span class="p">),</span> <span class="n">domain_lat_range</span><span class="o">=</span><span class="p">(</span><span class="mf">39.5</span><span class="p">,</span> <span class="mf">42.0</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">chosen</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">scene</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">keep</span><span class="p">])</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">chosen</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="step-3-make-a-receptor-and-a-kernel-for-each-sounding">
+<h2>Step 3: Make a receptor and a kernel for each sounding<a class="headerlink" href="#step-3-make-a-receptor-and-a-kernel-for-each-sounding" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../reference/_api/stilt.observations.receptors_from_soundings.html#stilt.observations.receptors_from_soundings" title="stilt.observations.receptors_from_soundings"><code class="xref py py-func docutils literal notranslate"><span class="pre">receptors_from_soundings()</span></code></a> makes one receptor per
+row and the table of their averaging kernels. <code class="docutils literal notranslate"><span class="pre">&quot;slant&quot;</span></code> releases the
+particles along the satellite’s line of sight, at the retrieval’s own
+levels up to 3 km above the surface (<a class="reference internal" href="../guides/slant_columns.html"><span class="doc">Slant Columns</span></a>).
+<code class="docutils literal notranslate"><span class="pre">&quot;column&quot;</span></code> releases them straight up instead.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">receptors_from_soundings</span>
+
+<span class="n">receptors</span><span class="p">,</span> <span class="n">kernels</span> <span class="o">=</span> <span class="n">receptors_from_soundings</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s2">&quot;slant&quot;</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mi">3000</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">add_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">add_table</span><span class="p">(</span><span class="s2">&quot;kernels&quot;</span><span class="p">,</span> <span class="n">kernels</span><span class="p">)</span>    <span class="c1"># tables/kernels.parquet</span>
+</pre></div>
+</div>
+<p>Each receptor keeps its <code class="docutils literal notranslate"><span class="pre">sounding_id</span></code> as a column of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>,
+so the results join back to the soundings. The kernel table is an input
+like <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>: a <code class="docutils literal notranslate"><span class="pre">receptor</span></code> column, and one row per kernel
+level with its <code class="docutils literal notranslate"><span class="pre">level</span></code> and <code class="docutils literal notranslate"><span class="pre">value</span></code>. Adding it again leaves the kernels
+already there as they were.</p>
+</section>
+<section id="step-4-weight-the-particles">
+<h2>Step 4: Weight the particles<a class="headerlink" href="#step-4-weight-the-particles" title="Link to this heading">#</a></h2>
+<p>Two transforms go in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> (<a class="reference internal" href="../guides/transforms.html"><span class="doc">Particle Weighting (Transforms)</span></a>). The
+averaging kernel differs per sounding, so it reads the kernel table by
+name. Pressure weighting is worked out from the particles, so every
+receptor uses the same setting:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">transforms</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">averaging_kernel</span>
+<span class="w">    </span><span class="nt">table</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kernels</span>
+<span class="w">    </span><span class="nt">coordinate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pres</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pressure_weighting</span>
+</pre></div>
+</div>
+<p>TROPOMI gives its kernel on pressures, so <code class="docutils literal notranslate"><span class="pre">coordinate:</span> <span class="pre">pres</span></code> matches it
+to each particle’s pressure at its first output step, with nothing to
+convert to height. TROPOMI’s kernels are layer averages, and the reader’s
+<code class="docutils literal notranslate"><span class="pre">ak_pressure</span></code> holds the layer midpoints. OCO-2 kernels are values at
+levels, and GGG kernels are on a fixed pressure grid per site. A PROFFAST
+EM27/SUN kernel is on a fixed altitude grid: give the altitudes in the
+receptor’s vertical reference and leave <code class="docutils literal notranslate"><span class="pre">coordinate</span></code> at its default,
+the release height.</p>
+</section>
+<section id="step-5-run">
+<h2>Step 5: Run<a class="headerlink" href="#step-5-run" title="Link to this heading">#</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>run<span class="w"> </span>./xch4<span class="w">          </span><span class="c1"># or stilt submit ./xch4 on a cluster</span>
+</pre></div>
+</div>
+<p>Every way of running, Slurm included, applies each receptor’s own kernel,
+because the table is part of the project.</p>
+</section>
+<section id="step-6-compare-enhancements">
+<h2>Step 6: Compare enhancements<a class="headerlink" href="#step-6-compare-enhancements" title="Link to this heading">#</a></h2>
+<p>The footprint, weighted by the kernel and the pressure weights, gives the
+modeled enhancement for a flux field. The observed enhancement is the
+retrieved value minus a background. Here the background is the median of
+the soundings outside the plume of a forward run
+(<a class="reference internal" href="../guides/plume_background.html"><span class="doc">Plume Background</span></a>); a mole-fraction field also works
+(<a class="reference internal" href="../guides/background.html"><span class="doc">Background</span></a>).</p>
+<p><code class="docutils literal notranslate"><span class="pre">plume</span></code> is the outline of the forward run’s particles at the overpass
+(<a class="reference internal" href="../reference/_api/stilt.observations.plume_polygon.html#stilt.observations.plume_polygon" title="stilt.observations.plume_polygon"><code class="xref py py-func docutils literal notranslate"><span class="pre">plume_polygon()</span></code></a>, as in that guide).</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">plume_background</span>
+
+<span class="n">flux</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataarray</span><span class="p">(</span><span class="s2">&quot;ch4_flux.nc&quot;</span><span class="p">)</span>     <span class="c1"># µmol m⁻² s⁻¹, on the footprint grid or coarser</span>
+<span class="n">bg</span> <span class="o">=</span> <span class="n">plume_background</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">],</span> <span class="n">plume</span><span class="p">)</span>
+<span class="n">background</span> <span class="o">=</span> <span class="n">bg</span><span class="o">.</span><span class="n">value</span>                       <span class="c1"># ppb</span>
+
+<span class="n">soundings</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;sounding_id&quot;</span><span class="p">)</span>
+<span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">rec</span> <span class="ow">in</span> <span class="n">project</span><span class="o">.</span><span class="n">receptors</span><span class="o">.</span><span class="n">itertuples</span><span class="p">():</span>
+    <span class="n">foot</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">footprint</span>
+    <span class="k">if</span> <span class="n">foot</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>      <span class="c1"># no particle reached the grid</span>
+        <span class="k">continue</span>
+    <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+        <span class="s2">&quot;sounding_id&quot;</span><span class="p">:</span> <span class="n">rec</span><span class="o">.</span><span class="n">sounding_id</span><span class="p">,</span>
+        <span class="s2">&quot;modeled&quot;</span><span class="p">:</span> <span class="mi">1000</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>   <span class="c1"># ppm to ppb</span>
+        <span class="s2">&quot;observed&quot;</span><span class="p">:</span> <span class="n">soundings</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rec</span><span class="o">.</span><span class="n">sounding_id</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">background</span><span class="p">,</span>
+    <span class="p">})</span>
+<span class="n">compare</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;sounding_id&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A flux in µmol m⁻² s⁻¹ times a footprint gives ppm, and XCH4 is in ppb.
+The enhancement adds no prior term: the background was retrieved too, so
+the prior’s share cancels in the difference.</p>
+<section id="comparing-absolute-columns">
+<h3>Comparing absolute columns<a class="headerlink" href="#comparing-absolute-columns" title="Link to this heading">#</a></h3>
+<p>To compare the retrieved value itself, with a background from a model
+field, add the prior the retrieval carries where it is not sensitive.
+<a class="reference internal" href="../reference/_api/stilt.observations.modelled_column.html#stilt.observations.modelled_column" title="stilt.observations.modelled_column"><code class="xref py py-func docutils literal notranslate"><span class="pre">modelled_column()</span></code></a> does that:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">modelled_column</span>
+
+<span class="n">cams</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataarray</span><span class="p">(</span><span class="s2">&quot;cams_ch4.nc&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="s2">&quot;pres&quot;</span><span class="p">)</span>   <span class="c1"># (time, pres, lat, lon), ppb</span>
+
+<span class="n">sounding_id</span> <span class="o">=</span> <span class="n">compare</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>              <span class="c1"># any sounding with a footprint</span>
+<span class="n">rec</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">receptors</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;sounding_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sounding_id</span><span class="p">]</span>
+<span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
+<span class="n">row</span> <span class="o">=</span> <span class="n">soundings</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sounding_id</span><span class="p">]</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">pressure_levels</span>                     <span class="c1"># layer boundaries, hPa, surface first</span>
+<span class="n">w</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">p</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>            <span class="c1"># each layer&#39;s share of the column</span>
+<span class="n">up</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">altitude_levels</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">row</span><span class="o">.</span><span class="n">surface_altitude</span> <span class="o">+</span> <span class="mi">3000</span>   <span class="c1"># layers above the receptor&#39;s top</span>
+<span class="n">profile</span> <span class="o">=</span> <span class="n">cams</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;nearest&quot;</span><span class="p">)</span>
+<span class="n">above</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">w</span> <span class="o">*</span> <span class="n">row</span><span class="o">.</span><span class="n">ak</span> <span class="o">*</span> <span class="n">profile</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">pres</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">ak_pressure</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">)[</span><span class="n">up</span><span class="p">]))</span>
+
+<span class="n">column</span> <span class="o">=</span> <span class="n">modelled_column</span><span class="p">(</span>
+    <span class="mi">1000</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">background</span><span class="p">(</span><span class="n">cams</span><span class="p">)</span><span class="o">.</span><span class="n">value</span> <span class="o">+</span> <span class="n">above</span><span class="p">,</span>
+    <span class="n">ak</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">ak</span><span class="p">,</span> <span class="n">prior</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">apriori</span><span class="p">,</span> <span class="n">pressure_weight</span><span class="o">=</span><span class="n">w</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">sim.background(cams)</span></code> covers the receptor’s levels only, up to 3 km.
+<code class="docutils literal notranslate"><span class="pre">above</span></code> is the rest of the column: the field on the retrieval’s layers
+above the receptor’s top, weighted by the kernel and the pressure weights.
+That air saw no fluxes in the domain, so the field alone gives it
+(<a class="reference internal" href="../guides/background.html"><span class="doc">Background</span></a>).</p>
+</section>
+</section>
+<section id="your-own-instrument">
+<h2>Your own instrument<a class="headerlink" href="#your-own-instrument" title="Link to this heading">#</a></h2>
+<p>A new instrument needs only a reader: a function that returns a table
+with the columns of
+<code class="xref py py-data docutils literal notranslate"><span class="pre">SOUNDING_SCHEMA</span></code>. The reader
+handles the product’s conventions,
+such as unit conversions, quality flags, which variable holds the kernel,
+and how to rebuild the pressure grid. Every step after reading is the same.
+<a class="reference internal" href="../guides/readers.html"><span class="doc">Reading Retrieval Products</span></a> says which module to copy.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="flux_inversion.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Tutorial: From Footprints To Concentrations</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../guides/index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">User Guide</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-you-ll-learn">What you’ll learn</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#starting-point">Starting point</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-read-the-soundings">Step 1: Read the soundings</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-choose-the-soundings-to-run">Step 2: Choose the soundings to run</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-make-a-receptor-and-a-kernel-for-each-sounding">Step 3: Make a receptor and a kernel for each sounding</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-weight-the-particles">Step 4: Weight the particles</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-5-run">Step 5: Run</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-6-compare-enhancements">Step 6: Compare enhancements</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#comparing-absolute-columns">Comparing absolute columns</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#your-own-instrument">Your own instrument</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/tutorials/satellite_column.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,6 +1,0 @@
-stilt.ReceptorID.rindex
-=======================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.rindex

@@ -1,0 +1,6 @@
+stilt.transport.hysplit.HysplitModel.needs\_workdir
+===================================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+.. autoattribute:: HysplitModel.needs_workdir

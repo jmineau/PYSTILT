@@ -1,0 +1,6 @@
+﻿stilt.read\_footprint
+=====================
+
+.. currentmodule:: stilt
+
+.. autofunction:: read_footprint

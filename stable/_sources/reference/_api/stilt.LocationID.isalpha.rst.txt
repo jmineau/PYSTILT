@@ -1,6 +1,0 @@
-stilt.LocationID.isalpha
-========================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.isalpha

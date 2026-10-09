@@ -1,0 +1,6 @@
+﻿stilt.particles.FOOTPRINT\_COLUMNS
+==================================
+
+.. currentmodule:: stilt.particles
+
+.. autodata:: FOOTPRINT_COLUMNS

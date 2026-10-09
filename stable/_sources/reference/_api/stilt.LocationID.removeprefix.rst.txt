@@ -1,6 +1,0 @@
-stilt.LocationID.removeprefix
-=============================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.removeprefix

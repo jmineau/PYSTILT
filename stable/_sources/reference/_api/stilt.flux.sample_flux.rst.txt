@@ -1,6 +1,0 @@
-﻿stilt.flux.sample\_flux
-=======================
-
-.. currentmodule:: stilt.flux
-
-.. autofunction:: sample_flux

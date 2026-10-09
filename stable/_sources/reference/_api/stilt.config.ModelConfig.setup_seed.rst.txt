@@ -1,6 +1,0 @@
-stilt.config.ModelConfig.setup\_seed
-====================================
-
-.. currentmodule:: stilt.config
-
-.. automethod:: ModelConfig.setup_seed

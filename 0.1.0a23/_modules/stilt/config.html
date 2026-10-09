@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>stilt.config &#8212; PYSTILT 0.1.0a23</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+
+    <script src="../../_static/documentation_options.js?v=24653ca2"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/config';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a23';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a23" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT 0.1.0a23</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../development.html">
+    Development
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.config</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for stilt.config</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The project config: what ``config.yaml`` holds, and the variants it declares.</span>
+
+<span class="sd">``config.yaml`` names the transport model, the mets, and the variants. The</span>
+<span class="sd">model&#39;s parameters and the footprint settings are flat, top-level keys: the</span>
+<span class="sd">defaults every variant starts from. Each part has its own config class,</span>
+<span class="sd">next to the code that uses it: the transport model&#39;s and its met config</span>
+<span class="sd">(such as :class:`~stilt.transport.hysplit.HysplitConfig` and</span>
+<span class="sd">:class:`~stilt.transport.hysplit.MetConfig`),</span>
+<span class="sd">:class:`~stilt.footprint.config.FootprintConfig`, and</span>
+<span class="sd">:class:`~stilt.execution.ExecutionConfig`. :class:`ProjectConfig` reads the</span>
+<span class="sd">file and checks it without reading any other file, so a ``config.yaml``</span>
+<span class="sd">loads offline. :meth:`ProjectConfig.resolve` turns each declared variant</span>
+<span class="sd">into a :class:`Variant`, what its simulations run with; that reads each</span>
+<span class="sd">footprint geometry and asks the transport model for its build. Which</span>
+<span class="sd">weather each met is, read from its files, is read when a variant&#39;s</span>
+<span class="sd">hash is first needed.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">difflib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Self</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BaseModel</span><span class="p">,</span>
+    <span class="n">ConfigDict</span><span class="p">,</span>
+    <span class="n">Field</span><span class="p">,</span>
+    <span class="n">PrivateAttr</span><span class="p">,</span>
+    <span class="n">ValidationError</span><span class="p">,</span>
+    <span class="n">field_validator</span><span class="p">,</span>
+    <span class="n">model_validator</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileGeometrySpec</span><span class="p">,</span> <span class="n">FootprintConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.targets</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mesh</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">footprint_hash</span><span class="p">,</span>
+    <span class="n">footprint_settings</span><span class="p">,</span>
+    <span class="n">run_settings</span><span class="p">,</span>
+    <span class="n">settings_hash</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport</span><span class="w"> </span><span class="kn">import</span> <span class="n">MODELS</span><span class="p">,</span> <span class="n">ModelInfo</span><span class="p">,</span> <span class="n">TransportConfig</span><span class="p">,</span> <span class="n">get_model</span>
+
+<span class="c1">#: Pattern for variant and met names, which become directory names.</span>
+<span class="n">VARIANT_NAME_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[a-z0-9][a-z0-9-]*$&quot;</span><span class="p">)</span>
+
+<span class="c1">#: The top-level keys that belong to the footprint; every other unknown key belongs to the model.</span>
+<span class="n">_FOOTPRINT_FIELDS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_fields</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">transport_config</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fields</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">where</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return *fields* validated by the config class of the transport model called *model*.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If there is no such model, or a field is unknown to it or invalid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config_class</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">config_class</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">config_class</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_Declared</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    One variant as declared in ``config.yaml``, merged with the defaults.</span>
+
+<span class="sd">    Its transport settings are not validated yet, and a ``realizations``</span>
+<span class="sd">    group is one entry; :meth:`ProjectConfig.resolve` does both.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">met</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">realizations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">transport</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="n">footprint</span><span class="p">:</span> <span class="n">FootprintConfig</span> <span class="o">|</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="Variant">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.html#stilt.Variant">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Variant</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    One variant, resolved: its configs, its met, the model build, and its hashes.</span>
+
+<span class="sd">    Get one from ``project.variants`` or ``sim.variant``. A variant with</span>
+<span class="sd">    ``realizations: N`` is an ensemble: its simulations run N times,</span>
+<span class="sd">    realization ``k`` with ``seed + k`` (:meth:`transport_for`), and its</span>
+<span class="sd">    results share one folder, a ``realization=k`` partition each.</span>
+
+<span class="sd">    Variants with equal :attr:`particles_hash` share one run of the</span>
+<span class="sd">    transport model per receptor (and realization) and differ only in their</span>
+<span class="sd">    footprints. The hashes are computed once. Change a variant with</span>
+<span class="sd">    :func:`dataclasses.replace`, which computes them again.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        Name as declared in ``config.yaml``.</span>
+<span class="sd">    met : str</span>
+<span class="sd">        Name of the met it runs with.</span>
+<span class="sd">    met_config : BaseModel</span>
+<span class="sd">        That met&#39;s config, of the transport model&#39;s ``met_config_class``,</span>
+<span class="sd">        with absolute directories when resolved for a project.</span>
+<span class="sd">    transport : TransportConfig</span>
+<span class="sd">        The transport model&#39;s config, such as a</span>
+<span class="sd">        :class:`~stilt.transport.hysplit.HysplitConfig`, with the base seed.</span>
+<span class="sd">    model : ModelInfo</span>
+<span class="sd">        The transport model build that runs it.</span>
+<span class="sd">    realizations : int or None</span>
+<span class="sd">        Number of realizations of an ensemble, or ``None`` for a single run.</span>
+<span class="sd">    footprint : FootprintConfig or None</span>
+<span class="sd">        Footprint config, with its grid, or ``None`` for particles only.</span>
+<span class="sd">    geometry_hash : str or None</span>
+<span class="sd">        Hash of the geometry the footprint grid was derived for</span>
+<span class="sd">        (``Mesh.hash``), or ``None`` when the footprint has no geometry.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">met</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">met_config</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">transport</span><span class="p">:</span> <span class="n">TransportConfig</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">ModelInfo</span>
+    <span class="n">realizations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">footprint</span><span class="p">:</span> <span class="n">FootprintConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">realization_numbers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The realizations its simulations run as: ``0`` to ``N - 1``, or ``[None]`` for a single run.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">realizations</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">realizations</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Variant.transport_for">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.transport_for.html#stilt.Variant.transport_for">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">transport_for</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TransportConfig</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the transport config realization *realization* runs with.</span>
+
+<span class="sd">        Realization ``k`` of an ensemble has ``seed + k``; a single run</span>
+<span class="sd">        (``None``) has the variant&#39;s own.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If *realization* is not one of :attr:`realization_numbers`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">realization</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">realization_numbers</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> runs as realizations &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">realization_numbers</span><span class="si">}</span><span class="s2">, not </span><span class="si">{</span><span class="n">realization</span><span class="si">!r}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">realization</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">transport</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">realizations</span><span class="p">(</span><span class="n">realization</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)[</span><span class="n">realization</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Variant.met_settings">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.met_settings.html#stilt.Variant.met_settings">[docs]</a>
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">met_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        What a run records of the met, its config&#39;s ``settings()``.</span>
+
+<span class="sd">        For HYSPLIT, the weather product and the crop. Read on first use,</span>
+<span class="sd">        once for all the variants of a met: the product comes from the</span>
+<span class="sd">        header of the met&#39;s first file.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        FileNotFoundError</span>
+<span class="sd">            If the met&#39;s directory holds no file to read its product from.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">met_config</span><span class="o">.</span><span class="n">settings</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Met </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">met</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="Variant.run_settings">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.run_settings.html#stilt.Variant.run_settings">[docs]</a>
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The settings that identify this variant&#39;s particles, as ``_settings.yaml`` records them.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">run_settings</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">met_settings</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">ensemble</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">realizations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Variant.particles_hash">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.particles_hash.html#stilt.Variant.particles_hash">[docs]</a>
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">particles_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Hash of :attr:`run_settings`, which finds the particles folder.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">settings_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_settings</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Variant.footprint_settings">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.footprint_settings.html#stilt.Variant.footprint_settings">[docs]</a>
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">footprint_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The settings that identify this variant&#39;s footprints, or ``None`` for particles only.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">footprint_settings</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">footprint</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry_hash</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Variant.footprint_hash">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.footprint_hash.html#stilt.Variant.footprint_hash">[docs]</a>
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">footprint_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Hash of the particles and :attr:`footprint_settings`, which finds the footprint folder.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">footprint_settings</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">footprint_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">particles_hash</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">footprint_settings</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ProjectConfig">
+<a class="viewcode-back" href="../../reference/_api/stilt.ProjectConfig.html#stilt.ProjectConfig">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ProjectConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A project&#39;s configuration, as read from ``config.yaml``.</span>
+
+<span class="sd">    The transport model&#39;s parameters and the footprint fields are flat,</span>
+<span class="sd">    top-level keys, and are the defaults for every variant. ``model`` names</span>
+<span class="sd">    the transport model, HYSPLIT unless set; its parameters are checked by</span>
+<span class="sd">    its own config class and are in :attr:`transport`. The footprint fields</span>
+<span class="sd">    are in :attr:`footprint`. Each variant names a met and overrides some of</span>
+<span class="sd">    the defaults; only the declared variants run. A variant that names</span>
+<span class="sd">    another ``model`` gives that model&#39;s own parameters itself, and</span>
+<span class="sd">    inherits the parameters every model shares</span>
+<span class="sd">    (:class:`~stilt.transport.TransportConfig`).</span>
+<span class="sd">    An unknown key is an error that names the nearest setting.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">extra</span><span class="o">=</span><span class="s2">&quot;allow&quot;</span><span class="p">)</span>
+
+    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="s2">&quot;hysplit&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Transport model the variants run with, unless a variant names &quot;</span>
+            <span class="s2">&quot;another: ``hysplit``, or the import path of a model class in &quot;</span>
+            <span class="s2">&quot;another package, such as ``mypkg.models.MyModel``. Its parameters &quot;</span>
+            <span class="s2">&quot;are top-level keys of the config.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">mets</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Meteorology by name, such as ``hrrr``. At least one is required. &quot;</span>
+            <span class="s2">&quot;Each is checked by the met config of the transport model that &quot;</span>
+            <span class="s2">&quot;reads it (:class:`stilt.transport.hysplit.MetConfig` for HYSPLIT).&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">variants</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Variants by name, each a set of overrides of the defaults. A &quot;</span>
+            <span class="s2">&quot;variant may also set ``met`` (needed with several mets unless the &quot;</span>
+            <span class="s2">&quot;variant has a met&#39;s name) and ``realizations`` (run N times, &quot;</span>
+            <span class="s2">&quot;realization k with ``seed + k``, as one ensemble). Variants with &quot;</span>
+            <span class="s2">&quot;the same transport settings share one transport model run and &quot;</span>
+            <span class="s2">&quot;differ in the footprint made from it. At least one is required: &quot;</span>
+            <span class="s2">&quot;``hrrr: </span><span class="si">{}</span><span class="s2">`` runs the defaults.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">execution</span><span class="p">:</span> <span class="n">ExecutionConfig</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">ExecutionConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">({}),</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Where the receptors run and with what resources, such as &quot;</span>
+            <span class="s2">&quot;``backend: slurm`` and its options.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="s2">&quot;output&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Directory the results go to, relative to the project directory &quot;</span>
+            <span class="s2">&quot;unless absolute. A URL such as ``s3://bucket/output`` puts it on &quot;</span>
+            <span class="s2">&quot;an object store. Several projects can name the same directory and &quot;</span>
+            <span class="s2">&quot;share runs.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="n">_transport</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">PrivateAttr</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">_footprint</span><span class="p">:</span> <span class="n">FootprintConfig</span> <span class="o">=</span> <span class="n">PrivateAttr</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">({})</span>
+    <span class="p">)</span>
+    <span class="c1"># Each met checked by the met config of a model that reads it, by</span>
+    <span class="c1"># (met, model).</span>
+    <span class="n">_met_configs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">PrivateAttr</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;mets&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_met_mappings</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">mets</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Accept a met config object in Python, kept as the settings it was given.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mets</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="n">name</span><span class="p">:</span> <span class="n">met</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">,</span> <span class="n">exclude_unset</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">met</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">)</span>
+                <span class="k">else</span> <span class="n">met</span>
+                <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">met</span> <span class="ow">in</span> <span class="n">mets</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">}</span>
+        <span class="k">return</span> <span class="n">mets</span>
+
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;after&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_mets</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Require at least one met, each with a valid name.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">mets</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;ProjectConfig.mets must contain at least one meteorology configuration&quot;</span>
+            <span class="p">)</span>
+        <span class="n">bad</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mets</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">VARIANT_NAME_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">k</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="n">bad</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Met names must match </span><span class="si">{</span><span class="n">VARIANT_NAME_RE</span><span class="o">.</span><span class="n">pattern</span><span class="si">}</span><span class="s2">, got: </span><span class="si">{</span><span class="n">bad</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;after&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_defaults_and_variants</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check the defaults and each declared variant, so a bad config fails when it loads.</span>
+
+<span class="sd">        A variant&#39;s own transport settings are checked when it is resolved</span>
+<span class="sd">        (:meth:`resolve`), by the transport model&#39;s config class; everything</span>
+<span class="sd">        else is checked here.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">:</span>
+            <span class="n">first</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mets</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;The config has no variants. Add</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="s2">&quot;  variants:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;    </span><span class="si">{</span><span class="n">first</span><span class="si">}</span><span class="s2">: </span><span class="se">{{}}\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;to run the defaults with met </span><span class="si">{</span><span class="n">first</span><span class="si">}</span><span class="s2">, and more entries for &quot;</span>
+                <span class="s2">&quot;other settings.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">extra</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_extra</span> <span class="ow">or</span> <span class="p">{})</span>
+        <span class="n">_check_keys</span><span class="p">(</span><span class="n">extra</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;config&quot;</span><span class="p">,</span> <span class="n">own</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">model_fields</span><span class="p">))</span>
+        <span class="n">footprint</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">extra</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">extra</span><span class="p">)</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_FOOTPRINT_FIELDS</span><span class="p">}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_footprint</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">footprint</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;config footprint settings: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transport</span> <span class="o">=</span> <span class="n">transport_config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">extra</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;config (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="n">used</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">declared</span><span class="p">():</span>
+            <span class="n">declared</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_declared</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">met_config</span><span class="p">(</span><span class="n">declared</span><span class="o">.</span><span class="n">met</span><span class="p">,</span> <span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+            <span class="n">used</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">declared</span><span class="o">.</span><span class="n">met</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mets</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">-</span> <span class="n">used</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">met_config</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">transport</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The transport model&#39;s config, from the top-level keys: the defaults every variant starts from.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transport</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">footprint</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FootprintConfig</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The footprint settings, from the top-level keys: the defaults every variant starts from.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint</span>
+
+<div class="viewcode-block" id="ProjectConfig.declared">
+<a class="viewcode-back" href="../../reference/_api/stilt.ProjectConfig.declared.html#stilt.ProjectConfig.declared">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">declared</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the variants as written.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span></div>
+
+
+<div class="viewcode-block" id="ProjectConfig.met_config">
+<a class="viewcode-back" href="../../reference/_api/stilt.ProjectConfig.met_config.html#stilt.ProjectConfig.met_config">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">met_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the met called *name*, checked by the met config of the transport model *model*.</span>
+
+<span class="sd">        *model* is the project&#39;s model unless given. A relative directory</span>
+<span class="sd">        stays as written; :meth:`resolve` makes it absolute.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the met is not one the model can read.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">model</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_met_configs</span><span class="p">:</span>
+            <span class="n">met_class</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">met_config_class</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_met_configs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">met_class</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mets</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+            <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Met </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> (</span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_met_configs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_declared</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Declared</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return one declared variant merged with the defaults.</span>
+
+<span class="sd">        A variant that names another ``model`` inherits the met, the</span>
+<span class="sd">        footprint fields, and the transport parameters every model shares</span>
+<span class="sd">        (:class:`~stilt.transport.TransportConfig`); it gives that model&#39;s</span>
+<span class="sd">        own fields itself. Its transport fields are merged but not</span>
+<span class="sd">        validated.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            For a bad name, an unknown met or model, a bad ``realizations``,</span>
+<span class="sd">            ``from:``, or footprint settings without a grid.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">VARIANT_NAME_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">group</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Variant name </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2"> must match </span><span class="si">{</span><span class="n">VARIANT_NAME_RE</span><span class="o">.</span><span class="n">pattern</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">declared</span><span class="p">()[</span><span class="n">group</span><span class="p">]</span> <span class="ow">or</span> <span class="p">{})</span>
+        <span class="k">if</span> <span class="s2">&quot;from&quot;</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2"> uses &#39;from:&#39;, which is no longer needed: a &quot;</span>
+                <span class="s2">&quot;variant with the same transport settings as another shares its &quot;</span>
+                <span class="s2">&quot;particles. Give the variant the transport overrides of &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">spec</span><span class="p">[</span><span class="s1">&#39;from&#39;</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> (if any) and its own footprint settings.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">met</span> <span class="o">=</span> <span class="n">_met_name</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mets</span><span class="p">)</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;.&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">model</span> <span class="ow">and</span> <span class="n">model</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">MODELS</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Unknown transport model </span><span class="si">{</span><span class="n">model</span><span class="si">!r}</span><span class="s2">. The built-in models are &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">MODELS</span><span class="p">)</span><span class="si">}</span><span class="s2">; another is named by its import path.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">_check_keys</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">own</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;realizations&quot;</span><span class="p">})</span>
+        <span class="n">realizations</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;realizations&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">realizations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">realizations</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">realizations</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">realizations</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2">: realizations must be &gt;= 1&quot;</span><span class="p">)</span>
+        <span class="n">shared</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">TransportConfig</span><span class="o">.</span><span class="n">model_fields</span><span class="p">)</span>
+        <span class="n">defaults</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transport</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span>
+            <span class="n">include</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">model</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="k">else</span> <span class="n">shared</span>
+        <span class="p">)</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">defaults</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_footprint</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()}</span>
+        <span class="n">merged</span> <span class="o">=</span> <span class="n">_override</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">spec</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_Declared</span><span class="p">(</span>
+            <span class="n">met</span><span class="o">=</span><span class="n">met</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">realizations</span><span class="o">=</span><span class="n">realizations</span><span class="p">,</span>
+            <span class="n">transport</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_FOOTPRINT_FIELDS</span><span class="p">},</span>
+            <span class="n">footprint</span><span class="o">=</span><span class="n">_footprint</span><span class="p">(</span>
+                <span class="n">group</span><span class="p">,</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_FOOTPRINT_FIELDS</span><span class="p">}</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="ProjectConfig.resolve">
+<a class="viewcode-back" href="../../reference/_api/stilt.ProjectConfig.resolve.html#stilt.ProjectConfig.resolve">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Variant</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return one :class:`Variant` per declared variant, in declared order.</span>
+
+<span class="sd">        Each variant&#39;s transport settings are validated by its model&#39;s config</span>
+<span class="sd">        class, as are its realizations (``realizations: N`` runs it N</span>
+<span class="sd">        times, realization ``k`` with ``seed + k``). Each met&#39;s directories</span>
+<span class="sd">        are made absolute; what a run records of the met is read on first</span>
+<span class="sd">        use (:attr:`Variant.met_settings`). Each geometry is read</span>
+<span class="sd">        once, however many variants use it, and the grid of a footprint</span>
+<span class="sd">        given only by a geometry is derived from it</span>
+<span class="sd">        (:meth:`stilt.Mesh.to_grid`). The transport model&#39;s version and</span>
+<span class="sd">        data files are read once for each distinct build: the fields of its</span>
+<span class="sd">        config that change no particle, such as ``exe_dir``.</span>
+<span class="sd">        ``project.variants`` holds the result.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        directory : str or Path, optional</span>
+<span class="sd">            Where a relative geometry file or met directory starts: the</span>
+<span class="sd">            project directory. Without it, the working directory.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If a variant&#39;s transport settings are invalid for its model, or its</span>
+<span class="sd">            realizations would repeat one another.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">meshes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">builds</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">ModelInfo</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">mets</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">variants</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Variant</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">declared</span><span class="p">():</span>
+            <span class="n">declared</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_declared</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+            <span class="n">transport</span> <span class="o">=</span> <span class="n">transport_config</span><span class="p">(</span>
+                <span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">declared</span><span class="o">.</span><span class="n">transport</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2"> (</span><span class="si">{</span><span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">footprint</span><span class="p">,</span> <span class="n">geometry_hash</span> <span class="o">=</span> <span class="n">declared</span><span class="o">.</span><span class="n">footprint</span><span class="p">,</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">footprint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">footprint</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">_mesh</span><span class="p">(</span><span class="n">footprint</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">directory</span><span class="p">,</span> <span class="n">meshes</span><span class="p">)</span>
+                <span class="n">geometry_hash</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">hash</span>
+                <span class="k">if</span> <span class="n">footprint</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">grid</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">to_grid</span><span class="p">(</span><span class="n">cells_per_target</span><span class="o">=</span><span class="n">footprint</span><span class="o">.</span><span class="n">cells_per_target</span><span class="p">)</span>
+                    <span class="n">footprint</span> <span class="o">=</span> <span class="n">footprint</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;grid&quot;</span><span class="p">:</span> <span class="n">grid</span><span class="p">})</span>
+            <span class="n">where</span> <span class="o">=</span> <span class="n">transport</span><span class="o">.</span><span class="n">model_dump_json</span><span class="p">(</span><span class="n">include</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">transport</span><span class="o">.</span><span class="n">UNRECORDED</span><span class="p">))</span>
+            <span class="n">build</span> <span class="o">=</span> <span class="p">(</span><span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">where</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">build</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">builds</span><span class="p">:</span>
+                <span class="n">model</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+                <span class="n">builds</span><span class="p">[</span><span class="n">build</span><span class="p">]</span> <span class="o">=</span> <span class="n">ModelInfo</span><span class="p">(</span>
+                    <span class="c1"># As config.yaml names it, so another process imports it again.</span>
+                    <span class="n">name</span><span class="o">=</span><span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">version</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">version</span><span class="p">(</span><span class="n">transport</span><span class="p">),</span>
+                    <span class="n">data_files</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">data_files</span><span class="p">(</span><span class="n">transport</span><span class="p">),</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">declared</span><span class="o">.</span><span class="n">realizations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">transport</span><span class="o">.</span><span class="n">realizations</span><span class="p">(</span><span class="n">declared</span><span class="o">.</span><span class="n">realizations</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+            <span class="n">met_key</span> <span class="o">=</span> <span class="p">(</span><span class="n">declared</span><span class="o">.</span><span class="n">met</span><span class="p">,</span> <span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">met_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">mets</span><span class="p">:</span>
+                <span class="n">mets</span><span class="p">[</span><span class="n">met_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">_located</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">met_config</span><span class="p">(</span><span class="o">*</span><span class="n">met_key</span><span class="p">),</span> <span class="n">directory</span><span class="p">)</span>
+            <span class="n">variants</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="o">=</span> <span class="n">Variant</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">group</span><span class="p">,</span>
+                <span class="n">met</span><span class="o">=</span><span class="n">declared</span><span class="o">.</span><span class="n">met</span><span class="p">,</span>
+                <span class="n">met_config</span><span class="o">=</span><span class="n">mets</span><span class="p">[</span><span class="n">met_key</span><span class="p">],</span>
+                <span class="n">transport</span><span class="o">=</span><span class="n">transport</span><span class="p">,</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">builds</span><span class="p">[</span><span class="n">build</span><span class="p">],</span>
+                <span class="n">realizations</span><span class="o">=</span><span class="n">declared</span><span class="o">.</span><span class="n">realizations</span><span class="p">,</span>
+                <span class="n">footprint</span><span class="o">=</span><span class="n">footprint</span><span class="p">,</span>
+                <span class="n">geometry_hash</span><span class="o">=</span><span class="n">geometry_hash</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">variants</span></div>
+
+
+<div class="viewcode-block" id="ProjectConfig.to_yaml">
+<a class="viewcode-back" href="../../reference/_api/stilt.ProjectConfig.to_yaml.html#stilt.ProjectConfig.to_yaml">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the config as YAML, and write it to ``path`` when given.</span>
+
+<span class="sd">        The file is meant to be edited by hand, so it holds only the settings</span>
+<span class="sd">        that were given, top-level and for each met. ``mets`` and ``variants``</span>
+<span class="sd">        come first. The full settings of each variant are in the output</span>
+<span class="sd">        directory, in the ``_settings.yaml`` of each ``settings=`` folder.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model_fields_set</span><span class="p">)</span>
+        <span class="n">given</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_extra</span> <span class="ow">or</span> <span class="p">{})</span>
+        <span class="c1"># Footprint keys as their class writes them (a transform by its kind).</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_footprint</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="n">given</span> <span class="o">&amp;</span> <span class="n">_FOOTPRINT_FIELDS</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;execution&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;execution&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execution</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span>
+                <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">,</span> <span class="n">exclude_unset</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+        <span class="n">head</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;mets&quot;</span><span class="p">,</span> <span class="s2">&quot;variants&quot;</span><span class="p">)}</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span>
+            <span class="p">{</span><span class="o">**</span><span class="n">head</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">},</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+            <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">text</span></div>
+
+
+<div class="viewcode-block" id="ProjectConfig.from_yaml">
+<a class="viewcode-back" href="../../reference/_api/stilt.ProjectConfig.from_yaml.html#stilt.ProjectConfig.from_yaml">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_yaml</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load a project config from a YAML file.&quot;&quot;&quot;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">()</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">raw</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="c1">#: The commented ``config.yaml`` that ``Project.init(path, starter=True)`` and</span>
+<span class="c1">#: ``stilt init`` write, to edit by hand.</span>
+<span class="n">STARTER_CONFIG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;# PYSTILT project configuration</span>
+<span class="s2"># See docs for details: https://jmineau.github.io/PYSTILT</span>
+
+
+<span class="s2"># Meteorology, by name. Edit directory to point to your ARL files, or replace</span>
+<span class="s2"># file_format and file_tres with &quot;download: hrrr&quot; to download them from NOAA.</span>
+<span class="s2">mets:</span>
+<span class="s2">  hrrr:  # Unique name for this met.</span>
+<span class="s2">    directory: /path/to/arl/meteorology</span>
+<span class="s2">    file_format: &quot;%Y%m</span><span class="si">%d</span><span class="s2">_%H&quot;</span>
+<span class="s2">    file_tres: 6h  # Hours each met file covers; the docs&#39; HRRR files hold six.</span>
+
+
+<span class="s2"># Footprint grid. Remove it (or set grid: null) to make particles only.</span>
+<span class="s2">grid:</span>
+<span class="s2">  xmin: -113.0</span>
+<span class="s2">  xmax: -110.5</span>
+<span class="s2">  ymin: 40.0</span>
+<span class="s2">  ymax: 42.0</span>
+<span class="s2">  xres: 0.01</span>
+<span class="s2">  yres: 0.01</span>
+
+
+<span class="s2"># Variants. Every receptor runs once per variant, with the settings in this</span>
+<span class="s2"># file as the defaults. An entry with no overrides runs the defaults as they</span>
+<span class="s2"># are; add others to run the same receptors under other settings, e.g. a</span>
+<span class="s2"># mixed-layer bracket or a wind-error ensemble (see the docs). Only the</span>
+<span class="s2"># variants listed here run.</span>
+<span class="s2">variants:</span>
+<span class="s2">  hrrr: </span><span class="si">{}</span>
+<span class="s2">#  hrrr-zi08: </span><span class="si">{ziscale: 0.8}</span>
+
+
+<span class="s2"># Common run controls. Negative n_hours means backward in time.</span>
+<span class="s2">n_hours: -24</span>
+<span class="s2">numpar: 1000</span>
+<span class="s2">varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]</span>
+<span class="s2">hnf_plume: true  # rescale footprints via a gaussian plume model in the hyper-near field</span>
+
+
+<span class="s2"># Results go to this directory, relative to the project unless absolute.</span>
+<span class="s2"># Several projects can name the same directory and share runs.</span>
+<span class="s2">output: ./output</span>
+
+
+<span class="s2"># Execution is optional. Local execution is the default.</span>
+<span class="s2"># execution:</span>
+<span class="s2">#   backend: local  # or &quot;slurm&quot;</span>
+<span class="s2">#   cpus: 1         # receptors at once (per array task on Slurm)</span>
+<span class="s2">#   n_workers: 1    # Slurm array tasks</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_met_name</span><span class="p">(</span><span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">mets</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the met a variant runs with, taking ``met`` out of *spec*.&quot;&quot;&quot;</span>
+    <span class="n">met</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;met&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">met</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">mets</span><span class="p">:</span>
+            <span class="n">met</span> <span class="o">=</span> <span class="n">group</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">mets</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">met</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">mets</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2"> must name its met (one of </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">mets</span><span class="p">)</span><span class="si">}</span><span class="s2">) &quot;</span>
+                <span class="s2">&quot;or be named after one&quot;</span>
+            <span class="p">)</span>
+    <span class="k">if</span> <span class="n">met</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">mets</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2"> names unknown met </span><span class="si">{</span><span class="n">met</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">met</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_located</span><span class="p">(</span><span class="n">met</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return *met* with its ``directory`` and ``subgrid_dir`` absolute, when it has them.</span>
+
+<span class="sd">    A relative path starts from *directory*, or the working directory, and</span>
+<span class="sd">    ``~`` and ``$VARIABLES`` are expanded.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">paths</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">field</span><span class="p">:</span> <span class="n">absolute</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;directory&quot;</span><span class="p">,</span> <span class="s2">&quot;subgrid_dir&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">:=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">met</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">met</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">update</span><span class="o">=</span><span class="n">paths</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_override</span><span class="p">(</span><span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">base</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">spec</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Apply a variant&#39;s overrides to ``base``.</span>
+
+<span class="sd">    A ``grid`` mapping updates the base grid field by field, so a variant can</span>
+<span class="sd">    change only the resolution, and ``grid: null`` removes the footprint. A</span>
+<span class="sd">    variant that sets its own ``geometry`` drops the inherited ``grid``</span>
+<span class="sd">    unless it sets ``grid`` too, so the grid is derived from its geometry.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If a variant changes part of a grid that is derived from the</span>
+<span class="sd">        default ``geometry``. That grid is not known until the geometry is</span>
+<span class="sd">        built.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">merged</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">base</span><span class="p">,</span> <span class="o">**</span><span class="n">spec</span><span class="p">}</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;grid&quot;</span><span class="p">),</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;grid&quot;</span><span class="p">),</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">merged</span><span class="p">[</span><span class="s2">&quot;grid&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">base</span><span class="p">[</span><span class="s2">&quot;grid&quot;</span><span class="p">],</span> <span class="o">**</span><span class="n">spec</span><span class="p">[</span><span class="s2">&quot;grid&quot;</span><span class="p">]}</span>
+        <span class="k">elif</span> <span class="n">base</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;geometry&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">&quot;geometry&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2"> changes part of a grid that is derived from &quot;</span>
+                <span class="s2">&quot;the default geometry. Give a full grid, or set cells_per_target &quot;</span>
+                <span class="s2">&quot;to change its resolution.&quot;</span>
+            <span class="p">)</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;geometry&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">&quot;grid&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+        <span class="n">merged</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;grid&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">merged</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_footprint</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fields</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">FootprintConfig</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the footprint settings, or ``None`` when they give no grid or geometry.</span>
+
+<span class="sd">    The geometry is not read here.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If footprint settings other than the grid are set without a grid,</span>
+<span class="sd">        since they would otherwise be dropped without a word.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="p">(</span><span class="o">**</span><span class="n">fields</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">config</span>
+    <span class="n">given</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span>
+    <span class="n">default</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">({})</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span>
+    <span class="n">stray</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">field</span> <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">given</span> <span class="k">if</span> <span class="n">given</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">!=</span> <span class="n">default</span><span class="p">[</span><span class="n">field</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">stray</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> sets footprint settings (</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">stray</span><span class="p">)</span><span class="si">}</span><span class="s2">) &quot;</span>
+            <span class="s2">&quot;but no grid. Add a grid or geometry, or remove them.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_mesh</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">meshes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the mesh a geometry spec describes, reading each spec once.</span>
+
+<span class="sd">    A relative file starts from *directory*. The spec in the settings keeps</span>
+<span class="sd">    the path as written, and a mesh&#39;s hash is of its polygons, so moving</span>
+<span class="sd">    the project changes no hash.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">model_dump_json</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">meshes</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">FileGeometrySpec</span><span class="p">)</span> <span class="ow">and</span> <span class="n">directory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">spec</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">absolute</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">directory</span><span class="p">))})</span>
+        <span class="n">meshes</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Mesh</span><span class="o">.</span><span class="n">from_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">meshes</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_keys</span><span class="p">(</span><span class="n">keys</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">where</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">own</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Raise for the first key that is no setting, naming the nearest one and what it is.</span>
+
+<span class="sd">    A key may be a footprint setting, a setting of the transport *model*,</span>
+<span class="sd">    or one of *own*: the config&#39;s own keys at the top, or a variant&#39;s.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If a key is none of these.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="s2">&quot;a footprint setting&quot;</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_FOOTPRINT_FIELDS</span><span class="p">}</span>
+    <span class="n">config_class</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">config_class</span>
+    <span class="n">parts</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">name</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;a </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2"> setting&quot;</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">config_class</span><span class="o">.</span><span class="n">model_fields</span><span class="p">})</span>
+    <span class="n">parts</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">name</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;a </span><span class="si">{</span><span class="n">where</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2"> key&quot;</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">own</span><span class="p">})</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">parts</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;from&quot;</span><span class="p">:</span>  <span class="c1"># &quot;from:&quot; has its own message</span>
+            <span class="k">continue</span>
+        <span class="n">close</span> <span class="o">=</span> <span class="n">difflib</span><span class="o">.</span><span class="n">get_close_matches</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">parts</span><span class="p">),</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">hint</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; Did you mean </span><span class="si">{</span><span class="n">close</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">, </span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="n">close</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="si">}</span><span class="s2">?&quot;</span> <span class="k">if</span> <span class="n">close</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2"> is not a setting.</span><span class="si">{</span><span class="n">hint</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;STARTER_CONFIG&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;VARIANT_NAME_RE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ProjectConfig&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Variant&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;transport_config&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

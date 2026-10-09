@@ -1,6 +1,0 @@
-﻿stilt.project.project\_slug
-===========================
-
-.. currentmodule:: stilt.project
-
-.. autofunction:: project_slug

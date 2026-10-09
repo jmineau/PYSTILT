@@ -1,6 +1,0 @@
-stilt.store.FsspecStore.publish\_file
-=====================================
-
-.. currentmodule:: stilt.store
-
-.. automethod:: FsspecStore.publish_file

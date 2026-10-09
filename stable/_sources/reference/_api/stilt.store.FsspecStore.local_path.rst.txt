@@ -1,6 +1,0 @@
-stilt.store.FsspecStore.local\_path
-===================================
-
-.. currentmodule:: stilt.store
-
-.. automethod:: FsspecStore.local_path

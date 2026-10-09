@@ -1,6 +1,0 @@
-stilt.execution.ReceptorResult.summarise
-========================================
-
-.. currentmodule:: stilt.execution
-
-.. automethod:: ReceptorResult.summarise

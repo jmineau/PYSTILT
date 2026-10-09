@@ -1,6 +1,0 @@
-stilt.ReceptorID.rsplit
-=======================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.rsplit

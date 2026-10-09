@@ -1,6 +1,0 @@
-stilt.LocationID.join
-=====================
-
-.. currentmodule:: stilt
-
-.. automethod:: LocationID.join

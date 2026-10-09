@@ -1,6 +1,0 @@
-stilt.Model.run
-===============
-
-.. currentmodule:: stilt
-
-.. automethod:: Model.run

@@ -1,0 +1,6 @@
+stilt.Receptor.from\_json
+=========================
+
+.. currentmodule:: stilt
+
+.. automethod:: Receptor.from_json

@@ -1,6 +1,0 @@
-stilt.ReceptorID.ljust
-======================
-
-.. currentmodule:: stilt
-
-.. automethod:: ReceptorID.ljust

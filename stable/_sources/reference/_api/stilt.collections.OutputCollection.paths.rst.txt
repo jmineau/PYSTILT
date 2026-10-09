@@ -1,6 +1,0 @@
-stilt.collections.OutputCollection.paths
-========================================
-
-.. currentmodule:: stilt.collections
-
-.. automethod:: OutputCollection.paths

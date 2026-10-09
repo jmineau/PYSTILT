@@ -1,6 +1,0 @@
-stilt.config.ModelConfig.defaults
-=================================
-
-.. currentmodule:: stilt.config
-
-.. automethod:: ModelConfig.defaults
