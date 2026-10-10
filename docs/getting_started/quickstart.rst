@@ -74,20 +74,18 @@ the ground on the University of Utah campus, at 08:00 UTC on 15 January 2021:
 
 .. This page runs when the docs are built. It uses the met files the tests
    cache, which cover 14 and 15 January 2021 around Salt Lake, and works in a
-   temporary folder so the project it makes is not left in the repository.
+   temporary folder so the project it makes is not left in the repository
+   (docs/_ext/docs_examples.py).
 
 .. ipython:: python
    :suppress:
 
    import os
-   import tempfile
-   from pathlib import Path
 
-   docs_cwd = os.getcwd()
-   met_dir = Path(os.environ.get("STILT_TEST_MET_DIR", "tests/met_cache")).resolve()
-   assert met_dir.is_dir(), f"{met_dir} is missing: see 'Examples in the docs' in AGENTS.md"
-   met = {"directory": str(met_dir), "file_format": "%Y%m%d_%H", "file_tres": "6h"}
-   os.chdir(tempfile.mkdtemp())
+   import docs_examples
+
+   met = docs_examples.met()
+   docs_cwd = docs_examples.temp_workdir()
 
 Step 2: Follow the particles
 ----------------------------
