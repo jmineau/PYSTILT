@@ -432,7 +432,7 @@ Driven by [`just`](https://github.com/casey/just) and [`uv`](https://docs.astral
 | `just imports` | the import contracts (`lint-imports`) |
 | `just docstr` | docstring coverage of the public API (95%) |
 | `just quality-check` | lint, type check, import contracts, docstrings, unit tests |
-| `just build-docs` | clean Sphinx HTML build into `docs/_build`; warnings are errors |
+| `just build-docs` | clean Sphinx HTML build into `docs/_build`, running every example; warnings are errors |
 | `just docs-serve` | live docs preview at <http://127.0.0.1:8000> |
 | `just dist` | the sdist and one wheel per bundled HYSPLIT build into `dist/`, then `just check-dist` |
 | `just check-dist` | check each wheel's tag and that it holds only its own `hycs_std` |
@@ -532,6 +532,56 @@ them is kept) and what is inherited. A property or attribute's page is
 where its See Also and Examples go, as in pandas: give each public one a
 docstring that says what it is, and add See Also or Examples where they help.
 One with no docstring shows an empty row.
+
+#### Examples in the docs
+
+Examples run when the docs build, so they show real output, and the build fails
+when one breaks.
+
+- **A figure in a docstring:** put a `.. plot::` directive in the Examples
+  section. Its code runs (doctest `>>>` lines work), and the figure appears
+  under it.
+
+  ```rst
+  Examples
+  --------
+  .. plot::
+
+     >>> import matplotlib.pyplot as plt
+     >>> _ = plt.plot([0, 1, 2], [0, 1, 4])
+  ```
+
+- **Code in an `.rst` page:** a `.. ipython:: python` block runs, and shows each
+  line with its output, as in an IPython session. Changing a
+  `.. code-block:: python` to `.. ipython:: python` is enough to make it run. For
+  a figure, put `@savefig name.png` on the line above the plotting call.
+
+  ```rst
+  .. ipython:: python
+
+     import matplotlib.pyplot as plt
+     import stilt
+
+     stilt.__version__
+
+     @savefig squares.png width=5in
+     plt.plot([0, 1, 2], [0, 1, 4]);
+  ```
+
+  A block that raises or warns fails the build; `:okexcept:` or `:okwarning:`
+  under the directive allows one that is meant to. All `.rst` pages share one
+  session, so each page imports and defines what it uses.
+- **When they run:** `just build-docs` runs everything, as CI does;
+  `just docs-serve` reruns a page's blocks whenever that page is rebuilt.
+- **Notebooks, and code cells in Markdown pages,** are off in this project.
+  `copier update --data docs_notebooks=true` turns them on; it adds myst-nb, and
+  Jupyter with it, to the dev tools.
+- **Data:** the docs build on GitHub Actions, so an example uses synthetic data,
+  a small file in the repository, or a public download, never a machine-specific
+  path. Seed random numbers so the figures don't change from build to build.
+- **Optional dependencies:** the `dev` group installs `pystilt[complete]`, so the
+  plotting extra (`visualization`) is there in CI. If an example needs another
+  extra, add `pystilt[extra]` the same way.
 
 #### Voice
 
