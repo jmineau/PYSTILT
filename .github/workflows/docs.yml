@@ -48,7 +48,34 @@ jobs:
       - name: Install
         run: uv sync --locked
 
+      # The Getting Started page runs a real simulation on the met files the
+      # tests cache: the same cache and key as tests.yml.
+      - name: Restore HRRR met cache
+        id: met-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: tests/met_cache
+          key: met-hrrr-2021-v1
+
+      - name: Prewarm HRRR met cache
+        if: steps.met-cache.outputs.cache-hit != 'true'
+        env:
+          STILT_TEST_FETCH_MET: "1"
+        run: |
+          uv run pytest \
+            tests/transport/hysplit/test_release_assignment.py::test_hysplit_multipoint_release_points_follow_control_order \
+            --setup-only -q
+
+      - name: Save HRRR met cache
+        if: steps.met-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: tests/met_cache
+          key: ${{ steps.met-cache.outputs.cache-primary-key }}
+
       - name: Build
+        env:
+          STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
         run: uv run just build-docs
 
       - uses: actions/upload-artifact@v7
