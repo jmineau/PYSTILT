@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 
 import matplotlib
+import matplotlib.legend
 import numpy as np
 import pandas as pd
 import pytest
@@ -172,6 +173,24 @@ def test_receptor_map_column_returns_axes(col_receptor):
 def test_receptor_map_multipoint_returns_axes(multi_receptor):
     ax = multi_receptor.plot.map()
     assert ax is not None
+
+
+def test_receptor_map_legend_has_a_fixed_place(receptor, monkeypatch):
+    """
+    The legend sits in a corner instead of searching for the emptiest spot.
+
+    With loc="best", matplotlib tries every candidate against every point on the
+    axes, and warns when that takes over a second, as it does with the particles
+    of a simulation.
+    """
+
+    def search(self, *args, **kwargs):
+        raise AssertionError("the legend searched for its best position")
+
+    monkeypatch.setattr(matplotlib.legend.Legend, "_find_best_position", search)
+    fig, ax = plt.subplots()
+    receptor.plot.map(ax=ax)
+    fig.canvas.draw()  # the legend is placed at draw time
 
 
 def test_receptor_map_with_domain(receptor, grid):
