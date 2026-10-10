@@ -22,11 +22,28 @@ failed ones by reason. Then it lists the output's settings folders
 
 In Python, ``project.status()`` is the same, one row per simulation:
 
-.. code-block:: python
+.. This page runs when the docs are built, on the sample project of
+   docs/_ext/docs_examples.py (four receptors, all complete).
 
+.. ipython:: python
+   :suppress:
+
+   import os
+
+   import docs_examples
+
+   docs_cwd = docs_examples.temp_workdir(sample=True)
+
+.. ipython:: python
+
+   import stilt
+
+   project = stilt.Project("./my_project")
    status = project.status()
    status.state.value_counts()
    status[status.state == "failed"][["receptor", "variant", "reason", "message"]]
+
+The sample project has no failures, so the last table is empty.
 
 Each simulation is in one of four states. The state comes from the files in
 the output directory, so it is the same whoever asks and whenever.
@@ -176,10 +193,20 @@ My footprint looks wrong
 Start from the particles. A map of them shows where the air came from,
 whatever the footprint grid:
 
-.. code-block:: python
+.. ipython:: python
 
-   sim.particles.stilt.plot.map()
-   sim.footprint.stilt.plot.map()
+   sim = project.simulation("202101150800_-111.848_40.766_10", "hrrr")
+
+   @savefig checking_particles.png width=6in
+   sim.particles.stilt.plot.map();
+
+   @savefig checking_footprint.png width=6in
+   sim.footprint.stilt.plot.map();
+
+.. ipython:: python
+   :suppress:
+
+   os.chdir(docs_cwd)
 
 Then check, in order:
 
