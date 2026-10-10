@@ -12,6 +12,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   14 and 15 January 2021 that the tests use, so its output and figures are
   what the code makes. Its receptor moved from 15 July 2023 to 15 January
   2021 to fit that met.
+- The outputs, checking, and receptors guides run when the docs are built too,
+  and show their plots. The outputs and checking guides open a small sample
+  project that the docs build makes first (about 40 s).
 
 ### Fixed
 
