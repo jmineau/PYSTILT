@@ -41,6 +41,9 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
     "sphinx.ext.githubpages",
+    "matplotlib.sphinxext.plot_directive",  # `.. plot::` runs code, shows the figure
+    "IPython.sphinxext.ipython_directive",  # `.. ipython::` runs code in an .rst page
+    "IPython.sphinxext.ipython_console_highlighting",  # colors its In/Out prompts
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
     "sphinx_design",
@@ -137,6 +140,19 @@ autosummary_filename_map = {
     "stilt.particles.Background": "stilt.particles.Background-class"
 }
 set_type_checking_flag = True
+
+# Examples run when the docs build, so they show real output and fail the build
+# when they break. A `.. plot::` directive (in a docstring's Examples section or
+# on any page) shows its code and the figure it draws.
+plot_include_source = True
+plot_html_show_source_link = False
+plot_html_show_formats = False
+plot_formats = [("png", 100)]
+
+# In an .rst page, `.. ipython:: python` runs its code and shows each line with
+# its output; a block that raises or warns fails the build. Its figures (a line
+# `@savefig name.png` above the plotting call) are saved under docs/_build.
+ipython_savefig_dir = "_build/savefig"
 
 # Intersphinx settings
 intersphinx_mapping = {

@@ -47,13 +47,13 @@ repos:
         name: ruff check
         entry: uv run --no-sync ruff check --fix --show-fixes --force-exclude
         language: system
-        types_or: [python, pyi]
+        types_or: [python, pyi, jupyter]
         require_serial: true
       - id: ruff-format
         name: ruff format
         entry: uv run --no-sync ruff format --force-exclude
         language: system
-        types_or: [python, pyi]
+        types_or: [python, pyi, jupyter]
         require_serial: true
       - id: pyrefly
         name: pyrefly
