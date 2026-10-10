@@ -193,6 +193,23 @@ def test_receptor_map_legend_has_a_fixed_place(receptor, monkeypatch):
     fig.canvas.draw()  # the legend is placed at draw time
 
 
+def test_receptor_map_column_names_its_height_reference(col_receptor):
+    """A column's heights are labeled with the reference they are given in."""
+    for ref in ("agl", "msl"):
+        ax = col_receptor.model_copy(update={"altitude_ref": ref}).plot.map()
+        assert any(f"m {ref.upper()}" in t.get_text() for t in ax.texts)
+        plt.close("all")
+
+
+def test_receptor_map_multipoint_names_its_height_reference(multi_receptor):
+    """The height colorbar names the reference the receptor's heights are in."""
+    for ref in ("agl", "msl"):
+        ax = multi_receptor.model_copy(update={"altitude_ref": ref}).plot.map()
+        labels = [a.get_ylabel() for a in ax.figure.axes]
+        assert f"Height {ref.upper()} (m)" in labels
+        plt.close("all")
+
+
 def test_receptor_map_with_domain(receptor, grid):
     ax = receptor.plot.map(domain=grid)
     assert ax is not None
