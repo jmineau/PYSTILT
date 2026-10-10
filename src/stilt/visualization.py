@@ -465,7 +465,7 @@ class ReceptorPlotAccessor:
         if met_bounds is not None:
             _draw_met_box(ax, met_bounds)
 
-        ax.legend(fontsize=8)
+        ax.legend(fontsize=8, loc="upper right")
         if standalone:
             ax.set(xlabel="Longitude", ylabel="Latitude", title="Receptor")
         return ax
@@ -565,7 +565,7 @@ class SimulationPlotAccessor:
 
         if met_bounds is not None:
             _draw_met_box(ax, met_bounds)
-            ax.legend(fontsize=8)
+            ax.legend(fontsize=8, loc="upper right")
 
         ax.set_title(f"Simulation {sim}")
         return ax
