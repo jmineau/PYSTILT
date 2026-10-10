@@ -484,6 +484,21 @@ def test_jacobian_takes_a_plain_receptor_column(written_footprints):
     np.testing.assert_array_equal(H_plain.data.toarray(), H.data.toarray())
 
 
+def test_read_returns_one_receptors_stored_columns(written_footprints):
+    out, feet_by_id, empty_id = written_footprints
+    one = next(iter(feet_by_id))
+    table = out.read("footprints", FEET, one)
+    assert table.column_names == ["receptor", "hour", "y", "x", "foot"]
+    assert set(table.column("receptor").to_pylist()) == {one}
+    many = out.table("footprints", FEET, [one])
+    assert table.num_rows == many.num_rows == np.count_nonzero(feet_by_id[one].values)
+    cells = out.read("footprints", FEET, one, columns=["hour", "foot"])
+    assert cells.column_names == ["hour", "foot"]
+    assert out.read("footprints", FEET, empty_id).num_rows == 0
+    with pytest.raises(FileNotFoundError):
+        out.read("footprints", FEET, "202407150000_-111.9_40.8_5")
+
+
 def test_table_reads_the_date_folder_as_a_date32_column(written_footprints):
     import pyarrow as pa
 

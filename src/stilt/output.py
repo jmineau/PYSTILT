@@ -62,10 +62,11 @@ from typing import TYPE_CHECKING, Any, Literal
 import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as pads
+import pyarrow.parquet as pq
 import xarray as xr
 import yaml
 
-from stilt._paths import atomic_path, location
+from stilt._paths import atomic_path, location, readable
 from stilt.footprint import (
     FOOTPRINT_SCHEMA,
     FootprintConfig,
@@ -574,6 +575,48 @@ class Output:
         """
         folder = self._found(kind, kind, variant, realization)
         return None if folder is None else _receptor_file(folder, receptor_id)
+
+    def read(
+        self,
+        kind: Kind,
+        variant: Variant,
+        receptor_id: str,
+        realization: int | None = None,
+        columns: list[str] | None = None,
+    ) -> pa.Table:
+        """
+        Return one receptor's result file as a table of its stored columns.
+
+        The file as written, with no ``date`` column: what :meth:`table`
+        reads for many receptors at once, for one. :meth:`table` builds a
+        dataset over its files, which costs more than this on a single
+        one, so a method that reads receptors one at a time uses this.
+
+        Parameters
+        ----------
+        kind : {"particles", "footprints"}
+            Which result.
+        variant : Variant
+            Whose result.
+        receptor_id : str
+            The receptor, whose file must exist (:meth:`present`).
+        realization : int, optional
+            Which realization of an ensemble.
+        columns : list of str, optional
+            Only these stored columns. Every column by default.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the receptor has no file, or the variant no folder.
+        """
+        path = self.path(kind, variant, receptor_id, realization)
+        if path is None:
+            raise FileNotFoundError(
+                f"No {kind} folder for variant {variant.name!r} in {self.directory}."
+            )
+        with readable(path) as source:
+            return pq.read_table(source, columns=columns)
 
     def log_path(
         self, variant: Variant, receptor_id: str, realization: int | None = None
