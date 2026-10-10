@@ -898,7 +898,7 @@ def test_jacobian_of_a_variant(tmp_path):
         project.jacobian(sims, target, bins)
 
 
-def test_jacobian_in_batches_and_threads_is_the_same_matrix(tmp_path):
+def test_jacobian_in_threads_is_the_same_matrix(tmp_path):
     receptors = [_receptor(h) for h in range(8, 16)]
     project = _project(tmp_path, receptors, execution={"cpus": 3})
     for r in receptors[:-1]:
@@ -910,7 +910,7 @@ def test_jacobian_in_batches_and_threads_is_the_same_matrix(tmp_path):
         closed="left",
     )
     whole = project.jacobian(project.simulations, target, bins, workers=1)
-    batched = project.jacobian(project.simulations, target, bins, workers=3, batch=2)
+    batched = project.jacobian(project.simulations, target, bins, workers=3)
 
     assert (
         list(batched.receptors)

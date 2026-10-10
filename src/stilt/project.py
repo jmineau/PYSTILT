@@ -976,7 +976,6 @@ class Project:
         time_bins: pd.IntervalIndex,
         *,
         workers: int | None = None,
-        batch: int = 64,
     ) -> Jacobian:
         """
         Sum the selected footprints onto a target, per time bin, as one sparse matrix.
@@ -987,10 +986,10 @@ class Project:
         within each of *time_bins*, and cells or layers outside the target
         or the bins are dropped. The selection must hold one variant.
 
-        Footprints are read and summed *batch* receptors at a time, in
-        *workers* threads. Each thread holds one batch, so memory peaks at
-        about *workers* times a batch whatever the selection's size; the
-        result itself is sparse.
+        Footprints are read and summed one receptor at a time, in *workers*
+        threads. Each thread holds one footprint, so memory stays at a few
+        footprints whatever the selection's size; the result itself is
+        sparse.
 
         Parameters
         ----------
@@ -1006,10 +1005,6 @@ class Project:
             Threads that read and sum batches. Defaults to the CPUs this
             process may use (in a Slurm job, the job's), at most 8: more
             threads add memory and stop adding speed.
-        batch : int, default 64
-            Receptors read and summed together. At about 350,000 cells a
-            footprint, a batch of 64 takes some 2 GB at its peak, so 8
-            threads take some 16 GB.
 
         Returns
         -------
@@ -1037,11 +1032,11 @@ class Project:
             raise ValueError(f"Variant {name!r} has no footprints yet.")
         requested = list(dict.fromkeys(frame["receptor"]))
         found = self.output.present("footprints", variant, requested, k)
-        present = [r for r in requested if r in found]
-        batches = [present[i : i + batch] for i in range(0, len(present), batch)]
         return _jacobian(
-            lambda rows: self.output.table("footprints", variant, rows, k),
-            batches,
+            lambda r: self.output.table(
+                "footprints", variant, [r], k, columns=["hour", "y", "x", "foot"]
+            ),
+            [r for r in requested if r in found],
             variant.footprint,
             target,
             time_bins,
