@@ -1033,8 +1033,8 @@ class Project:
         requested = list(dict.fromkeys(frame["receptor"]))
         found = self.output.present("footprints", variant, requested, k)
         return _jacobian(
-            lambda r: self.output.table(
-                "footprints", variant, [r], k, columns=["hour", "y", "x", "foot"]
+            lambda r: self.output.read(
+                "footprints", variant, r, k, columns=["hour", "y", "x", "foot"]
             ),
             [r for r in requested if r in found],
             variant.footprint,

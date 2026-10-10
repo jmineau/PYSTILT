@@ -123,7 +123,8 @@ src/stilt/
   output.py          Output: the output directory, a folder per kind and
                      settings hash; finding a variant's folder, which
                      receptors have results (present, complete), reading
-                     many files at once (table), failure records, writing
+                     one receptor's file (read) or many at once (table),
+                     failure records, writing
   simulation.py      Simulation: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
   config.py          ProjectConfig: reads config.yaml, splits the flat keys into
