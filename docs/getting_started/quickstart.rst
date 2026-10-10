@@ -26,7 +26,7 @@ fails, naming the hours.
 
 If you already have ARL files, for example in a group archive, tell PYSTILT
 the folder they are in, a pattern for their names, and how many hours each
-file covers. For files named like ``20230715_18``, each holding six hours:
+file covers. For files named like ``20210115_06``, each holding six hours:
 
 .. code-block:: python
 
@@ -59,18 +59,35 @@ Step 1: Describe your measurement
 ---------------------------------
 
 A receptor is where and when you measured. This one is a sensor 10 m above
-the ground on the University of Utah campus, at 18:00 UTC on 15 July 2023:
+the ground on the University of Utah campus, at 08:00 UTC on 15 January 2021:
 
-.. code-block:: python
+.. ipython:: python
 
    import stilt
 
    receptor = stilt.PointReceptor(
-       time="2023-07-15 18:00",   # UTC
+       time="2021-01-15 08:00",   # UTC
        longitude=-111.848,
        latitude=40.766,
        altitude=10,               # meters above ground level
    )
+
+.. This page runs when the docs are built. It uses the met files the tests
+   cache, which cover 14 and 15 January 2021 around Salt Lake, and works in a
+   temporary folder so the project it makes is not left in the repository.
+
+.. ipython:: python
+   :suppress:
+
+   import os
+   import tempfile
+   from pathlib import Path
+
+   docs_cwd = os.getcwd()
+   met_dir = Path(os.environ.get("STILT_TEST_MET_DIR", "tests/met_cache")).resolve()
+   assert met_dir.is_dir(), f"{met_dir} is missing: see 'Examples in the docs' in AGENTS.md"
+   met = {"directory": str(met_dir), "file_format": "%Y%m%d_%H", "file_tres": "6h"}
+   os.chdir(tempfile.mkdtemp())
 
 Step 2: Follow the particles
 ----------------------------
@@ -78,7 +95,7 @@ Step 2: Follow the particles
 :func:`stilt.run_trajectories` releases particles at the receptor and
 follows them back in time through the meteorology:
 
-.. code-block:: python
+.. ipython:: python
 
    particles = stilt.run_trajectories(
        receptor,
@@ -100,10 +117,24 @@ This runs HYSPLIT, the transport model, and usually takes a minute or two.
 The particles are a :class:`pandas.DataFrame`, one row per particle per
 time step:
 
-.. code-block:: python
+.. ipython:: python
 
    particles.head()
-   particles.stilt.plot.map()
+
+   @savefig quickstart_particles.png width=6in
+   particles.stilt.plot.map();
+
+The particles start at the receptor and spread out. The met files here cover
+only a small region around Salt Lake, and the particles leave it before the 24
+hours are up. A particle that leaves the met stops there. This is how many hours
+they went (``age`` is in minutes):
+
+.. ipython:: python
+
+   print(f"{particles['age'].abs().max() / 60:.1f} hours")
+
+If that is short of ``n_hours``, the footprint covers only those hours.
+:doc:`../guides/checking` says when that matters.
 
 Step 3: Calculate the footprint
 -------------------------------
@@ -111,7 +142,7 @@ Step 3: Calculate the footprint
 The footprint is calculated on a grid. Make it big enough to include the
 areas upwind of your site. Here the cells are 0.01°, about 1 km:
 
-.. code-block:: python
+.. ipython:: python
 
    grid = stilt.Grid(
        xmin=-113.0, xmax=-110.5,   # longitude range
@@ -120,19 +151,22 @@ areas upwind of your site. Here the cells are 0.01°, about 1 km:
    )
    foot = stilt.calc_footprint(particles, receptor, grid)
 
-   foot.stilt.plot.map()
+   @savefig quickstart_footprint.png width=6in
+   foot.stilt.plot.map();
 
-You should see the most influence near the receptor, trailing off in the
-direction the air came from. The map shows the footprint summed over all 24
-hours, on a log scale. Cells with more color influenced the measurement more.
+The footprint starts at the receptor and stretches in the direction the air
+came from, here to the north-northwest. The map shows the footprint summed over
+time, on a log scale. Cells with more color influenced the measurement more.
 
 The footprint is an :class:`xarray.DataArray` with dimensions
-``(time, lat, lon)``, one map per hour, in units of ppm per
-(µmol m⁻² s⁻¹). Sum it over time with xarray:
+``(time, lat, lon)``, in units of ppm per (µmol m⁻² s⁻¹). It has one map for
+each hour the particles were still inside the met files. Sum it over time with
+xarray:
 
-.. code-block:: python
+.. ipython:: python
 
-   foot.sum("time")
+   foot.sizes
+   foot.sum("time").sizes
 
 PYSTILT's own methods on the particles and the footprint are under
 ``.stilt``.
@@ -146,7 +180,7 @@ runs every receptor, and keeps the results. :meth:`Project.init
 <stilt.Project.init>` creates the folder and writes both to it. The
 settings are the ones above:
 
-.. code-block:: python
+.. ipython:: python
 
    project = stilt.Project.init(
        "./my_first_project",
@@ -157,7 +191,7 @@ settings are the ones above:
        numpar=200,
        grid=grid,
    )
-   project.run()
+   project.run();
 
 ``run()`` runs the particles and the footprint of every receptor, and
 returns when they are done.
@@ -167,11 +201,18 @@ there is one variant, named ``hrrr`` after the met. One receptor under
 one variant is a :term:`simulation`. Look yours up by the receptor's id and
 the variant name:
 
-.. code-block:: python
+.. ipython:: python
 
    sim = project.simulation(receptor.id, "hrrr")
-   sim.footprint.stilt.plot.map()
    sim.particles.head()
+
+   @savefig quickstart_sim_footprint.png width=6in
+   sim.footprint.stilt.plot.map();
+
+This footprint looks a little different from the one in Step 3, although the
+settings are the same. Each run draws its own random numbers for the
+turbulence, and 200 particles are few. To repeat a run exactly, set ``krand: 2``
+and a ``seed``.
 
 What PYSTILT wrote
 ------------------
@@ -185,9 +226,9 @@ folder.
      config.yaml                 # your settings
      receptors.csv               # your receptors
      output/
-       particles/settings=hrrr-a3f9c2/date=2023-07-15/202307151800_-111.848_40.766_10.parquet
-       footprints/settings=hrrr-93278c/date=2023-07-15/202307151800_-111.848_40.766_10.parquet
-       logs/settings=hrrr-a3f9c2/date=2023-07-15/202307151800_-111.848_40.766_10.log
+       particles/settings=hrrr-a3f9c2/date=2021-01-15/202101150800_-111.848_40.766_10.parquet
+       footprints/settings=hrrr-93278c/date=2021-01-15/202101150800_-111.848_40.766_10.parquet
+       logs/settings=hrrr-a3f9c2/date=2021-01-15/202101150800_-111.848_40.766_10.log
 
 Each folder under ``particles``, ``footprints``, and ``logs`` is a
 :term:`settings folder <settings folder>`: the variant's name, ``hrrr``,
@@ -251,7 +292,7 @@ line, so the file reads:
 .. code-block:: text
 
    time,longitude,latitude,altitude
-   2023-07-15 18:00:00,-111.848,40.766,10
+   2021-01-15 08:00:00,-111.848,40.766,10
 
 Then run it and check the result:
 
@@ -259,6 +300,11 @@ Then run it and check the result:
 
    stilt run ./my_first_project
    stilt status ./my_first_project
+
+.. ipython:: python
+   :suppress:
+
+   os.chdir(docs_cwd)
 
 Next steps
 ----------
