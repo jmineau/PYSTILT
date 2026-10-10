@@ -579,6 +579,13 @@ when one breaks.
 - **Data:** the docs build on GitHub Actions, so an example uses synthetic data,
   a small file in the repository, or a public download, never a machine-specific
   path. Seed random numbers so the figures don't change from build to build.
+- **The Getting Started page runs a real simulation** on the met files the tests
+  cache (`tests/met_cache`, 14 and 15 January 2021 around Salt Lake), in a
+  temporary folder. `just build-docs` needs them: set `STILT_TEST_MET_DIR` to
+  that folder, or fetch them once with
+  `STILT_TEST_FETCH_MET=1 uv run pytest tests/transport/hysplit/test_release_assignment.py::test_hysplit_multipoint_release_points_follow_control_order --setup-only -q`.
+  A receptor in the page must stay inside that time window. `docs.yml` restores
+  the same cache the tests use.
 - **Optional dependencies:** the `dev` group installs `pystilt[complete]`, so the
   plotting extra (`visualization`) is there in CI. If an example needs another
   extra, add `pystilt[extra]` the same way.

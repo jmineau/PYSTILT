@@ -6,6 +6,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The Getting Started page runs when the docs are built, on the met files for
+  14 and 15 January 2021 that the tests use, so its output and figures are
+  what the code makes. Its receptor moved from 15 July 2023 to 15 January
+  2021 to fit that met.
+
+### Fixed
+
+- `receptor.plot.map()`, and so `sim.plot.map()`, puts its legend in the upper
+  right corner. It searched for the emptiest spot, which took over a second
+  with a simulation's particles on the map, and matplotlib warned.
+
 ## [0.1.0a24] - 2026-10-09
 
 ### Added
