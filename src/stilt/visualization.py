@@ -439,7 +439,13 @@ class ReceptorPlotAccessor:
                 label="Receptors",
                 **kwargs,
             )
-            fig.colorbar(sc, ax=ax, label="Height AGL (m)", shrink=0.7, pad=0.02)
+            fig.colorbar(
+                sc,
+                ax=ax,
+                label=f"Height {r.altitude_ref.upper()} (m)",
+                shrink=0.7,
+                pad=0.02,
+            )
         else:  # a point, or a column at one location
             ax.scatter(
                 [lons[0]],
@@ -453,7 +459,7 @@ class ReceptorPlotAccessor:
             )
             if isinstance(r, ColumnReceptor):
                 ax.annotate(
-                    f"{r.bottom:.0f}–{r.top:.0f} m AGL",
+                    f"{r.bottom:.0f}–{r.top:.0f} m {r.altitude_ref.upper()}",
                     xy=(lons[0], lats[0]),
                     xytext=(6, 4),
                     textcoords="offset points",

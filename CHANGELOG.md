@@ -21,6 +21,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `receptor.plot.map()`, and so `sim.plot.map()`, puts its legend in the upper
   right corner. It searched for the emptiest spot, which took over a second
   with a simulation's particles on the map, and matplotlib warned.
+- `receptor.plot.map()` labels a column's heights, and a multipoint receptor's
+  height colorbar, with the reference the receptor was given (`AGL` or `MSL`).
+  It said `AGL` for both.
 
 ## [0.1.0a24] - 2026-10-09
 
