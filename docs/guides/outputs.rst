@@ -18,23 +18,41 @@ Jacobian.
 Quick look
 ----------
 
+.. This page runs when the docs are built, on a small sample project: four
+   receptors an hour apart on the morning of 15 January 2021, run on the met
+   files the tests cache (docs/_ext/docs_examples.py).
+
+.. ipython:: python
+   :suppress:
+
+   import os
+
+   import docs_examples
+
+   docs_cwd = docs_examples.temp_workdir(sample=True)
+
 Open the project, pick a simulation, and plot it:
 
-.. code-block:: python
+.. ipython:: python
 
    import stilt
 
    project = stilt.Project("./my_project")
-   sim = project.simulation("202307151800_-111.848_40.766_10", "hrrr")
+   sim = project.simulation("202101150800_-111.848_40.766_10", "hrrr")
 
-   sim.footprint.stilt.plot.map()   # footprint, summed over time
-   sim.particles.stilt.plot.map()   # particle paths
-   sim.plot.map()                   # receptor, particles, and footprint together
+   @savefig outputs_footprint.png width=6in
+   sim.footprint.stilt.plot.map();   # footprint, summed over time
+
+   @savefig outputs_particles.png width=6in
+   sim.particles.stilt.plot.map();   # particle paths
+
+   @savefig outputs_simulation.png width=6in
+   sim.plot.map();                   # receptor, particles, and footprint together
 
 A simulation is named by its receptor id and its variant. To see them all,
 look at ``project.simulations``, a DataFrame with one row per simulation:
 
-.. code-block:: python
+.. ipython:: python
 
    project.simulations[["receptor", "variant"]]
 
@@ -46,12 +64,23 @@ also show coastlines and state borders. There are a few other plots:
 - ``project.plot.availability()`` shows the receptor times at each
   location.
 
+.. ipython:: python
+
+   @savefig outputs_facet.png width=6in
+   sim.footprint.stilt.plot.facet();
+
+   @savefig outputs_availability.png width=6in
+   project.plot.availability();
+
+   @savefig outputs_receptor.png width=6in
+   sim.receptor.plot.map();
+
 Footprints
 ----------
 
 A footprint is an :class:`xarray.DataArray`:
 
-.. code-block:: python
+.. ipython:: python
 
    sim.has_footprint        # True once the footprint file exists
    foot = sim.footprint     # raises FileNotFoundError before that
@@ -62,14 +91,14 @@ of ppm per (µmol m⁻² s⁻¹). With ``time_integrate: true`` in the footprint
 settings there is a single time step. Use xarray as you would on any other
 array:
 
-.. code-block:: python
+.. ipython:: python
 
    total = foot.sum("time")                                     # summed over time
-   morning = foot.sel(time=slice("2023-07-15 06:00", "2023-07-15 11:00"))
+   last_hours = foot.sel(time=slice("2021-01-15 02:00", "2021-01-15 07:00"))
 
 Methods that need the receptor or the grid are under ``foot.stilt``:
 
-.. code-block:: python
+.. ipython:: python
 
    foot.stilt.receptor      # the receptor
    foot.stilt.grid          # the grid it was made on
@@ -81,10 +110,10 @@ array through sums and arithmetic.
 To write a footprint as a CF NetCDF file for other tools, and read one
 back:
 
-.. code-block:: python
+.. ipython:: python
 
-   foot.stilt.to_netcdf("wbb_2023-07-15_18.nc")
-   foot = stilt.read_footprint("wbb_2023-07-15_18.nc")
+   foot.stilt.to_netcdf("footprint_2021-01-15_08.nc")
+   foot = stilt.read_footprint("footprint_2021-01-15_08.nc")
 
 The file records the receptor and the settings used to make it.
 ``stilt.read_footprint`` also opens a footprint file from the output
@@ -93,7 +122,7 @@ directory, such as ``sim.footprint_path``, with nothing else around it.
 Particles
 ---------
 
-.. code-block:: python
+.. ipython:: python
 
    sim.has_particles           # True once the particle file exists
    particles = sim.particles   # raises FileNotFoundError before that
@@ -135,18 +164,20 @@ what a transport model must write.
 
 PYSTILT's methods for the particle table are under ``particles.stilt``:
 
-.. code-block:: python
+.. ipython:: python
 
    particles.stilt.endpoints()    # where each particle ends, one row each
-   particles.stilt.plot.map()     # map of every particle position
+
+   @savefig outputs_all_particles.png width=6in
+   particles.stilt.plot.map();    # map of every particle position
 
 To open a particle file without a project:
 
 .. code-block:: python
 
    path = (
-       "output/particles/settings=hrrr-a3f9c2/date=2023-07-15/"
-       "202307151800_-111.848_40.766_10.parquet"
+       "output/particles/settings=hrrr-a3f9c2/date=2021-01-15/"
+       "202101150800_-111.848_40.766_10.parquet"
    )
    particles = stilt.read_particles(path)
    meta = stilt.particles.particles_metadata(path)
@@ -182,15 +213,15 @@ variant. Its columns are:
 Select rows the way you would in pandas, then hand the selection to the
 project to load its results:
 
-.. code-block:: python
+.. ipython:: python
 
    sims = project.simulations
-   july = sims[
+   morning = sims[
        (sims.variant == "hrrr")
-       & sims.time.between("2023-07-01", "2023-07-31 23:00")   # both ends included
+       & sims.time.between("2021-01-15 06:00", "2021-01-15 09:00")   # both ends included
    ]
-   footprints = project.footprints(july)   # one dataset: receptor, hour, lat, lon
-   particles = project.particles(july)     # one table, with receptor and variant columns
+   footprints = project.footprints(morning)   # one dataset: receptor, hour, lat, lon
+   particles = project.particles(morning)     # one table, with receptor and variant columns
 
 Leave the selection out to load every simulation. Any table with
 ``receptor`` and ``variant`` columns works as a selection, such as your
@@ -203,11 +234,17 @@ times cannot share a time axis, so they line up on ``hour``: the hours
 after each receptor's time, where a backward run's first hour is -1. The
 ``time`` coordinate gives the clock time each receptor's hours start:
 
-.. code-block:: python
+.. ipython:: python
 
-   footprints.foot.sum("hour").mean("receptor").plot()   # the mean footprint
-   footprints.foot.sel(receptor=rid)                     # one receptor's hours
-   footprints.time.sel(receptor=rid)                     # and when they start
+   import numpy as np
+
+   rid = morning.receptor.iloc[0]                         # the first receptor
+
+   mean = footprints.foot.sum("hour").mean("receptor")    # the mean footprint
+   @savefig outputs_mean_footprint.png width=6in
+   np.log10(mean.where(mean > 0)).plot();                 # most cells are 0: use a log scale
+   footprints.foot.sel(receptor=rid)                      # one receptor's hours
+   footprints.time.sel(receptor=rid)                      # and when they start
 
 The values are read from the files only when a computation needs them, a
 day's receptors at a time, so opening a month of footprints is quick.
@@ -226,7 +263,7 @@ To sum a selection's footprints onto your flux cells, as one matrix, use
 
 The particles come back as one table, so pandas can group them:
 
-.. code-block:: python
+.. ipython:: python
 
    particles.groupby("receptor")["foot"].sum()
 
@@ -238,9 +275,9 @@ DuckDB, or polars instead. To find a single file, use
 
 To work with one simulation of a selection, look it up by its row:
 
-.. code-block:: python
+.. ipython:: python
 
-   for receptor, variant in july[["receptor", "variant"]].itertuples(index=False):
+   for receptor, variant in morning[["receptor", "variant"]].itertuples(index=False):
        sim = project.simulation(receptor, variant)
 
 The extra columns of ``receptors.csv`` select one satellite scene or one
@@ -253,13 +290,20 @@ site:
 
 To see what is left to do:
 
-.. code-block:: python
+.. ipython:: python
 
    project.incomplete()       # the simulations that are not complete
    st = project.status()      # every simulation, with six more columns
    st.state.value_counts()
    st[st.state == "failed"]   # the failed simulations, and why
-   project.status(july)       # the same, for a selection
+   project.status(morning)    # the same, for a selection
+
+None failed here, so the table of failed simulations is empty.
+
+.. ipython:: python
+   :suppress:
+
+   os.chdir(docs_cwd)
 
 ``status()`` adds a ``particles`` and a ``footprint`` column that say
 whether each result exists, and a ``state`` column: ``complete``,
@@ -294,7 +338,7 @@ question about thousands of simulations is one query:
 
    -- where each particle of one day's receptors ended up
    SELECT receptor, particle, arg_min(lon, time) AS lon, arg_min(lat, time) AS lat
-   FROM read_parquet('output/particles/settings=hrrr-a3f9c2/date=2023-07-15/*.parquet', hive_partitioning = true)
+   FROM read_parquet('output/particles/settings=hrrr-a3f9c2/date=2021-01-15/*.parquet', hive_partitioning = true)
    GROUP BY receptor, particle;
 
 A footprint file holds the cells the particles reached, as ``hour``,

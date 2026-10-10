@@ -12,12 +12,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   14 and 15 January 2021 that the tests use, so its output and figures are
   what the code makes. Its receptor moved from 15 July 2023 to 15 January
   2021 to fit that met.
+- The outputs, checking, and receptors guides run when the docs are built too,
+  and show their plots. The outputs and checking guides open a small sample
+  project that the docs build makes first (about 40 s).
 
 ### Fixed
 
 - `receptor.plot.map()`, and so `sim.plot.map()`, puts its legend in the upper
   right corner. It searched for the emptiest spot, which took over a second
   with a simulation's particles on the map, and matplotlib warned.
+- `receptor.plot.map()` labels a column's heights, and a multipoint receptor's
+  height colorbar, with the reference the receptor was given (`AGL` or `MSL`).
+  It said `AGL` for both.
 
 ## [0.1.0a24] - 2026-10-09
 
