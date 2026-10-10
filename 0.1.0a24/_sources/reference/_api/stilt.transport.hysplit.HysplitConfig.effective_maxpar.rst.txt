@@ -1,0 +1,6 @@
+stilt.transport.hysplit.HysplitConfig.effective\_maxpar
+=======================================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+.. autoproperty:: HysplitConfig.effective_maxpar

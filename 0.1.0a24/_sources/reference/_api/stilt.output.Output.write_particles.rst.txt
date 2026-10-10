@@ -1,0 +1,6 @@
+stilt.output.Output.write\_particles
+====================================
+
+.. currentmodule:: stilt.output
+
+.. automethod:: Output.write_particles

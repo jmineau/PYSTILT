@@ -5,7 +5,7 @@
   // A link from before the docs were versioned (e.g. .../api.html): retry it in stable/.
   const root = new URL("https://jmineau.github.io/PYSTILT/").pathname;
   const rest = location.pathname.startsWith(root) ? location.pathname.slice(root.length) : "";
-  if (rest && !["dev", "stable", "0.1.0a23", "0.1.0a22"].includes(rest.split("/")[0])) {
+  if (rest && !["dev", "stable", "0.1.0a24", "0.1.0a23", "0.1.0a22"].includes(rest.split("/")[0])) {
     location.replace(root + "stable/" + rest + location.search + location.hash);
   }
 </script>

@@ -1,0 +1,6 @@
+stilt.Project.config\_path
+==========================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Project.config_path

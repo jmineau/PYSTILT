@@ -1,0 +1,28 @@
+﻿stilt.transforms.AveragingKernel
+================================
+
+.. currentmodule:: stilt.transforms
+
+
+
+
+.. class-signature:: stilt.transforms.AveragingKernel
+
+
+.. class-parameters:: stilt.transforms.AveragingKernel
+
+
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~AveragingKernel.apply
+   ~AveragingKernel.kernel
+
+
+

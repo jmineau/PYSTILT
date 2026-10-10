@@ -1,0 +1,6 @@
+﻿stilt.observations.select\_observations\_spatial
+================================================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: select_observations_spatial

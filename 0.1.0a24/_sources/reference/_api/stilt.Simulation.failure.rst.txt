@@ -1,0 +1,6 @@
+stilt.Simulation.failure
+========================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Simulation.failure

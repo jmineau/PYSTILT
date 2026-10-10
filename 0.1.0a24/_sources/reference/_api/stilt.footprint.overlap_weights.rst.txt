@@ -1,0 +1,6 @@
+﻿stilt.footprint.overlap\_weights
+================================
+
+.. currentmodule:: stilt.footprint
+
+.. autofunction:: overlap_weights

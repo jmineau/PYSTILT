@@ -1,0 +1,6 @@
+stilt.ProjectConfig.footprint
+=============================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: ProjectConfig.footprint

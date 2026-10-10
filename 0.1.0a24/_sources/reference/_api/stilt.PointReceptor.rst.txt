@@ -1,0 +1,46 @@
+﻿stilt.PointReceptor
+===================
+
+.. currentmodule:: stilt
+
+
+
+
+.. class-signature:: stilt.PointReceptor
+
+
+Parameters
+----------
+
+.. config-model:: stilt.PointReceptor
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~PointReceptor.location_id
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~PointReceptor.coords
+
+
+
+
+Inherited
+---------
+
+
+From :class:`~.Receptor`: :py:obj:`~.Receptor.from_dict`, :py:obj:`~.Receptor.from_json`, :py:obj:`~.Receptor.from_points`, :py:obj:`~.Receptor.geometry`, :py:obj:`~.Receptor.id`, :py:obj:`~.Receptor.plot`, :py:obj:`~.Receptor.points`, :py:obj:`~.Receptor.to_dict`, :py:obj:`~.Receptor.to_json`
+
+

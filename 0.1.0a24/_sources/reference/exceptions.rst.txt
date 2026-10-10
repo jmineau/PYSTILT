@@ -1,0 +1,69 @@
+Exceptions
+==========
+
+Every exception PYSTILT raises is a :class:`stilt.StiltError`, so one
+``except`` clause catches them all:
+
+.. code-block:: python
+
+   import stilt
+
+   try:
+       project.run()
+   except stilt.StiltError as error:
+       print(f"PYSTILT stopped: {error}")
+
+Each one also subclasses the builtin that describes it. A
+:class:`~stilt.exceptions.SimulationError` is a ``RuntimeError`` and a
+:class:`~stilt.exceptions.HYSPLITNotFoundError` is a ``FileNotFoundError``,
+so code that catches the builtin keeps working. Plain input checks, such as
+a negative particle count, raise ``ValueError``.
+
+Base class
+----------
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.StiltError
+
+Failed runs
+-----------
+
+A worker records a :class:`~stilt.exceptions.SimulationError` as a failed
+simulation (:attr:`stilt.Simulation.failure`). Its ``reason`` is a short
+name for the cause: for HYSPLIT, one of
+:class:`stilt.transport.hysplit.FailureReason`, such as ``MET_COVERAGE``,
+``NO_PARTICLE_DATA``, or ``TIMEOUT``. A run that the meteorology does not
+cover fails as ``MET_COVERAGE``.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.exceptions.SimulationError
+   stilt.exceptions.MeteorologyError
+
+Setup
+-----
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.exceptions.HYSPLITNotFoundError
+
+Empty footprints
+----------------
+
+:class:`~stilt.exceptions.EmptyFootprint` is a finished result, not a
+failure. :func:`stilt.calc_footprint` raises it when no particle
+reaches the grid, and a run writes a footprint file with no rows, marked
+empty (:doc:`layout`).
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.exceptions.EmptyFootprint
