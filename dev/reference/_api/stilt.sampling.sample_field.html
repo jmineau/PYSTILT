@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=98da91c8"></script>
+    <script src="../../_static/documentation_options.js?v=eea7ecef"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.spatial.horizontal_dims" href="stilt.spatial.horizontal_dims.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev299+ga0f5d4c1b" />
+  <meta name="docsearch:version" content="0.1.0a24.dev2+g3897e8765" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -796,6 +796,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.logged.html">stilt.output.Output.logged</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.path.html">stilt.output.Output.path</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.present.html">stilt.output.Output.present</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.read.html">stilt.output.Output.read</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.record_failure.html">stilt.output.Output.record_failure</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.table.html">stilt.output.Output.table</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.write_empty_footprint.html">stilt.output.Output.write_empty_footprint</a></li>
@@ -916,13 +917,13 @@ to 180 or 0 to 360).</p>
 field.</p></li>
 <li><p><strong>y</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeAliasType</span></code></span>) – Point coordinates: longitude and latitude for a <code class="docutils literal notranslate"><span class="pre">lat</span></code>/<code class="docutils literal notranslate"><span class="pre">lon</span></code>
 field.</p></li>
-<li><p><strong>z</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeAliasType</span></code> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Vertical coordinate of each point, in the units of the field’s
+<li><p><strong>z</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeAliasType</span></code> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Vertical coordinate of each point, in the units of the field’s
 vertical dimension. Required when the field has one. Matched to the
 nearest level, so a point above the top level takes the top level.</p></li>
-<li><p><strong>times</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeAliasType</span></code> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Time of each point. Required when the field has a <code class="docutils literal notranslate"><span class="pre">time</span></code>
+<li><p><strong>times</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeAliasType</span></code> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Time of each point. Required when the field has a <code class="docutils literal notranslate"><span class="pre">time</span></code>
 dimension. Matched to the nearest time, so times outside the
 field’s span take the first or last step.</p></li>
-<li><p><strong>fill_value</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – Value for points outside the field and for missing cells. Use 0 for
+<li><p><strong>fill_value</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – Value for points outside the field and for missing cells. Use 0 for
 a surface flux, where no data means no emission. <code class="docutils literal notranslate"><span class="pre">NaN</span></code> suits a
 mole fraction, which is unknown there.</p></li>
 </ul>

@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=98da91c8"></script>
+    <script src="../../_static/documentation_options.js?v=eea7ecef"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.observations.plumes.density_polygon" href="stilt.observations.plumes.density_polygon.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev299+ga0f5d4c1b" />
+  <meta name="docsearch:version" content="0.1.0a24.dev2+g3897e8765" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -796,6 +796,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.logged.html">stilt.output.Output.logged</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.path.html">stilt.output.Output.path</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.present.html">stilt.output.Output.present</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.read.html">stilt.output.Output.read</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.record_failure.html">stilt.output.Output.record_failure</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.table.html">stilt.output.Output.table</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.write_empty_footprint.html">stilt.output.Output.write_empty_footprint</a></li>
@@ -919,26 +920,26 @@ is <code class="docutils literal notranslate"><span class="pre">enhancement</spa
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>enhancement</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – The modeled enhancement of the column, weighted by the kernel and
+<li><p><strong>enhancement</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – The modeled enhancement of the column, weighted by the kernel and
 the pressure weights, in the units of <code class="docutils literal notranslate"><span class="pre">prior</span></code>. A flux in
 µmol m⁻² s⁻¹ gives ppm; multiply by 1000 for ppb.</p></li>
-<li><p><strong>background</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – The weighted background (<code class="docutils literal notranslate"><span class="pre">sim.background(field).value</span></code>). Over a
+<li><p><strong>background</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – The weighted background (<code class="docutils literal notranslate"><span class="pre">sim.background(field).value</span></code>). Over a
 receptor that stops below the top of the atmosphere it covers the
 receptor’s levels only; add the weighted field above the top first.</p></li>
-<li><p><strong>ak</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeAliasType</span></code> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – The column averaging kernel on the retrieval’s levels (the
+<li><p><strong>ak</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeAliasType</span></code> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – The column averaging kernel on the retrieval’s levels (the
 soundings’ <code class="docutils literal notranslate"><span class="pre">ak</span></code>).</p></li>
-<li><p><strong>pressure_weight</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeAliasType</span></code> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Each level’s share of the column’s dry air, summing to 1. For a
+<li><p><strong>pressure_weight</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeAliasType</span></code> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Each level’s share of the column’s dry air, summing to 1. For a
 layer product with <code class="docutils literal notranslate"><span class="pre">pressure_levels</span></code> <code class="docutils literal notranslate"><span class="pre">p</span></code> (surface first), that
 is <code class="docutils literal notranslate"><span class="pre">-np.diff(p)</span> <span class="pre">/</span> <span class="pre">(p[0]</span> <span class="pre">-</span> <span class="pre">p[-1])</span></code>.</p></li>
-<li><p><strong>prior</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeAliasType</span></code> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – The retrieval’s prior profile on the same levels (the soundings’
+<li><p><strong>prior</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeAliasType</span></code> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – The retrieval’s prior profile on the same levels (the soundings’
 <code class="docutils literal notranslate"><span class="pre">apriori</span></code>).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span></p>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span></p>
 </dd>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If only some of <code class="docutils literal notranslate"><span class="pre">ak</span></code>, <code class="docutils literal notranslate"><span class="pre">pressure_weight</span></code>, and <code class="docutils literal notranslate"><span class="pre">prior</span></code> are
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If only some of <code class="docutils literal notranslate"><span class="pre">ak</span></code>, <code class="docutils literal notranslate"><span class="pre">pressure_weight</span></code>, and <code class="docutils literal notranslate"><span class="pre">prior</span></code> are
     given, or they differ in length.</p>
 </dd>
 </dl>

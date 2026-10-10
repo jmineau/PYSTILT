@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=98da91c8"></script>
+    <script src="../_static/documentation_options.js?v=eea7ecef"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Footprints And Particles" href="outputs.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev299+ga0f5d4c1b" />
+  <meta name="docsearch:version" content="0.1.0a24.dev2+g3897e8765" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -644,9 +644,9 @@ a selection of simulations (<a class="reference internal" href="outputs.html"><s
 <span class="n">H</span><span class="o">.</span><span class="n">to_frame</span><span class="p">(</span><span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>   <span class="c1"># receptors by (time, cell), pandas sparse columns</span>
 </pre></div>
 </div>
-<p>It reads the footprints in batches, in several threads, and returns a
-sparse matrix, so its size does not depend on the grid and memory stays
-at a few batches of footprints. <code class="docutils literal notranslate"><span class="pre">H.to_xarray()</span></code> holds a sparse array
+<p>It reads the footprints one receptor at a time, in several threads, and
+returns a sparse matrix, so its size does not depend on the grid and
+memory stays at a few footprints whatever the selection’s size. <code class="docutils literal notranslate"><span class="pre">H.to_xarray()</span></code> holds a sparse array
 from the optional <code class="docutils literal notranslate"><span class="pre">sparse</span></code> package (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pystilt[sparse]</span></code>), or
 a NumPy array with <code class="docutils literal notranslate"><span class="pre">dense=True</span></code>. Receptors whose footprint is empty are
 in <code class="docutils literal notranslate"><span class="pre">H.empty</span></code>, and those not run yet in <code class="docutils literal notranslate"><span class="pre">H.missing</span></code>.</p>

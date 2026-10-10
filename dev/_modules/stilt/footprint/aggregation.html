@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=98da91c8"></script>
+    <script src="../../../_static/documentation_options.js?v=eea7ecef"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev299+ga0f5d4c1b" />
+  <meta name="docsearch:version" content="0.1.0a24.dev2+g3897e8765" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -500,9 +500,9 @@
 <span class="sd">Summing footprints onto the cells of another grid or set of polygons, per time bin.</span>
 
 <span class="sd">:func:`aggregate` does it for one footprint (``foot.stilt.aggregate``) and</span>
-<span class="sd">:func:`jacobian` for many at once. Both hand their footprint cells, each</span>
-<span class="sd">with its time bin, to :func:`_sum_onto`, which applies the overlap</span>
-<span class="sd">weights.</span>
+<span class="sd">:func:`jacobian` for many at once. Both hand one footprint&#39;s cells, each</span>
+<span class="sd">with its time bin, to :func:`_row`, which applies the overlap weights and</span>
+<span class="sd">returns that footprint&#39;s row of the Jacobian.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -602,91 +602,101 @@
     <span class="k">return</span> <span class="n">overlap_weights</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">crs</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_sum_onto</span><span class="p">(</span>
+<span class="c1">#: A Jacobian row with this many entries or fewer (64 MB of float64) is</span>
+<span class="c1">#: summed in a dense array, which is fastest; a longer one in a sparse one.</span>
+<span class="n">_DENSE_ROW_MAX</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="mi">23</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_row</span><span class="p">(</span>
     <span class="n">weights</span><span class="p">:</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">,</span>
-    <span class="n">n_rows</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">n_bins</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">row</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">bin_idx</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">cell</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">foot</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Sum footprint cells onto a target, per time bin.</span>
+<span class="sd">    Sum one footprint&#39;s cells onto a target, per time bin: its row of the Jacobian.</span>
 
-<span class="sd">    Each footprint cell is given by its row (receptor), its time bin (-1</span>
-<span class="sd">    for none), its flat raster index (``y * nx + x``), and its value.</span>
-<span class="sd">    *weights* maps raster cells (rows) onto target cells (columns).</span>
+<span class="sd">    Each cell is given by its time bin (-1 for none), its flat raster index</span>
+<span class="sd">    (``y * nx + x``), and its value. *weights* maps raster cells (rows) onto</span>
+<span class="sd">    target cells (columns).</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    scipy.sparse.csr_matrix</span>
-<span class="sd">        Shape ``(n_rows, n_bins * n_cells)``: every target cell for the</span>
-<span class="sd">        first bin, then the second. Cells outside the bins are dropped.</span>
+<span class="sd">        Shape ``(1, n_bins * n_cells)``: every target cell for the first</span>
+<span class="sd">        bin, then the second. Cells outside the bins are dropped.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">keep</span> <span class="o">=</span> <span class="n">bin_idx</span> <span class="o">&gt;=</span> <span class="mi">0</span>
-    <span class="n">n_raster</span><span class="p">,</span> <span class="n">n_cells</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()</span>
-    <span class="c1"># One row per (receptor, bin), summed onto the target in one product,</span>
-    <span class="c1"># then laid out as (receptor) by (bin, target cell).</span>
-    <span class="n">per_bin</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span>
-        <span class="p">(</span>
-            <span class="n">foot</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span>
-            <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span> <span class="o">*</span> <span class="n">n_bins</span> <span class="o">+</span> <span class="n">bin_idx</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span> <span class="n">cell</span><span class="p">[</span><span class="n">keep</span><span class="p">]),</span>
-        <span class="p">),</span>
-        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_rows</span> <span class="o">*</span> <span class="n">n_bins</span><span class="p">,</span> <span class="n">n_raster</span><span class="p">),</span>
+    <span class="n">bin_idx</span><span class="p">,</span> <span class="n">cell</span> <span class="o">=</span> <span class="n">bin_idx</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span> <span class="n">cell</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span>
+    <span class="n">foot</span> <span class="o">=</span> <span class="n">foot</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">n_cells</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="c1"># Each raster cell overlaps a few target cells, listed in its row of</span>
+    <span class="c1"># the weights: one for an aligned grid, several for polygons. Look them</span>
+    <span class="c1"># up for every footprint cell at once.</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">cell</span><span class="p">]</span>
+    <span class="n">counts</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">cell</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">start</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">counts</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="n">which</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cell</span><span class="p">)),</span> <span class="n">counts</span><span class="p">)</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">start</span> <span class="o">-</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">counts</span><span class="p">)</span> <span class="o">-</span> <span class="n">counts</span><span class="p">),</span> <span class="n">counts</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">total</span><span class="p">)</span>
+    <span class="n">column</span> <span class="o">=</span> <span class="n">bin_idx</span><span class="p">[</span><span class="n">which</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span> <span class="o">*</span> <span class="n">n_cells</span> <span class="o">+</span> <span class="n">weights</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="n">pos</span><span class="p">]</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">foot</span><span class="p">[</span><span class="n">which</span><span class="p">]</span> <span class="o">*</span> <span class="n">weights</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">pos</span><span class="p">]</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">n_bins</span> <span class="o">*</span> <span class="n">n_cells</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="n">_DENSE_ROW_MAX</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">minlength</span><span class="o">=</span><span class="n">n</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span> <span class="n">column</span><span class="p">)),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
     <span class="p">)</span>
-    <span class="n">onto</span> <span class="o">=</span> <span class="n">per_bin</span> <span class="o">@</span> <span class="n">weights</span>
-    <span class="k">return</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span><span class="n">onto</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n_rows</span><span class="p">,</span> <span class="n">n_bins</span> <span class="o">*</span> <span class="n">n_cells</span><span class="p">))</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_sum_table</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_receptor_row</span><span class="p">(</span>
     <span class="n">table</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">,</span>
-    <span class="n">receptors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">weights</span><span class="p">:</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">,</span>
     <span class="n">nx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">edges</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Sum the footprint cells in *table* onto a target, a row per receptor.</span>
+<span class="sd">    Return a receptor&#39;s Jacobian row from the stored cells of its footprint.</span>
 
-<span class="sd">    Returns the rows of the receptors of *receptors* that have cells in the</span>
-<span class="sd">    table, in that order, and their ids. A receptor in *receptors* without</span>
-<span class="sd">    cells is an empty footprint and gets no row; cells of receptors not in</span>
-<span class="sd">    *receptors* are left out.</span>
+<span class="sd">    *table* holds the footprint&#39;s ``hour``, ``y``, ``x``, and ``foot``</span>
+<span class="sd">    columns. ``None`` when it has no rows: the footprint is empty.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">n_bins</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">edges</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">table</span><span class="o">.</span><span class="n">num_rows</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_bins</span> <span class="o">*</span> <span class="n">weights</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()[</span><span class="mi">1</span><span class="p">])),</span> <span class="p">[]</span>
-    <span class="c1"># Work with the dictionary indices of the receptor column: one small</span>
-    <span class="c1"># array of ids, and an int32 per cell.</span>
-    <span class="n">table</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">unify_dictionaries</span><span class="p">()</span><span class="o">.</span><span class="n">combine_chunks</span><span class="p">()</span>
-    <span class="n">receptor_col</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">combine_chunks</span><span class="p">()</span>
-    <span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">receptor_col</span><span class="o">.</span><span class="n">dictionary</span><span class="o">.</span><span class="n">to_pylist</span><span class="p">()</span>
-    <span class="n">dict_idx</span> <span class="o">=</span> <span class="n">receptor_col</span><span class="o">.</span><span class="n">indices</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-    <span class="n">found</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
-    <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">found</span><span class="p">]</span>
-    <span class="n">row_of</span> <span class="o">=</span> <span class="p">{</span><span class="n">r</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">rows</span><span class="p">)}</span>
-    <span class="n">row_by_id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">row_of</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
-
-    <span class="c1"># A receptor has tens of hours and its cells hundreds of thousands, so</span>
-    <span class="c1"># find the bin of each receptor-hour once and look it up per cell.</span>
+        <span class="k">return</span> <span class="kc">None</span>
     <span class="n">hour</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s2">&quot;hour&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-    <span class="n">first</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">hour</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
-    <span class="n">hours</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">hour</span><span class="o">.</span><span class="n">max</span><span class="p">())</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
-    <span class="n">release</span> <span class="o">=</span> <span class="n">_naive_utc_ns</span><span class="p">([</span><span class="n">parse_receptor_id</span><span class="p">(</span><span class="n">r</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">])</span>
-    <span class="n">starts</span> <span class="o">=</span> <span class="n">release</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">+</span> <span class="n">hours</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="mi">3_600_000_000_000</span>
-    <span class="n">bin_of</span> <span class="o">=</span> <span class="n">_time_bin</span><span class="p">(</span><span class="n">starts</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="o">*</span><span class="n">edges</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">starts</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
-    <span class="n">bin_of</span><span class="p">[</span><span class="n">row_by_id</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># receptors in the table that were not asked for</span>
-    <span class="n">bin_idx</span> <span class="o">=</span> <span class="n">bin_of</span><span class="p">[</span><span class="n">dict_idx</span><span class="p">,</span> <span class="n">hour</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span> <span class="o">-</span> <span class="n">first</span><span class="p">]</span>
-
-    <span class="n">cell</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span> <span class="o">*</span> <span class="n">nx</span> <span class="o">+</span> <span class="n">table</span><span class="o">.</span><span class="n">column</span><span class="p">(</span>
-        <span class="s2">&quot;x&quot;</span>
-    <span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
-    <span class="n">foot</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s2">&quot;foot&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">_sum_onto</span><span class="p">(</span>
-        <span class="n">weights</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">),</span> <span class="n">n_bins</span><span class="p">,</span> <span class="n">row_by_id</span><span class="p">[</span><span class="n">dict_idx</span><span class="p">],</span> <span class="n">bin_idx</span><span class="p">,</span> <span class="n">cell</span><span class="p">,</span> <span class="n">foot</span>
+    <span class="c1"># The hours are few, so find each hour&#39;s bin once and look it up per cell.</span>
+    <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">hour</span><span class="o">.</span><span class="n">min</span><span class="p">()),</span> <span class="nb">int</span><span class="p">(</span><span class="n">hour</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+    <span class="n">release</span> <span class="o">=</span> <span class="n">_naive_utc_ns</span><span class="p">([</span><span class="n">parse_receptor_id</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)[</span><span class="mi">0</span><span class="p">]])</span>
+    <span class="n">starts</span> <span class="o">=</span> <span class="n">release</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span> <span class="o">*</span> <span class="mi">3_600_000_000_000</span>
+    <span class="n">bin_idx</span> <span class="o">=</span> <span class="n">_time_bin</span><span class="p">(</span><span class="n">starts</span><span class="p">,</span> <span class="o">*</span><span class="n">edges</span><span class="p">)[</span><span class="n">hour</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span> <span class="o">-</span> <span class="n">first</span><span class="p">]</span>
+    <span class="n">cell</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">table</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span> <span class="o">*</span> <span class="n">nx</span>
+        <span class="o">+</span> <span class="n">table</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">rows</span>
+    <span class="k">return</span> <span class="n">_row</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">edges</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">bin_idx</span><span class="p">,</span> <span class="n">cell</span><span class="p">,</span> <span class="n">table</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s2">&quot;foot&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_by_receptor</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the rows of *table* split by receptor id, in one pass.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">table</span><span class="o">.</span><span class="n">num_rows</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="n">receptor</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pa</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_dictionary</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">type</span><span class="p">):</span>
+        <span class="n">receptor</span> <span class="o">=</span> <span class="n">receptor</span><span class="o">.</span><span class="n">dictionary_encode</span><span class="p">()</span>
+    <span class="n">receptor</span> <span class="o">=</span> <span class="n">receptor</span><span class="o">.</span><span class="n">unify_dictionaries</span><span class="p">()</span><span class="o">.</span><span class="n">combine_chunks</span><span class="p">()</span>
+    <span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">receptor</span><span class="o">.</span><span class="n">dictionary</span><span class="o">.</span><span class="n">to_pylist</span><span class="p">()</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">receptor</span><span class="o">.</span><span class="n">indices</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;stable&quot;</span><span class="p">)</span>
+    <span class="n">bounds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="n">order</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">ordered</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">order</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">rid</span><span class="p">:</span> <span class="n">ordered</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">bounds</span><span class="p">[</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">rid</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">bounds</span><span class="p">[</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+    <span class="p">}</span>
 
 
 <div class="viewcode-block" id="Jacobian">
@@ -831,8 +841,8 @@
 <span class="sd">    The same operation as ``foot.stilt.aggregate``, for many footprints at</span>
 <span class="sd">    once. *table* is what :meth:`stilt.output.Output.table` reads: the</span>
 <span class="sd">    stored non-zero cells of each receptor, all on the grid of *config*.</span>
-<span class="sd">    :meth:`stilt.Project.jacobian` reads and sums a project&#39;s</span>
-<span class="sd">    footprints in batches, so a selection of any size fits in memory.</span>
+<span class="sd">    :meth:`stilt.Project.jacobian` reads a project&#39;s footprints one</span>
+<span class="sd">    receptor at a time instead, so a selection of any size fits in memory.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -857,9 +867,11 @@
 <span class="sd">    -------</span>
 <span class="sd">    Jacobian</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cells</span> <span class="o">=</span> <span class="n">_by_receptor</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+    <span class="n">none</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">empty_table</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">_jacobian</span><span class="p">(</span>
-        <span class="k">lambda</span> <span class="n">batch</span><span class="p">:</span> <span class="n">table</span><span class="p">,</span>
-        <span class="p">[</span><span class="n">receptors</span><span class="p">],</span>
+        <span class="k">lambda</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="n">cells</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">,</span> <span class="n">none</span><span class="p">),</span>
+        <span class="n">receptors</span><span class="p">,</span>
         <span class="n">config</span><span class="p">,</span>
         <span class="n">target</span><span class="p">,</span>
         <span class="n">time_bins</span><span class="p">,</span>
@@ -869,8 +881,8 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_jacobian</span><span class="p">(</span>
-    <span class="n">read</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">],</span>
-    <span class="n">batches</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+    <span class="n">read</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">],</span>
+    <span class="n">receptors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span>
     <span class="n">target</span><span class="p">:</span> <span class="n">Geometry</span><span class="p">,</span>
     <span class="n">time_bins</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="p">,</span>
@@ -880,12 +892,12 @@
     <span class="n">workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Jacobian</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Sum footprints onto a target batch by batch, and stack the rows into one Jacobian.</span>
+<span class="sd">    Sum footprints onto a target one receptor at a time, and stack the rows into one Jacobian.</span>
 
-<span class="sd">    ``read(batch)`` returns the footprint cells of a batch of receptors.</span>
-<span class="sd">    Batches are read and summed in *workers* threads (by default the CPUs</span>
-<span class="sd">    this process may use, at most 8), so only that many are in memory at</span>
-<span class="sd">    once; the rows come back in batch order.</span>
+<span class="sd">    ``read(receptor_id)`` returns the stored cells of that receptor&#39;s</span>
+<span class="sd">    footprint. Receptors are read and summed in *workers* threads (by</span>
+<span class="sd">    default the CPUs this process may use, at most 8), each holding one</span>
+<span class="sd">    footprint at a time; the rows come back in *receptors* order.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">workers</span> <span class="o">=</span> <span class="n">_threads</span><span class="p">(</span><span class="n">workers</span><span class="p">)</span>
     <span class="n">edges</span> <span class="o">=</span> <span class="n">_bin_edges</span><span class="p">(</span><span class="n">time_bins</span><span class="p">)</span>  <span class="c1"># raises for bins not closed on the left</span>
@@ -895,28 +907,29 @@
     <span class="n">x_axis</span><span class="p">,</span> <span class="n">y_axis</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">axes</span>
     <span class="n">weights</span> <span class="o">=</span> <span class="n">_target_weights</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">,</span> <span class="n">x_axis</span><span class="p">,</span> <span class="n">y_axis</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">one</span><span class="p">(</span><span class="n">batch</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
-        <span class="k">return</span> <span class="n">_sum_table</span><span class="p">(</span><span class="n">read</span><span class="p">(</span><span class="n">batch</span><span class="p">),</span> <span class="n">batch</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_axis</span><span class="p">),</span> <span class="n">edges</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">one</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_receptor_row</span><span class="p">(</span>
+            <span class="n">read</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">),</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_axis</span><span class="p">),</span> <span class="n">edges</span>
+        <span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">workers</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">batches</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">one</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">workers</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">one</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">workers</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
-            <span class="n">parts</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">batches</span><span class="p">))</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">receptors</span><span class="p">))</span>
     <span class="n">n_columns</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">time_bins</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
-    <span class="n">blocks</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span> <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">ids</span> <span class="ow">in</span> <span class="n">parts</span> <span class="k">if</span> <span class="n">ids</span><span class="p">]</span>
+    <span class="n">blocks</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span> <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
     <span class="n">data</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span><span class="n">sparse</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">blocks</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;csr&quot;</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">blocks</span>
         <span class="k">else</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_columns</span><span class="p">))</span>
     <span class="p">)</span>
-    <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">ids</span> <span class="ow">in</span> <span class="n">parts</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">]</span>
-    <span class="n">found</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
-    <span class="n">empty</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">batch</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">found</span><span class="p">]</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="n">empty</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">]</span>
 
     <span class="n">columns</span> <span class="o">=</span> <span class="n">_columns</span><span class="p">(</span><span class="n">_naive_utc</span><span class="p">(</span><span class="n">time_bins</span><span class="o">.</span><span class="n">left</span><span class="p">),</span> <span class="n">target</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">Jacobian</span><span class="p">(</span>
-        <span class="n">data</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;receptor&quot;</span><span class="p">),</span> <span class="n">columns</span><span class="p">,</span> <span class="n">empty</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">missing</span> <span class="ow">or</span> <span class="p">[])</span>
+        <span class="n">data</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;receptor&quot;</span><span class="p">),</span> <span class="n">columns</span><span class="p">,</span> <span class="n">empty</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">missing</span> <span class="ow">or</span> <span class="p">[])</span>
     <span class="p">)</span>
 
 
@@ -972,14 +985,12 @@
     <span class="n">data</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
     <span class="n">t</span><span class="p">,</span> <span class="n">iy</span><span class="p">,</span> <span class="n">ix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
     <span class="n">layer_bin</span> <span class="o">=</span> <span class="n">_time_bin</span><span class="p">(</span><span class="n">_naive_utc_ns</span><span class="p">(</span><span class="n">foot</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">),</span> <span class="o">*</span><span class="n">edges</span><span class="p">)</span>
-    <span class="n">summed</span> <span class="o">=</span> <span class="n">_sum_onto</span><span class="p">(</span>
+    <span class="n">summed</span> <span class="o">=</span> <span class="n">_row</span><span class="p">(</span>
         <span class="n">weights</span><span class="p">,</span>
-        <span class="mi">1</span><span class="p">,</span>
         <span class="nb">len</span><span class="p">(</span><span class="n">time_bins</span><span class="p">),</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
         <span class="n">layer_bin</span><span class="p">[</span><span class="n">t</span><span class="p">],</span>
         <span class="n">iy</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">ix</span><span class="p">,</span>
-        <span class="n">data</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="n">data</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">],</span>
     <span class="p">)</span>
     <span class="n">n_cells</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
     <span class="n">by_bin</span> <span class="o">=</span> <span class="n">summed</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">),</span> <span class="n">n_cells</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>

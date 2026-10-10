@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=98da91c8"></script>
+    <script src="../../_static/documentation_options.js?v=eea7ecef"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.Project.init" href="stilt.Project.init.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev299+ga0f5d4c1b" />
+  <meta name="docsearch:version" content="0.1.0a24.dev2+g3897e8765" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -796,6 +796,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.logged.html">stilt.output.Output.logged</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.path.html">stilt.output.Output.path</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.present.html">stilt.output.Output.present</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.read.html">stilt.output.Output.read</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.record_failure.html">stilt.output.Output.record_failure</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.table.html">stilt.output.Output.table</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.write_empty_footprint.html">stilt.output.Output.write_empty_footprint</a></li>
@@ -905,31 +906,28 @@
 <h1>stilt.Project.jacobian<a class="headerlink" href="#stilt-project-jacobian" title="Link to this heading">#</a></h1>
 <dl class="py method">
 <dt class="sig sig-object py" id="stilt.Project.jacobian">
-<span class="sig-prename descclassname"><span class="pre">Project.</span></span><span class="sig-name descname"><span class="pre">jacobian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_bins</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">workers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/project.html#Project.jacobian"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.Project.jacobian" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">Project.</span></span><span class="sig-name descname"><span class="pre">jacobian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_bins</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">workers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/project.html#Project.jacobian"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.Project.jacobian" title="Link to this definition">#</a></dt>
 <dd><p>Sum the selected footprints onto a target, per time bin, as one sparse matrix.</p>
 <p>The same operation as <code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code>, for every selected
 footprint at once. Each footprint cell is split among the target
 cells it overlaps in proportion to area, time layers are summed
 within each of <em>time_bins</em>, and cells or layers outside the target
 or the bins are dropped. The selection must hold one variant.</p>
-<p>Footprints are read and summed <em>batch</em> receptors at a time, in
-<em>workers</em> threads. Each thread holds one batch, so memory peaks at
-about <em>workers</em> times a batch whatever the selection’s size; the
-result itself is sparse.</p>
+<p>Footprints are read and summed one receptor at a time, in <em>workers</em>
+threads. Each thread holds one footprint, so memory stays at a few
+footprints whatever the selection’s size; the result itself is
+sparse.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>sel</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a></span>) – The simulations, as for <a class="reference internal" href="stilt.Project.status.html#stilt.Project.status" title="stilt.Project.status"><code class="xref py py-meth docutils literal notranslate"><span class="pre">status()</span></code></a>, all of one variant.</p></li>
+<li><p><strong>sel</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a></span>) – The simulations, as for <a class="reference internal" href="stilt.Project.status.html#stilt.Project.status" title="stilt.Project.status"><code class="xref py py-meth docutils literal notranslate"><span class="pre">status()</span></code></a>, all of one variant.</p></li>
 <li><p><strong>target</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Grid</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">Mesh</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">Zones</span></code></span>) – Where the fluxes are: a grid, mesh, or set of zones.</p></li>
 <li><p><strong>time_bins</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.IntervalIndex.html#pandas.IntervalIndex" title="(in pandas v3.0.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntervalIndex</span></code></a></span>) – Flux time bins, such as a flux inventory’s steps. They must be
 closed on the left (<code class="docutils literal notranslate"><span class="pre">closed=&quot;left&quot;</span></code>): each bin holds the
 footprint hours that start in it.</p></li>
-<li><p><strong>workers</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Threads that read and sum batches. Defaults to the CPUs this
+<li><p><strong>workers</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Threads that read and sum batches. Defaults to the CPUs this
 process may use (in a Slurm job, the job’s), at most 8: more
 threads add memory and stop adding speed.</p></li>
-<li><p><strong>batch</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – Receptors read and summed together. At about 350,000 cells a
-footprint, a batch of 64 takes some 2 GB at its peak, so 8
-threads take some 16 GB.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -943,8 +941,8 @@ those not run yet in <code class="docutils literal notranslate"><span class="pre
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">time_bins</span></code> is not a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.IntervalIndex.html#pandas.IntervalIndex" title="(in pandas v3.0.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.IntervalIndex</span></code></a>.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If the selection holds more or fewer than one variant, the
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">time_bins</span></code> is not a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.IntervalIndex.html#pandas.IntervalIndex" title="(in pandas v3.0.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.IntervalIndex</span></code></a>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the selection holds more or fewer than one variant, the
     variant has no grid or no footprints yet, or <code class="docutils literal notranslate"><span class="pre">time_bins</span></code> is not
     closed on the left.</p></li>
 </ul>

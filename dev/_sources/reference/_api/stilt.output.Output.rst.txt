@@ -34,6 +34,7 @@ Methods
    ~Output.logged
    ~Output.path
    ~Output.present
+   ~Output.read
    ~Output.record_failure
    ~Output.table
    ~Output.write_empty_footprint

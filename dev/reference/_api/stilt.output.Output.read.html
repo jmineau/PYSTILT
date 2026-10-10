@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.transport.hysplit.HysplitModel.needs_workdir &#8212; PYSTILT dev</title>
+    <title>stilt.output.Output.read &#8212; PYSTILT dev</title>
   
   
   
@@ -46,7 +46,7 @@
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/_api/stilt.transport.hysplit.HysplitModel.needs_workdir';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/_api/stilt.output.Output.read';</script>
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
@@ -57,8 +57,8 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="stilt.transport.hysplit.HysplitModel.data_files" href="stilt.transport.hysplit.HysplitModel.data_files.html" />
-    <link rel="prev" title="stilt.transport.hysplit.HysplitModel.batched" href="stilt.transport.hysplit.HysplitModel.batched.html" />
+    <link rel="next" title="stilt.output.Output.record_failure" href="stilt.output.Output.record_failure.html" />
+    <link rel="prev" title="stilt.output.Output.present" href="stilt.output.Output.present.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="0.1.0a24.dev2+g3897e8765" />
@@ -692,7 +692,7 @@
 </details></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="../execution.html">Execution</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../execution.html">Execution</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="stilt.execution.run.html">stilt.execution.run</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.execution.submit.html">stilt.execution.submit</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.execution.pending.html">stilt.execution.pending</a></li>
@@ -726,9 +726,9 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.get_model.html">stilt.transport.get_model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.run_model.html">stilt.transport.run_model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.run_model_many.html">stilt.transport.run_model_many</a></li>
-<li class="toctree-l2 current active has-children"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.html">stilt.transport.hysplit.HysplitModel</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.html">stilt.transport.hysplit.HysplitModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.batched.html">stilt.transport.hysplit.HysplitModel.batched</a></li>
-<li class="toctree-l3 current active"><a aria-current="page" class="current reference internal" href="#">stilt.transport.hysplit.HysplitModel.needs_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.needs_workdir.html">stilt.transport.hysplit.HysplitModel.needs_workdir</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.data_files.html">stilt.transport.hysplit.HysplitModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.run.html">stilt.transport.hysplit.HysplitModel.run</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.version.html">stilt.transport.hysplit.HysplitModel.version</a></li>
@@ -781,8 +781,8 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.observations.modelled_column.html">stilt.observations.modelled_column</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../project.html">Project And Output</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.output.Output.html">stilt.output.Output</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../project.html">Project And Output</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="stilt.output.Output.html">stilt.output.Output</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.clear_failure.html">stilt.output.Output.clear_failure</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.complete.html">stilt.output.Output.complete</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.failure.html">stilt.output.Output.failure</a></li>
@@ -796,7 +796,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.logged.html">stilt.output.Output.logged</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.path.html">stilt.output.Output.path</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.present.html">stilt.output.Output.present</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.read.html">stilt.output.Output.read</a></li>
+<li class="toctree-l3 current active"><a aria-current="page" class="current reference internal" href="#">stilt.output.Output.read</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.record_failure.html">stilt.output.Output.record_failure</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.table.html">stilt.output.Output.table</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.write_empty_footprint.html">stilt.output.Output.write_empty_footprint</a></li>
@@ -880,12 +880,12 @@
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">API Reference</a></li>
     
     
-    <li class="breadcrumb-item"><a href="../execution.html" class="nav-link">Execution</a></li>
+    <li class="breadcrumb-item"><a href="../project.html" class="nav-link">Project And Output</a></li>
     
     
-    <li class="breadcrumb-item"><a href="stilt.transport.hysplit.HysplitModel.html" class="nav-link">stilt.transport.hysplit.HysplitModel</a></li>
+    <li class="breadcrumb-item"><a href="stilt.output.Output.html" class="nav-link">stilt.output.Output</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.transport.hysplit.HysplitModel.needs_workdir</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.output.Output.read</span></li>
   </ul>
 </nav>
 </div>
@@ -902,12 +902,33 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="stilt-transport-hysplit-hysplitmodel-needs-workdir">
-<h1>stilt.transport.hysplit.HysplitModel.needs_workdir<a class="headerlink" href="#stilt-transport-hysplit-hysplitmodel-needs-workdir" title="Link to this heading">#</a></h1>
-<dl class="py attribute">
-<dt class="sig sig-object py" id="stilt.transport.hysplit.HysplitModel.needs_workdir">
-<span class="sig-prename descclassname"><span class="pre">HysplitModel.</span></span><span class="sig-name descname"><span class="pre">needs_workdir</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#stilt.transport.hysplit.HysplitModel.needs_workdir" title="Link to this definition">#</a></dt>
-<dd><p>HYSPLIT writes its inputs and outputs as files in a directory.</p>
+  <section id="stilt-output-output-read">
+<h1>stilt.output.Output.read<a class="headerlink" href="#stilt-output-output-read" title="Link to this heading">#</a></h1>
+<dl class="py method">
+<dt class="sig sig-object py" id="stilt.output.Output.read">
+<span class="sig-prename descclassname"><span class="pre">Output.</span></span><span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kind</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receptor_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">realization</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/output.html#Output.read"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.output.Output.read" title="Link to this definition">#</a></dt>
+<dd><p>Return one receptor’s result file as a table of its stored columns.</p>
+<p>The file as written, with no <code class="docutils literal notranslate"><span class="pre">date</span></code> column: what <a class="reference internal" href="stilt.output.Output.table.html#stilt.output.Output.table" title="stilt.output.Output.table"><code class="xref py py-meth docutils literal notranslate"><span class="pre">table()</span></code></a>
+reads for many receptors at once, for one. <a class="reference internal" href="stilt.output.Output.table.html#stilt.output.Output.table" title="stilt.output.Output.table"><code class="xref py py-meth docutils literal notranslate"><span class="pre">table()</span></code></a> builds a
+dataset over its files, which costs more than this on a single
+one, so a method that reads receptors one at a time uses this.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>kind</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<code class="docutils literal notranslate"><span class="pre">'particles'</span></code>, <code class="docutils literal notranslate"><span class="pre">'footprints'</span></code>]</span>) – Which result.</p></li>
+<li><p><strong>variant</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="stilt.config.Variant.html#stilt.config.Variant" title="stilt.config.Variant"><code class="xref py py-class docutils literal notranslate"><span class="pre">Variant</span></code></a></span>) – Whose result.</p></li>
+<li><p><strong>receptor_id</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The receptor, whose file must exist (<a class="reference internal" href="stilt.output.Output.present.html#stilt.output.Output.present" title="stilt.output.Output.present"><code class="xref py py-meth docutils literal notranslate"><span class="pre">present()</span></code></a>).</p></li>
+<li><p><strong>realization</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Which realization of an ensemble.</p></li>
+<li><p><strong>columns</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>] | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Only these stored columns. Every column by default.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#FileNotFoundError" title="(in Python v3.15)"><strong>FileNotFoundError</strong></a> – If the receptor has no file, or the variant no folder.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table" title="(in Apache Arrow v25.0.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Table</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -923,20 +944,20 @@
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="stilt.transport.hysplit.HysplitModel.batched.html"
+       href="stilt.output.Output.present.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">stilt.transport.hysplit.HysplitModel.batched</p>
+        <p class="prev-next-title">stilt.output.Output.present</p>
       </div>
     </a>
     <a class="right-next"
-       href="stilt.transport.hysplit.HysplitModel.data_files.html"
+       href="stilt.output.Output.record_failure.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">stilt.transport.hysplit.HysplitModel.data_files</p>
+        <p class="prev-next-title">stilt.output.Output.record_failure</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -959,14 +980,14 @@
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.transport.hysplit.HysplitModel.needs_workdir"><code class="docutils literal notranslate"><span class="pre">HysplitModel.needs_workdir</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.output.Output.read"><code class="docutils literal notranslate"><span class="pre">Output.read()</span></code></a></li>
 </ul>
   </nav></div>
 
   <div class="sidebar-secondary-item">
 
   <div class="tocsection sourcelink">
-    <a href="../../_sources/reference/_api/stilt.transport.hysplit.HysplitModel.needs_workdir.rst.txt">
+    <a href="../../_sources/reference/_api/stilt.output.Output.read.rst.txt">
       <i class="fa-solid fa-file-lines"></i> Show Source
     </a>
   </div>

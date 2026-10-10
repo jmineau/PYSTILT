@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=98da91c8"></script>
+    <script src="../../_static/documentation_options.js?v=eea7ecef"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev299+ga0f5d4c1b" />
+  <meta name="docsearch:version" content="0.1.0a24.dev2+g3897e8765" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -1526,7 +1526,6 @@
         <span class="n">time_bins</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">batch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Jacobian</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Sum the selected footprints onto a target, per time bin, as one sparse matrix.</span>
@@ -1537,10 +1536,10 @@
 <span class="sd">        within each of *time_bins*, and cells or layers outside the target</span>
 <span class="sd">        or the bins are dropped. The selection must hold one variant.</span>
 
-<span class="sd">        Footprints are read and summed *batch* receptors at a time, in</span>
-<span class="sd">        *workers* threads. Each thread holds one batch, so memory peaks at</span>
-<span class="sd">        about *workers* times a batch whatever the selection&#39;s size; the</span>
-<span class="sd">        result itself is sparse.</span>
+<span class="sd">        Footprints are read and summed one receptor at a time, in *workers*</span>
+<span class="sd">        threads. Each thread holds one footprint, so memory stays at a few</span>
+<span class="sd">        footprints whatever the selection&#39;s size; the result itself is</span>
+<span class="sd">        sparse.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1556,10 +1555,6 @@
 <span class="sd">            Threads that read and sum batches. Defaults to the CPUs this</span>
 <span class="sd">            process may use (in a Slurm job, the job&#39;s), at most 8: more</span>
 <span class="sd">            threads add memory and stop adding speed.</span>
-<span class="sd">        batch : int, default 64</span>
-<span class="sd">            Receptors read and summed together. At about 350,000 cells a</span>
-<span class="sd">            footprint, a batch of 64 takes some 2 GB at its peak, so 8</span>
-<span class="sd">            threads take some 16 GB.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1587,11 +1582,11 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> has no footprints yet.&quot;</span><span class="p">)</span>
         <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">]))</span>
         <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">requested</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
-        <span class="n">present</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">requested</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">found</span><span class="p">]</span>
-        <span class="n">batches</span> <span class="o">=</span> <span class="p">[</span><span class="n">present</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">batch</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">present</span><span class="p">),</span> <span class="n">batch</span><span class="p">)]</span>
         <span class="k">return</span> <span class="n">_jacobian</span><span class="p">(</span>
-            <span class="k">lambda</span> <span class="n">rows</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">table</span><span class="p">(</span><span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span>
-            <span class="n">batches</span><span class="p">,</span>
+            <span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">read</span><span class="p">(</span>
+                <span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;hour&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;foot&quot;</span><span class="p">]</span>
+            <span class="p">),</span>
+            <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">requested</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">found</span><span class="p">],</span>
             <span class="n">variant</span><span class="o">.</span><span class="n">footprint</span><span class="p">,</span>
             <span class="n">target</span><span class="p">,</span>
             <span class="n">time_bins</span><span class="p">,</span>

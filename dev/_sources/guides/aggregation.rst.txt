@@ -104,9 +104,9 @@ a selection of simulations (:doc:`outputs`), all of one variant:
    H.to_xarray()             # receptor, time, cell
    H.to_frame(sparse=True)   # receptors by (time, cell), pandas sparse columns
 
-It reads the footprints in batches, in several threads, and returns a
-sparse matrix, so its size does not depend on the grid and memory stays
-at a few batches of footprints. ``H.to_xarray()`` holds a sparse array
+It reads the footprints one receptor at a time, in several threads, and
+returns a sparse matrix, so its size does not depend on the grid and
+memory stays at a few footprints whatever the selection's size. ``H.to_xarray()`` holds a sparse array
 from the optional ``sparse`` package (``pip install pystilt[sparse]``), or
 a NumPy array with ``dense=True``. Receptors whose footprint is empty are
 in ``H.empty``, and those not run yet in ``H.missing``.
