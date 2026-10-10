@@ -586,6 +586,13 @@ when one breaks.
   `STILT_TEST_FETCH_MET=1 uv run pytest tests/transport/hysplit/test_release_assignment.py::test_hysplit_multipoint_release_points_follow_control_order --setup-only -q`.
   A receptor in the page must stay inside that time window. `docs.yml` restores
   the same cache the tests use.
+- **The guides that open a project start from a sample project**
+  (`docs/_ext/docs_examples.py`): four receptors an hour apart on 15 January
+  2021, run once per docs build (about 40 s) and copied into a temporary folder
+  for each page. A page starts it from a hidden block
+  (`docs_examples.temp_workdir(sample=True)`) and goes back with
+  `os.chdir(docs_cwd)` at its end, so the page's files land in the temporary
+  folder.
 - **Optional dependencies:** the `dev` group installs `pystilt[complete]`, so the
   plotting extra (`visualization`) is there in CI. If an example needs another
   extra, add `pystilt[extra]` the same way.
