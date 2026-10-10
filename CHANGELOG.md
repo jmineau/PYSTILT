@@ -6,6 +6,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- `project.jacobian` reads and sums one footprint per thread instead of
+  batches of 64, so its memory is a few footprints whatever the
+  selection: a year of hourly footprints at one site took 18.8 GB and now
+  takes under 1 GB, in less time. The `batch` parameter is gone.
+
 ## [0.1.0a23] - 2026-10-08
 
 ### Migration

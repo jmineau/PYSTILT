@@ -2,9 +2,9 @@
 Summing footprints onto the cells of another grid or set of polygons, per time bin.
 
 :func:`aggregate` does it for one footprint (``foot.stilt.aggregate``) and
-:func:`jacobian` for many at once. Both hand their footprint cells, each
-with its time bin, to :func:`_sum_onto`, which applies the overlap
-weights.
+:func:`jacobian` for many at once. Both hand one footprint's cells, each
+with its time bin, to :func:`_row`, which applies the overlap weights and
+returns that footprint's row of the Jacobian.
 """
 
 from __future__ import annotations
@@ -104,91 +104,101 @@ def _target_weights(
     return overlap_weights(target, x, y, grid.xres, grid.yres, grid.crs).T.tocsr()
 
 
-def _sum_onto(
+#: A Jacobian row with this many entries or fewer (64 MB of float64) is
+#: summed in a dense array, which is fastest; a longer one in a sparse one.
+_DENSE_ROW_MAX = 1 << 23
+
+
+def _row(
     weights: sparse.csr_matrix,
-    n_rows: int,
     n_bins: int,
-    row: np.ndarray,
     bin_idx: np.ndarray,
     cell: np.ndarray,
     foot: np.ndarray,
 ) -> sparse.csr_matrix:
     """
-    Sum footprint cells onto a target, per time bin.
+    Sum one footprint's cells onto a target, per time bin: its row of the Jacobian.
 
-    Each footprint cell is given by its row (receptor), its time bin (-1
-    for none), its flat raster index (``y * nx + x``), and its value.
-    *weights* maps raster cells (rows) onto target cells (columns).
+    Each cell is given by its time bin (-1 for none), its flat raster index
+    (``y * nx + x``), and its value. *weights* maps raster cells (rows) onto
+    target cells (columns).
 
     Returns
     -------
     scipy.sparse.csr_matrix
-        Shape ``(n_rows, n_bins * n_cells)``: every target cell for the
-        first bin, then the second. Cells outside the bins are dropped.
+        Shape ``(1, n_bins * n_cells)``: every target cell for the first
+        bin, then the second. Cells outside the bins are dropped.
     """
     keep = bin_idx >= 0
-    n_raster, n_cells = weights.get_shape()
-    # One row per (receptor, bin), summed onto the target in one product,
-    # then laid out as (receptor) by (bin, target cell).
-    per_bin = sparse.csr_matrix(
-        (
-            foot[keep],
-            (row[keep].astype(np.int64) * n_bins + bin_idx[keep], cell[keep]),
-        ),
-        shape=(n_rows * n_bins, n_raster),
+    bin_idx, cell = bin_idx[keep], cell[keep]
+    foot = foot[keep].astype(np.float64)
+    n_cells = weights.get_shape()[1]
+    # Each raster cell overlaps a few target cells, listed in its row of
+    # the weights: one for an aligned grid, several for polygons. Look them
+    # up for every footprint cell at once.
+    start = weights.indptr[cell]
+    counts = weights.indptr[cell + 1] - start
+    total = int(counts.sum())
+    which = np.repeat(np.arange(len(cell)), counts)
+    pos = np.repeat(start - (np.cumsum(counts) - counts), counts) + np.arange(total)
+    column = bin_idx[which].astype(np.int64) * n_cells + weights.indices[pos]
+    value = foot[which] * weights.data[pos]
+    n = n_bins * n_cells
+    if n <= _DENSE_ROW_MAX:
+        return sparse.csr_matrix(
+            np.bincount(column, weights=value, minlength=n)[None, :]
+        )
+    return sparse.csr_matrix(
+        (value, (np.zeros(total, dtype=np.int64), column)), shape=(1, n)
     )
-    onto = per_bin @ weights
-    return sparse.csr_matrix(onto.reshape(n_rows, n_bins * n_cells))
 
 
-def _sum_table(
+def _receptor_row(
     table: pa.Table,
-    receptors: list[str],
+    receptor_id: str,
     weights: sparse.csr_matrix,
     nx: int,
     edges: tuple[np.ndarray, np.ndarray],
-) -> tuple[sparse.csr_matrix, list[str]]:
+) -> sparse.csr_matrix | None:
     """
-    Sum the footprint cells in *table* onto a target, a row per receptor.
+    Return a receptor's Jacobian row from the stored cells of its footprint.
 
-    Returns the rows of the receptors of *receptors* that have cells in the
-    table, in that order, and their ids. A receptor in *receptors* without
-    cells is an empty footprint and gets no row; cells of receptors not in
-    *receptors* are left out.
+    *table* holds the footprint's ``hour``, ``y``, ``x``, and ``foot``
+    columns. ``None`` when it has no rows: the footprint is empty.
     """
-    n_bins = len(edges[0])
     if not table.num_rows:
-        return sparse.csr_matrix((0, n_bins * weights.get_shape()[1])), []
-    # Work with the dictionary indices of the receptor column: one small
-    # array of ids, and an int32 per cell.
-    table = table.unify_dictionaries().combine_chunks()
-    receptor_col = table.column("receptor").combine_chunks()
-    ids: list[str] = receptor_col.dictionary.to_pylist()
-    dict_idx = receptor_col.indices.to_numpy()
-    found = set(ids)
-    rows = [r for r in receptors if r in found]
-    row_of = {r: i for i, r in enumerate(rows)}
-    row_by_id = np.array([row_of.get(r, -1) for r in ids], dtype=np.int32)
-
-    # A receptor has tens of hours and its cells hundreds of thousands, so
-    # find the bin of each receptor-hour once and look it up per cell.
+        return None
     hour = table.column("hour").to_numpy()
-    first = int(hour.min())
-    hours = np.arange(first, int(hour.max()) + 1, dtype=np.int64)
-    release = _naive_utc_ns([parse_receptor_id(r)[0] for r in ids])
-    starts = release[:, None] + hours[None, :] * 3_600_000_000_000
-    bin_of = _time_bin(starts.ravel(), *edges).reshape(starts.shape).astype(np.int32)
-    bin_of[row_by_id < 0] = -1  # receptors in the table that were not asked for
-    bin_idx = bin_of[dict_idx, hour.astype(np.int32) - first]
-
-    cell = table.column("y").to_numpy().astype(np.int32) * nx + table.column(
-        "x"
-    ).to_numpy().astype(np.int32)
-    foot = table.column("foot").to_numpy().astype(np.float64)
-    data = _sum_onto(
-        weights, len(rows), n_bins, row_by_id[dict_idx], bin_idx, cell, foot
+    # The hours are few, so find each hour's bin once and look it up per cell.
+    first, last = int(hour.min()), int(hour.max())
+    release = _naive_utc_ns([parse_receptor_id(receptor_id)[0]])
+    starts = release + np.arange(first, last + 1, dtype=np.int64) * 3_600_000_000_000
+    bin_idx = _time_bin(starts, *edges)[hour.astype(np.intp) - first]
+    cell = (
+        table.column("y").to_numpy().astype(np.int64) * nx
+        + table.column("x").to_numpy()
     )
-    return data, rows
+    return _row(weights, len(edges[0]), bin_idx, cell, table.column("foot").to_numpy())
+
+
+def _by_receptor(table: pa.Table) -> dict[str, pa.Table]:
+    """Return the rows of *table* split by receptor id, in one pass."""
+    if not table.num_rows:
+        return {}
+    receptor = table.column("receptor")
+    if not pa.types.is_dictionary(receptor.type):
+        receptor = receptor.dictionary_encode()
+    receptor = receptor.unify_dictionaries().combine_chunks()
+    ids: list[str] = receptor.dictionary.to_pylist()
+    idx = receptor.indices.to_numpy()
+    order = np.argsort(idx, kind="stable")
+    bounds = np.searchsorted(idx[order], np.arange(len(ids) + 1))
+    ordered = table.take(order)
+    return {
+        rid: ordered.slice(bounds[k], bounds[k + 1] - bounds[k])
+        for k, rid in enumerate(ids)
+        if bounds[k + 1] > bounds[k]
+    }
 
 
 class Jacobian(NamedTuple):
@@ -324,8 +334,8 @@ def jacobian(
     The same operation as ``foot.stilt.aggregate``, for many footprints at
     once. *table* is what :meth:`stilt.output.Output.table` reads: the
     stored non-zero cells of each receptor, all on the grid of *config*.
-    :meth:`stilt.Project.jacobian` reads and sums a project's
-    footprints in batches, so a selection of any size fits in memory.
+    :meth:`stilt.Project.jacobian` reads a project's footprints one
+    receptor at a time instead, so a selection of any size fits in memory.
 
     Parameters
     ----------
@@ -350,9 +360,11 @@ def jacobian(
     -------
     Jacobian
     """
+    cells = _by_receptor(table)
+    none = table.schema.empty_table()
     return _jacobian(
-        lambda batch: table,
-        [receptors],
+        lambda receptor_id: cells.get(receptor_id, none),
+        receptors,
         config,
         target,
         time_bins,
@@ -362,8 +374,8 @@ def jacobian(
 
 
 def _jacobian(
-    read: Callable[[list[str]], pa.Table],
-    batches: list[list[str]],
+    read: Callable[[str], pa.Table],
+    receptors: list[str],
     config: FootprintConfig,
     target: Geometry,
     time_bins: pd.IntervalIndex,
@@ -373,12 +385,12 @@ def _jacobian(
     workers: int | None = None,
 ) -> Jacobian:
     """
-    Sum footprints onto a target batch by batch, and stack the rows into one Jacobian.
+    Sum footprints onto a target one receptor at a time, and stack the rows into one Jacobian.
 
-    ``read(batch)`` returns the footprint cells of a batch of receptors.
-    Batches are read and summed in *workers* threads (by default the CPUs
-    this process may use, at most 8), so only that many are in memory at
-    once; the rows come back in batch order.
+    ``read(receptor_id)`` returns the stored cells of that receptor's
+    footprint. Receptors are read and summed in *workers* threads (by
+    default the CPUs this process may use, at most 8), each holding one
+    footprint at a time; the rows come back in *receptors* order.
     """
     workers = _threads(workers)
     edges = _bin_edges(time_bins)  # raises for bins not closed on the left
@@ -388,28 +400,29 @@ def _jacobian(
     x_axis, y_axis = grid.axes
     weights = _target_weights(target, grid, geometry_hash, x_axis, y_axis)
 
-    def one(batch: list[str]) -> tuple[sparse.csr_matrix, list[str]]:
-        return _sum_table(read(batch), batch, weights, len(x_axis), edges)
+    def one(receptor_id: str) -> sparse.csr_matrix | None:
+        return _receptor_row(
+            read(receptor_id), receptor_id, weights, len(x_axis), edges
+        )
 
-    if workers <= 1 or len(batches) <= 1:
-        parts = [one(batch) for batch in batches]
+    if workers <= 1 or len(receptors) <= 1:
+        rows = [one(r) for r in receptors]
     else:
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            parts = list(pool.map(one, batches))
+            rows = list(pool.map(one, receptors))
     n_columns = len(time_bins) * len(target.index)
-    blocks = [data for data, ids in parts if ids]
+    blocks = [row for row in rows if row is not None]
     data = (
         sparse.csr_matrix(sparse.vstack(blocks, format="csr"))
         if blocks
         else sparse.csr_matrix((0, n_columns))
     )
-    rows = [r for _, ids in parts for r in ids]
-    found = set(rows)
-    empty = [r for batch in batches for r in batch if r not in found]
+    found = [r for r, row in zip(receptors, rows, strict=True) if row is not None]
+    empty = [r for r, row in zip(receptors, rows, strict=True) if row is None]
 
     columns = _columns(_naive_utc(time_bins.left), target.index)
     return Jacobian(
-        data, pd.Index(rows, name="receptor"), columns, empty, list(missing or [])
+        data, pd.Index(found, name="receptor"), columns, empty, list(missing or [])
     )
 
 
@@ -465,14 +478,12 @@ def aggregate(
     data = foot.transpose("time", y_dim, x_dim).to_numpy()
     t, iy, ix = np.nonzero(data)
     layer_bin = _time_bin(_naive_utc_ns(foot["time"].values), *edges)
-    summed = _sum_onto(
+    summed = _row(
         weights,
-        1,
         len(time_bins),
-        np.zeros(len(t), dtype=np.int64),
         layer_bin[t],
         iy.astype(np.int64) * len(x) + ix,
-        data[t, iy, ix].astype(np.float64),
+        data[t, iy, ix],
     )
     n_cells = len(target.index)
     by_bin = summed.toarray().reshape(len(columns), n_cells).T

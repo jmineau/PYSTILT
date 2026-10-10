@@ -448,6 +448,42 @@ def test_jacobian_matches_footprint_aggregate(written_footprints, target):
         np.testing.assert_allclose(got, expected.to_numpy(), rtol=1e-6, atol=1e-12)
 
 
+def test_jacobian_sparse_row_matches_dense(written_footprints, monkeypatch):
+    """A row too long to sum densely is summed sparsely, to the same matrix."""
+    import stilt.footprint.aggregation as aggregation
+
+    out, feet_by_id, empty_id = written_footprints
+    target = Mesh.from_windows([(-111.85, 40.75), (-111.65, 40.9)], (0.3, 0.3))
+    table = out.table("footprints", FEET)
+    dense = jacobian(table, FEET.footprint, target, _bins(), [*feet_by_id, empty_id])
+    monkeypatch.setattr(aggregation, "_DENSE_ROW_MAX", 0)
+    sparse = jacobian(table, FEET.footprint, target, _bins(), [*feet_by_id, empty_id])
+
+    assert list(sparse.receptors) == list(dense.receptors)
+    assert sparse.empty == dense.empty == [empty_id]
+    np.testing.assert_allclose(
+        sparse.data.toarray(), dense.data.toarray(), rtol=1e-12, atol=0
+    )
+
+
+def test_jacobian_takes_a_plain_receptor_column(written_footprints):
+    """The receptor column may be strings rather than dictionary-encoded."""
+    import pyarrow as pa
+
+    out, feet_by_id, _ = written_footprints
+    table = out.table("footprints", FEET)
+    plain = table.set_column(
+        table.schema.get_field_index("receptor"),
+        "receptor",
+        table.column("receptor").cast(pa.string()),
+    )
+    ids = list(feet_by_id)
+    H = jacobian(table, FEET.footprint, GRID, _bins(), ids)
+    H_plain = jacobian(plain, FEET.footprint, GRID, _bins(), ids)
+    assert list(H_plain.receptors) == ids
+    np.testing.assert_array_equal(H_plain.data.toarray(), H.data.toarray())
+
+
 def test_table_reads_the_date_folder_as_a_date32_column(written_footprints):
     import pyarrow as pa
 
