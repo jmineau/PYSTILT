@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=ef159b43"></script>
+    <script src="../_static/documentation_options.js?v=657feee7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="stilt.sampling.nearest_cell" href="_api/stilt.sampling.nearest_cell.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev9+g509c5eb4d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev10+g669e769cb" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -1047,13 +1047,13 @@ here.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.particles.PARTICLE_SCHEMA.html#stilt.particles.PARTICLE_SCHEMA" title="stilt.particles.PARTICLE_SCHEMA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PARTICLE_SCHEMA</span></code></a></p></td>
-<td><p>Schema()</p></td>
+<td><p>The columns every particle table has, as a particle file stores them: what a transport model's run must return.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.particles.FOOTPRINT_COLUMNS.html#stilt.particles.FOOTPRINT_COLUMNS" title="stilt.particles.FOOTPRINT_COLUMNS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FOOTPRINT_COLUMNS</span></code></a></p></td>
-<td><p>Built-in immutable sequence.</p></td>
+<td><p>The column a footprint is made from.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.particles.HNF_PLUME_COLUMNS.html#stilt.particles.HNF_PLUME_COLUMNS" title="stilt.particles.HNF_PLUME_COLUMNS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">HNF_PLUME_COLUMNS</span></code></a></p></td>
-<td><p>Built-in immutable sequence.</p></td>
+<td><p>Particle columns the near-field plume correction reads (<code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> must include them).</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.particles.check_particles.html#stilt.particles.check_particles" title="stilt.particles.check_particles"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_particles</span></code></a></p></td>
 <td><p>Check that a particle table has the columns of <a class="reference internal" href="_api/stilt.particles.PARTICLE_SCHEMA.html#stilt.particles.PARTICLE_SCHEMA" title="stilt.particles.PARTICLE_SCHEMA"><code class="xref py py-data docutils literal notranslate"><span class="pre">PARTICLE_SCHEMA</span></code></a>, and <em>need</em>.</p></td>

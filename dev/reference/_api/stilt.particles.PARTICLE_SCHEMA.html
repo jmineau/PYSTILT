@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=ef159b43"></script>
+    <script src="../../_static/documentation_options.js?v=657feee7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="The Particle Table" href="../particles.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev9+g509c5eb4d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev10+g669e769cb" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -905,40 +905,12 @@
 <dl class="py data">
 <dt class="sig sig-object py" id="stilt.particles.PARTICLE_SCHEMA">
 <span class="sig-prename descclassname"><span class="pre">stilt.particles.</span></span><span class="sig-name descname"><span class="pre">PARTICLE_SCHEMA</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">particle:</span> <span class="pre">int32</span> <span class="pre">age:</span> <span class="pre">int32</span> <span class="pre">lon:</span> <span class="pre">double</span> <span class="pre">lat:</span> <span class="pre">double</span> <span class="pre">zagl:</span> <span class="pre">double</span></span><a class="headerlink" href="#stilt.particles.PARTICLE_SCHEMA" title="Link to this definition">#</a></dt>
-<dd><p>Schema()</p>
-<p>A named collection of types a.k.a schema. A schema defines the
-column names and types in a record batch or table data structure.
-They also contain metadata about the columns. For example, schemas
-converted from Pandas contain metadata about their original Pandas
-types so they can be converted back to the same types.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Do not call this class’s constructor directly. Instead use
-<a class="reference external" href="https://arrow.apache.org/docs/python/generated/pyarrow.schema.html#pyarrow.schema" title="(in Apache Arrow v25.0.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">pyarrow.schema()</span></code></a> factory function which makes a new Arrow
-Schema object.</p>
-</div>
-<p class="rubric">Examples</p>
-<p>Create a new Arrow Schema object:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">([</span>
-<span class="gp">... </span>    <span class="p">(</span><span class="s1">&#39;some_int&#39;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">int32</span><span class="p">()),</span>
-<span class="gp">... </span>    <span class="p">(</span><span class="s1">&#39;some_string&#39;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">())</span>
-<span class="gp">... </span><span class="p">])</span>
-<span class="go">some_int: int32</span>
-<span class="go">some_string: string</span>
-</pre></div>
-</div>
-<p>Create Arrow Schema with metadata:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">([</span>
-<span class="gp">... </span>    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;n_legs&#39;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">int64</span><span class="p">()),</span>
-<span class="gp">... </span>    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;animals&#39;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">())],</span>
-<span class="gp">... </span>    <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;n_legs&quot;</span><span class="p">:</span> <span class="s2">&quot;Number of legs per animal&quot;</span><span class="p">})</span>
-<span class="go">n_legs: int64</span>
-<span class="go">animals: string</span>
-<span class="go">-- schema metadata --</span>
-<span class="go">n_legs: &#39;Number of legs per animal&#39;</span>
-</pre></div>
-</div>
+<dd><p>The columns every particle table has, as a particle file stores them:
+what a transport model’s run must return. <code class="docutils literal notranslate"><span class="pre">particle</span></code> is the particle number
+(1 to <code class="docutils literal notranslate"><span class="pre">numpar</span></code>), <code class="docutils literal notranslate"><span class="pre">age</span></code> the minutes since release (negative for a
+backward run), <code class="docutils literal notranslate"><span class="pre">lon</span></code> and <code class="docutils literal notranslate"><span class="pre">lat</span></code> the position in degrees, and <code class="docutils literal notranslate"><span class="pre">zagl</span></code>
+the height above ground in meters. The reference page on the particle
+table says what the other columns are.</p>
 </dd></dl>
 
 </section>
