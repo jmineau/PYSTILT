@@ -286,7 +286,7 @@ class Project:
 
     @property
     def name(self) -> str:
-        """The project's name: the directory name."""
+        """The project's name, which is the name of its directory."""
         return self.directory.name
 
     @property

@@ -580,7 +580,7 @@ class HysplitConfig(TransportConfig):
 
     @property
     def effective_maxpar(self) -> int:
-        """``maxpar`` as HYSPLIT receives it: ``numpar`` when unset."""
+        """``maxpar`` as HYSPLIT receives it, which is ``numpar`` when unset."""
         return self.numpar if self.maxpar is None else self.maxpar
 
     def hourly_ziscale(self) -> list[float]:
