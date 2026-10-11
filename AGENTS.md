@@ -533,6 +533,14 @@ where its See Also and Examples go, as in pandas: give each public one a
 docstring that says what it is, and add See Also or Examples where they help.
 One with no docstring shows an empty row.
 
+Module data such as `PARTICLE_SCHEMA` is listed under the package that exports
+it (`stilt.particles`). autodoc looks for its `#:` comment in that module, where
+there is none, so `reexported_data_comment` in `docs/conf.py` takes the comment
+from the submodule that defines it; without the hook a page shows the docstring
+of the object's type ("Built-in immutable sequence."). Napoleon reads a first
+line of the form `text: more text` of a property, an attribute, or module data
+as `type: description`, so keep a colon out of the middle of that line.
+
 #### Examples in the docs
 
 Examples run when the docs build, so they show real output, and the build fails

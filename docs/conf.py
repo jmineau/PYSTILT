@@ -6,6 +6,10 @@ import sys
 from importlib.metadata import version as _version
 from pathlib import Path
 
+from sphinx.application import Sphinx
+from sphinx.errors import PycodeError
+from sphinx.pycode import ModuleAnalyzer
+
 DOCS = Path(__file__).resolve().parent
 
 sys.path.insert(0, str(DOCS / "_ext"))
@@ -215,7 +219,43 @@ def trim_class_docstrings(
         lines.pop()
 
 
+def reexported_data_comment(
+    app: Sphinx,
+    what: str,
+    name: str,
+    obj: object,
+    options: object,
+    lines: list[str],
+) -> None:
+    """
+    Give module data that a package re-exports the comment where it is written.
+
+    autodoc looks for the ``#:`` comment of module data in the module the page
+    names it under. ``stilt.particles`` only imports ``FOOTPRINT_COLUMNS``
+    from ``stilt.particles.table``, so its page showed the docstring of the
+    object's type ("Built-in immutable sequence.") and not the comment. This
+    takes the comment from the first module, the named one or a submodule
+    already imported, that holds the object under that name and comments it.
+    """
+    if what != "data":
+        return
+    package, _, attr = name.rpartition(".")
+    homes = [package, *sorted(m for m in sys.modules if m.startswith(f"{package}."))]
+    for home in homes:
+        try:
+            analyzer = ModuleAnalyzer.for_module(home)
+            comment = analyzer.find_attr_docs().get(("", attr))
+        except PycodeError:  # no source, such as a compiled module
+            continue
+        if comment and getattr(sys.modules[home], attr, None) is obj:
+            app.env.note_dependency(analyzer.srcname)  # an edit rebuilds the page
+            lines[:] = comment
+            return
+
+
 def setup(app: object) -> None:
     """Register Sphinx hooks for API doc cleanup."""
     app.connect("autodoc-skip-member", skip_pydantic_members)
     app.connect("autodoc-process-docstring", trim_class_docstrings)
+    # Ahead of napoleon (priority 500), which reads the comment it gets.
+    app.connect("autodoc-process-docstring", reexported_data_comment, priority=400)

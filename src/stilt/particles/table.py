@@ -49,7 +49,7 @@ PARTICLE_SCHEMA = pa.schema(
 #: Particle columns stored as int32 rather than float64.
 _INT_COLUMNS = ("age", "particle")
 
-#: The column a footprint is made from: each particle's sensitivity to
+#: The column a footprint is made from. It is each particle's sensitivity to
 #: surface fluxes over one output step.
 FOOTPRINT_COLUMNS: tuple[str, ...] = ("foot",)
 
