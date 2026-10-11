@@ -28,6 +28,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the first line had turned the words before it into a type, so
   `Project.name` read "the directory name." with "Type: The project's name"
   under it.
+- The API pages of `PARTICLE_SCHEMA`, `FOOTPRINT_COLUMNS`,
+  `HNF_PLUME_COLUMNS`, and `stilt.footprint.Geometry` show their own
+  description. They showed the docstring of their type ("Built-in immutable
+  sequence." for the two tuples).
 
 ## [0.1.0a24] - 2026-10-09
 
