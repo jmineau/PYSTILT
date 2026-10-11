@@ -24,6 +24,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `receptor.plot.map()` labels a column's heights, and a multipoint receptor's
   height colorbar, with the reference the receptor was given (`AGL` or `MSL`).
   It said `AGL` for both.
+- The API pages of eight properties show their whole description. A colon in
+  the first line had turned the words before it into a type, so
+  `Project.name` read "the directory name." with "Type: The project's name"
+  under it.
 
 ## [0.1.0a24] - 2026-10-09
 

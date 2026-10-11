@@ -181,7 +181,7 @@ class Grid(Bounds):
 
     @property
     def dims(self) -> tuple[str, str]:
-        """The names of a footprint's horizontal dimensions on this grid: ``("lat", "lon")`` or ``("y", "x")``."""
+        """The names of a footprint's horizontal dimensions on this grid, ``("lat", "lon")`` or ``("y", "x")``."""
         return ("lat", "lon") if self.is_longlat else ("y", "x")
 
     @property

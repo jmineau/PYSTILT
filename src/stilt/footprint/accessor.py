@@ -123,7 +123,7 @@ class FootprintAccessor:
 
     @property
     def config(self) -> FootprintConfig:
-        """The footprint settings: grid, smoothing, and particle transforms."""
+        """The footprint settings (grid, smoothing, and particle transforms)."""
         return self._settings[0]
 
     @property

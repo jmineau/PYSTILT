@@ -137,7 +137,7 @@ class Variant:
 
     @property
     def realization_numbers(self) -> list[int | None]:
-        """The realizations its simulations run as: ``0`` to ``N - 1``, or ``[None]`` for a single run."""
+        """The realizations its simulations run as, from ``0`` to ``N - 1``, or ``[None]`` for a single run."""
         if self.realizations is None:
             return [None]
         return list(range(self.realizations))
@@ -348,12 +348,12 @@ class ProjectConfig(BaseModel):
 
     @property
     def transport(self) -> Any:
-        """The transport model's config, from the top-level keys: the defaults every variant starts from."""
+        """The transport model's config from the top-level keys, which every variant starts from."""
         return self._transport
 
     @property
     def footprint(self) -> FootprintConfig:
-        """The footprint settings, from the top-level keys: the defaults every variant starts from."""
+        """The footprint settings from the top-level keys, which every variant starts from."""
         return self._footprint
 
     def declared(self) -> dict[str, dict[str, Any]]:

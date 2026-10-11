@@ -110,7 +110,7 @@ class Simulation:
 
     @property
     def transport(self) -> Any:
-        """The transport config this simulation runs with: the variant's, with ``seed + realization`` for an ensemble."""
+        """The transport config this simulation runs with. It is the variant's, with ``seed + realization`` for an ensemble."""
         return self.variant.transport_for(self.realization)
 
     # -- where the results are ---------------------------------------------
