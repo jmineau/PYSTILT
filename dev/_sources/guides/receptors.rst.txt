@@ -38,7 +38,7 @@ PointReceptor
 This is the most common type. Use it for a fixed surface site or an airborne
 sample at one height.
 
-.. code-block:: python
+.. ipython:: python
 
    import stilt
 
@@ -49,6 +49,9 @@ sample at one height.
        altitude=10.0,          # meters above ground
    )
 
+   @savefig receptors_point.png width=5in
+   receptor.plot.map();
+
 
 ColumnReceptor
 --------------
@@ -57,7 +60,7 @@ Use it when the measurement covers a range of heights above one spot.
 HYSPLIT releases the particles evenly in height between ``bottom`` and
 ``top``.
 
-.. code-block:: python
+.. ipython:: python
 
    receptor = stilt.ColumnReceptor(
        time="2023-07-15 18:00:00",
@@ -67,6 +70,9 @@ HYSPLIT releases the particles evenly in height between ``bottom`` and
        top=6000.0,
        altitude_ref="msl",
    )
+
+   @savefig receptors_column.png width=5in
+   receptor.plot.map();
 
 ``bottom`` must be below ``top``. Above-ground altitudes cannot be negative.
 
@@ -82,7 +88,7 @@ Use it when the instrument looks along a slanted path, so the air it
 samples is spread out both horizontally and vertically. OCO-2 soundings and
 other satellite views with a full line-of-sight geometry are examples.
 
-.. code-block:: python
+.. ipython:: python
 
    import numpy as np
 
@@ -93,6 +99,9 @@ other satellite views with a full line-of-sight geometry are examples.
        altitudes=np.linspace(0.0,    8000.0, 10),
        altitude_ref="msl",
    )
+
+   @savefig receptors_multipoint.png width=5in
+   receptor.plot.map();
 
 The three arrays must have the same length. The receptor's ID is built from
 a hash of its points, so listing the same points in another order gives the
