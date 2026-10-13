@@ -55,7 +55,7 @@ messages. Existing identifiers such as the `r_stilt` test fixtures and
   trajectory or footprint math.
 - **[stiltctl](https://github.com/jmineau/air-tracker-stiltctl)**: source of the
   thin CLI → `Project` → worker call path. Its queue-backed and Kubernetes
-  execution was implemented here and then removed (#67, #87).
+  execution was implemented here and then removed.
 - **[X-STILT](https://github.com/uataq/X-STILT)**: source of the observation
   layer and column science. PYSTILT ports the concepts, not the scripts, and
   does not aim for X-STILT feature parity.
@@ -387,12 +387,12 @@ as complete.
 - **Bulk methods work from listings.** A method of `Project` that takes a
   selection works from folder listings and receptor ids, and never builds
   a `Simulation` per row: on a large project one receptor costs milliseconds, and
-  `status()` once took 25 minutes on 64k footprints (#141). It opens a file
+  `status()` once took 25 minutes on 64k footprints. It opens a file
   per row only when the file's contents are the answer (`footprints`,
   `jacobian`), and builds receptors together (`Project._receptors`) when it
   needs them.
-- **One code path for a disk and an object store, and no store class**
-  (#135). `Output.directory` is a `Path` on a filesystem and a universal
+- **One code path for a disk and an object store, and no store class.**
+  `Output.directory` is a `Path` on a filesystem and a universal
   path (`UPath`) for a URL (`stilt._paths.location`). Code that touches
   the output checks `isinstance(path, Path)` for the local fast path
   (`os.scandir`, temporary file and rename, pyarrow on the path) and
@@ -682,9 +682,8 @@ Feature status lives in one place, the roadmap tables in
 [docs/roadmap.rst](docs/roadmap.rst); when a feature lands, update its row.
 The README links to it and keeps no table of its own.
 
-- Code that looks over-engineered goes on the running list in
-  [#48](https://github.com/jmineau/PYSTILT/issues/48) (label `simplify`),
-  not into an unrelated change.
+- Code that looks over-engineered goes on the over-engineering list (the
+  open issue labeled `simplify`), not into an unrelated change.
 - Before working on an issue, read it (`gh issue view <n>`) for the current
   scope and discussion.
 - A pull request fixes one thing, links the issue it resolves
@@ -722,7 +721,7 @@ The README links to it and keeps no table of its own.
   `attrs["empty"]`. Never synthesize a zero-valued footprint for it: a zero
   enhancement would flow into a comparison or an inversion unnoticed.
 - **Met that ran out is a failure; a domain exit is not.** The transport
-  model tells them apart, not the core (#189). HYSPLIT's driver reads its
+  model tells them apart, not the core. HYSPLIT's driver reads its
   `WARNING` file after each run and fails `no more meteorology` (and the
   other `metpos` time warnings in `FAILURE_PHRASES`) as `MET_COVERAGE`.
   Particles that all left the met's domain or its crop are a complete
