@@ -18,12 +18,12 @@ import contextlib
 import datetime as dt
 import logging
 import multiprocessing
-import os
 import shutil
 import signal
 import socket
 import threading
 import traceback
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -150,7 +150,8 @@ def run_particles(
     sim : Simulation
         What to run.
     workdir : Path
-        Directory to run in. Created here.
+        Directory to run in, made here. Anything in it is removed first,
+        so each run needs its own.
     keep_workdir : bool, default False
         Keep the working directory of a successful run too.
     timeout : int, optional
@@ -172,9 +173,9 @@ def run_particles(
     output, rid = sim.output, sim.receptor.id
     needs_workdir = getattr(get_model(sim.variant.model.name), "needs_workdir", True)
     if needs_workdir:
-        # The model runs in an empty directory. A job stopped partway can
-        # leave this simulation's directory behind; it is PYSTILT's own, so
-        # clear it.
+        # The model runs in an empty directory. The runner gives each run a
+        # new one, but a caller can hand over a directory that a stopped run
+        # left behind, so clear it.
         shutil.rmtree(workdir, ignore_errors=True)
         workdir.mkdir(parents=True)
     _log_start(sim)
@@ -359,7 +360,7 @@ def run_receptor(
     receptor_id : str
         Receptor to run.
     compute_root : Path
-        Directory the workdirs are made in, one per simulation, as
+        Directory the workdirs are made in, a new one for each run, as
         :func:`~stilt.execution.runner.resolve_compute_root` returns it.
     execution : ExecutionConfig, optional
         Execution settings, for ``timeout`` and ``keep_workdir``. Defaults
@@ -380,22 +381,17 @@ def run_receptor(
     """
     execution = execution if execution is not None else project.config.execution
     problems: list[str] = []
-    try:
-        for (_, k), names in _groups(project).items():
-            if not batched and _is_batched(project, names[0]):
-                continue
-            group = [project.simulation(receptor_id, n, k) for n in names]
-            problems += _run_group(
-                project,
-                group,
-                compute_root=compute_root,
-                execution=execution,
-                skip_existing=skip_existing,
-            )
-    finally:
-        # Each workdir is removed after its run, which leaves the receptor's
-        # folders above it (compute_root/<receptor>/<variant>/) behind.
-        _remove_empty_dirs(compute_root / receptor_id)
+    for (_, k), names in _groups(project).items():
+        if not batched and _is_batched(project, names[0]):
+            continue
+        group = [project.simulation(receptor_id, n, k) for n in names]
+        problems += _run_group(
+            project,
+            group,
+            compute_root=compute_root,
+            execution=execution,
+            skip_existing=skip_existing,
+        )
     return problems
 
 
@@ -457,13 +453,16 @@ def _run_batched(
     return problems
 
 
-def _remove_empty_dirs(root: Path) -> None:
-    """Remove *root* and every folder under it, as long as they hold no files."""
-    if not root.is_dir():
-        return
-    for directory, _, _ in os.walk(root, topdown=False):
-        with contextlib.suppress(OSError):
-            Path(directory).rmdir()
+def _new_workdir(compute_root: Path, sim: Simulation) -> Path:
+    """
+    Return a workdir for one run of *sim*'s transport model: a new path in *compute_root*.
+
+    The name is the receptor id, the variant, and the realization (in an
+    ensemble), then a random part, so two runs never share a workdir. Another project can use
+    the same compute root with the same receptor and variant names, and the
+    same simulation can run twice at once.
+    """
+    return compute_root / f"{str(sim).replace('/', '_')}_{uuid.uuid4().hex[:8]}"
 
 
 def _run_group(
@@ -482,7 +481,7 @@ def _run_group(
         try:
             particles = run_particles(
                 first,
-                workdir=compute_root / str(first),
+                workdir=_new_workdir(compute_root, first),
                 keep_workdir=execution.keep_workdir,
                 timeout=execution.timeout,
             )
@@ -608,7 +607,7 @@ def run_receptors(
     receptor_ids : list of str
         Receptors to run.
     compute_root : Path
-        Directory the workdirs are made in, one per simulation, as
+        Directory the workdirs are made in, a new one for each run, as
         :func:`~stilt.execution.runner.resolve_compute_root` returns it.
     execution : ExecutionConfig, optional
         Execution settings: ``cpus`` is the number of worker processes (1

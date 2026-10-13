@@ -67,7 +67,7 @@ _NO_SKIP = typer.Option(
 _COMPUTE_ROOT = typer.Option(
     None,
     "--compute-root",
-    help="Directory the transport model runs under, one workdir per simulation. Defaults to PYSTILT_COMPUTE_ROOT, then $TMPDIR/pystilt/<project>.",
+    help="Directory the transport model runs under, a new workdir for each run. Defaults to PYSTILT_COMPUTE_ROOT, then $TMPDIR/pystilt/<project>.",
 )
 
 

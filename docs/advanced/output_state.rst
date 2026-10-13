@@ -86,16 +86,24 @@ Where HYSPLIT runs
 HYSPLIT has to run in a local folder that holds its input files, the
 run's workdir. Workdirs are made in the compute root: ``compute_root`` if
 given, else ``PYSTILT_COMPUTE_ROOT``, else ``$TMPDIR/pystilt/<project
-name>``. After a successful run the particle file and the log are written
-to the output directory and the workdir is removed. After a failure the
-workdir is copied to ``scratch/`` in the output directory first, so
-CONTROL, SETUP.CFG, and MESSAGE survive the job. ``keep_workdir: true``
-under ``execution:`` in ``config.yaml`` keeps every run's workdir.
+name>``. Each run gets a new workdir there, named after the receptor id
+and the variant (and the realization, in an ensemble), with a random part
+at the end (``202301011200_-111.85_40.77_5_hrrr_3f9a1c2e``). Two runs
+never share one, so several projects can use one compute root, and a
+simulation that runs twice at once keeps its own files.
+
+After a successful run the particle file and the log are written to the
+output directory and the workdir is removed. After a failure the workdir
+is copied to ``scratch/`` in the output directory first, so CONTROL,
+SETUP.CFG, and MESSAGE survive the job. ``keep_workdir: true`` under
+``execution:`` in ``config.yaml`` keeps every run's workdir. A run killed
+outright (``SIGKILL``, or a node that fails) cannot clean up, and its
+workdir stays in the compute root until that folder is cleaned.
 
 Files are written through a temporary name and renamed into place, so a
 reader never sees a partial file, and two workers that run the same receptor
-by accident produce equivalent files with the last rename winning. No lock
-is needed.
+by accident produce equivalent files with the last rename winning. Each of
+them runs in its own workdir. No lock is needed.
 
 Environment variables
 ---------------------

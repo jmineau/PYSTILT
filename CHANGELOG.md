@@ -18,6 +18,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Each run of the transport model gets a new workdir in the compute root,
+  named after the receptor id, the variant, and the realization (in an
+  ensemble), with a random part at the end. The workdir was
+  `<compute root>/<receptor id>/<variant>`, so two runs of the same
+  receptor and variant name at once, from two projects that share a
+  compute root or from one project run twice, cleared each other's files.
+  One of them could fail, or read the other's particles.
 - `receptor.plot.map()`, and so `sim.plot.map()`, puts its legend in the upper
   right corner. It searched for the emptiest spot, which took over a second
   with a simulation's particles on the map, and matplotlib warned.

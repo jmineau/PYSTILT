@@ -74,7 +74,8 @@ say, such as the grid of a footprint given by a geometry and the transport
 model build. A variant with ``realizations: N`` stays one variant.
 
 The ``PYSTILT_COMPUTE_ROOT`` environment variable sets the compute root,
-where each run's workdir is made. It never changes a result.
+where each run's workdir is made. It never changes a result, and projects
+can share one.
 
 .. autosummary::
    :toctree: _api

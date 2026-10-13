@@ -82,14 +82,15 @@ Glossary
       folder. ``stilt status`` lists them.
 
    workdir
-      The folder one simulation's transport model runs in. It is removed
-      after a successful run and kept under ``scratch/`` in the output
-      directory when the run fails (``sim.kept_workdir``).
+      The folder one simulation's transport model runs in, new for each
+      run. It is removed after a successful run and kept under
+      ``scratch/`` in the output directory when the run fails
+      (``sim.kept_workdir``).
 
    compute root
       The folder the workdirs are made in, usually fast local disk: the
       ``--compute-root`` option, else ``PYSTILT_COMPUTE_ROOT``, else
-      ``$TMPDIR/pystilt/<project>``.
+      ``$TMPDIR/pystilt/<project>``. Projects can share one.
 
    HYSPLIT
       NOAA's particle transport program, written in Fortran. PYSTILT runs it
