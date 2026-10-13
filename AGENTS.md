@@ -320,9 +320,13 @@ output directory, never only in memory.
   public config stays flat (`ProjectConfig(numpar=..., seed=...)`). CONTRIBUTING
   explains how a field is routed to `SETUP.CFG`, `CONTROL`, `WINDERR`, or
   `ZIERR`.
-- The scratch directory comes from the `PYSTILT_COMPUTE_ROOT` environment
+- The compute root comes from the `PYSTILT_COMPUTE_ROOT` environment
   variable, which `resolve_compute_root` in the runner reads; `Project`
-  does not.
+  does not. Each run's workdir is a new path in it
+  (`_new_workdir` in the worker: receptor id, variant, realization, and a
+  random part), so projects can share a compute root and two runs never
+  clear each other's files. Never name a workdir from the simulation
+  alone.
 - `ExecutionConfig` (`execution:` in `config.yaml`) says where receptors run
   and with what Slurm resources. It forbids unknown keys; other `sbatch`
   options go under its `slurm:` mapping.
@@ -362,8 +366,8 @@ footprint settings together. "Particles" is the one word for the particle table 
 "trajectory" means one particle's path. Lookup
 reads the stored `_settings.yaml` back through the current config classes
 (`stilt.identity`) and re-hashes, so a field added later with a default
-still matches. `compute_root`
-is scratch: HYSPLIT runs there and the directory is discarded after success.
+still matches. The compute root
+is scratch: HYSPLIT runs in a new workdir there for each run, removed after success.
 Footprints are sparse tables (`hour, y, x, foot`, float32); an empty
 footprint is a file with no rows, marked `stilt:empty: true`, and counts
 as complete.

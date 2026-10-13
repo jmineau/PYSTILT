@@ -306,6 +306,59 @@ def test_a_receptor_leaves_no_folders_under_the_compute_root(
     assert list(compute_root.iterdir()) == []
 
 
+@pytest.mark.parametrize("numpar", [200, 100], ids=["other-settings", "same-settings"])
+def test_runs_that_share_a_compute_root_never_share_a_workdir(
+    tmp_path, receptor, monkeypatch, numpar
+):
+    """Two projects run the same receptor and variant name at once in one compute root."""
+    first = _model(tmp_path / "a", [receptor], numpar=100)
+    second = _model(tmp_path / "b", [receptor], numpar=numpar)
+    compute_root = tmp_path / "compute"
+    ended: dict[str, str | None] = {}
+
+    class _Model:
+        name = "hysplit"
+        started = 0
+
+        def run(self, receptor, params, met, window, workdir=None, timeout=None):
+            mine = f"run {_Model.started}"
+            _Model.started += 1
+            (workdir / "CONTROL").write_text(mine)
+            if mine == "run 0":  # the second project starts while the first runs
+                run_receptor(second, str(receptor.id), compute_root=compute_root)
+            control = workdir / "CONTROL"
+            ended[mine] = control.read_text() if control.exists() else None
+            raise RuntimeError("stop here")
+
+    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
+    run_receptor(first, str(receptor.id), compute_root=compute_root)
+
+    # Each run finds its own input in its workdir when it ends.
+    assert ended == {"run 0": "run 0", "run 1": "run 1"}
+    assert list(compute_root.iterdir()) == []
+
+
+def test_each_run_gets_a_new_workdir_named_after_its_simulation(
+    tmp_path, receptor, monkeypatch
+):
+    project = _model(tmp_path, [receptor], variants={"hrrr": {"realizations": 2}})
+    compute_root = tmp_path / "compute"
+    workdirs: list = []
+
+    def fake(sim, *, workdir, keep_workdir=False, timeout=None):
+        workdirs.append(workdir)
+        raise RuntimeError("stop here")
+
+    monkeypatch.setattr(worker, "run_particles", fake)
+    for _ in range(2):  # the same simulations again
+        run_receptor(project, str(receptor.id), compute_root=compute_root)
+
+    assert len(set(workdirs)) == 4
+    assert {w.parent for w in workdirs} == {compute_root}
+    names = sorted(w.name.rsplit("_", 1)[0] for w in workdirs)
+    assert names == [f"{receptor.id}_hrrr_{k}" for k in (0, 0, 1, 1)]
+
+
 def test_the_execution_settings_given_reach_the_hysplit_run(
     tmp_path, receptor, monkeypatch
 ):

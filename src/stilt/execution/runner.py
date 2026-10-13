@@ -115,7 +115,8 @@ def resolve_compute_root(
     That is *compute_root* when given, else the ``PYSTILT_COMPUTE_ROOT``
     environment variable when it is set and not empty, else
     ``$TMPDIR/pystilt/<project name>``. The path is absolute and resolved, so
-    a worker handed it gets the same directory.
+    a worker handed it gets the same directory. Projects can share one
+    compute root, since each run gets a new workdir in it.
     """
     if compute_root is None:
         compute_root = os.environ.get("PYSTILT_COMPUTE_ROOT") or None
@@ -231,7 +232,7 @@ def run(
         Skip simulations whose results all exist. ``False`` runs every
         simulation again.
     compute_root : str or Path, optional
-        Directory the workdirs are made in, one per simulation
+        Directory the workdirs are made in, a new one for each run
         (:func:`resolve_compute_root`). On Slurm it is resolved on the
         compute node unless given here.
 
