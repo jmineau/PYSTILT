@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=f00823eb"></script>
+    <script src="../../_static/documentation_options.js?v=126ebef7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="stilt.execution.worker.run_receptor" href="stilt.execution.worker.run_receptor.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev11+g3f852814d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev13+g95bfe9c37" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -917,7 +917,7 @@ for each simulation that failed.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>project</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Project</span></code></span>) – Project the receptors belong to.</p></li>
 <li><p><strong>receptor_ids</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – Receptors to run.</p></li>
-<li><p><strong>compute_root</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span>) – Directory the workdirs are made in, one per simulation, as
+<li><p><strong>compute_root</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span>) – Directory the workdirs are made in, a new one for each run, as
 <a class="reference internal" href="stilt.execution.runner.resolve_compute_root.html#stilt.execution.runner.resolve_compute_root" title="stilt.execution.runner.resolve_compute_root"><code class="xref py py-func docutils literal notranslate"><span class="pre">resolve_compute_root()</span></code></a> returns it.</p></li>
 <li><p><strong>execution</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExecutionConfig</span></code> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Execution settings: <code class="docutils literal notranslate"><span class="pre">cpus</span></code> is the number of worker processes (1
 runs in this process), and <code class="docutils literal notranslate"><span class="pre">timeout</span></code> and <code class="docutils literal notranslate"><span class="pre">keep_workdir</span></code> apply

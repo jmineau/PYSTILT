@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=f00823eb"></script>
+    <script src="../../../_static/documentation_options.js?v=126ebef7"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev11+g3f852814d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev13+g95bfe9c37" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -619,7 +619,8 @@
 <span class="sd">    That is *compute_root* when given, else the ``PYSTILT_COMPUTE_ROOT``</span>
 <span class="sd">    environment variable when it is set and not empty, else</span>
 <span class="sd">    ``$TMPDIR/pystilt/&lt;project name&gt;``. The path is absolute and resolved, so</span>
-<span class="sd">    a worker handed it gets the same directory.</span>
+<span class="sd">    a worker handed it gets the same directory. Projects can share one</span>
+<span class="sd">    compute root, since each run gets a new workdir in it.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">compute_root</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">compute_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;PYSTILT_COMPUTE_ROOT&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="kc">None</span>
@@ -741,7 +742,7 @@
 <span class="sd">        Skip simulations whose results all exist. ``False`` runs every</span>
 <span class="sd">        simulation again.</span>
 <span class="sd">    compute_root : str or Path, optional</span>
-<span class="sd">        Directory the workdirs are made in, one per simulation</span>
+<span class="sd">        Directory the workdirs are made in, a new one for each run</span>
 <span class="sd">        (:func:`resolve_compute_root`). On Slurm it is resolved on the</span>
 <span class="sd">        compute node unless given here.</span>
 

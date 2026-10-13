@@ -108,8 +108,9 @@ Commands
      id per line.
    - ``--output DIR`` uses another output directory than ``config.yaml``
      names.
-   - ``--compute-root DIR`` is the compute root: each run gets a workdir
-     in ``DIR``, removed after it succeeds.
+   - ``--compute-root DIR`` is the compute root: each run gets a new
+     workdir in ``DIR``, removed after it succeeds. Projects can share
+     one.
    - ``--task I/N`` runs task ``I`` of ``N`` here, as one task of a job
      array (:doc:`containers`).
 

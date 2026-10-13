@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=f00823eb"></script>
+    <script src="../_static/documentation_options.js?v=126ebef7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Checking A Run" href="checking.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev11+g3f852814d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev13+g95bfe9c37" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -724,18 +724,18 @@ what a transport model must write.</p>
 <p>PYSTILT’s methods for the particle table are under <code class="docutils literal notranslate"><span class="pre">particles.stilt</span></code>:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [22]: </span><span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">endpoints</span><span class="p">()</span>    <span class="c1"># where each particle ends, one row each</span>
 <span class="gh">Out[22]: </span>
-<span class="go">         age  particle  ...  foot_no_hnf_dilution                time</span>
-<span class="go">80525 -599.0       1.0  ...                   0.0 2021-01-14 22:01:00</span>
-<span class="go">70384 -395.0       2.0  ...                   0.0 2021-01-15 01:25:00</span>
-<span class="go">80807 -611.0       3.0  ...                   0.0 2021-01-14 21:49:00</span>
-<span class="go">81585 -663.0       4.0  ...                   0.0 2021-01-14 20:57:00</span>
-<span class="go">75799 -480.0       5.0  ...                   0.0 2021-01-15 00:00:00</span>
-<span class="go">...      ...       ...  ...                   ...                 ...</span>
-<span class="go">73936 -445.0     196.0  ...                   0.0 2021-01-15 00:35:00</span>
-<span class="go">53331 -268.0     197.0  ...                   0.0 2021-01-15 03:32:00</span>
-<span class="go">64265 -336.0     198.0  ...                   0.0 2021-01-15 02:24:00</span>
-<span class="go">77189 -508.0     199.0  ...                   0.0 2021-01-14 23:32:00</span>
-<span class="go">65513 -346.0     200.0  ...                   0.0 2021-01-15 02:14:00</span>
+<span class="go">          age  particle  ...  foot_no_hnf_dilution                time</span>
+<span class="go">79468 -1157.0       1.0  ...                   0.0 2021-01-14 12:43:00</span>
+<span class="go">67882  -378.0       2.0  ...                   0.0 2021-01-15 01:42:00</span>
+<span class="go">69877  -406.0       3.0  ...                   0.0 2021-01-15 01:14:00</span>
+<span class="go">78602  -668.0       4.0  ...                   0.0 2021-01-14 20:52:00</span>
+<span class="go">54240  -274.0       5.0  ...                   0.0 2021-01-15 03:26:00</span>
+<span class="go">...       ...       ...  ...                   ...                 ...</span>
+<span class="go">75876  -548.0     196.0  ...                   0.0 2021-01-14 22:52:00</span>
+<span class="go">62665  -328.0     197.0  ...                   0.0 2021-01-15 02:32:00</span>
+<span class="go">78465  -657.0     198.0  ...                   0.0 2021-01-14 21:03:00</span>
+<span class="go">50161  -251.0     199.0  ...                   0.0 2021-01-15 03:49:00</span>
+<span class="go">77060  -589.0     200.0  ...                   0.0 2021-01-14 22:11:00</span>
 
 <span class="go">[200 rows x 14 columns]</span>
 
@@ -813,11 +813,11 @@ after each receptor’s time, where a backward run’s first hour is -1. The
 
 <span class="gp">In [32]: </span><span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>                      <span class="c1"># one receptor&#39;s hours</span>
 <span class="gh">Out[32]: </span>
-<span class="go">&lt;xarray.DataArray &#39;foot&#39; (hour: 14, lat: 200, lon: 250)&gt; Size: 3MB</span>
-<span class="go">dask.array&lt;getitem, shape=(14, 200, 250), dtype=float32, chunksize=(14, 200, 250), chunktype=numpy.ndarray&gt;</span>
+<span class="go">&lt;xarray.DataArray &#39;foot&#39; (hour: 16, lat: 200, lon: 250)&gt; Size: 3MB</span>
+<span class="go">dask.array&lt;getitem, shape=(16, 200, 250), dtype=float32, chunksize=(16, 200, 250), chunktype=numpy.ndarray&gt;</span>
 <span class="go">Coordinates:</span>
-<span class="go">  * hour      (hour) int64 112B -14 -13 -12 -11 -10 -9 -8 -7 -6 -5 -4 -3 -2 -1</span>
-<span class="go">    time      (hour) datetime64[us] 112B 2021-01-14T16:00:00 ... 2021-01-15T0...</span>
+<span class="go">  * hour      (hour) int64 128B -16 -15 -14 -13 -12 -11 ... -6 -5 -4 -3 -2 -1</span>
+<span class="go">    time      (hour) datetime64[us] 128B 2021-01-14T14:00:00 ... 2021-01-15T0...</span>
 <span class="go">  * lat       (lat) float64 2kB 40.01 40.02 40.02 40.03 ... 41.98 41.98 41.99</span>
 <span class="go">  * lon       (lon) float64 2kB -113.0 -113.0 -113.0 ... -110.5 -110.5 -110.5</span>
 <span class="go">    receptor  &lt;U31 124B &#39;202101150600_-111.848_40.766_10&#39;</span>
@@ -828,8 +828,9 @@ after each receptor’s time, where a backward run’s first hour is -1. The
 
 <span class="gp">In [33]: </span><span class="n">footprints</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>                      <span class="c1"># and when they start</span>
 <span class="gh">Out[33]: </span>
-<span class="go">&lt;xarray.DataArray &#39;time&#39; (hour: 14)&gt; Size: 112B</span>
-<span class="go">array([&#39;2021-01-14T16:00:00.000000&#39;, &#39;2021-01-14T17:00:00.000000&#39;,</span>
+<span class="go">&lt;xarray.DataArray &#39;time&#39; (hour: 16)&gt; Size: 128B</span>
+<span class="go">array([&#39;2021-01-14T14:00:00.000000&#39;, &#39;2021-01-14T15:00:00.000000&#39;,</span>
+<span class="go">       &#39;2021-01-14T16:00:00.000000&#39;, &#39;2021-01-14T17:00:00.000000&#39;,</span>
 <span class="go">       &#39;2021-01-14T18:00:00.000000&#39;, &#39;2021-01-14T19:00:00.000000&#39;,</span>
 <span class="go">       &#39;2021-01-14T20:00:00.000000&#39;, &#39;2021-01-14T21:00:00.000000&#39;,</span>
 <span class="go">       &#39;2021-01-14T22:00:00.000000&#39;, &#39;2021-01-14T23:00:00.000000&#39;,</span>
@@ -838,8 +839,8 @@ after each receptor’s time, where a backward run’s first hour is -1. The
 <span class="go">       &#39;2021-01-15T04:00:00.000000&#39;, &#39;2021-01-15T05:00:00.000000&#39;],</span>
 <span class="go">      dtype=&#39;datetime64[us]&#39;)</span>
 <span class="go">Coordinates:</span>
-<span class="go">  * hour      (hour) int64 112B -14 -13 -12 -11 -10 -9 -8 -7 -6 -5 -4 -3 -2 -1</span>
-<span class="go">    time      (hour) datetime64[us] 112B 2021-01-14T16:00:00 ... 2021-01-15T0...</span>
+<span class="go">  * hour      (hour) int64 128B -16 -15 -14 -13 -12 -11 ... -6 -5 -4 -3 -2 -1</span>
+<span class="go">    time      (hour) datetime64[us] 128B 2021-01-14T14:00:00 ... 2021-01-15T0...</span>
 <span class="go">    receptor  &lt;U31 124B &#39;202101150600_-111.848_40.766_10&#39;</span>
 <span class="go">Attributes:</span>
 <span class="go">    standard_name:  time</span>
@@ -864,10 +865,10 @@ footprint as a <a class="reference external" href="https://docs.xarray.dev/en/st
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [34]: </span><span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
 <span class="gh">Out[34]: </span>
 <span class="go">receptor</span>
-<span class="go">202101150600_-111.848_40.766_10    143.672322</span>
-<span class="go">202101150700_-111.848_40.766_10    182.173612</span>
-<span class="go">202101150800_-111.848_40.766_10    236.022171</span>
-<span class="go">202101150900_-111.848_40.766_10    261.385947</span>
+<span class="go">202101150600_-111.848_40.766_10    144.337810</span>
+<span class="go">202101150700_-111.848_40.766_10    167.555968</span>
+<span class="go">202101150800_-111.848_40.766_10    243.148368</span>
+<span class="go">202101150900_-111.848_40.766_10    270.235598</span>
 <span class="go">Name: foot, dtype: float64</span>
 </pre></div>
 </div>

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=f00823eb"></script>
+    <script src="../_static/documentation_options.js?v=126ebef7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Internals" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev11+g3f852814d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev13+g95bfe9c37" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -597,15 +597,22 @@ Slurm task is handed a batch of receptor IDs.</p>
 <p>HYSPLIT has to run in a local folder that holds its input files, the
 run’s workdir. Workdirs are made in the compute root: <code class="docutils literal notranslate"><span class="pre">compute_root</span></code> if
 given, else <code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code>, else <code class="docutils literal notranslate"><span class="pre">$TMPDIR/pystilt/&lt;project</span>
-<span class="pre">name&gt;</span></code>. After a successful run the particle file and the log are written
-to the output directory and the workdir is removed. After a failure the
-workdir is copied to <code class="docutils literal notranslate"><span class="pre">scratch/</span></code> in the output directory first, so
-CONTROL, SETUP.CFG, and MESSAGE survive the job. <code class="docutils literal notranslate"><span class="pre">keep_workdir:</span> <span class="pre">true</span></code>
-under <code class="docutils literal notranslate"><span class="pre">execution:</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> keeps every run’s workdir.</p>
+<span class="pre">name&gt;</span></code>. Each run gets a new workdir there, named after the receptor id
+and the variant (and the realization, in an ensemble), with a random part
+at the end (<code class="docutils literal notranslate"><span class="pre">202301011200_-111.85_40.77_5_hrrr_3f9a1c2e</span></code>). Two runs
+never share one, so several projects can use one compute root, and a
+simulation that runs twice at once keeps its own files.</p>
+<p>After a successful run the particle file and the log are written to the
+output directory and the workdir is removed. After a failure the workdir
+is copied to <code class="docutils literal notranslate"><span class="pre">scratch/</span></code> in the output directory first, so CONTROL,
+SETUP.CFG, and MESSAGE survive the job. <code class="docutils literal notranslate"><span class="pre">keep_workdir:</span> <span class="pre">true</span></code> under
+<code class="docutils literal notranslate"><span class="pre">execution:</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> keeps every run’s workdir. A run killed
+outright (<code class="docutils literal notranslate"><span class="pre">SIGKILL</span></code>, or a node that fails) cannot clean up, and its
+workdir stays in the compute root until that folder is cleaned.</p>
 <p>Files are written through a temporary name and renamed into place, so a
 reader never sees a partial file, and two workers that run the same receptor
-by accident produce equivalent files with the last rename winning. No lock
-is needed.</p>
+by accident produce equivalent files with the last rename winning. Each of
+them runs in its own workdir. No lock is needed.</p>
 </section>
 <section id="environment-variables">
 <h2>Environment variables<a class="headerlink" href="#environment-variables" title="Link to this heading">#</a></h2>

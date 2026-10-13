@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=f00823eb"></script>
+    <script src="../_static/documentation_options.js?v=126ebef7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Your First Footprint" href="quickstart.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev11+g3f852814d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev13+g95bfe9c37" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -544,7 +544,7 @@ of <code class="docutils literal notranslate"><span class="pre">config.yaml</spa
 </dd>
 <dt id="term-compute-root">compute root<a class="headerlink" href="#term-compute-root" title="Link to this term">#</a></dt><dd><p>The folder the workdirs are made in, usually fast local disk: the
 <code class="docutils literal notranslate"><span class="pre">--compute-root</span></code> option, else <code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code>, else
-<code class="docutils literal notranslate"><span class="pre">$TMPDIR/pystilt/&lt;project&gt;</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">$TMPDIR/pystilt/&lt;project&gt;</span></code>. Projects can share one.</p>
 </dd>
 <dt id="term-defaults">defaults<a class="headerlink" href="#term-defaults" title="Link to this term">#</a></dt><dd><p>The settings written at the top level of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>. Every
 <a class="reference internal" href="#term-variant"><span class="xref std std-term">variant</span></a> starts from them and overrides what it changes. A
@@ -657,9 +657,10 @@ atmosphere. See <a class="reference internal" href="../guides/transforms.html"><
 <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, such as a different <code class="docutils literal notranslate"><span class="pre">ziscale</span></code>, a wind-error run, or
 another footprint grid. See <a class="reference internal" href="../guides/projects.html"><span class="doc">Projects And Variants</span></a>.</p>
 </dd>
-<dt id="term-workdir">workdir<a class="headerlink" href="#term-workdir" title="Link to this term">#</a></dt><dd><p>The folder one simulation’s transport model runs in. It is removed
-after a successful run and kept under <code class="docutils literal notranslate"><span class="pre">scratch/</span></code> in the output
-directory when the run fails (<code class="docutils literal notranslate"><span class="pre">sim.kept_workdir</span></code>).</p>
+<dt id="term-workdir">workdir<a class="headerlink" href="#term-workdir" title="Link to this term">#</a></dt><dd><p>The folder one simulation’s transport model runs in, new for each
+run. It is removed after a successful run and kept under
+<code class="docutils literal notranslate"><span class="pre">scratch/</span></code> in the output directory when the run fails
+(<code class="docutils literal notranslate"><span class="pre">sim.kept_workdir</span></code>).</p>
 </dd>
 </dl>
 </section>
