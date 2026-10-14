@@ -1,12 +1,14 @@
 """Tests for stilt.sampling and the enhancement of footprints and particles."""
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
 
 from stilt.footprint.config import FootprintConfig
-from stilt.sampling import sample_field
+from stilt.sampling import sample_field, sample_met
 from stilt.spatial import Grid, horizontal_dims
 
 from .fixtures.footprints import as_footprint
@@ -227,3 +229,145 @@ def test_footprint_enhancement_warns_when_cells_of_one_size_are_offset(
         foot.stilt.enhancement(
             _flux(np.ones((1, 2)), lons=(-112.3, -110.3), lats=(40.0,))
         )  # coarser
+
+
+# ---------------------------------------------------------------------------
+# sample_met: met columns at particle positions
+# ---------------------------------------------------------------------------
+
+#: Met times of the synthetic file, an hour apart.
+_T0 = pd.Timestamp("2021-01-15 00:00")
+_T1 = pd.Timestamp("2021-01-15 01:00")
+#: Heights of its levels above ground; level 0 is the surface.
+_LEVELS = [0.0, 50.0, 500.0, 2000.0]
+
+
+def _met_file(path: Path) -> Path:
+    """
+    Write an ARL file with two times of uniform fields, and return its path.
+
+    A 1 degree lat-lon grid from 20 E, 10 S, with terrain-following levels
+    at the heights in ``_LEVELS``. Every field is uniform across the grid.
+    From the first time to the second, PBLH goes from 500 to 800 m and each
+    level's PRES rises by 10 hPa; the rest stay the same. SPHU stays above
+    1/254, the smallest value ARL packing keeps in a uniform field.
+    """
+    from arlmet import File
+    from arlmet.grid import Grid as ArlGrid
+    from arlmet.grid import Projection
+    from arlmet.vertical import TerrainAxis
+
+    grid = ArlGrid(
+        projection=Projection(
+            pole_lat=90.0,
+            pole_lon=0.0,
+            tangent_lat=1.0,
+            tangent_lon=1.0,
+            grid_size=0.0,
+            orientation=0.0,
+            cone_angle=0.0,
+            sync_x=1.0,
+            sync_y=1.0,
+            sync_lat=-10.0,
+            sync_lon=20.0,
+        ),
+        nx=20,
+        ny=20,
+    )
+    ones = np.ones((20, 20), np.float32)
+    with File(
+        path, mode="w", source="TEST", grid=grid, vertical_axis=TerrainAxis(_LEVELS)
+    ) as f:
+        for time, pblh, dp in ((_T0, 500.0, 0.0), (_T1, 800.0, 10.0)):
+            rs = f.create_recordset(time)
+            rs.create_datarecord("SHGT", level=0, forecast=0, data=ones * 1500)
+            rs.create_datarecord("PBLH", level=0, forecast=0, data=ones * pblh)
+            for level, (pres, temp, sphu) in enumerate(
+                [(850.0, 280.0, 0.010), (800.0, 275.0, 0.008), (650.0, 265.0, 0.006)],
+                start=1,
+            ):
+                rs.create_datarecord(
+                    "PRES", level=level, forecast=0, data=ones * (pres + dp)
+                )
+                rs.create_datarecord("TEMP", level=level, forecast=0, data=ones * temp)
+                rs.create_datarecord("SPHU", level=level, forecast=0, data=ones * sphu)
+    return path
+
+
+def _particles_at(times, zagl):
+    """Return particles at 25.5 E, 5 S, at the given times and heights."""
+    return pd.DataFrame(
+        {
+            "particle": np.arange(1, len(times) + 1),
+            "lon": 25.5,
+            "lat": -5.0,
+            "zagl": zagl,
+            "time": pd.to_datetime(times),
+        }
+    )
+
+
+def test_sample_met_interpolates_linearly_in_time_and_height(tmp_path):
+    met = _met_file(tmp_path / "met.arl")
+    particles = _particles_at(
+        [_T0, _T0 + pd.Timedelta(minutes=20), _T1], [50.0, 275.0, 500.0]
+    )
+
+    sampled = sample_met(particles, [met])
+
+    np.testing.assert_allclose(sampled["mlht"], [500.0, 600.0, 800.0], rtol=1e-6)
+    np.testing.assert_allclose(sampled["zsfc"], 1500.0, rtol=1e-6)
+    # Halfway between the first two levels, a third of the way to the next hour.
+    pres = [850.0, 825.0 + 10.0 / 3.0, 810.0]
+    np.testing.assert_allclose(sampled["pres"], pres, rtol=1e-6)
+    temp = np.array([280.0, 277.5, 275.0])
+    sphu = np.array([0.010, 0.009, 0.008])
+    dens = 100.0 * np.array(pres) / (287.04 * temp * (1.0 + 0.61 * sphu))
+    np.testing.assert_allclose(sampled["dens"], dens, rtol=1e-6)
+    pd.testing.assert_frame_equal(sampled[particles.columns], particles)
+
+
+def test_sample_met_samples_only_the_columns_asked_for(tmp_path):
+    met = _met_file(tmp_path / "met.arl")
+    particles = _particles_at([_T0], [100.0])
+
+    sampled = sample_met(particles, [met], columns=["zsfc"])
+
+    assert list(sampled.columns) == [*particles.columns, "zsfc"]
+
+
+def test_sample_met_is_nan_below_the_lowest_level_and_off_the_grid(tmp_path):
+    met = _met_file(tmp_path / "met.arl")
+    particles = _particles_at([_T0, _T0], [10.0, 100.0])
+    particles.loc[1, "lon"] = 60.0  # east of the grid
+
+    sampled = sample_met(particles, [met], columns=["pres", "zsfc"])
+
+    assert np.isnan(sampled["pres"]).all()
+    assert sampled["zsfc"].iloc[0] == pytest.approx(1500.0)
+    assert np.isnan(sampled["zsfc"].iloc[1])
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (lambda p: p.assign(pres=1.0), "already have"),
+        (lambda p: p.drop(columns="time"), "'time' column"),
+        (lambda p: p.assign(time=_T1 + pd.Timedelta(minutes=1)), "outside the met"),
+        (lambda p: p.assign(time=_T0 - pd.Timedelta(minutes=1)), "outside the met"),
+    ],
+    ids=["column-present", "no-time", "after-the-met", "before-the-met"],
+)
+def test_sample_met_rejects(tmp_path, change, message):
+    met = _met_file(tmp_path / "met.arl")
+    particles = change(_particles_at([_T0], [100.0]))
+
+    with pytest.raises(ValueError, match=message):
+        sample_met(particles, [met], columns=["pres"])
+
+
+def test_sample_met_rejects_a_column_it_cannot_sample(tmp_path):
+    met = _met_file(tmp_path / "met.arl")
+
+    with pytest.raises(ValueError, match="cannot sample"):
+        sample_met(_particles_at([_T0], [100.0]), [met], columns=["foot"])
