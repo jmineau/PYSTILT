@@ -4,6 +4,7 @@ HYSPLIT's meteorology: the met config (:class:`MetConfig`), and finding, downloa
 
 from __future__ import annotations
 
+import bisect
 import fnmatch
 import functools
 import inspect
@@ -22,12 +23,16 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 from stilt._paths import absolute, atomic_path
 from stilt.exceptions import MeteorologyError
 from stilt.identity import settings_hash
+from stilt.meteorology import run_window
 from stilt.spatial import Bounds
 
 if TYPE_CHECKING:
     from arlmet.archives import Archive
 
 logger = logging.getLogger(__name__)
+
+#: The characters ``fnmatch`` reads as a wildcard in a file pattern.
+_WILDCARDS = frozenset("*?[")
 
 
 class MetConfig(BaseModel):
@@ -262,6 +267,8 @@ class Met:
         #: the working directory, and ``~`` and ``$VARIABLES`` are expanded.
         self.directory = absolute(config.directory)
         self._archive: Archive | None = None
+        self._matches: dict[str, list[Path]] = {}
+        self._sorted_tails: dict[int, tuple[list[str], list[Path]]] = {}
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -283,17 +290,44 @@ class Met:
                     found.append(((*parts, name), Path(root) / name))
         return found
 
+    def _tails(self, depth: int) -> tuple[list[str], list[Path]]:
+        """Return the last *depth* parts of each file's path as ``a/b`` strings, sorted, and the files in that order."""
+        if depth not in self._sorted_tails:
+            tails = sorted(
+                ("/".join(parts[-depth:]), path)
+                for parts, path in self._listing
+                if len(parts) >= depth
+            )
+            self._sorted_tails[depth] = ([t for t, _ in tails], [p for _, p in tails])
+        return self._sorted_tails[depth]
+
     def _matching(self, pattern: str) -> list[Path]:
-        """Return the files whose path ends in one that starts with *pattern*, as ``rglob(pattern + "*")`` finds them."""
-        depth = pattern.count("/") + 1
-        found = []
-        for parts, path in self._listing:
-            if len(parts) < depth:
-                continue
-            tail = "/".join(parts[-depth:])
-            if fnmatch.fnmatchcase(tail, pattern + "*") and path.is_file():
-                found.append(path)
-        return found
+        """
+        Return the files whose path ends in one that starts with *pattern*, as ``rglob(pattern + "*")`` finds them.
+
+        Each pattern is looked up once. Without a wildcard, the files are a
+        run of the sorted paths, found by bisection, so a check of many
+        receptors, which looks up thousands of patterns in a folder of
+        thousands of files, takes seconds.
+        """
+        if pattern not in self._matches:
+            depth = pattern.count("/") + 1
+            tails, paths = self._tails(depth)
+            if _WILDCARDS.isdisjoint(pattern):
+                start = bisect.bisect_left(tails, pattern)
+                end = start
+                while end < len(tails) and tails[end].startswith(pattern):
+                    end += 1
+                candidates = paths[start:end]
+            else:
+                match = f"{pattern}*"
+                candidates = [
+                    path
+                    for tail, path in zip(tails, paths, strict=True)
+                    if fnmatch.fnmatchcase(tail, match)
+                ]
+            self._matches[pattern] = [path for path in candidates if path.is_file()]
+        return self._matches[pattern]
 
     @staticmethod
     def _dedupe_matched_files(paths: list[Path]) -> list[Path]:
@@ -417,15 +451,9 @@ class Met:
             return self._download(window, hour_after)
 
         # Local files
-        file_format, file_tres, tres = (
-            self.config.file_format,
-            self.config.file_tres,
-            self._file_freq,
-        )
-        # MetConfig requires both when there is no download.
-        assert file_format is not None and tres is not None
-        earlier, later = _cover(window, hour_after, tres)
-        met_times = pd.date_range(earlier.floor(tres), later, freq=tres)
+        file_format = self.config.file_format
+        assert file_format is not None  # MetConfig requires it without download
+        met_times, earlier, later = self._file_times(window, hour_after)
         patterns = list(dict.fromkeys(t.strftime(file_format) for t in met_times))
 
         files: list[Path] = []
@@ -445,10 +473,136 @@ class Met:
             ]
             raise MeteorologyError(
                 f"No met file in {self.directory} for {', '.join(hours)} "
-                f"(each {file_tres}, named {', '.join(missing)}...). The run "
-                f"covers {earlier:%Y-%m-%d %H:%M} to {later:%Y-%m-%d %H:%M}."
+                f"(each {self.config.file_tres}, named {', '.join(missing)}...). "
+                f"The run covers {earlier:%Y-%m-%d %H:%M} to "
+                f"{later:%Y-%m-%d %H:%M}."
             )
         return self._dedupe_matched_files(files)
+
+    def _file_times(
+        self, window: tuple[Any, Any], hour_after: bool
+    ) -> tuple[pd.DatetimeIndex, pd.Timestamp, pd.Timestamp]:
+        """Return the times of the local files that cover *window*, and the first and last time they must cover."""
+        tres = self._file_freq
+        assert tres is not None  # MetConfig requires file_tres without download
+        earlier, later = _cover(window, hour_after, tres)
+        return pd.date_range(earlier.floor(tres), later, freq=tres), earlier, later
+
+    def missing_hours(
+        self, window: tuple[Any, Any], *, hour_after: bool = False
+    ) -> list[pd.Timestamp]:
+        """
+        Return the times of the local files that cover *window* and are not found.
+
+        The files :meth:`files_for` fails for, without raising. Empty when
+        every file is there, and always empty with ``download``, which
+        fetches the files it lacks.
+
+        Parameters
+        ----------
+        window : tuple of datetime-like
+            The time to cover (:func:`run_window`).
+        hour_after : bool, default False
+            Also cover the hour after the window's end, as :meth:`files_for`
+            does.
+        """
+        if self.config.download is not None:
+            return []
+        file_format = self.config.file_format
+        assert file_format is not None  # MetConfig requires it without download
+        met_times, _, _ = self._file_times(window, hour_after)
+        return [t for t in met_times if not self._matching(t.strftime(file_format))]
+
+    def check_receptors(self, receptors: pd.DataFrame, n_hours: int) -> pd.DataFrame:
+        """
+        Return what would stop runs of *receptors* before HYSPLIT starts, found without running.
+
+        The file check that :meth:`files_for` makes for each run, made for
+        every receptor at once: the met's ``directory`` exists and holds an
+        ARL file, and every file a run needs is there. With the crop on, a
+        receptor outside ``subgrid_bounds`` is listed too, since HYSPLIT
+        cannot start a particle outside the files. A met with ``download``
+        has no files to look for before a run, so only its crop is checked.
+        This looks for files, not inside them: :meth:`check` opens each file
+        at a run, and a run that passes this one can still fail as
+        ``MET_COVERAGE`` when a file is damaged or cut short.
+
+        Parameters
+        ----------
+        receptors : pandas.DataFrame
+            One row per release point, with ``receptor`` (the id), ``time``,
+            ``longitude``, and ``latitude`` columns.
+        n_hours : int
+            The length of the runs, negative for backward.
+
+        Returns
+        -------
+        pandas.DataFrame
+            One row for each thing found, with ``check`` (``met_directory``,
+            ``met_files``, or ``met_crop``), ``receptor`` (``NA`` when the
+            finding is about the met), and ``message`` columns. Empty when
+            nothing would stop a run.
+        """
+        found: list[tuple[str, str | None, str]] = []
+        if self.config.download is None:
+            problem = self._directory_problem()
+            if problem is not None:
+                found.append(("met_directory", None, problem))
+            else:
+                found += self._missing_files(receptors, n_hours)
+        found += self._outside_crop(receptors)
+        return pd.DataFrame(found, columns=["check", "receptor", "message"])
+
+    def _directory_problem(self) -> str | None:
+        """Return why ``directory`` cannot be a local met's, or ``None`` when it holds an ARL file."""
+        if not self.directory.is_dir():
+            return f"{self.directory} does not exist."
+        try:
+            self.config.source()
+        except FileNotFoundError as error:
+            return str(error)
+        return None
+
+    def _missing_files(
+        self, receptors: pd.DataFrame, n_hours: int
+    ) -> list[tuple[str, str | None, str]]:
+        """List the receptors that lack a file their run needs, and the hours of those files."""
+        first = receptors.drop_duplicates("receptor")
+        messages: dict[Any, str | None] = {}
+        for time in first["time"].drop_duplicates():
+            window = run_window(time, n_hours)
+            hours = self.missing_hours(window, hour_after=n_hours < 0)
+            messages[time] = (
+                "no met file for " + ", ".join(f"{t:%Y-%m-%d %H:%M}" for t in hours)
+                if hours
+                else None
+            )
+        return [
+            ("met_files", str(rid), message)
+            for rid, time in zip(first["receptor"], first["time"], strict=True)
+            if (message := messages[time]) is not None
+        ]
+
+    def _outside_crop(
+        self, receptors: pd.DataFrame
+    ) -> list[tuple[str, str | None, str]]:
+        """List the receptors with a release point outside the crop box, when the met is cropped."""
+        crop = self.config.crop()
+        if crop is None:
+            return []
+        west, south, east, north = crop["bbox"]
+        lon, lat = receptors["longitude"], receptors["latitude"]
+        outside = receptors[(lon < west) | (lon > east) | (lat < south) | (lat > north)]
+        box = f"{west:g} to {east:g} longitude, {south:g} to {north:g} latitude"
+        return [
+            (
+                "met_crop",
+                str(row.receptor),
+                f"longitude {row.longitude:g} and latitude {row.latitude:g} are "
+                f"outside subgrid_bounds ({box})",
+            )
+            for row in outside.drop_duplicates("receptor").itertuples()
+        ]
 
     def check(
         self, files: list[Path], window: tuple[Any, Any], *, hour_after: bool = False
