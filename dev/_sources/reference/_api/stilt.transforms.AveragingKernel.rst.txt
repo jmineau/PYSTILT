@@ -23,6 +23,7 @@ Methods
 
    ~AveragingKernel.apply
    ~AveragingKernel.kernel
+   ~AveragingKernel.table_receptors
 
 
 

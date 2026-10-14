@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=8fb66309"></script>
+    <script src="../../_static/documentation_options.js?v=de43b91d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev14+g8225e434d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev18+g17e98126e" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -527,6 +527,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span><span class="p">,</span> <span class="n">location</span><span class="p">,</span> <span class="n">write_parquet</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.check</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_project</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">STARTER_CONFIG</span><span class="p">,</span> <span class="n">ProjectConfig</span><span class="p">,</span> <span class="n">Variant</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint</span><span class="w"> </span><span class="kn">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Jacobian</span>
@@ -1598,6 +1599,60 @@
 
 
     <span class="c1"># -- running ---------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="Project.check">
+<a class="viewcode-back" href="../../reference/_api/stilt.Project.check.html#stilt.Project.check">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return what would stop the project&#39;s simulations, found before any run.</span>
+
+<span class="sd">        Looks only at the inputs, and runs and downloads nothing. For each</span>
+<span class="sd">        variant it checks that:</span>
+
+<span class="sd">        - the met&#39;s ``directory`` exists and holds an ARL file (``met_directory``);</span>
+<span class="sd">        - every met file each receptor&#39;s run needs is there, naming the</span>
+<span class="sd">          hours (``met_files``);</span>
+<span class="sd">        - each receptor is inside the met&#39;s crop box, ``subgrid_bounds``,</span>
+<span class="sd">          when the crop is on (``met_crop``);</span>
+<span class="sd">        - each receptor is inside the footprint grid (``grid``);</span>
+<span class="sd">        - each ``averaging_kernel`` table exists (``kernel_table``), has a</span>
+<span class="sd">          kernel for every receptor (``kernel_missing``), and holds none for</span>
+<span class="sd">          a receptor the project lacks (``kernel_unused``).</span>
+
+<span class="sd">        A met with ``download`` has no files to look for: they are fetched</span>
+<span class="sd">        when a run needs them, so only its crop is checked.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pandas.DataFrame</span>
+<span class="sd">            One row for each thing found, with ``check`` (the name in</span>
+<span class="sd">            parentheses above), ``variant`` (the variants it is found for,</span>
+<span class="sd">            separated by commas, when they share a met, a run length, a</span>
+<span class="sd">            grid, or a table), ``receptor`` (``NA`` when it is not about</span>
+<span class="sd">            one receptor), and ``message`` columns. Empty when nothing is</span>
+<span class="sd">            found. ``stilt check`` prints it.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If ``config.yaml`` or ``receptors.csv`` is invalid.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The check looks for files, not inside them, and the crop box is the</span>
+<span class="sd">        only domain it knows. A run that passes it can still fail as</span>
+<span class="sd">        ``MET_COVERAGE``: a met file that is damaged or cut short is found</span>
+<span class="sd">        when the run opens it, and a receptor outside the domain of the</span>
+<span class="sd">        files (an uncropped met), when HYSPLIT starts it.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; problems = project.check()</span>
+<span class="sd">        &gt;&gt;&gt; problems.empty  # True when nothing would stop a run</span>
+<span class="sd">        &gt;&gt;&gt; problems[problems.check == &quot;met_files&quot;][[&quot;receptor&quot;, &quot;message&quot;]]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">check_project</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="Project.run">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.run.html#stilt.Project.run">[docs]</a>

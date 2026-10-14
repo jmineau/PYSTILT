@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../../_static/documentation_options.js?v=8fb66309"></script>
+    <script src="../../../../_static/documentation_options.js?v=de43b91d"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev14+g8225e434d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev18+g17e98126e" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -506,6 +506,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">bisect</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">fnmatch</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
@@ -524,12 +525,16 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span><span class="p">,</span> <span class="n">atomic_path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeteorologyError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">settings_hash</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.meteorology</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_window</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">arlmet.archives</span><span class="w"> </span><span class="kn">import</span> <span class="n">Archive</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="c1">#: The characters ``fnmatch`` reads as a wildcard in a file pattern.</span>
+<span class="n">_WILDCARDS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="s2">&quot;*?[&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="MetConfig">
@@ -778,6 +783,8 @@
         <span class="c1">#: the working directory, and ``~`` and ``$VARIABLES`` are expanded.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">=</span> <span class="n">absolute</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_archive</span><span class="p">:</span> <span class="n">Archive</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_matches</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sorted_tails</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
     <span class="c1"># Internal helpers</span>
@@ -799,17 +806,44 @@
                     <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">(((</span><span class="o">*</span><span class="n">parts</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="n">name</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">found</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_tails</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">depth</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the last *depth* parts of each file&#39;s path as ``a/b`` strings, sorted, and the files in that order.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">depth</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sorted_tails</span><span class="p">:</span>
+            <span class="n">tails</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+                <span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="n">depth</span><span class="p">:]),</span> <span class="n">path</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">parts</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_listing</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">depth</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sorted_tails</span><span class="p">[</span><span class="n">depth</span><span class="p">]</span> <span class="o">=</span> <span class="p">([</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">tails</span><span class="p">],</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">tails</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sorted_tails</span><span class="p">[</span><span class="n">depth</span><span class="p">]</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_matching</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the files whose path ends in one that starts with *pattern*, as ``rglob(pattern + &quot;*&quot;)`` finds them.&quot;&quot;&quot;</span>
-        <span class="n">depth</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
-        <span class="n">found</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">parts</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_listing</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">depth</span><span class="p">:</span>
-                <span class="k">continue</span>
-            <span class="n">tail</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="n">depth</span><span class="p">:])</span>
-            <span class="k">if</span> <span class="n">fnmatch</span><span class="o">.</span><span class="n">fnmatchcase</span><span class="p">(</span><span class="n">tail</span><span class="p">,</span> <span class="n">pattern</span> <span class="o">+</span> <span class="s2">&quot;*&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-                <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">found</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the files whose path ends in one that starts with *pattern*, as ``rglob(pattern + &quot;*&quot;)`` finds them.</span>
+
+<span class="sd">        Each pattern is looked up once. Without a wildcard, the files are a</span>
+<span class="sd">        run of the sorted paths, found by bisection, so a check of many</span>
+<span class="sd">        receptors, which looks up thousands of patterns in a folder of</span>
+<span class="sd">        thousands of files, takes seconds.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">pattern</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_matches</span><span class="p">:</span>
+            <span class="n">depth</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">tails</span><span class="p">,</span> <span class="n">paths</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tails</span><span class="p">(</span><span class="n">depth</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">_WILDCARDS</span><span class="o">.</span><span class="n">isdisjoint</span><span class="p">(</span><span class="n">pattern</span><span class="p">):</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_left</span><span class="p">(</span><span class="n">tails</span><span class="p">,</span> <span class="n">pattern</span><span class="p">)</span>
+                <span class="n">end</span> <span class="o">=</span> <span class="n">start</span>
+                <span class="k">while</span> <span class="n">end</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">tails</span><span class="p">)</span> <span class="ow">and</span> <span class="n">tails</span><span class="p">[</span><span class="n">end</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">pattern</span><span class="p">):</span>
+                    <span class="n">end</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">candidates</span> <span class="o">=</span> <span class="n">paths</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">match</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">*&quot;</span>
+                <span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">path</span>
+                    <span class="k">for</span> <span class="n">tail</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">tails</span><span class="p">,</span> <span class="n">paths</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">fnmatch</span><span class="o">.</span><span class="n">fnmatchcase</span><span class="p">(</span><span class="n">tail</span><span class="p">,</span> <span class="n">match</span><span class="p">)</span>
+                <span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matches</span><span class="p">[</span><span class="n">pattern</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">path</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">candidates</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">()]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_matches</span><span class="p">[</span><span class="n">pattern</span><span class="p">]</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_dedupe_matched_files</span><span class="p">(</span><span class="n">paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
@@ -935,15 +969,9 @@
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_download</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">hour_after</span><span class="p">)</span>
 
         <span class="c1"># Local files</span>
-        <span class="n">file_format</span><span class="p">,</span> <span class="n">file_tres</span><span class="p">,</span> <span class="n">tres</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">file_format</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">file_tres</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_file_freq</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="c1"># MetConfig requires both when there is no download.</span>
-        <span class="k">assert</span> <span class="n">file_format</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">tres</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-        <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="n">_cover</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">hour_after</span><span class="p">,</span> <span class="n">tres</span><span class="p">)</span>
-        <span class="n">met_times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">earlier</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">tres</span><span class="p">),</span> <span class="n">later</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="n">tres</span><span class="p">)</span>
+        <span class="n">file_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">file_format</span>
+        <span class="k">assert</span> <span class="n">file_format</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># MetConfig requires it without download</span>
+        <span class="n">met_times</span><span class="p">,</span> <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_times</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">hour_after</span><span class="p">)</span>
         <span class="n">patterns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">file_format</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">met_times</span><span class="p">))</span>
 
         <span class="n">files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -963,11 +991,143 @@
             <span class="p">]</span>
             <span class="k">raise</span> <span class="n">MeteorologyError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;No met file in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">hours</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;(each </span><span class="si">{</span><span class="n">file_tres</span><span class="si">}</span><span class="s2">, named </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">...). The run &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;covers </span><span class="si">{</span><span class="n">earlier</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">later</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;(each </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">file_tres</span><span class="si">}</span><span class="s2">, named </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">...). &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;The run covers </span><span class="si">{</span><span class="n">earlier</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2"> to &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">later</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2">.&quot;</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dedupe_matched_files</span><span class="p">(</span><span class="n">files</span><span class="p">)</span></div>
 
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_file_times</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">hour_after</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the times of the local files that cover *window*, and the first and last time they must cover.&quot;&quot;&quot;</span>
+        <span class="n">tres</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_freq</span>
+        <span class="k">assert</span> <span class="n">tres</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># MetConfig requires file_tres without download</span>
+        <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="n">_cover</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">hour_after</span><span class="p">,</span> <span class="n">tres</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">earlier</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">tres</span><span class="p">),</span> <span class="n">later</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="n">tres</span><span class="p">),</span> <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span>
+
+<div class="viewcode-block" id="Met.missing_hours">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.Met.missing_hours.html#stilt.transport.hysplit.Met.missing_hours">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">missing_hours</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">hour_after</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the times of the local files that cover *window* and are not found.</span>
+
+<span class="sd">        The files :meth:`files_for` fails for, without raising. Empty when</span>
+<span class="sd">        every file is there, and always empty with ``download``, which</span>
+<span class="sd">        fetches the files it lacks.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        window : tuple of datetime-like</span>
+<span class="sd">            The time to cover (:func:`run_window`).</span>
+<span class="sd">        hour_after : bool, default False</span>
+<span class="sd">            Also cover the hour after the window&#39;s end, as :meth:`files_for`</span>
+<span class="sd">            does.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">download</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">file_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">file_format</span>
+        <span class="k">assert</span> <span class="n">file_format</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># MetConfig requires it without download</span>
+        <span class="n">met_times</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_times</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">hour_after</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">met_times</span> <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_matching</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">file_format</span><span class="p">))]</span></div>
+
+
+<div class="viewcode-block" id="Met.check_receptors">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.Met.check_receptors.html#stilt.transport.hysplit.Met.check_receptors">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_receptors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return what would stop runs of *receptors* before HYSPLIT starts, found without running.</span>
+
+<span class="sd">        The file check that :meth:`files_for` makes for each run, made for</span>
+<span class="sd">        every receptor at once: the met&#39;s ``directory`` exists and holds an</span>
+<span class="sd">        ARL file, and every file a run needs is there. With the crop on, a</span>
+<span class="sd">        receptor outside ``subgrid_bounds`` is listed too, since HYSPLIT</span>
+<span class="sd">        cannot start a particle outside the files. A met with ``download``</span>
+<span class="sd">        has no files to look for before a run, so only its crop is checked.</span>
+<span class="sd">        This looks for files, not inside them: :meth:`check` opens each file</span>
+<span class="sd">        at a run, and a run that passes this one can still fail as</span>
+<span class="sd">        ``MET_COVERAGE`` when a file is damaged or cut short.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        receptors : pandas.DataFrame</span>
+<span class="sd">            One row per release point, with ``receptor`` (the id), ``time``,</span>
+<span class="sd">            ``longitude``, and ``latitude`` columns.</span>
+<span class="sd">        n_hours : int</span>
+<span class="sd">            The length of the runs, negative for backward.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pandas.DataFrame</span>
+<span class="sd">            One row for each thing found, with ``check`` (``met_directory``,</span>
+<span class="sd">            ``met_files``, or ``met_crop``), ``receptor`` (``NA`` when the</span>
+<span class="sd">            finding is about the met), and ``message`` columns. Empty when</span>
+<span class="sd">            nothing would stop a run.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">download</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">problem</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_directory_problem</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">problem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;met_directory&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">problem</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">found</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_missing_files</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">)</span>
+        <span class="n">found</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outside_crop</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;check&quot;</span><span class="p">,</span> <span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">])</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_directory_problem</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return why ``directory`` cannot be a local met&#39;s, or ``None`` when it holds an ARL file.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2"> does not exist.&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">source</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_missing_files</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the receptors that lack a file their run needs, and the hours of those files.&quot;&quot;&quot;</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="n">receptors</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span>
+        <span class="n">messages</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">time</span> <span class="ow">in</span> <span class="n">first</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">():</span>
+            <span class="n">window</span> <span class="o">=</span> <span class="n">run_window</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">)</span>
+            <span class="n">hours</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">missing_hours</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">hour_after</span><span class="o">=</span><span class="n">n_hours</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">messages</span><span class="p">[</span><span class="n">time</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;no met file for &quot;</span> <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">t</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">hours</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">hours</span>
+                <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="p">(</span><span class="s2">&quot;met_files&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">rid</span><span class="p">),</span> <span class="n">message</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">rid</span><span class="p">,</span> <span class="n">time</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">first</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">],</span> <span class="n">first</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">message</span> <span class="o">:=</span> <span class="n">messages</span><span class="p">[</span><span class="n">time</span><span class="p">])</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_outside_crop</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the receptors with a release point outside the crop box, when the met is cropped.&quot;&quot;&quot;</span>
+        <span class="n">crop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">crop</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">crop</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">west</span><span class="p">,</span> <span class="n">south</span><span class="p">,</span> <span class="n">east</span><span class="p">,</span> <span class="n">north</span> <span class="o">=</span> <span class="n">crop</span><span class="p">[</span><span class="s2">&quot;bbox&quot;</span><span class="p">]</span>
+        <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span> <span class="o">=</span> <span class="n">receptors</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">],</span> <span class="n">receptors</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]</span>
+        <span class="n">outside</span> <span class="o">=</span> <span class="n">receptors</span><span class="p">[(</span><span class="n">lon</span> <span class="o">&lt;</span> <span class="n">west</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">lon</span> <span class="o">&gt;</span> <span class="n">east</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">lat</span> <span class="o">&lt;</span> <span class="n">south</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">lat</span> <span class="o">&gt;</span> <span class="n">north</span><span class="p">)]</span>
+        <span class="n">box</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">west</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">east</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> longitude, </span><span class="si">{</span><span class="n">south</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">north</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> latitude&quot;</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="p">(</span>
+                <span class="s2">&quot;met_crop&quot;</span><span class="p">,</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">receptor</span><span class="p">),</span>
+                <span class="sa">f</span><span class="s2">&quot;longitude </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">longitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> and latitude </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">latitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> are &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;outside subgrid_bounds (</span><span class="si">{</span><span class="n">box</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">outside</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">itertuples</span><span class="p">()</span>
+        <span class="p">]</span>
 
 <div class="viewcode-block" id="Met.check">
 <a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.Met.check.html#stilt.transport.hysplit.Met.check">[docs]</a>

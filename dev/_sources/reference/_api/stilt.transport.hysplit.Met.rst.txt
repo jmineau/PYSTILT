@@ -30,7 +30,9 @@ Methods
    :toctree:
 
    ~Met.check
+   ~Met.check_receptors
    ~Met.files_for
+   ~Met.missing_hours
    ~Met.readable
 
 

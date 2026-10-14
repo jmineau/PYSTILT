@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=8fb66309"></script>
+    <script src="../_static/documentation_options.js?v=de43b91d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Running" href="running.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev14+g8225e434d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev18+g17e98126e" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -576,8 +576,12 @@ or scratch space.</p>
 <span class="w">  </span><span class="nt">mem</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4G</span>
 </pre></div>
 </div>
-<p>Then submit from the environment PYSTILT is installed in:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>submit<span class="w"> </span>./my_project
+<p>Then check the project and submit it from the environment PYSTILT is
+installed in. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> finds a met folder that is not where you said,
+or met files a receptor needs that are not there, before the job array
+starts and its simulations fail one by one (<a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>check<span class="w"> </span>./my_project
+stilt<span class="w"> </span>submit<span class="w"> </span>./my_project
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code> prints the Slurm job ID and returns once the job is

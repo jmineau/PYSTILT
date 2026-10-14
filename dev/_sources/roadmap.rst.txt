@@ -51,6 +51,8 @@ each a ``stilt run --task`` command line.
      - Implemented
    * - Local runs, in one process or a process pool
      - Implemented
+   * - A check of a project's met files, grid, and kernel table before any run (``stilt check``, ``project.check()``)
+     - Implemented
    * - Slurm job arrays, with preempted tasks resubmitted
      - Implemented
    * - One task of a job array or a Kubernetes indexed Job (``stilt run --task I/N``)

@@ -97,6 +97,14 @@ Commands
    Create a project folder with a starter ``config.yaml`` and
    ``receptors.csv``.
 
+``stilt check <project>``
+   List what would stop the project's runs, before any run starts: a met
+   directory that does not exist, met files a receptor's run needs that
+   are not there, a receptor outside the met's crop or the footprint grid,
+   and an averaging-kernel table that does not match the receptors. Nothing
+   is run or downloaded. It exits with 0 when it finds nothing and 1 when
+   it lists anything (:doc:`checking`).
+
 ``stilt run <project>``
    Run every unfinished simulation and wait until they are done, here or
    as a Slurm job array. Its options:

@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../../_static/documentation_options.js?v=8fb66309"></script>
+    <script src="../../../../_static/documentation_options.js?v=de43b91d"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev14+g8225e434d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev18+g17e98126e" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -527,6 +527,8 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.met</span><span class="w"> </span><span class="kn">import</span> <span class="n">Met</span><span class="p">,</span> <span class="n">MetConfig</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
     <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
 
 
@@ -613,6 +615,38 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">own</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="ow">or</span> <span class="n">_sha256</span><span class="p">(</span><span class="n">own</span><span class="p">)</span> <span class="o">!=</span> <span class="n">digest</span><span class="p">:</span>
                 <span class="n">changed</span><span class="p">[</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">digest</span>
         <span class="k">return</span> <span class="n">changed</span> <span class="ow">or</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="HysplitModel.check_met">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.HysplitModel.check_met.html#stilt.transport.hysplit.HysplitModel.check_met">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_met</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">met</span><span class="p">:</span> <span class="n">MetConfig</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return what would stop HYSPLIT from running *receptors* with *met*, found before any run.</span>
+
+<span class="sd">        The checks of :meth:`Met.check_receptors`: the met&#39;s directory</span>
+<span class="sd">        holds ARL files, every file a run needs is there, and the receptors</span>
+<span class="sd">        are inside the crop. Nothing is run, opened past the first file&#39;s</span>
+<span class="sd">        header, or downloaded.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        met : MetConfig</span>
+<span class="sd">            The met, with an absolute directory in a project.</span>
+<span class="sd">        receptors : pandas.DataFrame</span>
+<span class="sd">            One row per release point, with ``receptor``, ``time``,</span>
+<span class="sd">            ``longitude``, and ``latitude`` columns.</span>
+<span class="sd">        n_hours : int</span>
+<span class="sd">            The length of the runs, which sets the files each needs.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pandas.DataFrame</span>
+<span class="sd">            ``check``, ``receptor`` (``NA`` for a problem of the met</span>
+<span class="sd">            itself), and ``message`` columns, one row for each problem.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Met</span><span class="p">(</span><span class="s2">&quot;met&quot;</span><span class="p">,</span> <span class="n">met</span><span class="p">)</span><span class="o">.</span><span class="n">check_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="HysplitModel.run">

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=8fb66309"></script>
+    <script src="../_static/documentation_options.js?v=de43b91d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -63,7 +63,7 @@
     <link rel="prev" title="Slant Columns" href="slant_columns.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev14+g8225e434d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev18+g17e98126e" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -659,9 +659,10 @@ for you. Pass <code class="docutils literal notranslate"><span class="pre">level
 when all kernels share one grid. When the footprint is made, the
 transform looks up the receptor’s id in the table. The table is part of
 the project, so this works the same in a notebook, with <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>, and
-on Slurm workers. A receptor with no rows in the table raises an error.
-<code class="docutils literal notranslate"><span class="pre">table</span></code> also takes the path of a Parquet or CSV file, relative to the
-project root.</p>
+on Slurm workers. A receptor with no rows in the table raises an error, and
+<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> lists those receptors before a run, with the table’s ids that
+match no receptor (<a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>). <code class="docutils literal notranslate"><span class="pre">table</span></code> also takes the path of a
+Parquet or CSV file, relative to the project root.</p>
 </section>
 <section id="in-python">
 <h2>In Python<a class="headerlink" href="#in-python" title="Link to this heading">#</a></h2>

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=8fb66309"></script>
+    <script src="../_static/documentation_options.js?v=de43b91d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Projects And Variants" href="projects.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev14+g8225e434d" />
+  <meta name="docsearch:version" content="0.1.0a25.dev18+g17e98126e" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -645,6 +645,13 @@ per line.</p>
 <dl class="simple">
 <dt><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span> <span class="pre">&lt;project&gt;</span></code></dt><dd><p>Create a project folder with a starter <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> and
 <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span> <span class="pre">&lt;project&gt;</span></code></dt><dd><p>List what would stop the project’s runs, before any run starts: a met
+directory that does not exist, met files a receptor’s run needs that
+are not there, a receptor outside the met’s crop or the footprint grid,
+and an averaging-kernel table that does not match the receptors. Nothing
+is run or downloaded. It exits with 0 when it finds nothing and 1 when
+it lists anything (<a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>).</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">&lt;project&gt;</span></code></dt><dd><p>Run every unfinished simulation and wait until they are done, here or
 as a Slurm job array. Its options:</p>
