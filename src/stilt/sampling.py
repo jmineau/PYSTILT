@@ -171,6 +171,8 @@ def _nearest_level(levels: xr.DataArray, z: np.ndarray) -> np.ndarray:
 
 
 #: The ARL variables each particle column is computed from, by :func:`sample_met`.
+#: ``pres`` is the ``PRES`` field, not arlmet's virtual ``"pressure"``, which
+#: is NaN at a height on sigma files (jmineau/arl-met#65).
 _MET_VARIABLES: dict[str, tuple[str, ...]] = {
     "mlht": ("PBLH",),
     "dens": ("PRES", "TEMP", "SPHU"),
