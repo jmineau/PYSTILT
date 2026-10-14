@@ -217,6 +217,7 @@ def test_cli_help_lists_current_commands():
 
     assert result.exit_code == 0
     expected = {
+        "check",
         "init",
         "run",
         "status",
@@ -230,6 +231,86 @@ def test_cli_help_lists_current_commands():
         for cmd in app.registered_commands
     }
     assert registered == expected
+
+
+# ---------------------------------------------------------------------------
+# check command
+# ---------------------------------------------------------------------------
+
+
+def _write_checkable_config(tmp_path, n_receptors=1, files=True):
+    """Write a project of hourly receptors from noon, and met files for them unless ``files`` is false."""
+    import datetime as dt
+
+    from .fixtures.factories import make_met_files
+
+    _write_minimal_config(tmp_path)
+    times = [
+        dt.datetime(2023, 1, 1, 12) + dt.timedelta(hours=h) for h in range(n_receptors)
+    ]
+    (tmp_path / "receptors.csv").write_text(
+        "time,longitude,latitude,altitude\n"
+        + "".join(f"{t:%Y-%m-%d %H:%M:%S},-111.85,40.77,5.0\n" for t in times)
+    )
+    if files:
+        for time in times:
+            make_met_files(tmp_path / "met", time, -24)
+
+
+def test_check_exits_when_no_config(tmp_path):
+    result = runner.invoke(app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 2
+
+
+def test_check_finding_nothing_exits_0(tmp_path):
+    _write_checkable_config(tmp_path)
+
+    result = runner.invoke(app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+    assert f"Project: {tmp_path.resolve()}  receptors=1" in result.output
+    assert "Variants: hrrr (met hrrr, particles only)" in result.output
+    assert "No problems found." in result.output
+
+
+def test_check_lists_what_would_stop_a_run_and_exits_1(tmp_path, calls):
+    _write_checkable_config(tmp_path, files=False)
+
+    result = runner.invoke(app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 1, result.output
+    lines = result.output.splitlines()
+    header = next(line for line in lines if line.startswith("check"))
+    assert header.split() == ["check", "variant", "receptor", "message"]
+    row = next(line for line in lines if line.startswith("met_files"))
+    assert "202301011200_-111.85_40.77_5" in row
+    assert "no met file for 2022-12-31 12:00" in row
+    assert "Found 1 problem: met_files 1" in result.output
+    assert calls == []  # nothing ran
+
+
+def test_check_shows_the_first_rows_of_each_check_and_counts_the_rest(tmp_path):
+    _write_checkable_config(tmp_path, n_receptors=12, files=False)
+
+    result = runner.invoke(app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 1, result.output
+    shown = [line for line in result.output.splitlines() if "no met file" in line]
+    assert len(shown) == 10
+    assert "... 2 more (project.check() lists them all)" in result.output
+    assert "Found 12 problems: met_files 12" in result.output
+
+
+def test_check_exits_2_when_the_project_files_are_invalid(tmp_path):
+    _write_checkable_config(tmp_path)
+    config = tmp_path / "config.yaml"
+    config.write_text(config.read_text() + "nonsense: 1\n")
+
+    result = runner.invoke(app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert "nonsense" in result.output
 
 
 # ---------------------------------------------------------------------------

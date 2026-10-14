@@ -140,6 +140,7 @@ layers = [
     "cli",
     "observations",
     "project : execution : config",
+    "check",
     "simulation",
     "output",
     "footprint : identity : meteorology : transport",

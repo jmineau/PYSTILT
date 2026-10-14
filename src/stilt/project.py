@@ -28,6 +28,7 @@ import xarray as xr
 import yaml
 
 from stilt._paths import absolute, location, write_parquet
+from stilt.check import check_project
 from stilt.config import STARTER_CONFIG, ProjectConfig, Variant
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import Geometry, Jacobian
@@ -1046,6 +1047,57 @@ class Project:
         )
 
     # -- running ---------------------------------------------------------------
+
+    def check(self) -> pd.DataFrame:
+        """
+        Return what would stop the project's simulations, found before any run.
+
+        Looks only at the inputs, and runs and downloads nothing. For each
+        variant it checks that:
+
+        - the met's ``directory`` exists and holds an ARL file (``met_directory``);
+        - every met file each receptor's run needs is there, naming the
+          hours (``met_files``);
+        - each receptor is inside the met's crop box, ``subgrid_bounds``,
+          when the crop is on (``met_crop``);
+        - each receptor is inside the footprint grid (``grid``);
+        - each ``averaging_kernel`` table exists (``kernel_table``), has a
+          kernel for every receptor (``kernel_missing``), and holds none for
+          a receptor the project lacks (``kernel_unused``).
+
+        A met with ``download`` has no files to look for: they are fetched
+        when a run needs them, so only its crop is checked.
+
+        Returns
+        -------
+        pandas.DataFrame
+            One row for each thing found, with ``check`` (the name in
+            parentheses above), ``variant`` (the variants it is found for,
+            separated by commas, when they share a met, a run length, a
+            grid, or a table), ``receptor`` (``NA`` when it is not about
+            one receptor), and ``message`` columns. Empty when nothing is
+            found. ``stilt check`` prints it.
+
+        Raises
+        ------
+        ValueError
+            If ``config.yaml`` or ``receptors.csv`` is invalid.
+
+        Notes
+        -----
+        The check looks for files, not inside them, and the crop box is the
+        only domain it knows. A run that passes it can still fail as
+        ``MET_COVERAGE``: a met file that is damaged or cut short is found
+        when the run opens it, and a receptor outside the domain of the
+        files (an uncropped met), when HYSPLIT starts it.
+
+        Examples
+        --------
+        >>> problems = project.check()
+        >>> problems.empty  # True when nothing would stop a run
+        >>> problems[problems.check == "met_files"][["receptor", "message"]]
+        """
+        return check_project(self)
 
     def run(
         self,
