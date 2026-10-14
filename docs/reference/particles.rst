@@ -105,6 +105,11 @@ columns above. Some that PYSTILT reads:
 The near-field correction reads ``dens``, ``samt``, ``sigw``, ``tlgr``,
 ``foot``, and ``mlht`` (:data:`HNF_PLUME_COLUMNS`).
 
+``mlht``, ``dens``, ``pres``, and ``zsfc`` can also be sampled from the met
+files at each particle's position, for a model that writes only positions:
+:func:`stilt.sampling.sample_met`. The values are the met's, so they differ
+from HYSPLIT's own columns; :doc:`../guides/meteorology` says by how much.
+
 Columns PYSTILT adds
 --------------------
 

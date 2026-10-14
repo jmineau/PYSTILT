@@ -225,6 +225,17 @@ time_bins = pd.interval_range(
 H = project.jacobian(january, windows, time_bins)  # sparse: receptors by (hour, window)
 ```
 
+`stilt.sampling.sample_met` adds met columns (`mlht`, `dens`, `pres`, `zsfc`) to a particle
+table, sampled from the met files at each particle's position and time:
+
+```python
+from stilt.particles import particles_metadata
+from stilt.sampling import sample_met
+
+met_files = particles_metadata(sim.particles_path).met_files
+sampled = sample_met(sim.particles.drop(columns="dens"), met_files, columns=["dens"])
+```
+
 If a simulation's particles never reach the grid, PYSTILT writes a footprint file with no cells
 and the reason. The simulation counts as finished, and `project.footprints()` lists it in
 `attrs["empty"]`.

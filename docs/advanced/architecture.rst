@@ -110,7 +110,8 @@ Module map
        targets.py       the geometries footprints are summed onto (Mesh,
                         Zones), the overlap weights, and to_grid
        accessor.py      the .stilt xarray accessor
-     sampling.py        sampling a gridded field (a flux, a mole fraction) at points
+     sampling.py        sampling a gridded field (a flux, a mole fraction) at
+                        points; sample_met, ARL met at particle positions
      spatial.py         rasters and CRS without shapely: Bounds, Grid,
                         horizontal_dims, is_longlat, same_crs, haversine_km
      meteorology.py     run_window, and the wind-error statistics
