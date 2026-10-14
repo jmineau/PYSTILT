@@ -8,6 +8,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `stilt.sampling.sample_met(particles, files, columns)` samples ARL met
+  files at each particle's position and time and adds `mlht` (`PBLH`),
+  `dens` (from `PRES`, `TEMP`, and `SPHU`), `pres` (`PRES`), or `zsfc`
+  (`SHGT`), interpolated by arlmet and linearly in time. A transport model
+  that writes only positions can get these columns this way. An
+  integration test compares them with HYSPLIT's own columns on two HRRR
+  runs and prints the spread: `zsfc` and near-ground `pres` match, `mlht`
+  matches HYSPLIT's with `kmixd: 0` to a median of 16 to 30 m, and `pres`
+  reads high above 100 m (6 to 8 hPa at 1 to 2 km), because arlmet finds
+  the heights of HRRR's levels from its nominal sigma levels, not `PRES`.
 - `stilt check [project]` and `project.check()` list what would stop a
   project's runs, before any run starts: a met whose directory does not exist
   or holds no ARL file, receptors that lack a met file their run needs (naming
