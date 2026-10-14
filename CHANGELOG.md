@@ -15,6 +15,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The outputs, checking, and receptors guides run when the docs are built too,
   and show their plots. The outputs and checking guides open a small sample
   project that the docs build makes first (about 40 s).
+- The Internals section of the docs has an Architecture page for
+  contributors: the module map, how a run goes from a project to result
+  files, the configuration internals, and implementation notes. The
+  Development page explains how to write the docs and how their examples run.
 
 ### Fixed
 
