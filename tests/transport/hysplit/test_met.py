@@ -492,6 +492,57 @@ def test_one_missing_file_fails_the_run_naming_its_hours(tmp_path):
     assert info.value.reason == "MET_COVERAGE"
 
 
+def test_missing_hours_are_the_hours_files_for_fails_for(tmp_path):
+    """The same search as files_for, that says which files it did not find rather than raising."""
+    _touch_files(tmp_path, ["20230101_09", "20230101_11"])
+    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
+    window = run_window(dt.datetime(2023, 1, 1, 12), -3)
+
+    missing = met.missing_hours(window)
+
+    assert missing == [
+        pd.Timestamp("2023-01-01 10:00"),
+        pd.Timestamp("2023-01-01 12:00"),
+    ]
+    with pytest.raises(MeteorologyError, match="2023-01-01 10:00, 2023-01-01 12:00"):
+        met.files_for(window)
+    _touch_files(tmp_path, ["20230101_10", "20230101_12"])
+    assert _make_met(tmp_path, "%Y%m%d_%H", "1h").missing_hours(window) == []
+
+
+def test_missing_hours_are_never_found_for_a_download(tmp_path):
+    met = Met("hrrr", MetConfig(directory=tmp_path, download="hrrr"))
+
+    assert met.missing_hours(run_window(dt.datetime(2023, 1, 1, 12), -3)) == []
+
+
+def test_checking_receptors_looks_up_each_file_once(tmp_path, monkeypatch):
+    """Receptors an hour apart need mostly the same files, which are looked up once."""
+    _touch_files(tmp_path, [f"20230101_{h:02d}" for h in range(24)])
+    write_arl_file(tmp_path / "header.arl")
+    looked_up = []
+    tails = Met._tails
+    monkeypatch.setattr(
+        Met, "_tails", lambda self, depth: looked_up.append(depth) or tails(self, depth)
+    )
+    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
+    receptors = pd.DataFrame(
+        {
+            "receptor": [f"r{h}" for h in range(6, 12)],
+            "time": [pd.Timestamp(f"2023-01-01 {h}:00") for h in range(6, 12)],
+            "longitude": -111.85,
+            "latitude": 40.77,
+        }
+    )
+
+    found = met.check_receptors(receptors, -3)
+
+    assert found.empty
+    # Six receptors an hour apart, each running three hours back, need the
+    # files of the nine hours from 03:00 to 11:00.
+    assert len(looked_up) == 9
+
+
 def test_files_for_error_reports_missing_patterns(tmp_path):
     """Error message names the missing file names and the directory."""
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
@@ -552,6 +603,36 @@ def test_files_for_match_multi_hour_filename_prefixes(tmp_path):
         "20240531_18-23_hrrr",
         "20240601_00-05_hrrr",
     ]
+
+
+def test_files_for_matches_a_format_with_a_wildcard(tmp_path):
+    """A format with ``*`` is matched as a wildcard, not as the characters of a name."""
+    _touch_files(
+        tmp_path, ["20240601_00-05_hrrr", "20240601_06-11_hrrr", "20240601_06"]
+    )
+    met = _make_met(tmp_path, "%Y%m%d_%H*_hrrr", "6h")
+
+    files = _run_files(met, dt.datetime(2024, 6, 1, 6), -6)
+
+    assert [f.name for f in files] == ["20240601_00-05_hrrr", "20240601_06-11_hrrr"]
+
+
+@pytest.mark.parametrize(
+    "pattern", ["20240601_0", "20240601_06", "2024/20240601_0", "20240602", "nothing"]
+)
+def test_a_pattern_finds_the_files_rglob_finds(tmp_path, pattern):
+    """The sorted index of file names gives what a search of the folder does."""
+    names = ["20240601_00", "20240601_06", "2024/20240601_00", "2024/20240601_06x"]
+    _touch_files(tmp_path, [n for n in names if "/" not in n])
+    (tmp_path / "2024").mkdir()
+    _touch_files(tmp_path, [n for n in names if "/" in n])
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+
+    found = met._matching(pattern)
+
+    assert sorted(found) == sorted(
+        f for f in tmp_path.rglob(pattern + "*") if f.is_file()
+    )
 
 
 def test_files_for_searches_recursively(tmp_path):

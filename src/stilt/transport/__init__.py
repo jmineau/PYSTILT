@@ -172,6 +172,17 @@ class TransportModel(Protocol):
         (:meth:`run_many`). False when the model does not say. The worker
         then hands it every receptor of a variant that needs particles at
         once, where it otherwise calls :meth:`run` for one at a time.
+    check_met : callable, optional
+        ``check_met(met, receptors, n_hours)``, for a model that reads files,
+        which ``stilt check`` calls to find what would stop its runs before
+        any starts. *met* is the model's met config, *receptors* a table
+        with one row per release point (``receptor``, ``time``,
+        ``longitude``, ``latitude``), and *n_hours* the length of the runs.
+        It returns a DataFrame with ``check`` (a short name, such as
+        ``met_files``), ``receptor`` (the id, or ``NA`` for a problem of the
+        met itself), and ``message`` columns, one row for each problem. It
+        runs and downloads nothing. A model without it has no met files to
+        check.
     """
 
     name: str

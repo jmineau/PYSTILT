@@ -25,6 +25,8 @@ from .failures import FailureReason
 from .met import Met, MetConfig
 
 if TYPE_CHECKING:
+    import pandas as pd
+
     from stilt.receptors import Receptor
 
 
@@ -104,6 +106,35 @@ class HysplitModel:
             if not own.is_file() or _sha256(own) != digest:
                 changed[path.name] = digest
         return changed or None
+
+    def check_met(
+        self, met: MetConfig, receptors: pd.DataFrame, n_hours: int
+    ) -> pd.DataFrame:
+        """
+        Return what would stop HYSPLIT from running *receptors* with *met*, found before any run.
+
+        The checks of :meth:`Met.check_receptors`: the met's directory
+        holds ARL files, every file a run needs is there, and the receptors
+        are inside the crop. Nothing is run, opened past the first file's
+        header, or downloaded.
+
+        Parameters
+        ----------
+        met : MetConfig
+            The met, with an absolute directory in a project.
+        receptors : pandas.DataFrame
+            One row per release point, with ``receptor``, ``time``,
+            ``longitude``, and ``latitude`` columns.
+        n_hours : int
+            The length of the runs, which sets the files each needs.
+
+        Returns
+        -------
+        pandas.DataFrame
+            ``check``, ``receptor`` (``NA`` for a problem of the met
+            itself), and ``message`` columns, one row for each problem.
+        """
+        return Met("met", met).check_receptors(receptors, n_hours)
 
     def run(
         self,
