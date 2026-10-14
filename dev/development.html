@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=126ebef7"></script>
+    <script src="_static/documentation_options.js?v=8fb66309"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Roadmap" href="roadmap.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev13+g95bfe9c37" />
+  <meta name="docsearch:version" content="0.1.0a25.dev14+g8225e434d" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -544,6 +544,150 @@ just<span class="w"> </span>docs-serve<span class="w">       </span><span class=
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">just</span></code> with no arguments lists the rest.</p>
 </section>
+<section id="writing-documentation">
+<h2>Writing documentation<a class="headerlink" href="#writing-documentation" title="Link to this heading">#</a></h2>
+<p>The sources are in <code class="docutils literal notranslate"><span class="pre">docs/</span></code>: <code class="docutils literal notranslate"><span class="pre">getting_started/</span></code> (install, quickstart,
+concepts), <code class="docutils literal notranslate"><span class="pre">guides/</span></code> (task-oriented how-tos, one idea per page),
+<code class="docutils literal notranslate"><span class="pre">tutorials/</span></code> (end-to-end worked examples), <code class="docutils literal notranslate"><span class="pre">migration/</span></code> (from STILT-R,
+X-STILT, stiltctl), <code class="docutils literal notranslate"><span class="pre">reference/</span></code> (API pages built from docstrings, and the
+table of every <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> key, made by the <code class="docutils literal notranslate"><span class="pre">config-model</span></code> directive in
+<code class="docutils literal notranslate"><span class="pre">docs/_ext/</span></code>), and <code class="docutils literal notranslate"><span class="pre">advanced/</span></code> (internals). A user-facing change needs a
+guide or reference update, and <code class="docutils literal notranslate"><span class="pre">just</span> <span class="pre">build-docs</span></code> must pass: warnings are
+errors.</p>
+<section id="voice">
+<h3>Voice<a class="headerlink" href="#voice" title="Link to this heading">#</a></h3>
+<p>Docs, docstrings, config field descriptions, and CLI help all follow this
+voice. Most readers are scientists who want to run the model and trust the
+result; write for them. Good examples are the
+<a class="reference external" href="https://uataq.github.io/stilt/">STILT-R docs</a> and the xarray, pandas, and
+MetPy user guides.</p>
+<ul class="simple">
+<li><p><strong>Start with what it is for.</strong> Open a page or docstring with what the thing
+does, in plain words. Then show an example. Internals and edge cases go
+last, or in <code class="docutils literal notranslate"><span class="pre">docs/advanced/</span></code>.</p></li>
+<li><p><strong>Keep sentences short.</strong> One idea per sentence. If a sentence needs a
+colon, a semicolon, and a parenthesis, split it.</p></li>
+<li><p><strong>Use the reader’s words.</strong> Receptor, particles, footprint, meteorology.
+Internal names (store key, publish, resolve) belong only on pages about
+internals. Describe a config’s fields (its parameters) in plain English,
+naming no class or module. <code class="docutils literal notranslate"><span class="pre">AGENTS.md</span></code> has the table of words to use.</p></li>
+<li><p><strong>Show it.</strong> A short code block, with its output when that helps, is
+clearer than a paragraph describing it.</p></li>
+<li><p><strong>Say it plainly.</strong> No metaphors (“a dial worth turning”), no selling
+(“powerful”, “seamless”), no filler (“note that”, “it’s worth noting”).
+Use American spelling (meters, modeled, center).</p></li>
+</ul>
+<p>Some habits make text read as machine-written. Avoid them:</p>
+<ul class="simple">
+<li><p>Colon reveals: “PYSTILT does one thing: it follows the air.” Write
+“PYSTILT follows the air.”</p></li>
+<li><p>“X, not Y” contrasts when nobody suggested Y.</p></li>
+<li><p>A bold sentence at the start of a paragraph that states its point.</p></li>
+<li><p>Dashes joining clauses. Use a period or parentheses.</p></li>
+<li><p>Lists of three out of habit, and closing sentences that restate the
+paragraph.</p></li>
+<li><p>Asides about what the code does “deliberately” or used to do.</p></li>
+<li><p>Validation statistics in a user guide. Give the reader the setting to use
+and cite the study.</p></li>
+<li><p>Labels invented on one line and referred to later (“the first case”).</p></li>
+</ul>
+<p>Docstrings follow the NumPy style. The summary line says what the object is
+or what the function returns. Parameter descriptions give the meaning and
+units, not the type again. Check every example and claim against the code
+when you write it.</p>
+</section>
+<section id="api-pages">
+<h3>API pages<a class="headerlink" href="#api-pages" title="Link to this heading">#</a></h3>
+<p>Each class has a page with tables of its attributes and methods, and each
+member a page of its own; a subclass lists what it defines and links to what
+it inherits. <code class="docutils literal notranslate"><span class="pre">docs/_templates/autosummary/class.rst</span></code> is PYSTILT’s own (it
+renders config models through <code class="docutils literal notranslate"><span class="pre">config-model</span></code>). <code class="docutils literal notranslate"><span class="pre">docs/_ext/api_pages.py</span></code>,
+from python-template, decides which members get a row (not pydantic’s, so no
+list of them is kept) and what is inherited.</p>
+<p>A property or attribute’s page is where its See Also and Examples go, as in
+pandas. Give each public one a docstring that says what it is, and add See
+Also or Examples where they help; one with no docstring shows an empty row.
+Napoleon reads a first line of the form <code class="docutils literal notranslate"><span class="pre">text:</span> <span class="pre">more</span> <span class="pre">text</span></code> of a property, an
+attribute, or module data as <code class="docutils literal notranslate"><span class="pre">type:</span> <span class="pre">description</span></code>, so keep a colon out of
+the middle of that line.</p>
+<p>Module data such as <code class="docutils literal notranslate"><span class="pre">PARTICLE_SCHEMA</span></code> is listed under the package that
+exports it (<code class="docutils literal notranslate"><span class="pre">stilt.particles</span></code>). autodoc looks for its <code class="docutils literal notranslate"><span class="pre">#:</span></code> comment in that
+module, where there is none, so <code class="docutils literal notranslate"><span class="pre">reexported_data_comment</span></code> in
+<code class="docutils literal notranslate"><span class="pre">docs/conf.py</span></code> takes the comment from the submodule that defines it.
+Without the hook, a page shows the docstring of the object’s type
+(“Built-in immutable sequence.”).</p>
+</section>
+<section id="examples-in-the-docs">
+<h3>Examples in the docs<a class="headerlink" href="#examples-in-the-docs" title="Link to this heading">#</a></h3>
+<p>Examples run when the docs build, so they show real output, and the build
+fails when one breaks.</p>
+<ul>
+<li><p><strong>A figure in a docstring:</strong> put a <code class="docutils literal notranslate"><span class="pre">..</span> <span class="pre">plot::</span></code> directive in the Examples
+section. Its code runs (doctest <code class="docutils literal notranslate"><span class="pre">&gt;&gt;&gt;</span></code> lines work), and the figure appears
+under it.</p>
+<div class="highlight-rst notranslate"><div class="highlight"><pre><span></span><span class="gh">Examples</span>
+<span class="gh">--------</span>
+<span class="p">..</span> <span class="ow">plot</span><span class="p">::</span>
+
+   &gt;&gt;&gt; import matplotlib.pyplot as plt
+   &gt;&gt;&gt; _ = plt.plot([0, 1, 2], [0, 1, 4])
+</pre></div>
+</div>
+</li>
+<li><p><strong>Code in an .rst page:</strong> an <code class="docutils literal notranslate"><span class="pre">..</span> <span class="pre">ipython::</span> <span class="pre">python</span></code> block runs and shows
+each line with its output, as in an IPython session. Changing a
+<code class="docutils literal notranslate"><span class="pre">..</span> <span class="pre">code-block::</span> <span class="pre">python</span></code> to <code class="docutils literal notranslate"><span class="pre">..</span> <span class="pre">ipython::</span> <span class="pre">python</span></code> is enough to make it
+run. For a figure, put <code class="docutils literal notranslate"><span class="pre">&#64;savefig</span> <span class="pre">name.png</span></code> on the line above the plotting
+call.</p>
+<div class="highlight-rst notranslate"><div class="highlight"><pre><span></span><span class="p">..</span> <span class="ow">ipython</span><span class="p">::</span> python
+
+   import matplotlib.pyplot as plt
+   import stilt
+
+   stilt.__version__
+
+   @savefig squares.png width=5in
+   plt.plot([0, 1, 2], [0, 1, 4]);
+</pre></div>
+</div>
+<p>A block that raises or warns fails the build; <code class="docutils literal notranslate"><span class="pre">:okexcept:</span></code> or
+<code class="docutils literal notranslate"><span class="pre">:okwarning:</span></code> under the directive allows one that is meant to. All .rst
+pages share one session, so each page imports and defines what it uses.</p>
+</li>
+<li><p><strong>When they run:</strong> <code class="docutils literal notranslate"><span class="pre">just</span> <span class="pre">build-docs</span></code> runs everything, as CI does.
+<code class="docutils literal notranslate"><span class="pre">just</span> <span class="pre">docs-serve</span></code> reruns a page’s blocks whenever that page is rebuilt.</p></li>
+<li><p><strong>Notebooks, and code cells in Markdown pages,</strong> are off in this project.
+<code class="docutils literal notranslate"><span class="pre">copier</span> <span class="pre">update</span> <span class="pre">--data</span> <span class="pre">docs_notebooks=true</span></code> turns them on; it adds myst-nb,
+and Jupyter with it, to the dev tools.</p></li>
+<li><p><strong>Data:</strong> the docs build on GitHub Actions, so an example uses synthetic
+data, a small file in the repository, or a public download, never a
+machine-specific path. Seed random numbers so the figures don’t change from
+build to build.</p></li>
+<li><p><strong>The Getting Started page runs a real simulation</strong> on the met files the
+tests cache (<code class="docutils literal notranslate"><span class="pre">tests/met_cache</span></code>, 14 and 15 January 2021 around Salt Lake),
+in a temporary folder. <code class="docutils literal notranslate"><span class="pre">just</span> <span class="pre">build-docs</span></code> needs them: set
+<code class="docutils literal notranslate"><span class="pre">STILT_TEST_MET_DIR</span></code> to that folder, or fetch them once with</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">STILT_TEST_FETCH_MET</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/transport/hysplit/test_release_assignment.py::test_hysplit_multipoint_release_points_follow_control_order<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--setup-only<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>A receptor on the page must stay inside that time window. <code class="docutils literal notranslate"><span class="pre">docs.yml</span></code>
+restores the same cache the tests use.</p>
+</li>
+<li><p><strong>The guides that open a project start from a sample project</strong>
+(<code class="docutils literal notranslate"><span class="pre">docs/_ext/docs_examples.py</span></code>): four receptors an hour apart on 15 January
+2021, run once per docs build (about 40 s) and copied into a temporary
+folder for each page. A page starts it from a hidden block
+(<code class="docutils literal notranslate"><span class="pre">docs_examples.temp_workdir(sample=True)</span></code>) and goes back with
+<code class="docutils literal notranslate"><span class="pre">os.chdir(docs_cwd)</span></code> at its end, so the page’s files land in the
+temporary folder.</p></li>
+<li><p><strong>Optional dependencies:</strong> the <code class="docutils literal notranslate"><span class="pre">dev</span></code> group installs
+<code class="docutils literal notranslate"><span class="pre">pystilt[complete]</span></code>, so the plotting extra (<code class="docutils literal notranslate"><span class="pre">visualization</span></code>) is there in
+CI. If an example needs another extra, add <code class="docutils literal notranslate"><span class="pre">pystilt[extra]</span></code> the same way.</p></li>
+</ul>
+</section>
+</section>
 <section id="stilt-r-parity">
 <span id="id1"></span><h2>STILT-R parity<a class="headerlink" href="#stilt-r-parity" title="Link to this heading">#</a></h2>
 <p>PYSTILT is tested against a fixed commit of
@@ -789,6 +933,12 @@ upstream.</p>
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#use-of-ai-coding-agents">Use of AI coding agents</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#set-up-a-development-environment">Set up a development environment</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#writing-documentation">Writing documentation</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#voice">Voice</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api-pages">API pages</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples-in-the-docs">Examples in the docs</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt-r-parity">STILT-R parity</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pinned-upstream-commit">Pinned upstream commit</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-matches">What matches</a></li>
