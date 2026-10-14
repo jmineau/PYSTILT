@@ -981,6 +981,25 @@ def test_ak_table_rereads_when_the_file_changes(tmp_path):
     assert kernel.apply(_make_particles(1), b)["foot"].tolist() == [0.25]
 
 
+def test_ak_table_names_the_receptors_it_has_kernels_for(tmp_path):
+    a, b = _two_receptors()
+    _write_table(tmp_path / "kernels.parquet", a, b)
+
+    held = AveragingKernel(table="kernels.parquet").table_receptors(tmp_path)
+
+    assert held == {str(a.id), str(b.id)}
+
+
+def test_ak_table_receptors_needs_a_table_that_exists_with_its_columns(tmp_path):
+    with pytest.raises(ValueError, match="not a table"):
+        AveragingKernel(levels=[0.0, 1.0], values=[1.0, 1.0]).table_receptors()
+    with pytest.raises(FileNotFoundError):
+        AveragingKernel(table="kernels.parquet").table_receptors(tmp_path)
+    pd.DataFrame({"receptor": ["x"]}).to_csv(tmp_path / "bad.csv", index=False)
+    with pytest.raises(ValueError, match="lacks columns"):
+        AveragingKernel(table="bad.csv").table_receptors(tmp_path)
+
+
 def test_ak_table_round_trips_through_config():
     kernel = load_transform(
         {"kind": "averaging_kernel", "table": "kernels.parquet", "coordinate": "pres"}

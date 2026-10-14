@@ -233,6 +233,37 @@ class AveragingKernel(BaseModel):
             )
         return self
 
+    def _kernels(
+        self, directory: str | Path | None
+    ) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+        """Return the kernels of ``table`` by receptor id; a relative path starts from *directory*."""
+        assert self.table is not None
+        path = self.table
+        if re.fullmatch(r"[A-Za-z0-9_-]+", path):  # a project table's name
+            path = f"tables/{path}.parquet"
+        if directory is not None and not Path(path).is_absolute():
+            path = str(Path(directory) / path)
+        return _read_kernel_table(path, os.stat(path).st_mtime)
+
+    def table_receptors(self, directory: str | Path | None = None) -> frozenset[str]:
+        """
+        Return the ids of the receptors the ``table`` has a kernel for.
+
+        A relative ``table`` path starts from *directory*, as for
+        :meth:`kernel`.
+
+        Raises
+        ------
+        ValueError
+            If the transform has no ``table``, or the table lacks the
+            ``receptor``, ``level``, or ``value`` column.
+        FileNotFoundError
+            If the table's file does not exist.
+        """
+        if self.table is None:
+            raise ValueError("averaging_kernel has levels and values, not a table.")
+        return frozenset(self._kernels(directory))
+
     def kernel(
         self, receptor: Receptor | None = None, directory: str | Path | None = None
     ) -> tuple[list[float], list[float]]:
@@ -250,12 +281,7 @@ class AveragingKernel(BaseModel):
                 "averaging_kernel with a table needs the receptor to know which "
                 "kernel to look up."
             )
-        path = self.table
-        if re.fullmatch(r"[A-Za-z0-9_-]+", path):  # a project table's name
-            path = f"tables/{path}.parquet"
-        if directory is not None and not Path(path).is_absolute():
-            path = str(Path(directory) / path)
-        kernels = _read_kernel_table(path, os.stat(path).st_mtime)
+        kernels = self._kernels(directory)
         rid = str(receptor.id)
         try:
             levels, values = kernels[rid]
