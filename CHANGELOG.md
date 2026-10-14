@@ -8,6 +8,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `stilt check [project]` and `project.check()` list what would stop a
+  project's runs, before any run starts: a met whose directory does not exist
+  or holds no ARL file, receptors that lack a met file their run needs (naming
+  the hours), receptors outside the met's crop box (`subgrid_bounds`) or the
+  footprint grid, and an `averaging_kernel` table that lacks a receptor or
+  holds one the project does not have. `stilt check` prints the table and
+  exits with 1 when it lists anything. It looks for files, not inside them: a
+  run that passes can still fail as `MET_COVERAGE` when a met file is damaged
+  or cut short. The Getting Started page runs it before the first run.
+- A transport model can give `check_met(met, receptors, n_hours)` for
+  `stilt check` to find what would stop its runs. HYSPLIT's does, with the new
+  `Met.missing_hours` and `Met.check_receptors`. `AveragingKernel.table_receptors`
+  lists the receptors a kernel table holds.
 - The Getting Started page runs when the docs are built, on the met files for
   14 and 15 January 2021 that the tests use, so its output and figures are
   what the code makes. Its receptor moved from 15 July 2023 to 15 January

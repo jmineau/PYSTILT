@@ -189,6 +189,23 @@ settings are the ones above:
        numpar=200,
        grid=grid,
    )
+
+Before running, check the project. ``project.check()`` looks for what would
+stop a run before it starts: met files missing for a receptor's hours, a
+receptor outside the grid, and a met folder that does not exist. It returns a
+table with a row for each thing found, so an empty table means nothing is in
+the way:
+
+.. ipython:: python
+
+   project.check()
+
+The check looks for files, not inside them, so a run that passes it can
+still fail later, if a met file is damaged. :doc:`../guides/checking` says how
+to tell.
+
+.. ipython:: python
+
    project.run();
 
 ``run()`` runs the particles and the footprint of every receptor, and
@@ -292,12 +309,17 @@ line, so the file reads:
    time,longitude,latitude,altitude
    2021-01-15 08:00:00,-111.848,40.766,10
 
-Then run it and check the result:
+Then check the project, run it, and look at the result:
 
 .. code-block:: bash
 
+   stilt check ./my_first_project
    stilt run ./my_first_project
    stilt status ./my_first_project
+
+``stilt check`` lists what would stop a run, such as a met file that is not
+there, and exits with 1 when it lists anything. It prints no rows when
+everything is in place.
 
 .. ipython:: python
    :suppress:

@@ -67,6 +67,7 @@ classes. `stilt.__all__` (and each subpackage's) is the public surface.
 src/stilt/
   cli.py          Typer CLI, a thin adapter over Project and execution
   project.py      Project: inputs, the simulations table, run/submit, bulk reads
+  check.py        check_project: what would stop a project's runs, from its inputs
   output.py       Output: the output directory; `completed`, the completion rule
   simulation.py   Simulation: a frozen (receptor, variant, output) value
   config.py       ProjectConfig and Variant;  identity.py  settings records, hashes
@@ -241,6 +242,8 @@ The reasons are in `docs/advanced/architecture.rst` ("Implementation notes").
 - **Met that ran out is a failure; a domain exit is not.** HYSPLIT's warnings
   are unreliable, so `Met.files_for` and `Met.check` stop a run on missing or
   damaged met before it starts (`FAILURE_PHRASES` maps the log afterwards).
+  `stilt check` runs the file search for every receptor early; it opens no met
+  file past one header, so a damaged file still fails at run time.
 - **Realizations are an axis**: `realizations: N` is one variant with a
   `realization` column and `realization=k/` partitions, run with `seed + k`.
   HYSPLIT gets `SEED = -(|seed| + 1)` (`setup_seed`, mirrored by the R

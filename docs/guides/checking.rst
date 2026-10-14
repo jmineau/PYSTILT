@@ -1,8 +1,117 @@
 Checking A Run
 ==============
 
-This page is for after a run: which simulations finished, why some did
-not, and what to do when a footprint looks wrong.
+This page is for before a run and after it. Before: what ``stilt check``
+finds in a project's inputs. After: which simulations finished, why some
+did not, and what to do when a footprint looks wrong.
+
+.. This page runs when the docs are built, on the sample project of
+   docs/_ext/docs_examples.py (four receptors, all complete).
+
+.. ipython:: python
+   :suppress:
+
+   import os
+
+   import docs_examples
+
+   docs_cwd = docs_examples.temp_workdir(sample=True)
+
+Before a run
+------------
+
+The first failures a new project meets are in its inputs: a met folder
+with a typo, met files that miss some receptor's hours, a receptor off the
+grid. ``stilt check`` finds them before HYSPLIT starts. It reads the
+project's files and one met file's header for each met, and runs and
+downloads nothing:
+
+.. code-block:: text
+
+   $ stilt check ./my_project
+   Project: /data/my_project  receptors=3
+   Variants: hrrr (met hrrr, footprint), hrrr-err (met hrrr, particles only)
+
+   check      variant         receptor                         message
+   met_files  hrrr, hrrr-err  202107150600_-111.848_40.766_10  no met file for 2021-07-14 12:00
+   met_files  hrrr, hrrr-err  202107150700_-111.848_40.766_10  no met file for 2021-07-14 12:00
+   met_files  hrrr, hrrr-err  202107150600_-114.2_40.766_10    no met file for 2021-07-14 12:00
+   grid       hrrr            202107150600_-114.2_40.766_10    longitude -114.2 and latitude 40.766 are outside the footprint grid (-113 to -110.5 longitude, 40 to 42 latitude)
+
+   Found 4 problems: met_files 3, grid 1
+
+It checks every variant. Variants that share what a check looks at, such
+as a met and a run length, share its rows, and the ``variant`` column lists
+them. Each check shows its first ten rows and counts the rest. It exits
+with 0 when it finds nothing, 1 when it lists anything, and 2 when its
+command line is wrong or the project's files are invalid.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 42 40
+
+   * - Check
+     - What it found
+     - What to do
+   * - ``met_directory``
+     - A met's ``directory`` does not exist or holds no ARL file. A project
+       reads each met's weather product from the header of its first file,
+       so without one it cannot find its results.
+     - Correct ``directory`` under ``mets:``. A met with ``download`` is not
+       checked: it makes its directory and fetches files when a run needs
+       them.
+   * - ``met_files``
+     - A receptor's run needs a met file that is not there. The message
+       names the hours of the files, each as long as ``file_tres``.
+     - Add the files, or check ``file_format`` and ``file_tres`` against the
+       file names. A backward run needs files from ``n_hours`` before the
+       receptor time to just after it (:doc:`meteorology`).
+   * - ``met_crop``
+     - With ``subgrid_enable`` on, a receptor lies outside
+       ``subgrid_bounds``. HYSPLIT cannot start particles outside the
+       cropped files.
+     - Widen ``subgrid_bounds``. It must hold the whole run, not only the
+       footprint grid.
+   * - ``grid``
+     - A release point of a receptor lies outside the variant's footprint
+       grid. Only the particles that travel into the grid add to its
+       footprint, and a footprint with none is empty.
+     - Widen the grid. A receptor meant to lie outside it, such as one far
+       downwind, is still listed, and the exit code is 1.
+   * - ``kernel_table``
+     - The ``averaging_kernel`` table does not exist, or lacks its
+       ``receptor``, ``level``, or ``value`` column.
+     - ``project.add_table("kernels", table)`` makes it
+       (:func:`~stilt.transforms.averaging_kernel_table`).
+   * - ``kernel_missing``
+     - The table has no kernel for a receptor, which fails its footprint.
+     - Add the receptor's kernel. If the table's ids look like the receptors'
+       with other digits, the ids were made from different coordinates.
+   * - ``kernel_unused``
+     - The table has a kernel for an id that is no receptor of the project.
+       The run does not need it.
+     - Nothing, if the table is shared. Otherwise look for ids that differ
+       from the receptors' in a digit.
+
+``stilt check`` looks for files, not inside them. A run that passes can still
+fail as ``MET_COVERAGE``: a file that is damaged or cut short is found when
+the run opens it, and a receptor outside the domain of the files, when HYSPLIT
+starts it (the reasons are below).
+
+In Python, ``project.check()`` is the same table, one row for each thing
+found. It is empty when there is none:
+
+.. ipython:: python
+
+   import stilt
+
+   project = stilt.Project("./my_project")
+   project.check()
+
+The sample project has everything its runs need, so the table is empty. A
+table with rows is a pandas DataFrame, so ``problems = project.check()`` and
+``problems[problems.check == "met_files"]`` select the receptors that lack
+met files.
 
 Where each simulation stands
 ----------------------------
@@ -22,23 +131,8 @@ failed ones by reason. Then it lists the output's settings folders
 
 In Python, ``project.status()`` is the same, one row per simulation:
 
-.. This page runs when the docs are built, on the sample project of
-   docs/_ext/docs_examples.py (four receptors, all complete).
-
-.. ipython:: python
-   :suppress:
-
-   import os
-
-   import docs_examples
-
-   docs_cwd = docs_examples.temp_workdir(sample=True)
-
 .. ipython:: python
 
-   import stilt
-
-   project = stilt.Project("./my_project")
    status = project.status()
    status.state.value_counts()
    status[status.state == "failed"][["receptor", "variant", "reason", "message"]]
@@ -124,6 +218,7 @@ The reasons
          Check the met's ``directory`` and ``file_format`` against the
          files on disk. A backward run needs files from ``n_hours`` before
          the receptor time to just after it (:doc:`meteorology`).
+         ``stilt check`` finds these before a run.
        - ``The met file ... is damaged`` or ``The met files hold no time
          step between ...``: a file is there but cut short, written
          partway, or has records lost to null bytes, so it lacks hours the

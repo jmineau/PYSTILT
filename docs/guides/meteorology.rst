@@ -51,6 +51,8 @@ spans (``n_hours`` from the receptor time) and looks for those. A 24-hour
 backward run with 6-hour HRRR files needs 5 or 6 files, depending on the
 receptor hour. Every one is needed. If one is missing, the simulation fails
 before HYSPLIT runs, as ``MET_COVERAGE``, naming the hours with no file.
+``stilt check`` makes this search for every receptor before any run starts
+(:doc:`checking`).
 
 A file that is there but damaged fails the run before HYSPLIT runs too,
 as ``MET_COVERAGE``: one cut short, holding an hour written partway, or
