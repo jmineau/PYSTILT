@@ -23,7 +23,8 @@ known differences pass:
     HYSPLIT finds each met level's height from the ``PRES`` field and the
     virtual temperature, from the ground up. arlmet 0.1.0b3 finds a sigma
     file's level heights from the header's sigma values times ``PRSS``,
-    which for HRRR are up to about 50 hPa off ``PRES`` aloft. Near the
+    which for HRRR are up to about 50 hPa off ``PRES`` aloft
+    (jmineau/arl-met#66). Near the
     ground the two agree to 0.3 hPa; higher up the sampled pressure is too
     high, by about 1 hPa at 100 to 500 m, 6 to 8 hPa at 1 to 2 km, and
     over 20 hPa above 2 km in the summer run. The
