@@ -119,9 +119,10 @@ for you. Pass ``levels`` as one array per receptor, or as a single array
 when all kernels share one grid. When the footprint is made, the
 transform looks up the receptor's id in the table. The table is part of
 the project, so this works the same in a notebook, with ``stilt run``, and
-on Slurm workers. A receptor with no rows in the table raises an error.
-``table`` also takes the path of a Parquet or CSV file, relative to the
-project root.
+on Slurm workers. A receptor with no rows in the table raises an error, and
+``stilt check`` lists those receptors before a run, with the table's ids that
+match no receptor (:doc:`checking`). ``table`` also takes the path of a
+Parquet or CSV file, relative to the project root.
 
 In Python
 ---------

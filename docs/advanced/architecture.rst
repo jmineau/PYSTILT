@@ -69,6 +69,10 @@ Module map
      project.py         Project: the project directory, its receptors and
                         simulations (DataFrames), run/submit, and a
                         selection's status, particles, footprints, Jacobian
+     check.py           check_project: what would stop a project's runs,
+                        found from its inputs before any run (Project.check,
+                        stilt check); a transport model's check_met finds the
+                        met's part
      output.py          Output: the output directory, a folder per kind and
                         settings hash; finding a variant's folder, which
                         receptors have results (present, complete), reading
