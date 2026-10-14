@@ -9,8 +9,13 @@ or build on PYSTILT.
    How a result is found, why a changed setting makes a new folder, and
    how two workers never step on each other.
 
+:doc:`architecture`
+   How the code is organized, how a run goes from a project to result
+   files, and the implementation details that are easy to break.
+
 .. toctree::
    :maxdepth: 1
    :hidden:
 
    output_state
+   architecture

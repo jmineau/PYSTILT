@@ -40,9 +40,12 @@ architecture and the rules the code relies on.
 
 ## Writing documentation
 
-Docs and docstrings follow the voice described under "Voice" in
-[AGENTS.md](AGENTS.md). Build the docs with
-`just build-docs` and check that your change adds no new warnings.
+Docs and docstrings follow the voice described under "Writing
+documentation" in [docs/development.rst](docs/development.rst), which also
+explains how the examples in the docs run. Build the docs with
+`just build-docs` and check that your change adds no new warnings. The
+Documentation workflow builds them on every pull request and publishes
+`main` as `dev/` and each release under its version.
 
 ## Adding configuration fields
 
