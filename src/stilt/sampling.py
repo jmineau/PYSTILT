@@ -9,9 +9,16 @@ the cell it falls in. ``foot.stilt.enhancement`` and
 :func:`stilt.particles.background` a mole-fraction field. PYSTILT does
 not convert units. A flux in µmol m⁻² s⁻¹ times a footprint in ppm per
 (µmol m⁻² s⁻¹) gives ppm.
+
+:func:`sample_met` samples ARL met files at particle positions, for the
+particle columns a transport model can write from the met (``mlht``,
+``dens``, ``pres``, ``zsfc``).
 """
 
 from __future__ import annotations
+
+import os
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
@@ -163,8 +170,171 @@ def _nearest_level(levels: xr.DataArray, z: np.ndarray) -> np.ndarray:
     return np.abs(coords[None, :] - z[:, None]).argmin(axis=1)
 
 
+#: The ARL variables each particle column is computed from, by :func:`sample_met`.
+_MET_VARIABLES: dict[str, tuple[str, ...]] = {
+    "mlht": ("PBLH",),
+    "dens": ("PRES", "TEMP", "SPHU"),
+    "pres": ("PRES",),
+    "zsfc": ("SHGT",),
+}
+
+#: Gas constant of dry air, J kg⁻¹ K⁻¹, the value HYSPLIT uses.
+_R_DRY = 287.04
+
+
+def sample_met(
+    particles: pd.DataFrame,
+    files: Iterable[str | os.PathLike[str]],
+    columns: Iterable[str] = ("mlht", "dens", "pres", "zsfc"),
+) -> pd.DataFrame:
+    """
+    Return the particles with met columns sampled from ARL files at each particle's position.
+
+    A transport model that writes only positions can get the columns
+    HYSPLIT writes from the met this way. Each row is sampled at its
+    ``lon``, ``lat``, ``zagl``, and ``time``: bilinear across the met's
+    grid and linear in height between its levels
+    (:func:`arlmet.sample_points`), then linear in time between the two
+    met times around the particle's, as HYSPLIT does. Each column comes
+    from these ARL variables:
+
+    - ``mlht`` is ``PBLH``, the met model's boundary-layer height, in m
+      above ground.
+    - ``dens`` is 100 ``PRES`` / (R ``TEMP`` (1 + 0.61 ``SPHU``)), the
+      density of moist air in kg m⁻³, with R = 287.04 J kg⁻¹ K⁻¹.
+    - ``pres`` is ``PRES``, the pressure, in hPa.
+    - ``zsfc`` is ``SHGT``, the terrain height, in m above sea level.
+
+    The values are the met's, not HYSPLIT's. HYSPLIT's ``mlht`` is the
+    met's ``PBLH`` only with ``kmixd: 0``, and then it is at least
+    ``kmix0``; the default, ``kmixd: 3``, finds the mixed layer from the
+    profile. HYSPLIT also finds the heights of the met's levels its own
+    way, so its ``pres`` and ``dens`` differ from these;
+    :doc:`/guides/meteorology` says by how much.
+
+    Parameters
+    ----------
+    particles : pandas.DataFrame
+        A particle table with ``lon``, ``lat``, ``zagl``, and ``time``.
+        ``sim.particles`` has ``time``. For a table a transport model
+        returned, add it: the receptor time plus ``age`` minutes.
+    files : iterable of path-like
+        ARL met files that cover the particles' times, such as the files the
+        run read (``met_files`` of :class:`stilt.transport.ModelRun` or of
+        :func:`stilt.particles.particles_metadata`).
+    columns : iterable of str, default ("mlht", "dens", "pres", "zsfc")
+        The columns to add.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A copy of *particles* with the columns added. A row off the met's
+        grid, below its lowest level, or above its top is NaN.
+
+    Raises
+    ------
+    ValueError
+        If a column is not one of the four or is in *particles* already
+        (drop it first), *particles* has no ``time`` column, or a row is
+        outside the files' times.
+    KeyError
+        If the files lack a variable a column needs.
+
+    Examples
+    --------
+    >>> meta = stilt.particles.particles_metadata(sim.particles_path)
+    >>> hysplit = sim.particles
+    >>> sampled = stilt.sampling.sample_met(
+    ...     hysplit.drop(columns="pres"), meta.met_files, columns=["pres"]
+    ... )
+    >>> (sampled["pres"] - hysplit["pres"]).describe()
+    """
+    import arlmet
+
+    columns = list(dict.fromkeys(columns))
+    unknown = [c for c in columns if c not in _MET_VARIABLES]
+    if unknown:
+        raise ValueError(
+            f"sample_met cannot sample {unknown}; it samples {list(_MET_VARIABLES)}."
+        )
+    present = [c for c in columns if c in particles.columns]
+    if present:
+        raise ValueError(
+            f"The particles already have {present}. Drop them first to sample them."
+        )
+    if "time" not in particles.columns:
+        raise ValueError(
+            "sample_met needs a 'time' column: the receptor time plus 'age' minutes."
+        )
+    variables = list(dict.fromkeys(v for c in columns for v in _MET_VARIABLES[c]))
+
+    handles = [arlmet.File(path) for path in files]
+    try:
+        met_times = pd.DatetimeIndex(sorted({t for h in handles for t in h.times}))
+        times = pd.DatetimeIndex(particles["time"])
+        before, after, weight = _bracket(met_times, times)
+        # Each row is sampled at the met time before it and, unless it is on
+        # a met time, at the one after. One call samples both.
+        later = weight > 0
+        position = particles[["lon", "lat", "zagl"]].to_numpy(dtype=float)
+        points = pd.DataFrame(
+            np.concatenate([position, position[later]]), columns=["lon", "lat", "z"]
+        )
+        points["time"] = np.concatenate([before, after[later]])
+        sampled = arlmet.sample_points(handles, points, variables, z_kind="agl")
+    finally:
+        for handle in handles:
+            handle.close()
+
+    n = len(particles)
+    w = weight[later]
+    met: dict[str, np.ndarray] = {}
+    for name in variables:
+        values = sampled[name].to_numpy(dtype=float)
+        at_rows = values[:n].copy()
+        at_rows[later] = (1.0 - w) * at_rows[later] + w * values[n:]
+        met[name] = at_rows
+
+    out = particles.copy()
+    for column in columns:
+        if column == "dens":
+            virtual_temperature = met["TEMP"] * (1.0 + 0.61 * met["SPHU"])
+            out[column] = 100.0 * met["PRES"] / (_R_DRY * virtual_temperature)
+        else:
+            out[column] = met[_MET_VARIABLES[column][0]]
+    return out
+
+
+def _bracket(
+    met_times: pd.DatetimeIndex, times: pd.DatetimeIndex
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Return the met times before and after each time, and the weight of the one after.
+
+    A time on a met time has that time for both, and weight 0.
+    """
+    if len(met_times) == 0:
+        raise ValueError("The met files hold no time steps.")
+    after = met_times.searchsorted(times, side="left")
+    outside = (after == len(met_times)) | np.asarray(times < met_times[0])
+    if outside.any():
+        raise ValueError(
+            f"{int(outside.sum())} particle rows are outside the met files' times "
+            f"({met_times[0]} to {met_times[-1]}): {times[outside].min()} "
+            f"to {times[outside].max()}."
+        )
+    t1 = met_times[after]
+    exact = np.asarray(t1 == times)
+    t0 = met_times[np.where(exact, after, after - 1)]
+    elapsed = (times - t0).to_numpy()
+    span = np.where(exact, np.timedelta64(1, "s"), (t1 - t0).to_numpy())
+    weight = np.where(exact, 0.0, elapsed / span)
+    return t0.to_numpy(), t1.to_numpy(), weight.astype(float)
+
+
 __all__ = [
     "nearest_cell",
     "sample_field",
+    "sample_met",
     "vertical_dim",
 ]
