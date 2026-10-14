@@ -299,6 +299,42 @@ The header is read when a project's settings folders are first needed,
 to run it or to read its results. A met's ``directory`` must hold its
 files on the machine that opens the project.
 
+Met at particle positions
+-------------------------
+
+:func:`stilt.sampling.sample_met` reads met files at each particle's
+position and time, and adds ``mlht``, ``dens``, ``pres``, or ``zsfc`` to the
+particle table. A transport model that writes only positions can get these
+columns this way. Give it the files the run read:
+
+.. code-block:: python
+
+   import stilt
+   from stilt.sampling import sample_met
+
+   particles = sim.particles.drop(columns=["mlht", "dens"])
+   met_files = stilt.particles.particles_metadata(sim.particles_path).met_files
+   sampled = sample_met(particles, met_files, columns=["mlht", "dens"])
+
+``mlht`` is the met's ``PBLH``, ``pres`` its ``PRES``, ``zsfc`` its
+``SHGT``, and ``dens`` is computed from ``PRES``, ``TEMP``, and ``SPHU``.
+Values are interpolated across the grid and between levels by arlmet, and
+in time between the two met times around each particle's. A particle
+below the met's lowest level (8 to 9 m above ground for HRRR) gets NaN.
+
+These are the met's values, not HYSPLIT's. On two 6-hour HRRR runs from
+Salt Lake City (``tests/integration/test_sample_met.py``):
+
+- ``zsfc`` matches to a few meters.
+- ``mlht`` matches HYSPLIT's with ``kmixd: 0``, floored at ``kmix0``,
+  to a median of 16 to 30 m. The default, ``kmixd: 3``, finds a
+  different mixed layer from the profile.
+- ``pres`` matches to 0.3 hPa in the lowest 100 m, then reads high: about
+  1 hPa at 100 to 500 m, 6 to 8 hPa at 1 to 2 km, and over 20 hPa above
+  2 km. HYSPLIT finds the heights of HRRR's levels from its ``PRES``
+  field; arlmet finds them from the file's nominal sigma levels.
+  ``dens`` follows ``pres``, and is 0.1 to 0.6 % higher near the ground.
+
 Where HYSPLIT reads the files
 -----------------------------
 

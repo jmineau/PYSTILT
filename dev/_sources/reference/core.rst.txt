@@ -181,12 +181,15 @@ Sampling fields
 :mod:`stilt.sampling` looks up a gridded field at points: a surface flux
 under a footprint or along particle paths (``foot.stilt.enhancement``,
 ``particles.stilt.enhancement``), or a mole-fraction field at particle
-endpoints (:func:`stilt.particles.background`).
+endpoints (:func:`stilt.particles.background`). :func:`~stilt.sampling.sample_met`
+reads ARL met files at particle positions, for the particle columns a
+transport model can write from the met.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    sampling.sample_field
+   sampling.sample_met
    sampling.vertical_dim
    sampling.nearest_cell

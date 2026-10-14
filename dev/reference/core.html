@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=de43b91d"></script>
+    <script src="../_static/documentation_options.js?v=e640794c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="API Reference" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev18+g17e98126e" />
+  <meta name="docsearch:version" content="0.1.0a25.dev22+gc78f9f280" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -626,6 +626,7 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.spatial.is_longlat.html">stilt.spatial.is_longlat</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.spatial.horizontal_dims.html">stilt.spatial.horizontal_dims</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.sample_field.html">stilt.sampling.sample_field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.sample_met.html">stilt.sampling.sample_met</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.vertical_dim.html">stilt.sampling.vertical_dim</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.nearest_cell.html">stilt.sampling.nearest_cell</a></li>
 </ul>
@@ -1152,16 +1153,21 @@ so each geometry’s weights are computed once per footprint grid.
 <p><code class="xref py py-mod docutils literal notranslate"><span class="pre">stilt.sampling</span></code> looks up a gridded field at points: a surface flux
 under a footprint or along particle paths (<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>,
 <code class="docutils literal notranslate"><span class="pre">particles.stilt.enhancement</span></code>), or a mole-fraction field at particle
-endpoints (<a class="reference internal" href="_api/stilt.particles.background.html#stilt.particles.background" title="stilt.particles.background"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.particles.background()</span></code></a>).</p>
+endpoints (<a class="reference internal" href="_api/stilt.particles.background.html#stilt.particles.background" title="stilt.particles.background"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.particles.background()</span></code></a>). <a class="reference internal" href="_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-func docutils literal notranslate"><span class="pre">sample_met()</span></code></a>
+reads ARL met files at particle positions, for the particle columns a
+transport model can write from the met.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.sampling.sample_field.html#stilt.sampling.sample_field" title="stilt.sampling.sample_field"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.sample_field</span></code></a></p></td>
 <td><p>Return the field's value in the cell nearest each point.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.sampling.vertical_dim.html#stilt.sampling.vertical_dim" title="stilt.sampling.vertical_dim"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.vertical_dim</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.sample_met</span></code></a></p></td>
+<td><p>Return the particles with met columns sampled from ARL files at each particle's position.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.sampling.vertical_dim.html#stilt.sampling.vertical_dim" title="stilt.sampling.vertical_dim"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.vertical_dim</span></code></a></p></td>
 <td><p>Return the name of a field's vertical dimension.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.sampling.nearest_cell.html#stilt.sampling.nearest_cell" title="stilt.sampling.nearest_cell"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.nearest_cell</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.sampling.nearest_cell.html#stilt.sampling.nearest_cell" title="stilt.sampling.nearest_cell"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.nearest_cell</span></code></a></p></td>
 <td><p>Return the index of the cell nearest each value, or <code class="docutils literal notranslate"><span class="pre">-1</span></code> outside the cells.</p></td>
 </tr>
 </tbody>

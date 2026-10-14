@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=de43b91d"></script>
+    <script src="../_static/documentation_options.js?v=e640794c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Receptors" href="receptors.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev18+g17e98126e" />
+  <meta name="docsearch:version" content="0.1.0a25.dev22+gc78f9f280" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -833,6 +833,39 @@ different settings folders.</p>
 to run it or to read its results. A met’s <code class="docutils literal notranslate"><span class="pre">directory</span></code> must hold its
 files on the machine that opens the project.</p>
 </section>
+<section id="met-at-particle-positions">
+<h2>Met at particle positions<a class="headerlink" href="#met-at-particle-positions" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../reference/_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.sample_met()</span></code></a> reads met files at each particle’s
+position and time, and adds <code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">dens</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code>, or <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> to the
+particle table. A transport model that writes only positions can get these
+columns this way. Give it the files the run read:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample_met</span>
+
+<span class="n">particles</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;mlht&quot;</span><span class="p">,</span> <span class="s2">&quot;dens&quot;</span><span class="p">])</span>
+<span class="n">met_files</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">particles_metadata</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles_path</span><span class="p">)</span><span class="o">.</span><span class="n">met_files</span>
+<span class="n">sampled</span> <span class="o">=</span> <span class="n">sample_met</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">met_files</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;mlht&quot;</span><span class="p">,</span> <span class="s2">&quot;dens&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">mlht</span></code> is the met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code> its <code class="docutils literal notranslate"><span class="pre">PRES</span></code>, <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> its
+<code class="docutils literal notranslate"><span class="pre">SHGT</span></code>, and <code class="docutils literal notranslate"><span class="pre">dens</span></code> is computed from <code class="docutils literal notranslate"><span class="pre">PRES</span></code>, <code class="docutils literal notranslate"><span class="pre">TEMP</span></code>, and <code class="docutils literal notranslate"><span class="pre">SPHU</span></code>.
+Values are interpolated across the grid and between levels by arlmet, and
+in time between the two met times around each particle’s. A particle
+below the met’s lowest level (8 to 9 m above ground for HRRR) gets NaN.</p>
+<p>These are the met’s values, not HYSPLIT’s. On two 6-hour HRRR runs from
+Salt Lake City (<code class="docutils literal notranslate"><span class="pre">tests/integration/test_sample_met.py</span></code>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">zsfc</span></code> matches to a few meters.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mlht</span></code> matches HYSPLIT’s with <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">0</span></code>, floored at <code class="docutils literal notranslate"><span class="pre">kmix0</span></code>,
+to a median of 16 to 30 m. The default, <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code>, finds a
+different mixed layer from the profile.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pres</span></code> matches to 0.3 hPa in the lowest 100 m, then reads high: about
+1 hPa at 100 to 500 m, 6 to 8 hPa at 1 to 2 km, and over 20 hPa above
+2 km. HYSPLIT finds the heights of HRRR’s levels from its <code class="docutils literal notranslate"><span class="pre">PRES</span></code>
+field; arlmet finds them from the file’s nominal sigma levels.
+<code class="docutils literal notranslate"><span class="pre">dens</span></code> follows <code class="docutils literal notranslate"><span class="pre">pres</span></code>, and is 0.1 to 0.6 % higher near the ground.</p></li>
+</ul>
+</section>
 <section id="where-hysplit-reads-the-files">
 <h2>Where HYSPLIT reads the files<a class="headerlink" href="#where-hysplit-reads-the-files" title="Link to this heading">#</a></h2>
 <p>HYSPLIT reads the files where they are. PYSTILT does not change or copy
@@ -893,6 +926,7 @@ crop.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#era5">ERA5</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cropping-to-your-region">Cropping to your region</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#which-weather-a-run-records">Which weather a run records</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#met-at-particle-positions">Met at particle positions</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-hysplit-reads-the-files">Where HYSPLIT reads the files</a></li>
 </ul>
   </nav></div>
