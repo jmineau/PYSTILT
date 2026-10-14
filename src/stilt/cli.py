@@ -6,6 +6,7 @@ prints a short summary. Examples::
 
     stilt init                        # start a project in the current directory
     stilt init ./my_project           # start a project in ./my_project
+    stilt check                       # list what would stop a run, before any run
     stilt run                         # run, and wait until done
     stilt run ./my_project --no-skip  # run every simulation again
     stilt run --backend slurm         # run as a Slurm job array, and wait
@@ -16,9 +17,10 @@ prints a short summary. Examples::
 
 ``stilt run`` exits with 0 when every simulation it ran is complete, 1 when
 some failed, and 3 when some did not finish because the run was
-interrupted (Ctrl-C, or SIGTERM from a scheduler). Every command exits with
-2 when its command line is wrong: an unknown option, a bad value, or a
-directory that is not a project.
+interrupted (Ctrl-C, or SIGTERM from a scheduler). ``stilt check`` exits
+with 0 when it finds nothing and 1 when it lists anything. Every command
+exits with 2 when its command line is wrong: an unknown option, a bad value,
+or a directory that is not a project.
 """
 
 from __future__ import annotations
@@ -133,6 +135,34 @@ def init(project: Path = _NEW_PROJECT_ARG) -> None:
     typer.echo("  config.yaml    edit the met directory and footprint settings")
     typer.echo("  receptors.csv  add receptor times and locations, one per line:")
     typer.echo("                  2023-01-01 12:00:00,-111.85,40.77,5")
+
+
+#: Rows of each check ``stilt check`` prints; ``project.check()`` has them all.
+_CHECK_ROWS = 10
+
+
+@app.command()
+def check(project: str | None = _PROJECT_ARG) -> None:
+    """
+    List what would stop a project's runs, before any run.
+
+    For each variant, checks that the met's directory exists and holds ARL
+    files, that every met file each receptor's run needs is there (naming
+    the hours), that each receptor is inside the met's crop box and the
+    footprint grid, and that an averaging-kernel table matches the
+    receptors. Nothing is run or downloaded. It looks for files, not inside
+    them: a run that passes can still fail as MET_COVERAGE, when a met file
+    is damaged or cut short, or the receptor is outside the files' domain.
+    Exits with 0 when it finds nothing, 1 when it lists anything, and 2 when
+    the command line is wrong or the project's files are invalid.
+    """
+    opened = Project(_resolve_project(project))
+    try:
+        problems = opened.check()
+    except ValueError as error:
+        _fail(str(error))
+    _print_check(opened, problems)
+    raise typer.Exit(code=EXIT_FAILED if len(problems) else EXIT_COMPLETE)
 
 
 _BACKEND = typer.Option(
@@ -488,6 +518,44 @@ def _status_data(project: Project) -> dict[str, Any]:
             for row in folders.to_dict("records")
         ],
     }
+
+
+def _print_check(project: Project, problems: pd.DataFrame) -> None:
+    """
+    Print the receptors and variants checked, then the problems found as a table.
+
+    The first :data:`_CHECK_ROWS` rows of each check are shown, with a count
+    of the rest.
+    """
+    typer.echo(f"Project: {project.directory}  receptors={len(project.receptors)}")
+    variants = ", ".join(
+        f"{name} (met {v.met}, {'footprint' if v.footprint is not None else 'particles only'})"
+        for name, v in project.variants.items()
+    )
+    typer.echo(f"Variants: {variants}")
+    if problems.empty:
+        typer.echo("No problems found.")
+        return
+    lines: list[tuple[str, str, str, str]] = []
+    for name, rows in problems.groupby("check", sort=False):
+        for row in rows.head(_CHECK_ROWS).itertuples():
+            receptor = "" if pd.isna(row.receptor) else str(row.receptor)
+            lines.append((str(name), str(row.variant), receptor, str(row.message)))
+        if len(rows) > _CHECK_ROWS:
+            more = (
+                f"... {len(rows) - _CHECK_ROWS} more (project.check() lists them all)"
+            )
+            lines.append((str(name), "", "", more))
+    header = ("check", "variant", "receptor", "message")
+    widths = [max(len(line[i]) for line in [header, *lines]) for i in range(3)]
+    typer.echo()
+    for line in [header, *lines]:
+        cells = [f"{t:<{w}}" for t, w in zip(line[:3], widths, strict=True)]
+        typer.echo("  ".join([*cells, line[3]]).rstrip())
+    counts = problems.groupby("check", sort=False).size()
+    listed = ", ".join(f"{name} {n}" for name, n in counts.items())
+    noun = "problem" if len(problems) == 1 else "problems"
+    typer.echo(f"\nFound {len(problems)} {noun}: {listed}")
 
 
 def _print_folders(project: Project) -> None:
