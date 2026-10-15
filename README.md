@@ -245,13 +245,13 @@ and the reason. The simulation counts as finished, and `project.footprints()` li
 PYSTILT footprints match the [STILT-R](https://github.com/uataq/stilt) footprints to a relative
 tolerance of 1e-7 in every grid cell. The test suite checks this against a pinned STILT-R
 commit. The NetCDF files are laid out differently from STILT-R's, so read them as standard
-CF-1.8 NetCDF. The [STILT-R parity section](https://jmineau.github.io/PYSTILT/development.html#stilt-r-parity)
+CF-1.8 NetCDF. The [STILT-R parity page](https://jmineau.github.io/PYSTILT/development/stilt_r_parity.html)
 of the development docs has the details.
 
 ## Roadmap
 
 What is implemented and what is planned is on the
-[roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) page of the documentation.
+[roadmap](https://jmineau.github.io/PYSTILT/development/roadmap.html) page of the documentation.
 
 ## Use of AI coding agents
 

@@ -343,9 +343,9 @@ The units
    sums the hours into one layer.
 
 PYSTILT's footprints match STILT-R's to a relative 10⁻⁷ per cell, which
-the fidelity tests check (:doc:`../development`). If yours differ from a STILT-R
+the fidelity tests check (:doc:`../development/stilt_r_parity`). If yours differ from a STILT-R
 run of the same receptor, compare the settings first: STILT-R's names are
-in :doc:`../migration/stilt_r`.
+in :doc:`migration/stilt_r`.
 
 Why the output has separate trees
 ---------------------------------

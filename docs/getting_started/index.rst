@@ -10,8 +10,8 @@ If you are new to PYSTILT, read these pages in order.
 The :doc:`glossary` defines STILT's terms, such as receptor, footprint,
 ``numpar``, and ARL. Keep it open in another tab.
 
-Already know STILT-R? Start with :doc:`../migration/stilt_r`, then come back
-to the quickstart.
+Already know another STILT, such as STILT-R or X-STILT? Start with
+:doc:`../guides/migration/index`, then come back to the quickstart.
 
 .. toctree::
    :maxdepth: 1
