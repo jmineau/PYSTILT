@@ -19,8 +19,8 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt import ColumnReceptor, PointReceptor, calc_footprint
-from stilt.migration import _receptor, read_stilt_r
+from stilt import ColumnReceptor, MultiPointReceptor, PointReceptor, calc_footprint
+from stilt.migration import _axis, _particles, _receptor, read_stilt_r
 
 SAMPLE = Path(__file__).parent / "fixtures" / "stilt_r_by_id"
 POINT = "201507050000_-111.85_40.77_5"
@@ -66,6 +66,51 @@ def test_receptor_coordinates_are_the_15_digits_hysplit_ran():
     }
     receptor = _receptor(stored, Path("x_traj.rds"))
     assert receptor.id == "202306252100_-112.043938842752_40.7454482983855_5"
+
+
+def test_slant_points_stored_as_lists_are_a_multipoint_receptor():
+    # X-STILT's slant columns keep lati and long as R lists of vectors.
+    stored = {
+        "run_time": pd.DatetimeIndex(["2020-07-01 20:00"]),
+        "long": [np.array([-112.0, -112.01, -112.02])],
+        "lati": [np.array([40.5, 40.51, 40.52])],
+        "zagl": np.array([100.0, 1000.0, 2000.0]),
+    }
+    receptor = _receptor(stored, Path("x_traj.rds"))
+    assert isinstance(receptor, MultiPointReceptor)
+    assert receptor.longitudes == (-112.0, -112.01, -112.02)
+    assert receptor.altitudes == (100.0, 1000.0, 2000.0)
+
+
+def test_a_receptor_that_is_not_stilt_r_s_raises():
+    path = Path("x_traj.rds")
+    with pytest.raises(ValueError, match="has no long, zagl"):
+        _receptor({"run_time": pd.DatetimeIndex(["2020-07-01"]), "lati": 40.5}, path)
+    stored = {
+        "run_time": pd.DatetimeIndex(["2020-07-01"]),
+        "long": np.array([-112.0, -112.1]),
+        "lati": np.array([40.5, 40.6, 40.7]),
+        "zagl": np.array([5.0]),
+    }
+    with pytest.raises(ValueError, match="have 2, 3, and 1 values"):
+        _receptor(stored, path)
+
+
+def test_particles_without_a_schema_column_raise():
+    receptor, particles, _ = _read()[POINT]
+    stilt_r = particles.drop(columns=["time", "zagl"]).rename(
+        columns={"particle": "indx", "age": "time", "lon": "long", "lat": "lati"}
+    )
+    with pytest.raises(ValueError, match="x_traj.rds: .*'zagl'"):
+        _particles(stilt_r, receptor, Path("x_traj.rds"))
+
+
+def test_an_rds_without_particles_raises(copy):
+    import rdata
+
+    rdata.write_rds(copy / POINT / f"{POINT}_traj.rds", {"file": "x", "params": {}})
+    with pytest.raises(ValueError, match="not a STILT-R trajectory file"):
+        _read(copy)
 
 
 def test_column_receptor_spans_the_heights_and_keeps_seconds():
@@ -196,6 +241,24 @@ def test_a_projected_footprint_raises(copy):
     projected.to_netcdf(path)
     with pytest.raises(ValueError, match="longitude/latitude grid"):
         _read(copy)
+
+
+def test_uneven_footprint_cells_raise(copy):
+    path = copy / POINT / f"{POINT}_foot.nc"
+    with xr.open_dataset(path, decode_times=False) as ds:
+        uneven = ds.load()
+    lon = uneven["lon"].to_numpy().copy()
+    lon[3] += 0.005
+    uneven = uneven.assign_coords(lon=lon)
+    path.unlink()
+    uneven.to_netcdf(path)
+    with pytest.raises(ValueError, match="not evenly spaced"):
+        _read(copy)
+
+
+def test_an_axis_of_one_cell_raises():
+    with pytest.raises(ValueError, match="two lon cells"):
+        _axis(np.array([-112.0]), "lon", Path("x_foot.nc"))
 
 
 def test_a_folder_that_is_not_by_id_raises(tmp_path):

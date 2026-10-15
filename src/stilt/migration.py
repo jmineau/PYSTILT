@@ -190,7 +190,9 @@ def _read_rds(path: Path, rdata: Any) -> dict[str, Any]:
         "POSIXct": _posixct,
     }
     output = rdata.read_rds(path, constructor_dict=constructors)
-    if not isinstance(output, Mapping) or "particle" not in output:
+    if not isinstance(output, Mapping) or not isinstance(
+        output.get("particle"), pd.DataFrame
+    ):
         raise ValueError(
             f"{path} is not a STILT-R trajectory file: it holds no particle table."
         )
@@ -215,15 +217,10 @@ def _values(value: Any) -> np.ndarray:
 
 def _receptor(stored: Any, path: Path) -> Receptor:
     """Return the receptor a ``_traj.rds`` file records (``run_time``, ``long``, ``lati``, ``zagl``)."""
-    if not isinstance(stored, Mapping):
-        raise ValueError(f"{path} records no receptor.")
-    stored = {str(k): v for k, v in stored.items()}
+    stored = {str(k): v for k, v in (stored or {}).items()}
     missing = [k for k in ("run_time", "long", "lati", "zagl") if k not in stored]
     if missing:
         raise ValueError(f"{path}: the receptor has no {', '.join(missing)}.")
-    times = pd.DatetimeIndex(stored["run_time"])
-    if len(times) == 0 or (times != times[0]).any():
-        raise ValueError(f"{path}: the receptor needs one run_time, not {times}.")
     lon, lat, zagl = (_values(stored[k]) for k in ("long", "lati", "zagl"))
     n = max(lon.size, lat.size, zagl.size)
     try:
@@ -233,7 +230,8 @@ def _receptor(stored: Any, path: Path) -> Receptor:
             f"{path}: the receptor's long, lati, and zagl have {lon.size}, "
             f"{lat.size}, and {zagl.size} values."
         ) from None
-    time = times[0]
+    # STILT-R releases every point at the first run_time (write_control).
+    time = pd.DatetimeIndex(stored["run_time"])[0]
     if n > 1 and np.unique(lon).size == 1 and np.unique(lat).size == 1:
         # STILT-R releases a column's particles evenly from the lowest
         # height to the highest (its xhgt), however many heights it is given.
@@ -247,10 +245,8 @@ def _receptor(stored: Any, path: Path) -> Receptor:
     return Receptor.from_points(time, zip(lon, lat, zagl, strict=True))
 
 
-def _particles(stored: Any, receptor: Receptor, path: Path) -> pd.DataFrame:
+def _particles(stored: pd.DataFrame, receptor: Receptor, path: Path) -> pd.DataFrame:
     """Return STILT-R's particle table with PYSTILT's column names and a UTC ``time`` column."""
-    if not isinstance(stored, pd.DataFrame):
-        raise ValueError(f"{path}: the particles are not a table.")
     particles = stored.rename(columns=_COLUMNS).reset_index(drop=True)
     try:
         check_particles(particles)
