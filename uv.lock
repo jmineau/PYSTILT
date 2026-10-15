@@ -3075,6 +3075,7 @@ complete = [
     { name = "geopandas" },
     { name = "h3" },
     { name = "matplotlib" },
+    { name = "rdata" },
     { name = "sparse" },
 ]
 download = [
@@ -3087,6 +3088,9 @@ geometry = [
 ]
 sparse = [
     { name = "sparse" },
+]
+stilt-r = [
+    { name = "rdata" },
 ]
 visualization = [
     { name = "cartopy" },
@@ -3144,8 +3148,10 @@ requires-dist = [
     { name = "pystilt", extras = ["download"], marker = "extra == 'complete'" },
     { name = "pystilt", extras = ["geometry"], marker = "extra == 'complete'" },
     { name = "pystilt", extras = ["sparse"], marker = "extra == 'complete'" },
+    { name = "pystilt", extras = ["stilt-r"], marker = "extra == 'complete'" },
     { name = "pystilt", extras = ["visualization"], marker = "extra == 'complete'" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "rdata", marker = "extra == 'stilt-r'", specifier = ">=1.0" },
     { name = "scipy", specifier = ">=1.10" },
     { name = "shapely", specifier = ">=2.0" },
     { name = "sparse", marker = "extra == 'sparse'", specifier = ">=0.15" },
@@ -3153,7 +3159,7 @@ requires-dist = [
     { name = "universal-pathlib", specifier = ">=0.2" },
     { name = "xarray", specifier = ">=2023.6" },
 ]
-provides-extras = ["geometry", "visualization", "download", "sparse", "complete"]
+provides-extras = ["geometry", "visualization", "download", "sparse", "stilt-r", "complete"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -3337,6 +3343,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/da/92/1446574745d74df0c92e6aa4a7b0b3130706a4142b2d1a5869f2eaa423c6/pyyaml-6.0.3-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:16249ee61e95f858e83976573de0f5b2893b3677ba71c9dd36b9cf8be9ac6d65", size = 829923, upload-time = "2025-09-25T21:32:54.537Z" },
     { url = "https://files.pythonhosted.org/packages/f0/7a/1c7270340330e575b92f397352af856a8c06f230aa3e76f86b39d01b416a/pyyaml-6.0.3-cp314-cp314t-win_amd64.whl", hash = "sha256:4ad1906908f2f5ae4e5a8ddfce73c320c2a1429ec52eafd27138b7f1cbe341c9", size = 174062, upload-time = "2025-09-25T21:32:55.767Z" },
     { url = "https://files.pythonhosted.org/packages/f1/12/de94a39c2ef588c7e6455cfbe7343d3b2dc9d6b6b2f40c4c6565744c873d/pyyaml-6.0.3-cp314-cp314t-win_arm64.whl", hash = "sha256:ebc55a14a21cb14062aa4162f906cd962b28e2e9ea38f9b4391244cd8de4ae0b", size = 149341, upload-time = "2025-09-25T21:32:56.828Z" },
+]
+
+[[package]]
+name = "rdata"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "typing-extensions" },
+    { name = "xarray" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c3/6f/4bf8fc3981569b0fb32815db86aef880b233305353a48d2c1770a29fe9cb/rdata-1.1.0.tar.gz", hash = "sha256:37c8b19e8be82d7d7acb36c6623bfeb7ab1d95d9380ec00a6c063f88b1f50e3a", size = 106564, upload-time = "2026-06-11T18:45:40.187Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/29/ef/acc15553b522a3710837520a76556958d533753d27e5ead18a8600159398/rdata-1.1.0-py3-none-any.whl", hash = "sha256:12efb7597725d6db6cc78d84eb522a9634008f8fce1c2733b7fd42b9013bc41f", size = 287685, upload-time = "2026-06-11T18:45:38.837Z" },
 ]
 
 [[package]]

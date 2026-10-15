@@ -85,6 +85,11 @@ the ones that have an equivalent.
        :func:`stilt.observations.plume_background` on forward runs
        (:doc:`/guides/plume_background`)
 
+Runs you already have in X-STILT's ``out/by-id`` folder are read with
+:func:`stilt.migration.read_stilt_r` (:doc:`stilt_r`). X-STILT weights the
+footprint by the averaging kernel and pressure weighting, but saves the
+particles before it does, so the particles read are unweighted.
+
 Moving a workflow over
 ----------------------
 

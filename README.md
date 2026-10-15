@@ -28,8 +28,8 @@ agreement with STILT-R, and runs on a local machine and on Slurm.
 pip install pystilt
 ```
 
-For plotting, projected grids, aggregation over shapefiles, and downloading meteorology from
-NOAA, install everything:
+For plotting, projected grids, aggregation over shapefiles, downloading meteorology from
+NOAA, and reading STILT-R output, install everything:
 
 ```bash
 pip install "pystilt[complete]"
@@ -239,6 +239,16 @@ sampled = sample_met(sim.particles.drop(columns="dens"), met_files, columns=["de
 If a simulation's particles never reach the grid, PYSTILT writes a footprint file with no cells
 and the reason. The simulation counts as finished, and `project.footprints()` lists it in
 `attrs["empty"]`.
+
+Runs made with STILT-R or X-STILT are read from their `out/by-id` folder, one simulation at a
+time, as a receptor, a particle table, and a footprint (`pip install "pystilt[stilt-r]"`):
+
+```python
+from stilt.migration import read_stilt_r
+
+for receptor, particles, foot in read_stilt_r("my_project/out/by-id"):
+    print(receptor.id, len(particles), foot is not None)
+```
 
 ## STILT-R parity
 
