@@ -36,7 +36,7 @@ The workflow side by side
    * - Outputs
      - ``out/by-id/<id>/``, ``_traj.rds`` and ``_foot.nc``
      - the output directory: ``particles/`` and ``footprints/`` Parquet files
-       by variant settings and day (:doc:`../guides/projects`)
+       by variant settings and day (:doc:`../projects`)
 
 ``run_stilt.r`` settings in PYSTILT
 -----------------------------------
@@ -85,10 +85,10 @@ The workflow side by side
    * - wind and mixing-depth error settings (``siguverr``, ``tluverr``,
        ``sigzierr``, …)
      - same names, usually on a variant of their own
-       (:doc:`../guides/transport_error`)
+       (:doc:`../transport_error`)
    * - ``n_nodes`` and ``n_cores`` with Slurm
      - ``execution: backend: slurm``, with ``n_workers`` array tasks of
-       ``cpus`` CPUs each (:doc:`../guides/slurm`)
+       ``cpus`` CPUs each (:doc:`../slurm`)
    * - ``slurm_options``
      - ``time``, ``mem``, ``partition``, ``account``, and ``qos`` under
        ``execution``, and any other ``sbatch`` option under
@@ -96,7 +96,7 @@ The workflow side by side
    * - ``n_cores`` without Slurm
      - ``execution: cpus``
    * - ``before_footprint``
-     - ``transforms`` (:doc:`../guides/transforms`)
+     - ``transforms`` (:doc:`../transforms`)
    * - ``before_trajec``
      - no equivalent
    * - ``run_trajec``, ``run_foot``
@@ -104,7 +104,7 @@ The workflow side by side
        ``stilt run --no-skip`` reruns everything. To make a second
        footprint from the same particles, add a variant that changes only
        footprint settings; it shares the particles
-       (:doc:`../guides/projects`).
+       (:doc:`../projects`).
    * - ``simulation_id`` (run a subset)
      - ``project.run(receptors=[...])`` with the receptor ids you want,
        or ``stilt run --receptors ids.txt``
@@ -122,7 +122,7 @@ Other differences
 
 A project runs its receptors under named *variants*. A variant is a
 met plus any settings that differ from the defaults (see
-:doc:`../guides/projects`). One project can run the same receptors with
+:doc:`../projects`). One project can run the same receptors with
 several mets, a range of ``ziscale`` values, or a second
 footprint grid. Each variant gets its own folder.
 
@@ -130,7 +130,7 @@ The transport error run is a variant too. STILT-R runs HYSPLIT a second time
 with the wind-error settings and stores both sets of particles in one
 ``_traj.rds``. In PYSTILT that second run is its own variant, with its own
 folder and log, and it can repeat several times
-(:doc:`../guides/transport_error`).
+(:doc:`../transport_error`).
 
 ``stilt run`` skips simulations whose outputs already exist. After a failure,
 run it again and only the missing simulations run. Adding a variant runs
@@ -140,7 +140,7 @@ PYSTILT never overwrites a result. STILT-R deletes ``out/by-id`` and starts
 over whenever ``run_trajec = TRUE``. In PYSTILT a variant's results live in
 :term:`settings folders <settings folder>`, so changed settings run into a
 new folder and the old one stays until you delete it (see
-:doc:`../guides/projects`).
+:doc:`../projects`).
 
 Receptors
 ---------
@@ -160,7 +160,7 @@ in minutes must use ``age``.
 
 STILT-R makes a column receptor from a row with several ``zagl`` values. In
 ``receptors.csv``, a column or multipoint receptor is several rows that share
-an ``r_idx`` value. See :doc:`../guides/receptors`.
+an ``r_idx`` value. See :doc:`../receptors`.
 
 Outputs
 -------
@@ -175,7 +175,7 @@ keeps the receptor and the settings in it.
 A point receptor's id has the same form as STILT-R's simulation ID, and
 names its files in each variant's settings folder:
 ``date=2015-07-05/201507050000_-111.8472_40.7665_21.parquet`` (see
-:doc:`../guides/projects`). A column receptor's id adds its bottom and top
+:doc:`../projects`). A column receptor's id adds its bottom and top
 after the ``X``.
 
 Reading STILT-R output

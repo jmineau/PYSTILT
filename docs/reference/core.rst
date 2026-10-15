@@ -114,7 +114,7 @@ Output of STILT-R and X-STILT
 
 :mod:`stilt.migration` reads the ``out/by-id`` folder of a STILT-R or
 X-STILT project as receptors, particle tables, and footprints
-(:doc:`/migration/stilt_r`).
+(:doc:`/guides/migration/stilt_r`).
 
 .. autosummary::
    :toctree: _api

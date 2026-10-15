@@ -20,7 +20,7 @@ laptop or tens of thousands on an HPC cluster.
 .. note::
 
    PYSTILT is alpha software. Names and options may still change between
-   releases. The :doc:`roadmap` shows what is settled.
+   releases. The :doc:`development/roadmap` shows what is settled.
 
 .. grid:: 1 1 2 2
    :gutter: 2
@@ -53,11 +53,12 @@ laptop or tens of thousands on an HPC cluster.
       Complete examples. Run a week of tower footprints, turn footprints
       into modeled concentrations, and scale up on a Slurm cluster.
 
-   .. grid-item-card:: :fas:`right-left` Coming from STILT-R?
-      :link: migration/stilt_r
+   .. grid-item-card:: :fas:`right-left` Coming from another STILT?
+      :link: guides/migration/index
       :link-type: doc
 
-      Where each ``run_stilt.r`` setting lives in PYSTILT.
+      Where the settings and steps of STILT-R, X-STILT, stiltctl, and Jena
+      STILT are in PYSTILT.
 
    .. grid-item-card:: :fas:`code` API reference
       :link: reference/index
@@ -72,8 +73,5 @@ laptop or tens of thousands on an HPC cluster.
    getting_started/index
    tutorials/index
    guides/index
-   migration/index
    reference/index
-   advanced/index
-   roadmap
-   development
+   development/index

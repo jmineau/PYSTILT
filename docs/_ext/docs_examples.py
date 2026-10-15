@@ -44,7 +44,7 @@ def met() -> dict:
     if not directory.is_dir():
         raise FileNotFoundError(
             f"{directory} is missing. The docs run on the met files the tests "
-            "cache: see 'Examples in the docs' in docs/development.rst."
+            "cache: see 'Examples in the docs' in docs/development/index.rst."
         )
     return {"directory": str(directory), "file_format": "%Y%m%d_%H", "file_tres": "6h"}
 

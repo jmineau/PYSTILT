@@ -41,7 +41,7 @@ architecture and the rules the code relies on.
 ## Writing documentation
 
 Docs and docstrings follow the voice described under "Writing
-documentation" in [docs/development.rst](docs/development.rst), which also
+documentation" in [docs/development/index.rst](docs/development/index.rst), which also
 explains how the examples in the docs run. Build the docs with
 `just build-docs` and check that your change adds no new warnings. The
 Documentation workflow builds them on every pull request and publishes

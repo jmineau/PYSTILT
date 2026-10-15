@@ -47,7 +47,7 @@ How the footprints differ
      - Hourly: layer ``k`` holds the steps from ``k`` to ``k + 1`` hours
        back.
      - Hourly, the same hours: the first hour back is layer -1
-       (:doc:`../reference/layout`).
+       (:doc:`../../reference/layout`).
    * - Particle count
      - The total is divided by the particles left after the ``dmass``
        check.
@@ -59,7 +59,7 @@ How the footprints differ
      - ECMWF short-term forecasts every 3 hours at about 35 km, in ARL
        format.
      - Any ARL meteorology, ERA5 included once converted
-       (:doc:`../guides/meteorology`).
+       (:doc:`../meteorology`).
 
 The settings that come closest
 ------------------------------
@@ -83,5 +83,5 @@ near-field correction, and use the same grid:
 The coarsening grids, the ``dmass`` weighting, and the western-edge rule
 have no PYSTILT setting. Footprints from the two will not match cell by
 cell, most of all far from the receptor, where Jena STILT's grids are
-coarsest. Compare totals over regions (:doc:`../guides/aggregation`), or
+coarsest. Compare totals over regions (:doc:`../aggregation`), or
 the modeled mole fractions, rather than single cells.
