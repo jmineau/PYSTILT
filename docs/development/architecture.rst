@@ -2,9 +2,11 @@ Architecture
 ============
 
 How the code is organized, how a run goes from a project to result files,
-and the implementation details that are easy to break. This page is for
-contributors and for anyone building on PYSTILT. ``AGENTS.md`` at the
-repository root has the short version and the rules a change must keep.
+how PYSTILT knows which work is finished, and the implementation details that
+are easy to break. This page is for contributors, for anyone building on
+PYSTILT, and for anyone running at scale or sharing an output directory
+between projects. ``AGENTS.md`` at the repository root has the short version
+and the rules a change must keep.
 
 The design in brief
 -------------------
@@ -17,9 +19,7 @@ receptors crossed with the named variants in ``config.yaml``, which must
 declare at least one.
 
 Each variant resolves into a ``Variant`` (``stilt.config``) with two records
-of settings (``stilt.identity``). Its run settings are hashed, and the hash
-identifies a run and names its particles folder. Its optional footprint
-settings, hashed together with the run settings, name its footprints folder.
+of settings (``stilt.identity``), and their hashes name its folders.
 Variants with equal run settings share one run per receptor and differ only
 in the footprint made from it. Changing a setting never overwrites a result:
 it hashes to a new folder. :doc:`../reference/layout` describes the files.
@@ -28,7 +28,7 @@ Whether a simulation is complete is decided by the files in the output
 directory, by ``stilt.output.completed``: the particles exist, and the
 footprint when the variant has a grid. ``Output.complete``,
 ``Simulation.is_complete``, and ``Project.status`` all apply it.
-:doc:`output_state` explains the consequences.
+:ref:`finished-work` explains the consequences.
 
 ``Project`` reads, and the workers write results. ``Project(path)`` opens a
 project directory: its config, its receptors, the simulations they define,
@@ -180,20 +180,38 @@ run a project this way.
 
 The unit of work is a receptor. ``run_receptor`` runs the transport model
 once per distinct run-settings hash, then writes the footprint of every
-variant that shares those particles. A batched model (``batched = True``,
+variant that shares those particles. A worker handles the variants of its
+receptor in config order. A variant whose particles are missing runs the
+model, the variants that share those particles reuse them, and their
+footprints are remade if the particles were replaced in the same call. A batched model (``batched = True``,
 with ``run_many``) is the exception: ``run_receptors`` first runs each of its
 variant groups once for all the receptors that need particles, then the
 per-receptor loop does the rest. HYSPLIT is not batched.
 
-Each run's workdir is a new path in the compute root (``_new_workdir`` in the
-worker: the receptor id, the variant, the realization, and a random part), so
-projects can share a compute root and two runs never clear each other's
-files. The compute root comes from ``--compute-root``, the
-``PYSTILT_COMPUTE_ROOT`` environment variable, or ``$TMPDIR/pystilt/<project>``
-(``resolve_compute_root`` in the runner; ``Project`` does not read it). A
-workdir is removed after the run. A failed run's workdir, or every one with
-``keep_workdir``, is first copied to the output's ``scratch/`` folder,
-replacing an earlier copy for the same simulation.
+HYSPLIT has to run in a local folder that holds its input files, the run's
+workdir. Each run's workdir is a new path in the compute root
+(``_new_workdir`` in the worker: the receptor id, the variant, the
+realization in an ensemble, and a random part, as in
+``202301011200_-111.85_40.77_5_hrrr_3f9a1c2e``), so projects can share a
+compute root and two runs never clear each other's files. A simulation that
+runs twice at once keeps its own files in each. The compute root comes from
+``--compute-root``, the ``PYSTILT_COMPUTE_ROOT`` environment variable, or
+``$TMPDIR/pystilt/<project>`` (``resolve_compute_root`` in the runner;
+``Project`` does not read it). It changes where PYSTILT runs and never what it
+calculates, so it is not in ``config.yaml``.
+
+After a successful run the particle file and the log are written to the output
+directory and the workdir is removed. A failed run's workdir, or every one
+with ``keep_workdir: true`` under ``execution:`` in ``config.yaml``, is first
+copied to the output's ``scratch/`` folder, replacing an earlier copy for the
+same simulation, so CONTROL, SETUP.CFG, and MESSAGE survive the job. A run
+killed outright (``SIGKILL``, or a node that fails) cannot clean up, and its
+workdir stays in the compute root until that folder is cleaned.
+
+Files are written through a temporary name and renamed into place, so a reader
+never sees a partial file, and two workers that run the same receptor by
+accident produce equivalent files with the last rename winning. Each of them
+runs in its own workdir. No lock is needed.
 
 Slurm tasks rebuild the model from the project in another process on another
 node, so anything a worker needs must be in the project or the output
@@ -204,6 +222,74 @@ soundings, ``stilt.observations`` helpers thin and group it, and each row
 becomes a receptor (``receptors_from_soundings``, which also gives the kernel
 table, kept with ``project.add_table``). Then ``add_receptors`` and a run go
 as usual. Observation logic stays out of ``project.py``.
+
+.. _finished-work:
+
+How PYSTILT tracks finished work
+--------------------------------
+
+This section explains what happens behind ``stilt status`` and reruns. You
+don't need it to use PYSTILT, but it helps when running at scale, across
+machines, or with several projects sharing one output directory.
+
+The result files are the record
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+PYSTILT keeps no separate list of which simulations have run. A simulation
+is complete when the result files its variant makes exist in the output
+directory (:attr:`stilt.Simulation.is_complete`). Today that is:
+
+- the particle file,
+  ``particles/settings=<variant>-<hash>/date=<day>/<receptor>.parquet``
+- the footprint file in the variant's ``footprints/`` folder, when the
+  variant has a grid. A footprint that no particle reached is a file with
+  no rows, marked ``stilt:empty: true`` in its metadata, and it counts.
+
+Each result has one expected path, so checking one simulation is a file
+lookup. For many simulations (``stilt status``, or planning a run) PYSTILT
+lists the date folders the selection falls in, once each, and reads the
+answer for every receptor from that. That keeps a project of a hundred
+thousand receptors quick to check, and a few simulations of it cheap.
+A notebook, a Slurm task, and another project sharing the directory all see
+the same files, so they agree on what's finished without talking to each
+other. Deleting a result file makes that simulation unfinished again.
+
+A project's simulations are its receptors (``receptors.csv``) run under each
+of its variants (``config.yaml``), and ``project.simulations`` is exactly that
+set, one row per simulation. Both files are in the project folder before
+anything runs, so any worker on any machine can open the project from the
+folder alone.
+
+Settings name the folders
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:doc:`../reference/layout` lists what each ``_settings.yaml`` and result
+file holds.
+
+Each variant resolves into two records of settings (:mod:`stilt.identity`).
+Its run settings hold everything that changes the particles: the HYSPLIT
+parameters, the content of the meteorology, and the transport model's
+build. Their hash names the ``particles/`` folder. Its footprint settings
+hold the footprint config, its grid, and the hash of the geometry the grid
+was derived for. Hashed together with the run settings, they name the
+``footprints/`` folder. Each folder holds a ``_settings.yaml`` with the
+settings written out in full.
+
+That is how PYSTILT knows a setting changed: the variant now hashes to a
+folder that does not exist yet, so its receptors run again into it. The old
+folder is untouched. It is also how two variants come to share particles:
+if only their footprint fields differ, their transport settings hash the
+same and they resolve to one ``particles/`` folder.
+
+A folder is found by reading its ``_settings.yaml`` back through the current
+config classes and hashing that, rather than by comparing stored digests.
+So a setting added in a later version, with a default, still matches folders
+written before it existed; a default whose meaning changed does not, which
+is right, because the particles would differ.
+
+``stilt status`` lists the folders no variant of the current config uses.
+PYSTILT never deletes a folder, because another project may share the
+directory; deletion is by hand.
 
 Import layers
 -------------
