@@ -178,6 +178,53 @@ names its files in each variant's settings folder:
 :doc:`../guides/projects`). A column receptor's id adds its bottom and top
 after the ``X``.
 
+Reading STILT-R output
+----------------------
+
+:func:`stilt.migration.read_stilt_r` reads the ``out/by-id`` folder of a
+STILT-R project, so runs you already have work with PYSTILT's tools. It
+reads X-STILT's ``out/by-id`` the same way. It needs the ``stilt-r`` extra,
+which reads R's ``.rds`` files without R:
+
+.. code-block:: bash
+
+   pip install "pystilt[stilt-r]"
+
+Each simulation gives its receptor, its particles, and its footprint, one
+folder at a time:
+
+.. code-block:: python
+
+   from stilt.migration import read_stilt_r
+
+   for receptor, particles, foot in read_stilt_r("my_project/out/by-id"):
+       print(receptor.id, len(particles), foot is not None)
+
+The particles are the table STILT-R saved in ``<id>_traj.rds``, with
+PYSTILT's column names (``indx``, ``time``, ``long``, ``lati``, and ``xhgt``
+become ``particle``, ``age``, ``lon``, ``lat``, and ``release_height``) and a
+``time`` column of UTC times. The footprint is ``<id>_foot.nc`` as a PYSTILT
+footprint, or ``None`` when the folder has none. Both are kept as STILT-R
+made them: the near-field correction STILT-R applied stays in ``foot``, and
+the footprint's values are the file's. To make a footprint on another grid,
+pass the particles to :func:`stilt.calc_footprint`.
+
+Some of what STILT-R saved is not read:
+
+- With transport error, STILT-R saves a second set of particles in the same
+  ``.rds`` (``particle_error``). Only the first set is read.
+- The HYSPLIT settings in the ``.rds`` (``params``) are not returned. The
+  ``.rds`` and ``.nc`` files do not record the STILT-R version, ``n_hours``,
+  or ``smooth_factor``.
+- A footprint on a projected grid (a ``projection`` other than
+  longitude/latitude) raises an error; open it with
+  :func:`xarray.open_dataset`.
+- Other footprint files in a folder, such as X-STILT's footprints at other
+  resolutions, are not read.
+- X-STILT weights ``foot`` by the averaging kernel and pressure weighting
+  just before it makes the footprint, after the ``.rds`` is saved. Its
+  particles are unweighted and its footprint is weighted.
+
 Moving a project over
 ---------------------
 
