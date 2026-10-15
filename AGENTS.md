@@ -192,7 +192,7 @@ format's quirks; never met files or data that is not ours to redistribute.
 A user-facing change updates its guide or reference in `docs/` in the same
 change, and `just build-docs` must pass. Examples run when the docs build, so
 they use synthetic data, a small repository file, a public download, or the
-test met cache, and seed their random numbers (`docs/development/index.rst`). Give
+test met cache, and seed their random numbers (`CONTRIBUTING.md`). Give
 every public property and attribute a docstring, with no colon in the middle
 of its first line (napoleon reads `text: more` as `type: description`).
 
@@ -200,7 +200,7 @@ of its first line (napoleon reads `text: more` as `type: description`).
 scientists who want to run the model and trust the result. Open with what it
 does, then an example. One idea per sentence; no metaphors, selling, or
 filler; American spelling. The full guide, with the habits that read as
-machine-written, is "Writing documentation" in `docs/development/index.rst`. Words:
+machine-written, is "Writing documentation" in `CONTRIBUTING.md`. Words:
 
 | Say (user-facing) | Not |
 |---|---|
