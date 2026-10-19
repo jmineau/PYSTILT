@@ -77,7 +77,7 @@ def _sigterm_as_interrupt():
         signal.signal(signal.SIGTERM, previous)
 
 
-#: The step of a simulation that failed: its particles or its footprint.
+#: The step of a simulation that failed, its particles or its footprint.
 Step = Literal["particles", "footprint"]
 
 #: The output folder each step writes to.

@@ -93,7 +93,7 @@ logger = logging.getLogger(__name__)
 
 #: Underscore-prefixed, so dataset readers skip it.
 SETTINGS_FILE = "_settings.yaml"
-#: A receptor's failure record, under its folder's logs: ``<receptor_id>.failure.yaml``.
+#: The suffix of a receptor's failure record, ``<receptor_id>.failure.yaml``, in its folder's logs.
 FAILURE_SUFFIX = ".failure.yaml"
 HASH_CHARS = 6
 
@@ -351,7 +351,7 @@ class Output:
     """
 
     def __init__(self, path: str | Path | UPath) -> None:
-        #: The output directory: a Path, or a universal path on an object store.
+        #: The output directory, a Path or a universal path on an object store.
         self.directory: Location = location(path)
         # Each folder's settings hash, by kind and folder name. Reading one
         # means reading its _settings.yaml and hashing it again, so each is

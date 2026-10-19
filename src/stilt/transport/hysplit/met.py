@@ -263,7 +263,7 @@ class Met:
     def __init__(self, name: str, config: MetConfig):
         self.name = name
         self.config = config
-        #: ``config.directory``, made absolute: a relative path starts from
+        #: ``config.directory``, made absolute. A relative path starts from
         #: the working directory, and ``~`` and ``$VARIABLES`` are expanded.
         self.directory = absolute(config.directory)
         self._archive: Archive | None = None
