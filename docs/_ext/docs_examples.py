@@ -6,6 +6,10 @@ cropped around Salt Lake. A page that works with a project on disk starts from
 a small sample project, which is built once per docs build (about 40 s) and
 copied into a temporary folder for each page that uses it.
 
+Every run on these pages uses ``krand=2`` and ``seed=42``. HYSPLIT's default,
+``krand=4``, draws the random numbers for its turbulence from the clock, so
+each build would make different particles, numbers, and figures.
+
 A page uses these from a block that is run but not shown (``:suppress:``)::
 
     import docs_examples
@@ -72,6 +76,8 @@ def sample_project() -> Path:
             variants={"hrrr": {}},
             n_hours=-24,
             numpar=200,
+            krand=2,
+            seed=42,
             grid=grid,
         ).run()
         marker.touch()

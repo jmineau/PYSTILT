@@ -106,6 +106,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   copy when it was cut short, and `stilt check` did not report a block that
   had only its copy. Names ending in `.partial` or `.bad` are skipped, as lock
   files and backup copies (`~`) already were.
+- The Getting Started page and the sample project behind the outputs and
+  checking guides run with `krand: 2` and `seed: 42`. HYSPLIT's default,
+  `krand: 4`, draws its random numbers from the clock, so two docs builds of
+  one commit made different numbers and figures. The Getting Started example
+  shows the two settings.
 
 ## [0.1.0a24] - 2026-10-09
 
