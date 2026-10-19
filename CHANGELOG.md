@@ -66,6 +66,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `HNF_PLUME_COLUMNS`, and `stilt.footprint.Geometry` show their own
   description. They showed the docstring of their type ("Built-in immutable
   sequence." for the two tuples).
+- A met file's `.partial` or `.bad` copy is no longer read as a met file
+  ([#232](https://github.com/jmineau/PYSTILT/issues/232)). Files are found by
+  the start of their names, so the copy beside a block (`20240702_00-05_hrrr`
+  and `20240702_00-05_hrrr.partial`, as an HRRR archive can have) was found
+  with it. A run then cropped and handed HYSPLIT both files, or failed on the
+  copy when it was cut short, and `stilt check` did not report a block that
+  had only its copy. Names ending in `.partial` or `.bad` are skipped, as lock
+  files and backup copies (`~`) already were.
 
 ## [0.1.0a24] - 2026-10-09
 

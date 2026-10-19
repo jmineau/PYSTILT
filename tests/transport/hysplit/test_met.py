@@ -756,6 +756,52 @@ def test_files_for_ignores_backup_copies(tmp_path):
     assert [f.name for f in files] == ["20200107_18-23_hrrr"]
 
 
+@pytest.mark.parametrize("ending", [".partial", ".bad"])
+def test_files_for_ignores_a_copy_cut_short_or_set_aside(tmp_path, ending):
+    """A sibling that ends in `.partial` or `.bad` is not the block it sits beside."""
+    block = "20240702_00-05_hrrr"
+    _touch_files(tmp_path, [block, block + ending])
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+
+    files = _run_files(met, dt.datetime(2024, 7, 2, 3), -2)
+
+    assert [f.name for f in files] == [block]
+
+
+def test_files_for_ignores_a_sibling_set_aside_in_a_subfolder(tmp_path):
+    """The HRRR archive keeps blocks in year and month folders, with their `.bad` copies."""
+    block = "20260220_00-05_hrrr"
+    (tmp_path / "2026" / "02").mkdir(parents=True)
+    _touch_files(tmp_path / "2026" / "02", [block, block + ".bad"])
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+
+    files = _run_files(met, dt.datetime(2026, 2, 20, 3), -2)
+
+    assert [f.name for f in files] == [block]
+
+
+def test_a_block_with_only_a_copy_set_aside_is_missing(tmp_path):
+    """The copy does not stand in for the block: the run, and `stilt check`, find it missing."""
+    _touch_files(tmp_path, ["20240702_00-05_hrrr.partial"])
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    window = run_window(dt.datetime(2024, 7, 2, 3), -2)
+
+    with pytest.raises(MeteorologyError, match="No met file") as info:
+        met.files_for(window, hour_after=True)
+    assert info.value.reason == "MET_COVERAGE"
+    assert met.missing_hours(window, hour_after=True) == [
+        pd.Timestamp("2024-07-02 00:00")
+    ]
+
+
+def test_the_source_is_not_read_from_a_copy_set_aside(tmp_path):
+    """The met's product comes from a file `files_for` can return, not from its `.bad` copy."""
+    write_arl_file(tmp_path / "20240702_00-05_hrrr.bad", source="NAM")
+    write_arl_file(tmp_path / "20240702_06-11_hrrr", source="HRRR")
+
+    assert _make_met(tmp_path, "%Y%m%d_%H", "6h").config.source() == "HRRR"
+
+
 def test_downloaded_met_gets_the_next_file_in_the_last_hour_of_a_file(tmp_path):
     """
     A receptor in the last hour of a met file also needs the next file, as for local met.
