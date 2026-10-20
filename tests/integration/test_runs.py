@@ -14,16 +14,21 @@ Skip them:
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from stilt.config import ProjectConfig
+from stilt.exceptions import SimulationError
 from stilt.execution.runner import resolve_compute_root
 from stilt.footprint.targets import Mesh
 from stilt.identity import transport_from_settings
 from stilt.particles import particles_metadata
 from stilt.project import Project
+from stilt.receptors import MultiPointReceptor
+from stilt.transport.hysplit import FailureReason
 from stilt.transport.hysplit.driver import winderrtf
 
 from ..conftest import integration
+from ..fixtures.r_stilt_reference import REFERENCE_TIME
 from .conftest import reference_met
 
 _XYERR = {"siguverr": 2.0, "tluverr": 60.0, "zcoruverr": 500.0, "horcoruverr": 40.0}
@@ -402,6 +407,53 @@ def test_multipoint(tmp_path, wbb_multipoint_receptor, multipoint_config):
     sim = model.simulation(*sid)
     assert sim.has_particles
     assert sim.has_footprint
+
+
+def _forty_points() -> MultiPointReceptor:
+    """Forty locations 0.03 degrees apart, 4 m up: HYSPLIT's maxpar cut left the last one empty (#237)."""
+    lons = -112.4 + 0.03 * np.arange(40)
+    lats = 40.76 + 0.0001 * np.arange(40)
+    return MultiPointReceptor(
+        time=REFERENCE_TIME, longitudes=lons, latitudes=lats, altitudes=[4.0] * 40
+    )
+
+
+@integration
+def test_every_multipoint_location_gets_the_same_particles(tmp_path, met_dir):
+    """With maxpar unset, 1000 particles over 40 locations give each 26; none is cut."""
+    import stilt
+
+    receptor = _forty_points()
+    particles = stilt.run_trajectories(
+        receptor, reference_met(met_dir), workdir=tmp_path, n_hours=-1,
+        numpar=1000, krand=2, seed=42, hnf_plume=False,
+    )  # fmt: skip
+
+    # A particle's first row is a minute after release, much nearer its own
+    # location than the next one (2.5 km away).
+    first = particles.loc[particles.groupby("particle")["age"].idxmax()]
+    lons, lats = np.array(receptor.longitudes), np.array(receptor.latitudes)
+    nearest = np.argmin(
+        (first["lon"].to_numpy()[:, None] - lons) ** 2
+        + (first["lat"].to_numpy()[:, None] - lats) ** 2,
+        axis=1,
+    )
+    counts = np.bincount(nearest, minlength=40)
+    assert counts.tolist() == [26] * 40
+    warning = tmp_path / "WARNING"  # HYSPLIT writes it only with a warning
+    assert not warning.exists() or "exceeding puff limit" not in warning.read_text()
+
+
+@integration
+def test_a_maxpar_that_cuts_a_multipoint_release_short_fails(tmp_path, met_dir):
+    import stilt
+
+    with pytest.raises(SimulationError, match="40 locations") as caught:
+        stilt.run_trajectories(
+            _forty_points(), reference_met(met_dir), workdir=tmp_path, n_hours=-1,
+            numpar=1000, maxpar=1000, krand=2, seed=42, hnf_plume=False,
+        )  # fmt: skip
+    assert caught.value.reason == FailureReason.PARTICLE_LIMIT
 
 
 # ---------------------------------------------------------------------------

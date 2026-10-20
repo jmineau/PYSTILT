@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -22,6 +23,13 @@ _R_HELPERS = Path(__file__).parents[1] / "fixtures" / "r_helpers"
 
 def _scenario_id(s: ReferenceScenario) -> str:
     return s.name
+
+
+def _setup_value(path: Path, name: str) -> str:
+    """Return the value of entry *name* in the SETUP.CFG at *path*."""
+    found = re.search(rf"\b{name}\s*=\s*([^,\s]+)", path.read_text(), re.IGNORECASE)
+    assert found is not None, f"{name} is not in {path}"
+    return found.group(1)
 
 
 def _csv(values: float | tuple[float, ...]) -> str:
@@ -130,6 +138,9 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
             "TRUE",
             str(kmsl),
             *winderr_args,
+            # The MAXPAR PYSTILT gave HYSPLIT, which is above numpar for a
+            # multipoint receptor, so both release the same particles.
+            _setup_value(setup_file, "maxpar"),
         ],
         capture_output=True,
         text=True,

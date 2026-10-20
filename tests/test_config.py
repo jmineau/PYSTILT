@@ -12,10 +12,7 @@ from stilt.footprint.targets import Mesh
 from stilt.identity import footprint_settings, read_footprint_settings
 from stilt.spatial import Grid
 from stilt.transforms import AveragingKernel, FirstOrderLifetime, PressureWeighting
-from stilt.transport.hysplit.driver import (
-    setup_entries,
-    winderrtf,
-)
+from stilt.transport.hysplit.driver import winderrtf
 
 from .fixtures.factories import make_met_config, write_arl_file
 
@@ -980,12 +977,12 @@ def test_maxpar_follows_each_variants_numpar(tmp_path):
         tmp_path, numpar=1000, variants={"hrrr": {}, "np3k": {"numpar": 3000}}
     )
     variants = cfg.resolve()
-    assert setup_entries(variants["hrrr"].transport)["maxpar"] == 1000
-    assert setup_entries(variants["np3k"].transport)["maxpar"] == 3000
-    # A run's identity holds the value HYSPLIT got, so an unset maxpar equals
-    # numpar and a variant that raises numpar is a different run.
-    assert variants["hrrr"].run_settings["maxpar"] == 1000
-    assert variants["np3k"].run_settings["maxpar"] == 3000
+    assert variants["hrrr"].transport.maxpar_for(1) == 1000
+    assert variants["np3k"].transport.maxpar_for(1) == 3000
+    assert variants["np3k"].transport.maxpar_for(40) == 40 * 76
+    # An unset maxpar is recorded unset: what HYSPLIT gets depends on the
+    # receptor's locations.
+    assert variants["hrrr"].run_settings["maxpar"] is None
 
 
 # ---------------------------------------------------------------------------

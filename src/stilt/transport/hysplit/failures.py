@@ -20,6 +20,7 @@ class FailureReason(StrEnum):
     NO_PARTICLE_DATA = "NO_PARTICLE_DATA"
     FORTRAN_RUNTIME_ERROR = "FORTRAN_RUNTIME_ERROR"
     TIMEOUT = "TIMEOUT"
+    PARTICLE_LIMIT = "PARTICLE_LIMIT"
 
 
 #: Phrases HYSPLIT (or the driver) writes to stilt.log or HYSPLIT's WARNING
@@ -39,6 +40,14 @@ FAILURE_PHRASES: dict[str, FailureReason] = {
     "PARTICLE_STILT.DAT does not contain any trajectory data": FailureReason.NO_PARTICLE_DATA,
     "Fortran runtime error": FailureReason.FORTRAN_RUNTIME_ERROR,
 }
+
+
+#: What HYSPLIT writes to its WARNING file when it reaches ``MAXPAR`` while
+#: releasing. Not in :data:`FAILURE_PHRASES`: a release from one location
+#: writes it too (HYSPLIT's rounding asks for one particle over ``numpar``
+#: and keeps ``numpar``), which is harmless. From several locations it means
+#: the last ones got fewer particles or none (``PARTICLE_LIMIT``).
+PARTICLE_LIMIT_PHRASE = "exceeding puff limit"
 
 
 def failure_in(text: str) -> tuple[FailureReason, str] | None:

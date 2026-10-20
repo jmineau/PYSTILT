@@ -108,7 +108,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
 def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
     tmp_path, met_dir
 ):
-    """Nondivisible particle counts still use contiguous blocks in point order."""
+    """Nondivisible particle counts use equal contiguous blocks in point order."""
     receptor = MultiPointReceptor(
         time=dt.datetime(2021, 1, 15, 6, 0),
         longitudes=[-112.0, -111.8, -111.6],
@@ -130,20 +130,14 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
         timeout=120,
     )
 
+    # HYSPLIT gives each point 10 // 3, rounded up to 4, and maxpar leaves
+    # room for all 12, so the last point is not cut to 2 (#237).
     release_rows = _release_time_rows(result)
-    assert release_rows["particle"].tolist() == list(range(1, params.numpar + 1))
-    assert _nearest_release_assignments(release_rows, receptor) == [
-        0,
-        0,
-        0,
-        0,
-        1,
-        1,
-        1,
-        1,
-        2,
-        2,
-    ]
+    assert release_rows["particle"].tolist() == list(range(1, 13))
+    assert (
+        _nearest_release_assignments(release_rows, receptor)
+        == [0] * 4 + [1] * 4 + [2] * 4
+    )
 
 
 @integration
