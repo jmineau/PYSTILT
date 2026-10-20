@@ -283,7 +283,7 @@ class Met:
         ``name~``, which all end in ``~``) are left out.
         """
         found: list[tuple[tuple[str, ...], Path]] = []
-        for root, _, names in os.walk(self.directory):
+        for root, names in _walk(self.directory):
             parts = Path(root).relative_to(self.directory).parts
             for name in names:
                 if ".lock" not in name and not name.endswith("~"):
@@ -755,6 +755,34 @@ def _inspect_file(
             return tuple(met.times), tuple(met.check())
     except ARLFormatError as exc:
         return (), (str(exc),)
+
+
+def _walk(directory: Path) -> Iterator[tuple[str, list[str]]]:
+    """
+    Yield each folder under *directory*, itself first, with the names in it that are not folders.
+
+    Like :func:`os.walk`, it does not go into a symlink to a folder and skips
+    a folder it cannot read. Unlike it, it tells a folder from a file without
+    following symlinks, so it opens no symlink's target: an archive of
+    symlinks, such as one link per met file beside the files in
+    ``year/month`` folders, is listed from its folders alone. A symlink to a
+    folder is listed with the names, and a pattern that matches it finds
+    nothing, since only files are kept (:meth:`Met._matching`).
+    """
+    folders = [str(directory)]
+    while folders:
+        folder = folders.pop(0)
+        names: list[str] = []
+        try:
+            with os.scandir(folder) as entries:
+                for entry in entries:
+                    if entry.is_dir(follow_symlinks=False):
+                        folders.append(entry.path)
+                    else:
+                        names.append(entry.name)
+        except OSError:
+            continue
+        yield folder, names
 
 
 def _arl_candidates(directory: Path) -> Iterator[Path]:

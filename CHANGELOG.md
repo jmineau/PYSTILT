@@ -45,6 +45,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A run finds its met files without opening the target of each symlink in
+  the met's directory. Every run lists the directory, and an archive that
+  keeps a link to each met file beside the files themselves (an HRRR
+  archive of 27,007 names, 15,903 of them links) took 2 to 17 s to list
+  on a network filesystem; it now takes under 1.3 s, and 0.1 s when the
+  listing is cached. The files found are the same.
 - Each run of the transport model gets a new workdir in the compute root,
   named after the receptor id, the variant, and the realization (in an
   ensemble), with a random part at the end. The workdir was
