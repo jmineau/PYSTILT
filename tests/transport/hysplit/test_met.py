@@ -648,15 +648,13 @@ def test_files_for_searches_recursively(tmp_path):
 
 def test_files_for_walks_the_directory_once(tmp_path, monkeypatch):
     """It walked the whole tree once per file pattern (#191)."""
-    import os
-
     from stilt.transport.hysplit import met as met_module
 
     _touch_files(tmp_path, [f"20230101_{h:02d}" for h in range(24)])
     walks = []
-    real_walk = os.walk
+    real_walk = met_module._walk
     monkeypatch.setattr(
-        met_module.os, "walk", lambda top: walks.append(top) or real_walk(top)
+        met_module, "_walk", lambda top: walks.append(top) or real_walk(top)
     )
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
 
@@ -690,6 +688,84 @@ def test_files_for_deduplicates_root_symlink_and_nested_file(tmp_path):
 
     assert len(files) == 1
     assert files[0].name == "20210601_00-05_hrrr"
+
+
+def _linked_archive(root: Path) -> Path:
+    """
+    An archive laid out as the shared HRRR one: files in year/month folders, a link to each at the top.
+
+    Beside them, a link to a missing file and a link to a folder whose name
+    starts like a met file's.
+    """
+    nested = root / "2024" / "06"
+    nested.mkdir(parents=True)
+    for name in ["20240601_00-05_hrrr", "20240601_06-11_hrrr"]:
+        (nested / name).touch()
+        (root / name).symlink_to(Path("2024") / "06" / name)
+    (root / "20240601_12-17_hrrr").symlink_to(Path("2024") / "06" / "gone")
+    (root / "20240601_18-folder").symlink_to(Path("2024"), target_is_directory=True)
+    return nested
+
+
+def test_a_folder_of_links_finds_each_file_once(tmp_path):
+    """A file and the link to it are one file, found where the link points."""
+    nested = _linked_archive(tmp_path)
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+
+    files = met.files_for(("2024-06-01 00:00", "2024-06-01 11:00"))
+
+    assert files == [
+        (nested / "20240601_00-05_hrrr").resolve(),
+        (nested / "20240601_06-11_hrrr").resolve(),
+    ]
+
+
+@pytest.mark.parametrize("hour", [12, 18])
+def test_a_link_to_a_missing_file_or_a_folder_is_no_met_file(tmp_path, hour):
+    _linked_archive(tmp_path)
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+
+    with pytest.raises(MeteorologyError, match=f"named 20240601_{hour}"):
+        met.files_for((f"2024-06-01 {hour}:00", f"2024-06-01 {hour + 1}:00"))
+
+
+def test_the_walk_lists_links_without_following_them(tmp_path):
+    """Links are listed as names, and a link to a folder is not walked into."""
+    from stilt.transport.hysplit.met import _walk
+
+    _linked_archive(tmp_path)
+
+    walked = {Path(folder): sorted(names) for folder, names in _walk(tmp_path)}
+
+    assert walked == {
+        tmp_path: [
+            "20240601_00-05_hrrr",
+            "20240601_06-11_hrrr",
+            "20240601_12-17_hrrr",
+            "20240601_18-folder",
+        ],
+        tmp_path / "2024": [],
+        tmp_path / "2024" / "06": ["20240601_00-05_hrrr", "20240601_06-11_hrrr"],
+    }
+
+
+def test_the_walk_skips_a_folder_it_cannot_read(tmp_path):
+    """As os.walk does: a missing directory lists nothing, and raises nothing."""
+    from stilt.transport.hysplit.met import _walk
+
+    assert list(_walk(tmp_path / "missing")) == []
+
+
+@pytest.mark.parametrize("pattern", ["20240601_0", "20240601_1", "2024/06/2024", "06/"])
+def test_a_folder_of_links_finds_what_rglob_finds(tmp_path, pattern):
+    _linked_archive(tmp_path)
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+
+    found = met._matching(pattern)
+
+    assert sorted(found) == sorted(
+        f for f in tmp_path.rglob(pattern + "*") if f.is_file()
+    )
 
 
 def test_files_for_backward_non_boundary_includes_ceil_file(tmp_path):
