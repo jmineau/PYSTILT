@@ -1,6 +1,7 @@
 """Tests for stilt.project: the project directory, its tables, its results, and running it."""
 
 import datetime as dt
+import doctest
 from pathlib import Path
 
 import matplotlib
@@ -13,6 +14,7 @@ from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
 from stilt.output import Output
+from stilt.particles import transport_error
 from stilt.project import Project
 from stilt.receptors import PointReceptor
 from stilt.spatial import Grid
@@ -803,6 +805,94 @@ def test_particles_reads_only_the_columns_asked_for(tmp_path):
 
     with pytest.raises(ValueError, match="No column 'height'"):
         project.particles(columns=["height"])
+
+
+def _write_spread_particles(
+    project: Project, receptor, variant, realization, spread, seed
+) -> None:
+    """Write 300 particles scattered *spread* degrees around the receptor, with the same footprint value each."""
+    sim = project.simulation(receptor.id, variant, realization)
+    rng = np.random.default_rng(seed)
+    n = 300
+    particles = pd.DataFrame(
+        {
+            "age": np.full(n, -60.0),
+            "particle": np.arange(1, n + 1, dtype=float),
+            "lon": receptor.longitude + rng.normal(0, spread, n),
+            "lat": receptor.latitude + rng.normal(0, spread, n),
+            "zagl": np.full(n, 10.0),
+            "foot": np.full(n, 1e-3),
+        }
+    )
+    particles = finished(particles, sim.receptor, sim.transport)
+    sim.output.write_particles(sim.variant, sim.receptor, particles, [], realization)
+
+
+def _run_docstring_examples(func, **names):
+    """Run the ``>>>`` examples in *func*'s docstring with *names* defined; return what they defined."""
+    (test,) = doctest.DocTestFinder().find(func, globs=names)
+    assert test.examples, f"{func.__name__} has no docstring examples"
+    runner = doctest.DocTestRunner()
+    runner.run(test, clear_globs=False)  # pytest shows what a failure printed
+    assert runner.failures == 0
+    return test.globs
+
+
+def test_transport_error_docstring_recipe_gives_the_realizations_of_sim_transport_error(
+    tmp_path,
+):
+    """The docstring's recipe passes one table per realization, as ``sim.transport_error`` does (#239)."""
+    a, b = _receptor(12), _receptor(13)
+    project = _project(
+        tmp_path,
+        [a, b],
+        grid=None,
+        hnf_plume=False,
+        krand=4,
+        variants={"hrrr": {}, "hrrr-err": {**_XYERR, "realizations": 4}},
+    )
+    # Every receptor and realization scatters its particles differently, so
+    # merging any of them changes the answer.
+    for i, receptor in enumerate((a, b)):
+        _write_spread_particles(project, receptor, "hrrr", None, 0.05, 10 * i)
+        for k in range(4):
+            spread = 0.08 * (1 + i) + 0.04 * k
+            _write_spread_particles(
+                project, receptor, "hrrr-err", k, spread, 10 * i + k
+            )
+    lat, lon = np.linspace(39.5, 42.0, 101), np.linspace(-113.0, -110.5, 101)
+    flux = xr.DataArray(
+        np.add.outer(np.sin(7 * lat), np.cos(5 * lon)) + 2,
+        dims=("lat", "lon"),
+        coords={"lat": lat, "lon": lon},
+    )
+    sims = project.simulations
+    assert len(sims[sims.variant == "hrrr-err"]) == 8
+
+    for receptor in (a, b):
+        rid = receptor.id
+        names = _run_docstring_examples(
+            transport_error, project=project, rid=rid, flux=flux
+        )
+        sim = project.simulation(rid, "hrrr")
+        realizations = [project.simulation(rid, "hrrr-err", k) for k in range(4)]
+        expected = sim.transport_error(realizations, flux)
+
+        assert names["result"].realizations == expected.realizations == 4
+        assert names["result"].variance == pytest.approx(expected.variance)
+        assert names["result"].enhancement_perturbed == pytest.approx(
+            expected.enhancement_perturbed
+        )
+
+        # The old recipe: one variant is one table, so one realization.
+        ensemble = sims[(sims.variant == "hrrr-err") & (sims.receptor == rid)]
+        merged = transport_error(
+            sim.particles,
+            [rows for _, rows in project.particles(ensemble).groupby("variant")],
+            flux,
+        )
+        assert merged.realizations == 1
+        assert merged.variance != pytest.approx(expected.variance, rel=0.2)
 
 
 def test_footprints_open_one_variant_as_a_dataset(tmp_path, monkeypatch):

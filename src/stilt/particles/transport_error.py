@@ -297,9 +297,10 @@ def transport_error(
     particles : pandas.DataFrame
         Unperturbed particle table of a receptor (``sim.particles``).
     error_particles : pandas.DataFrame or sequence of pandas.DataFrame
-        Particle table of a wind-error variant of the same receptor, or a
-        list of them for a variant with ``realizations: N``, such as
-        ``[rows for _, rows in project.particles(ensemble).groupby("variant")]``.
+        Particle table of a wind-error variant of the same receptor, or one
+        table per realization for a variant with ``realizations: N`` (see
+        Examples). A table is one simulation's particles: one receptor and
+        one realization.
     flux : xarray.DataArray
         Surface flux field (see ``particles.stilt.enhancement``).
     transforms : sequence, optional
@@ -365,6 +366,29 @@ def transport_error(
     Compare a single value with ``noise``. Over many receptors, combine the
     signed ``variance`` values with a median instead of clipping each at
     zero.
+
+    Examples
+    --------
+    For the variant ``hrrr-err`` with ``realizations: 4``, select one
+    receptor's simulations and group their particles by realization. Grouping
+    by ``variant`` gives one table, which counts as one realization and gives
+    a wrong variance. Without the receptor, each realization's table holds
+    every receptor's particles.
+
+    >>> from stilt.particles import transport_error
+    >>> sim = project.simulation(rid, "hrrr")
+    >>> sims = project.simulations
+    >>> ensemble = sims[(sims.variant == "hrrr-err") & (sims.receptor == rid)]
+    >>> by_realization = project.particles(ensemble).groupby("realization")
+    >>> error_particles = [rows for _, rows in by_realization]
+    >>> result = transport_error(sim.particles, error_particles, flux)
+    >>> result.realizations
+    4
+
+    ``sim.transport_error(realizations, flux)`` builds this list from the
+    realizations' simulations. It also passes ``transforms``, ``receptor``,
+    and ``directory``, which a variant with footprint transforms needs and
+    this call leaves out.
     """
     if not 0 < percentile <= 1:
         raise ValueError("percentile must be in (0, 1].")
