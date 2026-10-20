@@ -58,6 +58,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `receptor.plot.map()` labels a column's heights, and a multipoint receptor's
   height colorbar, with the reference the receptor was given (`AGL` or `MSL`).
   It said `AGL` for both.
+- `sim.plot.map(show_receptor=False)` leaves the receptor off the map. It
+  marked the receptor anyway, and with the default it marked it twice, so the
+  legend listed "Receptor" twice and a multipoint receptor got two height
+  colorbars. `foot.stilt.plot.map()` has a new `show_receptor` argument
+  (default `True`), which `sim.plot.map()` uses to mark the receptor once.
 - The API pages of eight properties show their whole description. A colon in
   the first line had turned the words before it into a type, so
   `Project.name` read "the directory name." with "Type: The project's name"
