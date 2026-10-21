@@ -23,6 +23,9 @@
 #  19  tluverr           (optional)
 #  20  zcoruverr         (optional)
 #  21  horcoruverr       (optional)
+#  22  maxpar            (optional; numpar when absent). PYSTILT raises it for
+#                        a multipoint receptor so every location gets its
+#                        particles; the tests pass the value PYSTILT wrote.
 
 args <- commandArgs(trailingOnly = TRUE)
 output_parquet  <- args[1]
@@ -47,6 +50,7 @@ tluverr_arg     <- if (length(args) >= 19) args[19] else ""
 zcoruverr_arg   <- if (length(args) >= 20) args[20] else ""
 horcoruverr_arg <- if (length(args) >= 21) args[21] else ""
 use_winderr     <- nchar(siguverr_arg) > 0
+maxpar          <- if (length(args) >= 22 && nchar(args[22]) > 0) as.numeric(args[22]) else numpar
 
 dir.create(work_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(dirname(output_parquet), recursive = TRUE, showWarnings = FALSE)
@@ -120,7 +124,7 @@ namelist <- list(
   kwet = 1,
   kzmix = 0,
   maxdim = 1,
-  maxpar = numpar,
+  maxpar = maxpar,
   mgmin = 10,
   mhrs = 9999,
   nbptyp = 1,

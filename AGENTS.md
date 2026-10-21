@@ -251,6 +251,11 @@ The reasons are in `docs/advanced/architecture.rst` ("Implementation notes").
 - **HYSPLIT chains same-location starts into a line source**: that is how
   `ColumnReceptor` works, and why a `MultiPointReceptor` may not repeat a
   horizontal location.
+- **HYSPLIT stops releasing at `MAXPAR`** and fills a multipoint receptor's
+  locations in order. An unset `maxpar` is chosen per receptor
+  (`HysplitConfig.maxpar_for`), so it is recorded unset; `check_release` fails
+  a multipoint run whose `WARNING` says `exceeding puff limit` (a one-location
+  run writes it too, harmlessly).
 - **Pressure weighting fits `ln p = b + a·z`** (`particle_pwf`); never use raw
   `pres` (`tests/integration/test_pressure_weighting.py` guards it).
 - **Release heights come from the `age = 0` row** (`add_release_heights`), with

@@ -240,6 +240,10 @@ The reasons
    * - ``FORTRAN_RUNTIME_ERROR``
      - HYSPLIT stopped with a Fortran error, which the message names. Read
        the log and the kept workdir's ``MESSAGE`` file.
+   * - ``PARTICLE_LIMIT``
+     - HYSPLIT reached ``maxpar`` before every location of a multipoint
+       receptor got its particles, so the last ones would have fewer or
+       none. Leave ``maxpar`` unset, or raise it (:doc:`receptors`).
    * - ``TIMEOUT``
      - The run took longer than ``timeout`` under ``execution:``. Raise it,
        or look for a slow node or a met file read over a slow filesystem.

@@ -340,13 +340,17 @@ def test_terminate_escalates_when_group_kill_does_not_finish(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def _fake_hysplit(monkeypatch, *, log: str, rows: list[list[float]] | None) -> list:
-    """Replace hycs_std with one that writes *log* and particle *rows* (none: no file)."""
+def _fake_hysplit(
+    monkeypatch, *, log: str, rows: list[list[float]] | None, warning: str = ""
+) -> list:
+    """Replace hycs_std with one that writes *log*, *warning*, and particle *rows* (none: no file)."""
     calls: list[int | None] = []
 
     def fake_run(workdir: Path, timeout: int | None) -> None:
         calls.append(timeout)
         (workdir / "stilt.log").write_text(log)
+        if warning:
+            (workdir / "WARNING").write_text(warning)
         if rows is not None:
             _write_particle_dat(workdir / "PARTICLE_STILT.DAT", rows)
 
@@ -428,6 +432,39 @@ def test_run_without_a_particle_file_fails(tmp_path, point_receptor, monkeypatch
     with pytest.raises(SimulationError, match="PARTICLE_STILT.DAT") as caught:
         _run(tmp_path, point_receptor)
     assert caught.value.reason == FailureReason.NO_PARTICLE_DATA
+
+
+PUFF_LIMIT = " WARNING emspnt: exceeding puff limit\n"
+
+
+def test_a_multipoint_release_cut_short_by_maxpar_fails(
+    tmp_path, multipoint_receptor, monkeypatch
+):
+    """HYSPLIT's puff-limit warning means the last locations got fewer particles (#237)."""
+    _fake_hysplit(monkeypatch, log="", rows=_ending_at(24 * 60), warning=PUFF_LIMIT)
+
+    with pytest.raises(SimulationError, match="3 locations") as caught:
+        _run(tmp_path, multipoint_receptor, _config(maxpar=10))
+    assert caught.value.reason == FailureReason.PARTICLE_LIMIT
+    assert "Raise maxpar or leave it unset" in str(caught.value)
+
+
+def test_a_point_release_at_the_puff_limit_is_a_run(
+    tmp_path, point_receptor, column_receptor, monkeypatch
+):
+    """From one location HYSPLIT asks for numpar + 1 and keeps numpar, which is harmless."""
+    _fake_hysplit(monkeypatch, log="", rows=_ending_at(24 * 60), warning=PUFF_LIMIT)
+
+    assert not _run(tmp_path / "point", point_receptor).particles.empty
+    assert not _run(tmp_path / "column", column_receptor).particles.empty
+
+
+def test_a_multipoint_release_without_the_warning_is_a_run(
+    tmp_path, multipoint_receptor, monkeypatch
+):
+    _fake_hysplit(monkeypatch, log="", rows=_ending_at(24 * 60))
+
+    assert not _run(tmp_path, multipoint_receptor).particles.empty
 
 
 def test_a_perturbed_run_is_one_hycs_std_call_with_winderr(
@@ -654,12 +691,37 @@ def test_winderrtf_zero_value_params():
     assert winderrtf(e) == 1
 
 
-def test_stilt_params_maxpar_defaults_to_numpar():
-    """``maxpar`` stays unset in the config; SETUP.CFG gets numpar in its place."""
-    p = HysplitConfig(numpar=500)
+def test_unset_maxpar_gives_every_location_its_rounded_up_share():
+    """HYSPLIT gives each of n locations ``numpar // n``, often plus one (#237)."""
+    p = HysplitConfig(numpar=1000)
     assert p.maxpar is None
-    assert setup_entries(p)["maxpar"] == 500
-    assert setup_entries(HysplitConfig(numpar=500, maxpar=800))["maxpar"] == 800
+    assert p.maxpar_for(1) == 1000  # one location keeps numpar
+    assert p.maxpar_for(3) == 3 * 334
+    assert p.maxpar_for(40) == 40 * 26
+    assert p.maxpar_for(56) == 56 * 18
+    assert HysplitConfig(numpar=10).maxpar_for(40) == 40  # at least one each
+
+
+def test_a_set_maxpar_is_used_as_given():
+    p = HysplitConfig(numpar=1000, maxpar=800)
+    assert p.maxpar_for(1) == p.maxpar_for(40) == 800
+    assert setup_entries(p)["maxpar"] == 800
+    assert "maxpar" not in setup_entries(HysplitConfig(numpar=1000))
+
+
+def test_setup_cfg_maxpar_follows_the_receptors_locations(
+    tmp_path, point_receptor, column_receptor, multipoint_receptor
+):
+    """One location (a column is one line source) gets numpar; three get 3 * (10 // 3 + 1)."""
+    for receptor, maxpar in [
+        (point_receptor, 10),
+        (column_receptor, 10),
+        (multipoint_receptor, 12),
+    ]:
+        assert driver.release_locations(receptor) == (3 if maxpar == 12 else 1)
+        assert f"maxpar={maxpar}," in _setup_cfg(tmp_path / receptor.kind, receptor)
+    set_maxpar = _config(maxpar=10)
+    assert "maxpar=10," in _setup_cfg(tmp_path / "set", multipoint_receptor, set_maxpar)
 
 
 def test_zicontroltf_is_derived_from_ziscale():
@@ -707,7 +769,7 @@ def test_setup_entries_route_transport_params_to_setup_cfg():
         assert name not in entries
     # None-valued fields are omitted
     assert "seed" not in entries
-    assert "maxpar" in entries  # defaulted from numpar
+    assert "maxpar" not in entries  # write_inputs adds it for the receptor
 
 
 # Fortran type of every SETUP.CFG entry PYSTILT writes, from the SETUP
@@ -741,7 +803,7 @@ HYSPLIT_SETUP_TYPES = {
 
 
 def test_hysplit_setup_types_cover_every_setup_entry():
-    entries = setup_entries(HysplitConfig(seed=1, krand=2))
+    entries = setup_entries(HysplitConfig(seed=1, krand=2, maxpar=1000))
     assert set(entries) == set(HYSPLIT_SETUP_TYPES)
 
 

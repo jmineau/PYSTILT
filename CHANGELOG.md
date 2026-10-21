@@ -54,6 +54,23 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A `MultiPointReceptor`'s last locations got fewer particles, or none,
+  with no message.** HYSPLIT gives each of `n` locations `numpar // n`
+  particles, which its rounding often raises by one, and stopped at
+  `maxpar`, which was `numpar` when unset: with 1000 particles over 40
+  locations the 39th got 12 and the 40th none, and its footprint was not
+  the mean over the locations. An unset `maxpar` now gives HYSPLIT
+  `n * (numpar // n + 1)` for a multipoint receptor (still `numpar` for one
+  location), so every location gets the same number, and a run whose `maxpar`
+  stops the release early fails as the new `FailureReason.PARTICLE_LIMIT`,
+  from HYSPLIT's `exceeding puff limit` warning. `HysplitConfig.maxpar_for(n)`
+  gives the value. **The settings record `maxpar` as set (`null` when unset),
+  no longer as `numpar`**, so a variant that leaves `maxpar` unset gets a new
+  settings folder (set `maxpar` to `numpar` to keep the old one), and one that
+  sets it keeps its folder. A project that sets
+  `maxpar` equal to `numpar` keeps its stored runs; its multipoint receptors
+  that HYSPLIT cuts short now fail until `maxpar` is raised or removed.
+
 - A run finds its met files without opening the target of each symlink in
   the met's directory. Every run lists the directory, and an archive that
   keeps a link to each met file beside the files themselves (an HRRR

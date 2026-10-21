@@ -107,11 +107,12 @@ def test_run_settings_leave_out_what_changes_no_particle(tmp_path):
         "version": "v5.1.0",
         "data_files": None,
     }
-    assert recorded["maxpar"] == 100  # unset maxpar is numpar, as HYSPLIT receives it
-
-    assert (
-        _variant(tmp_path, numpar=100, maxpar=100).particles_hash == base.particles_hash
-    )
+    # Unset, maxpar depends on the receptor (#237), so it is recorded unset,
+    # and a set maxpar, which can stop a multipoint release, is another run.
+    assert recorded["maxpar"] is None
+    capped = _variant(tmp_path, numpar=100, maxpar=100)
+    assert capped.run_settings["maxpar"] == 100
+    assert capped.particles_hash != base.particles_hash
     assert _variant(tmp_path, numpar=200).particles_hash != base.particles_hash
     other_model = replace(
         base, model=ModelInfo(name="hysplit", version="v5.3.2+t0-rows")
