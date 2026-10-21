@@ -106,6 +106,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   copy when it was cut short, and `stilt check` did not report a block that
   had only its copy. Names ending in `.partial` or `.bad` are skipped, as lock
   files and backup copies (`~`) already were.
+- `project.particles` returns the simulations in the order of the selection,
+  one variant (and realization) after another in the order they first
+  appear in it ([#250](https://github.com/jmineau/PYSTILT/issues/250)).
+  Each variant's receptors came back in an order that changed from one Python
+  process to the next, the order of a set of strings, which Python hashes
+  differently in every process.
 
 ## [0.1.0a24] - 2026-10-09
 
