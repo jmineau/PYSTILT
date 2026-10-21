@@ -51,6 +51,8 @@ Every function takes the kind of result, ``"particles"`` or
 
 from __future__ import annotations
 
+import datetime as dt
+import functools
 import logging
 import os
 import shutil
@@ -100,9 +102,36 @@ HASH_CHARS = 6
 # -- identity -----------------------------------------------------------------
 
 
+@functools.cache
+def _day_folder(day: str) -> str:
+    """Return the ``date=YYYY-MM-DD`` folder of a ``YYYYMMDD`` day, which must be a real date."""
+    return f"date={dt.datetime.strptime(day, '%Y%m%d'):%Y-%m-%d}"
+
+
 def _date_dir(receptor_id: str) -> str:
-    """Return the ``date=YYYY-MM-DD`` folder of a receptor id, which starts with the receptor time."""
-    time, _ = parse_receptor_id(receptor_id)
+    """
+    Return the ``date=YYYY-MM-DD`` folder of a receptor id, which starts with the receptor time.
+
+    The folder is the id's first eight characters, ``YYYYMMDD``, so a listing
+    of hundreds of thousands of ids reads each day once and does not parse
+    each id's time. An id that :func:`stilt.receptors.parse_receptor_id`
+    rejects raises its error.
+    """
+    rid = str(receptor_id)
+    stamp = rid[:12]  # YYYYMMDDHHMM
+    if (
+        len(rid) > 13
+        and rid[12] == "_"
+        and stamp.isascii()
+        and stamp.isdigit()
+        and stamp[8:10] < "24"
+        and stamp[10:12] < "60"
+    ):
+        try:
+            return _day_folder(stamp[:8])
+        except ValueError:
+            pass  # not a real date; parse_receptor_id says so
+    time, _ = parse_receptor_id(rid)
     return f"date={time:%Y-%m-%d}"
 
 
