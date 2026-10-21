@@ -14,7 +14,6 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 import xarray as xr
-from scipy.ndimage import convolve as _convolve
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
@@ -345,6 +344,56 @@ def _filter_and_rasterize_particles(
     return p, layers
 
 
+# Most (cell, kernel cell) pairs ``_stamp_kernel`` holds at once, about 16 to
+# 50 bytes each. It keeps memory bounded when late-time kernels are wide.
+_MAX_STAMP_PAIRS = 2**20
+
+
+def _stamp_kernel(
+    out: np.ndarray,
+    rows: np.ndarray,
+    cols: np.ndarray,
+    values: np.ndarray,
+    kernel: np.ndarray,
+) -> None:
+    """
+    Add ``values[j] * kernel``, centered on cell ``(rows[j], cols[j])``, to *out* in place.
+
+    This is STILT-R's ``permute.f90``: the kernel is added at each occupied
+    cell, so the cost is cells x kernel cells. Kernel mass that falls outside
+    *out* is dropped, as a convolution with zeros beyond the edge drops it.
+    Cells are stamped in chunks of at most ``_MAX_STAMP_PAIRS`` (cell, kernel
+    cell) pairs, so memory stays bounded however wide the kernel is.
+    """
+    n_rows, n_cols = out.shape
+    hx, hy = kernel.shape[0] // 2, kernel.shape[1] // 2
+    dx, dy = np.meshgrid(np.arange(-hx, hx + 1), np.arange(-hy, hy + 1), indexing="ij")
+    dx, dy, weights = dx.ravel(), dy.ravel(), kernel.ravel()
+    chunk = max(1, _MAX_STAMP_PAIRS // weights.size)
+    for start in range(0, len(values), chunk):
+        r = rows[start : start + chunk]
+        c = cols[start : start + chunk]
+        v = values[start : start + chunk]
+        # The box these kernels cover, cut to the edges of out.
+        r0, r1 = r.min() - hx, r.max() + hx + 1
+        c0, c1 = c.min() - hy, c.max() + hy + 1
+        crosses_edge = r0 < 0 or c0 < 0 or r1 > n_rows or c1 > n_cols
+        r0, r1 = max(r0, 0), min(r1, n_rows)
+        c0, c1 = max(c0, 0), min(c1, n_cols)
+        width = c1 - c0
+        # Flat index in the box of each (cell, kernel cell) pair, and its mass.
+        idx = ((r - r0) * width + (c - c0))[:, None] + (dx * width + dy)
+        mass = v[:, None] * weights
+        if crosses_edge:
+            rr = r[:, None] + dx
+            cc = c[:, None] + dy
+            inside = (rr >= 0) & (rr < n_rows) & (cc >= 0) & (cc < n_cols)
+            idx, mass = idx[inside], mass[inside]
+        out[r0:r1, c0:c1] += np.bincount(
+            idx.ravel(), weights=mass.ravel(), minlength=(r1 - r0) * width
+        ).reshape(r1 - r0, width)
+
+
 def _accumulate_smoothed_footprint(
     p: pd.DataFrame,
     *,
@@ -358,10 +407,11 @@ def _accumulate_smoothed_footprint(
     """
     Grid each time step's ``foot`` on the padded grid and smooth it with a Gaussian kernel.
 
-    Returns an array of shape ``(n_lon_buf, n_lat_buf, n_layers)``. The
-    convolution covers only the bounding box of nonzero cells, which gives
-    the same result as the whole grid because the cells outside it are
-    zero.
+    Returns an array of shape ``(n_lon_buf, n_lat_buf, n_layers)``. Each
+    step's particles are summed by cell, then the step's kernel is added at
+    each occupied cell (``_stamp_kernel``), as STILT-R's ``permute.f90``
+    does. This equals a convolution of the gridded step with the kernel, but
+    costs cells x kernel cells instead of grid cells x kernel cells.
     """
     foot_arr = np.zeros((n_lon_buf, n_lat_buf, len(layers)), dtype=float)
     kernel_cache: dict[float, np.ndarray] = {}
@@ -387,24 +437,15 @@ def _accumulate_smoothed_footprint(
             & (lai_arr >= 0)
             & (lai_arr < n_lat_buf)
         )
-        lin_idx = loi_arr[valid] * n_lat_buf + lai_arr[valid]
-        sparse = np.bincount(
-            lin_idx,
-            weights=foot_vals[valid],
-            minlength=n_lon_buf * n_lat_buf,
-        ).reshape(n_lon_buf, n_lat_buf)
-
-        nz_r, nz_c = np.nonzero(sparse)
-        if len(nz_r) == 0:
+        # Sum the particles in each occupied cell, then stamp the kernel once per cell.
+        cells, inverse = np.unique(
+            loi_arr[valid] * n_lat_buf + lai_arr[valid], return_inverse=True
+        )
+        if len(cells) == 0:
             continue
-        kh_x = k.shape[0] // 2
-        kh_y = k.shape[1] // 2
-        r0 = max(0, nz_r.min() - kh_x)
-        r1 = min(n_lon_buf, nz_r.max() + kh_x + 1)
-        c0 = max(0, nz_c.min() - kh_y)
-        c1 = min(n_lat_buf, nz_c.max() + kh_y + 1)
-        foot_arr[r0:r1, c0:c1, i] += _convolve(
-            sparse[r0:r1, c0:c1], k, mode="constant", cval=0.0
+        cell_foot = np.bincount(inverse, weights=foot_vals[valid])
+        _stamp_kernel(
+            foot_arr[:, :, i], cells // n_lat_buf, cells % n_lat_buf, cell_foot, k
         )
 
     return foot_arr

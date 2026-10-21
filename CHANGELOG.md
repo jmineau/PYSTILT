@@ -43,6 +43,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   files, the configuration internals, and implementation notes. The
   Development page explains how to write the docs and how their examples run.
 
+### Changed
+
+- `calc_footprint` is 6 to 110 times faster, with the same result. Each time
+  step's smoothing kernel is now added at each grid cell that holds particles,
+  as STILT-R's `permute.f90` does, instead of convolving the whole box around
+  the particles. On five real 24 h runs of 1000 particles on a 300 x 300 grid,
+  an hourly footprint takes 1.2 to 2.9 s instead of 8 to 260 s (STILT-R: 9 to
+  17 s). Memory stays bounded when kernels are wide.
+
 ### Fixed
 
 - Each run of the transport model gets a new workdir in the compute root,
