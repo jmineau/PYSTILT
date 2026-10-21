@@ -615,7 +615,8 @@ class ProjectPlotAccessor:
         from matplotlib.colors import Normalize
 
         if ax is None:
-            _, ax = plt.subplots()
+            # Constrained layout fits location labels of any length.
+            _, ax = plt.subplots(layout="constrained")
         assert ax is not None
 
         receptors = self._project.receptors
@@ -641,6 +642,11 @@ class ProjectPlotAccessor:
         ax.figure.colorbar(
             ScalarMappable(norm=norm, cmap=cmap), ax=ax, label="Receptors per day"
         )
-        ax.figure.autofmt_xdate()
+        if ax.figure.get_layout_engine() is None:
+            ax.figure.autofmt_xdate()  # rotates the dates and makes room for them
+        else:  # the layout makes the room; autofmt_xdate would warn on older matplotlib
+            for label in ax.get_xticklabels():
+                label.set_rotation(30)
+                label.set_horizontalalignment("right")
         ax.set(title="Receptors", xlabel="Day", ylabel="Location")
         return ax

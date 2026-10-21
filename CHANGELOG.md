@@ -109,6 +109,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A new map (`sim.plot.map()` and the other maps) makes room for each of its
   colorbars. The particles' colorbar label was drawn over the footprint's
   colorbar.
+- `project.plot.availability()` makes its figure so that location labels of any
+  length fit. A saved figure cut off the left of `-111.848_40.766_10` and of
+  the "Location" label.
 
 ## [0.1.0a24] - 2026-10-09
 

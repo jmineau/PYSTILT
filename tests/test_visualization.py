@@ -552,3 +552,34 @@ def test_project_availability_formats_the_figure_of_the_given_ax(receptor):
 
     assert fig.subplotpars.bottom == pytest.approx(0.2)  # set by autofmt_xdate
     assert other.subplotpars.bottom == default_bottom
+
+
+def test_project_availability_figure_keeps_long_location_labels(receptor):
+    """A label of any length stays inside the figure, so a saved figure has it whole."""
+    from unittest.mock import MagicMock
+
+    project = MagicMock()
+    project.receptors = pd.DataFrame(
+        {"location": ["-111.848_40.766_10-with-a-long-name"], "time": [receptor.time]}
+    )
+
+    ax = ProjectPlotAccessor(project).availability()
+
+    fig = ax.figure
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    for text in [*ax.get_yticklabels(), ax.yaxis.label]:
+        assert text.get_window_extent(renderer).x0 >= 0
+
+
+def test_project_availability_rotates_the_dates_of_its_own_figure(receptor):
+    from unittest.mock import MagicMock
+
+    project = MagicMock()
+    project.receptors = pd.DataFrame(
+        {"location": [receptor.location_id], "time": [receptor.time]}
+    )
+
+    ax = ProjectPlotAccessor(project).availability()
+
+    assert {label.get_rotation() for label in ax.get_xticklabels()} == {30.0}
