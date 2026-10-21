@@ -899,7 +899,7 @@ class Project:
             if table.num_rows:
                 part = particles_from_table(table, with_time).assign(variant=name)
                 parts.append(
-                    part.assign(realization=pd.array([k] * len(part), "Int64"))
+                    part.assign(realization=pd.array([k], "Int64").repeat(len(part)))
                 )
         if not parts:
             return pd.DataFrame(columns=pd.Index(first))

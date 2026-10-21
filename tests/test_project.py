@@ -788,6 +788,27 @@ def test_particles_come_in_the_order_of_the_selection(tmp_path):
         assert got["particle"].tolist() == [1.0] * len(got)
 
 
+def test_particles_name_their_variant_and_realization(tmp_path):
+    receptor = _receptor(12)
+    project = _project(
+        tmp_path,
+        [receptor],
+        grid=None,
+        krand=4,
+        variants={"hrrr": {}, "err": {**_XYERR, "realizations": 2}},
+    )
+    _write_trajectory(project, receptor)
+    for k in (1, 0):
+        _write_trajectory(project, receptor, "err", k)
+
+    got = project.particles(columns=["particle"])
+
+    assert got["realization"].dtype == "Int64"
+    assert got["variant"].tolist() == ["hrrr"] * 2 + ["err"] * 4
+    assert got["realization"].isna().tolist() == [True] * 2 + [False] * 4
+    assert got["realization"].tolist()[2:] == [0, 0, 1, 1]
+
+
 def test_particles_reads_only_the_columns_asked_for(tmp_path):
     """A day of a site was 12 GB with every column (#191)."""
     a = _receptor(12)
