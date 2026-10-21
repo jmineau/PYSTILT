@@ -191,6 +191,37 @@ def test_make_gauss_kernel_odd_shape():
     assert k.shape[1] % 2 == 1
 
 
+@pytest.mark.parametrize("max_pairs", [1, 50, 2**20])
+def test_stamp_kernel_equals_convolution_at_the_edges(monkeypatch, max_pairs):
+    """
+    Stamping the kernel at each cell equals a convolution with zeros beyond the grid.
+
+    Cells sit on and next to every edge, so kernel mass falls outside the
+    grid and must be dropped, as ``scipy.ndimage.convolve(mode="constant")``
+    drops it. The kernel is asymmetric, so a flipped kernel would fail, and
+    small ``_MAX_STAMP_PAIRS`` budgets split the cells into chunks.
+    """
+    from scipy.ndimage import convolve
+
+    from stilt.footprint import gridding
+
+    monkeypatch.setattr(gridding, "_MAX_STAMP_PAIRS", max_pairs)
+    rng = np.random.default_rng(0)
+    shape = (12, 9)
+    kernel = rng.uniform(size=(5, 7))
+    rows = np.array([0, 0, 11, 11, 5, 1, 10, 6, 3])
+    cols = np.array([0, 8, 0, 8, 4, 2, 7, 0, 8])
+    values = rng.uniform(size=len(rows))
+
+    out = np.zeros(shape)
+    gridding._stamp_kernel(out, rows, cols, values, kernel)
+
+    dense = np.zeros(shape)
+    dense[rows, cols] = values
+    expected = convolve(dense, kernel, mode="constant", cval=0.0)
+    np.testing.assert_allclose(out, expected, rtol=1e-12, atol=0)
+
+
 def test_make_gauss_kernel_symmetric():
     """
     For equal x/y resolution, the kernel is symmetric under flips and transposition.
