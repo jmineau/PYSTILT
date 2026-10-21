@@ -106,6 +106,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   copy when it was cut short, and `stilt check` did not report a block that
   had only its copy. Names ending in `.partial` or `.bad` are skipped, as lock
   files and backup copies (`~`) already were.
+- A new map (`sim.plot.map()` and the other maps) makes room for each of its
+  colorbars. The particles' colorbar label was drawn over the footprint's
+  colorbar.
 
 ## [0.1.0a24] - 2026-10-09
 

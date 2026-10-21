@@ -41,7 +41,8 @@ def _make_ax(
         import cartopy.crs as ccrs
         import cartopy.feature as cfeature
 
-        fig = plt.figure()
+        # Constrained layout makes room for each colorbar and its label.
+        fig = plt.figure(layout="constrained")
         ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
         # pyrefly: ignore[missing-attribute]
         ax.add_feature(cfeature.STATES, linewidth=0.4, edgecolor="0.4")

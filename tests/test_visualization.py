@@ -13,6 +13,7 @@ import xarray as xr
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # must come after use("Agg")
+from matplotlib.layout_engine import ConstrainedLayoutEngine
 
 from stilt.footprint.config import FootprintConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
@@ -125,6 +126,18 @@ def test_make_ax_with_existing_ax():
     _, existing = plt.subplots()
     fig, ax = _make_ax(ax=existing)
     assert ax is existing
+
+
+def test_make_ax_has_a_constrained_layout():
+    """Each colorbar a map adds gets room, with its label."""
+    fig, _ = _make_ax()
+    assert isinstance(fig.get_layout_engine(), ConstrainedLayoutEngine)
+
+
+def test_make_ax_leaves_the_layout_of_a_given_ax():
+    fig, existing = plt.subplots()
+    _make_ax(ax=existing)
+    assert fig.get_layout_engine() is None
 
 
 # ---------------------------------------------------------------------------
@@ -420,6 +433,36 @@ def test_simulation_map_show_traj_false(receptor, minimal_trajectories):
 
     ax = SimulationPlotAccessor(sim).map(show_particles=False)
     assert ax is not None
+
+
+def test_simulation_map_colorbar_labels_do_not_overlap(
+    receptor, minimal_footprint, minimal_trajectories
+):
+    """The particles' colorbar label was drawn over the footprint's colorbar."""
+    pytest.importorskip("cartopy")
+    from unittest.mock import MagicMock
+
+    from cartopy.mpl.feature_artist import FeatureArtist
+
+    sim = MagicMock()
+    sim.receptor = receptor
+    sim.footprint = minimal_footprint
+    sim.particles = minimal_trajectories
+    sim.id = "202301011200_test/hrrr"
+
+    ax = SimulationPlotAccessor(sim).map()
+
+    fig = ax.figure
+    for artist in ax.get_children():  # drawing the coastlines would download them
+        if isinstance(artist, FeatureArtist):
+            artist.set_visible(False)
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    bars = [other for other in fig.axes if other is not ax]
+    assert len(bars) == 2
+    for bar, other in (bars, bars[::-1]):
+        label = bar.yaxis.label.get_window_extent(renderer)
+        assert not label.overlaps(other.get_window_extent(renderer))
 
 
 def test_simulation_map_show_receptor_false(receptor):
