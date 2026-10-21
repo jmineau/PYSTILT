@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=328c75e0"></script>
+    <script src="../_static/documentation_options.js?v=1ba88ac5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="In Containers (Kubernetes)" href="containers.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev24+gc5666d0c0" />
+  <meta name="docsearch:version" content="0.1.0a25.dev26+gb93beb8b2" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -817,11 +817,16 @@ met.</p></td>
 <td><p>HYSPLIT stopped with a Fortran error, which the message names. Read
 the log and the kept workdir’s <code class="docutils literal notranslate"><span class="pre">MESSAGE</span></code> file.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TIMEOUT</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PARTICLE_LIMIT</span></code></p></td>
+<td><p>HYSPLIT reached <code class="docutils literal notranslate"><span class="pre">maxpar</span></code> before every location of a multipoint
+receptor got its particles, so the last ones would have fewer or
+none. Leave <code class="docutils literal notranslate"><span class="pre">maxpar</span></code> unset, or raise it (<a class="reference internal" href="receptors.html"><span class="doc">Receptors</span></a>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TIMEOUT</span></code></p></td>
 <td><p>The run took longer than <code class="docutils literal notranslate"><span class="pre">timeout</span></code> under <code class="docutils literal notranslate"><span class="pre">execution:</span></code>. Raise it,
 or look for a slow node or a met file read over a slow filesystem.</p></td>
 </tr>
-<tr class="row-odd"><td><p>an error’s name</p></td>
+<tr class="row-even"><td><p>an error’s name</p></td>
 <td><p>Any other error is recorded by its class, such as <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>,
 with its traceback. That is usually a bug or a setup problem worth
 reporting.</p></td>

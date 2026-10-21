@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=328c75e0"></script>
+    <script src="../_static/documentation_options.js?v=1ba88ac5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Installation" href="installation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev24+gc5666d0c0" />
+  <meta name="docsearch:version" content="0.1.0a25.dev26+gb93beb8b2" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -622,7 +622,7 @@ time step:</p>
 <span class="go">1 -1.0       2.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
 <span class="go">2 -1.0       3.0 -111.8473  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
 <span class="go">3 -1.0       4.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
-<span class="go">4 -1.0       5.0 -111.8473  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
+<span class="go">4 -1.0       5.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
 
 <span class="go">[5 rows x 13 columns]</span>
 
@@ -636,7 +636,7 @@ only a small region around Salt Lake, and the particles leave it before the 24
 hours are up. A particle that leaves the met stops there. This is how many hours
 they went (<code class="docutils literal notranslate"><span class="pre">age</span></code> is in minutes):</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">particles</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> hours&quot;</span><span class="p">)</span>
-<span class="go">12.1 hours</span>
+<span class="go">13.9 hours</span>
 </pre></div>
 </div>
 <p>If that is short of <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, the footprint covers only those hours.

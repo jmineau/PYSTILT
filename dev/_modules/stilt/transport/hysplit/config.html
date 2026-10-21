@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../../_static/documentation_options.js?v=328c75e0"></script>
+    <script src="../../../../_static/documentation_options.js?v=1ba88ac5"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev24+gc5666d0c0" />
+  <meta name="docsearch:version" content="0.1.0a25.dev26+gb93beb8b2" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -818,7 +818,12 @@
     <span class="p">)</span>
     <span class="n">maxpar</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Maximum number of particles in a simulation. Unset uses ``numpar``.&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Maximum number of particles in a simulation. Unset gives every &quot;</span>
+            <span class="s2">&quot;release location its full share: ``numpar`` for one location, &quot;</span>
+            <span class="s2">&quot;``n * (numpar // n + 1)`` for n. A set value that stops a &quot;</span>
+            <span class="s2">&quot;multipoint release before its last location fails the run.&quot;</span>
+        <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">mgmin</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="mi">10</span><span class="p">,</span>
@@ -1082,10 +1087,32 @@
                 <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>
 
-    <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">effective_maxpar</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;``maxpar`` as HYSPLIT receives it, which is ``numpar`` when unset.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">numpar</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxpar</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxpar</span>
+<div class="viewcode-block" id="HysplitConfig.maxpar_for">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.HysplitConfig.maxpar_for.html#stilt.transport.hysplit.HysplitConfig.maxpar_for">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">maxpar_for</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">locations</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the ``MAXPAR`` HYSPLIT gets for a release from *locations* horizontal locations.</span>
+
+<span class="sd">        HYSPLIT gives each location ``numpar // locations`` particles, which</span>
+<span class="sd">        its rounding often raises by one, and stops releasing when it reaches</span>
+<span class="sd">        ``MAXPAR``. A set ``maxpar`` is used as given. Unset, one location</span>
+<span class="sd">        gets ``numpar`` (HYSPLIT may ask for one more and keeps ``numpar``),</span>
+<span class="sd">        and several get ``locations * (numpar // locations + 1)``, so the</span>
+<span class="sd">        last locations are not left short.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; HysplitConfig(numpar=1000).maxpar_for(40)</span>
+<span class="sd">        1040</span>
+<span class="sd">        &gt;&gt;&gt; HysplitConfig(numpar=1000).maxpar_for(1)</span>
+<span class="sd">        1000</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxpar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxpar</span>
+        <span class="k">if</span> <span class="n">locations</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">numpar</span>
+        <span class="k">return</span> <span class="n">locations</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numpar</span> <span class="o">//</span> <span class="n">locations</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="HysplitConfig.hourly_ziscale">
 <a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.HysplitConfig.hourly_ziscale.html#stilt.transport.hysplit.HysplitConfig.hourly_ziscale">[docs]</a>
@@ -1094,22 +1121,6 @@
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ziscale</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span><span class="p">):</span>
             <span class="k">return</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ziscale</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_hours</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ziscale</span><span class="p">]</span></div>
-
-
-<div class="viewcode-block" id="HysplitConfig.settings">
-<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.HysplitConfig.settings.html#stilt.transport.hysplit.HysplitConfig.settings">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return what a run records of this config, the fields that change its particles.</span>
-
-<span class="sd">        ``exe_dir`` and ``data_dir`` are left out (:attr:`UNRECORDED`); the</span>
-<span class="sd">        build&#39;s version and the data files that differ from the bundled ones</span>
-<span class="sd">        are recorded with the model instead. ``maxpar`` is given as HYSPLIT</span>
-<span class="sd">        receives it, so an unset ``maxpar`` equals ``numpar``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">settings</span><span class="p">()</span>
-        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;maxpar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">effective_maxpar</span>
-        <span class="k">return</span> <span class="n">data</span></div>
 
 
 <div class="viewcode-block" id="HysplitConfig.realizations">

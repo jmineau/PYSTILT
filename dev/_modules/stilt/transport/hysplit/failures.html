@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../../_static/documentation_options.js?v=328c75e0"></script>
+    <script src="../../../../_static/documentation_options.js?v=1ba88ac5"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev24+gc5666d0c0" />
+  <meta name="docsearch:version" content="0.1.0a25.dev26+gb93beb8b2" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -523,7 +523,8 @@
     <span class="n">VARYING_MET_INTERVAL</span> <span class="o">=</span> <span class="s2">&quot;VARYING_MET_INTERVAL&quot;</span>
     <span class="n">NO_PARTICLE_DATA</span> <span class="o">=</span> <span class="s2">&quot;NO_PARTICLE_DATA&quot;</span>
     <span class="n">FORTRAN_RUNTIME_ERROR</span> <span class="o">=</span> <span class="s2">&quot;FORTRAN_RUNTIME_ERROR&quot;</span>
-    <span class="n">TIMEOUT</span> <span class="o">=</span> <span class="s2">&quot;TIMEOUT&quot;</span></div>
+    <span class="n">TIMEOUT</span> <span class="o">=</span> <span class="s2">&quot;TIMEOUT&quot;</span>
+    <span class="n">PARTICLE_LIMIT</span> <span class="o">=</span> <span class="s2">&quot;PARTICLE_LIMIT&quot;</span></div>
 
 
 
@@ -544,6 +545,14 @@
     <span class="s2">&quot;PARTICLE_STILT.DAT does not contain any trajectory data&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">NO_PARTICLE_DATA</span><span class="p">,</span>
     <span class="s2">&quot;Fortran runtime error&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">FORTRAN_RUNTIME_ERROR</span><span class="p">,</span>
 <span class="p">}</span>
+
+
+<span class="c1">#: What HYSPLIT writes to its WARNING file when it reaches ``MAXPAR`` while</span>
+<span class="c1">#: releasing. Not in :data:`FAILURE_PHRASES`: a release from one location</span>
+<span class="c1">#: writes it too (HYSPLIT&#39;s rounding asks for one particle over ``numpar``</span>
+<span class="c1">#: and keeps ``numpar``), which is harmless. From several locations it means</span>
+<span class="c1">#: the last ones got fewer particles or none (``PARTICLE_LIMIT``).</span>
+<span class="n">PARTICLE_LIMIT_PHRASE</span> <span class="o">=</span> <span class="s2">&quot;exceeding puff limit&quot;</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">failure_in</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FailureReason</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>

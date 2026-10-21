@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../../_static/documentation_options.js?v=328c75e0"></script>
+    <script src="../../../../_static/documentation_options.js?v=1ba88ac5"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev24+gc5666d0c0" />
+  <meta name="docsearch:version" content="0.1.0a25.dev26+gb93beb8b2" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -532,6 +532,7 @@
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.control</span><span class="w"> </span><span class="kn">import</span> <span class="n">ControlFile</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.failures</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">PARTICLE_LIMIT_PHRASE</span><span class="p">,</span>
     <span class="n">FailureReason</span><span class="p">,</span>
     <span class="n">failure_in</span><span class="p">,</span>
 <span class="p">)</span>
@@ -663,15 +664,15 @@
 <span class="sd">    Return the ``SETUP.CFG`` namelist entries of *params*, leaving out unset ones.</span>
 
 <span class="sd">    Every setting not in :data:`NOT_IN_SETUP` is an entry, in declaration</span>
-<span class="sd">    order. The driver adds ``KMSL``, ``IVMAX``, and ``WINDERRTF``, which</span>
-<span class="sd">    depend on the receptor or follow from other settings.</span>
+<span class="sd">    order. The driver adds ``KMSL``, ``IVMAX``, and ``WINDERRTF``, and</span>
+<span class="sd">    ``MAXPAR`` when ``maxpar`` is unset, which depend on the receptor or</span>
+<span class="sd">    follow from other settings.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">entries</span> <span class="o">=</span> <span class="p">{</span>
         <span class="n">name</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">HysplitConfig</span><span class="o">.</span><span class="n">model_fields</span>
         <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">NOT_IN_SETUP</span> <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
     <span class="p">}</span>
-    <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;maxpar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">effective_maxpar</span>
     <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;zicontroltf&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">zicontroltf</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;seed&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">setup_seed</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
@@ -691,6 +692,48 @@
 <span class="sd">    value works with both builds.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="o">-</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">release_locations</span><span class="p">(</span><span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the number of horizontal locations *receptor* releases particles from.</span>
+
+<span class="sd">    HYSPLIT divides ``numpar`` among them. A :class:`~stilt.receptors.ColumnReceptor`</span>
+<span class="sd">    is one location: HYSPLIT joins its two heights into one line source.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">({(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span> <span class="k">for</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">receptor</span><span class="o">.</span><span class="n">coords</span><span class="p">()})</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">check_release</span><span class="p">(</span><span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Raise when HYSPLIT stopped releasing before every location of *receptor* got its particles.</span>
+
+<span class="sd">    HYSPLIT fills the locations in order and stops at ``MAXPAR``, writing</span>
+<span class="sd">    ``exceeding puff limit`` to its ``WARNING`` file, so the last</span>
+<span class="sd">    locations get fewer particles or none. From one location that is</span>
+<span class="sd">    harmless (:data:`~stilt.transport.hysplit.failures.PARTICLE_LIMIT_PHRASE`).</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    SimulationError</span>
+<span class="sd">        With ``reason`` ``PARTICLE_LIMIT``, when *receptor* has several</span>
+<span class="sd">        locations and the ``WARNING`` file in *workdir* says HYSPLIT</span>
+<span class="sd">        reached ``MAXPAR``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">locations</span> <span class="o">=</span> <span class="n">release_locations</span><span class="p">(</span><span class="n">receptor</span><span class="p">)</span>
+    <span class="n">warning</span> <span class="o">=</span> <span class="n">workdir</span> <span class="o">/</span> <span class="n">WARNING_FILE</span>
+    <span class="k">if</span> <span class="n">locations</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">warning</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">PARTICLE_LIMIT_PHRASE</span> <span class="ow">in</span> <span class="n">warning</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">):</span>
+        <span class="n">fix</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;Raise maxpar or leave it unset.&quot;</span> <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">maxpar</span> <span class="k">else</span> <span class="s2">&quot;Set maxpar higher.&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;HYSPLIT stopped releasing at maxpar = </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">maxpar_for</span><span class="p">(</span><span class="n">locations</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;before each of the receptor&#39;s </span><span class="si">{</span><span class="n">locations</span><span class="si">}</span><span class="s2"> locations got its share of &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;numpar = </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">numpar</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">fix</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">reason</span><span class="o">=</span><span class="n">FailureReason</span><span class="o">.</span><span class="n">PARTICLE_LIMIT</span><span class="p">,</span>
+        <span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">ziscale_factors</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
@@ -801,6 +844,7 @@
     <span class="n">entries</span> <span class="o">=</span> <span class="n">setup_entries</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
     <span class="c1"># HYSPLIT&#39;s KMSL: 0 for heights above ground, 1 above sea level.</span>
     <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;kmsl&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">receptor</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">&quot;msl&quot;</span> <span class="k">else</span> <span class="mi">0</span>
+    <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;maxpar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">maxpar_for</span><span class="p">(</span><span class="n">release_locations</span><span class="p">(</span><span class="n">receptor</span><span class="p">))</span>
     <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;ivmax&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">varsiwant</span><span class="p">)</span>  <span class="c1"># number of output variables</span>
     <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;winderrtf&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">winderrtf</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
     <span class="n">setup</span> <span class="o">=</span> <span class="n">NameList</span><span class="p">(</span><span class="s2">&quot;SETUP&quot;</span><span class="p">)</span>
