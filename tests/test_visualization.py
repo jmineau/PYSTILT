@@ -364,6 +364,63 @@ def test_footprint_facet_on_a_projected_grid(projected_footprint):
     plt.close("all")
 
 
+@pytest.fixture
+def hourly_footprint(receptor, grid):
+    """Thirteen hourly steps from 19:00 to 07:00, so the panels cross midnight."""
+    times = pd.date_range("2023-01-01 19:00", periods=13, freq="h")
+    lons = np.array([-113.5, -112.5, -111.5])
+    lats = np.array([39.5, 40.5, 41.5])
+    data = xr.DataArray(
+        np.random.default_rng(0).random((len(times), len(lats), len(lons))),
+        dims=("time", "lat", "lon"),
+        coords={"time": times, "lat": lats, "lon": lons},
+    )
+    return as_footprint(data, receptor, FootprintConfig(grid=grid), "")
+
+
+def _colorbar_axes(fig, axes):
+    [cbar_ax] = [ax for ax in fig.axes if ax not in axes.flat]
+    return cbar_ax
+
+
+def test_footprint_facet_titles_each_panel_with_its_clock_time(hourly_footprint):
+    fig, axes = hourly_footprint.stilt.plot.facet()
+    titles = [ax.get_title() for ax in axes.flat][:13]
+    assert titles[0] == "2023-01-01 19:00"
+    assert titles[5] == "2023-01-02 00:00"  # xarray titles midnight with no hour
+    assert titles[-1] == "2023-01-02 07:00"
+
+
+def test_footprint_facet_has_no_title_over_the_panels(hourly_footprint):
+    fig, _ = hourly_footprint.stilt.plot.facet()
+    assert [text.get_text() for text in fig.texts] == []
+
+
+def test_footprint_facet_is_sized_by_its_panels(hourly_footprint):
+    """Each row of panels is 2.2 inches high, whatever the number of panels."""
+    fig, _ = hourly_footprint.stilt.plot.facet(ncols=4)  # 13 panels: 4 rows
+    assert fig.get_figheight() == pytest.approx(4 * 2.2)
+
+
+def test_footprint_facet_figsize_wins(hourly_footprint):
+    fig, _ = hourly_footprint.stilt.plot.facet(figsize=(6, 5))
+    assert tuple(fig.get_size_inches()) == (6, 5)
+
+
+def test_footprint_facet_colorbar_is_slim(hourly_footprint):
+    """The colorbar was as tall as the figure and 0.7 inch wide for thirteen panels."""
+    fig, axes = hourly_footprint.stilt.plot.facet()
+    fig.canvas.draw()  # the colorbar's aspect is applied when it is drawn
+    box = _colorbar_axes(fig, axes).get_position()
+    assert box.width * fig.get_figwidth() < 0.4
+    assert box.height < 0.7
+
+
+def test_footprint_facet_merges_cbar_kwargs(hourly_footprint):
+    fig, axes = hourly_footprint.stilt.plot.facet(cbar_kwargs={"label": "ppm"})
+    assert _colorbar_axes(fig, axes).get_ylabel() == "ppm"
+
+
 # ---------------------------------------------------------------------------
 # SimulationPlotAccessor
 # ---------------------------------------------------------------------------
