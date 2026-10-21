@@ -145,13 +145,12 @@ units. Put it on the footprint grid and compute two limits:
    err_independent = float(np.sqrt(((f * s) ** 2).sum()))  # each cell on its own
 
 The first assumes the errors in all cells move together, so it is an upper
-bound. X-STILT reports this one as the emission error (``cal.emiss.err``),
-with ``sigma`` from the spread of several inventories. The second assumes
-the cells are independent, which gives a lower bound. Real inventory errors
-are correlated over some distance, so the true value lies in between.
-Computing it needs the covariance of the flux errors, which is the prior
-error covariance of an inversion. If you set up the inversion with fips,
-``InverseProblem.prior_obs_error`` is that covariance carried to every
+bound. ``sigma`` can come from the spread of several inventories. The
+second assumes the cells are independent, which gives a lower bound. Real
+inventory errors are correlated over some distance, so the true value lies
+in between. Computing it needs the covariance of the flux errors, which is
+the prior error covariance of an inversion. If you set up the inversion with
+fips, ``InverseProblem.prior_obs_error`` is that covariance carried to every
 observation (the footprint matrix times the prior covariance times its
 transpose). The square root of its diagonal is each observation's emission
 error. Add it in quadrature to the transport and retrieval errors to get
@@ -238,14 +237,19 @@ Here ``w`` is ``weight``, ``s`` is ``sd_trans``, ``h`` is ``height``, and
 ``L`` is ``length_scale``, 356 m by default (X-STILT's value). With
 ``length_scale=None`` the levels are independent.
 
-``percentile=0.99`` reproduces X-STILT's trimming
+By default every particle counts, as in Lin and Gerbig. ``percentile=0.99``
+reproduces X-STILT's trimming
 (`Wu et al., 2018 <https://doi.org/10.5194/gmd-11-4843-2018>`_). It drops
 the top 1 % of particles in each level before taking the variance, which
 damps the few particles that pass over a point source at the cost of a
-small bias. X-STILT also fits a line through the levels where ``dvar`` is
-positive. PYSTILT does not, because fitting only those levels biases the
-result upward: under pure sampling noise it reports a positive error at
-every level.
+small bias. The :doc:`X-STILT migration page <migration/x_stilt>` lists
+where the rest of the calculation differs.
+
+PYSTILT uses each level's ``dvar`` as it is, with its sign, so that the
+noise in it averages out over many receptors. Fitting a line through only
+the levels where ``dvar`` is positive would bias the result upward: it
+keeps the levels whose variance happened to rise, so under pure sampling
+noise it reports a positive error at every level.
 
 The method measures how much the wind error moves particles between flux
 cells. It says little when the flux field is uniform, and it is only as

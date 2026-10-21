@@ -90,6 +90,42 @@ Runs you already have in X-STILT's ``out/by-id`` folder are read with
 footprint by the averaging kernel and pressure weighting, but saves the
 particles before it does, so the particles read are unweighted.
 
+Where the methods differ
+------------------------
+
+On the same particles, a few steps give different numbers in PYSTILT and in
+X-STILT. Each row says what each one does.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 40 40
+
+   * - Step
+     - X-STILT
+     - PYSTILT
+   * - Transport error across release levels (``scale.dvar``)
+     - Fits a weighted line of the perturbed variance against the unperturbed
+       variance through the levels where the variance rose, and scales every
+       level's variance with that line.
+     - Uses each level's variance difference as it is, with its sign (Lin
+       and Gerbig's equation 4), so the noise in it averages out over many
+       receptors. ``noise`` says how large it is
+       (:doc:`/guides/transport_error`).
+   * - Particles kept in each level (``pct``)
+     - Drops the particles above the 99th percentile of the enhancement.
+     - Keeps every particle, as Lin and Gerbig do. ``percentile=0.99``
+       gives X-STILT's trimming.
+   * - Vertical correlation of the level errors (``Lh``)
+     - 356 m, an empirical mean length scale.
+     - 356 m by default (``length_scale``). ``None`` treats the levels as
+       independent.
+   * - Emission error (``cal.emiss.err``)
+     - Reports the fully correlated sum, a footprint times a ``sigma`` from
+       the spread of several inventories.
+     - The same sum, and also the root-sum-square for independent cells,
+       which bounds the error from below. With a spatial correlation, fips's
+       ``prior_obs_error`` gives the value in between.
+
 Moving a workflow over
 ----------------------
 

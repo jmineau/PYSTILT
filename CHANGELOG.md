@@ -475,8 +475,8 @@ public.
   `resolution` argument. Pass a `stilt.Grid`, `stilt.Mesh`, or
   `stilt.Zones`; anything else raises `TypeError`. To keep only some cells
   of a grid, select rows of the result or use `Zones`.
-- The `regression` option of `observations.transport_error`, which
-  reproduced X-STILT's upward-biased fit through the positive levels.
+- The `regression` option of `observations.transport_error`, a fit through
+  only the levels whose variance difference is positive (see 0.1.0a15).
 - The `backend` argument of `overlap_weights`. exactextract is still used
   when it is installed.
 - `OutputCollection.missing()`. Use `simulations.incomplete()` or
@@ -906,20 +906,21 @@ public.
 ### Changed
 
 - **`transport_error` estimates Lin and Gerbig's (2005) variance difference
-  directly** instead of X-STILT's regression-scaled version. Validation on a
-  real HRRR column (`stilt/validation/transport_error/`) showed the
-  regression turns sampling noise into a positive error: it fits only the
-  levels whose variance happened to rise, so under no perturbation at all it
-  reported a third of the enhancement in summer and three quarters in
-  winter. The result now carries the signed `variance` (negative values are
-  noise, aggregate them with a median), `noise` (the estimator's own
-  standard deviation, from random halves of the unperturbed particles),
-  `sd` (clipped square root), and `enhancement_perturbed`. `percentile` now
-  defaults to `1.0` (every particle) and X-STILT's behaviour is available as
-  `percentile=0.99, regression=True`. The Transport Error guide now explains
-  that HYSPLIT decorrelates the wind error over distance travelled, so a
-  `horcoruverr` of a few kilometres produces no detectable perturbation, and
-  that the scales must come from an analysis-versus-radiosonde comparison.
+  directly**, per release level, with no regression across the levels.
+  Validation on a real HRRR column (`stilt/validation/transport_error/`)
+  showed why: a regression fitted through only the levels whose variance
+  happened to rise turns sampling noise into a positive error, and under no
+  perturbation at all it reported a third of the enhancement in summer and
+  three quarters in winter. The result now carries the signed `variance`
+  (negative values are noise, aggregate them with a median), `noise` (the
+  estimator's own standard deviation, from random halves of the unperturbed
+  particles), `sd` (clipped square root), and `enhancement_perturbed`.
+  `percentile` now defaults to `1.0` (every particle), and
+  `percentile=0.99, regression=True` keeps the earlier behaviour. The
+  Transport Error guide now explains that HYSPLIT decorrelates the wind
+  error over distance travelled, so a `horcoruverr` of a few kilometres
+  produces no detectable perturbation, and that the scales must come from an
+  analysis-versus-radiosonde comparison.
 
 ## [0.1.0a14] - 2026-09-22
 
