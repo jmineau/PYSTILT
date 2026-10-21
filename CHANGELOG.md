@@ -43,6 +43,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   files, the configuration internals, and implementation notes. The
   Development page explains how to write the docs and how their examples run.
 
+### Changed
+
+- `calc_footprint` is 6 to 110 times faster, with the same result. Each time
+  step's smoothing kernel is now added at each grid cell that holds particles,
+  as STILT-R's `permute.f90` does, instead of convolving the whole box around
+  the particles. On five real 24 h runs of 1000 particles on a 300 x 300 grid,
+  an hourly footprint takes 1.2 to 2.9 s instead of 8 to 260 s (STILT-R: 9 to
+  17 s). Memory stays bounded when kernels are wide.
+
 ### Fixed
 
 - **A `MultiPointReceptor`'s last locations got fewer particles, or none,
@@ -62,6 +71,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `maxpar` equal to `numpar` keeps its stored runs; its multipoint receptors
   that HYSPLIT cuts short now fail until `maxpar` is raised or removed.
 
+- A run finds its met files without opening the target of each symlink in
+  the met's directory. Every run lists the directory, and an archive that
+  keeps a link to each met file beside the files themselves (an HRRR
+  archive of 27,007 names, 15,903 of them links) took 2 to 17 s to list
+  on a network filesystem; it now takes under 1.3 s, and 0.1 s when the
+  listing is cached. The files found are the same.
 - Each run of the transport model gets a new workdir in the compute root,
   named after the receptor id, the variant, and the realization (in an
   ensemble), with a random part at the end. The workdir was
@@ -83,6 +98,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `HNF_PLUME_COLUMNS`, and `stilt.footprint.Geometry` show their own
   description. They showed the docstring of their type ("Built-in immutable
   sequence." for the two tuples).
+- A met file's `.partial` or `.bad` copy is no longer read as a met file
+  ([#232](https://github.com/jmineau/PYSTILT/issues/232)). Files are found by
+  the start of their names, so the copy beside a block (`20240702_00-05_hrrr`
+  and `20240702_00-05_hrrr.partial`, as an HRRR archive can have) was found
+  with it. A run then cropped and handed HYSPLIT both files, or failed on the
+  copy when it was cut short, and `stilt check` did not report a block that
+  had only its copy. Names ending in `.partial` or `.bad` are skipped, as lock
+  files and backup copies (`~`) already were.
 
 ## [0.1.0a24] - 2026-10-09
 

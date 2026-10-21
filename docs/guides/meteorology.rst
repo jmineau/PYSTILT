@@ -41,7 +41,9 @@ file covers:
    ``%Y`` for the year, ``%m`` month, ``%d`` day, and ``%H`` hour. Files
    named ``20230715_18`` match ``"%Y%m%d_%H"``. Files named
    ``hysplit.20230715.18z.hrrra`` match ``"hysplit.%Y%m%d.%Hz.hrrra"``. A
-   file matches when its name starts with the pattern.
+   file matches when its name starts with the pattern. Lock files, backup
+   copies that end in ``~``, and names that end in ``.partial`` or ``.bad``
+   are skipped.
 
 ``file_tres``
    How much time each file covers, such as ``1h``, ``3h``, or ``6h``.
