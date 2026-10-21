@@ -75,6 +75,22 @@ also show coastlines and state borders. There are a few other plots:
    @savefig outputs_receptor.png width=6in
    sim.receptor.plot.map();
 
+A map takes a ``tiler``, any cartopy tiler, to draw map tiles under the data.
+The maps in these docs are drawn on shaded-relief tiles of the USGS National
+Map, which are kept in the repository so that building the docs needs no
+network for them. Your own maps can use the same tiles. cartopy downloads them
+when the map is drawn, and ``cache=True`` keeps what it downloaded:
+
+.. code-block:: python
+
+   from cartopy.io.img_tiles import GoogleTiles
+
+   usgs = GoogleTiles(
+       url="https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}",
+       cache=True,
+   )
+   sim.plot.map(tiler=usgs)
+
 Footprints
 ----------
 

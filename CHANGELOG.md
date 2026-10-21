@@ -44,6 +44,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Development page explains how to write the docs and how their examples run.
 - `sim.plot.map()` takes `tiler` and `tiler_zoom`, as the footprint, particles,
   and receptor maps do, to draw map tiles under a new map.
+- The maps in the docs are drawn on USGS shaded-relief tiles, which are kept in
+  the repository (`docs/_tiles`). Building the docs needs no network for them,
+  and every build draws the same maps.
 
 ### Fixed
 
