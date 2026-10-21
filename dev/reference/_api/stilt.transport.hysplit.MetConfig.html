@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=6f3c8aa1"></script>
+    <script src="../../_static/documentation_options.js?v=328c75e0"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Meteorology" href="../meteorology.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev23+g11985e877" />
+  <meta name="docsearch:version" content="0.1.0a25.dev24+gc5666d0c0" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -954,7 +954,7 @@ Moving the files, or renaming them, changes no result.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">'s3'</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">file_format</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">strftime</span></code> pattern for the start of each file name, such as <code class="docutils literal notranslate"><span class="pre">%Y%m%d_%H</span></code>. Files whose names start with it are found anywhere under <code class="docutils literal notranslate"><span class="pre">directory</span></code>. Required when <code class="docutils literal notranslate"><span class="pre">download</span></code> is not set.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">strftime</span></code> pattern for the start of each file name, such as <code class="docutils literal notranslate"><span class="pre">%Y%m%d_%H</span></code>. Files whose names start with it are found anywhere under <code class="docutils literal notranslate"><span class="pre">directory</span></code>, except lock files, backup copies ending in <code class="docutils literal notranslate"><span class="pre">~</span></code>, and names ending in <code class="docutils literal notranslate"><span class="pre">.partial</span></code> or <code class="docutils literal notranslate"><span class="pre">.bad</span></code>. Required when <code class="docutils literal notranslate"><span class="pre">download</span></code> is not set.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">file_tres</span></code></p></td>

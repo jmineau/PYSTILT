@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../../_static/documentation_options.js?v=6f3c8aa1"></script>
+    <script src="../../../../_static/documentation_options.js?v=328c75e0"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev23+g11985e877" />
+  <meta name="docsearch:version" content="0.1.0a25.dev24+gc5666d0c0" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -593,7 +593,9 @@
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">&quot;``strftime`` pattern for the start of each file name, such as &quot;</span>
             <span class="s2">&quot;``%Y%m</span><span class="si">%d</span><span class="s2">_%H``. Files whose names start with it are found anywhere &quot;</span>
-            <span class="s2">&quot;under ``directory``. Required when ``download`` is not set.&quot;</span>
+            <span class="s2">&quot;under ``directory``, except lock files, backup copies ending in &quot;</span>
+            <span class="s2">&quot;``~``, and names ending in ``.partial`` or ``.bad``. Required &quot;</span>
+            <span class="s2">&quot;when ``download`` is not set.&quot;</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">file_tres</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -726,6 +728,19 @@
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_stray</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Whether the file *name* beside a met file is not one.</span>
+
+<span class="sd">    Files are found by the start of their names, so a sibling such as</span>
+<span class="sd">    ``20240702_00-05_hrrr.partial`` would be found with the block it sits</span>
+<span class="sd">    beside. Stray names are lock files, backup copies (``name~&lt;timestamp&gt;~``,</span>
+<span class="sd">    ``name.~1~``, and ``name~`` all end in ``~``), a download cut short</span>
+<span class="sd">    (``.partial``), and a copy set aside as damaged (``.bad``).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;.lock&quot;</span> <span class="ow">in</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">&quot;~&quot;</span><span class="p">,</span> <span class="s2">&quot;.partial&quot;</span><span class="p">,</span> <span class="s2">&quot;.bad&quot;</span><span class="p">))</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_time</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return *value* as a Timestamp, raising for a missing time.&quot;&quot;&quot;</span>
     <span class="n">time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
@@ -795,14 +810,13 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Every file under :attr:`directory`, walked once, as its path&#39;s parts relative to it and the path.</span>
 
-<span class="sd">        Lock files and backup copies (``name~&lt;timestamp&gt;~``, ``name.~1~``,</span>
-<span class="sd">        ``name~``, which all end in ``~``) are left out.</span>
+<span class="sd">        Lock files, backup copies, and names ending in ``.partial`` or ``.bad`` are left out.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">names</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">):</span>
             <span class="n">parts</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span>
             <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
-                <span class="k">if</span> <span class="s2">&quot;.lock&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_stray</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
                     <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">(((</span><span class="o">*</span><span class="n">parts</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="n">name</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">found</span>
 
@@ -1297,8 +1311,8 @@
         <span class="k">return</span>
     <span class="n">folders</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;.lock&quot;</span> <span class="ow">in</span> <span class="n">entry</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
-            <span class="k">continue</span>  <span class="c1"># backups and lock files, as Met.files_for skips them</span>
+        <span class="k">if</span> <span class="n">_is_stray</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+            <span class="k">continue</span>  <span class="c1"># as Met.files_for skips them</span>
         <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
             <span class="n">folders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">entry</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>

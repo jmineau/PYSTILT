@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6f3c8aa1"></script>
+    <script src="../_static/documentation_options.js?v=328c75e0"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Checking A Run" href="checking.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev23+g11985e877" />
+  <meta name="docsearch:version" content="0.1.0a25.dev24+gc5666d0c0" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -725,17 +725,17 @@ what a transport model must write.</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [22]: </span><span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">endpoints</span><span class="p">()</span>    <span class="c1"># where each particle ends, one row each</span>
 <span class="gh">Out[22]: </span>
 <span class="go">         age  particle  ...  foot_no_hnf_dilution                time</span>
-<span class="go">52312 -264.0       1.0  ...                   0.0 2021-01-15 03:36:00</span>
-<span class="go">58674 -305.0       2.0  ...                   0.0 2021-01-15 02:55:00</span>
-<span class="go">57272 -295.0       3.0  ...                   0.0 2021-01-15 03:05:00</span>
-<span class="go">62843 -339.0       4.0  ...                   0.0 2021-01-15 02:21:00</span>
-<span class="go">66103 -375.0       5.0  ...                   0.0 2021-01-15 01:45:00</span>
+<span class="go">47600 -239.0       1.0  ...                   0.0 2021-01-15 04:01:00</span>
+<span class="go">68819 -389.0       2.0  ...                   0.0 2021-01-15 01:31:00</span>
+<span class="go">60162 -310.0       3.0  ...                   0.0 2021-01-15 02:50:00</span>
+<span class="go">64452 -343.0       4.0  ...                   0.0 2021-01-15 02:17:00</span>
+<span class="go">62357 -326.0       5.0  ...                   0.0 2021-01-15 02:34:00</span>
 <span class="go">...      ...       ...  ...                   ...                 ...</span>
-<span class="go">74758 -618.0     196.0  ...                   0.0 2021-01-14 21:42:00</span>
-<span class="go">65578 -367.0     197.0  ...                   0.0 2021-01-15 01:53:00</span>
-<span class="go">73562 -562.0     198.0  ...                   0.0 2021-01-14 22:38:00</span>
-<span class="go">49351 -247.0     199.0  ...                   0.0 2021-01-15 03:53:00</span>
-<span class="go">54661 -277.0     200.0  ...                   0.0 2021-01-15 03:23:00</span>
+<span class="go">60744 -313.0     196.0  ...                   0.0 2021-01-15 02:47:00</span>
+<span class="go">77804 -653.0     197.0  ...                   0.0 2021-01-14 21:07:00</span>
+<span class="go">63734 -336.0     198.0  ...                   0.0 2021-01-15 02:24:00</span>
+<span class="go">66318 -359.0     199.0  ...                   0.0 2021-01-15 02:01:00</span>
+<span class="go">49585 -248.0     200.0  ...                   0.0 2021-01-15 03:52:00</span>
 
 <span class="go">[200 rows x 14 columns]</span>
 
@@ -864,10 +864,10 @@ footprint as a <a class="reference external" href="https://docs.xarray.dev/en/st
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [34]: </span><span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
 <span class="gh">Out[34]: </span>
 <span class="go">receptor</span>
-<span class="go">202101150600_-111.848_40.766_10    144.930206</span>
-<span class="go">202101150700_-111.848_40.766_10    171.046357</span>
-<span class="go">202101150800_-111.848_40.766_10    225.180027</span>
-<span class="go">202101150900_-111.848_40.766_10    272.346685</span>
+<span class="go">202101150600_-111.848_40.766_10    139.468477</span>
+<span class="go">202101150700_-111.848_40.766_10    168.771975</span>
+<span class="go">202101150800_-111.848_40.766_10    233.355710</span>
+<span class="go">202101150900_-111.848_40.766_10    267.892134</span>
 <span class="go">Name: foot, dtype: float64</span>
 </pre></div>
 </div>

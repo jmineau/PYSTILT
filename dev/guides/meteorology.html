@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6f3c8aa1"></script>
+    <script src="../_static/documentation_options.js?v=328c75e0"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Receptors" href="receptors.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev23+g11985e877" />
+  <meta name="docsearch:version" content="0.1.0a25.dev24+gc5666d0c0" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -588,7 +588,9 @@ file covers:</p>
 <code class="docutils literal notranslate"><span class="pre">%Y</span></code> for the year, <code class="docutils literal notranslate"><span class="pre">%m</span></code> month, <code class="docutils literal notranslate"><span class="pre">%d</span></code> day, and <code class="docutils literal notranslate"><span class="pre">%H</span></code> hour. Files
 named <code class="docutils literal notranslate"><span class="pre">20230715_18</span></code> match <code class="docutils literal notranslate"><span class="pre">&quot;%Y%m%d_%H&quot;</span></code>. Files named
 <code class="docutils literal notranslate"><span class="pre">hysplit.20230715.18z.hrrra</span></code> match <code class="docutils literal notranslate"><span class="pre">&quot;hysplit.%Y%m%d.%Hz.hrrra&quot;</span></code>. A
-file matches when its name starts with the pattern.</p>
+file matches when its name starts with the pattern. Lock files, backup
+copies that end in <code class="docutils literal notranslate"><span class="pre">~</span></code>, and names that end in <code class="docutils literal notranslate"><span class="pre">.partial</span></code> or <code class="docutils literal notranslate"><span class="pre">.bad</span></code>
+are skipped.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">file_tres</span></code></dt><dd><p>How much time each file covers, such as <code class="docutils literal notranslate"><span class="pre">1h</span></code>, <code class="docutils literal notranslate"><span class="pre">3h</span></code>, or <code class="docutils literal notranslate"><span class="pre">6h</span></code>.</p>
 </dd>
