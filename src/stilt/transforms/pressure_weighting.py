@@ -41,9 +41,6 @@ def particle_pwf(
     stands for the slab centered on it. Slab edges sit midway between
     neighboring release pressures, the ground closes the bottom slab, and the
     top slab extends above its release height as far as it does below.
-    X-STILT instead gives each particle the layer below it, which shifts
-    every weight down by half a slab and leaves the lowest particle with
-    almost none.
 
     A multipoint receptor releases several particles from each point. Those
     particles share one release height, so the point's slab is split evenly

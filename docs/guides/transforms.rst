@@ -51,8 +51,10 @@ Built-in transforms
    heights and pressures at their first output step. It evaluates the curve
    at each release height to get the release pressure. Each release height
    then stands for the slab of air centered on it, with the ground closing
-   the lowest slab. X-STILT gives each particle the layer below it instead,
-   which leaves a particle released at the surface almost no weight.
+   the lowest slab. HYSPLIT places each particle at random inside its own
+   slab of the column, so the slab around the release height is the air the
+   particle stands for. The :doc:`X-STILT migration page
+   <migration/x_stilt>` lists how this differs from X-STILT's weights.
 
    A multipoint receptor releases several particles from each point. They
    share one release height, so the point's slab is split evenly among

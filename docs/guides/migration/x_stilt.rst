@@ -125,6 +125,15 @@ X-STILT. Each row says what each one does.
      - The same sum, and also the root-sum-square for independent cells,
        which bounds the error from below. With a spatial correlation, fips's
        ``prior_obs_error`` gives the value in between.
+   * - Pressure weighting (``get.wgt.*.func``)
+     - Gives each particle the layer below its release pressure, from the
+       next particle down (or the ground, for the lowest). A particle released
+       at the surface gets almost no weight.
+     - Gives each particle the slab centered on its release height, with
+       edges halfway to its neighbors and the ground closing the lowest slab,
+       because HYSPLIT places each particle at random inside its own slab.
+       A particle's slab is half a slab higher than in X-STILT
+       (:doc:`/guides/transforms`).
 
 Moving a workflow over
 ----------------------
