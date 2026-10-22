@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=ce137895"></script>
+    <script src="../_static/documentation_options.js?v=6a883399"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Installation" href="installation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev27+g705749c72" />
+  <meta name="docsearch:version" content="0.1.0a25.dev29+gbfc381335" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -599,6 +599,8 @@ follows them back in time through the meteorology:</p>
 <span class="gp">   ...: </span>    <span class="n">met</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>     <span class="c1"># follow the air 24 hours back in time</span>
 <span class="gp">   ...: </span>    <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>      <span class="c1"># number of particles to release</span>
+<span class="gp">   ...: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>         <span class="c1"># the random numbers a seed can fix</span>
+<span class="gp">   ...: </span>    <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>         <span class="c1"># same seed, same particles</span>
 <span class="gp">   ...: </span><span class="p">)</span>
 <span class="gp">   ...: </span>
 </pre></div>
@@ -611,6 +613,12 @@ what you want for measurements. 24 to 72 hours is typical.</p>
 but take longer. 200 is fine for a first try. Research runs often use
 500 to 1000.</p>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">krand</span></code> and <code class="docutils literal notranslate"><span class="pre">seed</span></code></dt><dd><p>HYSPLIT draws random numbers for the turbulence that moves each particle.
+<code class="docutils literal notranslate"><span class="pre">krand=2</span></code> with a <code class="docutils literal notranslate"><span class="pre">seed</span></code> makes the draws the same on every run, so your
+particles match the ones on this page. Without them (<code class="docutils literal notranslate"><span class="pre">krand=4</span></code>, the
+default) every run draws its own, and the particles and the footprint
+change a little from run to run.</p>
+</dd>
 </dl>
 <p>This runs HYSPLIT, the transport model, and usually takes a minute or two.
 The particles are a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code></a>, one row per particle per
@@ -619,7 +627,7 @@ time step:</p>
 <span class="gh">Out[4]: </span>
 <span class="go">   age  particle       lon      lat  ...  samt   sigw     tlgr  foot_no_hnf_dilution</span>
 <span class="go">0 -1.0       1.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
-<span class="go">1 -1.0       2.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
+<span class="go">1 -1.0       2.0 -111.8473  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
 <span class="go">2 -1.0       3.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
 <span class="go">3 -1.0       4.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
 <span class="go">4 -1.0       5.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
@@ -636,7 +644,7 @@ only a small region around Salt Lake, and the particles leave it before the 24
 hours are up. A particle that leaves the met stops there. This is how many hours
 they went (<code class="docutils literal notranslate"><span class="pre">age</span></code> is in minutes):</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">particles</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> hours&quot;</span><span class="p">)</span>
-<span class="go">14.0 hours</span>
+<span class="go">12.0 hours</span>
 </pre></div>
 </div>
 <p>If that is short of <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, the footprint covers only those hours.
@@ -690,6 +698,8 @@ settings are the ones above:</p>
 <span class="gp">   ....: </span>    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="p">{}},</span>       <span class="c1"># one variant: these settings, met hrrr</span>
 <span class="gp">   ....: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>
 <span class="gp">   ....: </span>    <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+<span class="gp">   ....: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">   ....: </span>    <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
 <span class="gp">   ....: </span>    <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span>
 <span class="gp">   ....: </span><span class="p">)</span>
 <span class="gp">   ....: </span>
@@ -725,7 +735,7 @@ the variant name:</p>
 <span class="gh">Out[16]: </span>
 <span class="go">   age  particle       lon  ...     tlgr  foot_no_hnf_dilution                time</span>
 <span class="go">0 -1.0       1.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
-<span class="go">1 -1.0       2.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
+<span class="go">1 -1.0       2.0 -111.8473  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
 <span class="go">2 -1.0       3.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
 <span class="go">3 -1.0       4.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
 <span class="go">4 -1.0       5.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
@@ -737,10 +747,11 @@ the variant name:</p>
 </div>
 <a class="reference internal image-reference" href="../_images/quickstart_sim_footprint.png"><img alt="../_images/quickstart_sim_footprint.png" src="../_images/quickstart_sim_footprint.png" style="width: 6in;" />
 </a>
-<p>This footprint looks a little different from the one in Step 3, although the
-settings are the same. Each run draws its own random numbers for the
-turbulence, and 200 particles are few. To repeat a run exactly, set <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code>
-and a <code class="docutils literal notranslate"><span class="pre">seed</span></code>.</p>
+<p>This is the same footprint as in Step 3, because the settings and the seed
+are the same. The seed belongs to the variant, so every receptor of a variant
+runs with it. Without <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code> and a <code class="docutils literal notranslate"><span class="pre">seed</span></code>, each run draws its own
+random numbers for the turbulence, and 200 particles are few, so a second
+run’s footprint looks a little different.</p>
 </section>
 <section id="what-pystilt-wrote">
 <h2>What PYSTILT wrote<a class="headerlink" href="#what-pystilt-wrote" title="Link to this heading">#</a></h2>

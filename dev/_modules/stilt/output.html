@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=ce137895"></script>
+    <script src="../../_static/documentation_options.js?v=6a883399"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev27+g705749c72" />
+  <meta name="docsearch:version" content="0.1.0a25.dev29+gbfc381335" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -592,7 +592,7 @@
 
 <span class="c1">#: Underscore-prefixed, so dataset readers skip it.</span>
 <span class="n">SETTINGS_FILE</span> <span class="o">=</span> <span class="s2">&quot;_settings.yaml&quot;</span>
-<span class="c1">#: A receptor&#39;s failure record, under its folder&#39;s logs: ``&lt;receptor_id&gt;.failure.yaml``.</span>
+<span class="c1">#: The suffix of a receptor&#39;s failure record, ``&lt;receptor_id&gt;.failure.yaml``, in its folder&#39;s logs.</span>
 <span class="n">FAILURE_SUFFIX</span> <span class="o">=</span> <span class="s2">&quot;.failure.yaml&quot;</span>
 <span class="n">HASH_CHARS</span> <span class="o">=</span> <span class="mi">6</span>
 
@@ -855,7 +855,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="c1">#: The output directory: a Path, or a universal path on an object store.</span>
+        <span class="c1">#: The output directory, a Path or a universal path on an object store.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">:</span> <span class="n">Location</span> <span class="o">=</span> <span class="n">location</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="c1"># Each folder&#39;s settings hash, by kind and folder name. Reading one</span>
         <span class="c1"># means reading its _settings.yaml and hashing it again, so each is</span>

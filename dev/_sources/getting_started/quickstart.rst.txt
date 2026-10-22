@@ -100,6 +100,8 @@ follows them back in time through the meteorology:
        met,
        n_hours=-24,     # follow the air 24 hours back in time
        numpar=200,      # number of particles to release
+       krand=2,         # the random numbers a seed can fix
+       seed=42,         # same seed, same particles
    )
 
 ``n_hours``
@@ -110,6 +112,13 @@ follows them back in time through the meteorology:
    How many particles to release. More particles give a smoother footprint
    but take longer. 200 is fine for a first try. Research runs often use
    500 to 1000.
+
+``krand`` and ``seed``
+   HYSPLIT draws random numbers for the turbulence that moves each particle.
+   ``krand=2`` with a ``seed`` makes the draws the same on every run, so your
+   particles match the ones on this page. Without them (``krand=4``, the
+   default) every run draws its own, and the particles and the footprint
+   change a little from run to run.
 
 This runs HYSPLIT, the transport model, and usually takes a minute or two.
 The particles are a :class:`pandas.DataFrame`, one row per particle per
@@ -187,6 +196,8 @@ settings are the ones above:
        variants={"hrrr": {}},       # one variant: these settings, met hrrr
        n_hours=-24,
        numpar=200,
+       krand=2,
+       seed=42,
        grid=grid,
    )
 
@@ -224,10 +235,11 @@ the variant name:
    @savefig quickstart_sim_footprint.png width=6in
    sim.footprint.stilt.plot.map();
 
-This footprint looks a little different from the one in Step 3, although the
-settings are the same. Each run draws its own random numbers for the
-turbulence, and 200 particles are few. To repeat a run exactly, set ``krand: 2``
-and a ``seed``.
+This is the same footprint as in Step 3, because the settings and the seed
+are the same. The seed belongs to the variant, so every receptor of a variant
+runs with it. Without ``krand: 2`` and a ``seed``, each run draws its own
+random numbers for the turbulence, and 200 particles are few, so a second
+run's footprint looks a little different.
 
 What PYSTILT wrote
 ------------------

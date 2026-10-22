@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../../_static/documentation_options.js?v=ce137895"></script>
+    <script src="../../../../_static/documentation_options.js?v=6a883399"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev27+g705749c72" />
+  <meta name="docsearch:version" content="0.1.0a25.dev29+gbfc381335" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -512,15 +512,17 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-<span class="c1">#: When a reader returns a column: ``always``; ``kernel``, for every product</span>
-<span class="c1">#: with an averaging kernel (all but GGG ``.oof`` files); or ``optional``,</span>
-<span class="c1">#: when the product has it.</span>
+<span class="c1">#: When a reader returns a column. It is ``always``; ``kernel``, for every</span>
+<span class="c1">#: product with an averaging kernel (all but GGG ``.oof`` files); or</span>
+<span class="c1">#: ``optional``, when the product has it.</span>
 <span class="n">When</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;always&quot;</span><span class="p">,</span> <span class="s2">&quot;kernel&quot;</span><span class="p">,</span> <span class="s2">&quot;optional&quot;</span><span class="p">]</span>
 
 <span class="c1">#: Every column of a table of soundings, as ``{name: (when, meaning)}``.</span>
-<span class="c1">#: Vertical arrays run from the surface upward, pressures are in hPa,</span>
-<span class="c1">#: altitudes in meters above sea level, and azimuths in degrees clockwise</span>
-<span class="c1">#: from north toward the instrument or the sun.</span>
+<span class="c1">#: ``when`` is ``always``; ``kernel``, for every product with an averaging</span>
+<span class="c1">#: kernel (all but GGG ``.oof`` files); or ``optional``, when the product</span>
+<span class="c1">#: has it. Vertical arrays run from the surface upward, pressures are in</span>
+<span class="c1">#: hPa, altitudes in meters above sea level, and azimuths in degrees</span>
+<span class="c1">#: clockwise from north toward the instrument or the sun.</span>
 <span class="n">SOUNDING_SCHEMA</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">When</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;sounding_id&quot;</span><span class="p">:</span> <span class="p">(</span>
         <span class="s2">&quot;always&quot;</span><span class="p">,</span>
