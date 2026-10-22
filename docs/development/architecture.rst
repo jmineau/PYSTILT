@@ -513,8 +513,7 @@ the terrain under the lowest point. ``PressureWeighting.apply`` reads
 ``AveragingKernel`` holds only the kernel. ``calc_footprint`` divides by the
 particle count, so weights are scaled by ``N``. Weights sum to the column's
 mass fraction (less than 1) by design: the rest of the atmosphere is above
-the column top. X-STILT gives each particle the layer below it instead, which
-gives a surface-released particle zero weight.
+the column top.
 
 The hypsometric fit is load-bearing. HYSPLIT's first output step is already
 one time step of turbulence past release: on a real 1000-particle column, 394
