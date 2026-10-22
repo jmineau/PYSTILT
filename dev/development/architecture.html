@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=5e3f0503"></script>
+    <script src="../_static/documentation_options.js?v=6c8a9f2d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Development" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev37+g4b7ff1fd4" />
+  <meta name="docsearch:version" content="0.1.0a25.dev38+gd6485f029" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -941,8 +941,7 @@ the terrain under the lowest point. <code class="docutils literal notranslate"><
 <code class="docutils literal notranslate"><span class="pre">AveragingKernel</span></code> holds only the kernel. <code class="docutils literal notranslate"><span class="pre">calc_footprint</span></code> divides by the
 particle count, so weights are scaled by <code class="docutils literal notranslate"><span class="pre">N</span></code>. Weights sum to the column’s
 mass fraction (less than 1) by design: the rest of the atmosphere is above
-the column top. X-STILT gives each particle the layer below it instead, which
-gives a surface-released particle zero weight.</p>
+the column top.</p>
 <p>The hypsometric fit is load-bearing. HYSPLIT’s first output step is already
 one time step of turbulence past release: on a real 1000-particle column, 394
 of 999 adjacent particles are non-monotone in pressure against release

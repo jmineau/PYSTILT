@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=5e3f0503"></script>
+    <script src="../_static/documentation_options.js?v=6c8a9f2d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -63,7 +63,7 @@
     <link rel="prev" title="Slant Columns" href="slant_columns.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev37+g4b7ff1fd4" />
+  <meta name="docsearch:version" content="0.1.0a25.dev38+gd6485f029" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -558,8 +558,9 @@ fits a hypsometric curve, <span class="math notranslate nohighlight">\(\ln p = b
 heights and pressures at their first output step. It evaluates the curve
 at each release height to get the release pressure. Each release height
 then stands for the slab of air centered on it, with the ground closing
-the lowest slab. X-STILT gives each particle the layer below it instead,
-which leaves a particle released at the surface almost no weight.</p>
+the lowest slab. HYSPLIT places each particle at random inside its own
+slab of the column, so the slab around the release height is the air the
+particle stands for. The <a class="reference internal" href="migration/x_stilt.html"><span class="doc">X-STILT migration page</span></a> lists how this differs from X-STILT’s weights.</p>
 <p>A multipoint receptor releases several particles from each point. They
 share one release height, so the point’s slab is split evenly among
 them. The weighted footprint does not depend on how many particles each

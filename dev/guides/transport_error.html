@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=5e3f0503"></script>
+    <script src="../_static/documentation_options.js?v=6c8a9f2d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -63,7 +63,7 @@
     <link rel="prev" title="Summing Footprints: Areas And The Jacobian" href="aggregation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev37+g4b7ff1fd4" />
+  <meta name="docsearch:version" content="0.1.0a25.dev38+gd6485f029" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -639,13 +639,12 @@ units. Put it on the footprint grid and compute two limits:</p>
 </pre></div>
 </div>
 <p>The first assumes the errors in all cells move together, so it is an upper
-bound. X-STILT reports this one as the emission error (<code class="docutils literal notranslate"><span class="pre">cal.emiss.err</span></code>),
-with <code class="docutils literal notranslate"><span class="pre">sigma</span></code> from the spread of several inventories. The second assumes
-the cells are independent, which gives a lower bound. Real inventory errors
-are correlated over some distance, so the true value lies in between.
-Computing it needs the covariance of the flux errors, which is the prior
-error covariance of an inversion. If you set up the inversion with fips,
-<code class="docutils literal notranslate"><span class="pre">InverseProblem.prior_obs_error</span></code> is that covariance carried to every
+bound. <code class="docutils literal notranslate"><span class="pre">sigma</span></code> can come from the spread of several inventories. The
+second assumes the cells are independent, which gives a lower bound. Real
+inventory errors are correlated over some distance, so the true value lies
+in between. Computing it needs the covariance of the flux errors, which is
+the prior error covariance of an inversion. If you set up the inversion with
+fips, <code class="docutils literal notranslate"><span class="pre">InverseProblem.prior_obs_error</span></code> is that covariance carried to every
 observation (the footprint matrix times the prior covariance times its
 transpose). The square root of its diagonal is each observation’s emission
 error. Add it in quadrature to the transport and retrieval errors to get
@@ -722,14 +721,18 @@ are then combined with an exponential error correlation in the vertical:</p>
 <p>Here <code class="docutils literal notranslate"><span class="pre">w</span></code> is <code class="docutils literal notranslate"><span class="pre">weight</span></code>, <code class="docutils literal notranslate"><span class="pre">s</span></code> is <code class="docutils literal notranslate"><span class="pre">sd_trans</span></code>, <code class="docutils literal notranslate"><span class="pre">h</span></code> is <code class="docutils literal notranslate"><span class="pre">height</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">L</span></code> is <code class="docutils literal notranslate"><span class="pre">length_scale</span></code>, 356 m by default (X-STILT’s value). With
 <code class="docutils literal notranslate"><span class="pre">length_scale=None</span></code> the levels are independent.</p>
-<p><code class="docutils literal notranslate"><span class="pre">percentile=0.99</span></code> reproduces X-STILT’s trimming
+<p>By default every particle counts, as in Lin and Gerbig. <code class="docutils literal notranslate"><span class="pre">percentile=0.99</span></code>
+reproduces X-STILT’s trimming
 (<a class="reference external" href="https://doi.org/10.5194/gmd-11-4843-2018">Wu et al., 2018</a>). It drops
 the top 1 % of particles in each level before taking the variance, which
 damps the few particles that pass over a point source at the cost of a
-small bias. X-STILT also fits a line through the levels where <code class="docutils literal notranslate"><span class="pre">dvar</span></code> is
-positive. PYSTILT does not, because fitting only those levels biases the
-result upward: under pure sampling noise it reports a positive error at
-every level.</p>
+small bias. The <a class="reference internal" href="migration/x_stilt.html"><span class="doc">X-STILT migration page</span></a> lists
+where the rest of the calculation differs.</p>
+<p>PYSTILT uses each level’s <code class="docutils literal notranslate"><span class="pre">dvar</span></code> as it is, with its sign, so that the
+noise in it averages out over many receptors. Fitting a line through only
+the levels where <code class="docutils literal notranslate"><span class="pre">dvar</span></code> is positive would bias the result upward: it
+keeps the levels whose variance happened to rise, so under pure sampling
+noise it reports a positive error at every level.</p>
 <p>The method measures how much the wind error moves particles between flux
 cells. It says little when the flux field is uniform, and it is only as
 good as the wind statistics you gave the run. It covers transport only.
