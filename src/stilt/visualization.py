@@ -41,7 +41,8 @@ def _make_ax(
         import cartopy.crs as ccrs
         import cartopy.feature as cfeature
 
-        fig = plt.figure()
+        # Constrained layout makes room for each colorbar and its label.
+        fig = plt.figure(layout="constrained")
         ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
         # pyrefly: ignore[missing-attribute]
         ax.add_feature(cfeature.STATES, linewidth=0.4, edgecolor="0.4")
@@ -331,7 +332,8 @@ class FootprintPlotAccessor:
         """
         Plot each time step of the footprint in its own panel, with one colorbar.
 
-        This is xarray's faceted plot, in the footprint's own coordinates.
+        This is xarray's faceted plot, in the footprint's own coordinates. Each
+        panel is titled with its time.
 
         Parameters
         ----------
@@ -342,9 +344,12 @@ class FootprintPlotAccessor:
         cmap : str, default "cool"
             Colormap name.
         figsize : tuple of float, optional
-            Figure size. Defaults to ``(ncols * 4, nrows * 3)``.
+            Figure size. By default the figure is sized by its panels, each
+            2.2 inches high and 1.25 times as wide as high (xarray's ``size``
+            and ``aspect``, which can be passed instead).
         **kwargs
-            Forwarded to :meth:`xarray.DataArray.plot`.
+            Forwarded to :meth:`xarray.DataArray.plot`. ``cbar_kwargs`` is
+            merged into the slim colorbar's settings.
 
         Returns
         -------
@@ -357,18 +362,31 @@ class FootprintPlotAccessor:
             blank_zeros = foot.where(foot > 0)
             data = blank_zeros.copy(data=np.log10(blank_zeros.values))
         y_dim, x_dim = horizontal_dims(foot)
-        nrows = -(-foot.sizes["time"] // ncols)
+        if figsize is None:
+            kwargs.setdefault("size", 2.2)
+            kwargs.setdefault("aspect", 1.25)
+        else:
+            kwargs["figsize"] = figsize
+        cbar_kwargs = {
+            "label": "log₁₀(footprint)" if log else "footprint",
+            "fraction": 0.08,
+            "aspect": 30,
+            "shrink": 0.6,
+            "pad": 0.02,
+            **kwargs.pop("cbar_kwargs", {}),
+        }
         facets = data.plot(
             x=x_dim,
             y=y_dim,
             col="time",
             col_wrap=ncols,
             cmap=cmap,
-            figsize=figsize or (ncols * 4, nrows * 3),
-            cbar_kwargs={"label": "log₁₀(footprint)" if log else "footprint"},
+            cbar_kwargs=cbar_kwargs,
             **kwargs,
         )
-        facets.fig.suptitle("Footprint by time step")
+        # xarray titles a panel "time = 2021-01-15T01:00:00", and a midnight one with no hour.
+        for ax, time in zip(facets.axs.flat, foot["time"].values, strict=False):
+            ax.set_title(pd.Timestamp(time).strftime("%Y-%m-%d %H:%M"), fontsize=9)
         return facets.fig, facets.axs
 
 
@@ -637,7 +655,8 @@ class ProjectPlotAccessor:
         from matplotlib.colors import Normalize
 
         if ax is None:
-            _, ax = plt.subplots()
+            # Constrained layout fits location labels of any length.
+            _, ax = plt.subplots(layout="constrained")
         assert ax is not None
 
         receptors = self._project.receptors
@@ -663,6 +682,11 @@ class ProjectPlotAccessor:
         ax.figure.colorbar(
             ScalarMappable(norm=norm, cmap=cmap), ax=ax, label="Receptors per day"
         )
-        ax.figure.autofmt_xdate()
+        if ax.figure.get_layout_engine() is None:
+            ax.figure.autofmt_xdate()  # rotates the dates and makes room for them
+        else:  # the layout makes the room; autofmt_xdate would warn on older matplotlib
+            for label in ax.get_xticklabels():
+                label.set_rotation(30)
+                label.set_horizontalalignment("right")
         ax.set(title="Receptors", xlabel="Day", ylabel="Location")
         return ax

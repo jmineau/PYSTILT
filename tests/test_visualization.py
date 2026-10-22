@@ -13,6 +13,7 @@ import xarray as xr
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # must come after use("Agg")
+from matplotlib.layout_engine import ConstrainedLayoutEngine
 
 from stilt.footprint.config import FootprintConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
@@ -148,6 +149,18 @@ def test_make_ax_with_existing_ax():
     _, existing = plt.subplots()
     fig, ax = _make_ax(ax=existing)
     assert ax is existing
+
+
+def test_make_ax_has_a_constrained_layout():
+    """Each colorbar a map adds gets room, with its label."""
+    fig, _ = _make_ax()
+    assert isinstance(fig.get_layout_engine(), ConstrainedLayoutEngine)
+
+
+def test_make_ax_leaves_the_layout_of_a_given_ax():
+    fig, existing = plt.subplots()
+    _make_ax(ax=existing)
+    assert fig.get_layout_engine() is None
 
 
 # ---------------------------------------------------------------------------
@@ -396,6 +409,63 @@ def test_footprint_facet_on_a_projected_grid(projected_footprint):
     plt.close("all")
 
 
+@pytest.fixture
+def hourly_footprint(receptor, grid):
+    """Thirteen hourly steps from 19:00 to 07:00, so the panels cross midnight."""
+    times = pd.date_range("2023-01-01 19:00", periods=13, freq="h")
+    lons = np.array([-113.5, -112.5, -111.5])
+    lats = np.array([39.5, 40.5, 41.5])
+    data = xr.DataArray(
+        np.random.default_rng(0).random((len(times), len(lats), len(lons))),
+        dims=("time", "lat", "lon"),
+        coords={"time": times, "lat": lats, "lon": lons},
+    )
+    return as_footprint(data, receptor, FootprintConfig(grid=grid), "")
+
+
+def _colorbar_axes(fig, axes):
+    [cbar_ax] = [ax for ax in fig.axes if ax not in axes.flat]
+    return cbar_ax
+
+
+def test_footprint_facet_titles_each_panel_with_its_clock_time(hourly_footprint):
+    fig, axes = hourly_footprint.stilt.plot.facet()
+    titles = [ax.get_title() for ax in axes.flat][:13]
+    assert titles[0] == "2023-01-01 19:00"
+    assert titles[5] == "2023-01-02 00:00"  # xarray titles midnight with no hour
+    assert titles[-1] == "2023-01-02 07:00"
+
+
+def test_footprint_facet_has_no_title_over_the_panels(hourly_footprint):
+    fig, _ = hourly_footprint.stilt.plot.facet()
+    assert [text.get_text() for text in fig.texts] == []
+
+
+def test_footprint_facet_is_sized_by_its_panels(hourly_footprint):
+    """Each row of panels is 2.2 inches high, whatever the number of panels."""
+    fig, _ = hourly_footprint.stilt.plot.facet(ncols=4)  # 13 panels: 4 rows
+    assert fig.get_figheight() == pytest.approx(4 * 2.2)
+
+
+def test_footprint_facet_figsize_wins(hourly_footprint):
+    fig, _ = hourly_footprint.stilt.plot.facet(figsize=(6, 5))
+    assert tuple(fig.get_size_inches()) == (6, 5)
+
+
+def test_footprint_facet_colorbar_is_slim(hourly_footprint):
+    """The colorbar was as tall as the figure and 0.7 inch wide for thirteen panels."""
+    fig, axes = hourly_footprint.stilt.plot.facet()
+    fig.canvas.draw()  # the colorbar's aspect is applied when it is drawn
+    box = _colorbar_axes(fig, axes).get_position()
+    assert box.width * fig.get_figwidth() < 0.4
+    assert box.height < 0.7
+
+
+def test_footprint_facet_merges_cbar_kwargs(hourly_footprint):
+    fig, axes = hourly_footprint.stilt.plot.facet(cbar_kwargs={"label": "ppm"})
+    assert _colorbar_axes(fig, axes).get_ylabel() == "ppm"
+
+
 # ---------------------------------------------------------------------------
 # SimulationPlotAccessor
 # ---------------------------------------------------------------------------
@@ -485,6 +555,36 @@ def test_simulation_map_show_traj_false(receptor, minimal_trajectories):
 
     ax = SimulationPlotAccessor(sim).map(show_particles=False)
     assert ax is not None
+
+
+def test_simulation_map_colorbar_labels_do_not_overlap(
+    receptor, minimal_footprint, minimal_trajectories
+):
+    """The particles' colorbar label was drawn over the footprint's colorbar."""
+    pytest.importorskip("cartopy")
+    from unittest.mock import MagicMock
+
+    from cartopy.mpl.feature_artist import FeatureArtist
+
+    sim = MagicMock()
+    sim.receptor = receptor
+    sim.footprint = minimal_footprint
+    sim.particles = minimal_trajectories
+    sim.id = "202301011200_test/hrrr"
+
+    ax = SimulationPlotAccessor(sim).map()
+
+    fig = ax.figure
+    for artist in ax.get_children():  # drawing the coastlines would download them
+        if isinstance(artist, FeatureArtist):
+            artist.set_visible(False)
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    bars = [other for other in fig.axes if other is not ax]
+    assert len(bars) == 2
+    for bar, other in (bars, bars[::-1]):
+        label = bar.yaxis.label.get_window_extent(renderer)
+        assert not label.overlaps(other.get_window_extent(renderer))
 
 
 def test_simulation_map_show_receptor_false(receptor):
@@ -618,3 +718,34 @@ def test_project_availability_formats_the_figure_of_the_given_ax(receptor):
 
     assert fig.subplotpars.bottom == pytest.approx(0.2)  # set by autofmt_xdate
     assert other.subplotpars.bottom == default_bottom
+
+
+def test_project_availability_figure_keeps_long_location_labels(receptor):
+    """A label of any length stays inside the figure, so a saved figure has it whole."""
+    from unittest.mock import MagicMock
+
+    project = MagicMock()
+    project.receptors = pd.DataFrame(
+        {"location": ["-111.848_40.766_10-with-a-long-name"], "time": [receptor.time]}
+    )
+
+    ax = ProjectPlotAccessor(project).availability()
+
+    fig = ax.figure
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    for text in [*ax.get_yticklabels(), ax.yaxis.label]:
+        assert text.get_window_extent(renderer).x0 >= 0
+
+
+def test_project_availability_rotates_the_dates_of_its_own_figure(receptor):
+    from unittest.mock import MagicMock
+
+    project = MagicMock()
+    project.receptors = pd.DataFrame(
+        {"location": [receptor.location_id], "time": [receptor.time]}
+    )
+
+    ax = ProjectPlotAccessor(project).availability()
+
+    assert {label.get_rotation() for label in ax.get_xticklabels()} == {30.0}

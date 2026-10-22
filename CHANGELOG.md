@@ -148,6 +148,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   copy when it was cut short, and `stilt check` did not report a block that
   had only its copy. Names ending in `.partial` or `.bad` are skipped, as lock
   files and backup copies (`~`) already were.
+- A new map (`sim.plot.map()` and the other maps) makes room for each of its
+  colorbars. The particles' colorbar label was drawn over the footprint's
+  colorbar.
+- `project.plot.availability()` makes its figure so that location labels of any
+  length fit. A saved figure cut off the left of `-111.848_40.766_10` and of
+  the "Location" label.
+- `foot.stilt.plot.facet()` sizes its figure by its panels (2.2 inches high and
+  1.25 times as wide, or `size` and `aspect`), not by a default that made 13
+  hourly panels about 1.3 times taller than wide. Its colorbar is slim, each
+  panel is titled with its clock time (`2021-01-15 00:00`; the midnight panel
+  had no hour), and the title that was drawn over the top row is gone.
+  `cbar_kwargs` can be passed.
 - `project.particles` returns the simulations in the order of the selection,
   one variant (and realization) after another in the order they first
   appear in it ([#250](https://github.com/jmineau/PYSTILT/issues/250)).
