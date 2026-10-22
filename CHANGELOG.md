@@ -51,6 +51,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the particles. On five real 24 h runs of 1000 particles on a 300 x 300 grid,
   an hourly footprint takes 1.2 to 2.9 s instead of 8 to 260 s (STILT-R: 9 to
   17 s). Memory stays bounded when kernels are wide.
+- `project.status()`, `project.incomplete()`, and the plan `stilt submit` makes
+  take about a quarter less time on a large project, with the same result
+  ([#251](https://github.com/jmineau/PYSTILT/issues/251)). A receptor's date
+  folder is the first eight characters of its id, and the listing no longer
+  parses the id's time for each receptor. On a project of
+  233,660 simulations, `status()` takes 8.8 s instead of 11.6 s and
+  `incomplete()` 6.6 s instead of 9.2 s (medians of four runs, with the files
+  in the filesystem's cache).
 
 ### Fixed
 
