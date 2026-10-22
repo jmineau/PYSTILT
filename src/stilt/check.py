@@ -25,10 +25,10 @@ if TYPE_CHECKING:
 #: The columns of the table :func:`check_project` returns.
 CHECK_COLUMNS = ("check", "variant", "receptor", "message")
 
-#: One thing found: its check, the receptor it is about (``None`` when it is not about one), and what is wrong.
+#: One thing found, a tuple of its check, the receptor it is about (``None`` when it is not about one), and what is wrong.
 _Finding = tuple[str, str | None, str]
 
-#: A check of one variant: what it looks at (variants that look at the same thing share one result) and how to make it.
+#: A check of one variant, a tuple of what it looks at (variants that look at the same thing share one result) and how to make it.
 _Check = tuple[Any, Callable[[], list[_Finding]]]
 
 
