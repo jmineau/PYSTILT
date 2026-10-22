@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=6a883399"></script>
+    <script src="../../../_static/documentation_options.js?v=104dba9b"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev29+gbfc381335" />
+  <meta name="docsearch:version" content="0.1.0a25.dev31+ge6e627707" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -801,9 +801,10 @@
 <span class="sd">    particles : pandas.DataFrame</span>
 <span class="sd">        Unperturbed particle table of a receptor (``sim.particles``).</span>
 <span class="sd">    error_particles : pandas.DataFrame or sequence of pandas.DataFrame</span>
-<span class="sd">        Particle table of a wind-error variant of the same receptor, or a</span>
-<span class="sd">        list of them for a variant with ``realizations: N``, such as</span>
-<span class="sd">        ``[rows for _, rows in project.particles(ensemble).groupby(&quot;variant&quot;)]``.</span>
+<span class="sd">        Particle table of a wind-error variant of the same receptor, or one</span>
+<span class="sd">        table per realization for a variant with ``realizations: N`` (see</span>
+<span class="sd">        Examples). A table is one simulation&#39;s particles: one receptor and</span>
+<span class="sd">        one realization.</span>
 <span class="sd">    flux : xarray.DataArray</span>
 <span class="sd">        Surface flux field (see ``particles.stilt.enhancement``).</span>
 <span class="sd">    transforms : sequence, optional</span>
@@ -869,6 +870,29 @@
 <span class="sd">    Compare a single value with ``noise``. Over many receptors, combine the</span>
 <span class="sd">    signed ``variance`` values with a median instead of clipping each at</span>
 <span class="sd">    zero.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    For the variant ``hrrr-err`` with ``realizations: 4``, select one</span>
+<span class="sd">    receptor&#39;s simulations and group their particles by realization. Grouping</span>
+<span class="sd">    by ``variant`` gives one table, which counts as one realization and gives</span>
+<span class="sd">    a wrong variance. Without the receptor, each realization&#39;s table holds</span>
+<span class="sd">    every receptor&#39;s particles.</span>
+
+<span class="sd">    &gt;&gt;&gt; from stilt.particles import transport_error</span>
+<span class="sd">    &gt;&gt;&gt; sim = project.simulation(rid, &quot;hrrr&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; sims = project.simulations</span>
+<span class="sd">    &gt;&gt;&gt; ensemble = sims[(sims.variant == &quot;hrrr-err&quot;) &amp; (sims.receptor == rid)]</span>
+<span class="sd">    &gt;&gt;&gt; by_realization = project.particles(ensemble).groupby(&quot;realization&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; error_particles = [rows for _, rows in by_realization]</span>
+<span class="sd">    &gt;&gt;&gt; result = transport_error(sim.particles, error_particles, flux)</span>
+<span class="sd">    &gt;&gt;&gt; result.realizations</span>
+<span class="sd">    4</span>
+
+<span class="sd">    ``sim.transport_error(realizations, flux)`` builds this list from the</span>
+<span class="sd">    realizations&#39; simulations. It also passes ``transforms``, ``receptor``,</span>
+<span class="sd">    and ``directory``, which a variant with footprint transforms needs and</span>
+<span class="sd">    this call leaves out.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">percentile</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;percentile must be in (0, 1].&quot;</span><span class="p">)</span>

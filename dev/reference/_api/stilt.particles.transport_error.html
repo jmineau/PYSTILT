@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=6a883399"></script>
+    <script src="../../_static/documentation_options.js?v=104dba9b"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="stilt.particles.Background" href="stilt.particles.Background-class.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev29+gbfc381335" />
+  <meta name="docsearch:version" content="0.1.0a25.dev31+ge6e627707" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -915,9 +915,10 @@
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>particles</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – Unperturbed particle table of a receptor (<code class="docutils literal notranslate"><span class="pre">sim.particles</span></code>).</p></li>
-<li><p><strong>error_particles</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>]</span>) – Particle table of a wind-error variant of the same receptor, or a
-list of them for a variant with <code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">N</span></code>, such as
-<code class="docutils literal notranslate"><span class="pre">[rows</span> <span class="pre">for</span> <span class="pre">_,</span> <span class="pre">rows</span> <span class="pre">in</span> <span class="pre">project.particles(ensemble).groupby(&quot;variant&quot;)]</span></code>.</p></li>
+<li><p><strong>error_particles</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>]</span>) – Particle table of a wind-error variant of the same receptor, or one
+table per realization for a variant with <code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">N</span></code> (see
+Examples). A table is one simulation’s particles: one receptor and
+one realization.</p></li>
 <li><p><strong>flux</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataArray</span></code></a></span>) – Surface flux field (see <code class="docutils literal notranslate"><span class="pre">particles.stilt.enhancement</span></code>).</p></li>
 <li><p><strong>transforms</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</span>) – The footprint’s particle transforms (<code class="docutils literal notranslate"><span class="pre">sim.variant.footprint.transforms</span></code>),
 applied to both tables so the error is weighted like the footprint.</p></li>
@@ -972,6 +973,27 @@ already spreads the particles widely, as on a convective afternoon.
 Compare a single value with <code class="docutils literal notranslate"><span class="pre">noise</span></code>. Over many receptors, combine the
 signed <code class="docutils literal notranslate"><span class="pre">variance</span></code> values with a median instead of clipping each at
 zero.</p>
+<p class="rubric">Examples</p>
+<p>For the variant <code class="docutils literal notranslate"><span class="pre">hrrr-err</span></code> with <code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">4</span></code>, select one
+receptor’s simulations and group their particles by realization. Grouping
+by <code class="docutils literal notranslate"><span class="pre">variant</span></code> gives one table, which counts as one realization and gives
+a wrong variance. Without the receptor, each realization’s table holds
+every receptor’s particles.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">transport_error</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ensemble</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;hrrr-err&quot;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">receptor</span> <span class="o">==</span> <span class="n">rid</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">by_realization</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">particles</span><span class="p">(</span><span class="n">ensemble</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;realization&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">error_particles</span> <span class="o">=</span> <span class="p">[</span><span class="n">rows</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">rows</span> <span class="ow">in</span> <span class="n">by_realization</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">transport_error</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span> <span class="n">error_particles</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">realizations</span>
+<span class="go">4</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">sim.transport_error(realizations,</span> <span class="pre">flux)</span></code> builds this list from the
+realizations’ simulations. It also passes <code class="docutils literal notranslate"><span class="pre">transforms</span></code>, <code class="docutils literal notranslate"><span class="pre">receptor</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">directory</span></code>, which a variant with footprint transforms needs and
+this call leaves out.</p>
 </dd></dl>
 
 </section>

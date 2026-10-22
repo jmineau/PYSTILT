@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6a883399"></script>
+    <script src="../_static/documentation_options.js?v=104dba9b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Checking A Run" href="checking.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev29+gbfc381335" />
+  <meta name="docsearch:version" content="0.1.0a25.dev31+ge6e627707" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -885,7 +885,7 @@ DuckDB, or polars instead. To find a single file, use
 <p>The extra columns of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> select one satellite scene or one
 site:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">scene</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">scene</span> <span class="o">==</span> <span class="s2">&quot;A&quot;</span><span class="p">)]</span>
-<span class="n">ensemble</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;hrrr-err&quot;</span><span class="p">]</span>        <span class="c1"># every realization</span>
+<span class="n">ensemble</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;hrrr-err&quot;</span><span class="p">]</span>        <span class="c1"># every realization of every receptor</span>
 </pre></div>
 </div>
 <p>To see what is left to do:</p>
