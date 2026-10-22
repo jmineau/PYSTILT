@@ -17,6 +17,7 @@ from .driver import (
     LOG_FILE,
     PARTICLE_STILT_FILE,
     _bundled_data_dir,
+    check_release,
     read_particle_dat,
     run_hycs_std,
     write_inputs,
@@ -162,8 +163,10 @@ class HysplitModel:
             With HYSPLIT's log in ``log``, and ``reason`` ``TIMEOUT`` when
             the run exceeded *timeout* seconds; the :class:`FailureReason`
             of a known failure message in the log or ``WARNING`` file, such
-            as the met running out (``MET_COVERAGE``); or
-            ``NO_PARTICLE_DATA`` when HYSPLIT wrote no particle file.
+            as the met running out (``MET_COVERAGE``); ``PARTICLE_LIMIT``
+            when ``maxpar`` stopped a release from several locations before
+            the last ones got their particles; or ``NO_PARTICLE_DATA`` when
+            HYSPLIT wrote no particle file.
             Particles that all left the met's domain before the end of the
             run are kept.
         MeteorologyError
@@ -182,6 +185,7 @@ class HysplitModel:
         write_inputs(workdir, receptor, config, readable)
         try:
             run_hycs_std(workdir, timeout)
+            check_release(workdir, receptor, config)
             path = workdir / PARTICLE_STILT_FILE
             if not path.exists():
                 raise SimulationError(

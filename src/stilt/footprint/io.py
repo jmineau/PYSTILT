@@ -85,7 +85,7 @@ def _with_cf_metadata(ds: xr.Dataset, *, grid: Grid) -> xr.Dataset:
     return ds
 
 
-#: Units of a footprint: ppm per (µmol m⁻² s⁻¹).
+#: Units of a footprint, ppm per (µmol m⁻² s⁻¹).
 UNITS = "ppm m2 s umol-1"
 
 
@@ -408,7 +408,7 @@ def open_footprints(
     return _with_cf_metadata(ds, grid=grid)
 
 
-#: The columns of a stored footprint: its non-zero cells, indexed into its grid.
+#: The columns of a stored footprint, whose rows are its non-zero cells, indexed into its grid.
 FOOTPRINT_SCHEMA = pa.schema(
     [
         ("receptor", pa.dictionary(pa.int32(), pa.string())),

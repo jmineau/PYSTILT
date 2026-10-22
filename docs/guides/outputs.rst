@@ -302,7 +302,7 @@ site:
 .. code-block:: python
 
    scene = sims[(sims.variant == "hrrr") & (sims.scene == "A")]
-   ensemble = sims[sims.variant == "hrrr-err"]        # every realization
+   ensemble = sims[sims.variant == "hrrr-err"]        # every realization of every receptor
 
 To see what is left to do:
 

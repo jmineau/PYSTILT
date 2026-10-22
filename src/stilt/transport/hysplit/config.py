@@ -314,7 +314,12 @@ class HysplitConfig(TransportConfig):
     )
     maxpar: int | None = Field(
         None,
-        description="Maximum number of particles in a simulation. Unset uses ``numpar``.",
+        description=(
+            "Maximum number of particles in a simulation. Unset gives every "
+            "release location its full share: ``numpar`` for one location, "
+            "``n * (numpar // n + 1)`` for n. A set value that stops a "
+            "multipoint release before its last location fails the run."
+        ),
     )
     mgmin: int = Field(
         10,
@@ -578,29 +583,35 @@ class HysplitConfig(TransportConfig):
                 )
         return self
 
-    @property
-    def effective_maxpar(self) -> int:
-        """``maxpar`` as HYSPLIT receives it, which is ``numpar`` when unset."""
-        return self.numpar if self.maxpar is None else self.maxpar
+    def maxpar_for(self, locations: int) -> int:
+        """
+        Return the ``MAXPAR`` HYSPLIT gets for a release from *locations* horizontal locations.
+
+        HYSPLIT gives each location ``numpar // locations`` particles, which
+        its rounding often raises by one, and stops releasing when it reaches
+        ``MAXPAR``. A set ``maxpar`` is used as given. Unset, one location
+        gets ``numpar`` (HYSPLIT may ask for one more and keeps ``numpar``),
+        and several get ``locations * (numpar // locations + 1)``, so the
+        last locations are not left short.
+
+        Examples
+        --------
+        >>> HysplitConfig(numpar=1000).maxpar_for(40)
+        1040
+        >>> HysplitConfig(numpar=1000).maxpar_for(1)
+        1000
+        """
+        if self.maxpar is not None:
+            return self.maxpar
+        if locations <= 1:
+            return self.numpar
+        return locations * (self.numpar // locations + 1)
 
     def hourly_ziscale(self) -> list[float]:
         """Return ``ziscale`` as one factor per hour: a single value repeated over the run, or the list as given."""
         if isinstance(self.ziscale, int | float):
             return [float(self.ziscale)] * max(abs(self.n_hours), 1)
         return [float(v) for v in self.ziscale]
-
-    def settings(self) -> dict[str, Any]:
-        """
-        Return what a run records of this config, the fields that change its particles.
-
-        ``exe_dir`` and ``data_dir`` are left out (:attr:`UNRECORDED`); the
-        build's version and the data files that differ from the bundled ones
-        are recorded with the model instead. ``maxpar`` is given as HYSPLIT
-        receives it, so an unset ``maxpar`` equals ``numpar``.
-        """
-        data = super().settings()
-        data["maxpar"] = self.effective_maxpar
-        return data
 
     def realizations(self, n: int) -> list[Self]:
         """

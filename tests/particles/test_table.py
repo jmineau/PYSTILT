@@ -1,16 +1,19 @@
 """Tests for stilt.particles.table: particle files, release heights, the near-field correction."""
 
+import datetime as dt
 import json
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
 from stilt.identity import run_settings, transport_from_settings
 from stilt.particles import (
     correct_near_field,
+    particles_from_table,
     particles_metadata,
     read_particles,
     write_particles,
@@ -131,6 +134,79 @@ def test_read_particles_builds_time_when_only_time_is_asked_for(
         traj["age"].to_numpy(), unit="min"
     )
     np.testing.assert_array_equal(loaded["time"].to_numpy(), expected.to_numpy())
+
+
+def _file_table(receptor_id: str, ages: list[int]) -> pa.Table:
+    """One receptor's rows as a particle file stores them, with the ``date`` folder column the output adds."""
+    n = len(ages)
+    return pa.table(
+        {
+            "receptor": pa.DictionaryArray.from_arrays(
+                pa.array(np.zeros(n, dtype=np.int32)), pa.array([receptor_id])
+            ),
+            "particle": pa.array(np.arange(1, n + 1, dtype=np.int32)),
+            "age": pa.array(ages, pa.int32()),
+            "lon": pa.array(np.linspace(-112.0, -111.0, n)),
+            "date": pa.array([dt.date(2023, 1, 1)] * n, pa.date32()),
+        }
+    )
+
+
+_FIRST, _SECOND = "202301011200_-111.85_40.77_5", "202301011300_-111.85_40.77_5"
+
+
+def _two_files() -> pa.Table:
+    """Two receptors' files read together: two dictionaries of one entry each, as the output reads them."""
+    return pa.concat_tables(
+        [_file_table(_SECOND, [-60, -120, -180]), _file_table(_FIRST, [-30, -90])]
+    )
+
+
+def test_particles_from_table_gives_every_row_its_receptor_and_time():
+    got = particles_from_table(_two_files())
+
+    assert list(got.columns) == ["receptor", "particle", "age", "lon", "time"]
+    assert got["receptor"].tolist() == [_SECOND] * 3 + [_FIRST] * 2
+    assert not isinstance(got["receptor"].dtype, pd.CategoricalDtype)
+    assert all(isinstance(r, str) for r in got["receptor"].unique())
+    assert got["age"].dtype == got["particle"].dtype == "float64"
+    start = {_FIRST: pd.Timestamp("2023-01-01 12:00"), _SECOND: "2023-01-01 13:00"}
+    want = [
+        pd.Timestamp(start[r]) + pd.Timedelta(minutes=a)
+        for r, a in zip(got["receptor"], got["age"], strict=True)
+    ]
+    assert got["time"].dtype.kind == "M"  # naive UTC
+    assert got["time"].tolist() == want
+    assert got["time"].iloc[0] == pd.Timestamp("2023-01-01 12:00")
+
+
+def test_particles_from_table_reads_a_receptor_column_of_plain_strings():
+    table = _two_files()
+    plain = table.set_column(0, "receptor", table["receptor"].cast(pa.string()))
+    assert plain.schema.field("receptor").type == pa.string()
+    pd.testing.assert_frame_equal(
+        particles_from_table(plain), particles_from_table(table)
+    )
+
+
+def test_particles_from_table_without_time_or_age():
+    table = _two_files()
+    assert "time" not in particles_from_table(table, time=False).columns
+    no_age = table.drop_columns("age")
+    got = particles_from_table(no_age)
+    assert list(got.columns) == ["receptor", "particle", "lon"]
+    assert got["receptor"].tolist() == [_SECOND] * 3 + [_FIRST] * 2
+
+
+def test_particles_from_table_of_no_rows_is_empty():
+    got = particles_from_table(_file_table(_FIRST, []))
+    assert got.empty
+    assert "date" not in got.columns
+
+
+def test_particles_from_table_rejects_an_id_it_cannot_time():
+    with pytest.raises(ValueError, match="is not of the form"):
+        particles_from_table(_file_table("not_a_receptor_id", [-60]))
 
 
 def test_write_and_read_particles_round_trip(point_receptor, tmp_path):

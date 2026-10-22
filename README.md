@@ -28,8 +28,8 @@ agreement with STILT-R, and runs on a local machine and on Slurm.
 pip install pystilt
 ```
 
-For plotting, projected grids, aggregation over shapefiles, and downloading meteorology from
-NOAA, install everything:
+For plotting, projected grids, aggregation over shapefiles, downloading meteorology from
+NOAA, and reading STILT-R output, install everything:
 
 ```bash
 pip install "pystilt[complete]"
@@ -240,18 +240,28 @@ If a simulation's particles never reach the grid, PYSTILT writes a footprint fil
 and the reason. The simulation counts as finished, and `project.footprints()` lists it in
 `attrs["empty"]`.
 
+Runs made with STILT-R or X-STILT are read from their `out/by-id` folder, one simulation at a
+time, as a receptor, a particle table, and a footprint (`pip install "pystilt[stilt-r]"`):
+
+```python
+from stilt.migration import read_stilt_r
+
+for receptor, particles, foot in read_stilt_r("my_project/out/by-id"):
+    print(receptor.id, len(particles), foot is not None)
+```
+
 ## STILT-R parity
 
 PYSTILT footprints match the [STILT-R](https://github.com/uataq/stilt) footprints to a relative
 tolerance of 1e-7 in every grid cell. The test suite checks this against a pinned STILT-R
 commit. The NetCDF files are laid out differently from STILT-R's, so read them as standard
-CF-1.8 NetCDF. The [STILT-R parity section](https://jmineau.github.io/PYSTILT/development.html#stilt-r-parity)
+CF-1.8 NetCDF. The [STILT-R parity page](https://jmineau.github.io/PYSTILT/development/stilt_r_parity.html)
 of the development docs has the details.
 
 ## Roadmap
 
 What is implemented and what is planned is on the
-[roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) page of the documentation.
+[roadmap](https://jmineau.github.io/PYSTILT/development/roadmap.html) page of the documentation.
 
 ## Use of AI coding agents
 

@@ -4,9 +4,9 @@ Orientation for contributors and coding agents working on PYSTILT: the
 architecture, the invariants that must not break, and the development
 workflow. User docs: `docs/` and <https://jmineau.github.io/PYSTILT>. Longer
 references: [CONTRIBUTING.md](CONTRIBUTING.md) (setup, checks, recipes,
-building, releasing), [docs/advanced/architecture.rst](docs/advanced/architecture.rst)
-(module map, runs, configuration internals, implementation notes), and
-[docs/development.rst](docs/development.rst) (STILT-R parity, writing the docs).
+building, releasing), [docs/development/architecture.rst](docs/development/architecture.rst)
+(module map, runs, finished work, configuration internals, implementation notes), and
+[docs/development/stilt_r_parity.rst](docs/development/stilt_r_parity.rst) (STILT-R parity).
 
 > **Keep this file current.** If you change the module layout, the build/test
 > commands, or learn a new invariant or gotcha, update the matching section in
@@ -68,6 +68,7 @@ src/stilt/
   cli.py          Typer CLI, a thin adapter over Project and execution
   project.py      Project: inputs, the simulations table, run/submit, bulk reads
   check.py        check_project: what would stop a project's runs, from its inputs
+  migration.py    read_stilt_r: STILT-R and X-STILT by-id output, read with rdata
   output.py       Output: the output directory; `completed`, the completion rule
   simulation.py   Simulation: a frozen (receptor, variant, output) value
   config.py       ProjectConfig and Variant;  identity.py  settings records, hashes
@@ -105,7 +106,7 @@ only when the core reads it. Config classes do no I/O when they validate;
 ## Invariants
 
 - **STILT-R parity** at `rtol=1e-7` per footprint cell against a pinned commit
-  (`docs/development.rst`). Run the `fidelity` suite before merging a change to
+  (`docs/development/stilt_r_parity.rst`). Run the `fidelity` suite before merging a change to
   trajectory or footprint math. NetCDF output is CF-1.8, deliberately not
   byte-compatible with STILT-R.
 - **Completion is by file.** A simulation is complete iff its files exist in
@@ -184,15 +185,15 @@ format's quirks; never met files or data that is not ours to redistribute.
 - Exceptions live in `stilt/exceptions.py`, each subclassing `StiltError` and
   the builtin that describes it; a failed run is a `SimulationError`. Plain
   input checks raise builtins such as `ValueError`.
-- Extras: `geometry`, `visualization`, `download`, `sparse`, and `complete`,
-  which the `dev` group installs.
+- Extras: `geometry`, `visualization`, `download`, `sparse`, `stilt-r`, and
+  `complete`, which the `dev` group installs.
 
 ### Documentation
 
 A user-facing change updates its guide or reference in `docs/` in the same
 change, and `just build-docs` must pass. Examples run when the docs build, so
 they use synthetic data, a small repository file, a public download, or the
-test met cache, and seed their random numbers (`docs/development.rst`). Give
+test met cache, and seed their random numbers (`CONTRIBUTING.md`). Give
 every public property and attribute a docstring, with no colon in the middle
 of its first line (napoleon reads `text: more` as `type: description`).
 
@@ -200,7 +201,7 @@ of its first line (napoleon reads `text: more` as `type: description`).
 scientists who want to run the model and trust the result. Open with what it
 does, then an example. One idea per sentence; no metaphors, selling, or
 filler; American spelling. The full guide, with the habits that read as
-machine-written, is "Writing documentation" in `docs/development.rst`. Words:
+machine-written, is "Writing documentation" in `CONTRIBUTING.md`. Words:
 
 | Say (user-facing) | Not |
 |---|---|
@@ -216,16 +217,15 @@ machine-written, is "Writing documentation" in `docs/development.rst`. Words:
 
 - Conventional Commits (`fix(slurm): ...`, `docs: ...`); user-visible changes
   go under `## [Unreleased]` in `CHANGELOG.md`. The version comes from git tags
-  (setuptools-scm); releasing is in CONTRIBUTING.md. **Do not cut a release or
-  push a tag unless the maintainer asks.**
+  (setuptools-scm). Releases are cut by the maintainer (CONTRIBUTING.md).
 - Open work is in [GitHub issues](https://github.com/jmineau/PYSTILT/issues);
-  read one before working on it. Feature status lives in `docs/roadmap.rst`
+  read one before working on it. Feature status lives in `docs/development/roadmap.rst`
   (update its row when a feature lands). Over-engineered code goes on the
   issue labeled `simplify`. A pull request fixes one thing and links its issue.
 
 ## Gotchas
 
-The reasons are in `docs/advanced/architecture.rst` ("Implementation notes").
+The reasons are in `docs/development/architecture.rst` ("Implementation notes").
 
 - **Results are plain data**: `sim.particles` a DataFrame, `sim.footprint` a
   DataArray, with `.stilt` accessors; no wrapper classes. A missing result
@@ -251,6 +251,11 @@ The reasons are in `docs/advanced/architecture.rst` ("Implementation notes").
 - **HYSPLIT chains same-location starts into a line source**: that is how
   `ColumnReceptor` works, and why a `MultiPointReceptor` may not repeat a
   horizontal location.
+- **HYSPLIT stops releasing at `MAXPAR`** and fills a multipoint receptor's
+  locations in order. An unset `maxpar` is chosen per receptor
+  (`HysplitConfig.maxpar_for`), so it is recorded unset; `check_release` fails
+  a multipoint run whose `WARNING` says `exceeding puff limit` (a one-location
+  run writes it too, harmlessly).
 - **Pressure weighting fits `ln p = b + a·z`** (`particle_pwf`); never use raw
   `pres` (`tests/integration/test_pressure_weighting.py` guards it).
 - **Release heights come from the `age = 0` row** (`add_release_heights`), with

@@ -4,6 +4,7 @@ import re
 import textwrap
 
 import pytest
+import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from stilt.config import ProjectConfig
@@ -12,10 +13,7 @@ from stilt.footprint.targets import Mesh
 from stilt.identity import footprint_settings, read_footprint_settings
 from stilt.spatial import Grid
 from stilt.transforms import AveragingKernel, FirstOrderLifetime, PressureWeighting
-from stilt.transport.hysplit.driver import (
-    setup_entries,
-    winderrtf,
-)
+from stilt.transport.hysplit.driver import winderrtf
 
 from .fixtures.factories import make_met_config, write_arl_file
 
@@ -699,6 +697,15 @@ def test_variant_grid_override_merges_field_by_field(tmp_path):
     assert variants["none"].footprint is None
 
 
+def _all_keys(node) -> set[str]:
+    """Every mapping key in a loaded YAML document, at any depth."""
+    if isinstance(node, dict):
+        return set(node).union(*(_all_keys(v) for v in node.values()))
+    if isinstance(node, list):
+        return set().union(*(_all_keys(v) for v in node))
+    return set()
+
+
 def test_to_yaml_writes_only_what_was_set(tmp_path, grid):
     from stilt.transforms import FirstOrderLifetime
 
@@ -718,8 +725,11 @@ def test_to_yaml_writes_only_what_was_set(tmp_path, grid):
     cfg.to_yaml(path)
     text = path.read_text()
     assert "numpar: 50" in text and "zi08" in text
-    assert "capemin" not in text and "seed" not in text  # defaults stay out
-    assert "maxpar" not in text and "n_min" not in text  # at every level
+    # Check the keys, not the text: the met directory is under tmp_path,
+    # whose name can hold any of these words.
+    keys = _all_keys(yaml.safe_load(text))
+    assert "capemin" not in keys and "seed" not in keys  # defaults stay out
+    assert "maxpar" not in keys and "n_min" not in keys  # at every level
     assert text.startswith("mets:")  # inputs first, then the settings
     assert "kind: first_order_lifetime" in text  # nested objects are written in full
     loaded = ProjectConfig.from_yaml(path).resolve()
@@ -980,12 +990,12 @@ def test_maxpar_follows_each_variants_numpar(tmp_path):
         tmp_path, numpar=1000, variants={"hrrr": {}, "np3k": {"numpar": 3000}}
     )
     variants = cfg.resolve()
-    assert setup_entries(variants["hrrr"].transport)["maxpar"] == 1000
-    assert setup_entries(variants["np3k"].transport)["maxpar"] == 3000
-    # A run's identity holds the value HYSPLIT got, so an unset maxpar equals
-    # numpar and a variant that raises numpar is a different run.
-    assert variants["hrrr"].run_settings["maxpar"] == 1000
-    assert variants["np3k"].run_settings["maxpar"] == 3000
+    assert variants["hrrr"].transport.maxpar_for(1) == 1000
+    assert variants["np3k"].transport.maxpar_for(1) == 3000
+    assert variants["np3k"].transport.maxpar_for(40) == 40 * 76
+    # An unset maxpar is recorded unset: what HYSPLIT gets depends on the
+    # receptor's locations.
+    assert variants["hrrr"].run_settings["maxpar"] is None
 
 
 # ---------------------------------------------------------------------------

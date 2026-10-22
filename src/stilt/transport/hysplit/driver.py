@@ -30,6 +30,7 @@ from stilt.transport.hysplit.config import (
 )
 from stilt.transport.hysplit.control import ControlFile
 from stilt.transport.hysplit.failures import (
+    PARTICLE_LIMIT_PHRASE,
     FailureReason,
     failure_in,
 )
@@ -158,15 +159,15 @@ def setup_entries(params: HysplitConfig) -> dict[str, Any]:
     Return the ``SETUP.CFG`` namelist entries of *params*, leaving out unset ones.
 
     Every setting not in :data:`NOT_IN_SETUP` is an entry, in declaration
-    order. The driver adds ``KMSL``, ``IVMAX``, and ``WINDERRTF``, which
-    depend on the receptor or follow from other settings.
+    order. The driver adds ``KMSL``, ``IVMAX``, and ``WINDERRTF``, and
+    ``MAXPAR`` when ``maxpar`` is unset, which depend on the receptor or
+    follow from other settings.
     """
     entries = {
         name: getattr(params, name)
         for name in HysplitConfig.model_fields
         if name not in NOT_IN_SETUP and getattr(params, name) is not None
     }
-    entries["maxpar"] = params.effective_maxpar
     entries["zicontroltf"] = zicontroltf(params)
     if params.seed is not None:
         entries["seed"] = setup_seed(params.seed)
@@ -186,6 +187,48 @@ def setup_seed(seed: int) -> int:
     value works with both builds.
     """
     return -(abs(seed) + 1)
+
+
+def release_locations(receptor: Receptor) -> int:
+    """
+    Return the number of horizontal locations *receptor* releases particles from.
+
+    HYSPLIT divides ``numpar`` among them. A :class:`~stilt.receptors.ColumnReceptor`
+    is one location: HYSPLIT joins its two heights into one line source.
+    """
+    return len({(lat, lon) for lat, lon, _ in receptor.coords()})
+
+
+def check_release(workdir: Path, receptor: Receptor, config: HysplitConfig) -> None:
+    """
+    Raise when HYSPLIT stopped releasing before every location of *receptor* got its particles.
+
+    HYSPLIT fills the locations in order and stops at ``MAXPAR``, writing
+    ``exceeding puff limit`` to its ``WARNING`` file, so the last
+    locations get fewer particles or none. From one location that is
+    harmless (:data:`~stilt.transport.hysplit.failures.PARTICLE_LIMIT_PHRASE`).
+
+    Raises
+    ------
+    SimulationError
+        With ``reason`` ``PARTICLE_LIMIT``, when *receptor* has several
+        locations and the ``WARNING`` file in *workdir* says HYSPLIT
+        reached ``MAXPAR``.
+    """
+    locations = release_locations(receptor)
+    warning = workdir / WARNING_FILE
+    if locations < 2 or not warning.exists():
+        return
+    if PARTICLE_LIMIT_PHRASE in warning.read_text(encoding="utf-8", errors="replace"):
+        fix = (
+            "Raise maxpar or leave it unset." if config.maxpar else "Set maxpar higher."
+        )
+        raise SimulationError(
+            f"HYSPLIT stopped releasing at maxpar = {config.maxpar_for(locations)} "
+            f"before each of the receptor's {locations} locations got its share of "
+            f"numpar = {config.numpar}. {fix}",
+            reason=FailureReason.PARTICLE_LIMIT,
+        )
 
 
 def ziscale_factors(params: HysplitConfig) -> list[float] | None:
@@ -294,6 +337,7 @@ def write_inputs(
     entries = setup_entries(config)
     # HYSPLIT's KMSL: 0 for heights above ground, 1 above sea level.
     entries["kmsl"] = 1 if receptor.altitude_ref == "msl" else 0
+    entries["maxpar"] = config.maxpar_for(release_locations(receptor))
     entries["ivmax"] = len(config.varsiwant)  # number of output variables
     entries["winderrtf"] = winderrtf(config)
     setup = NameList("SETUP")

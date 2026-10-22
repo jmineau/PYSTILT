@@ -870,7 +870,9 @@ class Project:
             One row per particle per output step per simulation, with
             ``receptor``, ``variant``, and ``realization`` columns first. Simulations without
             particles are left out. Variants that share a run each get their
-            own copy of its rows.
+            own copy of its rows. The simulations come in the order of *sel*, one
+            variant (and realization) after another in the order they first appear
+            in it.
 
         Notes
         -----
@@ -891,11 +893,13 @@ class Project:
         for name, k, rows in _groups(frame):
             variant = self.variants[name]
             present = self.output.present("particles", variant, rows["receptor"], k)
-            table = self.output.table("particles", variant, present, k, stored)
+            # In selection order: a set would follow each process's string hashing.
+            receptors = [r for r in dict.fromkeys(rows["receptor"]) if r in present]
+            table = self.output.table("particles", variant, receptors, k, stored)
             if table.num_rows:
                 part = particles_from_table(table, with_time).assign(variant=name)
                 parts.append(
-                    part.assign(realization=pd.array([k] * len(part), "Int64"))
+                    part.assign(realization=pd.array([k], "Int64").repeat(len(part)))
                 )
         if not parts:
             return pd.DataFrame(columns=pd.Index(first))

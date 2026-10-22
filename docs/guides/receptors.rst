@@ -196,10 +196,18 @@ How particles are released
 
 - A :class:`PointReceptor` releases all of them from its one location.
 - A :class:`ColumnReceptor` spreads them evenly from ``bottom`` to ``top``.
-- A :class:`MultiPointReceptor` divides them among its locations. HYSPLIT
-  rounds the count per location up and stops when ``numpar`` runs out, so
-  the last location can get fewer. With 200 particles over 10 locations,
-  the first nine get 21 each and the last gets 11.
+- A :class:`MultiPointReceptor` divides them among its locations, and every
+  location gets the same number: ``numpar // n`` for ``n`` locations, which
+  HYSPLIT's rounding often raises by one. So a run can hold up to ``n``
+  more particles than ``numpar``. With 1000 particles over 40 locations,
+  each gets 26, 1040 in all; over 56 locations, each gets 17, 952 in all.
+
+HYSPLIT stops releasing when it reaches ``maxpar`` and fills the locations
+in order, so a ``maxpar`` set too low would leave the last locations with
+fewer particles or none. Leave ``maxpar`` unset: PYSTILT then gives HYSPLIT
+room for every location (``n * (numpar // n + 1)``). A run whose ``maxpar``
+cuts a multipoint release short fails as ``PARTICLE_LIMIT``
+(:doc:`checking`).
 
 
 Advanced: release heights for multipoint and slant receptors
