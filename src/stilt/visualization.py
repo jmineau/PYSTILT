@@ -511,6 +511,8 @@ class SimulationPlotAccessor:
         show_grid: bool = True,
         met_bounds: Bounds | None = None,
         ax: Axes | None = None,
+        tiler: GoogleTiles | None = None,
+        tiler_zoom: int = 8,
     ) -> Axes:
         """
         Map the footprint, the particles, and the receptor together.
@@ -542,6 +544,10 @@ class SimulationPlotAccessor:
             Outline the meteorology domain with a dotted blue line.
         ax : Axes, optional
             Axes to plot on. By default a new map is made.
+        tiler : cartopy.io.img_tiles.GoogleTiles, optional
+            Map tiles drawn as a background on a new cartopy map.
+        tiler_zoom : int, default 8
+            Zoom level of the map tiles.
 
         Returns
         -------
@@ -560,7 +566,7 @@ class SimulationPlotAccessor:
             lons, lats, _ = _receptor_points(sim.receptor)
             extent = _extent(lons, lats, pad=2.0)
 
-        _, ax = _make_ax(ax, extent=extent)
+        _, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
 
         if foot is not None:
             # The receptor is marked once, below, whatever the footprint records.

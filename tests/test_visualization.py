@@ -441,6 +441,26 @@ def test_simulation_map_with_footprint(receptor, minimal_footprint):
     assert ax is not None
 
 
+def test_simulation_map_draws_the_tiler_under_a_new_map(receptor):
+    pytest.importorskip("cartopy")
+    from unittest.mock import MagicMock
+
+    class Tiler:
+        def image_for_domain(self, domain, zoom):
+            raise AssertionError("the map is not drawn in this test")
+
+    sim = MagicMock()
+    sim.receptor = receptor
+    sim.footprint = None
+    sim.particles = None
+    sim.id = "202301011200_test/hrrr"
+    tiler = Tiler()
+
+    ax = SimulationPlotAccessor(sim).map(tiler=tiler, tiler_zoom=5)
+
+    assert ax.img_factories == [[tiler, (5,), {}]]  # cartopy draws it with the map
+
+
 def test_simulation_map_met_bounds(receptor, grid):
     from unittest.mock import MagicMock
 

@@ -47,6 +47,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The outputs, checking, and receptors guides run when the docs are built too,
   and show their plots. The outputs and checking guides open a small sample
   project that the docs build makes first (about 40 s).
+- The Internals section of the docs has an Architecture page for
+  contributors: the module map, how a run goes from a project to result
+  files, the configuration internals, and implementation notes. The
+  Development page explains how to write the docs and how their examples run.
+- `sim.plot.map()` takes `tiler` and `tiler_zoom`, as the footprint, particles,
+  and receptor maps do, to draw map tiles under a new map.
+- The maps in the docs are drawn on USGS shaded-relief tiles, which are kept in
+  the repository (`docs/_tiles`). Building the docs needs no network for them,
+  and every build draws the same maps.
 - The docs navigation is Getting Started, Tutorials, User Guide, API
   Reference, and Development. The Coming From Another STILT pages are in the
   User Guide. Development holds the Architecture page for contributors (the
