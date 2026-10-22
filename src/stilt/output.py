@@ -720,7 +720,8 @@ class Output:
             Whose results.
         receptor_ids : iterable of str, optional
             The receptors to read, each of which must have a file
-            (:meth:`present`). Without it, every file in the folder is read.
+            (:meth:`present`), in the order the rows come. Without it, every
+            file in the folder is read, in date order.
         realization : int, optional
             Which realization of an ensemble.
         columns : list of str, optional

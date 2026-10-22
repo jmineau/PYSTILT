@@ -45,6 +45,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `project.particles` is three to four times faster and takes less memory, with
+  the same table ([#252](https://github.com/jmineau/PYSTILT/issues/252)). The
+  receptor ids are made into strings once each, not for every row, and the
+  `realization` column is not built from a list. For 20 simulations (28.8
+  million rows), six columns without `time` take 3.2 s instead of 14.1 s and
+  peak at 4.8 GiB instead of 7.6; with `time` 8.4 s instead of 26.6; every
+  column 9.5 s instead of 27.5 and 8.4 GiB instead of 10.8.
 - `calc_footprint` is 6 to 110 times faster, with the same result. Each time
   step's smoothing kernel is now added at each grid cell that holds particles,
   as STILT-R's `permute.f90` does, instead of convolving the whole box around
@@ -119,6 +126,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   copy when it was cut short, and `stilt check` did not report a block that
   had only its copy. Names ending in `.partial` or `.bad` are skipped, as lock
   files and backup copies (`~`) already were.
+- `project.particles` returns the simulations in the order of the selection,
+  one variant (and realization) after another in the order they first
+  appear in it ([#250](https://github.com/jmineau/PYSTILT/issues/250)).
+  Each variant's receptors came back in an order that changed from one Python
+  process to the next, the order of a set of strings, which Python hashes
+  differently in every process.
 - The recipe in `stilt.particles.transport_error` for a variant with
   `realizations: N` grouped the particles by `variant`, which merges the
   realizations (and the receptors, for a selection of several) into one table:
