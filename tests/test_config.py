@@ -4,6 +4,7 @@ import re
 import textwrap
 
 import pytest
+import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from stilt.config import ProjectConfig
@@ -696,6 +697,15 @@ def test_variant_grid_override_merges_field_by_field(tmp_path):
     assert variants["none"].footprint is None
 
 
+def _all_keys(node) -> set[str]:
+    """Every mapping key in a loaded YAML document, at any depth."""
+    if isinstance(node, dict):
+        return set(node).union(*(_all_keys(v) for v in node.values()))
+    if isinstance(node, list):
+        return set().union(*(_all_keys(v) for v in node))
+    return set()
+
+
 def test_to_yaml_writes_only_what_was_set(tmp_path, grid):
     from stilt.transforms import FirstOrderLifetime
 
@@ -715,8 +725,11 @@ def test_to_yaml_writes_only_what_was_set(tmp_path, grid):
     cfg.to_yaml(path)
     text = path.read_text()
     assert "numpar: 50" in text and "zi08" in text
-    assert "capemin" not in text and "seed" not in text  # defaults stay out
-    assert "maxpar" not in text and "n_min" not in text  # at every level
+    # Check the keys, not the text: the met directory is under tmp_path,
+    # whose name can hold any of these words.
+    keys = _all_keys(yaml.safe_load(text))
+    assert "capemin" not in keys and "seed" not in keys  # defaults stay out
+    assert "maxpar" not in keys and "n_min" not in keys  # at every level
     assert text.startswith("mets:")  # inputs first, then the settings
     assert "kind: first_order_lifetime" in text  # nested objects are written in full
     loaded = ProjectConfig.from_yaml(path).resolve()
