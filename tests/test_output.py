@@ -752,6 +752,60 @@ def test_present_lists_only_the_date_folders_asked_for(tmp_path, monkeypatch):
     assert out.present("particles", VARIANT) == {day15.id, day16.id}
 
 
+@pytest.mark.parametrize(
+    "receptor_id",
+    [
+        "202407151200_-111.85_40.77_5",
+        "202407151259_-111.85_40.77_X0-100",
+        "200002290000_-111.85_40.77_5msl",  # a leap day
+        "202312312359_multi_0a1b2c3d",
+        "000101010000_-111.85_40.77_5",
+    ],
+)
+def test_the_date_folder_comes_from_the_start_of_the_id(receptor_id, monkeypatch):
+    """The folder is the id's day; the time is not parsed for each id (a project lists hundreds of thousands)."""
+    import stilt.output as output_module
+    from stilt.receptors import parse_receptor_id
+
+    time, _ = parse_receptor_id(receptor_id)
+    want = f"date={time:%Y-%m-%d}"
+    assert output_module._date_dir(receptor_id) == want
+
+    def parse(receptor_id):
+        raise AssertionError("an id of the right form is not parsed")
+
+    monkeypatch.setattr(output_module, "parse_receptor_id", parse)
+    assert output_module._date_dir(receptor_id) == want
+    assert output_module._date_dir(np.str_(receptor_id)) == want
+
+
+@pytest.mark.parametrize(
+    "receptor_id",
+    [
+        "",
+        "202407151200",  # no location
+        "202407151200_",
+        "20240715120_-111.85_40.77_5",  # a digit short
+        "2024071512000_-111.85_40.77_5",  # a digit over
+        "202407151200-111.85_40.77_5",
+        "2024071512ab_-111.85_40.77_5",
+        "202413151200_-111.85_40.77_5",  # month 13
+        "202402301200_-111.85_40.77_5",  # 30 February
+        "202302290000_-111.85_40.77_5",  # 29 February of a common year
+        "202407152400_-111.85_40.77_5",  # hour 24
+        "202407151260_-111.85_40.77_5",  # minute 60
+        "000001010000_-111.85_40.77_5",  # year 0
+        "2024071512²0_-111.85_40.77_5",  # a digit that is not 0 to 9
+        "2024-07-15_12_00_-111.85_40.77_5",
+    ],
+)
+def test_a_malformed_id_has_no_date_folder_and_says_why(receptor_id):
+    import stilt.output as output_module
+
+    with pytest.raises(ValueError, match="is not of the form"):
+        output_module._date_dir(receptor_id)
+
+
 # ---------------------------------------------------------------------------
 # What each file records
 # ---------------------------------------------------------------------------

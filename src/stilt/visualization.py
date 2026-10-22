@@ -146,6 +146,11 @@ def _draw_met_box(ax: Axes, bounds: Bounds) -> None:
     )
 
 
+def _legend(ax: Axes) -> None:
+    """Add a legend of the labeled artists in the upper right corner (the best spot is slow to search for)."""
+    ax.legend(fontsize=8, loc="upper right")
+
+
 # ---------------------------------------------------------------------------
 # Particles plot accessor
 # ---------------------------------------------------------------------------
@@ -244,6 +249,7 @@ class FootprintPlotAccessor:
         ax: Axes | None = None,
         cmap: str = "cool",
         show_grid: bool = False,
+        show_receptor: bool = True,
         met_bounds: Bounds | None = None,
         tiler: GoogleTiles | None = None,
         tiler_zoom: int = 8,
@@ -265,6 +271,8 @@ class FootprintPlotAccessor:
             Colormap name.
         show_grid : bool, default False
             Outline the footprint grid with a dashed line.
+        show_receptor : bool, default True
+            Mark the receptor the footprint was made for.
         met_bounds : Bounds, optional
             Outline the meteorology domain with a dotted blue line.
         tiler : cartopy.io.img_tiles.GoogleTiles, optional
@@ -304,8 +312,10 @@ class FootprintPlotAccessor:
         if met_bounds is not None:
             _draw_met_box(ax, met_bounds)
 
-        if "stilt_receptor" in foot.attrs:
-            foot.stilt.receptor.plot.map(ax=ax)
+        if show_receptor and "stilt_receptor" in foot.attrs:
+            foot.stilt.receptor.plot.map(ax=ax)  # also makes the legend
+        elif show_grid or met_bounds is not None:
+            _legend(ax)
         title = "Footprint" if time is None else f"Footprint — {pd.Timestamp(time)}"
         ax.set(xlabel="Longitude", ylabel="Latitude", title=title)
         return ax
@@ -471,7 +481,7 @@ class ReceptorPlotAccessor:
         if met_bounds is not None:
             _draw_met_box(ax, met_bounds)
 
-        ax.legend(fontsize=8, loc="upper right")
+        _legend(ax)
         if standalone:
             ax.set(xlabel="Longitude", ylabel="Latitude", title="Receptor")
         return ax
@@ -553,7 +563,14 @@ class SimulationPlotAccessor:
         _, ax = _make_ax(ax, extent=extent)
 
         if foot is not None:
-            foot.stilt.plot.map(ax=ax, log=log, cmap=foot_cmap, show_grid=show_grid)
+            # The receptor is marked once, below, whatever the footprint records.
+            foot.stilt.plot.map(
+                ax=ax,
+                log=log,
+                cmap=foot_cmap,
+                show_grid=show_grid,
+                show_receptor=False,
+            )
 
         if show_particles and particles is not None:
             # pandas-stubs read the registered .stilt accessor as a column
@@ -571,7 +588,7 @@ class SimulationPlotAccessor:
 
         if met_bounds is not None:
             _draw_met_box(ax, met_bounds)
-            ax.legend(fontsize=8, loc="upper right")
+            _legend(ax)
 
         ax.set_title(f"Simulation {sim}")
         return ax

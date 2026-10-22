@@ -58,6 +58,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the particles. On five real 24 h runs of 1000 particles on a 300 x 300 grid,
   an hourly footprint takes 1.2 to 2.9 s instead of 8 to 260 s (STILT-R: 9 to
   17 s). Memory stays bounded when kernels are wide.
+- `project.status()`, `project.incomplete()`, and the plan `stilt submit` makes
+  take about a quarter less time on a large project, with the same result
+  ([#251](https://github.com/jmineau/PYSTILT/issues/251)). A receptor's date
+  folder is the first eight characters of its id, and the listing no longer
+  parses the id's time for each receptor. On a project of
+  233,660 simulations, `status()` takes 8.8 s instead of 11.6 s and
+  `incomplete()` 6.6 s instead of 9.2 s (medians of four runs, with the files
+  in the filesystem's cache).
 
 ### Fixed
 
@@ -97,6 +105,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `receptor.plot.map()` labels a column's heights, and a multipoint receptor's
   height colorbar, with the reference the receptor was given (`AGL` or `MSL`).
   It said `AGL` for both.
+- `sim.plot.map(show_receptor=False)` leaves the receptor off the map. It
+  marked the receptor anyway, and with the default it marked it twice, so the
+  legend listed "Receptor" twice and a multipoint receptor got two height
+  colorbars. `foot.stilt.plot.map()` has a new `show_receptor` argument
+  (default `True`), which `sim.plot.map()` uses to mark the receptor once.
 - The API pages of eight properties show their whole description. A colon in
   the first line had turned the words before it into a type, so
   `Project.name` read "the directory name." with "Type: The project's name"
@@ -119,6 +132,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Each variant's receptors came back in an order that changed from one Python
   process to the next, the order of a set of strings, which Python hashes
   differently in every process.
+- The recipe in `stilt.particles.transport_error` for a variant with
+  `realizations: N` grouped the particles by `variant`, which merges the
+  realizations (and the receptors, for a selection of several) into one table:
+  `realizations` came out 1 and the variance was wrong. It now selects one
+  receptor and groups by `realization`, as `sim.transport_error` does, and a
+  test runs the docstring's example against `sim.transport_error`.
+- The Getting Started page and the sample project behind the outputs and
+  checking guides run with `krand: 2` and `seed: 42`. HYSPLIT's default,
+  `krand: 4`, draws its random numbers from the clock, so two docs builds of
+  one commit made different numbers and figures. The Getting Started example
+  shows the two settings.
 
 ## [0.1.0a24] - 2026-10-09
 

@@ -51,6 +51,8 @@ Every function takes the kind of result, ``"particles"`` or
 
 from __future__ import annotations
 
+import datetime as dt
+import functools
 import logging
 import os
 import shutil
@@ -93,16 +95,43 @@ logger = logging.getLogger(__name__)
 
 #: Underscore-prefixed, so dataset readers skip it.
 SETTINGS_FILE = "_settings.yaml"
-#: A receptor's failure record, under its folder's logs: ``<receptor_id>.failure.yaml``.
+#: The suffix of a receptor's failure record, ``<receptor_id>.failure.yaml``, in its folder's logs.
 FAILURE_SUFFIX = ".failure.yaml"
 HASH_CHARS = 6
 
 # -- identity -----------------------------------------------------------------
 
 
+@functools.cache
+def _day_folder(day: str) -> str:
+    """Return the ``date=YYYY-MM-DD`` folder of a ``YYYYMMDD`` day, which must be a real date."""
+    return f"date={dt.datetime.strptime(day, '%Y%m%d'):%Y-%m-%d}"
+
+
 def _date_dir(receptor_id: str) -> str:
-    """Return the ``date=YYYY-MM-DD`` folder of a receptor id, which starts with the receptor time."""
-    time, _ = parse_receptor_id(receptor_id)
+    """
+    Return the ``date=YYYY-MM-DD`` folder of a receptor id, which starts with the receptor time.
+
+    The folder is the id's first eight characters, ``YYYYMMDD``, so a listing
+    of hundreds of thousands of ids reads each day once and does not parse
+    each id's time. An id that :func:`stilt.receptors.parse_receptor_id`
+    rejects raises its error.
+    """
+    rid = str(receptor_id)
+    stamp = rid[:12]  # YYYYMMDDHHMM
+    if (
+        len(rid) > 13
+        and rid[12] == "_"
+        and stamp.isascii()
+        and stamp.isdigit()
+        and stamp[8:10] < "24"
+        and stamp[10:12] < "60"
+    ):
+        try:
+            return _day_folder(stamp[:8])
+        except ValueError:
+            pass  # not a real date; parse_receptor_id says so
+    time, _ = parse_receptor_id(rid)
     return f"date={time:%Y-%m-%d}"
 
 
@@ -351,7 +380,7 @@ class Output:
     """
 
     def __init__(self, path: str | Path | UPath) -> None:
-        #: The output directory: a Path, or a universal path on an object store.
+        #: The output directory, a Path or a universal path on an object store.
         self.directory: Location = location(path)
         # Each folder's settings hash, by kind and folder name. Reading one
         # means reading its _settings.yaml and hashing it again, so each is
