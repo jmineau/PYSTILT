@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=104dba9b"></script>
+    <script src="../../_static/documentation_options.js?v=2ea73668"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev31+ge6e627707" />
+  <meta name="docsearch:version" content="0.1.0a25.dev33+g219153cb0" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -550,6 +550,8 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
@@ -599,9 +601,36 @@
 <span class="c1"># -- identity -----------------------------------------------------------------</span>
 
 
+<span class="nd">@functools</span><span class="o">.</span><span class="n">cache</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_day_folder</span><span class="p">(</span><span class="n">day</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the ``date=YYYY-MM-DD`` folder of a ``YYYYMMDD`` day, which must be a real date.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;date=</span><span class="si">{</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">day</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;%Y%m</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span><span class="si">:</span><span class="s2">%Y-%m-%d</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_date_dir</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the ``date=YYYY-MM-DD`` folder of a receptor id, which starts with the receptor time.&quot;&quot;&quot;</span>
-    <span class="n">time</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">parse_receptor_id</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the ``date=YYYY-MM-DD`` folder of a receptor id, which starts with the receptor time.</span>
+
+<span class="sd">    The folder is the id&#39;s first eight characters, ``YYYYMMDD``, so a listing</span>
+<span class="sd">    of hundreds of thousands of ids reads each day once and does not parse</span>
+<span class="sd">    each id&#39;s time. An id that :func:`stilt.receptors.parse_receptor_id`</span>
+<span class="sd">    rejects raises its error.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)</span>
+    <span class="n">stamp</span> <span class="o">=</span> <span class="n">rid</span><span class="p">[:</span><span class="mi">12</span><span class="p">]</span>  <span class="c1"># YYYYMMDDHHMM</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">rid</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">13</span>
+        <span class="ow">and</span> <span class="n">rid</span><span class="p">[</span><span class="mi">12</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;_&quot;</span>
+        <span class="ow">and</span> <span class="n">stamp</span><span class="o">.</span><span class="n">isascii</span><span class="p">()</span>
+        <span class="ow">and</span> <span class="n">stamp</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span>
+        <span class="ow">and</span> <span class="n">stamp</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">10</span><span class="p">]</span> <span class="o">&lt;</span> <span class="s2">&quot;24&quot;</span>
+        <span class="ow">and</span> <span class="n">stamp</span><span class="p">[</span><span class="mi">10</span><span class="p">:</span><span class="mi">12</span><span class="p">]</span> <span class="o">&lt;</span> <span class="s2">&quot;60&quot;</span>
+    <span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_day_folder</span><span class="p">(</span><span class="n">stamp</span><span class="p">[:</span><span class="mi">8</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">pass</span>  <span class="c1"># not a real date; parse_receptor_id says so</span>
+    <span class="n">time</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">parse_receptor_id</span><span class="p">(</span><span class="n">rid</span><span class="p">)</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;date=</span><span class="si">{</span><span class="n">time</span><span class="si">:</span><span class="s2">%Y-%m-%d</span><span class="si">}</span><span class="s2">&quot;</span>
 
 
@@ -1224,7 +1253,8 @@
 <span class="sd">            Whose results.</span>
 <span class="sd">        receptor_ids : iterable of str, optional</span>
 <span class="sd">            The receptors to read, each of which must have a file</span>
-<span class="sd">            (:meth:`present`). Without it, every file in the folder is read.</span>
+<span class="sd">            (:meth:`present`), in the order the rows come. Without it, every</span>
+<span class="sd">            file in the folder is read, in date order.</span>
 <span class="sd">        realization : int, optional</span>
 <span class="sd">            Which realization of an ensemble.</span>
 <span class="sd">        columns : list of str, optional</span>
