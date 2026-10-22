@@ -78,6 +78,8 @@ Module map
                         receptors have results (present, complete), reading
                         one receptor's file (read) or many at once (table),
                         failure records, writing
+     migration.py       read_stilt_r: STILT-R and X-STILT by-id output as
+                        receptors, particle tables, and footprints
      simulation.py      Simulation: a frozen value (receptor, variant, output)
                         that knows where its results are and whether they exist
      config.py          ProjectConfig: reads config.yaml, splits the flat keys

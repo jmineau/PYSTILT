@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=2ea73668"></script>
+    <script src="../_static/documentation_options.js?v=d1c9c300"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Coming From Another STILT" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev33+g219153cb0" />
+  <meta name="docsearch:version" content="0.1.0a25.dev34+g9c7044faf" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -736,6 +736,48 @@ names its files in each variant’s settings folder:
 <a class="reference internal" href="../guides/projects.html"><span class="doc">Projects And Variants</span></a>). A column receptor’s id adds its bottom and top
 after the <code class="docutils literal notranslate"><span class="pre">X</span></code>.</p>
 </section>
+<section id="reading-stilt-r-output">
+<h2>Reading STILT-R output<a class="headerlink" href="#reading-stilt-r-output" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../reference/_api/stilt.migration.read_stilt_r.html#stilt.migration.read_stilt_r" title="stilt.migration.read_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.migration.read_stilt_r()</span></code></a> reads the <code class="docutils literal notranslate"><span class="pre">out/by-id</span></code> folder of a
+STILT-R project, so runs you already have work with PYSTILT’s tools. It
+reads X-STILT’s <code class="docutils literal notranslate"><span class="pre">out/by-id</span></code> the same way. It needs the <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> extra,
+which reads R’s <code class="docutils literal notranslate"><span class="pre">.rds</span></code> files without R:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;pystilt[stilt-r]&quot;</span>
+</pre></div>
+</div>
+<p>Each simulation gives its receptor, its particles, and its footprint, one
+folder at a time:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.migration</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_stilt_r</span>
+
+<span class="k">for</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">foot</span> <span class="ow">in</span> <span class="n">read_stilt_r</span><span class="p">(</span><span class="s2">&quot;my_project/out/by-id&quot;</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">),</span> <span class="n">foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The particles are the table STILT-R saved in <code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_traj.rds</span></code>, with
+PYSTILT’s column names (<code class="docutils literal notranslate"><span class="pre">indx</span></code>, <code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">lati</span></code>, and <code class="docutils literal notranslate"><span class="pre">xhgt</span></code>
+become <code class="docutils literal notranslate"><span class="pre">particle</span></code>, <code class="docutils literal notranslate"><span class="pre">age</span></code>, <code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code>, and <code class="docutils literal notranslate"><span class="pre">release_height</span></code>) and a
+<code class="docutils literal notranslate"><span class="pre">time</span></code> column of UTC times. The footprint is <code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_foot.nc</span></code> as a PYSTILT
+footprint, or <code class="docutils literal notranslate"><span class="pre">None</span></code> when the folder has none. Both are kept as STILT-R
+made them: the near-field correction STILT-R applied stays in <code class="docutils literal notranslate"><span class="pre">foot</span></code>, and
+the footprint’s values are the file’s. To make a footprint on another grid,
+pass the particles to <a class="reference internal" href="../reference/_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a>.</p>
+<p>Some of what STILT-R saved is not read:</p>
+<ul class="simple">
+<li><p>With transport error, STILT-R saves a second set of particles in the same
+<code class="docutils literal notranslate"><span class="pre">.rds</span></code> (<code class="docutils literal notranslate"><span class="pre">particle_error</span></code>). Only the first set is read.</p></li>
+<li><p>The HYSPLIT settings in the <code class="docutils literal notranslate"><span class="pre">.rds</span></code> (<code class="docutils literal notranslate"><span class="pre">params</span></code>) are not returned. The
+<code class="docutils literal notranslate"><span class="pre">.rds</span></code> and <code class="docutils literal notranslate"><span class="pre">.nc</span></code> files do not record the STILT-R version, <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>,
+or <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>.</p></li>
+<li><p>A footprint on a projected grid (a <code class="docutils literal notranslate"><span class="pre">projection</span></code> other than
+longitude/latitude) raises an error; open it with
+<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.open_dataset.html#xarray.open_dataset" title="(in xarray v2026.9.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">xarray.open_dataset()</span></code></a>.</p></li>
+<li><p>Other footprint files in a folder, such as X-STILT’s footprints at other
+resolutions, are not read.</p></li>
+<li><p>X-STILT weights <code class="docutils literal notranslate"><span class="pre">foot</span></code> by the averaging kernel and pressure weighting
+just before it makes the footprint, after the <code class="docutils literal notranslate"><span class="pre">.rds</span></code> is saved. Its
+particles are unweighted and its footprint is weighted.</p></li>
+</ul>
+</section>
 <section id="moving-a-project-over">
 <h2>Moving a project over<a class="headerlink" href="#moving-a-project-over" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
@@ -802,6 +844,7 @@ compare the footprints.</p></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#other-differences">Other differences</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#receptors">Receptors</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#outputs">Outputs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-stilt-r-output">Reading STILT-R output</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#moving-a-project-over">Moving a project over</a></li>
 </ul>
   </nav></div>
