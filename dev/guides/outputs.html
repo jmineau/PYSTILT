@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=32c4a974"></script>
+    <script src="../_static/documentation_options.js?v=2dacf016"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Checking A Run" href="checking.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev35+g4f1b2d346" />
+  <meta name="docsearch:version" content="0.1.0a25.dev36+g946a912d6" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -579,6 +579,20 @@ location.</p></li>
 </a>
 <a class="reference internal image-reference" href="../_images/outputs_receptor.png"><img alt="../_images/outputs_receptor.png" src="../_images/outputs_receptor.png" style="width: 6in;" />
 </a>
+<p>A map takes a <code class="docutils literal notranslate"><span class="pre">tiler</span></code>, any cartopy tiler, to draw map tiles under the data.
+The maps in these docs are drawn on shaded-relief tiles of the USGS National
+Map, which are kept in the repository so that building the docs needs no
+network for them. Your own maps can use the same tiles. cartopy downloads them
+when the map is drawn, and <code class="docutils literal notranslate"><span class="pre">cache=True</span></code> keeps what it downloaded:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cartopy.io.img_tiles</span><span class="w"> </span><span class="kn">import</span> <span class="n">GoogleTiles</span>
+
+<span class="n">usgs</span> <span class="o">=</span> <span class="n">GoogleTiles</span><span class="p">(</span>
+    <span class="n">url</span><span class="o">=</span><span class="s2">&quot;https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/</span><span class="si">{z}</span><span class="s2">/</span><span class="si">{y}</span><span class="s2">/</span><span class="si">{x}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">tiler</span><span class="o">=</span><span class="n">usgs</span><span class="p">)</span>
+</pre></div>
+</div>
 </section>
 <section id="footprints">
 <h2>Footprints<a class="headerlink" href="#footprints" title="Link to this heading">#</a></h2>
