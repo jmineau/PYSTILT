@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>How PYSTILT Tracks Finished Work &#8212; PYSTILT dev</title>
+    <title>Roadmap &#8212; PYSTILT dev</title>
   
   
   
@@ -41,13 +41,13 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=d1c9c300"></script>
+    <script src="../_static/documentation_options.js?v=32c4a974"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/output_state';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'development/roadmap';</script>
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
@@ -58,11 +58,10 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Architecture" href="architecture.html" />
-    <link rel="prev" title="Internals" href="index.html" />
+    <link rel="prev" title="STILT-R Parity" href="stilt_r_parity.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev34+g9c7044faf" />
+  <meta name="docsearch:version" content="0.1.0a25.dev35+g4f1b2d346" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -169,13 +168,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../reference/index.html">
     API Reference
   </a>
@@ -184,34 +176,10 @@
 
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="index.html">
-    Internals
-  </a>
-</li>
-
-            <li class="nav-item dropdown">
-                <button class="btn dropdown-toggle nav-item" type="button"
-                data-bs-toggle="dropdown" aria-expanded="false"
-                aria-controls="pst-nav-more-links">
-                    More
-                </button>
-                <ul id="pst-nav-more-links" class="dropdown-menu">
-                    
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../development.html">
     Development
   </a>
 </li>
 
-                </ul>
-            </li>
-            
   </ul>
 </nav></div>
       
@@ -349,13 +317,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../reference/index.html">
     API Reference
   </a>
@@ -364,20 +325,6 @@
 
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="index.html">
-    Internals
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../development.html">
     Development
   </a>
 </li>
@@ -460,8 +407,9 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">How PYSTILT Tracks Finished Work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stilt_r_parity.html">STILT-R Parity</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Roadmap</a></li>
 </ul>
 </div>
 </nav></div>
@@ -503,9 +451,9 @@
       </a>
     </li>
     
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Internals</a></li>
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Development</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">How PYSTILT Tracks Finished Work</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Roadmap</span></li>
   </ul>
 </nav>
 </div>
@@ -522,107 +470,177 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="how-pystilt-tracks-finished-work">
-<h1>How PYSTILT Tracks Finished Work<a class="headerlink" href="#how-pystilt-tracks-finished-work" title="Link to this heading">#</a></h1>
-<p>This page explains what happens behind <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> and reruns. You
-don’t need it to use PYSTILT, but it helps when running at scale, across
-machines, or with several projects sharing one output directory.</p>
-<section id="the-result-files-are-the-record">
-<h2>The result files are the record<a class="headerlink" href="#the-result-files-are-the-record" title="Link to this heading">#</a></h2>
-<p>PYSTILT keeps no separate list of which simulations have run. A simulation
-is complete when the result files its variant makes exist in the output
-directory (<a class="reference internal" href="../reference/_api/stilt.Simulation.is_complete.html#stilt.Simulation.is_complete" title="stilt.Simulation.is_complete"><code class="xref py py-attr docutils literal notranslate"><span class="pre">stilt.Simulation.is_complete</span></code></a>). Today that is:</p>
+  <section id="roadmap">
+<h1>Roadmap<a class="headerlink" href="#roadmap" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>PYSTILT is alpha software (the <code class="docutils literal notranslate"><span class="pre">0.1.0a</span></code> series). The public API may
+change between releases until v1.0.</p>
+</div>
+<section id="current-status">
+<h2>Current status<a class="headerlink" href="#current-status" title="Link to this heading">#</a></h2>
+<p>These parts are stable and covered by the test suite:</p>
 <ul class="simple">
-<li><p>the particle file,
-<code class="docutils literal notranslate"><span class="pre">particles/settings=&lt;variant&gt;-&lt;hash&gt;/date=&lt;day&gt;/&lt;receptor&gt;.parquet</span></code></p></li>
-<li><p>the footprint file in the variant’s <code class="docutils literal notranslate"><span class="pre">footprints/</span></code> folder, when the
-variant has a grid. A footprint that no particle reached is a file with
-no rows, marked <code class="docutils literal notranslate"><span class="pre">stilt:empty:</span> <span class="pre">true</span></code> in its metadata, and it counts.</p></li>
+<li><p>HYSPLIT trajectories and footprints</p></li>
+<li><p>Footprints that match <a class="reference external" href="https://github.com/uataq/stilt">uataq/stilt</a>
+(STILT-R) at <code class="docutils literal notranslate"><span class="pre">rtol=1e-7</span></code> per cell</p></li>
+<li><p>Running locally and on Slurm</p></li>
+<li><p>Reruns that skip finished simulations, judged by which output files exist</p></li>
+<li><p>Variants, which run the same receptors under several named settings in one
+project. Transport-error ensembles and extra footprints are variants too.</p></li>
+<li><p>Helpers for column and satellite observations</p></li>
+<li><p>Reading the <code class="docutils literal notranslate"><span class="pre">by-id</span></code> output of STILT-R and X-STILT as receptors, particles,
+and footprints (<a class="reference internal" href="../reference/_api/stilt.migration.read_stilt_r.html#stilt.migration.read_stilt_r" title="stilt.migration.read_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.migration.read_stilt_r()</span></code></a>)</p></li>
 </ul>
-<p>Each result has one expected path, so checking one simulation is a file
-lookup. For many simulations (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code>, or planning a run) PYSTILT
-lists the date folders the selection falls in, once each, and reads the
-answer for every receptor from that. That keeps a project of a hundred
-thousand receptors quick to check, and a few simulations of it cheap.
-A notebook, a Slurm task, and another project sharing the directory all see
-the same files, so they agree on what’s finished without talking to each
-other. Deleting a result file makes that simulation unfinished again.</p>
+<p>Footprints can also be summed onto other geometries. A footprint is computed
+on a rectangular grid and then summed onto a <a class="reference internal" href="../reference/_api/stilt.Grid.html#stilt.Grid" title="stilt.Grid"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Grid</span></code></a>, a
+<a class="reference internal" href="../reference/_api/stilt.Mesh.html#stilt.Mesh" title="stilt.Mesh"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Mesh</span></code></a> (from shapefiles, H3 hexagons, or windows around points),
+or <a class="reference internal" href="../reference/_api/stilt.Zones.html#stilt.Zones" title="stilt.Zones"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Zones</span></code></a> (groups of cells), using cached overlap weights.
+<code class="docutils literal notranslate"><span class="pre">Mesh.to_grid</span></code> picks a grid for a geometry, the <code class="docutils literal notranslate"><span class="pre">geometry</span></code>
+footprint setting names one in YAML, and <code class="docutils literal notranslate"><span class="pre">sim.calc_footprint</span></code> makes
+new footprints from saved particles.</p>
+<p>Most new work is on column and slant-column workflows for satellite and
+ground-based instruments (see <em>Future plans</em> below).</p>
 </section>
-<section id="what-defines-the-simulations">
-<h2>What defines the simulations<a class="headerlink" href="#what-defines-the-simulations" title="Link to this heading">#</a></h2>
-<p>A project’s simulations are its receptors (<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>) run under each
-of its variants (<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>). <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> is exactly that
-set, one row per simulation.</p>
-<p>Both files are in the project folder before anything runs, so any worker on
-any machine can open the project from the folder alone.
-<code class="docutils literal notranslate"><span class="pre">Project.init()</span></code> writes <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> once, and PYSTILT never rewrites
-it. <code class="docutils literal notranslate"><span class="pre">project.add_receptors()</span></code> appends new receptors to
-<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p>
+<section id="execution-call-path-from-stiltctl">
+<h2>Execution (call path from stiltctl)<a class="headerlink" href="#execution-call-path-from-stiltctl" title="Link to this heading">#</a></h2>
+<p><a class="reference external" href="https://github.com/jmineau/air-tracker-stiltctl">stiltctl</a> runs STILT on
+cloud infrastructure. PYSTILT keeps its call path. The CLI opens a <code class="docutils literal notranslate"><span class="pre">Project</span></code>,
+and the project hands receptors to workers. Its queue-backed and Kubernetes
+execution was implemented and then removed. Receptors now run on this
+machine, or as tasks of a Slurm job array or another scheduler’s array,
+each a <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span></code> command line.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 75.0%" />
+<col style="width: 25.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Feature</p></th>
+<th class="head"><p>Status</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Thin CLI → <code class="docutils literal notranslate"><span class="pre">Project</span></code> → worker call path</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>Local runs, in one process or a process pool</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-even"><td><p>A check of a project’s met files, grid, and kernel table before any run (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code>, <code class="docutils literal notranslate"><span class="pre">project.check()</span></code>)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>Slurm job arrays, with preempted tasks resubmitted</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-even"><td><p>One task of a job array or a Kubernetes indexed Job (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span> <span class="pre">I/N</span></code>)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>Queue-backed workers (PostgreSQL), Kubernetes deployment</p></td>
+<td><p>Removed</p></td>
+</tr>
+<tr class="row-even"><td><p>Cloud object store outputs (GCS, S3)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>Transport models other than HYSPLIT, named by import path (<code class="docutils literal notranslate"><span class="pre">model:</span> <span class="pre">mypkg.MyModel</span></code>), including models that run many receptors per call</p></td>
+<td><p>Implemented (the interface; HYSPLIT is the one model)</p></td>
+</tr>
+<tr class="row-even"><td><p>Met columns (<code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">dens</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code>, <code class="docutils literal notranslate"><span class="pre">zsfc</span></code>) sampled at particle positions, for a model that writes only positions (<code class="docutils literal notranslate"><span class="pre">stilt.sampling.sample_met</span></code>)</p></td>
+<td><p>Implemented (<code class="docutils literal notranslate"><span class="pre">pres</span></code> and <code class="docutils literal notranslate"><span class="pre">dens</span></code> read high above 100 m; see the Meteorology guide)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 </section>
-<section id="settings-name-the-folders">
-<h2>Settings name the folders<a class="headerlink" href="#settings-name-the-folders" title="Link to this heading">#</a></h2>
-<p><a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a> lists what each <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> and result
-file holds.</p>
-<p>Each variant resolves into two records of settings (<code class="xref py py-mod docutils literal notranslate"><span class="pre">stilt.identity</span></code>).
-Its run settings hold everything that changes the particles: the HYSPLIT
-parameters, the content of the meteorology, and the transport model’s
-build. Their hash names the <code class="docutils literal notranslate"><span class="pre">particles/</span></code> folder. Its footprint settings
-hold the footprint config, its grid, and the hash of the geometry the grid
-was derived for. Hashed together with the run settings, they name the
-<code class="docutils literal notranslate"><span class="pre">footprints/</span></code> folder. Each folder holds a <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> with the
-settings written out in full.</p>
-<p>That is how PYSTILT knows a setting changed: the variant now hashes to a
-folder that does not exist yet, so its receptors run again into it. The old
-folder is untouched. It is also how two variants come to share particles:
-if only their footprint fields differ, their transport settings hash the
-same and they resolve to one <code class="docutils literal notranslate"><span class="pre">particles/</span></code> folder.</p>
-<p>A folder is found by reading its <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> back through the current
-config classes and hashing that, rather than by comparing stored digests.
-So a setting added in a later version, with a default, still matches folders
-written before it existed; a default whose meaning changed does not, which
-is right, because the particles would differ.</p>
-<p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> lists the folders no variant of the current config uses.
-PYSTILT never deletes a folder, because another project may share the
-directory; deletion is by hand.</p>
+<section id="column-and-satellite-science-from-x-stilt">
+<h2>Column and satellite science (from X-STILT)<a class="headerlink" href="#column-and-satellite-science-from-x-stilt" title="Link to this heading">#</a></h2>
+<p><a class="reference external" href="https://github.com/uataq/X-STILT">X-STILT</a> extends STILT for column and
+slant-path satellite retrievals. PYSTILT ports X-STILT’s ideas for handling
+observations and weighting columns. It does not try to match every X-STILT
+feature.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 75.0%" />
+<col style="width: 25.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Feature</p></th>
+<th class="head"><p>Status</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stilt.observations</span></code> helpers (overpass grouping, sounding selection, jitter, slant geometry)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>Column receptor support</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-even"><td><p>Averaging-kernel and pressure-weighting particle transforms</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>First-order lifetime decay transform</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-even"><td><p>Declarative transforms in config YAML (default or per variant)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>Slant-column receptor support</p></td>
+<td><p>Implemented (see the <em>Slant Columns</em> guide)</p></td>
+</tr>
+<tr class="row-even"><td><p>Slant altitudes from a retrieval’s pressure levels (<code class="docutils literal notranslate"><span class="pre">pressure_altitudes</span></code>)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>User-defined transforms via <code class="docutils literal notranslate"><span class="pre">kind:</span> <span class="pre">my.module.Class</span></code></p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-even"><td><p>Per-sounding averaging kernels in batch runs (<code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> with <code class="docutils literal notranslate"><span class="pre">table:</span></code>)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>A receptor and a kernel for each sounding (<code class="docutils literal notranslate"><span class="pre">receptors_from_soundings</span></code>, <code class="docutils literal notranslate"><span class="pre">project.add_table</span></code>)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-even"><td><p>Product readers (OCO-2/3, TROPOMI, TCCON)</p></td>
+<td><p>Implemented (see <em>Reading Retrieval Products</em>); other instruments as one module each</p></td>
+</tr>
+<tr class="row-odd"><td><p>Transport error on the modeled enhancement (<code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code>)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-even"><td><p>Modeled enhancement from a flux field (<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>Background from a mole-fraction field at the trajectory endpoints (<code class="docutils literal notranslate"><span class="pre">sim.background</span></code>)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-even"><td><p>The retrieval’s prior term in a modeled column (<code class="docutils literal notranslate"><span class="pre">modelled_column</span></code>)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>Satellite-derived plume background (forward trajectories)</p></td>
+<td><p>Implemented (see the <em>Plume Background</em> guide)</p></td>
+</tr>
+<tr class="row-even"><td><p>Forward runs (positive <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>) for plume and dispersion studies</p></td>
+<td><p>Implemented (see the <em>Plume Background</em> guide)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Emission-error propagation to the modeled enhancement</p></td>
+<td><p>A recipe on <code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> (see the <em>Transport Error</em> guide); the
+correlated case is fips’s <code class="docutils literal notranslate"><span class="pre">prior_obs_error</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Inventory readers</p></td>
+<td><p>Out of scope; a flux field is an xarray array</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 </section>
-<section id="the-unit-of-work">
-<h2>The unit of work<a class="headerlink" href="#the-unit-of-work" title="Link to this heading">#</a></h2>
-<p>Workers are handed receptors. A worker runs every variant of its receptor,
-in config order. When a variant’s particles are missing it runs HYSPLIT; the
-variants that share those particles reuse them and make their own
-footprints, remade if the particles were replaced in the same call. A
-Slurm task is handed a batch of receptor IDs.</p>
-</section>
-<section id="where-hysplit-runs">
-<h2>Where HYSPLIT runs<a class="headerlink" href="#where-hysplit-runs" title="Link to this heading">#</a></h2>
-<p>HYSPLIT has to run in a local folder that holds its input files, the
-run’s workdir. Workdirs are made in the compute root: <code class="docutils literal notranslate"><span class="pre">compute_root</span></code> if
-given, else <code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code>, else <code class="docutils literal notranslate"><span class="pre">$TMPDIR/pystilt/&lt;project</span>
-<span class="pre">name&gt;</span></code>. Each run gets a new workdir there, named after the receptor id
-and the variant (and the realization, in an ensemble), with a random part
-at the end (<code class="docutils literal notranslate"><span class="pre">202301011200_-111.85_40.77_5_hrrr_3f9a1c2e</span></code>). Two runs
-never share one, so several projects can use one compute root, and a
-simulation that runs twice at once keeps its own files.</p>
-<p>After a successful run the particle file and the log are written to the
-output directory and the workdir is removed. After a failure the workdir
-is copied to <code class="docutils literal notranslate"><span class="pre">scratch/</span></code> in the output directory first, so CONTROL,
-SETUP.CFG, and MESSAGE survive the job. <code class="docutils literal notranslate"><span class="pre">keep_workdir:</span> <span class="pre">true</span></code> under
-<code class="docutils literal notranslate"><span class="pre">execution:</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> keeps every run’s workdir. A run killed
-outright (<code class="docutils literal notranslate"><span class="pre">SIGKILL</span></code>, or a node that fails) cannot clean up, and its
-workdir stays in the compute root until that folder is cleaned.</p>
-<p>Files are written through a temporary name and renamed into place, so a
-reader never sees a partial file, and two workers that run the same receptor
-by accident produce equivalent files with the last rename winning. Each of
-them runs in its own workdir. No lock is needed.</p>
-</section>
-<section id="environment-variables">
-<h2>Environment variables<a class="headerlink" href="#environment-variables" title="Link to this heading">#</a></h2>
-<p>This controls where PYSTILT runs. It never changes what it calculates, so it
-lives outside <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code>: the compute root, where workers make each run’s
-workdir</p></li>
-</ul>
+<section id="future-plans">
+<h2>Future plans<a class="headerlink" href="#future-plans" title="Link to this heading">#</a></h2>
+<p>In priority order:</p>
+<ol class="arabic simple">
+<li><p>Readers for the instruments people bring, such as EM27/SUN output
+from PROFFAST and MethaneAIR/MethaneSAT. Which ones come first depends on who is using
+column receptors.</p></li>
+<li><p>A YAML form for <a class="reference internal" href="../reference/_api/stilt.Zones.html#stilt.Zones" title="stilt.Zones"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Zones</span></code></a>, so the <code class="docutils literal notranslate"><span class="pre">geometry</span></code> footprint
+setting can name groups of cells.</p></li>
+</ol>
 </section>
 </section>
 
@@ -637,22 +655,13 @@ workdir</p></li>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="index.html"
+       href="stilt_r_parity.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Internals</p>
+        <p class="prev-next-title">STILT-R Parity</p>
       </div>
-    </a>
-    <a class="right-next"
-       href="architecture.html"
-       title="next page">
-      <div class="prev-next-info">
-        <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Architecture</p>
-      </div>
-      <i class="fa-solid fa-angle-right"></i>
     </a>
 </div>
                 </footer>
@@ -673,19 +682,17 @@ workdir</p></li>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-result-files-are-the-record">The result files are the record</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-defines-the-simulations">What defines the simulations</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#settings-name-the-folders">Settings name the folders</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-unit-of-work">The unit of work</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-hysplit-runs">Where HYSPLIT runs</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#environment-variables">Environment variables</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#current-status">Current status</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#execution-call-path-from-stiltctl">Execution (call path from stiltctl)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#column-and-satellite-science-from-x-stilt">Column and satellite science (from X-STILT)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#future-plans">Future plans</a></li>
 </ul>
   </nav></div>
 
   <div class="sidebar-secondary-item">
 
   <div class="tocsection sourcelink">
-    <a href="../_sources/advanced/output_state.rst.txt">
+    <a href="../_sources/development/roadmap.rst.txt">
       <i class="fa-solid fa-file-lines"></i> Show Source
     </a>
   </div>

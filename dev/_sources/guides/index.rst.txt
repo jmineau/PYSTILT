@@ -51,6 +51,11 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 - :doc:`hysplit_build`: run another HYSPLIT build, or your own land-use
   and terrain tables
 
+**Coming from another STILT**
+
+- :doc:`migration/index`: where the settings and steps of STILT-R, X-STILT,
+  stiltctl, and Jena STILT are in PYSTILT
+
 .. toctree::
    :hidden:
    :caption: Setting up a project
@@ -91,3 +96,9 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
    :caption: HYSPLIT
 
    hysplit_build
+
+.. toctree::
+   :hidden:
+   :caption: Coming from another STILT
+
+   migration/index

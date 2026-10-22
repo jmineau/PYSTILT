@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Internals &#8212; PYSTILT dev</title>
+    <title>Development &#8212; PYSTILT dev</title>
   
   
   
@@ -41,13 +41,13 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=d1c9c300"></script>
+    <script src="../_static/documentation_options.js?v=32c4a974"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/index';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'development/index';</script>
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
@@ -58,11 +58,11 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="How PYSTILT Tracks Finished Work" href="output_state.html" />
+    <link rel="next" title="Architecture" href="architecture.html" />
     <link rel="prev" title="stilt.exceptions.EmptyFootprint" href="../reference/_api/stilt.exceptions.EmptyFootprint.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev34+g9c7044faf" />
+  <meta name="docsearch:version" content="0.1.0a25.dev35+g4f1b2d346" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -169,13 +169,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../reference/index.html">
     API Reference
   </a>
@@ -184,34 +177,10 @@
 
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="#" aria-current="page">
-    Internals
-  </a>
-</li>
-
-            <li class="nav-item dropdown">
-                <button class="btn dropdown-toggle nav-item" type="button"
-                data-bs-toggle="dropdown" aria-expanded="false"
-                aria-controls="pst-nav-more-links">
-                    More
-                </button>
-                <ul id="pst-nav-more-links" class="dropdown-menu">
-                    
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../development.html">
     Development
   </a>
 </li>
 
-                </ul>
-            </li>
-            
   </ul>
 </nav></div>
       
@@ -349,13 +318,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../reference/index.html">
     API Reference
   </a>
@@ -364,20 +326,6 @@
 
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="#" aria-current="page">
-    Internals
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../development.html">
     Development
   </a>
 </li>
@@ -460,8 +408,9 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="output_state.html">How PYSTILT Tracks Finished Work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stilt_r_parity.html">STILT-R Parity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
 </ul>
 </div>
 </nav></div>
@@ -502,7 +451,7 @@
         <i class="fa-solid fa-home"></i>
       </a>
     </li>
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Internals</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Development</span></li>
   </ul>
 </nav>
 </div>
@@ -519,21 +468,47 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="internals">
-<h1>Internals<a class="headerlink" href="#internals" title="Link to this heading">#</a></h1>
-<p>How PYSTILT works inside. You don’t need these pages to use PYSTILT. They
-help when you run at scale, share an output directory between projects,
-or build on PYSTILT.</p>
+  <section id="development">
+<h1>Development<a class="headerlink" href="#development" title="Link to this heading">#</a></h1>
+<p>Contributions are welcome: bug reports, documentation fixes, and code. See
+<a class="reference external" href="https://github.com/jmineau/PYSTILT/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>
+for conventions and for how to write the docs, and open issues on
+<a class="reference external" href="https://github.com/jmineau/PYSTILT/issues">GitHub</a>.</p>
 <dl class="simple">
-<dt><a class="reference internal" href="output_state.html"><span class="doc">How PYSTILT Tracks Finished Work</span></a></dt><dd><p>How a result is found, why a changed setting makes a new folder, and
-how two workers never step on each other.</p>
+<dt><a class="reference internal" href="architecture.html"><span class="doc">Architecture</span></a></dt><dd><p>How the code is organized, how a run goes from a project to result files,
+and how PYSTILT knows which work is finished.</p>
 </dd>
-<dt><a class="reference internal" href="architecture.html"><span class="doc">Architecture</span></a></dt><dd><p>How the code is organized, how a run goes from a project to result
-files, and the implementation details that are easy to break.</p>
+<dt><a class="reference internal" href="stilt_r_parity.html"><span class="doc">STILT-R Parity</span></a></dt><dd><p>What “matches STILT-R” covers, and how to move to a newer STILT-R commit.</p>
+</dd>
+<dt><a class="reference internal" href="roadmap.html"><span class="doc">Roadmap</span></a></dt><dd><p>What is implemented and what is planned.</p>
 </dd>
 </dl>
+<section id="use-of-ai-coding-agents">
+<h2>Use of AI coding agents<a class="headerlink" href="#use-of-ai-coding-agents" title="Link to this heading">#</a></h2>
+<p>This project is developed with the help of AI coding agents, directed and
+reviewed by the maintainer, who owns the design and the science.</p>
+<p>If you contribute with an agent, <code class="docutils literal notranslate"><span class="pre">AGENTS.md</span></code> at the repository root is the
+orientation file it should read.</p>
+</section>
+<section id="set-up-a-development-environment">
+<h2>Set up a development environment<a class="headerlink" href="#set-up-a-development-environment" title="Link to this heading">#</a></h2>
+<p>PYSTILT uses <a class="reference external" href="https://docs.astral.sh/uv/">uv</a> and
+<a class="reference external" href="https://github.com/casey/just">just</a>. From a clone of the repository:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>sync
+uv<span class="w"> </span>run<span class="w"> </span>pre-commit<span class="w"> </span>install
+</pre></div>
+</div>
+<p>Common tasks:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>just<span class="w"> </span><span class="nb">test</span><span class="w">             </span><span class="c1"># run the unit tests</span>
+just<span class="w"> </span>quality-check<span class="w">    </span><span class="c1"># lint, type check, import contracts, docstrings, unit tests</span>
+just<span class="w"> </span>build-docs<span class="w">       </span><span class="c1"># build this documentation into docs/_build/html</span>
+just<span class="w"> </span>docs-serve<span class="w">       </span><span class="c1"># preview it at http://127.0.0.1:8000, rebuilt on every save</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">just</span></code> with no arguments lists the rest.</p>
 <div class="toctree-wrapper compound">
 </div>
+</section>
 </section>
 
 
@@ -556,11 +531,11 @@ files, and the implementation details that are easy to break.</p>
       </div>
     </a>
     <a class="right-next"
-       href="output_state.html"
+       href="architecture.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">How PYSTILT Tracks Finished Work</p>
+        <p class="prev-next-title">Architecture</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -576,9 +551,22 @@ files, and the implementation details that are easy to break.</p>
 
 
   <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#use-of-ai-coding-agents">Use of AI coding agents</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#set-up-a-development-environment">Set up a development environment</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
 
   <div class="tocsection sourcelink">
-    <a href="../_sources/advanced/index.rst.txt">
+    <a href="../_sources/development/index.rst.txt">
       <i class="fa-solid fa-file-lines"></i> Show Source
     </a>
   </div>
