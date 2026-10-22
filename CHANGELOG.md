@@ -106,6 +106,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   copy when it was cut short, and `stilt check` did not report a block that
   had only its copy. Names ending in `.partial` or `.bad` are skipped, as lock
   files and backup copies (`~`) already were.
+- The recipe in `stilt.particles.transport_error` for a variant with
+  `realizations: N` grouped the particles by `variant`, which merges the
+  realizations (and the receptors, for a selection of several) into one table:
+  `realizations` came out 1 and the variance was wrong. It now selects one
+  receptor and groups by `realization`, as `sim.transport_error` does, and a
+  test runs the docstring's example against `sim.transport_error`.
 - The Getting Started page and the sample project behind the outputs and
   checking guides run with `krand: 2` and `seed: 42`. HYSPLIT's default,
   `krand: 4`, draws its random numbers from the clock, so two docs builds of
