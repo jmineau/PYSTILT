@@ -1,0 +1,6 @@
+stilt.Project.status
+====================
+
+.. currentmodule:: stilt
+
+.. automethod:: Project.status

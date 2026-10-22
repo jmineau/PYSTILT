@@ -1,0 +1,6 @@
+stilt.Grid.is\_longlat
+======================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Grid.is_longlat

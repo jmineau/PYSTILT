@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Checking A Run &#8212; PYSTILT 0.1.0a24</title>
+    <title>Checking A Run &#8212; PYSTILT 0.1.0a25</title>
   
   
   
@@ -30,6 +30,7 @@
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
@@ -40,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=efecac6f"></script>
+    <script src="../_static/documentation_options.js?v=4b942876"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -50,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a24';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +62,7 @@
     <link rel="prev" title="In Containers (Kubernetes)" href="containers.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a24" />
+  <meta name="docsearch:version" content="0.1.0a25" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -132,7 +133,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a24</p>
+    <p class="title logo__title">PYSTILT 0.1.0a25</p>
   
 </a></div>
     
@@ -168,13 +169,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../reference/index.html">
     API Reference
   </a>
@@ -182,35 +176,11 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-            <li class="nav-item dropdown">
-                <button class="btn dropdown-toggle nav-item" type="button"
-                data-bs-toggle="dropdown" aria-expanded="false"
-                aria-controls="pst-nav-more-links">
-                    More
-                </button>
-                <ul id="pst-nav-more-links" class="dropdown-menu">
-                    
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../development.html">
+  <a class="nav-link nav-internal" href="../development/index.html">
     Development
   </a>
 </li>
 
-                </ul>
-            </li>
-            
   </ul>
 </nav></div>
       
@@ -348,13 +318,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../reference/index.html">
     API Reference
   </a>
@@ -362,21 +325,7 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../development.html">
+  <a class="nav-link nav-internal" href="../development/index.html">
     Development
   </a>
 </li>
@@ -493,6 +442,16 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="hysplit_build.html">Your Own HYSPLIT Build And Data Tables</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="migration/index.html">Coming From Another STILT</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="migration/stilt_r.html">Coming From STILT-R</a></li>
+<li class="toctree-l2"><a class="reference internal" href="migration/x_stilt.html">Coming From X-STILT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="migration/stiltctl.html">Coming From stiltctl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="migration/jena_stilt.html">Coming From Jena STILT</a></li>
+</ul>
+</details></li>
+</ul>
 </div>
 </nav></div>
     </div>
@@ -554,8 +513,118 @@
                   
   <section id="checking-a-run">
 <h1>Checking A Run<a class="headerlink" href="#checking-a-run" title="Link to this heading">#</a></h1>
-<p>This page is for after a run: which simulations finished, why some did
-not, and what to do when a footprint looks wrong.</p>
+<p>This page is for before a run and after it. Before: what <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code>
+finds in a project’s inputs. After: which simulations finished, why some
+did not, and what to do when a footprint looks wrong.</p>
+<section id="before-a-run">
+<h2>Before a run<a class="headerlink" href="#before-a-run" title="Link to this heading">#</a></h2>
+<p>The first failures a new project meets are in its inputs: a met folder
+with a typo, met files that miss some receptor’s hours, a receptor off the
+grid. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> finds them before HYSPLIT starts. It reads the
+project’s files and one met file’s header for each met, and runs and
+downloads nothing:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ stilt check ./my_project
+Project: /data/my_project  receptors=3
+Variants: hrrr (met hrrr, footprint), hrrr-err (met hrrr, particles only)
+
+check      variant         receptor                         message
+met_files  hrrr, hrrr-err  202107150600_-111.848_40.766_10  no met file for 2021-07-14 12:00
+met_files  hrrr, hrrr-err  202107150700_-111.848_40.766_10  no met file for 2021-07-14 12:00
+met_files  hrrr, hrrr-err  202107150600_-114.2_40.766_10    no met file for 2021-07-14 12:00
+grid       hrrr            202107150600_-114.2_40.766_10    longitude -114.2 and latitude 40.766 are outside the footprint grid (-113 to -110.5 longitude, 40 to 42 latitude)
+
+Found 4 problems: met_files 3, grid 1
+</pre></div>
+</div>
+<p>It checks every variant. Variants that share what a check looks at, such
+as a met and a run length, share its rows, and the <code class="docutils literal notranslate"><span class="pre">variant</span></code> column lists
+them. Each check shows its first ten rows and counts the rest. It exits
+with 0 when it finds nothing, 1 when it lists anything, and 2 when its
+command line is wrong or the project’s files are invalid.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 18.0%" />
+<col style="width: 42.0%" />
+<col style="width: 40.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Check</p></th>
+<th class="head"><p>What it found</p></th>
+<th class="head"><p>What to do</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">met_directory</span></code></p></td>
+<td><p>A met’s <code class="docutils literal notranslate"><span class="pre">directory</span></code> does not exist or holds no ARL file. A project
+reads each met’s weather product from the header of its first file,
+so without one it cannot find its results.</p></td>
+<td><p>Correct <code class="docutils literal notranslate"><span class="pre">directory</span></code> under <code class="docutils literal notranslate"><span class="pre">mets:</span></code>. A met with <code class="docutils literal notranslate"><span class="pre">download</span></code> is not
+checked: it makes its directory and fetches files when a run needs
+them.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">met_files</span></code></p></td>
+<td><p>A receptor’s run needs a met file that is not there. The message
+names the hours of the files, each as long as <code class="docutils literal notranslate"><span class="pre">file_tres</span></code>.</p></td>
+<td><p>Add the files, or check <code class="docutils literal notranslate"><span class="pre">file_format</span></code> and <code class="docutils literal notranslate"><span class="pre">file_tres</span></code> against the
+file names. A backward run needs files from <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> before the
+receptor time to just after it (<a class="reference internal" href="meteorology.html"><span class="doc">Meteorology</span></a>).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">met_crop</span></code></p></td>
+<td><p>With <code class="docutils literal notranslate"><span class="pre">subgrid_enable</span></code> on, a receptor lies outside
+<code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code>. HYSPLIT cannot start particles outside the
+cropped files.</p></td>
+<td><p>Widen <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code>. It must hold the whole run, not only the
+footprint grid.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">grid</span></code></p></td>
+<td><p>A release point of a receptor lies outside the variant’s footprint
+grid. Only the particles that travel into the grid add to its
+footprint, and a footprint with none is empty.</p></td>
+<td><p>Widen the grid. A receptor meant to lie outside it, such as one far
+downwind, is still listed, and the exit code is 1.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">kernel_table</span></code></p></td>
+<td><p>The <code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> table does not exist, or lacks its
+<code class="docutils literal notranslate"><span class="pre">receptor</span></code>, <code class="docutils literal notranslate"><span class="pre">level</span></code>, or <code class="docutils literal notranslate"><span class="pre">value</span></code> column.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">project.add_table(&quot;kernels&quot;,</span> <span class="pre">table)</span></code> makes it
+(<a class="reference internal" href="../reference/_api/stilt.transforms.averaging_kernel_table.html#stilt.transforms.averaging_kernel_table" title="stilt.transforms.averaging_kernel_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">averaging_kernel_table()</span></code></a>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kernel_missing</span></code></p></td>
+<td><p>The table has no kernel for a receptor, which fails its footprint.</p></td>
+<td><p>Add the receptor’s kernel. If the table’s ids look like the receptors’
+with other digits, the ids were made from different coordinates.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">kernel_unused</span></code></p></td>
+<td><p>The table has a kernel for an id that is no receptor of the project.
+The run does not need it.</p></td>
+<td><p>Nothing, if the table is shared. Otherwise look for ids that differ
+from the receptors’ in a digit.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> looks for files, not inside them. A run that passes can still
+fail as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>: a file that is damaged or cut short is found when
+the run opens it, and a receptor outside the domain of the files, when HYSPLIT
+starts it (the reasons are below).</p>
+<p>In Python, <code class="docutils literal notranslate"><span class="pre">project.check()</span></code> is the same table, one row for each thing
+found. It is empty when there is none:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+
+<span class="gp">In [2]: </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">&quot;./my_project&quot;</span><span class="p">)</span>
+
+<span class="gp">In [3]: </span><span class="n">project</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+<span class="gh">Out[3]: </span>
+<span class="go">Empty DataFrame</span>
+<span class="go">Columns: [check, variant, receptor, message]</span>
+<span class="go">Index: []</span>
+</pre></div>
+</div>
+<p>The sample project has everything its runs need, so the table is empty. A
+table with rows is a pandas DataFrame, so <code class="docutils literal notranslate"><span class="pre">problems</span> <span class="pre">=</span> <span class="pre">project.check()</span></code> and
+<code class="docutils literal notranslate"><span class="pre">problems[problems.check</span> <span class="pre">==</span> <span class="pre">&quot;met_files&quot;]</span></code> select the receptors that lack
+met files.</p>
+</section>
 <section id="where-each-simulation-stands">
 <h2>Where each simulation stands<a class="headerlink" href="#where-each-simulation-stands" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> counts the simulations of a project, per variant, and the
@@ -570,11 +639,25 @@ Output: /data/output
 </pre></div>
 </div>
 <p>In Python, <code class="docutils literal notranslate"><span class="pre">project.status()</span></code> is the same, one row per simulation:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">status</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">()</span>
-<span class="n">status</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
-<span class="n">status</span><span class="p">[</span><span class="n">status</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;failed&quot;</span><span class="p">][[</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;variant&quot;</span><span class="p">,</span> <span class="s2">&quot;reason&quot;</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">]]</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [4]: </span><span class="n">status</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">()</span>
+
+<span class="gp">In [5]: </span><span class="n">status</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+<span class="gh">Out[5]: </span>
+<span class="go">state</span>
+<span class="go">complete       4</span>
+<span class="go">failed         0</span>
+<span class="go">interrupted    0</span>
+<span class="go">pending        0</span>
+<span class="go">Name: count, dtype: int64</span>
+
+<span class="gp">In [6]: </span><span class="n">status</span><span class="p">[</span><span class="n">status</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;failed&quot;</span><span class="p">][[</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;variant&quot;</span><span class="p">,</span> <span class="s2">&quot;reason&quot;</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">]]</span>
+<span class="gh">Out[6]: </span>
+<span class="go">Empty DataFrame</span>
+<span class="go">Columns: [receptor, variant, reason, message]</span>
+<span class="go">Index: []</span>
 </pre></div>
 </div>
+<p>The sample project has no failures, so the last table is empty.</p>
 <p>Each simulation is in one of four states. The state comes from the files in
 the output directory, so it is the same whoever asks and whenever.</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -663,12 +746,13 @@ log that says what went wrong. An unexpected error, such as a bug, also has a
 <li><p><code class="docutils literal notranslate"><span class="pre">No</span> <span class="pre">met</span> <span class="pre">file</span> <span class="pre">...</span> <span class="pre">for</span> <span class="pre">&lt;hours&gt;</span></code>: a file the run needs is missing.
 Check the met’s <code class="docutils literal notranslate"><span class="pre">directory</span></code> and <code class="docutils literal notranslate"><span class="pre">file_format</span></code> against the
 files on disk. A backward run needs files from <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> before
-the receptor time to just after it (<a class="reference internal" href="meteorology.html"><span class="doc">Meteorology</span></a>).</p></li>
+the receptor time to just after it (<a class="reference internal" href="meteorology.html"><span class="doc">Meteorology</span></a>).
+<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> finds these before a run.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">met</span> <span class="pre">file</span> <span class="pre">...</span> <span class="pre">is</span> <span class="pre">damaged</span></code> or <code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">met</span> <span class="pre">files</span> <span class="pre">hold</span> <span class="pre">no</span> <span class="pre">time</span>
 <span class="pre">step</span> <span class="pre">between</span> <span class="pre">...</span></code>: a file is there but cut short, written
 partway, or has records lost to null bytes, so it lacks hours the
 run needs. Download or crop it again. PYSTILT checks each file
-before HYSPLIT runs (<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.File.check.html#arlmet.File.check" title="(in arl-met v0.1.0b3)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">arlmet.File.check()</span></code></a>).</p></li>
+before HYSPLIT runs (<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.File.check.html#arlmet.File.check" title="(in arl-met v0.1.0b4)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">arlmet.File.check()</span></code></a>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">no</span> <span class="pre">more</span> <span class="pre">meteorology</span></code>: the particles reached a time that no met
 file holds. HYSPLIT says so in the <code class="docutils literal notranslate"><span class="pre">WARNING</span></code> file of the kept
 workdir.</p></li>
@@ -691,11 +775,16 @@ met.</p></td>
 <td><p>HYSPLIT stopped with a Fortran error, which the message names. Read
 the log and the kept workdir’s <code class="docutils literal notranslate"><span class="pre">MESSAGE</span></code> file.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TIMEOUT</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PARTICLE_LIMIT</span></code></p></td>
+<td><p>HYSPLIT reached <code class="docutils literal notranslate"><span class="pre">maxpar</span></code> before every location of a multipoint
+receptor got its particles, so the last ones would have fewer or
+none. Leave <code class="docutils literal notranslate"><span class="pre">maxpar</span></code> unset, or raise it (<a class="reference internal" href="receptors.html"><span class="doc">Receptors</span></a>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TIMEOUT</span></code></p></td>
 <td><p>The run took longer than <code class="docutils literal notranslate"><span class="pre">timeout</span></code> under <code class="docutils literal notranslate"><span class="pre">execution:</span></code>. Raise it,
 or look for a slow node or a met file read over a slow filesystem.</p></td>
 </tr>
-<tr class="row-odd"><td><p>an error’s name</p></td>
+<tr class="row-even"><td><p>an error’s name</p></td>
 <td><p>Any other error is recorded by its class, such as <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>,
 with its traceback. That is usually a bug or a setup problem worth
 reporting.</p></td>
@@ -738,10 +827,17 @@ too small or not upwind: plot the particles (below) and widen it.</p>
 <h2>My footprint looks wrong<a class="headerlink" href="#my-footprint-looks-wrong" title="Link to this heading">#</a></h2>
 <p>Start from the particles. A map of them shows where the air came from,
 whatever the footprint grid:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">()</span>
-<span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">()</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [7]: </span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="s2">&quot;202101150800_-111.848_40.766_10&quot;</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
+
+<span class="gp">In [8]: </span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
+
+<span class="gp">In [9]: </span><span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
 </pre></div>
 </div>
+<a class="reference internal image-reference" href="../_images/checking_particles.png"><img alt="../_images/checking_particles.png" src="../_images/checking_particles.png" style="width: 6in;" />
+</a>
+<a class="reference internal image-reference" href="../_images/checking_footprint.png"><img alt="../_images/checking_footprint.png" src="../_images/checking_footprint.png" style="width: 6in;" />
+</a>
 <p>Then check, in order:</p>
 <dl class="simple">
 <dt>The time</dt><dd><p>Receptor times are UTC. A time in local time puts the release hours
@@ -776,9 +872,9 @@ sums the hours into one layer.</p>
 </dd>
 </dl>
 <p>PYSTILT’s footprints match STILT-R’s to a relative 10⁻⁷ per cell, which
-the fidelity tests check (<a class="reference internal" href="../development.html"><span class="doc">Development</span></a>). If yours differ from a STILT-R
+the fidelity tests check (<a class="reference internal" href="../development/stilt_r_parity.html"><span class="doc">STILT-R Parity</span></a>). If yours differ from a STILT-R
 run of the same receptor, compare the settings first: STILT-R’s names are
-in <a class="reference internal" href="../migration/stilt_r.html"><span class="doc">Coming From STILT-R</span></a>.</p>
+in <a class="reference internal" href="migration/stilt_r.html"><span class="doc">Coming From STILT-R</span></a>.</p>
 </section>
 <section id="why-the-output-has-separate-trees">
 <h2>Why the output has separate trees<a class="headerlink" href="#why-the-output-has-separate-trees" title="Link to this heading">#</a></h2>
@@ -838,6 +934,7 @@ trees alone; the logs tree only explains the ones that are not.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#before-a-run">Before a run</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-each-simulation-stands">Where each simulation stands</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-a-simulation-failed">Why a simulation failed</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-reasons">The reasons</a></li>

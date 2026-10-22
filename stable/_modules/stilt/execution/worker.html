@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.execution.worker &#8212; PYSTILT 0.1.0a24</title>
+    <title>stilt.execution.worker &#8212; PYSTILT 0.1.0a25</title>
   
   
   
@@ -29,6 +29,7 @@
 <link href="../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
@@ -39,7 +40,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=efecac6f"></script>
+    <script src="../../../_static/documentation_options.js?v=4b942876"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -49,7 +50,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a24';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -58,7 +59,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a24" />
+  <meta name="docsearch:version" content="0.1.0a25" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -129,7 +130,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a24</p>
+    <p class="title logo__title">PYSTILT 0.1.0a25</p>
   
 </a></div>
     
@@ -165,13 +166,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../../reference/index.html">
     API Reference
   </a>
@@ -179,35 +173,11 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-            <li class="nav-item dropdown">
-                <button class="btn dropdown-toggle nav-item" type="button"
-                data-bs-toggle="dropdown" aria-expanded="false"
-                aria-controls="pst-nav-more-links">
-                    More
-                </button>
-                <ul id="pst-nav-more-links" class="dropdown-menu">
-                    
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../../../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../../../development.html">
+  <a class="nav-link nav-internal" href="../../../development/index.html">
     Development
   </a>
 </li>
 
-                </ul>
-            </li>
-            
   </ul>
 </nav></div>
       
@@ -343,13 +313,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../../../reference/index.html">
     API Reference
   </a>
@@ -357,21 +320,7 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../../development.html">
+  <a class="nav-link nav-internal" href="../../../development/index.html">
     Development
   </a>
 </li>
@@ -516,12 +465,12 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">multiprocessing</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
 
@@ -575,7 +524,7 @@
         <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">previous</span><span class="p">)</span>
 
 
-<span class="c1">#: The step of a simulation that failed: its particles or its footprint.</span>
+<span class="c1">#: The step of a simulation that failed, its particles or its footprint.</span>
 <span class="n">Step</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="s2">&quot;footprint&quot;</span><span class="p">]</span>
 
 <span class="c1">#: The output folder each step writes to.</span>
@@ -650,7 +599,8 @@
 <span class="sd">    sim : Simulation</span>
 <span class="sd">        What to run.</span>
 <span class="sd">    workdir : Path</span>
-<span class="sd">        Directory to run in. Created here.</span>
+<span class="sd">        Directory to run in, made here. Anything in it is removed first,</span>
+<span class="sd">        so each run needs its own.</span>
 <span class="sd">    keep_workdir : bool, default False</span>
 <span class="sd">        Keep the working directory of a successful run too.</span>
 <span class="sd">    timeout : int, optional</span>
@@ -672,9 +622,9 @@
     <span class="n">output</span><span class="p">,</span> <span class="n">rid</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span>
     <span class="n">needs_workdir</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">get_model</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="s2">&quot;needs_workdir&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">needs_workdir</span><span class="p">:</span>
-        <span class="c1"># The model runs in an empty directory. A job stopped partway can</span>
-        <span class="c1"># leave this simulation&#39;s directory behind; it is PYSTILT&#39;s own, so</span>
-        <span class="c1"># clear it.</span>
+        <span class="c1"># The model runs in an empty directory. The runner gives each run a</span>
+        <span class="c1"># new one, but a caller can hand over a directory that a stopped run</span>
+        <span class="c1"># left behind, so clear it.</span>
         <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">workdir</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">workdir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">_log_start</span><span class="p">(</span><span class="n">sim</span><span class="p">)</span>
@@ -865,7 +815,7 @@
 <span class="sd">    receptor_id : str</span>
 <span class="sd">        Receptor to run.</span>
 <span class="sd">    compute_root : Path</span>
-<span class="sd">        Directory the workdirs are made in, one per simulation, as</span>
+<span class="sd">        Directory the workdirs are made in, a new one for each run, as</span>
 <span class="sd">        :func:`~stilt.execution.runner.resolve_compute_root` returns it.</span>
 <span class="sd">    execution : ExecutionConfig, optional</span>
 <span class="sd">        Execution settings, for ``timeout`` and ``keep_workdir``. Defaults</span>
@@ -886,22 +836,17 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">execution</span> <span class="o">=</span> <span class="n">execution</span> <span class="k">if</span> <span class="n">execution</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">project</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">execution</span>
     <span class="n">problems</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="k">for</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span> <span class="n">names</span> <span class="ow">in</span> <span class="n">_groups</span><span class="p">(</span><span class="n">project</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">batched</span> <span class="ow">and</span> <span class="n">_is_batched</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">names</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
-                <span class="k">continue</span>
-            <span class="n">group</span> <span class="o">=</span> <span class="p">[</span><span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span><span class="p">]</span>
-            <span class="n">problems</span> <span class="o">+=</span> <span class="n">_run_group</span><span class="p">(</span>
-                <span class="n">project</span><span class="p">,</span>
-                <span class="n">group</span><span class="p">,</span>
-                <span class="n">compute_root</span><span class="o">=</span><span class="n">compute_root</span><span class="p">,</span>
-                <span class="n">execution</span><span class="o">=</span><span class="n">execution</span><span class="p">,</span>
-                <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">,</span>
-            <span class="p">)</span>
-    <span class="k">finally</span><span class="p">:</span>
-        <span class="c1"># Each workdir is removed after its run, which leaves the receptor&#39;s</span>
-        <span class="c1"># folders above it (compute_root/&lt;receptor&gt;/&lt;variant&gt;/) behind.</span>
-        <span class="n">_remove_empty_dirs</span><span class="p">(</span><span class="n">compute_root</span> <span class="o">/</span> <span class="n">receptor_id</span><span class="p">)</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span> <span class="n">names</span> <span class="ow">in</span> <span class="n">_groups</span><span class="p">(</span><span class="n">project</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">batched</span> <span class="ow">and</span> <span class="n">_is_batched</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">names</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">continue</span>
+        <span class="n">group</span> <span class="o">=</span> <span class="p">[</span><span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span><span class="p">]</span>
+        <span class="n">problems</span> <span class="o">+=</span> <span class="n">_run_group</span><span class="p">(</span>
+            <span class="n">project</span><span class="p">,</span>
+            <span class="n">group</span><span class="p">,</span>
+            <span class="n">compute_root</span><span class="o">=</span><span class="n">compute_root</span><span class="p">,</span>
+            <span class="n">execution</span><span class="o">=</span><span class="n">execution</span><span class="p">,</span>
+            <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">,</span>
+        <span class="p">)</span>
     <span class="k">return</span> <span class="n">problems</span></div>
 
 
@@ -964,13 +909,16 @@
     <span class="k">return</span> <span class="n">problems</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_remove_empty_dirs</span><span class="p">(</span><span class="n">root</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove *root* and every folder under it, as long as they hold no files.&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">root</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
-        <span class="k">return</span>
-    <span class="k">for</span> <span class="n">directory</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">topdown</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="k">with</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">suppress</span><span class="p">(</span><span class="ne">OSError</span><span class="p">):</span>
-            <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span><span class="o">.</span><span class="n">rmdir</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_new_workdir</span><span class="p">(</span><span class="n">compute_root</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a workdir for one run of *sim*&#39;s transport model: a new path in *compute_root*.</span>
+
+<span class="sd">    The name is the receptor id, the variant, and the realization (in an</span>
+<span class="sd">    ensemble), then a random part, so two runs never share a workdir. Another project can use</span>
+<span class="sd">    the same compute root with the same receptor and variant names, and the</span>
+<span class="sd">    same simulation can run twice at once.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">compute_root</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">sim</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;_&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span><span class="mi">8</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_run_group</span><span class="p">(</span>
@@ -989,7 +937,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="n">particles</span> <span class="o">=</span> <span class="n">run_particles</span><span class="p">(</span>
                 <span class="n">first</span><span class="p">,</span>
-                <span class="n">workdir</span><span class="o">=</span><span class="n">compute_root</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">first</span><span class="p">),</span>
+                <span class="n">workdir</span><span class="o">=</span><span class="n">_new_workdir</span><span class="p">(</span><span class="n">compute_root</span><span class="p">,</span> <span class="n">first</span><span class="p">),</span>
                 <span class="n">keep_workdir</span><span class="o">=</span><span class="n">execution</span><span class="o">.</span><span class="n">keep_workdir</span><span class="p">,</span>
                 <span class="n">timeout</span><span class="o">=</span><span class="n">execution</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
             <span class="p">)</span>
@@ -1117,7 +1065,7 @@
 <span class="sd">    receptor_ids : list of str</span>
 <span class="sd">        Receptors to run.</span>
 <span class="sd">    compute_root : Path</span>
-<span class="sd">        Directory the workdirs are made in, one per simulation, as</span>
+<span class="sd">        Directory the workdirs are made in, a new one for each run, as</span>
 <span class="sd">        :func:`~stilt.execution.runner.resolve_compute_root` returns it.</span>
 <span class="sd">    execution : ExecutionConfig, optional</span>
 <span class="sd">        Execution settings: ``cpus`` is the number of worker processes (1</span>

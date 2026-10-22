@@ -1,0 +1,6 @@
+﻿stilt.exceptions.SimulationError
+================================
+
+.. currentmodule:: stilt.exceptions
+
+.. autoexception:: SimulationError

@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Index &#8212; PYSTILT 0.1.0a24</title>
+    <title>Index &#8212; PYSTILT 0.1.0a25</title>
   
   
   
@@ -29,6 +29,7 @@
 <link href="_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/plot_directive.css" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="_static/custom.css?v=90cc9208" />
@@ -39,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=efecac6f"></script>
+    <script src="_static/documentation_options.js?v=4b942876"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -49,7 +50,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a24';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -58,7 +59,7 @@
     <link rel="search" title="Search" href="search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a24" />
+  <meta name="docsearch:version" content="0.1.0a25" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -129,7 +130,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a24</p>
+    <p class="title logo__title">PYSTILT 0.1.0a25</p>
   
 </a></div>
     
@@ -165,13 +166,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="reference/index.html">
     API Reference
   </a>
@@ -179,35 +173,11 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="advanced/index.html">
-    Internals
-  </a>
-</li>
-
-            <li class="nav-item dropdown">
-                <button class="btn dropdown-toggle nav-item" type="button"
-                data-bs-toggle="dropdown" aria-expanded="false"
-                aria-controls="pst-nav-more-links">
-                    More
-                </button>
-                <ul id="pst-nav-more-links" class="dropdown-menu">
-                    
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="development.html">
+  <a class="nav-link nav-internal" href="development/index.html">
     Development
   </a>
 </li>
 
-                </ul>
-            </li>
-            
   </ul>
 </nav></div>
       
@@ -343,13 +313,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="reference/index.html">
     API Reference
   </a>
@@ -357,21 +320,7 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="advanced/index.html">
-    Internals
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="development.html">
+  <a class="nav-link nav-internal" href="development/index.html">
     Development
   </a>
 </li>
@@ -583,9 +532,17 @@
       </ul></li>
       <li><a href="reference/_api/stilt.Grid.cells.html#stilt.Grid.cells">cells (stilt.Grid property)</a>
 </li>
-      <li><a href="reference/_api/stilt.transport.hysplit.Met.check.html#stilt.transport.hysplit.Met.check">check() (stilt.transport.hysplit.Met method)</a>
+      <li><a href="reference/_api/stilt.Project.check.html#stilt.Project.check">check() (stilt.Project method)</a>
+
+      <ul>
+        <li><a href="reference/_api/stilt.transport.hysplit.Met.check.html#stilt.transport.hysplit.Met.check">(stilt.transport.hysplit.Met method)</a>
+</li>
+      </ul></li>
+      <li><a href="reference/_api/stilt.transport.hysplit.HysplitModel.check_met.html#stilt.transport.hysplit.HysplitModel.check_met">check_met() (stilt.transport.hysplit.HysplitModel method)</a>
 </li>
       <li><a href="reference/_api/stilt.particles.check_particles.html#stilt.particles.check_particles">check_particles() (in module stilt.particles)</a>
+</li>
+      <li><a href="reference/_api/stilt.transport.hysplit.Met.check_receptors.html#stilt.transport.hysplit.Met.check_receptors">check_receptors() (stilt.transport.hysplit.Met method)</a>
 </li>
       <li><a href="reference/_api/stilt.footprint.check_resolution.html#stilt.footprint.check_resolution">check_resolution() (in module stilt.footprint)</a>
 </li>
@@ -597,12 +554,12 @@
 </li>
       <li><a href="reference/_api/stilt.output.Output.complete.html#stilt.output.Output.complete">complete() (stilt.output.Output method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/_api/stilt.output.completed.html#stilt.output.completed">completed() (in module stilt.output)</a>
 </li>
       <li><a href="getting_started/glossary.html#term-compute-root"><strong>compute root</strong></a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/_api/stilt.footprint.FootprintAccessor.config.html#stilt.footprint.FootprintAccessor.config">config (stilt.footprint.FootprintAccessor property)</a>
 
       <ul>
@@ -663,16 +620,14 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference/_api/stilt.transport.hysplit.HysplitConfig.effective_maxpar.html#stilt.transport.hysplit.HysplitConfig.effective_maxpar">effective_maxpar (stilt.transport.hysplit.HysplitConfig property)</a>
-</li>
       <li><a href="getting_started/glossary.html#term-empty-footprint"><strong>empty footprint</strong></a>
 </li>
       <li><a href="reference/_api/stilt.exceptions.EmptyFootprint.html#stilt.exceptions.EmptyFootprint">EmptyFootprint</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/_api/stilt.particles.ParticlesAccessor.endpoints.html#stilt.particles.ParticlesAccessor.endpoints">endpoints() (stilt.particles.ParticlesAccessor method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/_api/stilt.footprint.FootprintAccessor.enhancement.html#stilt.footprint.FootprintAccessor.enhancement">enhancement() (stilt.footprint.FootprintAccessor method)</a>
 
       <ul>
@@ -929,6 +884,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/_api/stilt.execution.worker.make_footprint.html#stilt.execution.worker.make_footprint">make_footprint() (in module stilt.execution.worker)</a>
 </li>
+      <li><a href="reference/_api/stilt.transport.hysplit.HysplitConfig.maxpar_for.html#stilt.transport.hysplit.HysplitConfig.maxpar_for">maxpar_for() (stilt.transport.hysplit.HysplitConfig method)</a>
+</li>
       <li><a href="reference/_api/stilt.Zones.membership.html#stilt.Zones.membership">membership (stilt.Zones property)</a>
 </li>
       <li><a href="reference/_api/stilt.Mesh.html#stilt.Mesh">Mesh (class in stilt)</a>
@@ -954,6 +911,8 @@
       <li><a href="reference/_api/stilt.exceptions.MeteorologyError.html#stilt.exceptions.MeteorologyError">MeteorologyError</a>
 </li>
       <li><a href="reference/_api/stilt.Mesh.min_cell_width.html#stilt.Mesh.min_cell_width">min_cell_width (stilt.Mesh property)</a>
+</li>
+      <li><a href="reference/_api/stilt.transport.hysplit.Met.missing_hours.html#stilt.transport.hysplit.Met.missing_hours">missing_hours() (stilt.transport.hysplit.Met method)</a>
 </li>
       <li><a href="reference/_api/stilt.ProjectConfig.model_post_init.html#stilt.ProjectConfig.model_post_init">model_post_init() (stilt.ProjectConfig method)</a>
 
@@ -1022,6 +981,8 @@
       <li><a href="reference/_api/stilt.receptors.parse_receptor_id.html#stilt.receptors.parse_receptor_id">parse_receptor_id() (in module stilt.receptors)</a>
 </li>
       <li><a href="getting_started/glossary.html#term-particle"><strong>particle</strong></a>
+</li>
+      <li><a href="reference/_api/stilt.transport.hysplit.FailureReason.html#stilt.transport.hysplit.FailureReason.PARTICLE_LIMIT">PARTICLE_LIMIT (stilt.transport.hysplit.FailureReason attribute)</a>
 </li>
       <li><a href="reference/_api/stilt.transforms.particle_pwf.html#stilt.transforms.particle_pwf">particle_pwf() (in module stilt.transforms)</a>
 </li>
@@ -1109,6 +1070,8 @@
 </li>
       <li><a href="reference/_api/stilt.identity.read_run_settings.html#stilt.identity.read_run_settings">read_run_settings() (in module stilt.identity)</a>
 </li>
+      <li><a href="reference/_api/stilt.migration.read_stilt_r.html#stilt.migration.read_stilt_r">read_stilt_r() (in module stilt.migration)</a>
+</li>
       <li><a href="reference/_api/stilt.observations.read_tccon.html#stilt.observations.read_tccon">read_tccon() (in module stilt.observations)</a>
 </li>
       <li><a href="reference/_api/stilt.observations.read_tropomi_ch4.html#stilt.observations.read_tropomi_ch4">read_tropomi_ch4() (in module stilt.observations)</a>
@@ -1135,10 +1098,10 @@
 </li>
       <li><a href="reference/_api/stilt.Project.receptor.html#stilt.Project.receptor">receptor() (stilt.Project method)</a>
 </li>
-      <li><a href="reference/_api/stilt.Project.receptors.html#stilt.Project.receptors">receptors (stilt.Project property)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/_api/stilt.Project.receptors.html#stilt.Project.receptors">receptors (stilt.Project property)</a>
+</li>
       <li><a href="reference/_api/stilt.receptors.receptors_from_frame.html#stilt.receptors.receptors_from_frame">receptors_from_frame() (in module stilt.receptors)</a>
 </li>
       <li><a href="reference/_api/stilt.observations.receptors_from_soundings.html#stilt.observations.receptors_from_soundings">receptors_from_soundings() (in module stilt.observations)</a>
@@ -1197,17 +1160,17 @@
 </li>
       <li><a href="reference/_api/stilt.sampling.sample_field.html#stilt.sampling.sample_field">sample_field() (in module stilt.sampling)</a>
 </li>
+      <li><a href="reference/_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met">sample_met() (in module stilt.sampling)</a>
+</li>
       <li><a href="reference/_api/stilt.particles.TransportError.sd.html#stilt.particles.TransportError.sd">sd (stilt.particles.TransportError property)</a>
 </li>
       <li><a href="reference/_api/stilt.observations.select_observations_spatial.html#stilt.observations.select_observations_spatial">select_observations_spatial() (in module stilt.observations)</a>
 </li>
       <li><a href="getting_started/glossary.html#term-settings-folder"><strong>settings folder</strong></a>
 </li>
-      <li><a href="reference/_api/stilt.transport.hysplit.HysplitConfig.settings.html#stilt.transport.hysplit.HysplitConfig.settings">settings() (stilt.transport.hysplit.HysplitConfig method)</a>
+      <li><a href="reference/_api/stilt.transport.hysplit.MetConfig.settings.html#stilt.transport.hysplit.MetConfig.settings">settings() (stilt.transport.hysplit.MetConfig method)</a>
 
       <ul>
-        <li><a href="reference/_api/stilt.transport.hysplit.MetConfig.settings.html#stilt.transport.hysplit.MetConfig.settings">(stilt.transport.hysplit.MetConfig method)</a>
-</li>
         <li><a href="reference/_api/stilt.transport.TransportConfig.settings.html#stilt.transport.TransportConfig.settings">(stilt.transport.TransportConfig method)</a>
 </li>
       </ul></li>
@@ -1227,11 +1190,11 @@
 </li>
       <li><a href="reference/_api/stilt.observations.slant_points.html#stilt.observations.slant_points">slant_points() (in module stilt.observations)</a>
 </li>
+      <li><a href="reference/observations.html#stilt.observations.SOUNDING_SCHEMA">SOUNDING_SCHEMA (in module stilt.observations)</a>
+</li>
       <li><a href="reference/_api/stilt.transport.hysplit.MetConfig.source.html#stilt.transport.hysplit.MetConfig.source">source() (stilt.transport.hysplit.MetConfig method)</a>
 </li>
       <li><a href="reference/_api/stilt.Project.status.html#stilt.Project.status">status() (stilt.Project method)</a>
-</li>
-      <li><a href="reference/observations.html#stilt.observations.SOUNDING_SCHEMA">stilt.observations.SOUNDING_SCHEMA (built-in variable)</a>
 </li>
       <li><a href="reference/_api/stilt.StiltError.html#stilt.StiltError">StiltError</a>
 </li>
@@ -1250,6 +1213,8 @@
       <li><a href="reference/_api/stilt.output.Output.table.html#stilt.output.Output.table">table() (stilt.output.Output method)</a>
 </li>
       <li><a href="reference/_api/stilt.Project.table_path.html#stilt.Project.table_path">table_path() (stilt.Project method)</a>
+</li>
+      <li><a href="reference/_api/stilt.transforms.AveragingKernel.table_receptors.html#stilt.transforms.AveragingKernel.table_receptors">table_receptors() (stilt.transforms.AveragingKernel method)</a>
 </li>
       <li><a href="reference/_api/stilt.execution.task_share.html#stilt.execution.task_share">task_share() (in module stilt.execution)</a>
 </li>

@@ -1,0 +1,6 @@
+stilt.Simulation.id
+===================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Simulation.id

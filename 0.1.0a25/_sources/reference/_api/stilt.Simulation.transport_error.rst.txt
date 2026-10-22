@@ -1,0 +1,6 @@
+stilt.Simulation.transport\_error
+=================================
+
+.. currentmodule:: stilt
+
+.. automethod:: Simulation.transport_error

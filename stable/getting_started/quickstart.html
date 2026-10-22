@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Your First Footprint &#8212; PYSTILT 0.1.0a24</title>
+    <title>Your First Footprint &#8212; PYSTILT 0.1.0a25</title>
   
   
   
@@ -30,6 +30,7 @@
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
@@ -40,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=efecac6f"></script>
+    <script src="../_static/documentation_options.js?v=4b942876"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -50,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a24';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +62,7 @@
     <link rel="prev" title="Installation" href="installation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a24" />
+  <meta name="docsearch:version" content="0.1.0a25" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -132,7 +133,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a24</p>
+    <p class="title logo__title">PYSTILT 0.1.0a25</p>
   
 </a></div>
     
@@ -168,13 +169,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../reference/index.html">
     API Reference
   </a>
@@ -182,35 +176,11 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-            <li class="nav-item dropdown">
-                <button class="btn dropdown-toggle nav-item" type="button"
-                data-bs-toggle="dropdown" aria-expanded="false"
-                aria-controls="pst-nav-more-links">
-                    More
-                </button>
-                <ul id="pst-nav-more-links" class="dropdown-menu">
-                    
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../development.html">
+  <a class="nav-link nav-internal" href="../development/index.html">
     Development
   </a>
 </li>
 
-                </ul>
-            </li>
-            
   </ul>
 </nav></div>
       
@@ -348,13 +318,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../reference/index.html">
     API Reference
   </a>
@@ -362,21 +325,7 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../development.html">
+  <a class="nav-link nav-internal" href="../development/index.html">
     Development
   </a>
 </li>
@@ -547,7 +496,7 @@ before the measurement to just after it. A simulation with a file missing
 fails, naming the hours.</p>
 <p>If you already have ARL files, for example in a group archive, tell PYSTILT
 the folder they are in, a pattern for their names, and how many hours each
-file covers. For files named like <code class="docutils literal notranslate"><span class="pre">20230715_18</span></code>, each holding six hours:</p>
+file covers. For files named like <code class="docutils literal notranslate"><span class="pre">20210115_06</span></code>, each holding six hours:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">met</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;directory&quot;</span><span class="p">:</span> <span class="s2">&quot;/path/to/arl/hrrr&quot;</span><span class="p">,</span>
     <span class="s2">&quot;file_format&quot;</span><span class="p">:</span> <span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">_%H&quot;</span><span class="p">,</span>   <span class="c1"># date codes: %Y year, %m month, %d day, %H hour</span>
@@ -576,15 +525,16 @@ Downloaded files are reused on later runs. See
 <section id="step-1-describe-your-measurement">
 <h2>Step 1: Describe your measurement<a class="headerlink" href="#step-1-describe-your-measurement" title="Link to this heading">#</a></h2>
 <p>A receptor is where and when you measured. This one is a sensor 10 m above
-the ground on the University of Utah campus, at 18:00 UTC on 15 July 2023:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+the ground on the University of Utah campus, at 08:00 UTC on 15 January 2021:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
-<span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
-    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00&quot;</span><span class="p">,</span>   <span class="c1"># UTC</span>
-    <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
-    <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
-    <span class="n">altitude</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>               <span class="c1"># meters above ground level</span>
-<span class="p">)</span>
+<span class="gp">In [2]: </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
+<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2021-01-15 08:00&quot;</span><span class="p">,</span>   <span class="c1"># UTC</span>
+<span class="gp">   ...: </span>    <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">altitude</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>               <span class="c1"># meters above ground level</span>
+<span class="gp">   ...: </span><span class="p">)</span>
+<span class="gp">   ...: </span>
 </pre></div>
 </div>
 </section>
@@ -592,12 +542,15 @@ the ground on the University of Utah campus, at 18:00 UTC on 15 July 2023:</p>
 <h2>Step 2: Follow the particles<a class="headerlink" href="#step-2-follow-the-particles" title="Link to this heading">#</a></h2>
 <p><a class="reference internal" href="../reference/_api/stilt.run_trajectories.html#stilt.run_trajectories" title="stilt.run_trajectories"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.run_trajectories()</span></code></a> releases particles at the receptor and
 follows them back in time through the meteorology:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">particles</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">run_trajectories</span><span class="p">(</span>
-    <span class="n">receptor</span><span class="p">,</span>
-    <span class="n">met</span><span class="p">,</span>
-    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>     <span class="c1"># follow the air 24 hours back in time</span>
-    <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>      <span class="c1"># number of particles to release</span>
-<span class="p">)</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [3]: </span><span class="n">particles</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">run_trajectories</span><span class="p">(</span>
+<span class="gp">   ...: </span>    <span class="n">receptor</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">met</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>     <span class="c1"># follow the air 24 hours back in time</span>
+<span class="gp">   ...: </span>    <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>      <span class="c1"># number of particles to release</span>
+<span class="gp">   ...: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>         <span class="c1"># the random numbers a seed can fix</span>
+<span class="gp">   ...: </span>    <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>         <span class="c1"># same seed, same particles</span>
+<span class="gp">   ...: </span><span class="p">)</span>
+<span class="gp">   ...: </span>
 </pre></div>
 </div>
 <dl class="simple">
@@ -608,36 +561,73 @@ what you want for measurements. 24 to 72 hours is typical.</p>
 but take longer. 200 is fine for a first try. Research runs often use
 500 to 1000.</p>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">krand</span></code> and <code class="docutils literal notranslate"><span class="pre">seed</span></code></dt><dd><p>HYSPLIT draws random numbers for the turbulence that moves each particle.
+<code class="docutils literal notranslate"><span class="pre">krand=2</span></code> with a <code class="docutils literal notranslate"><span class="pre">seed</span></code> makes the draws the same on every run, so your
+particles match the ones on this page. Without them (<code class="docutils literal notranslate"><span class="pre">krand=4</span></code>, the
+default) every run draws its own, and the particles and the footprint
+change a little from run to run.</p>
+</dd>
 </dl>
 <p>This runs HYSPLIT, the transport model, and usually takes a minute or two.
-The particles are a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code></a>, one row per particle per
+The particles are a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code></a>, one row per particle per
 time step:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">particles</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
-<span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">()</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [4]: </span><span class="n">particles</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<span class="gh">Out[4]: </span>
+<span class="go">   age  particle       lon      lat  ...  samt   sigw     tlgr  foot_no_hnf_dilution</span>
+<span class="go">0 -1.0       1.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
+<span class="go">1 -1.0       2.0 -111.8473  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
+<span class="go">2 -1.0       3.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
+<span class="go">3 -1.0       4.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
+<span class="go">4 -1.0       5.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
+
+<span class="go">[5 rows x 13 columns]</span>
+
+<span class="gp">In [5]: </span><span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
 </pre></div>
 </div>
+<a class="reference internal image-reference" href="../_images/quickstart_particles.png"><img alt="../_images/quickstart_particles.png" src="../_images/quickstart_particles.png" style="width: 6in;" />
+</a>
+<p>The particles start at the receptor and spread out. The met files here cover
+only a small region around Salt Lake, and the particles leave it before the 24
+hours are up. A particle that leaves the met stops there. This is how many hours
+they went (<code class="docutils literal notranslate"><span class="pre">age</span></code> is in minutes):</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">particles</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> hours&quot;</span><span class="p">)</span>
+<span class="go">12.0 hours</span>
+</pre></div>
+</div>
+<p>If that is short of <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, the footprint covers only those hours.
+<a class="reference internal" href="../guides/checking.html"><span class="doc">Checking A Run</span></a> says when that matters.</p>
 </section>
 <section id="step-3-calculate-the-footprint">
 <h2>Step 3: Calculate the footprint<a class="headerlink" href="#step-3-calculate-the-footprint" title="Link to this heading">#</a></h2>
 <p>The footprint is calculated on a grid. Make it big enough to include the
 areas upwind of your site. Here the cells are 0.01°, about 1 km:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">grid</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span>
-    <span class="n">xmin</span><span class="o">=-</span><span class="mf">113.0</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=-</span><span class="mf">110.5</span><span class="p">,</span>   <span class="c1"># longitude range</span>
-    <span class="n">ymin</span><span class="o">=</span><span class="mf">40.0</span><span class="p">,</span>   <span class="n">ymax</span><span class="o">=</span><span class="mf">42.0</span><span class="p">,</span>     <span class="c1"># latitude range</span>
-    <span class="n">xres</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>   <span class="n">yres</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>     <span class="c1"># grid cell size in degrees</span>
-<span class="p">)</span>
-<span class="n">foot</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">calc_footprint</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">grid</span><span class="p">)</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [7]: </span><span class="n">grid</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span>
+<span class="gp">   ...: </span>    <span class="n">xmin</span><span class="o">=-</span><span class="mf">113.0</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=-</span><span class="mf">110.5</span><span class="p">,</span>   <span class="c1"># longitude range</span>
+<span class="gp">   ...: </span>    <span class="n">ymin</span><span class="o">=</span><span class="mf">40.0</span><span class="p">,</span>   <span class="n">ymax</span><span class="o">=</span><span class="mf">42.0</span><span class="p">,</span>     <span class="c1"># latitude range</span>
+<span class="gp">   ...: </span>    <span class="n">xres</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>   <span class="n">yres</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>     <span class="c1"># grid cell size in degrees</span>
+<span class="gp">   ...: </span><span class="p">)</span>
+<span class="gp">   ...: </span>
 
-<span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">()</span>
+<span class="gp">In [8]: </span><span class="n">foot</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">calc_footprint</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">grid</span><span class="p">)</span>
+
+<span class="gp">In [9]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
 </pre></div>
 </div>
-<p>You should see the most influence near the receptor, trailing off in the
-direction the air came from. The map shows the footprint summed over all 24
-hours, on a log scale. Cells with more color influenced the measurement more.</p>
+<a class="reference internal image-reference" href="../_images/quickstart_footprint.png"><img alt="../_images/quickstart_footprint.png" src="../_images/quickstart_footprint.png" style="width: 6in;" />
+</a>
+<p>The footprint starts at the receptor and stretches in the direction the air
+came from, here to the north-northwest. The map shows the footprint summed over
+time, on a log scale. Cells with more color influenced the measurement more.</p>
 <p>The footprint is an <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> with dimensions
-<code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>, one map per hour, in units of ppm per
-(µmol m⁻² s⁻¹). Sum it over time with xarray:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">)</span>
+<code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>, in units of ppm per (µmol m⁻² s⁻¹). It has one map for
+each hour the particles were still inside the met files. Sum it over time with
+xarray:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [10]: </span><span class="n">foot</span><span class="o">.</span><span class="n">sizes</span>
+<span class="gh">Out[10]: </span><span class="go">Frozen({&#39;time&#39;: 12, &#39;lat&#39;: 200, &#39;lon&#39;: 250})</span>
+
+<span class="gp">In [11]: </span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sizes</span>
+<span class="gh">Out[11]: </span><span class="go">Frozen({&#39;lat&#39;: 200, &#39;lon&#39;: 250})</span>
 </pre></div>
 </div>
 <p>PYSTILT’s own methods on the particles and the footprint are under
@@ -649,16 +639,36 @@ hours, on a log scale. Cells with more color influenced the measurement more.</p
 <a class="reference internal" href="../reference/_api/stilt.Project.html#stilt.Project" title="stilt.Project"><code class="xref py py-class docutils literal notranslate"><span class="pre">Project</span></code></a>: a folder that holds your receptors and settings,
 runs every receptor, and keeps the results. <a class="reference internal" href="../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Project.init</span></code></a> creates the folder and writes both to it. The
 settings are the ones above:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
-    <span class="s2">&quot;./my_first_project&quot;</span><span class="p">,</span>
-    <span class="n">receptors</span><span class="o">=</span><span class="p">[</span><span class="n">receptor</span><span class="p">],</span>
-    <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="n">met</span><span class="p">},</span>          <span class="c1"># &quot;hrrr&quot; is a name you choose</span>
-    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="p">{}},</span>       <span class="c1"># one variant: these settings, met hrrr</span>
-    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>
-    <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
-    <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">project</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [12]: </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
+<span class="gp">   ....: </span>    <span class="s2">&quot;./my_first_project&quot;</span><span class="p">,</span>
+<span class="gp">   ....: </span>    <span class="n">receptors</span><span class="o">=</span><span class="p">[</span><span class="n">receptor</span><span class="p">],</span>
+<span class="gp">   ....: </span>    <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="n">met</span><span class="p">},</span>          <span class="c1"># &quot;hrrr&quot; is a name you choose</span>
+<span class="gp">   ....: </span>    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="p">{}},</span>       <span class="c1"># one variant: these settings, met hrrr</span>
+<span class="gp">   ....: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>
+<span class="gp">   ....: </span>    <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+<span class="gp">   ....: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">   ....: </span>    <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+<span class="gp">   ....: </span>    <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span>
+<span class="gp">   ....: </span><span class="p">)</span>
+<span class="gp">   ....: </span>
+</pre></div>
+</div>
+<p>Before running, check the project. <code class="docutils literal notranslate"><span class="pre">project.check()</span></code> looks for what would
+stop a run before it starts: met files missing for a receptor’s hours, a
+receptor outside the grid, and a met folder that does not exist. It returns a
+table with a row for each thing found, so an empty table means nothing is in
+the way:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [13]: </span><span class="n">project</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+<span class="gh">Out[13]: </span>
+<span class="go">Empty DataFrame</span>
+<span class="go">Columns: [check, variant, receptor, message]</span>
+<span class="go">Index: []</span>
+</pre></div>
+</div>
+<p>The check looks for files, not inside them, so a run that passes it can
+still fail later, if a met file is damaged. <a class="reference internal" href="../guides/checking.html"><span class="doc">Checking A Run</span></a> says how
+to tell.</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [14]: </span><span class="n">project</span><span class="o">.</span><span class="n">run</span><span class="p">();</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">run()</span></code> runs the particles and the footprint of every receptor, and
@@ -667,11 +677,29 @@ returns when they are done.</p>
 there is one variant, named <code class="docutils literal notranslate"><span class="pre">hrrr</span></code> after the met. One receptor under
 one variant is a <a class="reference internal" href="glossary.html#term-simulation"><span class="xref std std-term">simulation</span></a>. Look yours up by the receptor’s id and
 the variant name:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
-<span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">()</span>
-<span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [15]: </span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
+
+<span class="gp">In [16]: </span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<span class="gh">Out[16]: </span>
+<span class="go">   age  particle       lon  ...     tlgr  foot_no_hnf_dilution                time</span>
+<span class="go">0 -1.0       1.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
+<span class="go">1 -1.0       2.0 -111.8473  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
+<span class="go">2 -1.0       3.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
+<span class="go">3 -1.0       4.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
+<span class="go">4 -1.0       5.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
+
+<span class="go">[5 rows x 14 columns]</span>
+
+<span class="gp">In [17]: </span><span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
 </pre></div>
 </div>
+<a class="reference internal image-reference" href="../_images/quickstart_sim_footprint.png"><img alt="../_images/quickstart_sim_footprint.png" src="../_images/quickstart_sim_footprint.png" style="width: 6in;" />
+</a>
+<p>This is the same footprint as in Step 3, because the settings and the seed
+are the same. The seed belongs to the variant, so every receptor of a variant
+runs with it. Without <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code> and a <code class="docutils literal notranslate"><span class="pre">seed</span></code>, each run draws its own
+random numbers for the turbulence, and 200 particles are few, so a second
+run’s footprint looks a little different.</p>
 </section>
 <section id="what-pystilt-wrote">
 <h2>What PYSTILT wrote<a class="headerlink" href="#what-pystilt-wrote" title="Link to this heading">#</a></h2>
@@ -681,9 +709,9 @@ folder.</p>
   config.yaml                 # your settings
   receptors.csv               # your receptors
   output/
-    particles/settings=hrrr-a3f9c2/date=2023-07-15/202307151800_-111.848_40.766_10.parquet
-    footprints/settings=hrrr-93278c/date=2023-07-15/202307151800_-111.848_40.766_10.parquet
-    logs/settings=hrrr-a3f9c2/date=2023-07-15/202307151800_-111.848_40.766_10.log
+    particles/settings=hrrr-a3f9c2/date=2021-01-15/202101150800_-111.848_40.766_10.parquet
+    footprints/settings=hrrr-93278c/date=2021-01-15/202101150800_-111.848_40.766_10.parquet
+    logs/settings=hrrr-a3f9c2/date=2021-01-15/202101150800_-111.848_40.766_10.log
 </pre></div>
 </div>
 <p>Each folder under <code class="docutils literal notranslate"><span class="pre">particles</span></code>, <code class="docutils literal notranslate"><span class="pre">footprints</span></code>, and <code class="docutils literal notranslate"><span class="pre">logs</span></code> is a
@@ -736,14 +764,18 @@ above:</p>
 <p>Add your receptor to <code class="docutils literal notranslate"><span class="pre">my_first_project/receptors.csv</span></code> below the header
 line, so the file reads:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>time,longitude,latitude,altitude
-2023-07-15 18:00:00,-111.848,40.766,10
+2021-01-15 08:00:00,-111.848,40.766,10
 </pre></div>
 </div>
-<p>Then run it and check the result:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>run<span class="w"> </span>./my_first_project
+<p>Then check the project, run it, and look at the result:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>check<span class="w"> </span>./my_first_project
+stilt<span class="w"> </span>run<span class="w"> </span>./my_first_project
 stilt<span class="w"> </span>status<span class="w"> </span>./my_first_project
 </pre></div>
 </div>
+<p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> lists what would stop a run, such as a met file that is not
+there, and exits with 1 when it lists anything. It prints no rows when
+everything is in place.</p>
 </section>
 <section id="next-steps">
 <h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading">#</a></h2>

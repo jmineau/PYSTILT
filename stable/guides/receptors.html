@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Receptors &#8212; PYSTILT 0.1.0a24</title>
+    <title>Receptors &#8212; PYSTILT 0.1.0a25</title>
   
   
   
@@ -30,6 +30,7 @@
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
@@ -40,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=efecac6f"></script>
+    <script src="../_static/documentation_options.js?v=4b942876"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -50,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a24';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +62,7 @@
     <link rel="prev" title="User Guide" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a24" />
+  <meta name="docsearch:version" content="0.1.0a25" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -132,7 +133,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a24</p>
+    <p class="title logo__title">PYSTILT 0.1.0a25</p>
   
 </a></div>
     
@@ -168,13 +169,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../reference/index.html">
     API Reference
   </a>
@@ -182,35 +176,11 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-            <li class="nav-item dropdown">
-                <button class="btn dropdown-toggle nav-item" type="button"
-                data-bs-toggle="dropdown" aria-expanded="false"
-                aria-controls="pst-nav-more-links">
-                    More
-                </button>
-                <ul id="pst-nav-more-links" class="dropdown-menu">
-                    
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../development.html">
+  <a class="nav-link nav-internal" href="../development/index.html">
     Development
   </a>
 </li>
 
-                </ul>
-            </li>
-            
   </ul>
 </nav></div>
       
@@ -348,13 +318,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../reference/index.html">
     API Reference
   </a>
@@ -362,21 +325,7 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../development.html">
+  <a class="nav-link nav-internal" href="../development/index.html">
     Development
   </a>
 </li>
@@ -493,6 +442,16 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="hysplit_build.html">Your Own HYSPLIT Build And Data Tables</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="migration/index.html">Coming From Another STILT</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="migration/stilt_r.html">Coming From STILT-R</a></li>
+<li class="toctree-l2"><a class="reference internal" href="migration/x_stilt.html">Coming From X-STILT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="migration/stiltctl.html">Coming From stiltctl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="migration/jena_stilt.html">Coming From Jena STILT</a></li>
+</ul>
+</details></li>
+</ul>
 </div>
 </nav></div>
     </div>
@@ -596,32 +555,42 @@ converted to UTC. Altitudes are in meters above ground level. Pass
 <h2>PointReceptor<a class="headerlink" href="#pointreceptor" title="Link to this heading">#</a></h2>
 <p>This is the most common type. Use it for a fixed surface site or an airborne
 sample at one height.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
-<span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
-    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00:00&quot;</span><span class="p">,</span>
-    <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
-    <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
-    <span class="n">altitude</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>          <span class="c1"># meters above ground</span>
-<span class="p">)</span>
+<span class="gp">In [2]: </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
+<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00:00&quot;</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">altitude</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>          <span class="c1"># meters above ground</span>
+<span class="gp">   ...: </span><span class="p">)</span>
+<span class="gp">   ...: </span>
+
+<span class="gp">In [3]: </span><span class="n">receptor</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
 </pre></div>
 </div>
+<a class="reference internal image-reference" href="../_images/receptors_point.png"><img alt="../_images/receptors_point.png" src="../_images/receptors_point.png" style="width: 5in;" />
+</a>
 </section>
 <section id="columnreceptor">
 <h2>ColumnReceptor<a class="headerlink" href="#columnreceptor" title="Link to this heading">#</a></h2>
 <p>Use it when the measurement covers a range of heights above one spot.
 HYSPLIT releases the particles evenly in height between <code class="docutils literal notranslate"><span class="pre">bottom</span></code> and
 <code class="docutils literal notranslate"><span class="pre">top</span></code>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">ColumnReceptor</span><span class="p">(</span>
-    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00:00&quot;</span><span class="p">,</span>
-    <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
-    <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
-    <span class="n">bottom</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span>
-    <span class="n">top</span><span class="o">=</span><span class="mf">6000.0</span><span class="p">,</span>
-    <span class="n">altitude_ref</span><span class="o">=</span><span class="s2">&quot;msl&quot;</span><span class="p">,</span>
-<span class="p">)</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [4]: </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">ColumnReceptor</span><span class="p">(</span>
+<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00:00&quot;</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">bottom</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">top</span><span class="o">=</span><span class="mf">6000.0</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">altitude_ref</span><span class="o">=</span><span class="s2">&quot;msl&quot;</span><span class="p">,</span>
+<span class="gp">   ...: </span><span class="p">)</span>
+<span class="gp">   ...: </span>
+
+<span class="gp">In [5]: </span><span class="n">receptor</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
 </pre></div>
 </div>
+<a class="reference internal image-reference" href="../_images/receptors_column.png"><img alt="../_images/receptors_column.png" src="../_images/receptors_column.png" style="width: 5in;" />
+</a>
 <p><code class="docutils literal notranslate"><span class="pre">bottom</span></code> must be below <code class="docutils literal notranslate"><span class="pre">top</span></code>. Above-ground altitudes cannot be negative.</p>
 <p>A column footprint usually needs weighting by pressure, and often by the
 instrument’s averaging kernel. Add the <code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code> and
@@ -632,17 +601,22 @@ instrument’s averaging kernel. Add the <code class="docutils literal notransla
 <p>Use it when the instrument looks along a slanted path, so the air it
 samples is spread out both horizontally and vertically. OCO-2 soundings and
 other satellite views with a full line-of-sight geometry are examples.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
-<span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">MultiPointReceptor</span><span class="p">(</span>
-    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00:00&quot;</span><span class="p">,</span>
-    <span class="n">longitudes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mf">111.85</span><span class="p">,</span> <span class="o">-</span><span class="mf">111.80</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
-    <span class="n">latitudes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">40.76</span><span class="p">,</span>  <span class="mf">40.80</span><span class="p">,</span>  <span class="mi">10</span><span class="p">),</span>
-    <span class="n">altitudes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span>    <span class="mf">8000.0</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
-    <span class="n">altitude_ref</span><span class="o">=</span><span class="s2">&quot;msl&quot;</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="gp">In [7]: </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">MultiPointReceptor</span><span class="p">(</span>
+<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00:00&quot;</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">longitudes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mf">111.85</span><span class="p">,</span> <span class="o">-</span><span class="mf">111.80</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+<span class="gp">   ...: </span>    <span class="n">latitudes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">40.76</span><span class="p">,</span>  <span class="mf">40.80</span><span class="p">,</span>  <span class="mi">10</span><span class="p">),</span>
+<span class="gp">   ...: </span>    <span class="n">altitudes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span>    <span class="mf">8000.0</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+<span class="gp">   ...: </span>    <span class="n">altitude_ref</span><span class="o">=</span><span class="s2">&quot;msl&quot;</span><span class="p">,</span>
+<span class="gp">   ...: </span><span class="p">)</span>
+<span class="gp">   ...: </span>
+
+<span class="gp">In [8]: </span><span class="n">receptor</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
 </pre></div>
 </div>
+<a class="reference internal image-reference" href="../_images/receptors_multipoint.png"><img alt="../_images/receptors_multipoint.png" src="../_images/receptors_multipoint.png" style="width: 5in;" />
+</a>
 <p>The three arrays must have the same length. The receptor’s ID is built from
 a hash of its points, so listing the same points in another order gives the
 same ID. To build the points from viewing angles instead of by hand, see
@@ -720,11 +694,18 @@ column is added.</p>
 <ul class="simple">
 <li><p>A <a class="reference internal" href="../reference/_api/stilt.PointReceptor.html#stilt.PointReceptor" title="stilt.PointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointReceptor</span></code></a> releases all of them from its one location.</p></li>
 <li><p>A <a class="reference internal" href="../reference/_api/stilt.ColumnReceptor.html#stilt.ColumnReceptor" title="stilt.ColumnReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnReceptor</span></code></a> spreads them evenly from <code class="docutils literal notranslate"><span class="pre">bottom</span></code> to <code class="docutils literal notranslate"><span class="pre">top</span></code>.</p></li>
-<li><p>A <a class="reference internal" href="../reference/_api/stilt.MultiPointReceptor.html#stilt.MultiPointReceptor" title="stilt.MultiPointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code></a> divides them among its locations. HYSPLIT
-rounds the count per location up and stops when <code class="docutils literal notranslate"><span class="pre">numpar</span></code> runs out, so
-the last location can get fewer. With 200 particles over 10 locations,
-the first nine get 21 each and the last gets 11.</p></li>
+<li><p>A <a class="reference internal" href="../reference/_api/stilt.MultiPointReceptor.html#stilt.MultiPointReceptor" title="stilt.MultiPointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code></a> divides them among its locations, and every
+location gets the same number: <code class="docutils literal notranslate"><span class="pre">numpar</span> <span class="pre">//</span> <span class="pre">n</span></code> for <code class="docutils literal notranslate"><span class="pre">n</span></code> locations, which
+HYSPLIT’s rounding often raises by one. So a run can hold up to <code class="docutils literal notranslate"><span class="pre">n</span></code>
+more particles than <code class="docutils literal notranslate"><span class="pre">numpar</span></code>. With 1000 particles over 40 locations,
+each gets 26, 1040 in all; over 56 locations, each gets 17, 952 in all.</p></li>
 </ul>
+<p>HYSPLIT stops releasing when it reaches <code class="docutils literal notranslate"><span class="pre">maxpar</span></code> and fills the locations
+in order, so a <code class="docutils literal notranslate"><span class="pre">maxpar</span></code> set too low would leave the last locations with
+fewer particles or none. Leave <code class="docutils literal notranslate"><span class="pre">maxpar</span></code> unset: PYSTILT then gives HYSPLIT
+room for every location (<code class="docutils literal notranslate"><span class="pre">n</span> <span class="pre">*</span> <span class="pre">(numpar</span> <span class="pre">//</span> <span class="pre">n</span> <span class="pre">+</span> <span class="pre">1)</span></code>). A run whose <code class="docutils literal notranslate"><span class="pre">maxpar</span></code>
+cuts a multipoint release short fails as <code class="docutils literal notranslate"><span class="pre">PARTICLE_LIMIT</span></code>
+(<a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>).</p>
 </section>
 <section id="advanced-release-heights-for-multipoint-and-slant-receptors">
 <h2>Advanced: release heights for multipoint and slant receptors<a class="headerlink" href="#advanced-release-heights-for-multipoint-and-slant-receptors" title="Link to this heading">#</a></h2>

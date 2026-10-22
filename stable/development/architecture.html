@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Architecture &#8212; PYSTILT 0.1.0a25</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+
+    <script src="../_static/documentation_options.js?v=4b942876"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'development/architecture';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="STILT-R Parity" href="stilt_r_parity.html" />
+    <link rel="prev" title="Development" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a25" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT 0.1.0a25</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button type="button" id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stilt_r_parity.html">STILT-R Parity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Development</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Architecture</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="architecture">
+<h1>Architecture<a class="headerlink" href="#architecture" title="Link to this heading">#</a></h1>
+<p>How the code is organized, how a run goes from a project to result files,
+how PYSTILT knows which work is finished, and the implementation details that
+are easy to break. This page is for contributors, for anyone building on
+PYSTILT, and for anyone running at scale or sharing an output directory
+between projects. <code class="docutils literal notranslate"><span class="pre">AGENTS.md</span></code> at the repository root has the short version
+and the rules a change must keep.</p>
+<section id="the-design-in-brief">
+<h2>The design in brief<a class="headerlink" href="#the-design-in-brief" title="Link to this heading">#</a></h2>
+<p>There is no index, manifest, or registry. A project is a directory of inputs
+(<a class="reference internal" href="../reference/_api/stilt.Project.html#stilt.Project" title="stilt.Project"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Project</span></code></a>: <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> and <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>) and an output
+directory (<code class="docutils literal notranslate"><span class="pre">stilt.output.Output</span></code>) that <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> names and that
+several projects can share. The simulations a project defines are its
+receptors crossed with the named variants in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, which must
+declare at least one.</p>
+<p>Each variant resolves into a <code class="docutils literal notranslate"><span class="pre">Variant</span></code> (<code class="docutils literal notranslate"><span class="pre">stilt.config</span></code>) with two records
+of settings (<code class="docutils literal notranslate"><span class="pre">stilt.identity</span></code>), and their hashes name its folders.
+Variants with equal run settings share one run per receptor and differ only
+in the footprint made from it. Changing a setting never overwrites a result:
+it hashes to a new folder. <a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a> describes the files.</p>
+<p>Whether a simulation is complete is decided by the files in the output
+directory, by <code class="docutils literal notranslate"><span class="pre">stilt.output.completed</span></code>: the particles exist, and the
+footprint when the variant has a grid. <code class="docutils literal notranslate"><span class="pre">Output.complete</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Simulation.is_complete</span></code>, and <code class="docutils literal notranslate"><span class="pre">Project.status</span></code> all apply it.
+<a class="reference internal" href="#finished-work"><span class="std std-ref">How PYSTILT tracks finished work</span></a> explains the consequences.</p>
+<p><code class="docutils literal notranslate"><span class="pre">Project</span></code> reads, and the workers write results. <code class="docutils literal notranslate"><span class="pre">Project(path)</span></code> opens a
+project directory: its config, its receptors, the simulations they define,
+and a view of their results. Its only writes are to its inputs.
+<code class="docutils literal notranslate"><span class="pre">Project.init</span></code> (or <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code>) writes <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> once and PYSTILT
+never rewrites it, <code class="docutils literal notranslate"><span class="pre">add_receptors</span></code> appends to <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">add_table</span></code> writes <code class="docutils literal notranslate"><span class="pre">tables/&lt;name&gt;.parquet</span></code>. It knows no scheduler or
+compute root. <code class="docutils literal notranslate"><span class="pre">stilt.execution.run</span></code> and <code class="docutils literal notranslate"><span class="pre">submit</span></code>, which <code class="docutils literal notranslate"><span class="pre">Project.run()</span></code>
+and <code class="docutils literal notranslate"><span class="pre">Project.submit()</span></code> call, find the receptors with missing results,
+resolve the compute root, and start the workers. The workers are the only
+code that writes results.</p>
+<p>Tables are plain DataFrames, and the verbs are on <code class="docutils literal notranslate"><span class="pre">Project</span></code>.
+<code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> is a pandas DataFrame, one row per simulation. Select
+it as in pandas (<code class="docutils literal notranslate"><span class="pre">sims[sims.variant</span> <span class="pre">==</span> <span class="pre">&quot;hrrr&quot;]</span></code>) and pass the selection to
+the project: <code class="docutils literal notranslate"><span class="pre">status</span></code>, <code class="docutils literal notranslate"><span class="pre">incomplete</span></code>, <code class="docutils literal notranslate"><span class="pre">particles</span></code> (one long table),
+<code class="docutils literal notranslate"><span class="pre">footprints</span></code> (one lazy dataset stacked on the hour), or <code class="docutils literal notranslate"><span class="pre">jacobian</span></code>. A
+selection is any table with <code class="docutils literal notranslate"><span class="pre">receptor</span></code> and <code class="docutils literal notranslate"><span class="pre">variant</span></code> columns (pandas,
+polars, pyarrow) or a boolean mask over <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>, and the
+methods read only those two columns. <code class="docutils literal notranslate"><span class="pre">project.receptors</span></code> is a plain
+DataFrame too. <code class="docutils literal notranslate"><span class="pre">project.receptor(id)</span></code> and <code class="docutils literal notranslate"><span class="pre">project.simulation(id,</span>
+<span class="pre">variant)</span></code> return values, and <code class="docutils literal notranslate"><span class="pre">sim.particles</span></code> and <code class="docutils literal notranslate"><span class="pre">sim.footprint</span></code> are
+data. <code class="docutils literal notranslate"><span class="pre">Output</span></code> has no folder classes: its methods (<code class="docutils literal notranslate"><span class="pre">path</span></code>, <code class="docutils literal notranslate"><span class="pre">read</span></code>,
+<code class="docutils literal notranslate"><span class="pre">present</span></code>, <code class="docutils literal notranslate"><span class="pre">complete</span></code>, <code class="docutils literal notranslate"><span class="pre">table</span></code>, the failure records, and the writers)
+take the kind of result (<code class="docutils literal notranslate"><span class="pre">&quot;particles&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;footprints&quot;</span></code>), the variant,
+and receptor ids.</p>
+<p><code class="docutils literal notranslate"><span class="pre">stilt.__all__</span></code>, plus the <code class="docutils literal notranslate"><span class="pre">__all__</span></code> of each subpackage, is the public
+surface. Everything else is internal and can change.</p>
+</section>
+<section id="module-map">
+<h2>Module map<a class="headerlink" href="#module-map" title="Link to this heading">#</a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>src/stilt/
+  cli.py             Typer CLI; a thin adapter over Project and execution
+  project.py         Project: the project directory, its receptors and
+                     simulations (DataFrames), run/submit, and a
+                     selection&#39;s status, particles, footprints, Jacobian
+  check.py           check_project: what would stop a project&#39;s runs,
+                     found from its inputs before any run (Project.check,
+                     stilt check); a transport model&#39;s check_met finds the
+                     met&#39;s part
+  output.py          Output: the output directory, a folder per kind and
+                     settings hash; finding a variant&#39;s folder, which
+                     receptors have results (present, complete), reading
+                     one receptor&#39;s file (read) or many at once (table),
+                     failure records, writing
+  migration.py       read_stilt_r: STILT-R and X-STILT by-id output as
+                     receptors, particle tables, and footprints
+  simulation.py      Simulation: a frozen value (receptor, variant, output)
+                     that knows where its results are and whether they exist
+  config.py          ProjectConfig: reads config.yaml, splits the flat keys
+                     into the model&#39;s config and the footprint&#39;s, rejects
+                     unknown keys naming the nearest setting, checks each
+                     declared variant; resolve() makes each a Variant (its
+                     configs, the model build, its two hashes)
+  identity.py        settings records and their hashes: what a run and a
+                     footprint were made with, in _settings.yaml
+  receptors/
+    models.py        receptor types (frozen pydantic models: point, column,
+                     multipoint), their times, and their ids
+    table.py         the receptor table behind the CSV reader, writer, and
+                     appender: receptor_rows checks it once, and
+                     receptors_from_rows builds receptors from checked rows
+    validation.py    the checks a receptor must pass, written once for many
+                     points and shared by the models and the table
+  particles/         the particle table (a DataFrame)
+    table.py         its columns, particle files, release heights, and the
+                     near-field plume correction
+    accessor.py      the .stilt pandas accessor
+    background.py    the background at a receptor (sim.background)
+    transport_error.py  the transport error of the enhancement
+  footprint/         the footprint (a DataArray)
+    config.py        FootprintConfig and the geometry specs
+    gridding.py      calc_footprint, as STILT-R&#39;s (fidelity-guarded)
+    aggregation.py   aggregate and jacobian: footprints summed onto other
+                     geometries, with time binning and target weights
+    io.py            footprint files and CF-1.8 NetCDF; open_footprints
+    targets.py       the geometries footprints are summed onto (Mesh,
+                     Zones), the overlap weights, and to_grid
+    accessor.py      the .stilt xarray accessor
+  sampling.py        sampling a gridded field (a flux, a mole fraction) at
+                     points; sample_met, ARL met at particle positions
+  spatial.py         rasters and CRS without shapely: Bounds, Grid,
+                     horizontal_dims, is_longlat, same_crs, haversine_km
+  meteorology.py     run_window, and the wind-error statistics
+                     (variogram, fit_variogram)
+  transforms/        pre-footprint particle transforms, one module each
+                     (averaging_kernel, pressure_weighting, lifetime); the
+                     loader, YAML I/O, and apply_transforms in __init__.py
+  exceptions.py      every exception class, all under StiltError
+  visualization.py   matplotlib helpers (optional dependency)
+  _paths.py          local paths and object-store paths behind one interface
+  execution/         ExecutionConfig (config.py); the runner (plans what is
+                     missing, runs it here or submits a Slurm job array);
+                     the worker (runs the transport model in a workdir and
+                     writes results for one or many simulations)
+  observations/      the X-STILT port: product readers and SOUNDING_SCHEMA,
+                     overpass grouping and sounding selection, slant
+                     geometry and receptors_from_soundings, modelled_column,
+                     plume backgrounds; arrays in, plain values out
+  transport/         the TransportModel and TransportConfig protocols,
+                     ModelRun, ModelInfo, get_model and its MODELS table,
+                     run_model and run_trajectories (__init__.py); one
+                     subpackage per transport model, which owns its config
+    hysplit/         HYSPLIT: HysplitConfig (config.py); MetConfig and Met,
+                     ARL file discovery, download, and cropping through
+                     arlmet (met.py); HysplitModel (model.py); the driver
+                     (driver.py: write_inputs, read_particle_dat); the
+                     CONTROL file (control.py) and SETUP.CFG namelist
+                     (namelist.py) writers; failure reasons read from its
+                     log (failures.py); the bundled binaries (bin/, Linux
+                     and macOS x86-64) and data tables (data/)
+
+tests/               pytest; folders follow src/stilt (execution/,
+                     footprint/, observations/, particles/,
+                     transport/hysplit/); integration/ holds the end-to-end
+                     runs, r_stilt/ the STILT-R comparisons, and fixtures/
+                     the factories and helpers tests share
+</pre></div>
+</div>
+</section>
+<section id="how-a-run-goes">
+<h2>How a run goes<a class="headerlink" href="#how-a-run-goes" title="Link to this heading">#</a></h2>
+<p>A run starts from <code class="docutils literal notranslate"><span class="pre">Project.run()</span></code>, <code class="docutils literal notranslate"><span class="pre">Project.submit()</span></code>, or <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>.
+<code class="docutils literal notranslate"><span class="pre">stilt.execution.run</span></code> finds the receptors with missing results and either
+runs them in this process (<code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">local</span></code>) or submits them as one Slurm
+job array (<code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">slurm</span></code>).</p>
+<p>For Slurm, <code class="docutils literal notranslate"><span class="pre">submit</span></code> writes
+<code class="docutils literal notranslate"><span class="pre">_slurm/&lt;stamp&gt;/{receptors.txt,receptors.parquet,execution.yaml,job.sh}</span></code> in
+the project and calls <code class="docutils literal notranslate"><span class="pre">sbatch</span></code>. Each task runs <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--receptors</span>
+<span class="pre">receptors.parquet</span> <span class="pre">--task</span> <span class="pre">$SLURM_ARRAY_TASK_ID/N</span> <span class="pre">--execution</span> <span class="pre">execution.yaml</span></code>.
+The parquet file holds the submitted receptors’ checked rows, which the
+task’s project takes in place of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>. <code class="docutils literal notranslate"><span class="pre">submit</span></code> returns the job
+id at once, and <code class="docutils literal notranslate"><span class="pre">run</span></code> waits by polling <code class="docutils literal notranslate"><span class="pre">sacct</span></code>.</p>
+<p>A task that stops with work left requeues itself (<code class="docutils literal notranslate"><span class="pre">scontrol</span> <span class="pre">requeue</span></code>) when
+it got SIGUSR1, which the script asks for two minutes before the time limit
+(<code class="docutils literal notranslate"><span class="pre">--signal=B:USR1&#64;120</span></code>), or when it was preempted (Slurm set the job’s
+<code class="docutils literal notranslate"><span class="pre">PreemptTime</span></code>). Slurm checks <code class="docutils literal notranslate"><span class="pre">--signal</span></code> times only about once a minute,
+so a preempted task may never get SIGUSR1. A task stopped by <code class="docutils literal notranslate"><span class="pre">scancel</span></code> is
+not requeued, and a task stops for good after <code class="docutils literal notranslate"><span class="pre">MAX_REQUEUES</span></code> requeues.</p>
+<p><code class="docutils literal notranslate"><span class="pre">run(task=(i,</span> <span class="pre">n))</span></code> (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span> <span class="pre">i/n</span></code>) runs one share here, whatever
+the backend. The share is taken from all the receptors before the complete
+ones are dropped (<code class="docutils literal notranslate"><span class="pre">task_share</span></code>), so tasks that start at different times
+never overlap. Any scheduler that can start a command line with an index can
+run a project this way.</p>
+<p>The unit of work is a receptor. <code class="docutils literal notranslate"><span class="pre">run_receptor</span></code> runs the transport model
+once per distinct run-settings hash, then writes the footprint of every
+variant that shares those particles. A worker handles the variants of its
+receptor in config order. A variant whose particles are missing runs the
+model, the variants that share those particles reuse them, and their
+footprints are remade if the particles were replaced in the same call. A batched model (<code class="docutils literal notranslate"><span class="pre">batched</span> <span class="pre">=</span> <span class="pre">True</span></code>,
+with <code class="docutils literal notranslate"><span class="pre">run_many</span></code>) is the exception: <code class="docutils literal notranslate"><span class="pre">run_receptors</span></code> first runs each of its
+variant groups once for all the receptors that need particles, then the
+per-receptor loop does the rest. HYSPLIT is not batched.</p>
+<p>HYSPLIT has to run in a local folder that holds its input files, the run’s
+workdir. Each run’s workdir is a new path in the compute root
+(<code class="docutils literal notranslate"><span class="pre">_new_workdir</span></code> in the worker: the receptor id, the variant, the
+realization in an ensemble, and a random part, as in
+<code class="docutils literal notranslate"><span class="pre">202301011200_-111.85_40.77_5_hrrr_3f9a1c2e</span></code>), so projects can share a
+compute root and two runs never clear each other’s files. A simulation that
+runs twice at once keeps its own files in each. The compute root comes from
+<code class="docutils literal notranslate"><span class="pre">--compute-root</span></code>, the <code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code> environment variable, or
+<code class="docutils literal notranslate"><span class="pre">$TMPDIR/pystilt/&lt;project&gt;</span></code> (<code class="docutils literal notranslate"><span class="pre">resolve_compute_root</span></code> in the runner;
+<code class="docutils literal notranslate"><span class="pre">Project</span></code> does not read it). It changes where PYSTILT runs and never what it
+calculates, so it is not in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p>
+<p>After a successful run the particle file and the log are written to the output
+directory and the workdir is removed. A failed run’s workdir, or every one
+with <code class="docutils literal notranslate"><span class="pre">keep_workdir:</span> <span class="pre">true</span></code> under <code class="docutils literal notranslate"><span class="pre">execution:</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, is first
+copied to the output’s <code class="docutils literal notranslate"><span class="pre">scratch/</span></code> folder, replacing an earlier copy for the
+same simulation, so CONTROL, SETUP.CFG, and MESSAGE survive the job. A run
+killed outright (<code class="docutils literal notranslate"><span class="pre">SIGKILL</span></code>, or a node that fails) cannot clean up, and its
+workdir stays in the compute root until that folder is cleaned.</p>
+<p>Files are written through a temporary name and renamed into place, so a reader
+never sees a partial file, and two workers that run the same receptor by
+accident produce equivalent files with the last rename winning. Each of them
+runs in its own workdir. No lock is needed.</p>
+<p>Slurm tasks rebuild the model from the project in another process on another
+node, so anything a worker needs must be in the project or the output
+directory, never only in memory.</p>
+<p>The observation-driven path sits above this. A reader yields a DataFrame of
+soundings, <code class="docutils literal notranslate"><span class="pre">stilt.observations</span></code> helpers thin and group it, and each row
+becomes a receptor (<code class="docutils literal notranslate"><span class="pre">receptors_from_soundings</span></code>, which also gives the kernel
+table, kept with <code class="docutils literal notranslate"><span class="pre">project.add_table</span></code>). Then <code class="docutils literal notranslate"><span class="pre">add_receptors</span></code> and a run go
+as usual. Observation logic stays out of <code class="docutils literal notranslate"><span class="pre">project.py</span></code>.</p>
+</section>
+<section id="how-pystilt-tracks-finished-work">
+<span id="finished-work"></span><h2>How PYSTILT tracks finished work<a class="headerlink" href="#how-pystilt-tracks-finished-work" title="Link to this heading">#</a></h2>
+<p>This section explains what happens behind <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> and reruns. You
+don’t need it to use PYSTILT, but it helps when running at scale, across
+machines, or with several projects sharing one output directory.</p>
+<section id="the-result-files-are-the-record">
+<h3>The result files are the record<a class="headerlink" href="#the-result-files-are-the-record" title="Link to this heading">#</a></h3>
+<p>PYSTILT keeps no separate list of which simulations have run. A simulation
+is complete when the result files its variant makes exist in the output
+directory (<a class="reference internal" href="../reference/_api/stilt.Simulation.is_complete.html#stilt.Simulation.is_complete" title="stilt.Simulation.is_complete"><code class="xref py py-attr docutils literal notranslate"><span class="pre">stilt.Simulation.is_complete</span></code></a>). Today that is:</p>
+<ul class="simple">
+<li><p>the particle file,
+<code class="docutils literal notranslate"><span class="pre">particles/settings=&lt;variant&gt;-&lt;hash&gt;/date=&lt;day&gt;/&lt;receptor&gt;.parquet</span></code></p></li>
+<li><p>the footprint file in the variant’s <code class="docutils literal notranslate"><span class="pre">footprints/</span></code> folder, when the
+variant has a grid. A footprint that no particle reached is a file with
+no rows, marked <code class="docutils literal notranslate"><span class="pre">stilt:empty:</span> <span class="pre">true</span></code> in its metadata, and it counts.</p></li>
+</ul>
+<p>Each result has one expected path, so checking one simulation is a file
+lookup. For many simulations (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code>, or planning a run) PYSTILT
+lists the date folders the selection falls in, once each, and reads the
+answer for every receptor from that. That keeps a project of a hundred
+thousand receptors quick to check, and a few simulations of it cheap.
+A notebook, a Slurm task, and another project sharing the directory all see
+the same files, so they agree on what’s finished without talking to each
+other. Deleting a result file makes that simulation unfinished again.</p>
+<p>A project’s simulations are its receptors (<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>) run under each
+of its variants (<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>), and <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> is exactly that
+set, one row per simulation. Both files are in the project folder before
+anything runs, so any worker on any machine can open the project from the
+folder alone.</p>
+</section>
+<section id="settings-name-the-folders">
+<h3>Settings name the folders<a class="headerlink" href="#settings-name-the-folders" title="Link to this heading">#</a></h3>
+<p><a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a> lists what each <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> and result
+file holds.</p>
+<p>Each variant resolves into two records of settings (<code class="xref py py-mod docutils literal notranslate"><span class="pre">stilt.identity</span></code>).
+Its run settings hold everything that changes the particles: the HYSPLIT
+parameters, the content of the meteorology, and the transport model’s
+build. Their hash names the <code class="docutils literal notranslate"><span class="pre">particles/</span></code> folder. Its footprint settings
+hold the footprint config, its grid, and the hash of the geometry the grid
+was derived for. Hashed together with the run settings, they name the
+<code class="docutils literal notranslate"><span class="pre">footprints/</span></code> folder. Each folder holds a <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> with the
+settings written out in full.</p>
+<p>That is how PYSTILT knows a setting changed: the variant now hashes to a
+folder that does not exist yet, so its receptors run again into it. The old
+folder is untouched. It is also how two variants come to share particles:
+if only their footprint fields differ, their transport settings hash the
+same and they resolve to one <code class="docutils literal notranslate"><span class="pre">particles/</span></code> folder.</p>
+<p>A folder is found by reading its <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> back through the current
+config classes and hashing that, rather than by comparing stored digests.
+So a setting added in a later version, with a default, still matches folders
+written before it existed; a default whose meaning changed does not, which
+is right, because the particles would differ.</p>
+<p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> lists the folders no variant of the current config uses.
+PYSTILT never deletes a folder, because another project may share the
+directory; deletion is by hand.</p>
+</section>
+</section>
+<section id="import-layers">
+<h2>Import layers<a class="headerlink" href="#import-layers" title="Link to this heading">#</a></h2>
+<p>The import contracts in <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>, checked by <code class="docutils literal notranslate"><span class="pre">lint-imports</span></code> in CI
+(<code class="docutils literal notranslate"><span class="pre">just</span> <span class="pre">imports</span></code>), hold this shape. One <code class="docutils literal notranslate"><span class="pre">layers</span></code> contract lists every
+top-level module from the CLI down to <code class="docutils literal notranslate"><span class="pre">_paths</span></code> and <code class="docutils literal notranslate"><span class="pre">exceptions</span></code>. A module
+imports only the layers below it, and modules that import each other share a
+layer. The contract is exhaustive, so a new top-level module fails until it
+is placed. Two short contracts hold what a layer cannot: only
+<code class="docutils literal notranslate"><span class="pre">stilt.transport</span></code> (its <code class="docutils literal notranslate"><span class="pre">get_model</span></code>) imports HYSPLIT’s package, and the
+project config reads no results and runs nothing.</p>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ProjectConfig</span></code> is the root. It holds <code class="docutils literal notranslate"><span class="pre">model</span></code> (the transport model,
+<code class="docutils literal notranslate"><span class="pre">hysplit</span></code> unless set), that model’s parameters and the footprint
+(<code class="docutils literal notranslate"><span class="pre">FootprintConfig</span></code>) fields as flat defaults, <code class="docutils literal notranslate"><span class="pre">mets</span></code>, and <code class="docutils literal notranslate"><span class="pre">variants</span></code>
+(overrides of the defaults).</p>
+<ul class="simple">
+<li><p>The model’s parameters are checked by its own config class
+(<code class="docutils literal notranslate"><span class="pre">stilt.transport.hysplit.HysplitConfig</span></code>; <code class="docutils literal notranslate"><span class="pre">config.transport</span></code>), reached
+through <code class="docutils literal notranslate"><span class="pre">stilt.transport.get_model</span></code>. The top-level footprint fields are
+<code class="docutils literal notranslate"><span class="pre">config.footprint</span></code>.</p></li>
+<li><p>A model is a variant axis, like a met. A variant that names another
+<code class="docutils literal notranslate"><span class="pre">model</span></code> gives that model’s own parameters itself, and inherits the met,
+the footprint fields, and the parameters PYSTILT’s own code reads (the base
+<code class="docutils literal notranslate"><span class="pre">TransportConfig</span></code>: <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">seed</span></code>, <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>, <code class="docutils literal notranslate"><span class="pre">veght</span></code>). A
+parameter goes on the base only when the core reads it; <code class="docutils literal notranslate"><span class="pre">numpar</span></code> and
+every <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> setting are HYSPLIT’s.</p></li>
+<li><p>When it loads, <code class="docutils literal notranslate"><span class="pre">ProjectConfig</span></code> checks each declared variant against the
+defaults (names, met, model, <code class="docutils literal notranslate"><span class="pre">realizations</span></code>, grid merging) and rejects an
+unknown key with the nearest known one (<code class="docutils literal notranslate"><span class="pre">difflib</span></code>), reading no other
+file. <code class="docutils literal notranslate"><span class="pre">from:</span></code> is rejected. <code class="docutils literal notranslate"><span class="pre">grid:</span> <span class="pre">null</span></code> means particles only, and
+footprint settings without a grid are an error.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ProjectConfig.resolve(directory)</span></code> (behind <code class="docutils literal notranslate"><span class="pre">project.variants</span></code>) turns
+each variant into <code class="docutils literal notranslate"><span class="pre">Variant</span></code> objects. It validates the variant’s transport
+settings with its model’s config class once, keeps <code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">N</span></code> as
+one ensemble variant (realization <code class="docutils literal notranslate"><span class="pre">k</span></code> runs with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>), reads each
+geometry once (a relative file from the project directory) to derive the
+grid, and asks the transport model its version once per build.
+<code class="docutils literal notranslate"><span class="pre">Project.init</span></code> resolves before it writes <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p></li>
+<li><p>Each part owns its config. <code class="docutils literal notranslate"><span class="pre">FootprintConfig</span></code> is in
+<code class="docutils literal notranslate"><span class="pre">stilt.footprint.config</span></code>, <code class="docutils literal notranslate"><span class="pre">ExecutionConfig</span></code> in
+<code class="docutils literal notranslate"><span class="pre">stilt.execution.config</span></code>, and a model’s config and met config in its
+package (<code class="docutils literal notranslate"><span class="pre">met_config_class</span></code>; HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">MetConfig</span></code> is in
+<code class="docutils literal notranslate"><span class="pre">stilt.transport.hysplit</span></code>). <code class="docutils literal notranslate"><span class="pre">ProjectConfig.mets</span></code> holds each met as
+written, and <code class="docutils literal notranslate"><span class="pre">ProjectConfig.met_config(name,</span> <span class="pre">model)</span></code> checks it with the
+met config of the model that reads it. <code class="docutils literal notranslate"><span class="pre">Bounds</span></code> and <code class="docutils literal notranslate"><span class="pre">Grid</span></code> are in
+<code class="docutils literal notranslate"><span class="pre">stilt.spatial</span></code>, which needs no shapely, since more than footprints use
+rasters. <code class="docutils literal notranslate"><span class="pre">stilt.config</span></code> composes them, so nothing below the project’s
+layer imports <code class="docutils literal notranslate"><span class="pre">stilt.config</span></code>.</p></li>
+<li><p>Config classes do no I/O when they validate, so a <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> loads
+offline. Reading a geometry or asking a model its build happens in
+<code class="docutils literal notranslate"><span class="pre">ProjectConfig.resolve</span></code>, and reading which weather a met holds happens
+when a variant’s hash is first needed (<code class="docutils literal notranslate"><span class="pre">Variant.met_settings</span></code>).</p></li>
+<li><p>A transport config’s fields that change no result are listed in its
+<code class="docutils literal notranslate"><span class="pre">UNRECORDED</span></code> class variable (HYSPLIT’s: <code class="docutils literal notranslate"><span class="pre">exe_dir</span></code> and <code class="docutils literal notranslate"><span class="pre">data_dir</span></code>) and
+left out of the settings records. A met’s record is built, not dumped: its
+config’s <code class="docutils literal notranslate"><span class="pre">settings()</span></code>, which for HYSPLIT is the source id in the ARL
+headers (from the first file under <code class="docutils literal notranslate"><span class="pre">directory</span></code>, or the archive’s
+<code class="docutils literal notranslate"><span class="pre">source</span></code> for <code class="docutils literal notranslate"><span class="pre">download</span></code>) and the crop (<code class="docutils literal notranslate"><span class="pre">MetConfig.crop()</span></code>, from
+<code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code> and <code class="docutils literal notranslate"><span class="pre">subgrid_levels</span></code>). Where the files are and how
+they are named are never recorded, so moving them keeps every result, and
+two products named alike hash apart. The grid and levels are not in the
+record either, since a product’s header changes over its archive’s life;
+the met files a run read are recorded in its particle file.</p></li>
+<li><p>Lookup reads each stored <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> back through the current
+config classes (<code class="docutils literal notranslate"><span class="pre">stilt.identity</span></code>) and re-hashes, so a field added later
+with a default still matches. Stored records ignore keys this version does
+not know.</p></li>
+<li><p>Every field is a plain pydantic <code class="docutils literal notranslate"><span class="pre">Field(default,</span> <span class="pre">description=...)</span></code>, and
+the public config stays flat (<code class="docutils literal notranslate"><span class="pre">ProjectConfig(numpar=...,</span> <span class="pre">seed=...)</span></code>).
+<code class="docutils literal notranslate"><span class="pre">CONTRIBUTING.md</span></code> explains how a HYSPLIT field is routed to
+<code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code>, <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>, <code class="docutils literal notranslate"><span class="pre">WINDERR</span></code>, or <code class="docutils literal notranslate"><span class="pre">ZIERR</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ExecutionConfig</span></code> (<code class="docutils literal notranslate"><span class="pre">execution:</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>) says where
+receptors run and with what Slurm resources. It forbids unknown keys; other
+<code class="docutils literal notranslate"><span class="pre">sbatch</span></code> options go under its <code class="docutils literal notranslate"><span class="pre">slurm:</span></code> mapping.</p></li>
+<li><p>Particle transforms are declared as a default or per variant
+(<code class="docutils literal notranslate"><span class="pre">transforms:</span> <span class="pre">[{kind:</span> <span class="pre">...}]</span></code>); <code class="docutils literal notranslate"><span class="pre">kind</span></code> may also be the import path of a
+user class.</p></li>
+</ul>
+</section>
+<section id="implementation-notes">
+<h2>Implementation notes<a class="headerlink" href="#implementation-notes" title="Link to this heading">#</a></h2>
+<section id="results-are-plain-data">
+<h3>Results are plain data<a class="headerlink" href="#results-are-plain-data" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">sim.particles</span></code> is a pandas DataFrame and <code class="docutils literal notranslate"><span class="pre">sim.footprint</span></code> an xarray
+DataArray. PYSTILT’s methods on them live in <code class="docutils literal notranslate"><span class="pre">.stilt</span></code> accessors. A
+footprint carries its receptor id as a scalar coordinate (kept through
+arithmetic) and the full receptor and settings as attributes
+(<code class="docutils literal notranslate"><span class="pre">stilt_receptor</span></code>, <code class="docutils literal notranslate"><span class="pre">stilt_footprint</span></code>), which the accessor reads. Every
+result file records what it needs to be read alone (<code class="docutils literal notranslate"><span class="pre">read_particles</span></code>,
+<code class="docutils literal notranslate"><span class="pre">read_footprint</span></code>).</p>
+<p><code class="docutils literal notranslate"><span class="pre">sim.particles</span></code> and <code class="docutils literal notranslate"><span class="pre">sim.footprint</span></code> are <code class="docutils literal notranslate"><span class="pre">cached_property</span></code> attributes of
+a frozen value. A missing file raises <code class="docutils literal notranslate"><span class="pre">FileNotFoundError</span></code>, which is never
+cached, so the next read tries again, rather than caching a <code class="docutils literal notranslate"><span class="pre">None</span></code> that
+would hide the result when it lands. <code class="docutils literal notranslate"><span class="pre">None</span></code> is only for final states (no
+grid, an empty footprint). Use <code class="docutils literal notranslate"><span class="pre">has_particles</span></code> and <code class="docutils literal notranslate"><span class="pre">has_footprint</span></code> to
+test presence; never write to a simulation’s <code class="docutils literal notranslate"><span class="pre">__dict__</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> is built once, and each access returns a copy, so a
+user’s new column stays theirs. <code class="docutils literal notranslate"><span class="pre">add_receptors</span></code> drops the cache. A
+<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> edited by hand needs a new <code class="docutils literal notranslate"><span class="pre">Project(path)</span></code>.</p>
+</section>
+<section id="bulk-methods-and-listings">
+<h3>Bulk methods and listings<a class="headerlink" href="#bulk-methods-and-listings" title="Link to this heading">#</a></h3>
+<p>A method of <code class="docutils literal notranslate"><span class="pre">Project</span></code> that takes a selection works from folder listings and
+receptor ids. It never builds a <code class="docutils literal notranslate"><span class="pre">Simulation</span></code> per row, which costs
+milliseconds each and adds up to many minutes on tens of thousands of
+footprints. It opens a file per row only when the file’s contents are the
+answer (<code class="docutils literal notranslate"><span class="pre">footprints</span></code>, <code class="docutils literal notranslate"><span class="pre">jacobian</span></code>), and builds receptors together
+(<code class="docutils literal notranslate"><span class="pre">Project._receptors</span></code>) when it needs them.</p>
+<p><code class="docutils literal notranslate"><span class="pre">Output.directory</span></code> is a <code class="docutils literal notranslate"><span class="pre">Path</span></code> on a filesystem and a universal path
+(<code class="docutils literal notranslate"><span class="pre">UPath</span></code>) for a URL (<code class="docutils literal notranslate"><span class="pre">stilt._paths.location</span></code>). Code that touches the
+output checks <code class="docutils literal notranslate"><span class="pre">isinstance(path,</span> <span class="pre">Path)</span></code> for the local fast path
+(<code class="docutils literal notranslate"><span class="pre">os.scandir</span></code>, a temporary file and rename, pyarrow on the path) and
+otherwise uses the store’s fsspec filesystem (<code class="docutils literal notranslate"><span class="pre">path.fs</span></code>), putting a file
+directly. Parquet is read through <code class="docutils literal notranslate"><span class="pre">stilt._paths.readable</span></code>.</p>
+</section>
+<section id="empty-footprints">
+<h3>Empty footprints<a class="headerlink" href="#empty-footprints" title="Link to this heading">#</a></h3>
+<p>When no particle reaches the grid, <code class="docutils literal notranslate"><span class="pre">calc_footprint</span></code> raises
+<code class="docutils literal notranslate"><span class="pre">EmptyFootprint</span></code> and the worker’s <code class="docutils literal notranslate"><span class="pre">make_footprint</span></code> writes a footprint file
+with no rows, marked <code class="docutils literal notranslate"><span class="pre">stilt:empty</span></code> in its metadata. <code class="docutils literal notranslate"><span class="pre">sim.is_complete</span></code> and
+<code class="docutils literal notranslate"><span class="pre">sim.has_footprint</span></code> are true, <code class="docutils literal notranslate"><span class="pre">sim.footprint</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">project.footprints()</span></code> gives it no row and lists it in <code class="docutils literal notranslate"><span class="pre">attrs[&quot;empty&quot;]</span></code>.
+PYSTILT never synthesizes a zero-valued footprint for it: a zero enhancement
+would flow into a comparison or an inversion unnoticed.</p>
+</section>
+<section id="failure-records">
+<h3>Failure records<a class="headerlink" href="#failure-records" title="Link to this heading">#</a></h3>
+<p>When a step fails, the worker writes <code class="docutils literal notranslate"><span class="pre">&lt;receptor</span> <span class="pre">id&gt;.failure.yaml</span></code> in the
+logs of the folder whose result failed (<code class="docutils literal notranslate"><span class="pre">logs/settings=&lt;key&gt;/date=.../</span></code>:
+the particles’ folder for the run, the footprint’s for one variant), and
+removes it when that result is written. Completion never reads it: a
+simulation is done by its result files alone. <code class="docutils literal notranslate"><span class="pre">sim.failure</span></code>, the
+<code class="docutils literal notranslate"><span class="pre">state</span></code>, <code class="docutils literal notranslate"><span class="pre">step</span></code>, <code class="docutils literal notranslate"><span class="pre">reason</span></code>, and <code class="docutils literal notranslate"><span class="pre">message</span></code> columns of <code class="docutils literal notranslate"><span class="pre">status()</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> read it, only for simulations missing a result.</p>
+</section>
+<section id="met-that-ran-out">
+<h3>Met that ran out<a class="headerlink" href="#met-that-ran-out" title="Link to this heading">#</a></h3>
+<p>Met that ran out is a failure, and a domain exit is not. The transport model
+tells them apart, not the core. HYSPLIT’s driver reads its <code class="docutils literal notranslate"><span class="pre">WARNING</span></code> file
+after each run and fails <code class="docutils literal notranslate"><span class="pre">no</span> <span class="pre">more</span> <span class="pre">meteorology</span></code> (and the other <code class="docutils literal notranslate"><span class="pre">metpos</span></code>
+time warnings in <code class="docutils literal notranslate"><span class="pre">FAILURE_PHRASES</span></code>) as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>. Particles that all
+left the met’s domain or its crop are a complete run, so a particle file may
+stop before <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>.</p>
+<p>HYSPLIT’s warning is not reliable. It writes only its first <code class="docutils literal notranslate"><span class="pre">metpos</span></code>
+warning per run, so a domain exit can hide met that ran out later. With
+<code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">4</span></code>, about one run in five that reaches a met file cut short drops
+every particle there with no warning at all and reports <code class="docutils literal notranslate"><span class="pre">Complete</span> <span class="pre">Hysplit</span></code>.
+So <code class="docutils literal notranslate"><span class="pre">Met.files_for</span></code> fails before running when a file is missing, naming the
+hours, and <code class="docutils literal notranslate"><span class="pre">Met.check</span></code> fails when a file is damaged or the files lack a time
+step the run needs (arlmet’s <code class="docutils literal notranslate"><span class="pre">File.check()</span></code> and <code class="docutils literal notranslate"><span class="pre">File.times</span></code>, read once
+per file in a process).</p>
+</section>
+<section id="realizations">
+<h3>Realizations<a class="headerlink" href="#realizations" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">N</span></code> makes one variant whose simulations are <code class="docutils literal notranslate"><span class="pre">(receptor,</span>
+<span class="pre">variant,</span> <span class="pre">k)</span></code>, with <code class="docutils literal notranslate"><span class="pre">k</span></code> in <code class="docutils literal notranslate"><span class="pre">0..N-1</span></code>, the <code class="docutils literal notranslate"><span class="pre">realization</span></code> column of
+<code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>. They share one settings folder, with a
+<code class="docutils literal notranslate"><span class="pre">realization=k/</span></code> partition each. The run record says <code class="docutils literal notranslate"><span class="pre">ensemble:</span> <span class="pre">true</span></code>
+with the base seed, and realization <code class="docutils literal notranslate"><span class="pre">k</span></code> runs with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>
+(<code class="docutils literal notranslate"><span class="pre">Variant.transport_for(k)</span></code>). An ensemble of one is still an ensemble, so
+raising <code class="docutils literal notranslate"><span class="pre">N</span></code> only adds partitions. A single run records neither key.</p>
+</section>
+<section id="the-hysplit-seed">
+<h3>The HYSPLIT seed<a class="headerlink" href="#the-hysplit-seed" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> gets <code class="docutils literal notranslate"><span class="pre">SEED</span> <span class="pre">=</span> <span class="pre">-(|seed|</span> <span class="pre">+</span> <span class="pre">1)</span></code> (<code class="docutils literal notranslate"><span class="pre">setup_seed</span></code> in the HYSPLIT
+driver), not the user’s value. HYSPLIT sets its generator state to
+<code class="docutils literal notranslate"><span class="pre">-1</span> <span class="pre">+</span> <span class="pre">SEED</span></code>, and under <code class="docutils literal notranslate"><span class="pre">krand=2</span></code> the generator (<code class="docutils literal notranslate"><span class="pre">ran1</span></code>) re-initializes
+only from a negative value and collapses every state <code class="docutils literal notranslate"><span class="pre">&gt;=</span> <span class="pre">-1</span></code> onto one
+stream, so a positive <code class="docutils literal notranslate"><span class="pre">SEED</span></code> would be inert. <code class="docutils literal notranslate"><span class="pre">krand=4</span></code> discards the seed
+(a clock draw with about 5000 distinct values), and <code class="docutils literal notranslate"><span class="pre">krand=1</span></code> uses it only
+for the initial turbulent velocity, so <code class="docutils literal notranslate"><span class="pre">seed</span></code> requires <code class="docutils literal notranslate"><span class="pre">krand=2</span></code>.
+<code class="docutils literal notranslate"><span class="pre">krand</span></code> is restricted to HYSPLIT’s documented modes because any other value
+silently degenerates the turbulence draws.</p>
+<p>Realization 0, and a single wind-error variant, use the default seed, as
+STILT-R’s error run does. The <code class="docutils literal notranslate"><span class="pre">winderr</span></code> fidelity scenario (an <code class="docutils literal notranslate"><span class="pre">hrrr-err</span></code>
+variant) relies on this, and the R fidelity fixture applies the same seed
+mapping.</p>
+</section>
+<section id="line-sources">
+<h3>Line sources<a class="headerlink" href="#line-sources" title="Link to this heading">#</a></h3>
+<p>In HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">emspnt.f</span></code>, consecutive <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> starting locations at the
+same latitude and longitude become one vertical line source, and only the
+last pair is released. That is how <code class="docutils literal notranslate"><span class="pre">ColumnReceptor</span></code> works (two lines:
+bottom and top), and why a <code class="docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code> may not repeat a horizontal
+location (the constructor raises). The bundled build releases column
+particles bottom to top in <code class="docutils literal notranslate"><span class="pre">indx</span></code> order (the table’s <code class="docutils literal notranslate"><span class="pre">particle</span></code>), which
+<code class="docutils literal notranslate"><span class="pre">add_release_heights</span></code> falls back to when a model writes no <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>
+release row.</p>
+</section>
+<section id="pressure-weighting">
+<h3>Pressure weighting<a class="headerlink" href="#pressure-weighting" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">PressureWeighting</span></code> fits <code class="docutils literal notranslate"><span class="pre">ln</span> <span class="pre">p</span> <span class="pre">=</span> <span class="pre">b</span> <span class="pre">+</span> <span class="pre">a·z</span></code> to the particles’ first-step
+<code class="docutils literal notranslate"><span class="pre">(zagl,</span> <span class="pre">pres)</span></code> and gives each distinct release height the pressure slab
+centered on it (<code class="docutils literal notranslate"><span class="pre">particle_pwf</span></code>), split evenly among the particles released
+there (a multipoint receptor releases many per point). The fit is made in the
+receptor’s own datum: for <code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code> it uses <code class="docutils literal notranslate"><span class="pre">zagl</span> <span class="pre">+</span> <span class="pre">zsfc</span></code> (so
+<code class="docutils literal notranslate"><span class="pre">zsfc</span></code> must be in <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code>), and the ground closing the bottom slab is
+the terrain under the lowest point. <code class="docutils literal notranslate"><span class="pre">PressureWeighting.apply</span></code> reads
+<code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code> from the receptor it is given; with none it assumes AGL.
+<code class="docutils literal notranslate"><span class="pre">AveragingKernel</span></code> holds only the kernel. <code class="docutils literal notranslate"><span class="pre">calc_footprint</span></code> divides by the
+particle count, so weights are scaled by <code class="docutils literal notranslate"><span class="pre">N</span></code>. Weights sum to the column’s
+mass fraction (less than 1) by design: the rest of the atmosphere is above
+the column top.</p>
+<p>The hypsometric fit is load-bearing. HYSPLIT’s first output step is already
+one time step of turbulence past release: on a real 1000-particle column, 394
+of 999 adjacent particles are non-monotone in pressure against release
+height. Raw first-step pressures give neighboring particles weights spanning
+a factor of 145; the fit gives 1.49, the true hydrostatic ratio across 3 km.
+Never “simplify” <code class="docutils literal notranslate"><span class="pre">particle_pwf</span></code> to use <code class="docutils literal notranslate"><span class="pre">pres</span></code> directly
+(<code class="docutils literal notranslate"><span class="pre">tests/integration/test_pressure_weighting.py</span></code> guards this).</p>
+<p>Exact release positions would not help either. <code class="docutils literal notranslate"><span class="pre">PARTICLE.DAT</span></code> starts at
+<code class="docutils literal notranslate"><span class="pre">t</span> <span class="pre">=</span> <span class="pre">-DELT</span></code>, never <code class="docutils literal notranslate"><span class="pre">t</span> <span class="pre">=</span> <span class="pre">0</span></code>, but the scatter is not only transport:
+<code class="docutils literal notranslate"><span class="pre">emspnt.f</span></code> places each particle uniformly at random inside its own
+<code class="docutils literal notranslate"><span class="pre">1/numpar</span></code> slab. The air a particle represents is its slab, known from
+<code class="docutils literal notranslate"><span class="pre">numpar</span></code> and the column, which is what <code class="docutils literal notranslate"><span class="pre">release_height</span></code> is. Particle data
+is needed only for the two-parameter <code class="docutils literal notranslate"><span class="pre">p(z)</span></code> fit.</p>
+</section>
+<section id="release-heights">
+<h3>Release heights<a class="headerlink" href="#release-heights" title="Link to this heading">#</a></h3>
+<p>The particle table’s contract asks a model to write each particle’s release
+at <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>. From it <code class="docutils literal notranslate"><span class="pre">add_release_heights</span></code> (<code class="docutils literal notranslate"><span class="pre">particles/table.py</span></code>, a
+core step the worker applies to any model’s particles, as is
+<code class="docutils literal notranslate"><span class="pre">correct_near_field</span></code>) finds which point of a multipoint receptor a particle
+left from, or which slab of a column. <code class="docutils literal notranslate"><span class="pre">release_height</span></code> is that point’s
+altitude or that slab’s center, never the random height inside the slab.</p>
+<p>For a multipoint or slant receptor, <code class="docutils literal notranslate"><span class="pre">_multipoint_release_heights</span></code> uses, in
+order: <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code> rows when present (exact); a match on height when every
+release altitude differs; then horizontal position, with a warning when
+points are closer than 1 km. The bundled HYSPLIT v5.1.0 writes no <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>
+row. A build that does can be used through <code class="docutils literal notranslate"><span class="pre">exe_dir</span></code>, and nothing in
+PYSTILT changes. <code class="docutils literal notranslate"><span class="pre">tests/transport/hysplit/test_release_assignment.py</span></code>
+covers closely spaced slant points.</p>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Development</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="stilt_r_parity.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">STILT-R Parity</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-design-in-brief">The design in brief</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-map">Module map</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-a-run-goes">How a run goes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-pystilt-tracks-finished-work">How PYSTILT tracks finished work</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-result-files-are-the-record">The result files are the record</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#settings-name-the-folders">Settings name the folders</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#import-layers">Import layers</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration">Configuration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#implementation-notes">Implementation notes</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#results-are-plain-data">Results are plain data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#bulk-methods-and-listings">Bulk methods and listings</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empty-footprints">Empty footprints</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#failure-records">Failure records</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#met-that-ran-out">Met that ran out</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#realizations">Realizations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-hysplit-seed">The HYSPLIT seed</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#line-sources">Line sources</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pressure-weighting">Pressure weighting</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#release-heights">Release heights</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/development/architecture.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Particle Weighting (Transforms) &#8212; PYSTILT 0.1.0a24</title>
+    <title>Particle Weighting (Transforms) &#8212; PYSTILT 0.1.0a25</title>
   
   
   
@@ -30,6 +30,7 @@
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
@@ -40,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=efecac6f"></script>
+    <script src="../_static/documentation_options.js?v=4b942876"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a24';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -62,7 +63,7 @@
     <link rel="prev" title="Slant Columns" href="slant_columns.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a24" />
+  <meta name="docsearch:version" content="0.1.0a25" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -133,7 +134,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a24</p>
+    <p class="title logo__title">PYSTILT 0.1.0a25</p>
   
 </a></div>
     
@@ -169,13 +170,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../reference/index.html">
     API Reference
   </a>
@@ -183,35 +177,11 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-            <li class="nav-item dropdown">
-                <button class="btn dropdown-toggle nav-item" type="button"
-                data-bs-toggle="dropdown" aria-expanded="false"
-                aria-controls="pst-nav-more-links">
-                    More
-                </button>
-                <ul id="pst-nav-more-links" class="dropdown-menu">
-                    
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../development.html">
+  <a class="nav-link nav-internal" href="../development/index.html">
     Development
   </a>
 </li>
 
-                </ul>
-            </li>
-            
   </ul>
 </nav></div>
       
@@ -349,13 +319,6 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
-<li class="nav-item ">
   <a class="nav-link nav-internal" href="../reference/index.html">
     API Reference
   </a>
@@ -363,21 +326,7 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../development.html">
+  <a class="nav-link nav-internal" href="../development/index.html">
     Development
   </a>
 </li>
@@ -494,6 +443,16 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="hysplit_build.html">Your Own HYSPLIT Build And Data Tables</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="migration/index.html">Coming From Another STILT</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="migration/stilt_r.html">Coming From STILT-R</a></li>
+<li class="toctree-l2"><a class="reference internal" href="migration/x_stilt.html">Coming From X-STILT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="migration/stiltctl.html">Coming From stiltctl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="migration/jena_stilt.html">Coming From Jena STILT</a></li>
+</ul>
+</details></li>
+</ul>
 </div>
 </nav></div>
     </div>
@@ -599,8 +558,9 @@ fits a hypsometric curve, <span class="math notranslate nohighlight">\(\ln p = b
 heights and pressures at their first output step. It evaluates the curve
 at each release height to get the release pressure. Each release height
 then stands for the slab of air centered on it, with the ground closing
-the lowest slab. X-STILT gives each particle the layer below it instead,
-which leaves a particle released at the surface almost no weight.</p>
+the lowest slab. HYSPLIT places each particle at random inside its own
+slab of the column, so the slab around the release height is the air the
+particle stands for. The <a class="reference internal" href="migration/x_stilt.html"><span class="doc">X-STILT migration page</span></a> lists how this differs from X-STILT’s weights.</p>
 <p>A multipoint receptor releases several particles from each point. They
 share one release height, so the point’s slab is split evenly among
 them. The weighted footprint does not depend on how many particles each
@@ -658,9 +618,10 @@ for you. Pass <code class="docutils literal notranslate"><span class="pre">level
 when all kernels share one grid. When the footprint is made, the
 transform looks up the receptor’s id in the table. The table is part of
 the project, so this works the same in a notebook, with <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>, and
-on Slurm workers. A receptor with no rows in the table raises an error.
-<code class="docutils literal notranslate"><span class="pre">table</span></code> also takes the path of a Parquet or CSV file, relative to the
-project root.</p>
+on Slurm workers. A receptor with no rows in the table raises an error, and
+<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> lists those receptors before a run, with the table’s ids that
+match no receptor (<a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>). <code class="docutils literal notranslate"><span class="pre">table</span></code> also takes the path of a
+Parquet or CSV file, relative to the project root.</p>
 </section>
 <section id="in-python">
 <h2>In Python<a class="headerlink" href="#in-python" title="Link to this heading">#</a></h2>

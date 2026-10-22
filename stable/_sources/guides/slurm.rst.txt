@@ -24,10 +24,14 @@ Add an ``execution`` section to ``config.yaml``:
      time: "02:00:00"            # time limit per array task
      mem: 4G
 
-Then submit from the environment PYSTILT is installed in:
+Then check the project and submit it from the environment PYSTILT is
+installed in. ``stilt check`` finds a met folder that is not where you said,
+or met files a receptor needs that are not there, before the job array
+starts and its simulations fail one by one (:doc:`checking`):
 
 .. code-block:: bash
 
+   stilt check ./my_project
    stilt submit ./my_project
 
 ``stilt submit`` prints the Slurm job ID and returns once the job is

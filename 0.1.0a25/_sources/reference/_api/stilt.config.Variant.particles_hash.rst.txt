@@ -1,0 +1,6 @@
+stilt.config.Variant.particles\_hash
+====================================
+
+.. currentmodule:: stilt.config
+
+.. autoproperty:: Variant.particles_hash

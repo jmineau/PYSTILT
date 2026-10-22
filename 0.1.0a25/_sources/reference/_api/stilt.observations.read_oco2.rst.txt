@@ -1,0 +1,6 @@
+﻿stilt.observations.read\_oco2
+=============================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: read_oco2

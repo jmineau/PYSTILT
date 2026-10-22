@@ -109,6 +109,19 @@ write particle and footprint files without a project.
    particles.ParticlesAccessor
    footprint.FootprintAccessor
 
+Output of STILT-R and X-STILT
+-----------------------------
+
+:mod:`stilt.migration` reads the ``out/by-id`` folder of a STILT-R or
+X-STILT project as receptors, particle tables, and footprints
+(:doc:`/guides/migration/stilt_r`).
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   migration.read_stilt_r
+
 What the particles give beyond the footprint
 --------------------------------------------
 
@@ -181,12 +194,15 @@ Sampling fields
 :mod:`stilt.sampling` looks up a gridded field at points: a surface flux
 under a footprint or along particle paths (``foot.stilt.enhancement``,
 ``particles.stilt.enhancement``), or a mole-fraction field at particle
-endpoints (:func:`stilt.particles.background`).
+endpoints (:func:`stilt.particles.background`). :func:`~stilt.sampling.sample_met`
+reads ARL met files at particle positions, for the particle columns a
+transport model can write from the met.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    sampling.sample_field
+   sampling.sample_met
    sampling.vertical_dim
    sampling.nearest_cell

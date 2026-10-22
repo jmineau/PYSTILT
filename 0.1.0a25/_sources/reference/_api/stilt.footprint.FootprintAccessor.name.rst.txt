@@ -1,0 +1,6 @@
+stilt.footprint.FootprintAccessor.name
+======================================
+
+.. currentmodule:: stilt.footprint
+
+.. autoproperty:: FootprintAccessor.name

@@ -1,0 +1,6 @@
+stilt.transport.TransportConfig.settings
+========================================
+
+.. currentmodule:: stilt.transport
+
+.. automethod:: TransportConfig.settings

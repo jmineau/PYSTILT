@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.transport.hysplit.FailureReason &#8212; PYSTILT 0.1.0a24</title>
+    <title>stilt.transport.hysplit.FailureReason &#8212; PYSTILT 0.1.0a25</title>
   
   
   
@@ -30,6 +30,7 @@
 <link href="../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/plot_directive.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
@@ -40,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=efecac6f"></script>
+    <script src="../../_static/documentation_options.js?v=4b942876"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -50,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a24';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +62,7 @@
     <link rel="prev" title="stilt.transport.hysplit.read_particle_dat" href="stilt.transport.hysplit.read_particle_dat.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a24" />
+  <meta name="docsearch:version" content="0.1.0a25" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -132,7 +133,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a24</p>
+    <p class="title logo__title">PYSTILT 0.1.0a25</p>
   
 </a></div>
     
@@ -167,13 +168,6 @@
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="../index.html">
     API Reference
@@ -182,35 +176,11 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-            <li class="nav-item dropdown">
-                <button class="btn dropdown-toggle nav-item" type="button"
-                data-bs-toggle="dropdown" aria-expanded="false"
-                aria-controls="pst-nav-more-links">
-                    More
-                </button>
-                <ul id="pst-nav-more-links" class="dropdown-menu">
-                    
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../../development.html">
+  <a class="nav-link nav-internal" href="../../development/index.html">
     Development
   </a>
 </li>
 
-                </ul>
-            </li>
-            
   </ul>
 </nav></div>
       
@@ -347,13 +317,6 @@
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="../index.html">
     API Reference
@@ -362,21 +325,7 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../development.html">
+  <a class="nav-link nav-internal" href="../../development/index.html">
     Development
   </a>
 </li>
@@ -474,6 +423,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.variants.html">stilt.Project.variants</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.add_receptors.html">stilt.Project.add_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.add_table.html">stilt.Project.add_table</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Project.check.html">stilt.Project.check</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.folders.html">stilt.Project.folders</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.footprints.html">stilt.Project.footprints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.incomplete.html">stilt.Project.incomplete</a></li>
@@ -584,6 +534,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintAccessor.to_netcdf.html">stilt.footprint.FootprintAccessor.to_netcdf</a></li>
 </ul>
 </details></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.migration.read_stilt_r.html">stilt.migration.read_stilt_r</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.particles.background.html">stilt.particles.background</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.particles.Background-class.html">stilt.particles.Background</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.particles.transport_error.html">stilt.particles.transport_error</a></li>
@@ -624,6 +575,7 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.spatial.is_longlat.html">stilt.spatial.is_longlat</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.spatial.horizontal_dims.html">stilt.spatial.horizontal_dims</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.sampling.sample_field.html">stilt.sampling.sample_field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.sampling.sample_met.html">stilt.sampling.sample_met</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.sampling.vertical_dim.html">stilt.sampling.vertical_dim</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.sampling.nearest_cell.html">stilt.sampling.nearest_cell</a></li>
 </ul>
@@ -679,7 +631,9 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.hysplit.Met.html">stilt.transport.hysplit.Met</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.crop_dir.html">stilt.transport.hysplit.Met.crop_dir</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.check.html">stilt.transport.hysplit.Met.check</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing_hours.html">stilt.transport.hysplit.Met.missing_hours</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -729,6 +683,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.html">stilt.transport.hysplit.HysplitModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.batched.html">stilt.transport.hysplit.HysplitModel.batched</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.needs_workdir.html">stilt.transport.hysplit.HysplitModel.needs_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.check_met.html">stilt.transport.hysplit.HysplitModel.check_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.data_files.html">stilt.transport.hysplit.HysplitModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.run.html">stilt.transport.hysplit.HysplitModel.run</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.version.html">stilt.transport.hysplit.HysplitModel.version</a></li>
@@ -740,6 +695,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transforms.AveragingKernel.html">stilt.transforms.AveragingKernel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.apply.html">stilt.transforms.AveragingKernel.apply</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.kernel.html">stilt.transforms.AveragingKernel.kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.table_receptors.html">stilt.transforms.AveragingKernel.table_receptors</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transforms.PressureWeighting.html">stilt.transforms.PressureWeighting</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -815,11 +771,10 @@
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../hysplit.html">HYSPLIT Integration</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.html">stilt.transport.hysplit.HysplitConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.effective_maxpar.html">stilt.transport.hysplit.HysplitConfig.effective_maxpar</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.UNRECORDED.html">stilt.transport.hysplit.HysplitConfig.UNRECORDED</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.hourly_ziscale.html">stilt.transport.hysplit.HysplitConfig.hourly_ziscale</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.maxpar_for.html">stilt.transport.hysplit.HysplitConfig.maxpar_for</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.realizations.html">stilt.transport.hysplit.HysplitConfig.realizations</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.settings.html">stilt.transport.hysplit.HysplitConfig.settings</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.write_inputs.html">stilt.transport.hysplit.write_inputs</a></li>
@@ -935,6 +890,11 @@ worker records it with the simulation.</p>
 <span class="sig-name descname"><span class="pre">TIMEOUT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'TIMEOUT'</span></span><a class="headerlink" href="#stilt.transport.hysplit.FailureReason.TIMEOUT" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="stilt.transport.hysplit.FailureReason.PARTICLE_LIMIT">
+<span class="sig-name descname"><span class="pre">PARTICLE_LIMIT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'PARTICLE_LIMIT'</span></span><a class="headerlink" href="#stilt.transport.hysplit.FailureReason.PARTICLE_LIMIT" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
 </dd></dl>
 
 </section>
@@ -992,6 +952,7 @@ worker records it with the simulation.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.transport.hysplit.FailureReason.NO_PARTICLE_DATA"><code class="docutils literal notranslate"><span class="pre">FailureReason.NO_PARTICLE_DATA</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.transport.hysplit.FailureReason.FORTRAN_RUNTIME_ERROR"><code class="docutils literal notranslate"><span class="pre">FailureReason.FORTRAN_RUNTIME_ERROR</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.transport.hysplit.FailureReason.TIMEOUT"><code class="docutils literal notranslate"><span class="pre">FailureReason.TIMEOUT</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.transport.hysplit.FailureReason.PARTICLE_LIMIT"><code class="docutils literal notranslate"><span class="pre">FailureReason.PARTICLE_LIMIT</span></code></a></li>
 </ul>
 </li>
 </ul>

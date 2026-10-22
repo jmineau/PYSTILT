@@ -1,0 +1,6 @@
+stilt.Zones.is\_longlat
+=======================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Zones.is_longlat

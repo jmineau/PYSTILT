@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Core Objects &#8212; PYSTILT 0.1.0a24</title>
+    <title>Core Objects &#8212; PYSTILT 0.1.0a25</title>
   
   
   
@@ -30,6 +30,7 @@
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
@@ -40,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=efecac6f"></script>
+    <script src="../_static/documentation_options.js?v=4b942876"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -50,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a24';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +62,7 @@
     <link rel="prev" title="API Reference" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a24" />
+  <meta name="docsearch:version" content="0.1.0a25" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -132,7 +133,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a24</p>
+    <p class="title logo__title">PYSTILT 0.1.0a25</p>
   
 </a></div>
     
@@ -167,13 +168,6 @@
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="index.html">
     API Reference
@@ -182,35 +176,11 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-            <li class="nav-item dropdown">
-                <button class="btn dropdown-toggle nav-item" type="button"
-                data-bs-toggle="dropdown" aria-expanded="false"
-                aria-controls="pst-nav-more-links">
-                    More
-                </button>
-                <ul id="pst-nav-more-links" class="dropdown-menu">
-                    
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="../development.html">
+  <a class="nav-link nav-internal" href="../development/index.html">
     Development
   </a>
 </li>
 
-                </ul>
-            </li>
-            
   </ul>
 </nav></div>
       
@@ -347,13 +317,6 @@
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../migration/index.html">
-    Coming From Another STILT
-  </a>
-</li>
-
-
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="index.html">
     API Reference
@@ -362,21 +325,7 @@
 
 
 <li class="nav-item ">
-  <a class="nav-link nav-internal" href="../advanced/index.html">
-    Internals
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../roadmap.html">
-    Roadmap
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../development.html">
+  <a class="nav-link nav-internal" href="../development/index.html">
     Development
   </a>
 </li>
@@ -474,6 +423,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.variants.html">stilt.Project.variants</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.add_receptors.html">stilt.Project.add_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.add_table.html">stilt.Project.add_table</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.check.html">stilt.Project.check</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.folders.html">stilt.Project.folders</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.footprints.html">stilt.Project.footprints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.incomplete.html">stilt.Project.incomplete</a></li>
@@ -584,6 +534,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.FootprintAccessor.to_netcdf.html">stilt.footprint.FootprintAccessor.to_netcdf</a></li>
 </ul>
 </details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.migration.read_stilt_r.html">stilt.migration.read_stilt_r</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.background.html">stilt.particles.background</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.Background-class.html">stilt.particles.Background</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.transport_error.html">stilt.particles.transport_error</a></li>
@@ -624,6 +575,7 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.spatial.is_longlat.html">stilt.spatial.is_longlat</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.spatial.horizontal_dims.html">stilt.spatial.horizontal_dims</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.sample_field.html">stilt.sampling.sample_field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.sample_met.html">stilt.sampling.sample_met</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.vertical_dim.html">stilt.sampling.vertical_dim</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.nearest_cell.html">stilt.sampling.nearest_cell</a></li>
 </ul>
@@ -679,7 +631,9 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.html">stilt.transport.hysplit.Met</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.crop_dir.html">stilt.transport.hysplit.Met.crop_dir</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.check.html">stilt.transport.hysplit.Met.check</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.missing_hours.html">stilt.transport.hysplit.Met.missing_hours</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -729,6 +683,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitModel.html">stilt.transport.hysplit.HysplitModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitModel.batched.html">stilt.transport.hysplit.HysplitModel.batched</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitModel.needs_workdir.html">stilt.transport.hysplit.HysplitModel.needs_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitModel.check_met.html">stilt.transport.hysplit.HysplitModel.check_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitModel.data_files.html">stilt.transport.hysplit.HysplitModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitModel.run.html">stilt.transport.hysplit.HysplitModel.run</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitModel.version.html">stilt.transport.hysplit.HysplitModel.version</a></li>
@@ -740,6 +695,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transforms.AveragingKernel.html">stilt.transforms.AveragingKernel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transforms.AveragingKernel.apply.html">stilt.transforms.AveragingKernel.apply</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transforms.AveragingKernel.kernel.html">stilt.transforms.AveragingKernel.kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transforms.AveragingKernel.table_receptors.html">stilt.transforms.AveragingKernel.table_receptors</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transforms.PressureWeighting.html">stilt.transforms.PressureWeighting</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -815,11 +771,10 @@
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="hysplit.html">HYSPLIT Integration</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.html">stilt.transport.hysplit.HysplitConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.effective_maxpar.html">stilt.transport.hysplit.HysplitConfig.effective_maxpar</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.UNRECORDED.html">stilt.transport.hysplit.HysplitConfig.UNRECORDED</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.hourly_ziscale.html">stilt.transport.hysplit.HysplitConfig.hourly_ziscale</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.maxpar_for.html">stilt.transport.hysplit.HysplitConfig.maxpar_for</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.realizations.html">stilt.transport.hysplit.HysplitConfig.realizations</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.settings.html">stilt.transport.hysplit.HysplitConfig.settings</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.transport.hysplit.write_inputs.html">stilt.transport.hysplit.write_inputs</a></li>
@@ -1058,6 +1013,20 @@ write particle and footprint files without a project.</p>
 </table>
 </div>
 </section>
+<section id="output-of-stilt-r-and-x-stilt">
+<h2>Output of STILT-R and X-STILT<a class="headerlink" href="#output-of-stilt-r-and-x-stilt" title="Link to this heading">#</a></h2>
+<p><code class="xref py py-mod docutils literal notranslate"><span class="pre">stilt.migration</span></code> reads the <code class="docutils literal notranslate"><span class="pre">out/by-id</span></code> folder of a STILT-R or
+X-STILT project as receptors, particle tables, and footprints
+(<a class="reference internal" href="../guides/migration/stilt_r.html"><span class="doc">Coming From STILT-R</span></a>).</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.migration.read_stilt_r.html#stilt.migration.read_stilt_r" title="stilt.migration.read_stilt_r"><code class="xref py py-obj docutils literal notranslate"><span class="pre">migration.read_stilt_r</span></code></a></p></td>
+<td><p>Read STILT-R or X-STILT <code class="docutils literal notranslate"><span class="pre">by-id</span></code> output, one simulation at a time.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 <section id="what-the-particles-give-beyond-the-footprint">
 <h2>What the particles give beyond the footprint<a class="headerlink" href="#what-the-particles-give-beyond-the-footprint" title="Link to this heading">#</a></h2>
 <p>The background mole fraction at a receptor, from a field sampled where
@@ -1111,7 +1080,7 @@ A <a class="reference internal" href="_api/stilt.Grid.html#stilt.Grid" title="st
 <td><p>Regions made by merging the cells of a <code class="docutils literal notranslate"><span class="pre">Grid</span></code> or <code class="docutils literal notranslate"><span class="pre">Mesh</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.footprint.Geometry.html#stilt.footprint.Geometry" title="stilt.footprint.Geometry"><code class="xref py py-obj docutils literal notranslate"><span class="pre">footprint.Geometry</span></code></a></p></td>
-<td><p>Represent a union type</p></td>
+<td><p>A geometry a footprint can be aggregated onto.</p></td>
 </tr>
 </tbody>
 </table>
@@ -1146,16 +1115,21 @@ so each geometry’s weights are computed once per footprint grid.
 <p><code class="xref py py-mod docutils literal notranslate"><span class="pre">stilt.sampling</span></code> looks up a gridded field at points: a surface flux
 under a footprint or along particle paths (<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>,
 <code class="docutils literal notranslate"><span class="pre">particles.stilt.enhancement</span></code>), or a mole-fraction field at particle
-endpoints (<a class="reference internal" href="_api/stilt.particles.background.html#stilt.particles.background" title="stilt.particles.background"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.particles.background()</span></code></a>).</p>
+endpoints (<a class="reference internal" href="_api/stilt.particles.background.html#stilt.particles.background" title="stilt.particles.background"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.particles.background()</span></code></a>). <a class="reference internal" href="_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-func docutils literal notranslate"><span class="pre">sample_met()</span></code></a>
+reads ARL met files at particle positions, for the particle columns a
+transport model can write from the met.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.sampling.sample_field.html#stilt.sampling.sample_field" title="stilt.sampling.sample_field"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.sample_field</span></code></a></p></td>
 <td><p>Return the field's value in the cell nearest each point.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.sampling.vertical_dim.html#stilt.sampling.vertical_dim" title="stilt.sampling.vertical_dim"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.vertical_dim</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.sample_met</span></code></a></p></td>
+<td><p>Return the particles with met columns sampled from ARL files at each particle's position.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.sampling.vertical_dim.html#stilt.sampling.vertical_dim" title="stilt.sampling.vertical_dim"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.vertical_dim</span></code></a></p></td>
 <td><p>Return the name of a field's vertical dimension.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.sampling.nearest_cell.html#stilt.sampling.nearest_cell" title="stilt.sampling.nearest_cell"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.nearest_cell</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.sampling.nearest_cell.html#stilt.sampling.nearest_cell" title="stilt.sampling.nearest_cell"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.nearest_cell</span></code></a></p></td>
 <td><p>Return the index of the cell nearest each value, or <code class="docutils literal notranslate"><span class="pre">-1</span></code> outside the cells.</p></td>
 </tr>
 </tbody>
@@ -1217,6 +1191,7 @@ endpoints (<a class="reference internal" href="_api/stilt.particles.background.h
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#simulation-objects">Simulation objects</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#settings-and-their-hashes">Settings and their hashes</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#particles-and-footprints">Particles and footprints</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#output-of-stilt-r-and-x-stilt">Output of STILT-R and X-STILT</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-particles-give-beyond-the-footprint">What the particles give beyond the footprint</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#simulation-tables">Simulation tables</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spatial-geometries">Spatial geometries</a><ul class="pst-show_toc_level nav section-nav flex-column">

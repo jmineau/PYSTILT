@@ -1,0 +1,6 @@
+﻿stilt.output.completed
+======================
+
+.. currentmodule:: stilt.output
+
+.. autofunction:: completed

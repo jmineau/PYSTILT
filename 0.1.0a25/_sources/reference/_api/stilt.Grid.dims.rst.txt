@@ -1,0 +1,6 @@
+stilt.Grid.dims
+===============
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Grid.dims

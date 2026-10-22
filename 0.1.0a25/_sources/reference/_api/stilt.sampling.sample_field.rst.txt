@@ -1,0 +1,6 @@
+﻿stilt.sampling.sample\_field
+============================
+
+.. currentmodule:: stilt.sampling
+
+.. autofunction:: sample_field

@@ -30,6 +30,7 @@ Methods
 .. autosummary::
    :toctree:
 
+   ~HysplitModel.check_met
    ~HysplitModel.data_files
    ~HysplitModel.run
    ~HysplitModel.version

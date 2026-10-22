@@ -1,0 +1,6 @@
+stilt.footprint.FootprintAccessor.receptor
+==========================================
+
+.. currentmodule:: stilt.footprint
+
+.. autoproperty:: FootprintAccessor.receptor

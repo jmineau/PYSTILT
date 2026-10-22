@@ -1,0 +1,6 @@
+﻿stilt.spatial.horizontal\_dims
+==============================
+
+.. currentmodule:: stilt.spatial
+
+.. autofunction:: horizontal_dims

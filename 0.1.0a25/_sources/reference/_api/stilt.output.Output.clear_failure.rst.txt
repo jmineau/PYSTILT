@@ -1,0 +1,6 @@
+stilt.output.Output.clear\_failure
+==================================
+
+.. currentmodule:: stilt.output
+
+.. automethod:: Output.clear_failure

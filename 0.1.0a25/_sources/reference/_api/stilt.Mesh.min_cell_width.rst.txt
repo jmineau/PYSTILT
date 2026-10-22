@@ -1,0 +1,6 @@
+stilt.Mesh.min\_cell\_width
+===========================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Mesh.min_cell_width

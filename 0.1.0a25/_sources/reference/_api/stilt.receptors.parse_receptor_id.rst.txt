@@ -1,0 +1,6 @@
+﻿stilt.receptors.parse\_receptor\_id
+===================================
+
+.. currentmodule:: stilt.receptors
+
+.. autofunction:: parse_receptor_id

@@ -1,0 +1,6 @@
+stilt.ProjectConfig.declared
+============================
+
+.. currentmodule:: stilt
+
+.. automethod:: ProjectConfig.declared

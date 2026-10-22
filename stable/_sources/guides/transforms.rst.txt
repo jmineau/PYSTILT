@@ -51,8 +51,10 @@ Built-in transforms
    heights and pressures at their first output step. It evaluates the curve
    at each release height to get the release pressure. Each release height
    then stands for the slab of air centered on it, with the ground closing
-   the lowest slab. X-STILT gives each particle the layer below it instead,
-   which leaves a particle released at the surface almost no weight.
+   the lowest slab. HYSPLIT places each particle at random inside its own
+   slab of the column, so the slab around the release height is the air the
+   particle stands for. The :doc:`X-STILT migration page
+   <migration/x_stilt>` lists how this differs from X-STILT's weights.
 
    A multipoint receptor releases several particles from each point. They
    share one release height, so the point's slab is split evenly among
@@ -119,9 +121,10 @@ for you. Pass ``levels`` as one array per receptor, or as a single array
 when all kernels share one grid. When the footprint is made, the
 transform looks up the receptor's id in the table. The table is part of
 the project, so this works the same in a notebook, with ``stilt run``, and
-on Slurm workers. A receptor with no rows in the table raises an error.
-``table`` also takes the path of a Parquet or CSV file, relative to the
-project root.
+on Slurm workers. A receptor with no rows in the table raises an error, and
+``stilt check`` lists those receptors before a run, with the table's ids that
+match no receptor (:doc:`checking`). ``table`` also takes the path of a
+Parquet or CSV file, relative to the project root.
 
 In Python
 ---------
