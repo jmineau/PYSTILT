@@ -68,6 +68,7 @@ src/stilt/
   cli.py          Typer CLI, a thin adapter over Project and execution
   project.py      Project: inputs, the simulations table, run/submit, bulk reads
   check.py        check_project: what would stop a project's runs, from its inputs
+  migration.py    read_stilt_r: STILT-R and X-STILT by-id output, read with rdata
   output.py       Output: the output directory; `completed`, the completion rule
   simulation.py   Simulation: a frozen (receptor, variant, output) value
   config.py       ProjectConfig and Variant;  identity.py  settings records, hashes
@@ -184,8 +185,8 @@ format's quirks; never met files or data that is not ours to redistribute.
 - Exceptions live in `stilt/exceptions.py`, each subclassing `StiltError` and
   the builtin that describes it; a failed run is a `SimulationError`. Plain
   input checks raise builtins such as `ValueError`.
-- Extras: `geometry`, `visualization`, `download`, `sparse`, and `complete`,
-  which the `dev` group installs.
+- Extras: `geometry`, `visualization`, `download`, `sparse`, `stilt-r`, and
+  `complete`, which the `dev` group installs.
 
 ### Documentation
 
@@ -216,8 +217,7 @@ machine-written, is "Writing documentation" in `docs/development.rst`. Words:
 
 - Conventional Commits (`fix(slurm): ...`, `docs: ...`); user-visible changes
   go under `## [Unreleased]` in `CHANGELOG.md`. The version comes from git tags
-  (setuptools-scm); releasing is in CONTRIBUTING.md. **Do not cut a release or
-  push a tag unless the maintainer asks.**
+  (setuptools-scm). Releases are cut by the maintainer (CONTRIBUTING.md).
 - Open work is in [GitHub issues](https://github.com/jmineau/PYSTILT/issues);
   read one before working on it. Feature status lives in `docs/roadmap.rst`
   (update its row when a feature lands). Over-engineered code goes on the

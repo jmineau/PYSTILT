@@ -8,6 +8,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `stilt.migration.read_stilt_r(by_id_dir)` reads the `out/by-id` folder of
+  a STILT-R or X-STILT project, one simulation at a time, as a receptor, a
+  particle table with PYSTILT's column names, and the footprint (`None` for
+  a folder without a `_foot.nc`). The `.rds` files are read with rdata, in
+  the new `stilt-r` extra, so R is not needed. A run's second set of
+  particles with transport error, and footprints on projected grids, are
+  not read. A small `by-id` sample written by STILT-R's own code is in the
+  tests, and PYSTILT's footprint of the particles read from it matches the
+  footprint STILT-R wrote at `rtol=1e-7`.
 - `stilt.sampling.sample_met(particles, files, columns)` samples ARL met
   files at each particle's position and time and adds `mlht` (`PBLH`),
   `dens` (from `PRES`, `TEMP`, and `SPHU`), `pres` (`PRES`), or `zsfc`
