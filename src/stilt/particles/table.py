@@ -212,16 +212,23 @@ def particles_from_table(table: pa.Table, time: bool = True) -> pd.DataFrame:
     data = data.drop(columns=["date"], errors="ignore")
     if data.empty:
         return data
-    data["receptor"] = data["receptor"].astype(str)
+    # The receptor column is a dictionary of a few ids (a Categorical here), so
+    # the strings and the times are made once per id and taken for every row:
+    # converting each of millions of rows takes seconds.
+    receptor = data["receptor"]
+    if not isinstance(receptor.dtype, pd.CategoricalDtype):
+        receptor = receptor.astype("category")
+    ids = receptor.cat.categories.astype(str)
+    codes = receptor.cat.codes.to_numpy()
+    data["receptor"] = ids.take(codes)
     for name in _INT_COLUMNS:
         if name in data.columns:
             data[name] = data[name].astype("float64")
     if time and "age" in data.columns:
-        times = {r: parse_receptor_id(r)[0] for r in data["receptor"].unique()}
-        receptor_time = pd.to_datetime(data["receptor"].map(times))
-        data["time"] = receptor_time + pd.to_timedelta(
-            data["age"].to_numpy(), unit="min"
-        )
+        receptor_time = pd.to_datetime([parse_receptor_id(r)[0] for r in ids])
+        data["time"] = pd.Series(
+            receptor_time.take(codes), index=data.index
+        ) + pd.to_timedelta(data["age"].to_numpy(), unit="min")
     return data
 
 

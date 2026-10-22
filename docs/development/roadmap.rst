@@ -19,6 +19,8 @@ These parts are stable and covered by the test suite:
 - Variants, which run the same receptors under several named settings in one
   project. Transport-error ensembles and extra footprints are variants too.
 - Helpers for column and satellite observations
+- Reading the ``by-id`` output of STILT-R and X-STILT as receptors, particles,
+  and footprints (:func:`stilt.migration.read_stilt_r`)
 
 Footprints can also be summed onto other geometries. A footprint is computed
 on a rectangular grid and then summed onto a :class:`stilt.Grid`, a

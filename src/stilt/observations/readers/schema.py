@@ -13,15 +13,17 @@ from typing import Literal
 
 import pandas as pd
 
-#: When a reader returns a column: ``always``; ``kernel``, for every product
-#: with an averaging kernel (all but GGG ``.oof`` files); or ``optional``,
-#: when the product has it.
+#: When a reader returns a column. It is ``always``; ``kernel``, for every
+#: product with an averaging kernel (all but GGG ``.oof`` files); or
+#: ``optional``, when the product has it.
 When = Literal["always", "kernel", "optional"]
 
 #: Every column of a table of soundings, as ``{name: (when, meaning)}``.
-#: Vertical arrays run from the surface upward, pressures are in hPa,
-#: altitudes in meters above sea level, and azimuths in degrees clockwise
-#: from north toward the instrument or the sun.
+#: ``when`` is ``always``; ``kernel``, for every product with an averaging
+#: kernel (all but GGG ``.oof`` files); or ``optional``, when the product
+#: has it. Vertical arrays run from the surface upward, pressures are in
+#: hPa, altitudes in meters above sea level, and azimuths in degrees
+#: clockwise from north toward the instrument or the sun.
 SOUNDING_SCHEMA: dict[str, tuple[When, str]] = {
     "sounding_id": (
         "always",

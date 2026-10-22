@@ -8,6 +8,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `stilt.migration.read_stilt_r(by_id_dir)` reads the `out/by-id` folder of
+  a STILT-R or X-STILT project, one simulation at a time, as a receptor, a
+  particle table with PYSTILT's column names, and the footprint (`None` for
+  a folder without a `_foot.nc`). The `.rds` files are read with rdata, in
+  the new `stilt-r` extra, so R is not needed. A run's second set of
+  particles with transport error, and footprints on projected grids, are
+  not read. A small `by-id` sample written by STILT-R's own code is in the
+  tests, and PYSTILT's footprint of the particles read from it matches the
+  footprint STILT-R wrote at `rtol=1e-7`.
 - `stilt.sampling.sample_met(particles, files, columns)` samples ARL met
   files at each particle's position and time and adds `mlht` (`PBLH`),
   `dens` (from `PRES`, `TEMP`, and `SPHU`), `pres` (`PRES`), or `zsfc`
@@ -42,15 +51,43 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   contributors: the module map, how a run goes from a project to result
   files, the configuration internals, and implementation notes. The
   Development page explains how to write the docs and how their examples run.
+- `sim.plot.map()` takes `tiler` and `tiler_zoom`, as the footprint, particles,
+  and receptor maps do, to draw map tiles under a new map.
+- The maps in the docs are drawn on USGS shaded-relief tiles, which are kept in
+  the repository (`docs/_tiles`). Building the docs needs no network for them,
+  and every build draws the same maps.
+- The docs navigation is Getting Started, Tutorials, User Guide, API
+  Reference, and Development. The Coming From Another STILT pages are in the
+  User Guide. Development holds the Architecture page for contributors (the
+  module map, how a run goes from a project to result files, how PYSTILT
+  tracks finished work, the configuration internals, and implementation
+  notes), the STILT-R Parity page, and the Roadmap. The Internals section is
+  gone, and its page on finished work is in Architecture. These pages have new
+  addresses.
 
 ### Changed
 
+- `project.particles` is three to four times faster and takes less memory, with
+  the same table ([#252](https://github.com/jmineau/PYSTILT/issues/252)). The
+  receptor ids are made into strings once each, not for every row, and the
+  `realization` column is not built from a list. For 20 simulations (28.8
+  million rows), six columns without `time` take 3.2 s instead of 14.1 s and
+  peak at 4.8 GiB instead of 7.6; with `time` 8.4 s instead of 26.6; every
+  column 9.5 s instead of 27.5 and 8.4 GiB instead of 10.8.
 - `calc_footprint` is 6 to 110 times faster, with the same result. Each time
   step's smoothing kernel is now added at each grid cell that holds particles,
   as STILT-R's `permute.f90` does, instead of convolving the whole box around
   the particles. On five real 24 h runs of 1000 particles on a 300 x 300 grid,
   an hourly footprint takes 1.2 to 2.9 s instead of 8 to 260 s (STILT-R: 9 to
   17 s). Memory stays bounded when kernels are wide.
+- `project.status()`, `project.incomplete()`, and the plan `stilt submit` makes
+  take about a quarter less time on a large project, with the same result
+  ([#251](https://github.com/jmineau/PYSTILT/issues/251)). A receptor's date
+  folder is the first eight characters of its id, and the listing no longer
+  parses the id's time for each receptor. On a project of
+  233,660 simulations, `status()` takes 8.8 s instead of 11.6 s and
+  `incomplete()` 6.6 s instead of 9.2 s (medians of four runs, with the files
+  in the filesystem's cache).
 
 ### Fixed
 
@@ -90,6 +127,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `receptor.plot.map()` labels a column's heights, and a multipoint receptor's
   height colorbar, with the reference the receptor was given (`AGL` or `MSL`).
   It said `AGL` for both.
+- `sim.plot.map(show_receptor=False)` leaves the receptor off the map. It
+  marked the receptor anyway, and with the default it marked it twice, so the
+  legend listed "Receptor" twice and a multipoint receptor got two height
+  colorbars. `foot.stilt.plot.map()` has a new `show_receptor` argument
+  (default `True`), which `sim.plot.map()` uses to mark the receptor once.
 - The API pages of eight properties show their whole description. A colon in
   the first line had turned the words before it into a type, so
   `Project.name` read "the directory name." with "Type: The project's name"
@@ -118,6 +160,23 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   panel is titled with its clock time (`2021-01-15 00:00`; the midnight panel
   had no hour), and the title that was drawn over the top row is gone.
   `cbar_kwargs` can be passed.
+- `project.particles` returns the simulations in the order of the selection,
+  one variant (and realization) after another in the order they first
+  appear in it ([#250](https://github.com/jmineau/PYSTILT/issues/250)).
+  Each variant's receptors came back in an order that changed from one Python
+  process to the next, the order of a set of strings, which Python hashes
+  differently in every process.
+- The recipe in `stilt.particles.transport_error` for a variant with
+  `realizations: N` grouped the particles by `variant`, which merges the
+  realizations (and the receptors, for a selection of several) into one table:
+  `realizations` came out 1 and the variance was wrong. It now selects one
+  receptor and groups by `realization`, as `sim.transport_error` does, and a
+  test runs the docstring's example against `sim.transport_error`.
+- The Getting Started page and the sample project behind the outputs and
+  checking guides run with `krand: 2` and `seed: 42`. HYSPLIT's default,
+  `krand: 4`, draws its random numbers from the clock, so two docs builds of
+  one commit made different numbers and figures. The Getting Started example
+  shows the two settings.
 
 ## [0.1.0a24] - 2026-10-09
 

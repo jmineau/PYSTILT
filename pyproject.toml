@@ -58,11 +58,15 @@ download = [
 sparse = [
     "sparse>=0.15",
 ]
+stilt-r = [
+    "rdata>=1.0",
+]
 complete = [
     "pystilt[geometry]",
     "pystilt[visualization]",
     "pystilt[download]",
     "pystilt[sparse]",
+    "pystilt[stilt-r]",
 ]
 
 [dependency-groups]
@@ -140,7 +144,7 @@ layers = [
     "cli",
     "observations",
     "project : execution : config",
-    "check",
+    "check | migration",
     "simulation",
     "output",
     "footprint : identity : meteorology : transport",

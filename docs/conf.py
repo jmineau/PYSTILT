@@ -254,7 +254,10 @@ def reexported_data_comment(
 
 
 def setup(app: object) -> None:
-    """Register Sphinx hooks for API doc cleanup."""
+    """Register Sphinx hooks for API doc cleanup, and draw the docs' maps on tiles."""
+    import docs_examples
+
+    docs_examples.use_tiles()  # tiles kept in docs/_tiles: no network, the same every build
     app.connect("autodoc-skip-member", skip_pydantic_members)
     app.connect("autodoc-process-docstring", trim_class_docstrings)
     # Ahead of napoleon (priority 500), which reads the comment it gets.

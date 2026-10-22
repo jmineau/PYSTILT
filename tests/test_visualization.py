@@ -105,6 +105,29 @@ def minimal_footprint(receptor, grid):
     return as_footprint(data, receptor, config, "")
 
 
+def _receptor_marks(ax):
+    """Return the artists the receptor's map draws: its star, or a multipoint receptor's scatter."""
+    return [c for c in ax.collections if c.get_label() in ("Receptor", "Receptors")]
+
+
+def _legend_labels(ax):
+    """Return the labels in *ax*'s legend, in order (empty when it has none)."""
+    legend = ax.get_legend()
+    return [] if legend is None else [t.get_text() for t in legend.get_texts()]
+
+
+def _simulation(receptor, footprint=None, particles=None):
+    """Return a stand-in for a simulation with the given receptor, footprint and particles."""
+    from unittest.mock import MagicMock
+
+    sim = MagicMock()
+    sim.receptor = receptor
+    sim.footprint = footprint
+    sim.particles = particles
+    sim.id = "202301011200_test/hrrr"
+    return sim
+
+
 # ---------------------------------------------------------------------------
 # _make_ax
 # ---------------------------------------------------------------------------
@@ -300,6 +323,28 @@ def test_footprint_map_met_bounds(minimal_footprint, grid):
     assert ax is not None
 
 
+def test_footprint_map_marks_the_receptor_once(minimal_footprint):
+    ax = minimal_footprint.stilt.plot.map()
+    assert len(_receptor_marks(ax)) == 1
+    assert _legend_labels(ax) == ["Receptor"]
+
+
+def test_footprint_map_show_receptor_false(minimal_footprint):
+    ax = minimal_footprint.stilt.plot.map(show_receptor=False)
+    assert _receptor_marks(ax) == []
+    assert _legend_labels(ax) == []
+
+
+def test_footprint_map_show_receptor_false_keeps_the_legend_of_the_outlines(
+    minimal_footprint, grid
+):
+    ax = minimal_footprint.stilt.plot.map(
+        show_receptor=False, show_grid=True, met_bounds=grid
+    )
+    assert _receptor_marks(ax) == []
+    assert _legend_labels(ax) == ["Domain", "Met domain"]
+
+
 def test_footprint_facet_returns_fig_axes(minimal_footprint):
     fig, axes = minimal_footprint.stilt.plot.facet()
     assert fig is not None
@@ -466,6 +511,26 @@ def test_simulation_map_with_footprint(receptor, minimal_footprint):
     assert ax is not None
 
 
+def test_simulation_map_draws_the_tiler_under_a_new_map(receptor):
+    pytest.importorskip("cartopy")
+    from unittest.mock import MagicMock
+
+    class Tiler:
+        def image_for_domain(self, domain, zoom):
+            raise AssertionError("the map is not drawn in this test")
+
+    sim = MagicMock()
+    sim.receptor = receptor
+    sim.footprint = None
+    sim.particles = None
+    sim.id = "202301011200_test/hrrr"
+    tiler = Tiler()
+
+    ax = SimulationPlotAccessor(sim).map(tiler=tiler, tiler_zoom=5)
+
+    assert ax.img_factories == [[tiler, (5,), {}]]  # cartopy draws it with the map
+
+
 def test_simulation_map_met_bounds(receptor, grid):
     from unittest.mock import MagicMock
 
@@ -533,6 +598,50 @@ def test_simulation_map_show_receptor_false(receptor):
 
     ax = SimulationPlotAccessor(sim).map(show_receptor=False)
     assert ax is not None
+
+
+def test_simulation_map_marks_the_receptor_once(
+    receptor, minimal_footprint, minimal_trajectories
+):
+    """The footprint's map and the simulation's both mark the receptor; only one may."""
+    sim = _simulation(receptor, minimal_footprint, minimal_trajectories)
+    ax = SimulationPlotAccessor(sim).map()
+    assert len(_receptor_marks(ax)) == 1
+    assert _legend_labels(ax) == ["Domain", "Receptor"]
+
+
+def test_simulation_map_show_receptor_false_leaves_the_receptor_off(
+    receptor, minimal_footprint, minimal_trajectories
+):
+    sim = _simulation(receptor, minimal_footprint, minimal_trajectories)
+    ax = SimulationPlotAccessor(sim).map(show_receptor=False)
+    assert _receptor_marks(ax) == []
+    assert _legend_labels(ax) == ["Domain"]
+
+
+def test_simulation_map_without_a_footprint_marks_the_receptor_once(
+    receptor, minimal_trajectories
+):
+    sim = _simulation(receptor, particles=minimal_trajectories)
+    ax = SimulationPlotAccessor(sim).map()
+    assert len(_receptor_marks(ax)) == 1
+    assert _legend_labels(ax) == ["Receptor"]
+
+
+def test_simulation_map_multipoint_receptor_has_one_height_colorbar(
+    multi_receptor, grid
+):
+    times = [dt.datetime(2023, 1, 1, 12)]
+    data = xr.DataArray(
+        np.ones((1, 2, 2)),
+        dims=("time", "lat", "lon"),
+        coords={"time": times, "lat": [39.5, 40.5], "lon": [-113.5, -112.5]},
+    )
+    foot = as_footprint(data, multi_receptor, FootprintConfig(grid=grid), "")
+    ax = SimulationPlotAccessor(_simulation(multi_receptor, foot)).map()
+    label = f"Height {multi_receptor.altitude_ref.upper()} (m)"
+    assert [a.get_ylabel() for a in ax.figure.axes].count(label) == 1
+    assert len(_receptor_marks(ax)) == 1
 
 
 # ---------------------------------------------------------------------------
