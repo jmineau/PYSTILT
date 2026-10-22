@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a25] - 2026-10-22
+
 ### Added
 
 - `stilt.migration.read_stilt_r(by_id_dir)` reads the `out/by-id` folder of
