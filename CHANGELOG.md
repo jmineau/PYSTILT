@@ -15,6 +15,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Another STILT entry. The four pages keep their URLs; the old
   `guides/migration/index.html` page, which only the 0.1.0a25 docs had, is
   not redirected.
+- `stilt.migration.read_stilt_r` takes a receptor's release points from each
+  folder's `CONTROL` file, the numbers HYSPLIT read, instead of rounding the
+  `.rds` receptor to 15 significant digits; the time still comes from the
+  `.rds`. A folder without `CONTROL` raises `FileNotFoundError` naming it.
+- `read_stilt_r(by_id_dir, smooth_factor=None)`: a footprint's
+  `smooth_factor` comes from rslurm's `_rslurm_<project>/params.RDS` beside
+  `out/` (STILT-R's Slurm runs), used only when its `n_hours` and `numpar`
+  match the run's `CONTROL` and HYSPLIT settings, or else from the new
+  argument. Reading a footprint with neither now raises `ValueError`
+  (breaking: it used to give a silent 1). Folders without a `_foot.nc` need
+  neither. X-STILT keeps `params.RDS` elsewhere, so its footprints need the
+  argument.
 
 ## [0.1.0a25] - 2026-10-22
 

@@ -88,7 +88,11 @@ the ones that have an equivalent.
 Runs you already have in X-STILT's ``out/by-id`` folder are read with
 :func:`stilt.migration.read_stilt_r` (:doc:`stilt_r`). X-STILT weights the
 footprint by the averaging kernel and pressure weighting, but saves the
-particles before it does, so the particles read are unweighted.
+particles before it does, so the particles read are unweighted. X-STILT keeps
+rslurm's ``params.RDS`` in a folder named for the job inside its own working
+directory, not beside ``out/``, so give the ``smooth_factor`` of
+``run_xstilt.r`` to read the footprints:
+``read_stilt_r("out/by-id", smooth_factor=1)``.
 
 Where the methods differ
 ------------------------
