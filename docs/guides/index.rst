@@ -51,10 +51,22 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 - :doc:`hysplit_build`: run another HYSPLIT build, or your own land-use
   and terrain tables
 
+.. _coming-from-another-stilt:
+
 **Coming from another STILT**
 
-- :doc:`migration/index`: where the settings and steps of STILT-R, X-STILT,
-  stiltctl, and Jena STILT are in PYSTILT
+If you have used another STILT tool, these pages show where its settings and
+steps are in PYSTILT.
+
+- :doc:`migration/stilt_r`: where each ``run_stilt.r`` setting lives, and what
+  PYSTILT does differently
+- :doc:`migration/x_stilt`: the column and satellite workflow (receptors from
+  soundings, averaging kernels, backgrounds, and transport error)
+- :doc:`migration/stiltctl`: running STILT on cloud infrastructure, and what
+  replaces the work queue and the long-lived workers
+- :doc:`migration/jena_stilt`: the Jena ``stiltR`` code behind the ICOS
+  footprint service, how its footprints differ, and the settings that come
+  closest
 
 .. toctree::
    :hidden:
@@ -101,4 +113,7 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
    :hidden:
    :caption: Coming from another STILT
 
-   migration/index
+   migration/stilt_r
+   migration/x_stilt
+   migration/stiltctl
+   migration/jena_stilt

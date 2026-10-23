@@ -6,6 +6,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The Coming From Another STILT page of the docs is gone. Its list of the four
+  Coming From pages (STILT-R, X-STILT, stiltctl, and Jena STILT) is in the
+  User Guide's Coming from another STILT section, whose heading in the sidebar
+  now has those four pages directly under it instead of a second Coming From
+  Another STILT entry. The four pages keep their URLs; the old
+  `guides/migration/index.html` page, which only the 0.1.0a25 docs had, is
+  not redirected.
+
 ## [0.1.0a25] - 2026-10-22
 
 ### Added

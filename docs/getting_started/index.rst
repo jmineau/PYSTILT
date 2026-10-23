@@ -11,7 +11,8 @@ The :doc:`glossary` defines STILT's terms, such as receptor, footprint,
 ``numpar``, and ARL. Keep it open in another tab.
 
 Already know another STILT, such as STILT-R or X-STILT? Start with
-:doc:`../guides/migration/index`, then come back to the quickstart.
+:ref:`Coming from another STILT <coming-from-another-stilt>`, then come back
+to the quickstart.
 
 .. toctree::
    :maxdepth: 1
