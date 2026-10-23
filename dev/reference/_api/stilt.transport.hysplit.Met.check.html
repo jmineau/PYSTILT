@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=e1bc1ba2"></script>
+    <script src="../../_static/documentation_options.js?v=04b1787c"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="stilt.transport.hysplit.Met.crop_dir" href="stilt.transport.hysplit.Met.crop_dir.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev39+g58e547e8b" />
+  <meta name="docsearch:version" content="0.1.0a26.dev1+gb4391d1b0" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -868,7 +868,7 @@ partway, a missing time step, or records lost to null bytes.
 HYSPLIT then stops its particles where the damage starts, and when
 some of them have left the met’s domain first, its log does not say
 why. Each file is checked once in a process
-(<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.File.check.html#arlmet.File.check" title="(in arl-met v0.1.0b3)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">arlmet.File.check()</span></code></a>), and together their time steps must
+(<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.File.check.html#arlmet.File.check" title="(in arl-met v0.1.0b4)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">arlmet.File.check()</span></code></a>), and together their time steps must
 reach from the first time the run needs to the last, with no gap
 wider than their spacing. That also finds a file cut after a whole
 time step, which looks whole to arlmet.</p>

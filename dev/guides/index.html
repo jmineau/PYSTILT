@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=e1bc1ba2"></script>
+    <script src="../_static/documentation_options.js?v=04b1787c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Tutorial: A Satellite Column, Start To Finish" href="../tutorials/satellite_column.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25.dev39+g58e547e8b" />
+  <meta name="docsearch:version" content="0.1.0a26.dev1+gb4391d1b0" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -444,13 +444,10 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1 has-children"><a class="reference internal" href="migration/index.html">Coming From Another STILT</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="migration/stilt_r.html">Coming From STILT-R</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migration/x_stilt.html">Coming From X-STILT</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migration/stiltctl.html">Coming From stiltctl</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migration/jena_stilt.html">Coming From Jena STILT</a></li>
-</ul>
-</details></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/stilt_r.html">Coming From STILT-R</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/x_stilt.html">Coming From X-STILT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/stiltctl.html">Coming From stiltctl</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/jena_stilt.html">Coming From Jena STILT</a></li>
 </ul>
 </div>
 </nav></div>
@@ -559,10 +556,19 @@ receptors, kernels, and modeled enhancements</p></li>
 <li><p><a class="reference internal" href="hysplit_build.html"><span class="doc">Your Own HYSPLIT Build And Data Tables</span></a>: run another HYSPLIT build, or your own land-use
 and terrain tables</p></li>
 </ul>
-<p><strong>Coming from another STILT</strong></p>
+<p id="coming-from-another-stilt"><strong>Coming from another STILT</strong></p>
+<p>If you have used another STILT tool, these pages show where its settings and
+steps are in PYSTILT.</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="migration/index.html"><span class="doc">Coming From Another STILT</span></a>: where the settings and steps of STILT-R, X-STILT,
-stiltctl, and Jena STILT are in PYSTILT</p></li>
+<li><p><a class="reference internal" href="migration/stilt_r.html"><span class="doc">Coming From STILT-R</span></a>: where each <code class="docutils literal notranslate"><span class="pre">run_stilt.r</span></code> setting lives, and what
+PYSTILT does differently</p></li>
+<li><p><a class="reference internal" href="migration/x_stilt.html"><span class="doc">Coming From X-STILT</span></a>: the column and satellite workflow (receptors from
+soundings, averaging kernels, backgrounds, and transport error)</p></li>
+<li><p><a class="reference internal" href="migration/stiltctl.html"><span class="doc">Coming From stiltctl</span></a>: running STILT on cloud infrastructure, and what
+replaces the work queue and the long-lived workers</p></li>
+<li><p><a class="reference internal" href="migration/jena_stilt.html"><span class="doc">Coming From Jena STILT</span></a>: the Jena <code class="docutils literal notranslate"><span class="pre">stiltR</span></code> code behind the ICOS
+footprint service, how its footprints differ, and the settings that come
+closest</p></li>
 </ul>
 <div class="toctree-wrapper compound">
 </div>

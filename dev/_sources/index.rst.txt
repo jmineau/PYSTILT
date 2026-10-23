@@ -54,8 +54,9 @@ laptop or tens of thousands on an HPC cluster.
       into modeled concentrations, and scale up on a Slurm cluster.
 
    .. grid-item-card:: :fas:`right-left` Coming from another STILT?
-      :link: guides/migration/index
-      :link-type: doc
+      :link: coming-from-another-stilt
+      :link-type: ref
+      :link-alt: Coming from another STILT
 
       Where the settings and steps of STILT-R, X-STILT, stiltctl, and Jena
       STILT are in PYSTILT.
