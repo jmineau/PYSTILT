@@ -4,10 +4,14 @@ Reading what STILT-R and X-STILT wrote.
 STILT-R writes each simulation to its own folder of ``out/by-id``, named by
 the simulation id. X-STILT runs STILT-R's code and writes the same layout::
 
-    out/by-id/
-      201507050000_-111.85_40.77_5/
-        201507050000_-111.85_40.77_5_traj.rds   receptor, particles, HYSPLIT settings
-        201507050000_-111.85_40.77_5_foot.nc    footprint
+    my_project/
+      out/by-id/
+        201507050000_-111.85_40.77_5/
+          201507050000_-111.85_40.77_5_traj.rds   receptor time, particles
+          201507050000_-111.85_40.77_5_foot.nc    footprint
+          CONTROL                                 the release points HYSPLIT read
+      _rslurm_my_project/
+        params.RDS                                every run's settings (Slurm runs only)
 
 :func:`read_stilt_r` reads these folders as PYSTILT's receptors, particle
 tables, and footprints. The ``.rds`` files are read with the
@@ -20,7 +24,7 @@ from __future__ import annotations
 import warnings
 from collections.abc import Iterator, Mapping
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -29,8 +33,11 @@ import xarray as xr
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _footprint_array
 from stilt.particles import check_particles
-from stilt.receptors import ColumnReceptor, Receptor
+from stilt.receptors import Receptor
 from stilt.spatial import Grid
+
+if TYPE_CHECKING:
+    from stilt.transport.hysplit.control import ControlFile
 
 #: PYSTILT's names for STILT-R's particle columns. HYSPLIT's driver renames
 #: the first four the same way; ``xhgt`` is the release height STILT-R adds
@@ -45,10 +52,16 @@ _COLUMNS = {
 
 _TRAJ = "_traj.rds"
 _FOOT = "_foot.nc"
+_CONTROL = "CONTROL"
+
+#: The columns of rslurm's ``params.RDS`` that are read: the footprint's
+#: smoothing, and two settings that must match the run's own files.
+_PARAMS_COLUMNS = ("smooth_factor", "n_hours", "numpar")
 
 
 def read_stilt_r(
     by_id_dir: str | Path,
+    smooth_factor: float | None = None,
 ) -> Iterator[tuple[Receptor, pd.DataFrame, xr.DataArray | None]]:
     """
     Read STILT-R or X-STILT ``by-id`` output, one simulation at a time.
@@ -61,6 +74,14 @@ def read_stilt_r(
     them. The folders are read in name order, which is time order, and each
     one only when the loop reaches it.
 
+    The receptor's release points are the ones in the folder's ``CONTROL``
+    file, the numbers HYSPLIT read, so a point receptor's id is the folder's
+    name. Its time is the ``.rds`` file's, which keeps the seconds that
+    ``CONTROL`` drops. A receptor with one release point is a
+    :class:`~stilt.PointReceptor`, two heights at one place are a
+    :class:`~stilt.ColumnReceptor`, and release points at different places,
+    such as X-STILT's slant columns, are a :class:`~stilt.MultiPointReceptor`.
+
     The particle columns get PYSTILT's names: ``indx``, ``time``, ``long``,
     ``lati``, and ``xhgt`` become ``particle``, ``age`` (minutes since
     release), ``lon``, ``lat``, and ``release_height``. ``time`` is then the
@@ -70,25 +91,24 @@ def read_stilt_r(
 
     The footprint is ``<id>_foot.nc``, on the grid its file gives, with
     layers stamped at the receptor time plus whole hours, as STILT-R stamps
-    them. Its settings hold that grid and ``time_integrate`` (true for a
-    backward run with one layer at the receptor time). The file does not
-    record ``smooth_factor``, so the settings give the default of 1, which
-    is STILT-R's default too. Other ``_foot.nc`` files in the folder, such as
-    X-STILT's footprints at other resolutions, are not read.
-
-    The receptor's coordinates are the ones HYSPLIT ran, to the 15
-    significant digits STILT-R writes in its CONTROL file and simulation id,
-    so a point receptor's id is the folder's name. A receptor with one
-    release point is a :class:`~stilt.PointReceptor`. Several heights at one
-    place are a :class:`~stilt.ColumnReceptor` from the lowest to the
-    highest, as STILT-R spreads its particles; release points at different
-    places, such as X-STILT's slant columns, are a
-    :class:`~stilt.MultiPointReceptor`.
+    them. Its settings hold that grid, ``time_integrate`` (true for a
+    backward run with one layer at the receptor time), and
+    ``smooth_factor``. The footprint file does not record ``smooth_factor``.
+    It comes from ``params.RDS``, which STILT-R's Slurm runs (rslurm) leave
+    in ``_rslurm_<project>/`` beside ``out/``, or else from the
+    *smooth_factor* argument. ``params.RDS`` is used only when its
+    ``n_hours`` and ``numpar`` are the run's (``CONTROL``, and the HYSPLIT
+    settings the ``.rds`` saved). Other ``_foot.nc`` files in the folder,
+    such as X-STILT's footprints at other resolutions, are not read.
 
     Parameters
     ----------
     by_id_dir : str or Path
         The ``by-id`` folder, such as ``my_project/out/by-id``.
+    smooth_factor : float, optional
+        The ``smooth_factor`` STILT-R made the footprints with, for a project
+        without ``params.RDS`` (one run without Slurm). Not needed to read
+        folders without a footprint.
 
     Yields
     ------
@@ -105,20 +125,24 @@ def read_stilt_r(
     ImportError
         If the rdata package is not installed.
     FileNotFoundError
-        If *by_id_dir* does not exist, or no folder in it holds a
-        ``_traj.rds`` file.
+        If *by_id_dir* does not exist, no folder in it holds a ``_traj.rds``
+        file, or a folder that does has no ``CONTROL`` file.
     ValueError
         When a simulation is read, if its files are not as STILT-R writes
-        them: a ``_traj.rds`` without the particle columns or the receptor,
-        or a footprint on a projected grid (only longitude/latitude grids
-        are read) or with layers that are not whole hours from the
-        receptor time.
+        them: a ``_traj.rds`` without the particle columns or the receptor
+        time, a ``CONTROL`` file that cannot be read, or a footprint on a
+        projected grid (only longitude/latitude grids are read) or with
+        layers that are not whole hours from the receptor time. When a
+        footprint is read, if its ``smooth_factor`` is not known (no
+        ``params.RDS`` and no *smooth_factor*), if ``params.RDS`` disagrees
+        with the run's ``n_hours`` or ``numpar``, or if it records a
+        ``smooth_factor`` other than *smooth_factor* or more than one.
 
     Warns
     -----
     UserWarning
         When folders hold a ``_foot.nc`` but no ``_traj.rds``. They are
-        skipped: the receptor is read from the ``.rds``.
+        skipped: the particles are read from the ``.rds``.
 
     Notes
     -----
@@ -133,6 +157,11 @@ def read_stilt_r(
     --------
     >>> for receptor, particles, foot in stilt.migration.read_stilt_r("out/by-id"):
     ...     print(receptor.id, len(particles), foot is not None)
+
+    A project run on one machine has no ``params.RDS``; give the
+    ``smooth_factor`` from its ``run_stilt.r``:
+
+    >>> sims = stilt.migration.read_stilt_r("out/by-id", smooth_factor=1)
     """
     root = Path(by_id_dir)
     if not root.is_dir():
@@ -152,8 +181,16 @@ def read_stilt_r(
             f"file, and are skipped (the first is {orphans[0].name}).",
             stacklevel=2,
         )
+    no_control = [p for p in runs if not (p / _CONTROL).is_file()]
+    if no_control:
+        raise FileNotFoundError(
+            f"{len(no_control)} folders of {root} have no {_CONTROL} file, the "
+            f"first {no_control[0]}. The receptor is read from the {_CONTROL} "
+            "file STILT-R writes in every by-id folder."
+        )
     rdata = _rdata()
-    return (_read_simulation(folder, rdata) for folder in runs)
+    params = _rslurm_params(root, rdata)
+    return (_read_simulation(folder, rdata, params, smooth_factor) for folder in runs)
 
 
 def _rdata() -> Any:
@@ -199,50 +236,113 @@ def _read_rds(path: Path, rdata: Any) -> dict[str, Any]:
     return {str(k): v for k, v in output.items()}
 
 
-def _values(value: Any) -> np.ndarray:
+def _rslurm_params(
+    by_id: Path, rdata: Any
+) -> tuple[Path, dict[str, set[float]]] | None:
     """
-    Return a receptor coordinate as HYSPLIT got it: a flat float array, to 15 significant digits.
+    Return rslurm's ``params.RDS`` of a STILT-R project, and the values of its columns that are read.
 
-    STILT-R writes the release points into HYSPLIT's CONTROL file, and its
-    simulation id, with R's ``paste``, which keeps 15 significant digits.
-    X-STILT may store a coordinate as a list of vectors.
+    ``stilt_apply`` hands rslurm one row per simulation, holding every
+    argument of ``simulation_step``, and rslurm saves them in
+    ``_rslurm_<job name>/params.RDS``. The job name is the project folder's
+    name, the folder ``out/`` is in. ``None`` when there is no such file, as
+    after a run without Slurm. Columns of R functions (the
+    ``before_trajec`` and ``before_footprint`` hooks) cannot be converted,
+    so only the columns needed are.
     """
-    if isinstance(value, (list, tuple)):
-        parts = [np.ravel(np.asarray(v, dtype=float)) for v in value]
-        flat = np.concatenate(parts) if parts else np.array([], dtype=float)
-    else:
-        flat = np.ravel(np.asarray(value, dtype=float))
-    return np.array([float(f"{v:.15g}") for v in flat])
+    project = by_id.resolve().parent.parent
+    path = project / f"_rslurm_{project.name}" / "params.RDS"
+    if not path.is_file():
+        return None
+    table = rdata.parser.parse_file(path, extension=".rds").object
+    convert = rdata.conversion.SimpleConverter().convert
+    attrs = rdata.conversion.convert_attrs(table, convert)
+    names = [str(name) for name in attrs.get("names", [])]
+    if "data.frame" not in [str(c) for c in attrs.get("class", [])]:
+        raise ValueError(f"{path} is not a table of STILT-R runs.")
+    values = {
+        name: {float(v) for v in np.ravel(convert(table.value[names.index(name)]))}
+        for name in _PARAMS_COLUMNS
+        if name in names
+    }
+    return path, values
 
 
-def _receptor(stored: Any, path: Path) -> Receptor:
-    """Return the receptor a ``_traj.rds`` file records (``run_time``, ``long``, ``lati``, ``zagl``)."""
-    stored = {str(k): v for k, v in (stored or {}).items()}
-    missing = [k for k in ("run_time", "long", "lati", "zagl") if k not in stored]
-    if missing:
-        raise ValueError(f"{path}: the receptor has no {', '.join(missing)}.")
-    lon, lat, zagl = (_values(stored[k]) for k in ("long", "lati", "zagl"))
-    n = max(lon.size, lat.size, zagl.size)
-    try:
-        lon, lat, zagl = (np.broadcast_to(v, n) for v in (lon, lat, zagl))
-    except ValueError:
+def _smooth_factor(
+    foot: Path,
+    n_hours: int,
+    stored_params: Any,
+    rslurm: tuple[Path, dict[str, set[float]]] | None,
+    given: float | None,
+) -> float:
+    """
+    Return the ``smooth_factor`` a STILT-R footprint was made with.
+
+    It is rslurm's ``params.RDS`` value when that file's ``n_hours`` is the
+    run's ``CONTROL`` value and its ``numpar`` the one HYSPLIT ran (the
+    ``.rds`` file's ``params``, when it has them); otherwise the value given.
+    """
+    if rslurm is None:
+        if given is None:
+            raise ValueError(
+                f"{foot}: the footprint's smooth_factor is not recorded. STILT-R's "
+                "Slurm runs record it in _rslurm_<project>/params.RDS beside out/, "
+                "and this project has none. Give the value from run_stilt.r: "
+                "read_stilt_r(by_id_dir, smooth_factor=1)."
+            )
+        return given
+    path, values = rslurm
+    stored = {str(k): v for k, v in (stored_params or {}).items()}
+    ran = {"n_hours": float(n_hours)}
+    if "numpar" in stored:
+        ran["numpar"] = float(np.ravel(stored["numpar"])[0])
+    for name, value in ran.items():
+        if values.get(name) != {value}:
+            recorded = ", ".join(f"{v:g}" for v in sorted(values.get(name, ())))
+            raise ValueError(
+                f"{foot}: {path} and this run disagree: it gives {name} "
+                f"{recorded or 'no value'}, and the run's files give {value:g}. "
+                "That params.RDS is not from this run."
+            )
+    smooth = sorted(values.get("smooth_factor", ()))
+    if len(smooth) != 1:
         raise ValueError(
-            f"{path}: the receptor's long, lati, and zagl have {lon.size}, "
-            f"{lat.size}, and {zagl.size} values."
-        ) from None
-    # STILT-R releases every point at the first run_time (write_control).
-    time = pd.DatetimeIndex(stored["run_time"])[0]
-    if n > 1 and np.unique(lon).size == 1 and np.unique(lat).size == 1:
-        # STILT-R releases a column's particles evenly from the lowest
-        # height to the highest (its xhgt), however many heights it is given.
-        return ColumnReceptor(
-            time=time,
-            longitude=float(lon[0]),
-            latitude=float(lat[0]),
-            bottom=float(zagl.min()),
-            top=float(zagl.max()),
+            f"{path} gives smooth_factor {', '.join(f'{v:g}' for v in smooth) or 'no value'}; "
+            "one value is needed to read the footprints."
         )
-    return Receptor.from_points(time, zip(lon, lat, zagl, strict=True))
+    if given is not None and given != smooth[0]:
+        raise ValueError(
+            f"smooth_factor={given:g} was given, but {path} records "
+            f"{smooth[0]:g} for this project's runs."
+        )
+    return smooth[0]
+
+
+def _control(path: Path) -> ControlFile:
+    """Return a run's ``CONTROL`` file, read as PYSTILT reads its own."""
+    # STILT-R runs HYSPLIT, so its CONTROL file is HYSPLIT's.
+    from stilt.transport.hysplit.control import ControlFile
+
+    try:
+        return ControlFile.read(path)
+    except (ValueError, IndexError) as error:
+        raise ValueError(f"{path} cannot be read as a CONTROL file: {error}") from None
+
+
+def _receptor(stored: Any, control: ControlFile, path: Path) -> Receptor:
+    """
+    Return the receptor of a run: its release points from ``CONTROL``, its time from the ``.rds``.
+
+    STILT-R writes ``CONTROL``'s time to the minute; the ``.rds`` keeps the
+    seconds. Every point is released at the first ``run_time``
+    (``write_control``).
+    """
+    stored = {str(k): v for k, v in (stored or {}).items()}
+    if "run_time" not in stored:
+        raise ValueError(f"{path}: the receptor has no run_time.")
+    time = pd.DatetimeIndex(stored["run_time"])[0]
+    points = [(lon, lat, alt) for lat, lon, alt in control.receptor.coords()]
+    return Receptor.from_points(time, points)
 
 
 def _particles(stored: pd.DataFrame, receptor: Receptor, path: Path) -> pd.DataFrame:
@@ -272,7 +372,9 @@ def _axis(centers: np.ndarray, name: str, path: Path) -> tuple[float, float, flo
     )
 
 
-def _footprint(path: Path, receptor: Receptor, backward: bool) -> xr.DataArray:
+def _footprint(
+    path: Path, receptor: Receptor, backward: bool, smooth_factor: float
+) -> xr.DataArray:
     """
     Return a STILT-R ``_foot.nc`` as a PYSTILT footprint.
 
@@ -313,25 +415,34 @@ def _footprint(path: Path, receptor: Receptor, backward: bool) -> xr.DataArray:
             f"receptor time {receptor.time}."
         )
     integrated = backward and hours.size == 1 and hours[0] == 0
-    config = FootprintConfig(grid=grid, time_integrate=bool(integrated))
+    config = FootprintConfig(
+        grid=grid, smooth_factor=smooth_factor, time_integrate=bool(integrated)
+    )
     values = foot.to_numpy().astype("float64")
     return _footprint_array(values, hours.astype(int), receptor, config, "", x, y)
 
 
 def _read_simulation(
-    folder: Path, rdata: Any
+    folder: Path,
+    rdata: Any,
+    rslurm: tuple[Path, dict[str, set[float]]] | None,
+    smooth_factor: float | None,
 ) -> tuple[Receptor, pd.DataFrame, xr.DataArray | None]:
     """Return the receptor, particles, and footprint of one ``by-id`` folder."""
     traj = folder / f"{folder.name}{_TRAJ}"
     output = _read_rds(traj, rdata)
-    receptor = _receptor(output.get("receptor"), traj)
+    control = _control(folder / _CONTROL)
+    receptor = _receptor(output.get("receptor"), control, traj)
     particles = _particles(output["particle"], receptor, traj)
     foot_path = folder / f"{folder.name}{_FOOT}"
     if not foot_path.is_file():
         return receptor, particles, None
+    smooth = _smooth_factor(
+        foot_path, control.n_hours, output.get("params"), rslurm, smooth_factor
+    )
     # STILT-R reads the run's direction the same way (calc_footprint).
     backward = bool(np.median(particles["age"]) < 0)
-    return receptor, particles, _footprint(foot_path, receptor, backward)
+    return receptor, particles, _footprint(foot_path, receptor, backward, smooth)
 
 
 __all__ = ["read_stilt_r"]

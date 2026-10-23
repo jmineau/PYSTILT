@@ -1,10 +1,12 @@
 """
 ``stilt.migration.read_stilt_r`` on a ``by-id`` folder the pinned STILT-R writes.
 
-``fixtures/r_helpers/write_by_id.r`` writes the folder with STILT-R's own
-``saveRDS`` and ``calc_footprint``, as it wrote the committed sample, and R
-reads it back with ``readRDS``. The reader must give the same receptor time
-and the same particles as R, and the same footprint as the file.
+``fixtures/r_helpers/write_by_id.r`` writes a project with STILT-R's own
+``write_control``, ``saveRDS`` and ``calc_footprint``, as it wrote the
+committed sample, and R reads it back with ``readRDS``. The reader must give
+the same receptor time and the same particles as R, the release points of
+``CONTROL``, and the same footprint as the file, made with the
+``smooth_factor`` of ``params.RDS``.
 """
 
 from __future__ import annotations
@@ -51,13 +53,14 @@ _PYSTILT_NAMES = {
 @pytest.fixture(scope="module")
 def written(rscript, r_stilt_dir, tmp_path_factory) -> tuple[Path, Path]:
     """Return a by-id folder STILT-R wrote, and a folder of what R reads from it."""
-    root = tmp_path_factory.mktemp("stilt_r_by_id")
-    by_id, dumped = root / "by-id", root / "dumped"
+    root = tmp_path_factory.mktemp("stilt_r")
+    project, dumped = root / "project", root / "dumped"
+    by_id = project / "out" / "by-id"
     dumped.mkdir()
     script = root / "dump.r"
     script.write_text(_DUMP)
     for command in (
-        [rscript, str(_R_HELPERS / "write_by_id.r"), str(r_stilt_dir), str(by_id)],
+        [rscript, str(_R_HELPERS / "write_by_id.r"), str(r_stilt_dir), str(project)],
         [rscript, str(script), str(by_id), str(dumped)],
     ):
         result = subprocess.run(command, capture_output=True, text=True)
@@ -74,6 +77,11 @@ def test_receptor_time_and_particles_are_what_r_reads(written):
     for name, (receptor, particles, _) in zip(names, sims, strict=True):
         seconds = float((dumped / f"{name}_time.txt").read_text())
         assert pd.Timestamp(receptor.time) == pd.Timestamp(seconds, unit="s")
+        lines = (by_id / name / "CONTROL").read_text().splitlines()
+        points = [
+            tuple(map(float, line.split())) for line in lines[2 : 2 + int(lines[1])]
+        ]
+        assert receptor.coords() == points
         from_r = pd.read_csv(
             dumped / f"{name}_particles.csv", float_precision="round_trip"
         ).rename(columns=_PYSTILT_NAMES)
@@ -92,3 +100,4 @@ def test_footprint_is_the_file_written(written):
         stamps = pd.to_datetime(raw["time"].to_numpy(), unit="s")
         np.testing.assert_array_equal(foot["time"].to_numpy(), stamps.to_numpy())
         np.testing.assert_array_equal(foot.to_numpy(), raw.to_numpy().astype(float))
+        assert foot.stilt.config.smooth_factor == 0.5
