@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=57967572"></script>
+    <script src="../_static/documentation_options.js?v=91a04d29"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -63,7 +63,7 @@
     <link rel="prev" title="Summing Footprints: Areas And The Jacobian" href="aggregation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev2+g99984e27e" />
+  <meta name="docsearch:version" content="0.1.0a26.dev3+ga3c4b9f60" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -587,7 +587,9 @@ and a rerun reproduces every realization exactly.</p></li>
 <p>PYSTILT rejects any other setting when it reads the config, because every
 realization would get the same draw. Each realization is its own
 simulation, so a rerun only does the missing ones. You can raise
-<code class="docutils literal notranslate"><span class="pre">realizations</span></code> later and only the new realizations run.</p>
+<code class="docutils literal notranslate"><span class="pre">realizations</span></code> later and only the new realizations run. If the variant
+also has a grid, <a class="reference internal" href="aggregation.html#jacobian-per-realization"><span class="std std-ref">One Jacobian per realization</span></a> shows a Jacobian for each
+realization.</p>
 <p>Pass all the realizations to <code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code> as a list. It averages
 them before taking the difference:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
