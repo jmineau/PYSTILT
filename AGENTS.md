@@ -60,7 +60,7 @@ scheduler or compute root; `stilt.execution.run` and `submit` start the
 workers. **Tables are plain DataFrames; the verbs are on `Project`**: a
 selection of `project.simulations` (any table with `receptor` and `variant`
 columns, or a mask) goes to `status`, `incomplete`, `particles`, `footprints`,
-or `jacobian`. Do not wrap the table in a class again. `Output` has no folder
+`jacobian`, or `transport_error`. Do not wrap the table in a class again. `Output` has no folder
 classes. `stilt.__all__` (and each subpackage's) is the public surface.
 
 ```

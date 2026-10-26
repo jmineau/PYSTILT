@@ -33,9 +33,10 @@ from stilt.config import STARTER_CONFIG, ProjectConfig, Variant
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import Geometry, Jacobian
 from stilt.footprint.aggregation import _jacobian
-from stilt.footprint.io import open_footprints
+from stilt.footprint.io import _threads, open_footprints
 from stilt.output import Kind, Output, completed
-from stilt.particles import particles_from_table
+from stilt.particles import particles_from_table, read_particles
+from stilt.particles.transport_error import _transport_errors
 from stilt.receptors import Receptor, read_receptors
 from stilt.receptors.table import (
     COLUMNS,
@@ -554,7 +555,8 @@ class Project:
         transport model), then the other columns of :attr:`receptors`. Rows
         run receptor by receptor, with variants in config order. Select rows as in pandas
         and pass the selection to :meth:`status`, :meth:`incomplete`,
-        :meth:`particles`, :meth:`footprints`, or :meth:`jacobian`.
+        :meth:`particles`, :meth:`footprints`, :meth:`jacobian`, or
+        :meth:`transport_error`.
 
         Examples
         --------
@@ -1049,6 +1051,137 @@ class Project:
             geometry_hash=variant.geometry_hash,
             workers=workers,
         )
+
+    def transport_error(
+        self,
+        sel: Any,
+        error: str,
+        flux: xr.DataArray,
+        *,
+        workers: int | None = None,
+        **options: Any,
+    ) -> pd.DataFrame:
+        """
+        Return the transport error of each selected simulation's modeled enhancement.
+
+        The same estimate as ``sim.transport_error``, for every selected
+        receptor at once (Lin and Gerbig, 2005; the *Transport Error* guide).
+        *sel* is the unperturbed run, and *error* names the wind-error
+        variant of the same receptors. Every realization of *error* that has
+        run is averaged, so a receptor whose ensemble is still running gets
+        an estimate from the realizations it has.
+
+        Receptors are read and estimated one at a time, in *workers*
+        threads. Each thread holds one receptor's particle tables: the
+        unperturbed one and one per realization.
+
+        Parameters
+        ----------
+        sel : DataFrame or mask
+            The simulations, as for :meth:`status`, all of one variant that
+            runs once (no ``realizations``).
+        error : str
+            The wind-error variant, such as ``"hrrr-err"``.
+        flux : xarray.DataArray
+            Surface flux field, in µmol m⁻² s⁻¹, the same for every receptor.
+        workers : int, optional
+            Threads that read and estimate receptors. Defaults to the CPUs
+            this process may use (in a Slurm job, the job's), at most 8.
+        **options
+            Passed to :func:`stilt.particles.transport_error`: ``levels``,
+            ``length_scale``, ``percentile``, ``noise_splits``, and
+            ``background``.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The selection with six more columns, from
+            :class:`~stilt.particles.TransportError`: ``enhancement``,
+            ``enhancement_perturbed``, ``background``, ``variance``,
+            ``noise``, and ``realizations`` (how many realizations of
+            *error* were averaged). A receptor without particles in the
+            selected variant or in any realization of *error* gets NaN and
+            ``realizations`` 0.
+
+        Raises
+        ------
+        KeyError
+            If the project has no variant named *error*.
+        ValueError
+            If the selection holds more or fewer than one variant, that
+            variant is an ensemble, or it is *error* itself.
+
+        Notes
+        -----
+        Each receptor's particles are read whole. A table of 1.4 million
+        rows takes about a second to read, so a selection of hundreds of
+        receptors takes minutes. The per-level tables of
+        :class:`~stilt.particles.TransportError` are not kept; get them for
+        one receptor with ``sim.transport_error``.
+
+        Examples
+        --------
+        >>> sims = project.simulations
+        >>> wbb = sims[(sims.variant == "hrrr") & (sims.site == "WBB")]
+        >>> errors = project.transport_error(wbb, "hrrr-err", flux)
+        >>> errors.groupby(errors.time.dt.month).variance.median()
+        """
+        frame = self._selected(sel)
+        name, _ = _one_group(frame, "A transport error")
+        variant = self.variants[name]
+        if variant.realizations is not None:
+            raise ValueError(
+                f"Variant {name!r} is an ensemble (realizations: "
+                f"{variant.realizations}); the selection is the unperturbed run, "
+                "a variant that runs once."
+            )
+        if error not in self.variants:
+            raise KeyError(
+                f"No variant {error!r}; the variants are {list(self.variants)}."
+            )
+        if error == name:
+            raise ValueError(
+                f"The selection is of {error!r} itself; select the unperturbed variant."
+            )
+        perturbed = self.variants[error]
+        requested = list(dict.fromkeys(frame["receptor"]))
+        have = self.output.present("particles", variant, requested)
+        ran = {
+            k: self.output.present("particles", perturbed, requested, k)
+            for k in perturbed.realization_numbers
+        }
+        # Each receptor with both sides, and the realizations of *error* it has.
+        runs = {
+            r: ks
+            for r in requested
+            if r in have and (ks := [k for k, found in ran.items() if r in found])
+        }
+
+        def particles(v: Variant, rid: str, k: int | None) -> pd.DataFrame:
+            path = self.output.path("particles", v, rid, k)
+            assert path is not None  # the listing found the file
+            return read_particles(path)
+
+        def read(rid: str) -> tuple[pd.DataFrame, list[pd.DataFrame]]:
+            return (
+                particles(variant, rid, None),
+                [particles(perturbed, rid, k) for k in runs[rid]],
+            )
+
+        found = _transport_errors(
+            read,
+            list(self._receptors(runs).values()),
+            flux,
+            transforms=()
+            if variant.footprint is None
+            else variant.footprint.transforms,
+            directory=self.directory,
+            workers=_threads(workers),
+            **options,
+        )
+        result = found.reindex(frame["receptor"].to_numpy())
+        result["realizations"] = result["realizations"].fillna(0).astype("int64")
+        return frame.assign(**{c: result[c].to_numpy() for c in result.columns})
 
     # -- running ---------------------------------------------------------------
 

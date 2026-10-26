@@ -106,6 +106,8 @@ feature.
      - Implemented (see *Reading Retrieval Products*); other instruments as one module each
    * - Transport error on the modeled enhancement (``sim.transport_error``)
      - Implemented
+   * - Transport error over a selection, averaging every realization that has run (``project.transport_error``)
+     - Implemented
    * - Modeled enhancement from a flux field (``foot.stilt.enhancement``)
      - Implemented
    * - Background from a mole-fraction field at the trajectory endpoints (``sim.background``)

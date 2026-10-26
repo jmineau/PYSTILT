@@ -16,7 +16,7 @@ from stilt.execution.runner import resolve_compute_root
 from stilt.output import Output
 from stilt.particles import transport_error
 from stilt.project import Project
-from stilt.receptors import PointReceptor
+from stilt.receptors import ColumnReceptor, PointReceptor
 from stilt.spatial import Grid
 from stilt.transport.hysplit import MetConfig
 from stilt.transport.hysplit.driver import winderrtf
@@ -929,6 +929,149 @@ def test_transport_error_docstring_recipe_gives_the_realizations_of_sim_transpor
         )
         assert merged.realizations == 1
         assert merged.variance != pytest.approx(expected.variance, rel=0.2)
+
+
+def _write_aged_particles(
+    project: Project, receptor, variant, realization, spread, seed
+):
+    """Write 300 particles scattered *spread* degrees around the receptor, each of a random age."""
+    sim = project.simulation(receptor.id, variant, realization)
+    rng = np.random.default_rng(seed)
+    n = 300
+    particles = pd.DataFrame(
+        {
+            "age": -rng.integers(1, 12, n) * 60.0,
+            "particle": np.arange(1, n + 1, dtype=float),
+            "lon": receptor.longitude + rng.normal(0, spread, n),
+            "lat": receptor.latitude + rng.normal(0, spread, n),
+            "zagl": np.full(n, 10.0),
+            "foot": np.full(n, 1e-3),
+        }
+    )
+    particles = finished(particles, sim.receptor, sim.transport)
+    sim.output.write_particles(sim.variant, sim.receptor, particles, [], realization)
+
+
+def _flux() -> xr.DataArray:
+    lat, lon = np.linspace(39.5, 42.0, 101), np.linspace(-113.0, -110.5, 101)
+    return xr.DataArray(
+        np.add.outer(np.sin(7 * lat), np.cos(5 * lon)) + 2,
+        dims=("lat", "lon"),
+        coords={"lat": lat, "lon": lon},
+    )
+
+
+_ERROR_COLUMNS = [
+    "enhancement",
+    "enhancement_perturbed",
+    "background",
+    "variance",
+    "noise",
+    "realizations",
+]
+
+
+@pytest.mark.parametrize("kind", ["point", "column"])
+@pytest.mark.parametrize("realizations", [None, 2])
+def test_transport_error_of_a_selection_is_sim_transport_error_per_receptor(
+    tmp_path, kind, realizations
+):
+    """Each row is ``sim.transport_error`` of its receptor, with the realizations it has run."""
+
+    def receptor(hour):
+        time = dt.datetime(2023, 1, 1, hour)
+        if kind == "point":
+            return make_receptor(time)
+        return ColumnReceptor(
+            time=time, longitude=-111.85, latitude=40.77, bottom=5.0, top=500.0
+        )
+
+    a, b, c, d = (receptor(h) for h in (12, 13, 14, 15))
+    error = {**_XYERR, "grid": None}
+    if realizations is not None:
+        error["realizations"] = realizations
+    lifetime = {"kind": "first_order_lifetime", "lifetime_hours": 2.0}
+    project = _project(
+        tmp_path,
+        [a, b, c, d],
+        hnf_plume=False,
+        # The lifetime weights the particles of hrrr and not those of
+        # hrrr-err, so using the wrong variant's transforms changes the answer.
+        variants={"hrrr": {"transforms": [lifetime]}, "hrrr-err": error},
+    )
+    ks = project.variants["hrrr-err"].realization_numbers
+    # Every receptor and realization scatters its particles differently, so
+    # pairing the wrong receptor or realization changes the answer.
+    for i, r in enumerate((a, b, c)):
+        _write_aged_particles(project, r, "hrrr", None, 0.05 + 0.01 * i, 10 * i)
+    for i, r in enumerate((a, b, d)):
+        # b has only its first realization yet.
+        for k in ks[:1] if r is b else ks:
+            spread = 0.08 * (1 + i) + 0.04 * (k or 0)
+            seed = 10 * i + (k or 0) + 100
+            _write_aged_particles(project, r, "hrrr-err", k, spread, seed)
+    flux = _flux()
+
+    sims = project.simulations
+    sel = sims[sims.variant == "hrrr"].iloc[::-1]  # d, c, b, a
+    errors = project.transport_error(sel, "hrrr-err", flux, length_scale=200.0)
+
+    assert list(errors.columns) == list(sel.columns) + _ERROR_COLUMNS
+    pd.testing.assert_frame_equal(errors[list(sel.columns)], sel)
+    rows = errors.set_index("receptor")
+    for r in (a, b):
+        sim = project.simulation(r.id, "hrrr")
+        ran = ks[:1] if r is b else ks
+        expected = sim.transport_error(
+            [project.simulation(r.id, "hrrr-err", k) for k in ran],
+            flux,
+            length_scale=200.0,
+        )
+        got = rows.loc[r.id]
+        assert got["realizations"] == expected.realizations == len(ran)
+        for column in _ERROR_COLUMNS[:-1]:
+            assert got[column] == pytest.approx(getattr(expected, column), rel=1e-12)
+    # c has no error run and d no unperturbed run.
+    for r in (c, d):
+        assert rows.loc[r.id, "realizations"] == 0
+        assert rows.loc[r.id, _ERROR_COLUMNS[:-1]].isna().all()
+    assert errors["realizations"].dtype == np.int64
+
+    in_threads = project.transport_error(
+        sel, "hrrr-err", flux, length_scale=200.0, workers=3
+    )
+    pd.testing.assert_frame_equal(in_threads, errors)
+
+
+def test_transport_error_takes_the_unperturbed_run_and_an_error_variant(tmp_path):
+    a = _receptor(12)
+    project = _project(
+        tmp_path,
+        [a],
+        grid=None,
+        variants={
+            "hrrr": {},
+            "hrrr-err": {**_XYERR, "realizations": 2},
+            "zi08": {"ziscale": 0.8},
+        },
+    )
+    sims, flux = project.simulations, _flux()
+    hrrr = sims[sims.variant == "hrrr"]
+
+    with pytest.raises(ValueError, match="one variant"):
+        project.transport_error(sims, "hrrr-err", flux)
+    with pytest.raises(ValueError, match="ensemble"):
+        one = sims[(sims.variant == "hrrr-err") & (sims.realization == 0)]
+        project.transport_error(one, "zi08", flux)
+    with pytest.raises(KeyError, match="No variant 'hrrr-error'"):
+        project.transport_error(hrrr, "hrrr-error", flux)
+    with pytest.raises(ValueError, match="itself"):
+        project.transport_error(hrrr, "hrrr", flux)
+
+    # Nothing has run: every row is NaN.
+    errors = project.transport_error(hrrr, "hrrr-err", flux)
+    assert errors["realizations"].tolist() == [0]
+    assert errors["variance"].isna().all()
 
 
 def test_footprints_open_one_variant_as_a_dataset(tmp_path, monkeypatch):
