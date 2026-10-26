@@ -26,9 +26,11 @@ class FailureReason(StrEnum):
 #: Phrases HYSPLIT (or the driver) writes to stilt.log or HYSPLIT's WARNING
 #: file, mapped to their FailureReason. The four ``metpos`` warnings say a
 #: particle inside the met's grid reached a time no met file holds: the met
-#: ran out. HYSPLIT writes only the first such warning of a run, and
+#: ran out. HYSPLIT writes only the first such warning of a run. It writes
 #: ``off spatial domain of all grids`` when every particle left the met's
-#: domain, which is not a failure.
+#: domain, which is not a failure, and also when the met ran out, so that
+#: line tells nothing; ``check_met_stop`` in the driver reads where the
+#: particles stopped instead.
 FAILURE_PHRASES: dict[str, FailureReason] = {
     "start point not within (x,y,t) any data file": FailureReason.MET_COVERAGE,
     "start time after end of meteorology data": FailureReason.MET_COVERAGE,

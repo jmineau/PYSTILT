@@ -54,7 +54,11 @@ Failure reasons
 ---------------
 
 When a run ends, PYSTILT reads HYSPLIT's log for the messages it knows.
-A known failure, a timeout, or a run without particle output raises a
+When the particles stopped before ``n_hours``, it also checks where: a
+particle more than 5 grid cells inside the met's domain means the met ran
+out (``MET_COVERAGE``), since particles that leave the domain end at its
+edge (:doc:`/guides/checking`). A known failure, a timeout, or a run
+without particle output raises a
 :class:`~stilt.exceptions.SimulationError` whose ``reason`` is a
 :class:`stilt.transport.hysplit.FailureReason`. The worker records it, and
 :attr:`stilt.Simulation.failure` and ``stilt status`` report it.
