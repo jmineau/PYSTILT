@@ -250,6 +250,10 @@ for receptor, particles, foot in read_stilt_r("my_project/out/by-id"):
     print(receptor.id, len(particles), foot is not None)
 ```
 
+`stilt.migration.import_stilt_r` writes them into a project's output directory instead, and prints
+the `stilt-r` variant that reads them, so `project.status()` and `project.jacobian()` work on runs
+STILT-R made.
+
 ## STILT-R parity
 
 PYSTILT footprints match the [STILT-R](https://github.com/uataq/stilt) footprints to a relative

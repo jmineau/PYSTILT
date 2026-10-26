@@ -2,10 +2,12 @@
 The transport model interface.
 
 A transport model turns one receptor and one set of transport settings into
-a particle table. Each model is a subpackage here. HYSPLIT
-(:class:`stilt.transport.hysplit.HysplitModel`) is the only one today. The
-worker reaches it through :func:`get_model` by the name a run's settings
-record, so a second model needs no change to the worker.
+a particle table. Each model is a subpackage or module here. HYSPLIT
+(:class:`stilt.transport.hysplit.HysplitModel`) is the one that runs;
+``stilt-r`` (:class:`stilt.transport.stilt_r.StiltRModel`) records the
+settings of runs imported from STILT-R and runs nothing. The worker reaches
+a model through :func:`get_model` by the name a run's settings record, so
+another model needs no change to the worker.
 """
 
 from __future__ import annotations
@@ -302,10 +304,22 @@ def _hysplit() -> TransportModel:
     return HysplitModel()
 
 
+def _stilt_r() -> TransportModel:
+    """Return the model of imported STILT-R runs, importing it only when it is asked for."""
+    from stilt.transport.stilt_r import StiltRModel
+
+    return StiltRModel()
+
+
 #: The transport models built into PYSTILT, by the name ``model:`` takes in
-#: ``config.yaml``. A model in its own package is named by its import path
-#: instead, as a transform's ``kind:`` is.
-MODELS: dict[str, Callable[[], TransportModel]] = {"hysplit": _hysplit}
+#: ``config.yaml``: ``hysplit``, and ``stilt-r`` for runs imported from
+#: STILT-R (:func:`stilt.migration.import_stilt_r`), which cannot run. A model
+#: in its own package is named by its import path instead, as a transform's
+#: ``kind:`` is.
+MODELS: dict[str, Callable[[], TransportModel]] = {
+    "hysplit": _hysplit,
+    "stilt-r": _stilt_r,
+}
 
 
 def get_model(name: str) -> TransportModel:

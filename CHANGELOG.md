@@ -19,6 +19,26 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   time in threads (`workers`), and the options of
   `stilt.particles.transport_error` pass through. The Transport Error guide
   uses it in place of a loop over `sim.transport_error`.
+- `stilt.migration.import_stilt_r(by_id_dir, output_dir, version)` writes
+  the runs of a STILT-R or X-STILT `out/by-id` folder into a PYSTILT output
+  directory, and prints the met and the variant (`model: stilt-r`) that
+  name the folders, so `project.status`, `project.particles`,
+  `project.footprints`, and `project.jacobian` read them. It returns the
+  receptors. An imported run's settings hold only what STILT-R's files
+  record: HYSPLIT's settings from each run's `SETUP.CFG`, `CONTROL` and
+  `ZICONTROL`, `hnf_plume` from the particles, the met directory the
+  `CONTROL` files name, the footprint's grid from `_foot.nc` and its
+  `smooth_factor` as `read_stilt_r` reads it, and the STILT-R version
+  given. Runs with other settings stop the import. A run's transport-error
+  particles go to a second variant, `<name>-err`, with the error settings
+  STILT-R saved; a run whose `stilt.log` says no particle reached the grid
+  gets an empty footprint; results already there are kept.
+- A built-in `stilt-r` transport model (`stilt.transport.stilt_r`), which
+  runs nothing: `StiltRConfig` holds HYSPLIT's settings with no defaults
+  and the STILT-R `version`, and `StiltRMetConfig` the met directory
+  (`met_path`). A run of a `stilt-r` variant fails as `NOT_RUNNABLE`.
+- `read_stilt_r(..., error=True)` reads a run's transport-error particles
+  (`particle_error`) in place of the first set.
 
 ### Changed
 

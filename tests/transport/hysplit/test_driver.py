@@ -520,6 +520,31 @@ def test_setup_cfg_takes_kmsl_from_an_msl_receptor(tmp_path, point_receptor):
     assert "kmsl=1" in _setup_cfg(tmp_path, receptor)
 
 
+def test_read_namelist_reads_the_setup_cfg_written(tmp_path, point_receptor):
+    from stilt.transport.hysplit.namelist import read_namelist
+
+    config = HysplitConfig(numpar=150, dzf=0.01, wvert=True, efile="")
+    entries = read_namelist(_inputs(tmp_path, point_receptor, config) / "SETUP.CFG")
+    assert entries["numpar"] == 150
+    assert entries["dzf"] == 0.01
+    assert entries["wvert"] is True
+    assert entries["efile"] == ""
+    assert entries["varsiwant"] == config.varsiwant
+    assert entries["kmsl"] == 0
+
+
+def test_read_namelist_rejects_a_file_that_is_not_one(tmp_path):
+    from stilt.transport.hysplit.namelist import read_namelist
+
+    path = tmp_path / "SETUP.CFG"
+    path.write_text("NUMPAR=10,\n")
+    with pytest.raises(ValueError, match=r"\$SETUP"):
+        read_namelist(path)
+    path.write_text("$SETUP\nNUMPAR 10\n$END\n")
+    with pytest.raises(ValueError, match="not a KEY=value"):
+        read_namelist(path)
+
+
 def test_kmsl_comes_only_from_the_receptor():
     """KMSL follows each receptor's altitude_ref; there is no setting to contradict it."""
     with pytest.raises(ValueError, match="kmsl"):

@@ -74,7 +74,10 @@ Transport model
 ----------------
 
 The worker runs a simulation through the transport model its settings name.
-HYSPLIT is the one built in, and CONTRIBUTING describes how to add another.
+HYSPLIT is the one built in that runs, and CONTRIBUTING describes how to add
+another. ``stilt-r`` is built in too, and runs nothing: its variants read
+the runs :func:`stilt.migration.import_stilt_r` imported from STILT-R, with
+the settings STILT-R's files record.
 A model fails a run that its meteorology does not cover, as
 ``MET_COVERAGE``. Particles that all leave the met's domain before the end
 of the run are a complete run.
@@ -91,3 +94,6 @@ of the run are a complete run.
    stilt.transport.run_model
    stilt.transport.run_model_many
    stilt.transport.hysplit.HysplitModel
+   stilt.transport.stilt_r.StiltRModel
+   stilt.transport.stilt_r.StiltRConfig
+   stilt.transport.stilt_r.StiltRMetConfig

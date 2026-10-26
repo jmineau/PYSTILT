@@ -132,8 +132,10 @@ exclude_type_checking_imports = true
 # (joined by ":"); "|" joins modules that must not. The observation layer
 # sits above the transport core, which runs without it; receptors and the
 # raster layer import nothing above them; a transport model's package, in
-# the transport layer, does not import the project config. Exhaustive, so
-# a new module has to be placed. Imports inside functions count.
+# the transport layer, does not import the project config. The migration
+# module writes imported runs into an output directory through variants, so
+# it sits above the project config. Exhaustive, so a new module has to be
+# placed. Imports inside functions count.
 [[tool.importlinter.contracts]]
 name = "The package's layers"
 type = "layers"
@@ -142,9 +144,9 @@ exhaustive = true
 layers = [
     "__main__",
     "cli",
-    "observations",
+    "observations | migration",
     "project : execution : config",
-    "check | migration",
+    "check",
     "simulation",
     "output",
     "footprint : identity : meteorology : transport",
@@ -164,10 +166,14 @@ type = "forbidden"
 source_modules = ["stilt.*"]
 forbidden_modules = ["stilt.transport.hysplit"]
 # get_model imports a model's package when asked for it; that is the boundary.
-# STILT-R runs HYSPLIT, so its reader reads the CONTROL files it left.
+# STILT-R runs HYSPLIT, so its reader reads the CONTROL and SETUP.CFG files
+# it left, and an imported run's settings are HYSPLIT's.
 ignore_imports = [
     "stilt.transport -> stilt.transport.hysplit",
+    "stilt.migration -> stilt.transport.hysplit.config",
     "stilt.migration -> stilt.transport.hysplit.control",
+    "stilt.migration -> stilt.transport.hysplit.namelist",
+    "stilt.transport.stilt_r -> stilt.transport.hysplit.config",
 ]
 allow_indirect_imports = true
 

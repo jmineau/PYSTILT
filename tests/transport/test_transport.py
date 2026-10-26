@@ -36,6 +36,38 @@ def test_get_model_names_the_models_it_knows():
         get_model("flexpart")
 
 
+def test_stilt_r_is_a_built_in_model_that_cannot_run(point_receptor):
+    from stilt.exceptions import SimulationError
+    from stilt.transport.stilt_r import StiltRMetConfig, StiltRModel
+
+    model = get_model("stilt-r")
+    assert isinstance(model, StiltRModel)
+    met = StiltRMetConfig(met_path="/data/hrrr")
+    assert met.settings() == {"met_path": "/data/hrrr"}
+    window = run_window(point_receptor.time, -24)
+    with pytest.raises(SimulationError) as caught:
+        model.run(point_receptor, None, met, window)
+    assert caught.value.reason == "NOT_RUNNABLE"
+
+
+def test_stilt_r_settings_have_no_defaults():
+    from stilt.transport.stilt_r import StiltRConfig
+
+    settings = HysplitConfig().settings()
+    with pytest.raises(ValueError, match="missing: numpar"):
+        StiltRConfig.model_validate(
+            {k: v for k, v in settings.items() if k != "numpar"}
+        )
+    config = StiltRConfig.model_validate({**settings, "version": "1d936c1"})
+    with pytest.raises(ValueError, match="valid dictionary"):
+        StiltRConfig.model_validate(["not", "settings"])
+    # The version is recorded as the model's, not as a setting.
+    assert config.settings() == settings
+    assert get_model("stilt-r").version(config) == "1d936c1"
+    with pytest.raises(ValueError, match="needs version"):
+        get_model("stilt-r").version(StiltRConfig.model_validate(settings))
+
+
 def test_hysplit_model_version_is_the_bundled_build_or_exe_dirs(tmp_path):
     from stilt.transport.hysplit.model import hysplit_version
 

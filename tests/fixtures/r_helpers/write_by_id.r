@@ -14,10 +14,15 @@
 #   - read_config() reads a CONC.CFG into `params`;
 #   - calc_plume_dilution() adds the near-field correction, which leaves a
 #     tibble with foot_no_hnf_dilution;
-#   - write_control() writes the CONTROL file HYSPLIT reads;
+#   - write_setup() writes the SETUP.CFG namelist HYSPLIT reads, and
+#     write_control() the CONTROL file;
 #   - saveRDS() writes the list (file, receptor, particle, params) as
 #     <id>_traj.rds;
-#   - calc_footprint() writes <id>_foot.nc, with smooth_factor 0.5.
+#   - calc_footprint() writes <id>_foot.nc, with smooth_factor 0.5;
+#   - for the point receptor, a transport-error run: write_winderr() writes
+#     WINDERR, SETUP.CFG is written again with winderrtf = 1 (as the second
+#     calc_trajectory() call writes it), and the .rds gets particle_error
+#     and particle_error_params.
 # Then the rows stilt_apply() hands rslurm::slurm_apply() are saved as
 # _rslurm_<project>/params.RDS, as rslurm saves them: one row per
 # simulation, with the before_trajec and before_footprint functions and a
@@ -26,7 +31,8 @@
 # Two simulations:
 #   201507050000_-111.85_40.77_5   a point receptor, run backward 2 hours,
 #                                  with hourly footprint layers and a grid
-#                                  whose cells are not square.
+#                                  whose cells are not square, and a
+#                                  transport-error set of particles.
 #   201507051800_-111.9_40.7_X     a column receptor as X-STILT makes one (two
 #                                  heights at one place, so particles have
 #                                  xhgt), released at 18:00:30, with a
@@ -64,6 +70,19 @@ numpar <- 10
 # kernel is one cell at 0.5 or 1, so the footprints are the same either way.
 smooth_factor <- 0.5
 met_files <- file.path('met', c('20150704_18-23_hrrr', '20150705_00-05_hrrr'))
+# The HYSPLIT namelist simulation_step() hands write_setup(), with this
+# sample's settings where they are not write_setup()'s defaults (the values
+# CONC.CFG above gives).
+namelist <- list(
+  varsiwant = c('time', 'indx', 'long', 'lati', 'zagl', 'foot', 'mlht', 'dens',
+                'samt', 'sigw', 'tlgr'),
+  frvs = 0.01, kmix0 = 150, maxpar = numpar, numpar = numpar, winderrtf = 0,
+  zicontroltf = 0)
+# The wind-error settings of the transport-error run, as simulation_step()
+# saves them: the mixed-layer error unset.
+error_params <- list(siguverr = 2.6, tluverr = 260, zcoruverr = 450,
+                     horcoruverr = 14, sigzierr = NA, tlzierr = NA,
+                     horcorzierr = NA, winderrtf = 1)
 
 make_particles <- function(numpar, n_minutes, long, lati, zagl, seed) {
   set.seed(seed)
@@ -86,7 +105,7 @@ make_particles <- function(numpar, n_minutes, long, lati, zagl, seed) {
 }
 
 write_simulation <- function(receptor, particle, xmn, xmx, ymn, ymx, xres,
-                             yres, time_integrate) {
+                             yres, time_integrate, particle_error = NULL) {
   zagl_id <- if (length(receptor$zagl) > 1) 'X' else receptor$zagl
   simulation_id <- strftime(
     receptor$run_time,
@@ -95,6 +114,8 @@ write_simulation <- function(receptor, particle, xmn, xmx, ymn, ymx, xres,
   rundir <- file.path(by_id_dir, simulation_id)
   dir.create(rundir, recursive = TRUE, showWarnings = FALSE)
 
+  setup <- file.path(rundir, 'SETUP.CFG')
+  do.call(write_setup, merge_lists(namelist, list(file = setup)))
   write_control(receptor, emisshrs = 0.01, n_hour = n_hours,
                 met_files = met_files, file = file.path(rundir, 'CONTROL'))
 
@@ -107,6 +128,13 @@ write_simulation <- function(receptor, particle, xmn, xmx, ymn, ymx, xres,
   output$receptor <- receptor
   output$particle <- particle
   output$params <- read_config(cfg)
+  if (!is.null(particle_error)) {
+    with(error_params, write_winderr(siguverr, tluverr, zcoruverr, horcoruverr,
+                                     file.path(rundir, 'WINDERR')))
+    do.call(write_setup, merge_lists(namelist, list(winderrtf = 1, file = setup)))
+    output$particle_error <- particle_error
+    output$particle_error_params <- error_params
+  }
   saveRDS(output, file.path(rundir, paste0(simulation_id, '_traj.rds')))
 
   calc_footprint(output$particle[, c('time', 'indx', 'long', 'lati', 'foot')],
@@ -123,8 +151,12 @@ point <- list(run_time = as.POSIXct('2015-07-05 00:00:00', tz = 'UTC'),
               lati = 40.77, long = -111.85, zagl = 5)
 p <- make_particles(numpar, 120, point$long, point$lati, point$zagl, seed = 1)
 p <- calc_plume_dilution(p, numpar, point$zagl, 0.5)
+p_error <- make_particles(numpar, 120, point$long, point$lati, point$zagl,
+                          seed = 3)
+p_error <- calc_plume_dilution(p_error, numpar, point$zagl, 0.5)
 write_simulation(point, p, xmn = -112.2, xmx = -111.6, ymn = 40.6, ymx = 41.0,
-                 xres = 0.02, yres = 0.025, time_integrate = FALSE)
+                 xres = 0.02, yres = 0.025, time_integrate = FALSE,
+                 particle_error = p_error)
 
 # A column receptor, as X-STILT writes one: release heights kept as xhgt
 # (calc_trajectory's formula), then the near-field correction.

@@ -36,7 +36,7 @@ Extras add optional features. List them in the brackets, for example
    * - ``sparse``
      - The Jacobian as a sparse xarray array (``H.to_xarray()``).
    * - ``stilt-r``
-     - Reading STILT-R and X-STILT output (:func:`stilt.migration.read_stilt_r`), whose ``.rds`` files rdata reads without R.
+     - Reading and importing STILT-R and X-STILT output (:func:`stilt.migration.read_stilt_r`, :func:`stilt.migration.import_stilt_r`), whose ``.rds`` files rdata reads without R.
    * - ``complete``
      - Everything above.
 

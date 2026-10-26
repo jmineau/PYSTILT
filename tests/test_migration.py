@@ -20,16 +20,27 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+import yaml
 
-from stilt import ColumnReceptor, MultiPointReceptor, PointReceptor, calc_footprint
+from stilt import (
+    ColumnReceptor,
+    Grid,
+    MultiPointReceptor,
+    PointReceptor,
+    Project,
+    calc_footprint,
+)
 from stilt.migration import (
     _axis,
+    _error_settings,
     _particles,
     _receptor,
     _rslurm_params,
     _smooth_factor,
+    import_stilt_r,
     read_stilt_r,
 )
+from stilt.particles import particles_metadata
 
 PROJECT = Path(__file__).parent / "fixtures" / "stilt_r_project"
 SAMPLE = PROJECT / "out" / "by-id"
@@ -379,3 +390,320 @@ def test_params_rds_that_is_not_a_table_raises(copy):
     )
     with pytest.raises(ValueError, match="not a table of STILT-R runs"):
         read_stilt_r(copy)
+
+
+# -- reading the transport-error particles ------------------------------------
+
+
+def test_error_reads_the_perturbed_particles_and_no_footprint(copy):
+    shutil.rmtree(copy / COLUMN)
+    ((receptor, particles, _),) = list(read_stilt_r(copy))
+    ((same, perturbed, foot),) = list(read_stilt_r(copy, error=True))
+    assert same == receptor
+    assert foot is None
+    assert list(perturbed.columns) == list(particles.columns)
+    assert not np.array_equal(perturbed["lon"], particles["lon"])
+
+
+def test_error_on_a_run_without_transport_error_raises(copy):
+    shutil.rmtree(copy / POINT)
+    with pytest.raises(ValueError, match="no transport-error particles"):
+        list(read_stilt_r(copy, error=True))
+
+
+# -- importing into an output directory ----------------------------------------
+
+VERSION = "0e290a6"
+
+
+def _by_id(tmp_path: Path, *names: str, rslurm: bool = True) -> Path:
+    """Return the by-id folder of a STILT-R project holding the sample's runs *names*."""
+    project = tmp_path / "landfill"
+    by_id = project / "out" / "by-id"
+    for name in names:
+        shutil.copytree(SAMPLE / name, by_id / name)
+    if rslurm:
+        shutil.copytree(PARAMS.parent, project / "_rslurm_landfill")
+    return by_id
+
+
+def _import(by_id: Path, output: Path, capsys, **kwargs) -> tuple[list, dict]:
+    """Import *by_id* into *output*; return the receptors and the config it printed."""
+    receptors = import_stilt_r(by_id, output, VERSION, **kwargs)
+    return receptors, yaml.safe_load(capsys.readouterr().out)
+
+
+def _project(tmp_path: Path, by_id: Path, capsys, **kwargs) -> Project:
+    """Import *by_id* and return a project whose config.yaml is what the import printed."""
+    output = tmp_path / "output"
+    receptors, config = _import(by_id, output, capsys, **kwargs)
+    return Project.init(tmp_path / "py", receptors, output=str(output), **config)
+
+
+def _settings(output: Path, kind: str, folder: str) -> dict:
+    """Return the settings block of a settings folder's _settings.yaml."""
+    # The folder name ends in six characters of the hash; "stilt-r-*" would
+    # also match "stilt-r-err-...".
+    (path,) = (output / kind).glob(f"settings={folder}-??????")
+    path = path / "_settings.yaml"
+    return yaml.safe_load(path.read_text())["settings"]
+
+
+def test_imported_runs_are_the_results_of_the_printed_variants(tmp_path, capsys):
+    by_id = _by_id(tmp_path, POINT)
+    project = _project(tmp_path, by_id, capsys)
+    assert list(project.variants) == ["stilt-r", "stilt-r-err"]
+    status = project.status()
+    assert list(status.state) == ["complete", "complete"]
+
+    ((receptor, particles, foot),) = list(read_stilt_r(by_id))
+    sim = project.simulation(POINT, "stilt-r")
+    assert sim.receptor == receptor
+    for column in ("particle", "age", "lon", "lat", "zagl", "foot"):
+        np.testing.assert_array_equal(
+            sim.particles[column].to_numpy(), particles[column].to_numpy()
+        )
+    assert foot is not None
+    np.testing.assert_allclose(sim.footprint.to_numpy(), foot.to_numpy(), rtol=1e-6)
+    ((_, perturbed, _),) = list(read_stilt_r(by_id, error=True))
+    np.testing.assert_array_equal(
+        project.simulation(POINT, "stilt-r-err").particles["lon"].to_numpy(),
+        perturbed["lon"].to_numpy(),
+    )
+
+
+def test_jacobian_sums_the_imported_footprints(tmp_path, capsys):
+    by_id = _by_id(tmp_path, POINT)
+    project = _project(tmp_path, by_id, capsys)
+    ((_, _, foot),) = list(read_stilt_r(by_id))
+    target = Grid(xmin=-112.2, xmax=-111.6, ymin=40.6, ymax=41.0, xres=0.1, yres=0.1)
+    bins = pd.IntervalIndex.from_breaks(
+        pd.date_range("2015-07-04 22:00", "2015-07-05 00:00", freq="1h"),
+        closed="left",
+    )
+    sims = project.simulations
+    H = project.jacobian(sims[sims.variant == "stilt-r"], target, bins)
+    assert list(H.receptors) == [POINT]
+    expected = foot.stilt.aggregate(target, bins)
+    np.testing.assert_allclose(
+        H.to_frame().iloc[0].to_numpy().reshape(len(bins), -1).T,
+        expected.to_numpy(),
+        rtol=1e-6,
+    )
+
+
+def test_the_settings_are_what_the_files_record(tmp_path, capsys):
+    output = tmp_path / "output"
+    _import(_by_id(tmp_path, POINT), output, capsys)
+    run = _settings(output, "particles", "stilt-r")
+    # SETUP.CFG
+    assert run["numpar"] == 10
+    assert run["kmix0"] == 150
+    assert run["frvs"] == 0.01
+    # CONTROL
+    assert run["n_hours"] == -2
+    assert run["emisshrs"] == 0.01
+    assert run["z_top"] == 25000
+    # The particles have STILT-R's near-field correction.
+    assert run["hnf_plume"] is True
+    # What no file holds is unset: no seed, no error, no mixed-layer factor.
+    assert run["seed"] is None
+    assert run["siguverr"] is None
+    assert run["ziscale"] == 1
+    assert run["model"] == {"name": "stilt-r", "version": VERSION, "data_files": None}
+    assert run["met"] == {"met_path": "met"}
+    error = _settings(output, "particles", "stilt-r-err")
+    assert {
+        k: error[k] for k in ("siguverr", "tluverr", "zcoruverr", "horcoruverr")
+    } == {
+        "siguverr": 2.6,
+        "tluverr": 260,
+        "zcoruverr": 450,
+        "horcoruverr": 14,
+    }
+    assert error["sigzierr"] is None
+    assert {k: v for k, v in error.items() if not k.endswith("err")} == {
+        k: v for k, v in run.items() if not k.endswith("err")
+    }
+    foot = _settings(output, "footprints", "stilt-r")
+    assert foot["smooth_factor"] == 0.5
+    assert foot["time_integrate"] is False
+    assert foot["grid"]["yres"] == 0.025
+    path = next((output / "particles").rglob(f"{POINT}.parquet"))
+    assert [str(p) for p in particles_metadata(path).met_files] == [
+        "met/20150704_18-23_hrrr",
+        "met/20150705_00-05_hrrr",
+    ]
+
+
+def test_runs_of_another_length_land_in_another_folder(tmp_path, capsys):
+    output = tmp_path / "output"
+    _import(_by_id(tmp_path / "a", POINT), output, capsys, name="a")
+    longer = _by_id(tmp_path / "b", POINT, rslurm=False)
+    _set_n_hours(longer / POINT / "CONTROL", -3)
+    (longer / POINT / f"{POINT}_foot.nc").unlink()
+    _import(longer, output, capsys, name="b")
+    folders = sorted(p.name for p in (output / "particles").iterdir())
+    assert [f.rsplit("-", 1)[0] for f in folders] == [
+        "settings=a",
+        "settings=a-err",
+        "settings=b",
+        "settings=b-err",
+    ]
+    assert _settings(output, "particles", "b")["n_hours"] == -3
+
+
+def test_runs_with_other_settings_stop_before_anything_is_written(tmp_path, capsys):
+    by_id = _by_id(tmp_path, POINT, COLUMN)
+    setup = by_id / COLUMN / "SETUP.CFG"
+    setup.write_text(setup.read_text().replace("KMIX0=150,", "KMIX0=250,"))
+    with pytest.raises(ValueError, match=r"different HYSPLIT settings: kmix0 is 250"):
+        import_stilt_r(by_id, tmp_path / "output", VERSION)
+    assert not (tmp_path / "output").exists()
+
+
+def test_footprints_with_other_settings_stop(tmp_path):
+    # The sample's two runs have footprints on different grids.
+    with pytest.raises(ValueError, match="different footprint settings"):
+        import_stilt_r(_by_id(tmp_path, POINT, COLUMN), tmp_path / "output", VERSION)
+
+
+def test_ziscale_comes_from_the_zicontrol_file(tmp_path, capsys):
+    by_id = _by_id(tmp_path, POINT)
+    setup = by_id / POINT / "SETUP.CFG"
+    setup.write_text(setup.read_text().replace("ZICONTROLTF=0,", "ZICONTROLTF=1,"))
+    with pytest.raises(FileNotFoundError, match="no ZICONTROL"):
+        import_stilt_r(by_id, tmp_path / "output", VERSION)
+    (by_id / POINT / "ZICONTROL").write_text("3\n0.8\n0.9\n")
+    with pytest.raises(ValueError, match="as many factors"):
+        import_stilt_r(by_id, tmp_path / "output", VERSION)
+    (by_id / POINT / "ZICONTROL").write_text("2\n0.8\n0.9\n")
+    _import(by_id, tmp_path / "output", capsys)
+    assert _settings(tmp_path / "output", "particles", "stilt-r")["ziscale"] == [
+        0.8,
+        0.9,
+    ]
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "error", "match"),
+    [
+        ("KMSL=0,", "KMSL=1,", ValueError, "above sea level"),
+        ("KRND=6,", "KRND=6,\nNEWKEY=1,", ValueError, "NEWKEY"),
+        ("WINDERRTF=1,", "WINDERRTF=0,", ValueError, "particle_error_params"),
+        ("KRAND=4,", "KRAND=5,", ValueError, "not valid HYSPLIT settings"),
+    ],
+)
+def test_a_setup_cfg_the_import_cannot_record_stops(tmp_path, old, new, error, match):
+    by_id = _by_id(tmp_path, POINT)
+    setup = by_id / POINT / "SETUP.CFG"
+    setup.write_text(setup.read_text().replace(old, new))
+    with pytest.raises(error, match=match):
+        import_stilt_r(by_id, tmp_path / "output", VERSION)
+
+
+def test_a_transport_error_flag_without_the_particles_stops(tmp_path):
+    by_id = _by_id(tmp_path, COLUMN)
+    setup = by_id / COLUMN / "SETUP.CFG"
+    setup.write_text(setup.read_text().replace("WINDERRTF=0,", "WINDERRTF=1,"))
+    with pytest.raises(ValueError, match="holds no particle_error"):
+        import_stilt_r(by_id, tmp_path / "output", VERSION)
+
+
+def test_a_run_without_setup_cfg_stops(tmp_path):
+    by_id = _by_id(tmp_path, POINT)
+    (by_id / POINT / "SETUP.CFG").unlink()
+    with pytest.raises(FileNotFoundError, match="has no SETUP.CFG"):
+        import_stilt_r(by_id, tmp_path / "output", VERSION)
+
+
+def test_several_met_directories_need_the_folder_that_holds_them(tmp_path, capsys):
+    by_id = _by_id(tmp_path, POINT)
+    control = by_id / POINT / "CONTROL"
+    text = control.read_text()
+    control.write_text(
+        text.replace("met/ \n20150704", "/data/hrrr/2015a/ \n20150704").replace(
+            "met/ \n20150705", "/data/hrrr/2015b/ \n20150705"
+        )
+    )
+    with pytest.raises(ValueError, match="2 met directories"):
+        import_stilt_r(by_id, tmp_path / "output", VERSION)
+    with pytest.raises(ValueError, match="is not in met_path /data/nam"):
+        import_stilt_r(by_id, tmp_path / "output", VERSION, met_path="/data/nam")
+    _, config = _import(by_id, tmp_path / "output", capsys, met_path="/data/hrrr/")
+    assert config["mets"] == {"stilt-r": {"met_path": "/data/hrrr"}}
+
+
+def test_a_run_whose_log_says_no_particle_reached_the_grid_is_empty(tmp_path, capsys):
+    by_id = _by_id(tmp_path, POINT)
+    # A second run of the same settings, at another place, without a footprint.
+    other = "201507050000_-111.85_40.78_5"
+    shutil.copytree(by_id / POINT, by_id / other)
+    for path in (by_id / other).iterdir():
+        path.rename(path.with_name(path.name.replace(POINT, other)))
+    (by_id / other / f"{other}_foot.nc").unlink()
+    _write_points(by_id / other / "CONTROL", ["40.78 -111.85 5"])
+    (by_id / other / "stilt.log").write_text(
+        "No non-zero footprint values found within the footprint domain. \n"
+    )
+    project = _project(tmp_path, by_id, capsys)
+    status = project.status()
+    assert list(status.state) == ["complete"] * 4
+    _import(by_id, tmp_path / "output", capsys)  # kept, not written again
+    sim = project.simulation(other, "stilt-r")
+    assert sim.has_footprint
+    assert sim.footprint is None
+    assert sim.log.startswith("No non-zero footprint")
+
+
+def test_a_run_without_a_footprint_or_a_log_saying_why_is_not_complete(
+    tmp_path, capsys
+):
+    by_id = _by_id(tmp_path, POINT)
+    other = "201507050000_-111.85_40.78_5"
+    shutil.copytree(by_id / POINT, by_id / other)
+    for path in (by_id / other).iterdir():
+        path.rename(path.with_name(path.name.replace(POINT, other)))
+    (by_id / other / f"{other}_foot.nc").unlink()
+    _write_points(by_id / other / "CONTROL", ["40.78 -111.85 5"])
+    project = _project(tmp_path, by_id, capsys)
+    status = project.status().set_index(["receptor", "variant"])
+    assert status.loc[(other, "stilt-r"), "particles"]
+    assert status.loc[(other, "stilt-r"), "state"] == "pending"
+
+
+def test_importing_again_keeps_what_is_there(tmp_path, capsys):
+    by_id = _by_id(tmp_path, POINT)
+    output = tmp_path / "output"
+    _, first = _import(by_id, output, capsys)
+    files = sorted(output.rglob("*.parquet"))
+    written = [p.stat().st_mtime_ns for p in files]
+    _, again = _import(by_id, output, capsys)
+    assert again == first
+    assert sorted(output.rglob("*.parquet")) == files
+    assert [p.stat().st_mtime_ns for p in files] == written
+
+
+def test_a_printed_variant_missing_a_setting_does_not_load(tmp_path, capsys):
+    receptors, config = _import(_by_id(tmp_path, POINT), tmp_path / "output", capsys)
+    del config["variants"]["stilt-r"]["kmix0"]
+    with pytest.raises(ValueError, match="missing: kmix0"):
+        Project.init(tmp_path / "py", receptors, **config)
+
+
+def test_the_name_must_be_a_variant_name(tmp_path):
+    with pytest.raises(ValueError, match="must be a variant name"):
+        import_stilt_r(
+            _by_id(tmp_path, POINT), tmp_path / "output", VERSION, name="STILT R"
+        )
+
+
+def test_runs_without_transport_error_give_one_variant(tmp_path, capsys):
+    project = _project(tmp_path, _by_id(tmp_path, COLUMN), capsys)
+    assert list(project.variants) == ["stilt-r"]
+    assert list(project.status().state) == ["complete"]
+
+
+def test_error_settings_need_every_setting_stilt_r_saves(tmp_path):
+    with pytest.raises(ValueError, match="particle_error_params has no siguverr"):
+        _error_settings({"winderrtf": 1}, tmp_path / "x_traj.rds")
