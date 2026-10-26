@@ -95,23 +95,24 @@ def _write_trajectory(
 
 
 def _write_footprint(
-    project: Project, receptor, variant="hrrr", *, empty=False
+    project: Project, receptor, variant="hrrr", realization=None, *, empty=False
 ) -> Path:
     """Write a footprint (or an empty one) for one simulation into the output directory."""
-    sim = project.simulation(receptor.id, variant)
+    sim = project.simulation(receptor.id, variant, realization)
     assert sim.variant.footprint is not None
     if empty:
-        return sim.output.write_empty_footprint(sim.variant, sim.receptor)
+        return sim.output.write_empty_footprint(sim.variant, sim.receptor, realization)
     grid = sim.variant.footprint.grid
     assert grid is not None
     x_axis, y_axis = grid.axes
     data = xr.DataArray(
-        np.random.default_rng(0).random((1, len(y_axis), len(x_axis))),
+        # Each realization gets its own values.
+        np.random.default_rng(realization or 0).random((1, len(y_axis), len(x_axis))),
         dims=("time", "lat", "lon"),
         coords={"time": [sim.receptor.time], "lat": y_axis, "lon": x_axis},
     )
     foot = as_footprint(data, sim.receptor, sim.variant.footprint, sim.variant.name)
-    return sim.output.write_footprint(sim.variant, foot)
+    return sim.output.write_footprint(sim.variant, foot, realization)
 
 
 def _pairs(frame: pd.DataFrame) -> list[tuple[str, str]]:
@@ -1022,6 +1023,49 @@ def test_jacobian_of_a_variant(tmp_path):
         project.jacobian(sims[sims.variant == "traj"], target, bins)
     with pytest.raises(ValueError, match="one variant"):
         project.jacobian(sims, target, bins)
+
+
+def test_jacobian_of_an_ensemble_is_one_realization_at_a_time(tmp_path):
+    a, b = _receptor(12), _receptor(13)
+    project = _project(
+        tmp_path,
+        [a, b],
+        variants={"hrrr": {}, "err": {**_XYERR, "realizations": 3}},
+    )
+    for k in range(3):
+        _write_footprint(project, a, "err", k)
+    _write_footprint(project, b, "err", 0)
+    target = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.5, yres=0.5)
+    bins = pd.IntervalIndex.from_breaks(
+        pd.date_range("2023-01-01 00:00", "2023-01-02 00:00", freq="12h"),
+        closed="left",
+    )
+    sims = project.simulations
+    ens = sims[sims.variant == "err"]
+
+    # Several realizations: the error names the column and says to pick one.
+    for several in (ens, ens[ens.receptor == a.id]):
+        with pytest.raises(ValueError, match="realization column") as error:
+            project.jacobian(several, target, bins)
+        assert "ens[ens.realization == 0]" in str(error.value)
+        assert "[0, 1, 2]" in str(error.value)
+    with pytest.raises(ValueError, match="realization column"):
+        project.footprints(ens)
+
+    # The documented loop: one Jacobian per realization, from that realization's files.
+    H = {k: project.jacobian(ens[ens.realization == k], target, bins) for k in range(3)}
+    assert [list(H[k].receptors) for k in range(3)] == [[a.id, b.id], [a.id], [a.id]]
+    assert H[1].missing == [b.id]
+    for k in range(3):
+        expected = project.simulation(a.id, "err", k).footprint.stilt.aggregate(
+            target, bins
+        )
+        np.testing.assert_allclose(
+            H[k].to_frame().iloc[0].to_numpy().reshape(len(bins), -1).T,
+            expected.to_numpy(),
+            rtol=1e-6,
+        )
+    assert (H[0].data[:1] != H[1].data).nnz > 0
 
 
 def test_jacobian_in_threads_is_the_same_matrix(tmp_path):

@@ -115,3 +115,28 @@ The columns are the time bin and then the target's cells, as named levels:
 ``time, cell`` for zones or a mesh, and ``time, lon, lat`` for a grid
 (``time, x, y`` when it is projected). For a grid,
 ``H.to_xarray().unstack("cell")`` has ``lon`` and ``lat`` dimensions.
+
+.. _jacobian-per-realization:
+
+One Jacobian per realization
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A variant with a grid and ``realizations`` makes a footprint for each
+receptor and each realization, ``0`` to ``N - 1``
+(:doc:`transport_error`). :meth:`~stilt.Project.jacobian` makes a Jacobian
+from one realization, so select each realization by the ``realization``
+column of ``project.simulations`` and loop:
+
+.. code-block:: python
+
+   ens = sims[sims.variant == "hrrr-err"]
+   H = {
+       k: project.jacobian(ens[ens.realization == k], counties, bins)
+       for k in range(4)   # realizations 0 to 3
+   }
+
+``H[k]`` is the Jacobian of realization ``k``, as above, with its own
+``receptors``, ``empty`` and ``missing``: a receptor that has not run for
+one realization is missing from that matrix alone. The dict holds every
+matrix at once. When each is large, loop with ``for`` instead and keep
+only what you compute from each one, such as a posterior.

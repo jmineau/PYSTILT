@@ -111,6 +111,15 @@ def _groups(frame: pd.DataFrame) -> Iterator[tuple[str, int | None, pd.DataFrame
 def _one_group(frame: pd.DataFrame, what: str) -> tuple[str, int | None]:
     """Return the one ``(variant, realization)`` of a selection, or raise."""
     groups = list(dict.fromkeys((v, k) for _, v, k in _rows(frame)))
+    variants = list(dict.fromkeys(v for v, _ in groups))
+    if len(variants) == 1 and len(groups) > 1:
+        realizations = [k for _, k in groups]
+        raise ValueError(
+            f"{what} is made from one realization of an ensemble; this "
+            f"selection holds realizations {realizations} of {variants[0]!r}. "
+            "Pick one with the realization column, as in "
+            f"ens[ens.realization == {realizations[0]}]."
+        )
     if len(groups) != 1:
         raise ValueError(
             f"{what} is made from one variant (and one realization of an "
@@ -936,9 +945,9 @@ class Project:
         Raises
         ------
         ValueError
-            If the selection holds more or fewer than one variant, the
-            variant has no grid, or no selected simulation has a footprint
-            file yet.
+            If the selection holds more or fewer than one variant, or
+            several realizations of an ensemble, the variant has no grid, or
+            no selected simulation has a footprint file yet.
 
         Notes
         -----
@@ -989,7 +998,8 @@ class Project:
         footprint at once. Each footprint cell is split among the target
         cells it overlaps in proportion to area, time layers are summed
         within each of *time_bins*, and cells or layers outside the target
-        or the bins are dropped. The selection must hold one variant.
+        or the bins are dropped. The selection must hold one variant, and
+        one realization of an ensemble: ``ens[ens.realization == k]``.
 
         Footprints are read and summed one receptor at a time, in *workers*
         threads. Each thread holds one footprint, so memory stays at a few
@@ -999,7 +1009,8 @@ class Project:
         Parameters
         ----------
         sel : DataFrame or mask
-            The simulations, as for :meth:`status`, all of one variant.
+            The simulations, as for :meth:`status`, all of one variant (and
+            one realization of an ensemble).
         target : Geometry
             Where the fluxes are: a grid, mesh, or set of zones.
         time_bins : pandas.IntervalIndex
@@ -1024,9 +1035,9 @@ class Project:
         TypeError
             If ``time_bins`` is not a :class:`pandas.IntervalIndex`.
         ValueError
-            If the selection holds more or fewer than one variant, the
-            variant has no grid or no footprints yet, or ``time_bins`` is not
-            closed on the left.
+            If the selection holds more or fewer than one variant, or
+            several realizations of an ensemble, the variant has no grid or
+            no footprints yet, or ``time_bins`` is not closed on the left.
         """
         frame = self._selected(sel)
         name, k = _one_group(frame, "A Jacobian")
