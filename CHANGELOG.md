@@ -27,6 +27,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (breaking: it used to give a silent 1). Folders without a `_foot.nc` need
   neither. X-STILT keeps `params.RDS` elsewhere, so its footprints need the
   argument.
+- `Project.jacobian` and `Project.footprints`, given a selection that holds
+  several realizations of one variant, now say so and show how to pick one,
+  `ens[ens.realization == k]`, instead of listing the variant and realization
+  pairs. The Summing Footprints guide shows the loop that makes a Jacobian for
+  each realization of an ensemble, and the transport error guide points to it.
 
 ## [0.1.0a25] - 2026-10-22
 

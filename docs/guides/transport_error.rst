@@ -88,7 +88,9 @@ get one:
 PYSTILT rejects any other setting when it reads the config, because every
 realization would get the same draw. Each realization is its own
 simulation, so a rerun only does the missing ones. You can raise
-``realizations`` later and only the new realizations run.
+``realizations`` later and only the new realizations run. If the variant
+also has a grid, :ref:`jacobian-per-realization` shows a Jacobian for each
+realization.
 
 Pass all the realizations to ``sim.transport_error`` as a list. It averages
 them before taking the difference:
