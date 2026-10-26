@@ -6,6 +6,20 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `project.transport_error(sel, "hrrr-err", flux)` estimates the transport
+  error for every selected receptor at once, as `sim.transport_error` does for
+  one. `sel` is the unperturbed run, and the second argument names the
+  wind-error variant; every realization of it that has run is averaged. It
+  returns the selection with six more columns: `enhancement`,
+  `enhancement_perturbed`, `background`, `variance`, `noise`, and
+  `realizations` (how many were averaged). A receptor without particles in
+  either variant gets NaN and `realizations` 0. Receptors are read one at a
+  time in threads (`workers`), and the options of
+  `stilt.particles.transport_error` pass through. The Transport Error guide
+  uses it in place of a loop over `sim.transport_error`.
+
 ### Changed
 
 - The Coming From Another STILT page of the docs is gone. Its list of the four

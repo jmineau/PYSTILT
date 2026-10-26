@@ -22,7 +22,8 @@ median and a single value can be compared with its noise.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -37,6 +38,16 @@ from stilt.transforms import apply_transforms, release_coordinate
 
 #: X-STILT's empirical mean vertical correlation length of transport errors, m.
 DEFAULT_LENGTH_SCALE = 356.0
+
+#: The results :func:`_transport_errors` keeps for each receptor, in column order.
+_RESULT_COLUMNS = (
+    "enhancement",
+    "enhancement_perturbed",
+    "background",
+    "variance",
+    "noise",
+    "realizations",
+)
 
 
 @dataclass(frozen=True)
@@ -473,6 +484,63 @@ def transport_error(
         background=background_value,
         realizations=n_real,
     )
+
+
+def _transport_errors(
+    read: Callable[[str], tuple[pd.DataFrame, list[pd.DataFrame]]],
+    receptors: Sequence[Receptor],
+    flux: xr.DataArray,
+    *,
+    transforms: Sequence[Any] = (),
+    directory: str | Path | None = None,
+    workers: int = 1,
+    **options: Any,
+) -> pd.DataFrame:
+    """
+    Return the transport error of many receptors, one receptor at a time.
+
+    ``read(receptor_id)`` returns that receptor's unperturbed particle table
+    and one table per error realization, as :func:`transport_error` takes
+    them; every receptor must have both. Each receptor is read and estimated
+    in one of *workers* threads, which holds only that receptor's tables.
+    *transforms* are the unperturbed variant's footprint transforms, as
+    ``sim.transport_error`` passes them, and *options* go to
+    :func:`transport_error` unchanged.
+
+    Returns one row per receptor, indexed by receptor id in *receptors*
+    order, with the columns in :data:`_RESULT_COLUMNS`.
+    """
+
+    def one(receptor: Receptor) -> tuple[float, float, float, float, float, int]:
+        particles, error_particles = read(receptor.id)
+        result = transport_error(
+            particles,
+            error_particles,
+            flux,
+            transforms=transforms,
+            receptor=receptor,
+            directory=directory,
+            **options,
+        )
+        return (
+            result.enhancement,
+            result.enhancement_perturbed,
+            result.background,
+            result.variance,
+            result.noise,
+            result.realizations,
+        )
+
+    if workers <= 1 or len(receptors) <= 1:
+        rows = [one(r) for r in receptors]
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            rows = list(pool.map(one, receptors))
+    return pd.DataFrame(
+        rows,
+        index=pd.Index([r.id for r in receptors], name="receptor"),
+        columns=pd.Index(_RESULT_COLUMNS),
+    ).astype({"realizations": "int64"})
 
 
 def _release_heights(particles: pd.DataFrame) -> pd.Series:

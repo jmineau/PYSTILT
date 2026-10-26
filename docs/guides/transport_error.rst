@@ -161,27 +161,45 @@ the total error of a modeled value.
 The transport error
 -------------------
 
-``sim.transport_error`` takes the same receptor under the wind-error
-variant and the flux field:
+``project.transport_error`` takes a selection of the unperturbed run, the
+name of the wind-error variant, and the flux field:
 
 .. code-block:: python
 
-   import pandas as pd
+   sims = project.simulations
+   wbb = sims[(sims.variant == "hrrr") & (sims.site == "WBB")]
+   errors = project.transport_error(wbb, "hrrr-err", flux)
+   errors.groupby(errors.time.dt.month).variance.median()
 
-   rows = []
-   for rid in project.receptors.receptor:
-       sim = project.simulation(rid, "hrrr")
-       err = project.simulation(rid, "hrrr-err")
-       result = sim.transport_error(err, flux)
-       rows.append({"receptor": sim.receptor.id, "enhancement": result.enhancement,
-                    "variance": result.variance, "noise": result.noise})
-   errors = pd.DataFrame(rows).set_index("receptor")
+``errors`` is ``wbb`` with six more columns. ``variance`` is the
+transport-error variance of the modeled enhancement, in the enhancement's
+units squared, and ``noise`` is its noise (`Is the estimate meaningful?`_).
+``enhancement`` and ``enhancement_perturbed`` are the modeled enhancement
+without and with the perturbation, and ``background`` is 0 unless you pass
+a background field (:doc:`background`). ``realizations`` is how many
+realizations of the error variant went into the estimate: every one that
+has run. A receptor without particles in either variant gets NaN and
+``realizations`` 0.
 
-``result.variance`` is the transport-error variance of the modeled
-enhancement, in the enhancement's units squared. ``result.sd`` is its
-square root. The particles are weighted the way the footprint weights
-them, with the variant's transforms: the averaging kernel (including one
-from a per-receptor table), pressure weighting, and lifetime decay.
+Each receptor's particles are read whole. A table of 1.4 million rows
+takes about a second to read, so a selection of hundreds of receptors takes
+minutes. For a whole large project, make the call in a Slurm job.
+``workers`` sets how many receptors are read at once (up to 8 by
+default).
+
+``sim.transport_error`` gives the same estimate for one receptor, and
+keeps the per-level table described below:
+
+.. code-block:: python
+
+   sim = project.simulation(rid, "hrrr")
+   result = sim.transport_error(project.simulation(rid, "hrrr-err"), flux)
+   result.variance, result.noise
+
+``result.sd`` is the square root of ``result.variance``. In both calls the
+particles are weighted the way the unperturbed variant's footprint weights
+them, with its transforms: the averaging kernel (including one from a
+per-receptor table), pressure weighting, and lifetime decay.
 :func:`stilt.particles.transport_error` does the same for particle tables
 you have without a project.
 
