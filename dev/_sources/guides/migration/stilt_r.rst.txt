@@ -200,6 +200,28 @@ folder at a time:
    for receptor, particles, foot in read_stilt_r("my_project/out/by-id"):
        print(receptor.id, len(particles), foot is not None)
 
+Each run's receptor comes from two files in its folder. The release points are
+the ones in ``CONTROL``, the numbers HYSPLIT read, so a point receptor's id is
+the folder's name. The time is the one in ``<id>_traj.rds``, which keeps the
+seconds that ``CONTROL`` drops. A folder without ``CONTROL`` stops the read
+with an error that names it.
+
+A footprint's ``smooth_factor`` is not in ``<id>_foot.nc``. When STILT-R ran
+through Slurm, rslurm kept every run's settings in
+``my_project/_rslurm_my_project/params.RDS``, beside ``out/``, and
+``smooth_factor`` is read from there. That file is used only when its
+``n_hours`` is the one in each run's ``CONTROL`` and its ``numpar`` the one
+HYSPLIT ran; otherwise the read stops and says which one differs. A project
+run on one machine has no ``params.RDS``: give the ``smooth_factor`` your
+``run_stilt.r`` set.
+
+.. code-block:: python
+
+   sims = read_stilt_r("my_project/out/by-id", smooth_factor=1)
+
+Without either, reading a footprint stops with an error that names both. A
+project of particles only (``run_foot = FALSE``) needs neither.
+
 The particles are the table STILT-R saved in ``<id>_traj.rds``, with
 PYSTILT's column names (``indx``, ``time``, ``long``, ``lati``, and ``xhgt``
 become ``particle``, ``age``, ``lon``, ``lat``, and ``release_height``) and a
@@ -213,9 +235,9 @@ Some of what STILT-R saved is not read:
 
 - With transport error, STILT-R saves a second set of particles in the same
   ``.rds`` (``particle_error``). Only the first set is read.
-- The HYSPLIT settings in the ``.rds`` (``params``) are not returned. The
-  ``.rds`` and ``.nc`` files do not record the STILT-R version, ``n_hours``,
-  or ``smooth_factor``.
+- The HYSPLIT settings in the ``.rds`` (``params``), the rest of
+  ``CONTROL`` (``n_hours``, the met files) and of ``params.RDS`` are not
+  returned. No file records the STILT-R version.
 - A footprint on a projected grid (a ``projection`` other than
   longitude/latitude) raises an error; open it with
   :func:`xarray.open_dataset`.

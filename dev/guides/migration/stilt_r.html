@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=04b1787c"></script>
+    <script src="../../_static/documentation_options.js?v=57967572"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Your Own HYSPLIT Build And Data Tables" href="../hysplit_build.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev1+gb4391d1b0" />
+  <meta name="docsearch:version" content="0.1.0a26.dev2+g99984e27e" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -737,6 +737,24 @@ folder at a time:</p>
     <span class="nb">print</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">),</span> <span class="n">foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>Each run’s receptor comes from two files in its folder. The release points are
+the ones in <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>, the numbers HYSPLIT read, so a point receptor’s id is
+the folder’s name. The time is the one in <code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_traj.rds</span></code>, which keeps the
+seconds that <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> drops. A folder without <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> stops the read
+with an error that names it.</p>
+<p>A footprint’s <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> is not in <code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_foot.nc</span></code>. When STILT-R ran
+through Slurm, rslurm kept every run’s settings in
+<code class="docutils literal notranslate"><span class="pre">my_project/_rslurm_my_project/params.RDS</span></code>, beside <code class="docutils literal notranslate"><span class="pre">out/</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> is read from there. That file is used only when its
+<code class="docutils literal notranslate"><span class="pre">n_hours</span></code> is the one in each run’s <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> and its <code class="docutils literal notranslate"><span class="pre">numpar</span></code> the one
+HYSPLIT ran; otherwise the read stops and says which one differs. A project
+run on one machine has no <code class="docutils literal notranslate"><span class="pre">params.RDS</span></code>: give the <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> your
+<code class="docutils literal notranslate"><span class="pre">run_stilt.r</span></code> set.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sims</span> <span class="o">=</span> <span class="n">read_stilt_r</span><span class="p">(</span><span class="s2">&quot;my_project/out/by-id&quot;</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Without either, reading a footprint stops with an error that names both. A
+project of particles only (<code class="docutils literal notranslate"><span class="pre">run_foot</span> <span class="pre">=</span> <span class="pre">FALSE</span></code>) needs neither.</p>
 <p>The particles are the table STILT-R saved in <code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_traj.rds</span></code>, with
 PYSTILT’s column names (<code class="docutils literal notranslate"><span class="pre">indx</span></code>, <code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">lati</span></code>, and <code class="docutils literal notranslate"><span class="pre">xhgt</span></code>
 become <code class="docutils literal notranslate"><span class="pre">particle</span></code>, <code class="docutils literal notranslate"><span class="pre">age</span></code>, <code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code>, and <code class="docutils literal notranslate"><span class="pre">release_height</span></code>) and a
@@ -749,9 +767,9 @@ pass the particles to <a class="reference internal" href="../../reference/_api/s
 <ul class="simple">
 <li><p>With transport error, STILT-R saves a second set of particles in the same
 <code class="docutils literal notranslate"><span class="pre">.rds</span></code> (<code class="docutils literal notranslate"><span class="pre">particle_error</span></code>). Only the first set is read.</p></li>
-<li><p>The HYSPLIT settings in the <code class="docutils literal notranslate"><span class="pre">.rds</span></code> (<code class="docutils literal notranslate"><span class="pre">params</span></code>) are not returned. The
-<code class="docutils literal notranslate"><span class="pre">.rds</span></code> and <code class="docutils literal notranslate"><span class="pre">.nc</span></code> files do not record the STILT-R version, <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>,
-or <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>.</p></li>
+<li><p>The HYSPLIT settings in the <code class="docutils literal notranslate"><span class="pre">.rds</span></code> (<code class="docutils literal notranslate"><span class="pre">params</span></code>), the rest of
+<code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> (<code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, the met files) and of <code class="docutils literal notranslate"><span class="pre">params.RDS</span></code> are not
+returned. No file records the STILT-R version.</p></li>
 <li><p>A footprint on a projected grid (a <code class="docutils literal notranslate"><span class="pre">projection</span></code> other than
 longitude/latitude) raises an error; open it with
 <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.open_dataset.html#xarray.open_dataset" title="(in xarray v2026.9.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">xarray.open_dataset()</span></code></a>.</p></li>

@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=04b1787c"></script>
+    <script src="../../_static/documentation_options.js?v=57967572"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev1+gb4391d1b0" />
+  <meta name="docsearch:version" content="0.1.0a26.dev2+g99984e27e" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -451,10 +451,14 @@
 <span class="sd">STILT-R writes each simulation to its own folder of ``out/by-id``, named by</span>
 <span class="sd">the simulation id. X-STILT runs STILT-R&#39;s code and writes the same layout::</span>
 
-<span class="sd">    out/by-id/</span>
-<span class="sd">      201507050000_-111.85_40.77_5/</span>
-<span class="sd">        201507050000_-111.85_40.77_5_traj.rds   receptor, particles, HYSPLIT settings</span>
-<span class="sd">        201507050000_-111.85_40.77_5_foot.nc    footprint</span>
+<span class="sd">    my_project/</span>
+<span class="sd">      out/by-id/</span>
+<span class="sd">        201507050000_-111.85_40.77_5/</span>
+<span class="sd">          201507050000_-111.85_40.77_5_traj.rds   receptor time, particles</span>
+<span class="sd">          201507050000_-111.85_40.77_5_foot.nc    footprint</span>
+<span class="sd">          CONTROL                                 the release points HYSPLIT read</span>
+<span class="sd">      _rslurm_my_project/</span>
+<span class="sd">        params.RDS                                every run&#39;s settings (Slurm runs only)</span>
 
 <span class="sd">:func:`read_stilt_r` reads these folders as PYSTILT&#39;s receptors, particle</span>
 <span class="sd">tables, and footprints. The ``.rds`` files are read with the</span>
@@ -467,7 +471,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Mapping</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
@@ -476,8 +480,11 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FootprintConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">_footprint_array</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_particles</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">ColumnReceptor</span><span class="p">,</span> <span class="n">Receptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.control</span><span class="w"> </span><span class="kn">import</span> <span class="n">ControlFile</span>
 
 <span class="c1">#: PYSTILT&#39;s names for STILT-R&#39;s particle columns. HYSPLIT&#39;s driver renames</span>
 <span class="c1">#: the first four the same way; ``xhgt`` is the release height STILT-R adds</span>
@@ -492,12 +499,18 @@
 
 <span class="n">_TRAJ</span> <span class="o">=</span> <span class="s2">&quot;_traj.rds&quot;</span>
 <span class="n">_FOOT</span> <span class="o">=</span> <span class="s2">&quot;_foot.nc&quot;</span>
+<span class="n">_CONTROL</span> <span class="o">=</span> <span class="s2">&quot;CONTROL&quot;</span>
+
+<span class="c1">#: The columns of rslurm&#39;s ``params.RDS`` that are read: the footprint&#39;s</span>
+<span class="c1">#: smoothing, and two settings that must match the run&#39;s own files.</span>
+<span class="n">_PARAMS_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;smooth_factor&quot;</span><span class="p">,</span> <span class="s2">&quot;n_hours&quot;</span><span class="p">,</span> <span class="s2">&quot;numpar&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="read_stilt_r">
 <a class="viewcode-back" href="../../reference/_api/stilt.migration.read_stilt_r.html#stilt.migration.read_stilt_r">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">read_stilt_r</span><span class="p">(</span>
     <span class="n">by_id_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Receptor</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Read STILT-R or X-STILT ``by-id`` output, one simulation at a time.</span>
@@ -510,6 +523,14 @@
 <span class="sd">    them. The folders are read in name order, which is time order, and each</span>
 <span class="sd">    one only when the loop reaches it.</span>
 
+<span class="sd">    The receptor&#39;s release points are the ones in the folder&#39;s ``CONTROL``</span>
+<span class="sd">    file, the numbers HYSPLIT read, so a point receptor&#39;s id is the folder&#39;s</span>
+<span class="sd">    name. Its time is the ``.rds`` file&#39;s, which keeps the seconds that</span>
+<span class="sd">    ``CONTROL`` drops. A receptor with one release point is a</span>
+<span class="sd">    :class:`~stilt.PointReceptor`, two heights at one place are a</span>
+<span class="sd">    :class:`~stilt.ColumnReceptor`, and release points at different places,</span>
+<span class="sd">    such as X-STILT&#39;s slant columns, are a :class:`~stilt.MultiPointReceptor`.</span>
+
 <span class="sd">    The particle columns get PYSTILT&#39;s names: ``indx``, ``time``, ``long``,</span>
 <span class="sd">    ``lati``, and ``xhgt`` become ``particle``, ``age`` (minutes since</span>
 <span class="sd">    release), ``lon``, ``lat``, and ``release_height``. ``time`` is then the</span>
@@ -519,25 +540,24 @@
 
 <span class="sd">    The footprint is ``&lt;id&gt;_foot.nc``, on the grid its file gives, with</span>
 <span class="sd">    layers stamped at the receptor time plus whole hours, as STILT-R stamps</span>
-<span class="sd">    them. Its settings hold that grid and ``time_integrate`` (true for a</span>
-<span class="sd">    backward run with one layer at the receptor time). The file does not</span>
-<span class="sd">    record ``smooth_factor``, so the settings give the default of 1, which</span>
-<span class="sd">    is STILT-R&#39;s default too. Other ``_foot.nc`` files in the folder, such as</span>
-<span class="sd">    X-STILT&#39;s footprints at other resolutions, are not read.</span>
-
-<span class="sd">    The receptor&#39;s coordinates are the ones HYSPLIT ran, to the 15</span>
-<span class="sd">    significant digits STILT-R writes in its CONTROL file and simulation id,</span>
-<span class="sd">    so a point receptor&#39;s id is the folder&#39;s name. A receptor with one</span>
-<span class="sd">    release point is a :class:`~stilt.PointReceptor`. Several heights at one</span>
-<span class="sd">    place are a :class:`~stilt.ColumnReceptor` from the lowest to the</span>
-<span class="sd">    highest, as STILT-R spreads its particles; release points at different</span>
-<span class="sd">    places, such as X-STILT&#39;s slant columns, are a</span>
-<span class="sd">    :class:`~stilt.MultiPointReceptor`.</span>
+<span class="sd">    them. Its settings hold that grid, ``time_integrate`` (true for a</span>
+<span class="sd">    backward run with one layer at the receptor time), and</span>
+<span class="sd">    ``smooth_factor``. The footprint file does not record ``smooth_factor``.</span>
+<span class="sd">    It comes from ``params.RDS``, which STILT-R&#39;s Slurm runs (rslurm) leave</span>
+<span class="sd">    in ``_rslurm_&lt;project&gt;/`` beside ``out/``, or else from the</span>
+<span class="sd">    *smooth_factor* argument. ``params.RDS`` is used only when its</span>
+<span class="sd">    ``n_hours`` and ``numpar`` are the run&#39;s (``CONTROL``, and the HYSPLIT</span>
+<span class="sd">    settings the ``.rds`` saved). Other ``_foot.nc`` files in the folder,</span>
+<span class="sd">    such as X-STILT&#39;s footprints at other resolutions, are not read.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    by_id_dir : str or Path</span>
 <span class="sd">        The ``by-id`` folder, such as ``my_project/out/by-id``.</span>
+<span class="sd">    smooth_factor : float, optional</span>
+<span class="sd">        The ``smooth_factor`` STILT-R made the footprints with, for a project</span>
+<span class="sd">        without ``params.RDS`` (one run without Slurm). Not needed to read</span>
+<span class="sd">        folders without a footprint.</span>
 
 <span class="sd">    Yields</span>
 <span class="sd">    ------</span>
@@ -554,20 +574,24 @@
 <span class="sd">    ImportError</span>
 <span class="sd">        If the rdata package is not installed.</span>
 <span class="sd">    FileNotFoundError</span>
-<span class="sd">        If *by_id_dir* does not exist, or no folder in it holds a</span>
-<span class="sd">        ``_traj.rds`` file.</span>
+<span class="sd">        If *by_id_dir* does not exist, no folder in it holds a ``_traj.rds``</span>
+<span class="sd">        file, or a folder that does has no ``CONTROL`` file.</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        When a simulation is read, if its files are not as STILT-R writes</span>
-<span class="sd">        them: a ``_traj.rds`` without the particle columns or the receptor,</span>
-<span class="sd">        or a footprint on a projected grid (only longitude/latitude grids</span>
-<span class="sd">        are read) or with layers that are not whole hours from the</span>
-<span class="sd">        receptor time.</span>
+<span class="sd">        them: a ``_traj.rds`` without the particle columns or the receptor</span>
+<span class="sd">        time, a ``CONTROL`` file that cannot be read, or a footprint on a</span>
+<span class="sd">        projected grid (only longitude/latitude grids are read) or with</span>
+<span class="sd">        layers that are not whole hours from the receptor time. When a</span>
+<span class="sd">        footprint is read, if its ``smooth_factor`` is not known (no</span>
+<span class="sd">        ``params.RDS`` and no *smooth_factor*), if ``params.RDS`` disagrees</span>
+<span class="sd">        with the run&#39;s ``n_hours`` or ``numpar``, or if it records a</span>
+<span class="sd">        ``smooth_factor`` other than *smooth_factor* or more than one.</span>
 
 <span class="sd">    Warns</span>
 <span class="sd">    -----</span>
 <span class="sd">    UserWarning</span>
 <span class="sd">        When folders hold a ``_foot.nc`` but no ``_traj.rds``. They are</span>
-<span class="sd">        skipped: the receptor is read from the ``.rds``.</span>
+<span class="sd">        skipped: the particles are read from the ``.rds``.</span>
 
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
@@ -582,6 +606,11 @@
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; for receptor, particles, foot in stilt.migration.read_stilt_r(&quot;out/by-id&quot;):</span>
 <span class="sd">    ...     print(receptor.id, len(particles), foot is not None)</span>
+
+<span class="sd">    A project run on one machine has no ``params.RDS``; give the</span>
+<span class="sd">    ``smooth_factor`` from its ``run_stilt.r``:</span>
+
+<span class="sd">    &gt;&gt;&gt; sims = stilt.migration.read_stilt_r(&quot;out/by-id&quot;, smooth_factor=1)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">by_id_dir</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">root</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
@@ -601,8 +630,16 @@
             <span class="sa">f</span><span class="s2">&quot;file, and are skipped (the first is </span><span class="si">{</span><span class="n">orphans</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="p">)</span>
+    <span class="n">no_control</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">runs</span> <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">p</span> <span class="o">/</span> <span class="n">_CONTROL</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">()]</span>
+    <span class="k">if</span> <span class="n">no_control</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">no_control</span><span class="p">)</span><span class="si">}</span><span class="s2"> folders of </span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2"> have no </span><span class="si">{</span><span class="n">_CONTROL</span><span class="si">}</span><span class="s2"> file, the &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;first </span><span class="si">{</span><span class="n">no_control</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">. The receptor is read from the </span><span class="si">{</span><span class="n">_CONTROL</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="s2">&quot;file STILT-R writes in every by-id folder.&quot;</span>
+        <span class="p">)</span>
     <span class="n">rdata</span> <span class="o">=</span> <span class="n">_rdata</span><span class="p">()</span>
-    <span class="k">return</span> <span class="p">(</span><span class="n">_read_simulation</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">rdata</span><span class="p">)</span> <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">)</span></div>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">_rslurm_params</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">rdata</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">_read_simulation</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">rdata</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="p">)</span> <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">)</span></div>
 
 
 
@@ -649,50 +686,113 @@
     <span class="k">return</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">output</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_values</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_rslurm_params</span><span class="p">(</span>
+    <span class="n">by_id</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">rdata</span><span class="p">:</span> <span class="n">Any</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">float</span><span class="p">]]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return a receptor coordinate as HYSPLIT got it: a flat float array, to 15 significant digits.</span>
+<span class="sd">    Return rslurm&#39;s ``params.RDS`` of a STILT-R project, and the values of its columns that are read.</span>
 
-<span class="sd">    STILT-R writes the release points into HYSPLIT&#39;s CONTROL file, and its</span>
-<span class="sd">    simulation id, with R&#39;s ``paste``, which keeps 15 significant digits.</span>
-<span class="sd">    X-STILT may store a coordinate as a list of vectors.</span>
+<span class="sd">    ``stilt_apply`` hands rslurm one row per simulation, holding every</span>
+<span class="sd">    argument of ``simulation_step``, and rslurm saves them in</span>
+<span class="sd">    ``_rslurm_&lt;job name&gt;/params.RDS``. The job name is the project folder&#39;s</span>
+<span class="sd">    name, the folder ``out/`` is in. ``None`` when there is no such file, as</span>
+<span class="sd">    after a run without Slurm. Columns of R functions (the</span>
+<span class="sd">    ``before_trajec`` and ``before_footprint`` hooks) cannot be converted,</span>
+<span class="sd">    so only the columns needed are.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
-        <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
-        <span class="n">flat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="k">if</span> <span class="n">parts</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">flat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">.15g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">flat</span><span class="p">])</span>
+    <span class="n">project</span> <span class="o">=</span> <span class="n">by_id</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">project</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;_rslurm_</span><span class="si">{</span><span class="n">project</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="o">/</span> <span class="s2">&quot;params.RDS&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">rdata</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">parse_file</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">extension</span><span class="o">=</span><span class="s2">&quot;.rds&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">object</span>
+    <span class="n">convert</span> <span class="o">=</span> <span class="n">rdata</span><span class="o">.</span><span class="n">conversion</span><span class="o">.</span><span class="n">SimpleConverter</span><span class="p">()</span><span class="o">.</span><span class="n">convert</span>
+    <span class="n">attrs</span> <span class="o">=</span> <span class="n">rdata</span><span class="o">.</span><span class="n">conversion</span><span class="o">.</span><span class="n">convert_attrs</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">convert</span><span class="p">)</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="p">[])]</span>
+    <span class="k">if</span> <span class="s2">&quot;data.frame&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;class&quot;</span><span class="p">,</span> <span class="p">[])]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is not a table of STILT-R runs.&quot;</span><span class="p">)</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">name</span><span class="p">:</span> <span class="p">{</span><span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">convert</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="n">names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">name</span><span class="p">)]))}</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_PARAMS_COLUMNS</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">path</span><span class="p">,</span> <span class="n">values</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_receptor</span><span class="p">(</span><span class="n">stored</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Receptor</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the receptor a ``_traj.rds`` file records (``run_time``, ``long``, ``lati``, ``zagl``).&quot;&quot;&quot;</span>
-    <span class="n">stored</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">stored</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;run_time&quot;</span><span class="p">,</span> <span class="s2">&quot;long&quot;</span><span class="p">,</span> <span class="s2">&quot;lati&quot;</span><span class="p">,</span> <span class="s2">&quot;zagl&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stored</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: the receptor has no </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-    <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">zagl</span> <span class="o">=</span> <span class="p">(</span><span class="n">_values</span><span class="p">(</span><span class="n">stored</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;long&quot;</span><span class="p">,</span> <span class="s2">&quot;lati&quot;</span><span class="p">,</span> <span class="s2">&quot;zagl&quot;</span><span class="p">))</span>
-    <span class="n">n</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">lon</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">lat</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">zagl</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">zagl</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">zagl</span><span class="p">))</span>
-    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_smooth_factor</span><span class="p">(</span>
+    <span class="n">foot</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">stored_params</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">rslurm</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">float</span><span class="p">]]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">given</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the ``smooth_factor`` a STILT-R footprint was made with.</span>
+
+<span class="sd">    It is rslurm&#39;s ``params.RDS`` value when that file&#39;s ``n_hours`` is the</span>
+<span class="sd">    run&#39;s ``CONTROL`` value and its ``numpar`` the one HYSPLIT ran (the</span>
+<span class="sd">    ``.rds`` file&#39;s ``params``, when it has them); otherwise the value given.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">rslurm</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">given</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">foot</span><span class="si">}</span><span class="s2">: the footprint&#39;s smooth_factor is not recorded. STILT-R&#39;s &quot;</span>
+                <span class="s2">&quot;Slurm runs record it in _rslurm_&lt;project&gt;/params.RDS beside out/, &quot;</span>
+                <span class="s2">&quot;and this project has none. Give the value from run_stilt.r: &quot;</span>
+                <span class="s2">&quot;read_stilt_r(by_id_dir, smooth_factor=1).&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">given</span>
+    <span class="n">path</span><span class="p">,</span> <span class="n">values</span> <span class="o">=</span> <span class="n">rslurm</span>
+    <span class="n">stored</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">stored_params</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="n">ran</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;n_hours&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">n_hours</span><span class="p">)}</span>
+    <span class="k">if</span> <span class="s2">&quot;numpar&quot;</span> <span class="ow">in</span> <span class="n">stored</span><span class="p">:</span>
+        <span class="n">ran</span><span class="p">[</span><span class="s2">&quot;numpar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">stored</span><span class="p">[</span><span class="s2">&quot;numpar&quot;</span><span class="p">])[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">ran</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">!=</span> <span class="p">{</span><span class="n">value</span><span class="p">}:</span>
+            <span class="n">recorded</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">())))</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">foot</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> and this run disagree: it gives </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">recorded</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;no value&#39;</span><span class="si">}</span><span class="s2">, and the run&#39;s files give </span><span class="si">{</span><span class="n">value</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="s2">&quot;That params.RDS is not from this run.&quot;</span>
+            <span class="p">)</span>
+    <span class="n">smooth</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;smooth_factor&quot;</span><span class="p">,</span> <span class="p">()))</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">smooth</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: the receptor&#39;s long, lati, and zagl have </span><span class="si">{</span><span class="n">lon</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2">, &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lat</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2">, and </span><span class="si">{</span><span class="n">zagl</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> values.&quot;</span>
-        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
-    <span class="c1"># STILT-R releases every point at the first run_time (write_control).</span>
-    <span class="n">time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">stored</span><span class="p">[</span><span class="s2">&quot;run_time&quot;</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="c1"># STILT-R releases a column&#39;s particles evenly from the lowest</span>
-        <span class="c1"># height to the highest (its xhgt), however many heights it is given.</span>
-        <span class="k">return</span> <span class="n">ColumnReceptor</span><span class="p">(</span>
-            <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">,</span>
-            <span class="n">longitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">lon</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
-            <span class="n">latitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
-            <span class="n">bottom</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">zagl</span><span class="o">.</span><span class="n">min</span><span class="p">()),</span>
-            <span class="n">top</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">zagl</span><span class="o">.</span><span class="n">max</span><span class="p">()),</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> gives smooth_factor </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s1">g</span><span class="si">}</span><span class="s1">&#39;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">smooth</span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;no value&#39;</span><span class="si">}</span><span class="s2">; &quot;</span>
+            <span class="s2">&quot;one value is needed to read the footprints.&quot;</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="n">Receptor</span><span class="o">.</span><span class="n">from_points</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="nb">zip</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">zagl</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">given</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">given</span> <span class="o">!=</span> <span class="n">smooth</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;smooth_factor=</span><span class="si">{</span><span class="n">given</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> was given, but </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> records &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">smooth</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> for this project&#39;s runs.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">smooth</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_control</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ControlFile</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a run&#39;s ``CONTROL`` file, read as PYSTILT reads its own.&quot;&quot;&quot;</span>
+    <span class="c1"># STILT-R runs HYSPLIT, so its CONTROL file is HYSPLIT&#39;s.</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.control</span><span class="w"> </span><span class="kn">import</span> <span class="n">ControlFile</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ControlFile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> cannot be read as a CONTROL file: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_receptor</span><span class="p">(</span><span class="n">stored</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">control</span><span class="p">:</span> <span class="n">ControlFile</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Receptor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the receptor of a run: its release points from ``CONTROL``, its time from the ``.rds``.</span>
+
+<span class="sd">    STILT-R writes ``CONTROL``&#39;s time to the minute; the ``.rds`` keeps the</span>
+<span class="sd">    seconds. Every point is released at the first ``run_time``</span>
+<span class="sd">    (``write_control``).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">stored</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">stored</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">if</span> <span class="s2">&quot;run_time&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stored</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: the receptor has no run_time.&quot;</span><span class="p">)</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">stored</span><span class="p">[</span><span class="s2">&quot;run_time&quot;</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="p">[(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">alt</span><span class="p">)</span> <span class="k">for</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">alt</span> <span class="ow">in</span> <span class="n">control</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">coords</span><span class="p">()]</span>
+    <span class="k">return</span> <span class="n">Receptor</span><span class="o">.</span><span class="n">from_points</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">points</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_particles</span><span class="p">(</span><span class="n">stored</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
@@ -722,7 +822,9 @@
     <span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_footprint</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">backward</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_footprint</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">backward</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return a STILT-R ``_foot.nc`` as a PYSTILT footprint.</span>
 
@@ -763,25 +865,34 @@
             <span class="sa">f</span><span class="s2">&quot;receptor time </span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="si">}</span><span class="s2">.&quot;</span>
         <span class="p">)</span>
     <span class="n">integrated</span> <span class="o">=</span> <span class="n">backward</span> <span class="ow">and</span> <span class="n">hours</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">hours</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span>
-    <span class="n">config</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="p">(</span><span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">time_integrate</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">integrated</span><span class="p">))</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="p">(</span>
+        <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="n">smooth_factor</span><span class="p">,</span> <span class="n">time_integrate</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">integrated</span><span class="p">)</span>
+    <span class="p">)</span>
     <span class="n">values</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;float64&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">_footprint_array</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">hours</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_read_simulation</span><span class="p">(</span>
-    <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">rdata</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">rdata</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">rslurm</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">float</span><span class="p">]]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Receptor</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the receptor, particles, and footprint of one ``by-id`` folder.&quot;&quot;&quot;</span>
     <span class="n">traj</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="si">}{</span><span class="n">_TRAJ</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="n">output</span> <span class="o">=</span> <span class="n">_read_rds</span><span class="p">(</span><span class="n">traj</span><span class="p">,</span> <span class="n">rdata</span><span class="p">)</span>
-    <span class="n">receptor</span> <span class="o">=</span> <span class="n">_receptor</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">),</span> <span class="n">traj</span><span class="p">)</span>
+    <span class="n">control</span> <span class="o">=</span> <span class="n">_control</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="n">_CONTROL</span><span class="p">)</span>
+    <span class="n">receptor</span> <span class="o">=</span> <span class="n">_receptor</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">),</span> <span class="n">control</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
     <span class="n">particles</span> <span class="o">=</span> <span class="n">_particles</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">],</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
     <span class="n">foot_path</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="si">}{</span><span class="n">_FOOT</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">foot_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
         <span class="k">return</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="n">smooth</span> <span class="o">=</span> <span class="n">_smooth_factor</span><span class="p">(</span>
+        <span class="n">foot_path</span><span class="p">,</span> <span class="n">control</span><span class="o">.</span><span class="n">n_hours</span><span class="p">,</span> <span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;params&quot;</span><span class="p">),</span> <span class="n">rslurm</span><span class="p">,</span> <span class="n">smooth_factor</span>
+    <span class="p">)</span>
     <span class="c1"># STILT-R reads the run&#39;s direction the same way (calc_footprint).</span>
     <span class="n">backward</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">_footprint</span><span class="p">(</span><span class="n">foot_path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">backward</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">_footprint</span><span class="p">(</span><span class="n">foot_path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">backward</span><span class="p">,</span> <span class="n">smooth</span><span class="p">)</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;read_stilt_r&quot;</span><span class="p">]</span>
