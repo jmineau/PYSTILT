@@ -227,6 +227,16 @@ The reasons
        - ``no more meteorology``: the particles reached a time that no met
          file holds. HYSPLIT says so in the ``WARNING`` file of the kept
          workdir.
+       - ``The particles stopped ... h into the ... h run, up to ... grid
+         cells inside the met's domain``: the particles stopped before
+         ``n_hours`` and at least one was more than 5 grid cells from
+         every edge of the met's domain, the domain top included.
+         Particles that leave the domain end within 2 cells of its edge,
+         so the met ran out, though HYSPLIT may have written no warning
+         and ``Complete Hysplit``. Look for a met file with fewer hours
+         than its name says, and download or crop it again. PYSTILT
+         checks this only when ``outdt`` is 0, the default: with fewer
+         rows, a particle's last row can be far from where it left.
        - A HYSPLIT message, such as ``start point not within (x,y,t) any
          data file``: the receptor is outside the files, in time or in
          space.

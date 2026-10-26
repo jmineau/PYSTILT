@@ -460,6 +460,20 @@ hours, and ``Met.check`` fails when a file is damaged or the files lack a time
 step the run needs (arlmet's ``File.check()`` and ``File.times``, read once
 per file in a process).
 
+After the run, the driver's ``check_met_stop`` catches a silent stop that the
+check before it missed, whatever its cause. A run that stopped before
+``n_hours`` fails as ``MET_COVERAGE`` when any particle at its last time step
+is more than ``MET_STOP_CELLS`` (5) grid cells from every edge of the met's
+domain: the sides of the first met file's grid, and ``z_top``, where a cell is
+``z_top`` divided by the met's number of levels. Particles that left the test
+met's crop ended 1.6 to 2.0 cells in, and a larger HRRR crop dropped them at about 1;
+the furthest-inside particle of runs the met stopped was 34 cells in or more.
+HYSPLIT writes ``off spatial domain of all grids`` for both, so its log cannot
+tell them apart. The check runs only when ``outdt`` is 0: with fewer rows, a
+particle's last row can be far inside the domain though it left. It takes a
+particle table, a grid, and the domain top, nothing of HYSPLIT's, so the core
+can call it for another transport model that knows its domain.
+
 Realizations
 ^^^^^^^^^^^^
 

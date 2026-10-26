@@ -358,7 +358,10 @@ class HysplitConfig(TransportConfig):
         0,
         description=(
             "Interval between particle outputs in ``PARTICLE_STILT.DAT``, in "
-            "minutes. 0 writes every time step and a negative value writes none."
+            "minutes. 0 writes every time step and a negative value writes none. "
+            "Only at 0 does PYSTILT check where the particles of a run that "
+            "stopped early ended, to tell met that ran out from particles that "
+            "left the met's domain."
         ),
     )
     p10f: float = Field(

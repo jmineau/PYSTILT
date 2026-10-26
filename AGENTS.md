@@ -241,7 +241,9 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
   removed when the result is written and never read by completion.
 - **Met that ran out is a failure; a domain exit is not.** HYSPLIT's warnings
   are unreliable, so `Met.files_for` and `Met.check` stop a run on missing or
-  damaged met before it starts (`FAILURE_PHRASES` maps the log afterwards).
+  damaged met before it starts (`FAILURE_PHRASES` maps the log afterwards),
+  and `check_met_stop` fails a run that stopped early with a particle more
+  than 5 grid cells inside the domain (only at `outdt: 0`).
   `stilt check` runs the file search for every receptor early; it opens no met
   file past one header, so a damaged file still fails at run time.
 - **Realizations are an axis**: `realizations: N` is one variant with a

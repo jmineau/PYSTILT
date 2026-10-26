@@ -314,15 +314,15 @@ def test_hysplit_fails_a_run_whose_met_runs_out(
 
 
 @integration
-def test_hysplit_can_drop_every_particle_at_a_met_gap_without_a_warning(
+def test_a_run_the_met_stopped_without_a_warning_fails_by_where_its_particles_ended(
     tmp_path, wbb_receptor, traj_only_config, met_dir, monkeypatch
 ):
     """
-    HYSPLIT may stop every particle where the met runs out and still say it completed.
+    HYSPLIT may stop every particle where the met runs out and still say it completed (#213).
 
-    This is why the met files are checked before a run (``Met.check``):
-    without it, the run would pass for one whose particles all left the
-    domain. With ``krand: 4`` about one run in five does this.
+    With ``krand: 4`` about one run in six does this. The run fails anyway,
+    since its particles stopped far inside the met's domain, not at its
+    edge as particles that leave it do.
     """
     from stilt.transport.hysplit import Met
 
@@ -332,8 +332,10 @@ def test_hysplit_can_drop_every_particle_at_a_met_gap_without_a_warning(
     project.run()
 
     sim = project.simulation(*_sim_id(wbb_receptor))
-    assert sim.has_particles  # complete, though the run asked for 12 hours
-    assert sim.particles["age"].abs().max() == 6 * 60  # where the cut file starts
+    assert not sim.has_particles
+    assert sim.failure is not None and sim.failure["reason"] == "MET_COVERAGE"
+    # Where the cut file starts.
+    assert "stopped 6.0 h into the 12 h run" in sim.failure["message"]
     assert sim.log_path is not None
     log = sim.log_path.read_text()
     assert "Complete Hysplit" in log

@@ -17,6 +17,7 @@ from .driver import (
     LOG_FILE,
     PARTICLE_STILT_FILE,
     _bundled_data_dir,
+    check_met_stop,
     check_release,
     read_particle_dat,
     run_hycs_std,
@@ -27,6 +28,7 @@ from .met import Met, MetConfig
 
 if TYPE_CHECKING:
     import pandas as pd
+    from arlmet import Grid
 
     from stilt.receptors import Receptor
 
@@ -166,7 +168,10 @@ class HysplitModel:
             as the met running out (``MET_COVERAGE``); ``PARTICLE_LIMIT``
             when ``maxpar`` stopped a release from several locations before
             the last ones got their particles; or ``NO_PARTICLE_DATA`` when
-            HYSPLIT wrote no particle file.
+            HYSPLIT wrote no particle file. A run whose particles stopped
+            before ``n_hours`` well inside the met's domain fails as
+            ``MET_COVERAGE`` too, when ``outdt`` is 0: more than 5 grid
+            cells from every edge, the domain top included.
             Particles that all left the met's domain before the end of the
             run are kept.
         MeteorologyError
@@ -193,12 +198,23 @@ class HysplitModel:
                     reason=FailureReason.NO_PARTICLE_DATA,
                 )
             particles = read_particle_dat(path, config.varsiwant)
+            if config.outdt == 0:  # the check needs a row every time step
+                grid, levels = _met_domain(readable[0])
+                check_met_stop(particles, config.n_hours, grid, levels, config.z_top)
         except SimulationError as error:
             error.log = _read_log(workdir)
             raise
         # The record names the source files; the crop settings are in the
         # run's settings.
         return ModelRun(particles=particles, log=_read_log(workdir), met_files=source)
+
+
+def _met_domain(path: Path) -> tuple[Grid, int]:
+    """Return the horizontal grid of the ARL file at *path* and its number of levels."""
+    from arlmet import File
+
+    with File(path) as met:
+        return met.grid, len(met.vertical_axis)
 
 
 def _read_log(workdir: Path) -> str:
