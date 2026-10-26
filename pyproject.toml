@@ -163,8 +163,12 @@ name = "Only the transport registry imports HYSPLIT's package"
 type = "forbidden"
 source_modules = ["stilt.*"]
 forbidden_modules = ["stilt.transport.hysplit"]
-ignore_imports = ["stilt.transport -> stilt.transport.hysplit"]
 # get_model imports a model's package when asked for it; that is the boundary.
+# STILT-R runs HYSPLIT, so its reader reads the CONTROL files it left.
+ignore_imports = [
+    "stilt.transport -> stilt.transport.hysplit",
+    "stilt.migration -> stilt.transport.hysplit.control",
+]
 allow_indirect_imports = true
 
 # Config classes do no I/O when they validate, so a config.yaml loads

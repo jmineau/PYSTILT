@@ -1,20 +1,27 @@
 #!/usr/bin/env Rscript
-# Write a small STILT-R by-id folder with STILT-R's own code. It is the test
-# sample of stilt.migration.read_stilt_r (tests/fixtures/stilt_r_by_id/), and
-# the r_only test writes it again with the pinned STILT-R.
+# Write a small STILT-R project with STILT-R's own code: out/by-id/ and the
+# params.RDS rslurm keeps. It is the test sample of
+# stilt.migration.read_stilt_r (tests/fixtures/stilt_r_project/), and the
+# r_only test writes it again with the pinned STILT-R.
 #
 # Args (positional):
 #   1  stilt_r_dir  A uataq/stilt checkout with r/src/permute.so built
-#   2  by_id_dir    Folder to write the simulations into (made if missing)
+#   2  project_dir  Project folder to write (made if missing); the
+#                   simulations go in its out/by-id
 #
 # The particles are made up here: no HYSPLIT and no met. The rest is what
 # STILT-R's simulation_step() does with them:
 #   - read_config() reads a CONC.CFG into `params`;
 #   - calc_plume_dilution() adds the near-field correction, which leaves a
 #     tibble with foot_no_hnf_dilution;
+#   - write_control() writes the CONTROL file HYSPLIT reads;
 #   - saveRDS() writes the list (file, receptor, particle, params) as
 #     <id>_traj.rds;
-#   - calc_footprint() writes <id>_foot.nc.
+#   - calc_footprint() writes <id>_foot.nc, with smooth_factor 0.5.
+# Then the rows stilt_apply() hands rslurm::slurm_apply() are saved as
+# _rslurm_<project>/params.RDS, as rslurm saves them: one row per
+# simulation, with the before_trajec and before_footprint functions and a
+# few of the other arguments of simulation_step().
 #
 # Two simulations:
 #   201507050000_-111.85_40.77_5   a point receptor, run backward 2 hours,
@@ -25,11 +32,13 @@
 #                                  xhgt), released at 18:00:30, with a
 #                                  time-integrated footprint.
 #
-# output$file is written relative, so no local path is stored in the sample.
+# output$file and the met files in CONTROL are written relative, so no local
+# path is stored in the sample.
 
 args <- commandArgs(trailingOnly = TRUE)
 stilt_r_dir <- args[1]
-by_id_dir <- args[2]
+project_dir <- args[2]
+by_id_dir <- file.path(project_dir, 'out', 'by-id')
 
 dyn.load(file.path(stilt_r_dir, 'r', 'src', 'permute.so'))
 options(dplyr.summarise.inform = FALSE)
@@ -48,6 +57,13 @@ suppressPackageStartupMessages({
 conc_cfg <- c(" &SETUP", " tratio = 0.75,", " delt = 1.0,", " numpar =  10,",
               " maxpar = 10,", " efile = '',", " krand =  4,",
               " wvert = .FALSE.,", " kmix0 = 150,", " frvs = 0.01,", " /")
+n_hours <- -2
+numpar <- 10
+# Not STILT-R's default of 1, so a test can tell the value read from
+# params.RDS from a default. These particles spread so little that each
+# kernel is one cell at 0.5 or 1, so the footprints are the same either way.
+smooth_factor <- 0.5
+met_files <- file.path('met', c('20150704_18-23_hrrr', '20150705_00-05_hrrr'))
 
 make_particles <- function(numpar, n_minutes, long, lati, zagl, seed) {
   set.seed(seed)
@@ -79,6 +95,9 @@ write_simulation <- function(receptor, particle, xmn, xmx, ymn, ymx, xres,
   rundir <- file.path(by_id_dir, simulation_id)
   dir.create(rundir, recursive = TRUE, showWarnings = FALSE)
 
+  write_control(receptor, emisshrs = 0.01, n_hour = n_hours,
+                met_files = met_files, file = file.path(rundir, 'CONTROL'))
+
   cfg <- file.path(tempdir(), 'CONC.CFG')
   writeLines(conc_cfg, cfg)
 
@@ -94,7 +113,7 @@ write_simulation <- function(receptor, particle, xmn, xmx, ymn, ymx, xres,
                  output = file.path(rundir, paste0(simulation_id, '_foot.nc')),
                  r_run_time = receptor$run_time,
                  projection = '+proj=longlat',
-                 smooth_factor = 1, time_integrate = time_integrate,
+                 smooth_factor = smooth_factor, time_integrate = time_integrate,
                  xmn = xmn, xmx = xmx, xres = xres,
                  ymn = ymn, ymx = ymx, yres = yres)
 }
@@ -102,8 +121,8 @@ write_simulation <- function(receptor, particle, xmn, xmx, ymn, ymx, xres,
 # A point receptor, backward 2 hours, hourly layers.
 point <- list(run_time = as.POSIXct('2015-07-05 00:00:00', tz = 'UTC'),
               lati = 40.77, long = -111.85, zagl = 5)
-p <- make_particles(10, 120, point$long, point$lati, point$zagl, seed = 1)
-p <- calc_plume_dilution(p, 10, point$zagl, 0.5)
+p <- make_particles(numpar, 120, point$long, point$lati, point$zagl, seed = 1)
+p <- calc_plume_dilution(p, numpar, point$zagl, 0.5)
 write_simulation(point, p, xmn = -112.2, xmx = -111.6, ymn = 40.6, ymx = 41.0,
                  xres = 0.02, yres = 0.025, time_integrate = FALSE)
 
@@ -111,7 +130,6 @@ write_simulation(point, p, xmn = -112.2, xmx = -111.6, ymn = 40.6, ymx = 41.0,
 # (calc_trajectory's formula), then the near-field correction.
 column <- list(run_time = as.POSIXct('2015-07-05 18:00:30', tz = 'UTC'),
                lati = 40.7, long = -111.9, zagl = c(0, 1000))
-numpar <- 10
 p <- make_particles(numpar, 90, column$long, column$lati, 500, seed = 2)
 step <- (max(column$zagl) - min(column$zagl)) / numpar
 px <- data.frame(indx = 1:numpar)
@@ -120,3 +138,24 @@ p <- merge(p, px, by = 'indx', sort = FALSE)
 p <- calc_plume_dilution(p, numpar, column$zagl, 0.5)
 write_simulation(column, p, xmn = -112.2, xmx = -111.6, ymn = 40.6,
                  ymx = 41.0, xres = 0.02, yres = 0.02, time_integrate = TRUE)
+
+# What rslurm saves: the hooks as list columns of functions, as STILT-R's
+# run_stilt.r passes them, the receptors, and the settings, one row each.
+before_trajec <- function() output
+before_footprint <- function() output
+params <- tibble(
+  simulation_id = NA,
+  before_footprint = list(before_footprint),
+  before_trajec = list(before_trajec),
+  n_hours = n_hours,
+  numpar = numpar,
+  r_run_time = c(point$run_time, column$run_time),
+  r_lati = c(point$lati, column$lati),
+  r_long = c(point$long, column$long),
+  r_zagl = list(point$zagl, column$zagl),
+  smooth_factor = smooth_factor,
+  time_integrate = c(FALSE, TRUE)
+)
+rslurm_dir <- file.path(project_dir, paste0('_rslurm_', basename(project_dir)))
+dir.create(rslurm_dir, showWarnings = FALSE)
+saveRDS(params, file.path(rslurm_dir, 'params.RDS'))
