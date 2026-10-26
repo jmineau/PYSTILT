@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=91a04d29"></script>
+    <script src="../_static/documentation_options.js?v=e8afc500"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="API Reference" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev3+ga3c4b9f60" />
+  <meta name="docsearch:version" content="0.1.0a26.dev4+gac0d6191b" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -436,6 +436,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.status.html">stilt.Project.status</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.submit.html">stilt.Project.submit</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.table_path.html">stilt.Project.table_path</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.transport_error.html">stilt.Project.transport_error</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Receptor.html">stilt.Receptor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -1059,7 +1060,8 @@ Both weight the particles the way the footprint does.</p>
 <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> one with one row per simulation. Select rows as in
 pandas, then pass the selection to the project’s <a class="reference internal" href="_api/stilt.Project.status.html#stilt.Project.status" title="stilt.Project.status"><code class="xref py py-meth docutils literal notranslate"><span class="pre">status()</span></code></a>,
 <a class="reference internal" href="_api/stilt.Project.incomplete.html#stilt.Project.incomplete" title="stilt.Project.incomplete"><code class="xref py py-meth docutils literal notranslate"><span class="pre">incomplete()</span></code></a>, <a class="reference internal" href="_api/stilt.Project.particles.html#stilt.Project.particles" title="stilt.Project.particles"><code class="xref py py-meth docutils literal notranslate"><span class="pre">particles()</span></code></a>,
-<a class="reference internal" href="_api/stilt.Project.footprints.html#stilt.Project.footprints" title="stilt.Project.footprints"><code class="xref py py-meth docutils literal notranslate"><span class="pre">footprints()</span></code></a>, or <a class="reference internal" href="_api/stilt.Project.jacobian.html#stilt.Project.jacobian" title="stilt.Project.jacobian"><code class="xref py py-meth docutils literal notranslate"><span class="pre">jacobian()</span></code></a>.</p>
+<a class="reference internal" href="_api/stilt.Project.footprints.html#stilt.Project.footprints" title="stilt.Project.footprints"><code class="xref py py-meth docutils literal notranslate"><span class="pre">footprints()</span></code></a>, <a class="reference internal" href="_api/stilt.Project.jacobian.html#stilt.Project.jacobian" title="stilt.Project.jacobian"><code class="xref py py-meth docutils literal notranslate"><span class="pre">jacobian()</span></code></a>, or
+<a class="reference internal" href="_api/stilt.Project.transport_error.html#stilt.Project.transport_error" title="stilt.Project.transport_error"><code class="xref py py-meth docutils literal notranslate"><span class="pre">transport_error()</span></code></a>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
 <span class="n">wbb</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">site</span> <span class="o">==</span> <span class="s2">&quot;WBB&quot;</span><span class="p">)]</span>
 <span class="n">feet</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">footprints</span><span class="p">(</span><span class="n">wbb</span><span class="p">)</span>

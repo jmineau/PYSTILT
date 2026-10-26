@@ -45,7 +45,8 @@ Tables are plain DataFrames, and the verbs are on ``Project``.
 ``project.simulations`` is a pandas DataFrame, one row per simulation. Select
 it as in pandas (``sims[sims.variant == "hrrr"]``) and pass the selection to
 the project: ``status``, ``incomplete``, ``particles`` (one long table),
-``footprints`` (one lazy dataset stacked on the hour), or ``jacobian``. A
+``footprints`` (one lazy dataset stacked on the hour), ``jacobian``, or
+``transport_error`` (the selection with the estimate's columns). A
 selection is any table with ``receptor`` and ``variant`` columns (pandas,
 polars, pyarrow) or a boolean mask over ``project.simulations``, and the
 methods read only those two columns. ``project.receptors`` is a plain
@@ -102,7 +103,8 @@ Module map
                         near-field plume correction
        accessor.py      the .stilt pandas accessor
        background.py    the background at a receptor (sim.background)
-       transport_error.py  the transport error of the enhancement
+       transport_error.py  the transport error of the enhancement, one
+                           receptor or a selection in threads
      footprint/         the footprint (a DataArray)
        config.py        FootprintConfig and the geometry specs
        gridding.py      calc_footprint, as STILT-R's (fidelity-guarded)
@@ -407,7 +409,7 @@ A method of ``Project`` that takes a selection works from folder listings and
 receptor ids. It never builds a ``Simulation`` per row, which costs
 milliseconds each and adds up to many minutes on tens of thousands of
 footprints. It opens a file per row only when the file's contents are the
-answer (``footprints``, ``jacobian``), and builds receptors together
+answer (``footprints``, ``jacobian``, ``transport_error``), and builds receptors together
 (``Project._receptors``) when it needs them.
 
 ``Output.directory`` is a ``Path`` on a filesystem and a universal path

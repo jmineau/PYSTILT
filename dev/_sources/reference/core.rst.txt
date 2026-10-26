@@ -148,7 +148,8 @@ Simulation tables
 ``project.simulations`` one with one row per simulation. Select rows as in
 pandas, then pass the selection to the project's :meth:`~Project.status`,
 :meth:`~Project.incomplete`, :meth:`~Project.particles`,
-:meth:`~Project.footprints`, or :meth:`~Project.jacobian`.
+:meth:`~Project.footprints`, :meth:`~Project.jacobian`, or
+:meth:`~Project.transport_error`.
 
 .. code-block:: python
 

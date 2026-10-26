@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=91a04d29"></script>
+    <script src="../../../_static/documentation_options.js?v=e8afc500"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev3+ga3c4b9f60" />
+  <meta name="docsearch:version" content="0.1.0a26.dev4+gac0d6191b" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -469,7 +469,8 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ThreadPoolExecutor</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
@@ -484,6 +485,16 @@
 
 <span class="c1">#: X-STILT&#39;s empirical mean vertical correlation length of transport errors, m.</span>
 <span class="n">DEFAULT_LENGTH_SCALE</span> <span class="o">=</span> <span class="mf">356.0</span>
+
+<span class="c1">#: The results :func:`_transport_errors` keeps for each receptor, in column order.</span>
+<span class="n">_RESULT_COLUMNS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">&quot;enhancement&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;enhancement_perturbed&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;background&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;variance&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;noise&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;realizations&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 
 
 <div class="viewcode-block" id="TransportError">
@@ -926,6 +937,63 @@
         <span class="n">realizations</span><span class="o">=</span><span class="n">n_real</span><span class="p">,</span>
     <span class="p">)</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_transport_errors</span><span class="p">(</span>
+    <span class="n">read</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]]],</span>
+    <span class="n">receptors</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Receptor</span><span class="p">],</span>
+    <span class="n">flux</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the transport error of many receptors, one receptor at a time.</span>
+
+<span class="sd">    ``read(receptor_id)`` returns that receptor&#39;s unperturbed particle table</span>
+<span class="sd">    and one table per error realization, as :func:`transport_error` takes</span>
+<span class="sd">    them; every receptor must have both. Each receptor is read and estimated</span>
+<span class="sd">    in one of *workers* threads, which holds only that receptor&#39;s tables.</span>
+<span class="sd">    *transforms* are the unperturbed variant&#39;s footprint transforms, as</span>
+<span class="sd">    ``sim.transport_error`` passes them, and *options* go to</span>
+<span class="sd">    :func:`transport_error` unchanged.</span>
+
+<span class="sd">    Returns one row per receptor, indexed by receptor id in *receptors*</span>
+<span class="sd">    order, with the columns in :data:`_RESULT_COLUMNS`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">one</span><span class="p">(</span><span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+        <span class="n">particles</span><span class="p">,</span> <span class="n">error_particles</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">transport_error</span><span class="p">(</span>
+            <span class="n">particles</span><span class="p">,</span>
+            <span class="n">error_particles</span><span class="p">,</span>
+            <span class="n">flux</span><span class="p">,</span>
+            <span class="n">transforms</span><span class="o">=</span><span class="n">transforms</span><span class="p">,</span>
+            <span class="n">receptor</span><span class="o">=</span><span class="n">receptor</span><span class="p">,</span>
+            <span class="n">directory</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">options</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">enhancement</span><span class="p">,</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">enhancement_perturbed</span><span class="p">,</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">background</span><span class="p">,</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">noise</span><span class="p">,</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">realizations</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">workers</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">one</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">workers</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">receptors</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="n">rows</span><span class="p">,</span>
+        <span class="n">index</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">([</span><span class="n">r</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;receptor&quot;</span><span class="p">),</span>
+        <span class="n">columns</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">_RESULT_COLUMNS</span><span class="p">),</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s2">&quot;realizations&quot;</span><span class="p">:</span> <span class="s2">&quot;int64&quot;</span><span class="p">})</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_release_heights</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>

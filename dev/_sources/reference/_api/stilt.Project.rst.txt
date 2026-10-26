@@ -52,6 +52,7 @@ Methods
    ~Project.status
    ~Project.submit
    ~Project.table_path
+   ~Project.transport_error
 
 
 
