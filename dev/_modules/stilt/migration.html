@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=72ef73c6"></script>
+    <script src="../../_static/documentation_options.js?v=248434d6"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev6+g6a93fb769" />
+  <meta name="docsearch:version" content="0.1.0a26.dev7+g577d6768b" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -456,18 +456,23 @@
 <span class="sd">        201507050000_-111.85_40.77_5/</span>
 <span class="sd">          201507050000_-111.85_40.77_5_traj.rds   receptor time, particles</span>
 <span class="sd">          201507050000_-111.85_40.77_5_foot.nc    footprint</span>
-<span class="sd">          CONTROL                                 the release points HYSPLIT read</span>
+<span class="sd">          CONTROL                                 the release points, run length, met files</span>
+<span class="sd">          SETUP.CFG                               HYSPLIT&#39;s other settings</span>
+<span class="sd">          stilt.log                               HYSPLIT&#39;s log, and STILT-R&#39;s notes</span>
 <span class="sd">      _rslurm_my_project/</span>
 <span class="sd">        params.RDS                                every run&#39;s settings (Slurm runs only)</span>
 
 <span class="sd">:func:`read_stilt_r` reads these folders as PYSTILT&#39;s receptors, particle</span>
-<span class="sd">tables, and footprints. The ``.rds`` files are read with the</span>
-<span class="sd">`rdata &lt;https://github.com/vnmabus/rdata&gt;`_ package, which needs no R</span>
-<span class="sd">(``pip install &quot;pystilt[stilt-r]&quot;``).</span>
+<span class="sd">tables, and footprints. :func:`import_stilt_r` writes them into an output</span>
+<span class="sd">directory, in folders named by the settings the files record, so a project</span>
+<span class="sd">reads them as its own (:class:`stilt.transport.stilt_r.StiltRModel`). The</span>
+<span class="sd">``.rds`` files are read with the `rdata &lt;https://github.com/vnmabus/rdata&gt;`_</span>
+<span class="sd">package, which needs no R (``pip install &quot;pystilt[stilt-r]&quot;``).</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">dataclasses</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Mapping</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -476,12 +481,20 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">VARIANT_NAME_RE</span><span class="p">,</span> <span class="n">Variant</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FootprintConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">_footprint_array</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">footprint_settings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.output</span><span class="w"> </span><span class="kn">import</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">Output</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_particles</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelInfo</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">WIND_ERROR_SETTINGS</span><span class="p">,</span> <span class="n">ZI_ERROR_SETTINGS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.namelist</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_namelist</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.stilt_r</span><span class="w"> </span><span class="kn">import</span> <span class="n">StiltRConfig</span><span class="p">,</span> <span class="n">StiltRMetConfig</span><span class="p">,</span> <span class="n">StiltRModel</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.control</span><span class="w"> </span><span class="kn">import</span> <span class="n">ControlFile</span>
@@ -500,6 +513,21 @@
 <span class="n">_TRAJ</span> <span class="o">=</span> <span class="s2">&quot;_traj.rds&quot;</span>
 <span class="n">_FOOT</span> <span class="o">=</span> <span class="s2">&quot;_foot.nc&quot;</span>
 <span class="n">_CONTROL</span> <span class="o">=</span> <span class="s2">&quot;CONTROL&quot;</span>
+<span class="n">_SETUP</span> <span class="o">=</span> <span class="s2">&quot;SETUP.CFG&quot;</span>
+<span class="n">_LOG</span> <span class="o">=</span> <span class="s2">&quot;stilt.log&quot;</span>
+
+<span class="c1">#: What STILT-R&#39;s simulation_step writes to stilt.log when no particle reached</span>
+<span class="c1">#: the footprint grid, and it writes no footprint.</span>
+<span class="n">_EMPTY_FOOTPRINT</span> <span class="o">=</span> <span class="s2">&quot;No non-zero footprint values found within the footprint domain.&quot;</span>
+
+<span class="c1">#: The entries of STILT-R&#39;s SETUP.CFG that are no setting of their own: the</span>
+<span class="c1">#: number of VARSIWANT columns, the flags for the WINDERR and ZICONTROL</span>
+<span class="c1">#: files, and KMSL, which the import requires to be 0 (heights above</span>
+<span class="c1">#: ground).</span>
+<span class="n">_SETUP_ONLY</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;ivmax&quot;</span><span class="p">,</span> <span class="s2">&quot;winderrtf&quot;</span><span class="p">,</span> <span class="s2">&quot;zicontroltf&quot;</span><span class="p">,</span> <span class="s2">&quot;kmsl&quot;</span><span class="p">)</span>
+
+<span class="c1">#: The transport-error settings, as HYSPLIT, STILT-R and PYSTILT name them.</span>
+<span class="n">_ERROR_SETTINGS</span> <span class="o">=</span> <span class="n">WIND_ERROR_SETTINGS</span> <span class="o">+</span> <span class="n">ZI_ERROR_SETTINGS</span>
 
 <span class="c1">#: The columns of rslurm&#39;s ``params.RDS`` that are read: the footprint&#39;s</span>
 <span class="c1">#: smoothing, and two settings that must match the run&#39;s own files.</span>
@@ -511,6 +539,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">read_stilt_r</span><span class="p">(</span>
     <span class="n">by_id_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">error</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Receptor</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Read STILT-R or X-STILT ``by-id`` output, one simulation at a time.</span>
@@ -558,6 +587,11 @@
 <span class="sd">        The ``smooth_factor`` STILT-R made the footprints with, for a project</span>
 <span class="sd">        without ``params.RDS`` (one run without Slurm). Not needed to read</span>
 <span class="sd">        folders without a footprint.</span>
+<span class="sd">    error : bool, default False</span>
+<span class="sd">        Read the second set of particles a run with transport error saved</span>
+<span class="sd">        (``particle_error``), the run with perturbed winds, in place of the</span>
+<span class="sd">        first. STILT-R makes no footprint of it, so the footprint is</span>
+<span class="sd">        ``None``.</span>
 
 <span class="sd">    Yields</span>
 <span class="sd">    ------</span>
@@ -585,7 +619,8 @@
 <span class="sd">        footprint is read, if its ``smooth_factor`` is not known (no</span>
 <span class="sd">        ``params.RDS`` and no *smooth_factor*), if ``params.RDS`` disagrees</span>
 <span class="sd">        with the run&#39;s ``n_hours`` or ``numpar``, or if it records a</span>
-<span class="sd">        ``smooth_factor`` other than *smooth_factor* or more than one.</span>
+<span class="sd">        ``smooth_factor`` other than *smooth_factor* or more than one. With</span>
+<span class="sd">        *error*, if a ``.rds`` holds no ``particle_error``.</span>
 
 <span class="sd">    Warns</span>
 <span class="sd">    -----</span>
@@ -596,8 +631,9 @@
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
 <span class="sd">    A run with transport error stores a second set of particles in the same</span>
-<span class="sd">    ``.rds`` (``particle_error``); only the first set is read. The HYSPLIT</span>
-<span class="sd">    settings in the ``.rds`` (``params``) are not returned. X-STILT weights</span>
+<span class="sd">    ``.rds`` (``particle_error``), which *error* reads. The HYSPLIT</span>
+<span class="sd">    settings in the ``.rds`` (``params``) are not returned;</span>
+<span class="sd">    :func:`import_stilt_r` records the settings of each run. X-STILT weights</span>
 <span class="sd">    ``foot`` by the averaging kernel and pressure weighting after it saves</span>
 <span class="sd">    the ``.rds``, so its particles are unweighted and its footprint is</span>
 <span class="sd">    weighted.</span>
@@ -611,6 +647,32 @@
 <span class="sd">    ``smooth_factor`` from its ``run_stilt.r``:</span>
 
 <span class="sd">    &gt;&gt;&gt; sims = stilt.migration.read_stilt_r(&quot;out/by-id&quot;, smooth_factor=1)</span>
+
+<span class="sd">    The particles of the transport-error run:</span>
+
+<span class="sd">    &gt;&gt;&gt; for receptor, perturbed, _ in stilt.migration.read_stilt_r(</span>
+<span class="sd">    ...     &quot;out/by-id&quot;, error=True</span>
+<span class="sd">    ... ):</span>
+<span class="sd">    ...     print(receptor.id, len(perturbed))</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">root</span><span class="p">,</span> <span class="n">runs</span> <span class="o">=</span> <span class="n">_runs</span><span class="p">(</span><span class="n">by_id_dir</span><span class="p">)</span>
+    <span class="n">rdata</span> <span class="o">=</span> <span class="n">_rdata</span><span class="p">()</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">_rslurm_params</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">rdata</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">_read_simulation</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">rdata</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span> <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">runs</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_runs</span><span class="p">(</span><span class="n">by_id_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a ``by-id`` folder and its run folders, those that hold ``&lt;id&gt;_traj.rds``, in name order.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    FileNotFoundError</span>
+<span class="sd">        If *by_id_dir* is not a folder, holds no run, or a run has no</span>
+<span class="sd">        ``CONTROL`` file.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">by_id_dir</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">root</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
@@ -628,7 +690,7 @@
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">orphans</span><span class="p">)</span><span class="si">}</span><span class="s2"> folders of </span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2"> hold a footprint but no </span><span class="si">{</span><span class="n">_TRAJ</span><span class="si">}</span><span class="s2"> &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;file, and are skipped (the first is </span><span class="si">{</span><span class="n">orphans</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">,</span>
-            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="n">no_control</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">runs</span> <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">p</span> <span class="o">/</span> <span class="n">_CONTROL</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">()]</span>
     <span class="k">if</span> <span class="n">no_control</span><span class="p">:</span>
@@ -637,10 +699,7 @@
             <span class="sa">f</span><span class="s2">&quot;first </span><span class="si">{</span><span class="n">no_control</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">. The receptor is read from the </span><span class="si">{</span><span class="n">_CONTROL</span><span class="si">}</span><span class="s2"> &quot;</span>
             <span class="s2">&quot;file STILT-R writes in every by-id folder.&quot;</span>
         <span class="p">)</span>
-    <span class="n">rdata</span> <span class="o">=</span> <span class="n">_rdata</span><span class="p">()</span>
-    <span class="n">params</span> <span class="o">=</span> <span class="n">_rslurm_params</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">rdata</span><span class="p">)</span>
-    <span class="k">return</span> <span class="p">(</span><span class="n">_read_simulation</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">rdata</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="p">)</span> <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">)</span></div>
-
+    <span class="k">return</span> <span class="n">root</span><span class="p">,</span> <span class="n">runs</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_rdata</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
@@ -877,25 +936,464 @@
     <span class="n">rdata</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
     <span class="n">rslurm</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">float</span><span class="p">]]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">error</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Receptor</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the receptor, particles, and footprint of one ``by-id`` folder.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the receptor, particles, and footprint of one ``by-id`` folder, or the receptor and its error particles.&quot;&quot;&quot;</span>
     <span class="n">traj</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="si">}{</span><span class="n">_TRAJ</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="n">output</span> <span class="o">=</span> <span class="n">_read_rds</span><span class="p">(</span><span class="n">traj</span><span class="p">,</span> <span class="n">rdata</span><span class="p">)</span>
     <span class="n">control</span> <span class="o">=</span> <span class="n">_control</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="n">_CONTROL</span><span class="p">)</span>
     <span class="n">receptor</span> <span class="o">=</span> <span class="n">_receptor</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">),</span> <span class="n">control</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">_error_particles</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">traj</span><span class="p">),</span> <span class="kc">None</span>
     <span class="n">particles</span> <span class="o">=</span> <span class="n">_particles</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">],</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
+    <span class="n">foot</span> <span class="o">=</span> <span class="n">_folder_footprint</span><span class="p">(</span>
+        <span class="n">folder</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">rslurm</span><span class="p">,</span> <span class="n">smooth_factor</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">foot</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_error_particles</span><span class="p">(</span>
+    <span class="n">output</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the particles of a run&#39;s transport-error set, with PYSTILT&#39;s column names.&quot;&quot;&quot;</span>
+    <span class="n">stored</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;particle_error&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stored</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> holds no transport-error particles (particle_error): &quot;</span>
+            <span class="s2">&quot;STILT-R ran it without wind or mixed-layer errors.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">_particles</span><span class="p">(</span><span class="n">stored</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_folder_footprint</span><span class="p">(</span>
+    <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">control</span><span class="p">:</span> <span class="n">ControlFile</span><span class="p">,</span>
+    <span class="n">output</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">rslurm</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">float</span><span class="p">]]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a folder&#39;s ``&lt;id&gt;_foot.nc`` as a PYSTILT footprint, or ``None`` when it has none.&quot;&quot;&quot;</span>
     <span class="n">foot_path</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="si">}{</span><span class="n">_FOOT</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">foot_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-        <span class="k">return</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="kc">None</span>
     <span class="n">smooth</span> <span class="o">=</span> <span class="n">_smooth_factor</span><span class="p">(</span>
         <span class="n">foot_path</span><span class="p">,</span> <span class="n">control</span><span class="o">.</span><span class="n">n_hours</span><span class="p">,</span> <span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;params&quot;</span><span class="p">),</span> <span class="n">rslurm</span><span class="p">,</span> <span class="n">smooth_factor</span>
     <span class="p">)</span>
     <span class="c1"># STILT-R reads the run&#39;s direction the same way (calc_footprint).</span>
     <span class="n">backward</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">_footprint</span><span class="p">(</span><span class="n">foot_path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">backward</span><span class="p">,</span> <span class="n">smooth</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_footprint</span><span class="p">(</span><span class="n">foot_path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">backward</span><span class="p">,</span> <span class="n">smooth</span><span class="p">)</span>
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;read_stilt_r&quot;</span><span class="p">]</span>
+<div class="viewcode-block" id="import_stilt_r">
+<a class="viewcode-back" href="../../reference/_api/stilt.migration.import_stilt_r.html#stilt.migration.import_stilt_r">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">import_stilt_r</span><span class="p">(</span>
+    <span class="n">by_id_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;stilt-r&quot;</span><span class="p">,</span>
+    <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">met_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write the runs of a STILT-R or X-STILT ``by-id`` folder into a PYSTILT output directory.</span>
+
+<span class="sd">    Each run&#39;s particles and footprint, as :func:`read_stilt_r` reads them,</span>
+<span class="sd">    go to the folders of a variant with ``model: stilt-r``</span>
+<span class="sd">    (:class:`~stilt.transport.stilt_r.StiltRModel`). A project whose</span>
+<span class="sd">    ``config.yaml`` has that variant reads them as its own results:</span>
+<span class="sd">    ``project.status``, ``project.particles``, ``project.footprints``, and</span>
+<span class="sd">    ``project.jacobian``. The import prints the variant and its met, to paste</span>
+<span class="sd">    into ``config.yaml``, and returns the receptors, for ``receptors.csv``.</span>
+
+<span class="sd">    Every folder of an output directory is named by the hash of its</span>
+<span class="sd">    settings, and an imported run&#39;s settings are only what STILT-R&#39;s files</span>
+<span class="sd">    record, never a default standing in for a value they do not give:</span>
+
+<span class="sd">    - HYSPLIT&#39;s settings from each run&#39;s ``SETUP.CFG``; ``n_hours``,</span>
+<span class="sd">      ``w_option``, ``z_top``, and ``emisshrs`` from its ``CONTROL``; and</span>
+<span class="sd">      ``ziscale`` from its ``ZICONTROL`` file when ``SETUP.CFG`` says</span>
+<span class="sd">      STILT-R wrote one (``ZICONTROLTF``), else 1 (no scaling).</span>
+<span class="sd">    - ``hnf_plume`` from the particles: STILT-R&#39;s near-field correction adds</span>
+<span class="sd">      the ``foot_no_hnf_dilution`` column.</span>
+<span class="sd">    - The met: the directory the ``CONTROL`` files name, as they name it.</span>
+<span class="sd">      Each run&#39;s met files are recorded in its particle file, and need not</span>
+<span class="sd">      exist any more.</span>
+<span class="sd">    - The footprint&#39;s grid and ``time_integrate`` from ``&lt;id&gt;_foot.nc``, and</span>
+<span class="sd">      its ``smooth_factor`` from ``params.RDS`` or *smooth_factor*, as</span>
+<span class="sd">      :func:`read_stilt_r` reads them.</span>
+<span class="sd">    - The STILT-R version, which no file records: *version*.</span>
+
+<span class="sd">    The second set of particles of a run with transport error</span>
+<span class="sd">    (``particle_error``) goes to the folder of a second variant,</span>
+<span class="sd">    ``&lt;name&gt;-err``, with the wind and mixed-layer error settings STILT-R</span>
+<span class="sd">    saved with it (``particle_error_params``). It has particles only:</span>
+<span class="sd">    STILT-R makes no footprint of them. A run whose ``stilt.log`` says that</span>
+<span class="sd">    no particle reached the footprint grid gets an empty footprint, as a</span>
+<span class="sd">    PYSTILT run would. Results already in the output directory are kept, so</span>
+<span class="sd">    an import can be run again after more STILT-R runs finish.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    by_id_dir : str or Path</span>
+<span class="sd">        The ``by-id`` folder, such as ``my_project/out/by-id``.</span>
+<span class="sd">    output_dir : str or Path</span>
+<span class="sd">        The output directory, as ``output:`` in ``config.yaml`` names it.</span>
+<span class="sd">    version : str</span>
+<span class="sd">        The STILT-R version that made the runs, such as the commit of</span>
+<span class="sd">        uataq/stilt the project was made from (``git rev-parse --short</span>
+<span class="sd">        HEAD`` in a STILT-R project folder).</span>
+<span class="sd">    name : str, default &quot;stilt-r&quot;</span>
+<span class="sd">        Name of the variant and of its met. The transport-error variant is</span>
+<span class="sd">        ``&lt;name&gt;-err``.</span>
+<span class="sd">    smooth_factor : float, optional</span>
+<span class="sd">        The ``smooth_factor`` STILT-R made the footprints with, for a project</span>
+<span class="sd">        without ``params.RDS``, as for :func:`read_stilt_r`.</span>
+<span class="sd">    met_path : str, optional</span>
+<span class="sd">        The met directory to record when the ``CONTROL`` files name more than</span>
+<span class="sd">        one, such as STILT-R&#39;s ``met_path`` with its files in yearly</span>
+<span class="sd">        folders. Every directory they name must be in it.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list of Receptor</span>
+<span class="sd">        The receptors of the runs, in folder order, for</span>
+<span class="sd">        :meth:`stilt.Project.add_receptors`.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ImportError</span>
+<span class="sd">        If the rdata package is not installed.</span>
+<span class="sd">    FileNotFoundError</span>
+<span class="sd">        As :func:`read_stilt_r` raises it, or if a run has no ``SETUP.CFG``</span>
+<span class="sd">        or no ``ZICONTROL`` file that its ``SETUP.CFG`` says it has.</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        As :func:`read_stilt_r` raises it, or if *name* is not a variant</span>
+<span class="sd">        name; if two runs were made with different settings, which is said</span>
+<span class="sd">        by name (import each set from a ``by-id`` folder of its own, under a</span>
+<span class="sd">        name of its own); if ``SETUP.CFG`` holds a setting PYSTILT does not</span>
+<span class="sd">        have, or ``KMSL`` other than 0 (heights above sea level); if the</span>
+<span class="sd">        ``CONTROL`` files name several met directories and *met_path* is not</span>
+<span class="sd">        given or does not hold them all; or if ``SETUP.CFG`` and the</span>
+<span class="sd">        ``.rds`` disagree on whether a run had transport error.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; receptors = stilt.migration.import_stilt_r(</span>
+<span class="sd">    ...     &quot;my_project/out/by-id&quot;, &quot;output&quot;, version=&quot;1d936c1&quot;</span>
+<span class="sd">    ... )</span>
+<span class="sd">    mets:</span>
+<span class="sd">      stilt-r:</span>
+<span class="sd">        met_path: /data/hrrr</span>
+<span class="sd">    variants:</span>
+<span class="sd">      stilt-r:</span>
+<span class="sd">        model: stilt-r</span>
+<span class="sd">        met: stilt-r</span>
+<span class="sd">        version: 1d936c1</span>
+<span class="sd">        capemin: -1</span>
+<span class="sd">        ...</span>
+<span class="sd">    &gt;&gt;&gt; project = stilt.Project.init(&quot;my_project_py&quot;, receptors, output=&quot;output&quot;, ...)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">VARIANT_NAME_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;name </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> must be a variant name, matching </span><span class="si">{</span><span class="n">VARIANT_NAME_RE</span><span class="o">.</span><span class="n">pattern</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">root</span><span class="p">,</span> <span class="n">runs</span> <span class="o">=</span> <span class="n">_runs</span><span class="p">(</span><span class="n">by_id_dir</span><span class="p">)</span>
+    <span class="n">controls</span> <span class="o">=</span> <span class="p">{</span><span class="n">folder</span><span class="p">:</span> <span class="n">_control</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="n">_CONTROL</span><span class="p">)</span> <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">}</span>
+    <span class="n">recorded</span> <span class="o">=</span> <span class="p">{</span><span class="n">folder</span><span class="p">:</span> <span class="n">_hysplit_settings</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">controls</span><span class="p">[</span><span class="n">folder</span><span class="p">])</span> <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">}</span>
+    <span class="n">first</span> <span class="o">=</span> <span class="n">runs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="n">_agree</span><span class="p">(</span>
+            <span class="n">recorded</span><span class="p">[</span><span class="n">first</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">recorded</span><span class="p">[</span><span class="n">folder</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;HYSPLIT settings&quot;</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">folder</span>
+        <span class="p">)</span>
+    <span class="n">met</span> <span class="o">=</span> <span class="n">StiltRMetConfig</span><span class="p">(</span><span class="n">met_path</span><span class="o">=</span><span class="n">_met_path</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">controls</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="n">met_path</span><span class="p">))</span>
+    <span class="n">rdata</span> <span class="o">=</span> <span class="n">_rdata</span><span class="p">()</span>
+    <span class="n">rslurm</span> <span class="o">=</span> <span class="n">_rslurm_params</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">rdata</span><span class="p">)</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">Output</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+
+    <span class="c1"># The first run&#39;s variants, and its folder; every later run must have</span>
+    <span class="c1"># the same settings.</span>
+    <span class="n">made</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Variant</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1"># The first footprint&#39;s settings, and its folder.</span>
+    <span class="n">first_foot</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FootprintConfig</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">empty</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">receptors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">:</span>
+        <span class="n">hysplit</span><span class="p">,</span> <span class="n">winderrtf</span> <span class="o">=</span> <span class="n">recorded</span><span class="p">[</span><span class="n">folder</span><span class="p">]</span>
+        <span class="n">control</span> <span class="o">=</span> <span class="n">controls</span><span class="p">[</span><span class="n">folder</span><span class="p">]</span>
+        <span class="n">traj</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="si">}{</span><span class="n">_TRAJ</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">stored</span> <span class="o">=</span> <span class="n">_read_rds</span><span class="p">(</span><span class="n">traj</span><span class="p">,</span> <span class="n">rdata</span><span class="p">)</span>
+        <span class="n">receptor</span> <span class="o">=</span> <span class="n">_receptor</span><span class="p">(</span><span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">),</span> <span class="n">control</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
+        <span class="n">receptors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">receptor</span><span class="p">)</span>
+        <span class="n">log</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="n">_LOG</span>
+
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">_particles</span><span class="p">(</span><span class="n">stored</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">],</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">hysplit</span><span class="p">,</span>
+            <span class="o">**</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">_ERROR_SETTINGS</span><span class="p">),</span>
+            <span class="s2">&quot;hnf_plume&quot;</span><span class="p">:</span> <span class="s2">&quot;foot_no_hnf_dilution&quot;</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="n">_variant</span><span class="p">(</span><span class="n">made</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">version</span><span class="p">,</span> <span class="n">folder</span><span class="p">)</span>
+        <span class="n">_write_particles</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">log</span><span class="p">)</span>
+
+        <span class="n">foot</span> <span class="o">=</span> <span class="n">_folder_footprint</span><span class="p">(</span>
+            <span class="n">folder</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">stored</span><span class="p">,</span> <span class="n">rslurm</span><span class="p">,</span> <span class="n">smooth_factor</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">first_foot</span> <span class="o">=</span> <span class="n">first_foot</span> <span class="ow">or</span> <span class="p">(</span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">folder</span><span class="p">)</span>
+            <span class="n">_agree</span><span class="p">(</span>
+                <span class="n">footprint_settings</span><span class="p">(</span><span class="n">first_foot</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="kc">None</span><span class="p">),</span>
+                <span class="n">footprint_settings</span><span class="p">(</span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                <span class="s2">&quot;footprint settings&quot;</span><span class="p">,</span>
+                <span class="n">first_foot</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">folder</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">with_foot</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">footprint</span><span class="o">=</span><span class="n">first_foot</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">_missing</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">with_foot</span><span class="p">,</span> <span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">write_footprint</span><span class="p">(</span><span class="n">with_foot</span><span class="p">,</span> <span class="n">foot</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">log</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="ow">and</span> <span class="n">_EMPTY_FOOTPRINT</span> <span class="ow">in</span> <span class="n">log</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">):</span>
+            <span class="n">empty</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">receptor</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;particle_error&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">winderrtf</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">_SETUP</span><span class="si">}</span><span class="s2"> says the run had transport error &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;(WINDERRTF=</span><span class="si">{</span><span class="n">winderrtf</span><span class="si">}</span><span class="s2">), and </span><span class="si">{</span><span class="n">traj</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> holds no &quot;</span>
+                    <span class="s2">&quot;particle_error.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="n">errors</span><span class="p">,</span> <span class="n">recorded_tf</span> <span class="o">=</span> <span class="n">_error_settings</span><span class="p">(</span><span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;particle_error_params&quot;</span><span class="p">),</span> <span class="n">traj</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">recorded_tf</span> <span class="o">!=</span> <span class="n">winderrtf</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">_SETUP</span><span class="si">}</span><span class="s2"> gives WINDERRTF=</span><span class="si">{</span><span class="n">winderrtf</span><span class="si">}</span><span class="s2">, and the &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;particle_error_params of </span><span class="si">{</span><span class="n">traj</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">recorded_tf</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">perturbed</span> <span class="o">=</span> <span class="n">_error_particles</span><span class="p">(</span><span class="n">stored</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
+        <span class="n">error_settings</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">hysplit</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">errors</span><span class="p">,</span>
+            <span class="s2">&quot;hnf_plume&quot;</span><span class="p">:</span> <span class="s2">&quot;foot_no_hnf_dilution&quot;</span> <span class="ow">in</span> <span class="n">perturbed</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="n">_variant</span><span class="p">(</span>
+            <span class="n">made</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-err&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">error_settings</span><span class="p">,</span> <span class="n">version</span><span class="p">,</span> <span class="n">folder</span>
+        <span class="p">)</span>
+        <span class="n">_write_particles</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">log</span><span class="p">)</span>
+
+    <span class="n">printed</span> <span class="o">=</span> <span class="p">[</span><span class="n">made</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="k">if</span> <span class="n">first_foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">printed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">printed</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">footprint</span><span class="o">=</span><span class="n">first_foot</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">receptor</span> <span class="ow">in</span> <span class="n">empty</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">_missing</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">printed</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">write_empty_footprint</span><span class="p">(</span><span class="n">printed</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">receptor</span><span class="p">)</span>
+    <span class="k">if</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-err&quot;</span> <span class="ow">in</span> <span class="n">made</span><span class="p">:</span>
+        <span class="n">printed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">made</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-err&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;mets&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">met</span><span class="o">.</span><span class="n">settings</span><span class="p">()},</span>
+        <span class="s2">&quot;variants&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">_variant_entry</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">printed</span><span class="p">},</span>
+    <span class="p">}</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">receptors</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_hysplit_settings</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">control</span><span class="p">:</span> <span class="n">ControlFile</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the HYSPLIT settings a run&#39;s ``SETUP.CFG``, ``CONTROL``, and ``ZICONTROL`` record, and its ``WINDERRTF``.</span>
+
+<span class="sd">    STILT-R writes ``SETUP.CFG`` again for its transport-error run, the same</span>
+<span class="sd">    but for ``WINDERRTF``, so that flag is returned on its own. STILT-R</span>
+<span class="sd">    writes no ``SEED``: HYSPLIT seeded its random numbers itself, which is</span>
+<span class="sd">    ``seed: null``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="n">_SETUP</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s2"> has no </span><span class="si">{</span><span class="n">_SETUP</span><span class="si">}</span><span class="s2">, which holds the HYSPLIT settings of its run.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">setup</span> <span class="o">=</span> <span class="n">read_namelist</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">unknown</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">setup</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">StiltRConfig</span><span class="o">.</span><span class="n">model_fields</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">_SETUP_ONLY</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> holds </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">k</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">unknown</span><span class="p">)</span><span class="si">}</span><span class="s2">, which &quot;</span>
+            <span class="s2">&quot;PYSTILT has no setting for, so the run&#39;s settings cannot be &quot;</span>
+            <span class="s2">&quot;recorded in full.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">setup</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kmsl&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> gives KMSL=</span><span class="si">{</span><span class="n">setup</span><span class="p">[</span><span class="s1">&#39;kmsl&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">: release heights above sea &quot;</span>
+            <span class="s2">&quot;level. The import reads heights above ground only.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">settings</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">setup</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_SETUP_ONLY</span><span class="p">}</span>
+    <span class="n">settings</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;seed&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">settings</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+        <span class="n">n_hours</span><span class="o">=</span><span class="n">control</span><span class="o">.</span><span class="n">n_hours</span><span class="p">,</span>
+        <span class="n">w_option</span><span class="o">=</span><span class="n">control</span><span class="o">.</span><span class="n">w_option</span><span class="p">,</span>
+        <span class="n">z_top</span><span class="o">=</span><span class="n">control</span><span class="o">.</span><span class="n">z_top</span><span class="p">,</span>
+        <span class="n">emisshrs</span><span class="o">=</span><span class="n">control</span><span class="o">.</span><span class="n">emisshrs</span><span class="p">,</span>
+        <span class="n">ziscale</span><span class="o">=</span><span class="n">_ziscale</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">setup</span><span class="p">)</span> <span class="k">if</span> <span class="n">setup</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;zicontroltf&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">settings</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">setup</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;winderrtf&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_ziscale</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">setup</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the hourly mixed-layer factors of a run&#39;s ``ZICONTROL`` file: a count, then the factors.&quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;ZICONTROL&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">_SETUP</span><span class="si">}</span><span class="s2"> gives ZICONTROLTF=</span><span class="si">{</span><span class="n">setup</span><span class="p">[</span><span class="s1">&#39;zicontroltf&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">, and &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s2"> has no ZICONTROL file.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="n">factors</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">values</span> <span class="ow">or</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">factors</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> does not give as many factors as its first line says.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">factors</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_error_settings</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the transport-error settings STILT-R saved with a run (``particle_error_params``), and its ``winderrtf``.</span>
+
+<span class="sd">    An unset setting is R&#39;s ``NA``, which is ``None``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">stored</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">params</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="n">_ERROR_SETTINGS</span><span class="p">,</span> <span class="s2">&quot;winderrtf&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stored</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: particle_error_params has no </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+    <span class="n">values</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="n">_ERROR_SETTINGS</span><span class="p">,</span> <span class="s2">&quot;winderrtf&quot;</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">masked_invalid</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">stored</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="n">values</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">value</span><span class="o">.</span><span class="n">mask</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">winderrtf</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;winderrtf&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">values</span><span class="p">,</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">winderrtf</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">winderrtf</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_met_path</span><span class="p">(</span><span class="n">controls</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ControlFile</span><span class="p">],</span> <span class="n">given</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the met directory to record: the one the runs&#39; ``CONTROL`` files name, or *given*, which must hold them all.&quot;&quot;&quot;</span>
+    <span class="n">directories</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">controls</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">c</span><span class="o">.</span><span class="n">met_files</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">given</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">directories</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">directories</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;The runs&#39; CONTROL files name </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">directories</span><span class="p">)</span><span class="si">}</span><span class="s2"> met directories &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directories</span><span class="p">[:</span><span class="mi">3</span><span class="p">])</span><span class="si">}{</span><span class="s1">&#39;, ...&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">directories</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2">). &quot;</span>
+            <span class="s2">&quot;Give the folder that holds them as met_path=, such as the &quot;</span>
+            <span class="s2">&quot;met_path of run_stilt.r.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">outside</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">directories</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="o">.</span><span class="n">is_relative_to</span><span class="p">(</span><span class="n">given</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">outside</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">outside</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">, a met directory a CONTROL file names, is not in &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;met_path </span><span class="si">{</span><span class="n">given</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">given</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_variant</span><span class="p">(</span>
+    <span class="n">made</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Variant</span><span class="p">,</span> <span class="n">Path</span><span class="p">]],</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">met_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">met</span><span class="p">:</span> <span class="n">StiltRMetConfig</span><span class="p">,</span>
+    <span class="n">settings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Variant</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the variant of a run&#39;s settings, checked against the first run&#39;s.</span>
+
+<span class="sd">    The first run&#39;s variant is kept in *made* under *name*.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the settings are not valid, or not the first run&#39;s.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">StiltRConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">({</span><span class="o">**</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">version</span><span class="p">})</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s2">: the run&#39;s settings are not valid HYSPLIT settings: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+    <span class="n">variant</span> <span class="o">=</span> <span class="n">Variant</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">met</span><span class="o">=</span><span class="n">met_name</span><span class="p">,</span>
+        <span class="n">met_config</span><span class="o">=</span><span class="n">met</span><span class="p">,</span>
+        <span class="n">transport</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+        <span class="n">model</span><span class="o">=</span><span class="n">ModelInfo</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">StiltRModel</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">StiltRModel</span><span class="p">()</span><span class="o">.</span><span class="n">version</span><span class="p">(</span><span class="n">config</span><span class="p">)),</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">made</span><span class="p">:</span>
+        <span class="n">made</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">variant</span><span class="p">,</span> <span class="n">folder</span><span class="p">)</span>
+    <span class="n">first</span><span class="p">,</span> <span class="n">first_folder</span> <span class="o">=</span> <span class="n">made</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+    <span class="n">_agree</span><span class="p">(</span><span class="n">first</span><span class="o">.</span><span class="n">run_settings</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">run_settings</span><span class="p">,</span> <span class="s2">&quot;settings&quot;</span><span class="p">,</span> <span class="n">first_folder</span><span class="p">,</span> <span class="n">folder</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">first</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_agree</span><span class="p">(</span>
+    <span class="n">first</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">other</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">what</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">first_folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raise when two runs&#39; settings differ, naming the first setting that does.&quot;&quot;&quot;</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">first</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">|</span> <span class="n">other</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">first</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">first_folder</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> were made with different &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> is </span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> and </span><span class="si">{</span><span class="n">first</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="si">!r}</span><span class="s2">. The &quot;</span>
+            <span class="s2">&quot;runs of one import share their settings: import each set from a &quot;</span>
+            <span class="s2">&quot;by-id folder of its own, under a name of its own.&quot;</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_missing</span><span class="p">(</span><span class="n">output</span><span class="p">:</span> <span class="n">Output</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether a receptor&#39;s result of *kind* is not in the output directory yet.&quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_write_particles</span><span class="p">(</span>
+    <span class="n">output</span><span class="p">:</span> <span class="n">Output</span><span class="p">,</span>
+    <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">control</span><span class="p">:</span> <span class="n">ControlFile</span><span class="p">,</span>
+    <span class="n">log</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write a run&#39;s particles, with the met files its ``CONTROL`` names and its ``stilt.log``, unless they are there.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_missing</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+        <span class="k">return</span>
+    <span class="n">output</span><span class="o">.</span><span class="n">write_particles</span><span class="p">(</span><span class="n">variant</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">control</span><span class="o">.</span><span class="n">met_files</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">log</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">write_log</span><span class="p">(</span><span class="n">variant</span><span class="p">,</span> <span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">log</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_variant_entry</span><span class="p">(</span><span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a variant as ``config.yaml`` names its folders: the keys of ``_settings.yaml``, flat.&quot;&quot;&quot;</span>
+    <span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">variant</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="s2">&quot;met&quot;</span><span class="p">:</span> <span class="n">variant</span><span class="o">.</span><span class="n">met</span><span class="p">,</span>
+        <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">variant</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">settings</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">settings</span><span class="p">()</span>
+    <span class="n">entry</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">settings</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">settings</span><span class="p">)})</span>
+    <span class="k">if</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;grid&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">entry</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">variant</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">entry</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;import_stilt_r&quot;</span><span class="p">,</span> <span class="s2">&quot;read_stilt_r&quot;</span><span class="p">]</span>
 </pre></div>
 
                 </article>

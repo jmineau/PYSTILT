@@ -80,7 +80,9 @@ Module map
                         one receptor's file (read) or many at once (table),
                         failure records, writing
      migration.py       read_stilt_r: STILT-R and X-STILT by-id output as
-                        receptors, particle tables, and footprints
+                        receptors, particle tables, and footprints;
+                        import_stilt_r writes it into an output directory
+                        with the settings its files record
      simulation.py      Simulation: a frozen value (receptor, variant, output)
                         that knows where its results are and whether they exist
      config.py          ProjectConfig: reads config.yaml, splits the flat keys
@@ -137,13 +139,15 @@ Module map
      transport/         the TransportModel and TransportConfig protocols,
                         ModelRun, ModelInfo, get_model and its MODELS table,
                         run_model and run_trajectories (__init__.py); one
-                        subpackage per transport model, which owns its config
+                        subpackage per transport model, which owns its config;
+                        stilt_r.py, the stilt-r model of imported STILT-R
+                        runs, which runs nothing
        hysplit/         HYSPLIT: HysplitConfig (config.py); MetConfig and Met,
                         ARL file discovery, download, and cropping through
                         arlmet (met.py); HysplitModel (model.py); the driver
                         (driver.py: write_inputs, read_particle_dat); the
                         CONTROL file (control.py) and SETUP.CFG namelist
-                        (namelist.py) writers; failure reasons read from its
+                        (namelist.py) writers and readers; failure reasons read from its
                         log (failures.py); the bundled binaries (bin/, Linux
                         and macOS x86-64) and data tables (data/)
 
@@ -303,9 +307,13 @@ The import contracts in ``pyproject.toml``, checked by ``lint-imports`` in CI
 top-level module from the CLI down to ``_paths`` and ``exceptions``. A module
 imports only the layers below it, and modules that import each other share a
 layer. The contract is exhaustive, so a new top-level module fails until it
-is placed. Two short contracts hold what a layer cannot: only
-``stilt.transport`` (its ``get_model``) imports HYSPLIT's package, and the
-project config reads no results and runs nothing.
+is placed. ``stilt.migration`` sits above the project config, because
+``import_stilt_r`` writes into an output directory through variants. Two
+short contracts hold what a layer cannot: only ``stilt.transport`` (its
+``get_model``) imports HYSPLIT's package, and the project config reads no
+results and runs nothing. STILT-R ran HYSPLIT, so the STILT-R reader and the
+``stilt-r`` model are the named exceptions: they read HYSPLIT's ``CONTROL``
+and ``SETUP.CFG`` files and record HYSPLIT's settings.
 
 Configuration
 -------------

@@ -1,0 +1,6 @@
+﻿stilt.migration.import\_stilt\_r
+================================
+
+.. currentmodule:: stilt.migration
+
+.. autofunction:: import_stilt_r

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=72ef73c6"></script>
+    <script src="../../_static/documentation_options.js?v=248434d6"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Coming From STILT-R" href="stilt_r.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev6+g6a93fb769" />
+  <meta name="docsearch:version" content="0.1.0a26.dev7+g577d6768b" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -625,7 +625,10 @@ particles before it does, so the particles read are unweighted. X-STILT keeps
 rslurm’s <code class="docutils literal notranslate"><span class="pre">params.RDS</span></code> in a folder named for the job inside its own working
 directory, not beside <code class="docutils literal notranslate"><span class="pre">out/</span></code>, so give the <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> of
 <code class="docutils literal notranslate"><span class="pre">run_xstilt.r</span></code> to read the footprints:
-<code class="docutils literal notranslate"><span class="pre">read_stilt_r(&quot;out/by-id&quot;,</span> <span class="pre">smooth_factor=1)</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">read_stilt_r(&quot;out/by-id&quot;,</span> <span class="pre">smooth_factor=1)</span></code>.
+<a class="reference internal" href="../../reference/_api/stilt.migration.import_stilt_r.html#stilt.migration.import_stilt_r" title="stilt.migration.import_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.migration.import_stilt_r()</span></code></a> writes them into a project’s output
+directory the same way, with the X-STILT commit as <code class="docutils literal notranslate"><span class="pre">version</span></code>
+(<a class="reference internal" href="stilt_r.html"><span class="doc">Coming From STILT-R</span></a>).</p>
 <section id="where-the-methods-differ">
 <h2>Where the methods differ<a class="headerlink" href="#where-the-methods-differ" title="Link to this heading">#</a></h2>
 <p>On the same particles, a few steps give different numbers in PYSTILT and in

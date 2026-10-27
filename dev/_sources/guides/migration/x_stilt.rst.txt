@@ -93,6 +93,9 @@ rslurm's ``params.RDS`` in a folder named for the job inside its own working
 directory, not beside ``out/``, so give the ``smooth_factor`` of
 ``run_xstilt.r`` to read the footprints:
 ``read_stilt_r("out/by-id", smooth_factor=1)``.
+:func:`stilt.migration.import_stilt_r` writes them into a project's output
+directory the same way, with the X-STILT commit as ``version``
+(:doc:`stilt_r`).
 
 Where the methods differ
 ------------------------

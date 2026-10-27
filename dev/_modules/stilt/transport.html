@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=72ef73c6"></script>
+    <script src="../../_static/documentation_options.js?v=248434d6"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev6+g6a93fb769" />
+  <meta name="docsearch:version" content="0.1.0a26.dev7+g577d6768b" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -449,10 +449,12 @@
 <span class="sd">The transport model interface.</span>
 
 <span class="sd">A transport model turns one receptor and one set of transport settings into</span>
-<span class="sd">a particle table. Each model is a subpackage here. HYSPLIT</span>
-<span class="sd">(:class:`stilt.transport.hysplit.HysplitModel`) is the only one today. The</span>
-<span class="sd">worker reaches it through :func:`get_model` by the name a run&#39;s settings</span>
-<span class="sd">record, so a second model needs no change to the worker.</span>
+<span class="sd">a particle table. Each model is a subpackage or module here. HYSPLIT</span>
+<span class="sd">(:class:`stilt.transport.hysplit.HysplitModel`) is the one that runs;</span>
+<span class="sd">``stilt-r`` (:class:`stilt.transport.stilt_r.StiltRModel`) records the</span>
+<span class="sd">settings of runs imported from STILT-R and runs nothing. The worker reaches</span>
+<span class="sd">a model through :func:`get_model` by the name a run&#39;s settings record, so</span>
+<span class="sd">another model needs no change to the worker.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -782,10 +784,22 @@
     <span class="k">return</span> <span class="n">HysplitModel</span><span class="p">()</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_stilt_r</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">TransportModel</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the model of imported STILT-R runs, importing it only when it is asked for.&quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.stilt_r</span><span class="w"> </span><span class="kn">import</span> <span class="n">StiltRModel</span>
+
+    <span class="k">return</span> <span class="n">StiltRModel</span><span class="p">()</span>
+
+
 <span class="c1">#: The transport models built into PYSTILT, by the name ``model:`` takes in</span>
-<span class="c1">#: ``config.yaml``. A model in its own package is named by its import path</span>
-<span class="c1">#: instead, as a transform&#39;s ``kind:`` is.</span>
-<span class="n">MODELS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">TransportModel</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;hysplit&quot;</span><span class="p">:</span> <span class="n">_hysplit</span><span class="p">}</span>
+<span class="c1">#: ``config.yaml``: ``hysplit``, and ``stilt-r`` for runs imported from</span>
+<span class="c1">#: STILT-R (:func:`stilt.migration.import_stilt_r`), which cannot run. A model</span>
+<span class="c1">#: in its own package is named by its import path instead, as a transform&#39;s</span>
+<span class="c1">#: ``kind:`` is.</span>
+<span class="n">MODELS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">TransportModel</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;hysplit&quot;</span><span class="p">:</span> <span class="n">_hysplit</span><span class="p">,</span>
+    <span class="s2">&quot;stilt-r&quot;</span><span class="p">:</span> <span class="n">_stilt_r</span><span class="p">,</span>
+<span class="p">}</span>
 
 
 <div class="viewcode-block" id="get_model">

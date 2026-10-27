@@ -234,10 +234,13 @@ pass the particles to :func:`stilt.calc_footprint`.
 Some of what STILT-R saved is not read:
 
 - With transport error, STILT-R saves a second set of particles in the same
-  ``.rds`` (``particle_error``). Only the first set is read.
+  ``.rds`` (``particle_error``), the run with perturbed winds.
+  ``read_stilt_r("my_project/out/by-id", error=True)`` reads that set in
+  place of the first, with no footprint: STILT-R makes none of it.
 - The HYSPLIT settings in the ``.rds`` (``params``), the rest of
   ``CONTROL`` (``n_hours``, the met files) and of ``params.RDS`` are not
-  returned. No file records the STILT-R version.
+  returned. :func:`~stilt.migration.import_stilt_r` records each run's
+  settings (below). No file records the STILT-R version.
 - A footprint on a projected grid (a ``projection`` other than
   longitude/latitude) raises an error; open it with
   :func:`xarray.open_dataset`.
@@ -246,6 +249,117 @@ Some of what STILT-R saved is not read:
 - X-STILT weights ``foot`` by the averaging kernel and pressure weighting
   just before it makes the footprint, after the ``.rds`` is saved. Its
   particles are unweighted and its footprint is weighted.
+
+Importing STILT-R output into a project
+---------------------------------------
+
+:func:`stilt.migration.import_stilt_r` writes the runs of an ``out/by-id``
+folder into a PYSTILT output directory, so a project reads them as its own:
+``project.status``, ``project.particles``, ``project.footprints``, and
+``project.jacobian``. Give it the STILT-R version the project ran, which no
+file records, such as the commit ``git rev-parse --short HEAD`` prints in the
+STILT-R project folder:
+
+.. code-block:: python
+
+   import stilt
+   from stilt.migration import import_stilt_r
+
+   receptors = import_stilt_r("my_project/out/by-id", "output", version="1d936c1")
+
+It prints the met and the variant that name the imported folders, for
+``config.yaml``:
+
+.. code-block:: yaml
+
+   mets:
+     stilt-r:
+       met_path: /data/hrrr
+   variants:
+     stilt-r:
+       model: stilt-r
+       met: stilt-r
+       version: 1d936c1
+       capemin: -1.0
+       cmass: 0
+       # ... every HYSPLIT setting, in name order
+       ziscale: 1.0
+       grid: {xmin: -112.5, xmax: -111.5, ymin: 40.25, ymax: 41.25, xres: 0.01,
+         yres: 0.01, crs: +proj=longlat}
+       geometry: null
+       cells_per_target: 4.0
+       smooth_factor: 1.0
+       time_integrate: false
+       transforms: []
+
+and returns the receptors, for ``receptors.csv``. Paste the printed lines into
+the ``config.yaml`` of a project whose ``output`` is that directory, then add
+the receptors:
+
+.. code-block:: python
+
+   project = stilt.Project("my_project_py")
+   project.add_receptors(receptors)
+   project.status()
+
+A ``stilt-r`` variant reads what the import wrote and runs nothing: a run of
+one fails (``NOT_RUNNABLE``), so its receptors that STILT-R did not run stay
+failed. Run them with a ``hysplit`` variant instead.
+
+Every folder of an output directory is named by the hash of its settings
+(:doc:`../projects`), so an imported run's settings hold only what STILT-R's
+files record, never a default in place of a value they do not give. Two
+STILT-R projects that differ only in ``n_hours`` land in two folders.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Setting
+     - Where it comes from
+   * - HYSPLIT's settings (``numpar``, ``kmix0``, ``veght``, ``varsiwant``, …)
+     - each run's ``SETUP.CFG``
+   * - ``n_hours``, ``w_option``, ``z_top``, ``emisshrs``
+     - each run's ``CONTROL``
+   * - ``ziscale``
+     - the ``ZICONTROL`` file, when ``SETUP.CFG`` says STILT-R wrote one; else
+       1, no scaling
+   * - ``hnf_plume``
+     - the particles: STILT-R's near-field correction adds
+       ``foot_no_hnf_dilution``
+   * - ``seed``
+     - none: STILT-R sets no seed
+   * - the met
+     - ``met_path``, the directory the ``CONTROL`` files name, as they name it.
+       Each run's met files are recorded in its particle file; they need not
+       exist any more
+   * - ``grid``, ``time_integrate``
+     - ``<id>_foot.nc``
+   * - ``smooth_factor``
+     - ``params.RDS``, or the ``smooth_factor`` argument, as for
+       :func:`~stilt.migration.read_stilt_r`
+   * - ``version``
+     - the ``version`` argument
+
+The runs of one import must share their settings. A run whose settings
+differ from the first run's stops the import, which names the setting. The
+HYSPLIT settings of every run are compared before anything is written. To
+import runs made with other settings, put them in a ``by-id`` folder of their
+own and import it under another ``name``. When the ``CONTROL`` files name
+more than one met directory, such as yearly folders, give the folder that
+holds them: ``import_stilt_r(..., met_path="/data/hrrr")``. ``SETUP.CFG``
+with heights above sea level (``KMSL=1``) stops the import too.
+
+A run with transport error also writes its second set of particles, the
+run with perturbed winds, to a second variant, ``stilt-r-err``, with the wind
+and mixed-layer error settings STILT-R saved (``particle_error_params``) and
+no grid. It is the same wind-error variant a PYSTILT project runs
+(:doc:`../transport_error`). A run whose ``stilt.log`` says no particle
+reached the footprint grid gets an empty footprint, as a PYSTILT run would.
+
+Results already in the output directory are kept, so the import can run
+again when more STILT-R runs finish. Reading the ``.rds`` files takes a few
+seconds each, so import a large project in a Slurm job.
 
 Moving a project over
 ---------------------

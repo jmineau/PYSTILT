@@ -1,0 +1,42 @@
+﻿stilt.transport.stilt\_r.StiltRConfig
+=====================================
+
+.. currentmodule:: stilt.transport.stilt_r
+
+
+
+
+.. class-signature:: stilt.transport.stilt_r.StiltRConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.transport.stilt_r.StiltRConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~StiltRConfig.UNRECORDED
+
+
+
+
+
+
+Inherited
+---------
+
+
+From :class:`~.HysplitConfig`: :py:obj:`~.HysplitConfig.hourly_ziscale`, :py:obj:`~.HysplitConfig.maxpar_for`, :py:obj:`~.HysplitConfig.realizations`
+
+
+
+From :class:`~.TransportConfig`: :py:obj:`~.TransportConfig.settings`
+
+

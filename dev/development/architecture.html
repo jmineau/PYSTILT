@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=72ef73c6"></script>
+    <script src="../_static/documentation_options.js?v=248434d6"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Development" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev6+g6a93fb769" />
+  <meta name="docsearch:version" content="0.1.0a26.dev7+g577d6768b" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -542,7 +542,9 @@ surface. Everything else is internal and can change.</p>
                      one receptor&#39;s file (read) or many at once (table),
                      failure records, writing
   migration.py       read_stilt_r: STILT-R and X-STILT by-id output as
-                     receptors, particle tables, and footprints
+                     receptors, particle tables, and footprints;
+                     import_stilt_r writes it into an output directory
+                     with the settings its files record
   simulation.py      Simulation: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
   config.py          ProjectConfig: reads config.yaml, splits the flat keys
@@ -599,13 +601,15 @@ surface. Everything else is internal and can change.</p>
   transport/         the TransportModel and TransportConfig protocols,
                      ModelRun, ModelInfo, get_model and its MODELS table,
                      run_model and run_trajectories (__init__.py); one
-                     subpackage per transport model, which owns its config
+                     subpackage per transport model, which owns its config;
+                     stilt_r.py, the stilt-r model of imported STILT-R
+                     runs, which runs nothing
     hysplit/         HYSPLIT: HysplitConfig (config.py); MetConfig and Met,
                      ARL file discovery, download, and cropping through
                      arlmet (met.py); HysplitModel (model.py); the driver
                      (driver.py: write_inputs, read_particle_dat); the
                      CONTROL file (control.py) and SETUP.CFG namelist
-                     (namelist.py) writers; failure reasons read from its
+                     (namelist.py) writers and readers; failure reasons read from its
                      log (failures.py); the bundled binaries (bin/, Linux
                      and macOS x86-64) and data tables (data/)
 
@@ -746,9 +750,13 @@ directory; deletion is by hand.</p>
 top-level module from the CLI down to <code class="docutils literal notranslate"><span class="pre">_paths</span></code> and <code class="docutils literal notranslate"><span class="pre">exceptions</span></code>. A module
 imports only the layers below it, and modules that import each other share a
 layer. The contract is exhaustive, so a new top-level module fails until it
-is placed. Two short contracts hold what a layer cannot: only
-<code class="docutils literal notranslate"><span class="pre">stilt.transport</span></code> (its <code class="docutils literal notranslate"><span class="pre">get_model</span></code>) imports HYSPLIT’s package, and the
-project config reads no results and runs nothing.</p>
+is placed. <code class="docutils literal notranslate"><span class="pre">stilt.migration</span></code> sits above the project config, because
+<code class="docutils literal notranslate"><span class="pre">import_stilt_r</span></code> writes into an output directory through variants. Two
+short contracts hold what a layer cannot: only <code class="docutils literal notranslate"><span class="pre">stilt.transport</span></code> (its
+<code class="docutils literal notranslate"><span class="pre">get_model</span></code>) imports HYSPLIT’s package, and the project config reads no
+results and runs nothing. STILT-R ran HYSPLIT, so the STILT-R reader and the
+<code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> model are the named exceptions: they read HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>
+and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> files and record HYSPLIT’s settings.</p>
 </section>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">#</a></h2>

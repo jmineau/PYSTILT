@@ -113,7 +113,8 @@ Output of STILT-R and X-STILT
 -----------------------------
 
 :mod:`stilt.migration` reads the ``out/by-id`` folder of a STILT-R or
-X-STILT project as receptors, particle tables, and footprints
+X-STILT project as receptors, particle tables, and footprints, and imports
+it into an output directory, where a ``stilt-r`` variant reads it
 (:doc:`/guides/migration/stilt_r`).
 
 .. autosummary::
@@ -121,6 +122,7 @@ X-STILT project as receptors, particle tables, and footprints
    :nosignatures:
 
    migration.read_stilt_r
+   migration.import_stilt_r
 
 What the particles give beyond the footprint
 --------------------------------------------
