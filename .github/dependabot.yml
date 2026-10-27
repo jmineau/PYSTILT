@@ -1,6 +1,7 @@
 # Dependabot opens pull requests that update pinned versions. Each ecosystem
 # gets one grouped PR a month, and skips releases younger than a week
-# (supply-chain safety). CI runs on each PR; merge it or close it.
+# (supply-chain safety). CI runs on each PR; merge it or close it. uv.lock is
+# not here: the Upgrade lock workflow (.github/workflows/lock-upgrade.yml) does it.
 version: 2
 updates:
   # Actions used by the workflows (actions/checkout@v7, ...)
@@ -23,17 +24,4 @@ updates:
       default-days: 7
     groups:
       pre-commit:
-        patterns: ["*"]
-
-  # uv.lock: the dev tools CI and contributors run. lockfile-only never raises
-  # the minimum versions in pyproject.toml, which would force them on users.
-  - package-ecosystem: uv
-    directory: /
-    schedule:
-      interval: monthly
-    cooldown:
-      default-days: 7
-    versioning-strategy: lockfile-only
-    groups:
-      uv:
         patterns: ["*"]

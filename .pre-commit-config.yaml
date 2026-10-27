@@ -32,7 +32,7 @@ repos:
       - id: zizmor
 
   # These run the tools in .venv, so their versions are the ones in uv.lock (one
-  # place to update; Dependabot does it) and pyrefly sees the project's
+  # place to update; the Upgrade lock workflow does it) and pyrefly sees the project's
   # dependencies. --no-sync: a hook never re-syncs .venv; run `just sync` after
   # changing dependencies.
   - repo: local

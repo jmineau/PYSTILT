@@ -32,12 +32,13 @@ relies on.
    that fails without the fix. User-facing changes need a docs update.
 3. Run the checks:
    ```bash
-   just quality-check   # ruff, pyrefly, the import contracts, docstrings, and the unit tests
+   just quality-check   # ruff, pyrefly, the import contracts, docstrings, and the unit tests (with the docstring examples)
    just pre-commit      # all pre-commit hooks
    ```
 4. Commit with a [Conventional Commits](https://www.conventionalcommits.org/)
    message (`fix(slurm): ...`, `docs: ...`), push to your fork, and open a
-   pull request.
+   pull request. Leave [CHANGELOG.md](CHANGELOG.md) alone: the release notes
+   are drafted from these messages when the maintainer releases.
 
 ## Writing documentation
 
@@ -156,6 +157,12 @@ fails when one breaks.
   A block that raises or warns fails the build; `:okexcept:` or
   `:okwarning:` under the directive allows one that is meant to. All .rst
   pages share one session, so each page imports and defines what it uses.
+  Split a long block so that no multi-line statement is its 10th (or 100th)
+  statement: the directive runs only the first line of that one.
+- **Examples in docstrings are tests too:** every `>>>` line under `src/` runs
+  with `just test` (`--doctest-modules`), so an example that stops matching
+  the code fails. One that needs a HYSPLIT run, met files or the network gets
+  `# doctest: +SKIP` on its `>>>` line.
 - **When they run:** `just build-docs` runs everything, as CI does.
   `just docs-serve` reruns a page's blocks whenever that page is rebuilt.
 - **Notebooks, and code cells in Markdown pages,** are off in this project.
@@ -332,10 +339,11 @@ archive, so it has no binary.
 The version comes from git tags, through setuptools-scm, so there is no
 version string to bump.
 
-1. Run `just changelog` to draft the entries from your commit messages, edit
-   them into `CHANGELOG.md` under `## [Unreleased]`, then rename that heading
-   to `## [X.Y.Z] - YYYY-MM-DD` and start a new empty `## [Unreleased]` above
-   it. Commit (`chore(release): X.Y.Z`) and push to `main`.
+1. Write the changelog: `just changelog` drafts the entries from the commit
+   messages since the last release. Edit them into `CHANGELOG.md` under
+   `## [Unreleased]`, then rename that heading to `## [X.Y.Z] - YYYY-MM-DD` and
+   start a new empty `## [Unreleased]` above it. Commit (`chore(release): X.Y.Z`)
+   and push to `main`.
 2. Run `just release X.Y.Z`. It checks that the tree is clean, that `main` is in
    sync with GitHub, and that the version is newer than every existing tag, then
    pushes the tag `vX.Y.Z`.
@@ -351,9 +359,20 @@ final release is out, the pre-releases before it leave the dropdown (see
 
 ## Dependency updates
 
-Dependabot opens one pull request a month per kind of pin: GitHub Actions,
-pre-commit hooks, and `uv.lock` (the dev tools; it never raises the minimum
-versions in `pyproject.toml`). Merge it when CI passes.
+Dependabot opens one pull request a month for each of GitHub Actions and
+pre-commit hooks. Merge it when CI passes.
+
+`uv.lock` (the dev tools and every dependency) is updated by the Upgrade lock
+workflow alone, not by Dependabot, which would leave a package at its old
+version when the newest release needs a newer Python than the oldest one this
+project supports. On the 1st of each month the workflow runs `uv lock --upgrade`
+(`uv.lock` then holds the newest release for each Python; it never raises the
+minimum versions in `pyproject.toml`) and, when the lock changes, opens the pull
+request `chore/lock-upgrade` (or updates it). GitHub does not start workflows on
+a pull request that its own token opened, so the workflow starts Tests, Code
+Quality and Documentation on the branch itself; their results show on the pull
+request. Merge it when they pass. You can also run it by hand: Actions > Upgrade
+lock > Run workflow.
 
 ## Template
 
@@ -367,7 +386,7 @@ made in the template.
 
 - Fix or add one thing per pull request, and link the issue it closes
   (`Fixes #N`).
-- Add user-visible changes to `CHANGELOG.md` under `## [Unreleased]`.
+- Leave `CHANGELOG.md` alone; the maintainer writes it at release, from your commit messages.
 - Make sure the tests pass and coverage does not drop.
 
 ## Reporting bugs

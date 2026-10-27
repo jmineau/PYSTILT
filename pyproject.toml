@@ -202,9 +202,9 @@ python-version = "3.11"  # as CI checks, against the oldest supported Python
 
 [tool.pytest]
 minversion = "9.0"
-testpaths = ["tests"]
+testpaths = ["tests", "src"]  # src: the docstring examples (--doctest-modules below)
 strict = true  # strict markers, config, xfail and parametrize ids
-addopts = ["-ra"]
+addopts = ["-ra", "--doctest-modules"]  # run the `>>>` examples in docstrings as tests
 log_level = "INFO"  # show captured logs for failing tests
 # Warnings are errors, so deprecations surface early. Ignore a specific
 # third-party warning with e.g. "ignore:some message:DeprecationWarning:pkg".
