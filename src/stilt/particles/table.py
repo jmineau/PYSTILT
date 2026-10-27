@@ -125,8 +125,8 @@ def particles_metadata(path: str | Path | UPath) -> ParticleMetadata:
 
     Examples
     --------
-    >>> meta = stilt.particles.particles_metadata(sim.particles_path)
-    >>> meta.settings["model"]
+    >>> meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP
+    >>> meta.settings["model"]  # doctest: +SKIP
     {'name': 'hysplit', 'version': 'v5.1.0'}
     """
     with readable(path) as source:
@@ -170,8 +170,8 @@ def read_particles(
 
     Examples
     --------
-    >>> particles = stilt.read_particles(sim.particles_path)
-    >>> particles.stilt.endpoints()
+    >>> particles = stilt.read_particles(sim.particles_path)  # doctest: +SKIP
+    >>> particles.stilt.endpoints()  # doctest: +SKIP
     """
     with readable(path) as source:
         pf = pq.ParquetFile(source)

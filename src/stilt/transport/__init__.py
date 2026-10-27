@@ -550,11 +550,17 @@ def run_trajectories(
 
     Examples
     --------
-    >>> receptor = stilt.PointReceptor(
+    >>> receptor = stilt.PointReceptor(  # doctest: +SKIP
     ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
     ... )
-    >>> met = {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}
-    >>> particles = stilt.run_trajectories(receptor, met, n_hours=-24, numpar=200)
+    >>> met = {
+    ...     "directory": "/data/hrrr",
+    ...     "file_format": "%Y%m%d_%H",
+    ...     "file_tres": "6h",
+    ... }  # doctest: +SKIP
+    >>> particles = stilt.run_trajectories(
+    ...     receptor, met, n_hours=-24, numpar=200
+    ... )  # doctest: +SKIP
     """
     transport_model = get_model(model)
     config = transport_model.config_class(**params)

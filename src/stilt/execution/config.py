@@ -26,7 +26,9 @@ class ExecutionConfig(BaseModel):
 
     Examples
     --------
-    >>> ExecutionConfig(backend="slurm", n_workers=100, time="02:00:00", mem="8G")
+    >>> config = ExecutionConfig(backend="slurm", n_workers=100, time="02:00:00")
+    >>> config.n_workers
+    100
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)

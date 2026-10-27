@@ -36,8 +36,8 @@ def group_by_overpass(
 
     Examples
     --------
-    >>> df["overpass"] = group_by_overpass(df["time"])
-    >>> for label, scene in df.groupby("overpass"):
+    >>> df["overpass"] = group_by_overpass(df["time"])  # doctest: +SKIP
+    >>> for label, scene in df.groupby("overpass"):  # doctest: +SKIP
     ...     ...
     """
     # pandas-stubs' Series() does not take every ArrayLike (pandas does)

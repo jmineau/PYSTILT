@@ -185,8 +185,8 @@ def read_footprint(
 
     Examples
     --------
-    >>> foot = stilt.read_footprint(sim.footprint_path)
-    >>> foot.stilt.receptor
+    >>> foot = stilt.read_footprint(sim.footprint_path)  # doctest: +SKIP
+    >>> foot.stilt.receptor  # doctest: +SKIP
     """
     import pyarrow.parquet as pq
 
@@ -318,8 +318,10 @@ def open_footprints(
 
     Examples
     --------
-    >>> ds = open_footprints(sorted(folder.glob("date=2024-07-*/*.parquet")))
-    >>> ds.foot.sum("hour").mean("receptor").plot()
+    >>> ds = open_footprints(
+    ...     sorted(folder.glob("date=2024-07-*/*.parquet"))
+    ... )  # doctest: +SKIP
+    >>> ds.foot.sum("hour").mean("receptor").plot()  # doctest: +SKIP
     """
     import dask.array as da
     from dask.delayed import delayed

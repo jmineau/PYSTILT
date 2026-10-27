@@ -88,10 +88,10 @@ class FootprintAccessor:
 
     Examples
     --------
-    >>> foot = sim.footprint
-    >>> foot.stilt.receptor
-    >>> foot.stilt.enhancement(flux).sum()
-    >>> foot.stilt.aggregate(counties, time_bins=bins)
+    >>> foot = sim.footprint  # doctest: +SKIP
+    >>> foot.stilt.receptor  # doctest: +SKIP
+    >>> foot.stilt.enhancement(flux).sum()  # doctest: +SKIP
+    >>> foot.stilt.aggregate(counties, time_bins=bins)  # doctest: +SKIP
     """
 
     def __init__(self, foot: xr.DataArray) -> None:

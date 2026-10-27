@@ -244,12 +244,12 @@ def sample_met(
 
     Examples
     --------
-    >>> meta = stilt.particles.particles_metadata(sim.particles_path)
-    >>> hysplit = sim.particles
-    >>> sampled = stilt.sampling.sample_met(
+    >>> meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP
+    >>> hysplit = sim.particles  # doctest: +SKIP
+    >>> sampled = stilt.sampling.sample_met(  # doctest: +SKIP
     ...     hysplit.drop(columns="pres"), meta.met_files, columns=["pres"]
     ... )
-    >>> (sampled["pres"] - hysplit["pres"]).describe()
+    >>> (sampled["pres"] - hysplit["pres"]).describe()  # doctest: +SKIP
     """
     import arlmet
 

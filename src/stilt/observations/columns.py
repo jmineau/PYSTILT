@@ -71,10 +71,12 @@ def modelled_column(
 
     Examples
     --------
-    >>> bg = sim.background(cams).value
-    >>> dxch4 = 1000 * float(sim.footprint.stilt.enhancement(flux).sum())  # ppb
-    >>> p = row.pressure_levels
-    >>> modelled_column(
+    >>> bg = sim.background(cams).value  # doctest: +SKIP
+    >>> dxch4 = 1000 * float(
+    ...     sim.footprint.stilt.enhancement(flux).sum()
+    ... )  # ppb  # doctest: +SKIP
+    >>> p = row.pressure_levels  # doctest: +SKIP
+    >>> modelled_column(  # doctest: +SKIP
     ...     dxch4,
     ...     bg,
     ...     ak=row.ak,

@@ -306,10 +306,14 @@ def receptors_from_soundings(
 
     Examples
     --------
-    >>> df = read_tropomi_ch4(path, lon_range=(-113.5, -110.5), lat_range=(39.5, 42))
-    >>> receptors, kernels = receptors_from_soundings(df[df.good], "slant", top=3000)
-    >>> project.add_receptors(receptors)
-    >>> project.add_table("kernels", kernels)
+    >>> df = read_tropomi_ch4(
+    ...     path, lon_range=(-113.5, -110.5), lat_range=(39.5, 42)
+    ... )  # doctest: +SKIP
+    >>> receptors, kernels = receptors_from_soundings(
+    ...     df[df.good], "slant", top=3000
+    ... )  # doctest: +SKIP
+    >>> project.add_receptors(receptors)  # doctest: +SKIP
+    >>> project.add_table("kernels", kernels)  # doctest: +SKIP
     """
     if kind not in ("column", "slant"):
         raise ValueError(f"kind is 'column' or 'slant', not {kind!r}.")

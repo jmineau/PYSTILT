@@ -200,7 +200,7 @@ class Simulation:
 
         Examples
         --------
-        >>> sim.failure
+        >>> sim.failure  # doctest: +SKIP
         {'step': 'particles', 'reason': 'MET_COVERAGE',
          'message': 'HYSPLIT: start point not within (x,y,t) any data file', ...}
         """
@@ -315,8 +315,10 @@ class Simulation:
 
         Examples
         --------
-        >>> smoother = sim.calc_footprint(smooth_factor=2.0)
-        >>> fine = sim.calc_footprint(grid=hexes.to_grid(cells_per_target=4))
+        >>> smoother = sim.calc_footprint(smooth_factor=2.0)  # doctest: +SKIP
+        >>> fine = sim.calc_footprint(
+        ...     grid=hexes.to_grid(cells_per_target=4)
+        ... )  # doctest: +SKIP
         """
         own = self.variant.footprint
         if own is None:
@@ -370,8 +372,8 @@ class Simulation:
 
         Examples
         --------
-        >>> ct = xr.open_dataarray("ct_ch4.nc").rename(level="pres")
-        >>> sim.background(ct).value
+        >>> ct = xr.open_dataarray("ct_ch4.nc").rename(level="pres")  # doctest: +SKIP
+        >>> sim.background(ct).value  # doctest: +SKIP
         """
         return background(
             self.particles,
@@ -406,10 +408,12 @@ class Simulation:
 
         Examples
         --------
-        >>> err = project.simulation(sim.receptor.id, "hrrr-err")
-        >>> sim.transport_error(err, flux).variance
-        >>> ensemble = [project.simulation(rid, "hrrr-err", k) for k in range(10)]
-        >>> sim.transport_error(ensemble, flux)
+        >>> err = project.simulation(sim.receptor.id, "hrrr-err")  # doctest: +SKIP
+        >>> sim.transport_error(err, flux).variance  # doctest: +SKIP
+        >>> ensemble = [
+        ...     project.simulation(rid, "hrrr-err", k) for k in range(10)
+        ... ]  # doctest: +SKIP
+        >>> sim.transport_error(ensemble, flux)  # doctest: +SKIP
         """
         sims = [error] if isinstance(error, Simulation) else list(error)
         return transport_error(

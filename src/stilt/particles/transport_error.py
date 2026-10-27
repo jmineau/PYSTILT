@@ -386,14 +386,18 @@ def transport_error(
     a wrong variance. Without the receptor, each realization's table holds
     every receptor's particles.
 
-    >>> from stilt.particles import transport_error
-    >>> sim = project.simulation(rid, "hrrr")
-    >>> sims = project.simulations
-    >>> ensemble = sims[(sims.variant == "hrrr-err") & (sims.receptor == rid)]
-    >>> by_realization = project.particles(ensemble).groupby("realization")
-    >>> error_particles = [rows for _, rows in by_realization]
-    >>> result = transport_error(sim.particles, error_particles, flux)
-    >>> result.realizations
+    >>> from stilt.particles import transport_error  # doctest: +SKIP
+    >>> sim = project.simulation(rid, "hrrr")  # doctest: +SKIP
+    >>> sims = project.simulations  # doctest: +SKIP
+    >>> ensemble = sims[
+    ...     (sims.variant == "hrrr-err") & (sims.receptor == rid)
+    ... ]  # doctest: +SKIP
+    >>> by_realization = project.particles(ensemble).groupby(
+    ...     "realization"
+    ... )  # doctest: +SKIP
+    >>> error_particles = [rows for _, rows in by_realization]  # doctest: +SKIP
+    >>> result = transport_error(sim.particles, error_particles, flux)  # doctest: +SKIP
+    >>> result.realizations  # doctest: +SKIP
     4
 
     ``sim.transport_error(realizations, flux)`` builds this list from the

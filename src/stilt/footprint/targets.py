@@ -311,8 +311,8 @@ class Mesh(BaseModel):
 
         Examples
         --------
-        >>> hexes = stilt.Mesh.from_h3(7, bounds)
-        >>> grid = hexes.to_grid(cells_per_target=4)
+        >>> hexes = stilt.Mesh.from_h3(7, bounds)  # doctest: +SKIP
+        >>> grid = hexes.to_grid(cells_per_target=4)  # doctest: +SKIP
         """
         import math
         import warnings

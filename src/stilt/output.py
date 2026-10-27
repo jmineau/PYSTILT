@@ -442,7 +442,7 @@ class Output:
 
         Examples
         --------
-        >>> project.output.folders(project.variants)
+        >>> project.output.folders(project.variants)  # doctest: +SKIP
         """
         rows = []
         for kind in KINDS:
