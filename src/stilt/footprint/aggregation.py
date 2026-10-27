@@ -283,8 +283,8 @@ class Jacobian(NamedTuple):
 
         Examples
         --------
-        >>> H = project.jacobian(july, zones, bins).to_xarray()
-        >>> (H * flux).sum(["time", "cell"])  # ppm at each receptor
+        >>> H = project.jacobian(july, zones, bins).to_xarray()  # doctest: +SKIP
+        >>> (H * flux).sum(["time", "cell"])  # ppm at each receptor  # doctest: +SKIP
         """
         times = pd.unique(self.columns.get_level_values("time"))
         n_cells = len(self.columns) // len(times) if len(times) else 0

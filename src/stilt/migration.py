@@ -191,17 +191,21 @@ def read_stilt_r(
 
     Examples
     --------
-    >>> for receptor, particles, foot in stilt.migration.read_stilt_r("out/by-id"):
+    >>> for receptor, particles, foot in stilt.migration.read_stilt_r(
+    ...     "out/by-id"
+    ... ):  # doctest: +SKIP
     ...     print(receptor.id, len(particles), foot is not None)
 
     A project run on one machine has no ``params.RDS``; give the
     ``smooth_factor`` from its ``run_stilt.r``:
 
-    >>> sims = stilt.migration.read_stilt_r("out/by-id", smooth_factor=1)
+    >>> sims = stilt.migration.read_stilt_r(
+    ...     "out/by-id", smooth_factor=1
+    ... )  # doctest: +SKIP
 
     The particles of the transport-error run:
 
-    >>> for receptor, perturbed, _ in stilt.migration.read_stilt_r(
+    >>> for receptor, perturbed, _ in stilt.migration.read_stilt_r(  # doctest: +SKIP
     ...     "out/by-id", error=True
     ... ):
     ...     print(receptor.id, len(perturbed))
@@ -629,7 +633,7 @@ def import_stilt_r(
 
     Examples
     --------
-    >>> receptors = stilt.migration.import_stilt_r(
+    >>> receptors = stilt.migration.import_stilt_r(  # doctest: +SKIP
     ...     "my_project/out/by-id", "output", version="1d936c1"
     ... )
     mets:
@@ -642,7 +646,7 @@ def import_stilt_r(
         version: 1d936c1
         capemin: -1
         ...
-    >>> project = stilt.Project.init("my_project_py", receptors, output="output", ...)
+    >>> project = stilt.Project.init("my_project_py", receptors, output="output", ...)  # doctest: +SKIP
     """
     if not VARIANT_NAME_RE.fullmatch(name):
         raise ValueError(

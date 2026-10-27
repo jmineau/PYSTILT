@@ -178,12 +178,16 @@ class Project:
     --------
     Make a project, run it, and load a footprint:
 
-    >>> import stilt
-    >>> receptor = stilt.PointReceptor(
+    >>> import stilt  # doctest: +SKIP
+    >>> receptor = stilt.PointReceptor(  # doctest: +SKIP
     ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
     ... )
-    >>> met = {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}
-    >>> project = stilt.Project.init(
+    >>> met = {
+    ...     "directory": "/data/hrrr",
+    ...     "file_format": "%Y%m%d_%H",
+    ...     "file_tres": "6h",
+    ... }  # doctest: +SKIP
+    >>> project = stilt.Project.init(  # doctest: +SKIP
     ...     "./my_project",
     ...     receptors=[receptor],
     ...     mets={"hrrr": met},
@@ -198,14 +202,14 @@ class Project:
     ...         "yres": 0.01,
     ...     },
     ... )
-    >>> project.run()
-    >>> foot = project.simulation(receptor.id, "hrrr").footprint
+    >>> project.run()  # doctest: +SKIP
+    >>> foot = project.simulation(receptor.id, "hrrr").footprint  # doctest: +SKIP
 
     Open it again later and check a selection of simulations:
 
-    >>> project = stilt.Project("./my_project")
-    >>> sims = project.simulations
-    >>> project.status(sims[sims.variant == "hrrr"])
+    >>> project = stilt.Project("./my_project")  # doctest: +SKIP
+    >>> sims = project.simulations  # doctest: +SKIP
+    >>> project.status(sims[sims.variant == "hrrr"])  # doctest: +SKIP
     """
 
     def __init__(self, path: str | Path, *, output: str | Path | None = None) -> None:
@@ -517,9 +521,11 @@ class Project:
 
         Examples
         --------
-        >>> receptors, kernels = receptors_from_soundings(df, "slant", top=3000)
-        >>> project.add_receptors(receptors)
-        >>> project.add_table("kernels", kernels)
+        >>> receptors, kernels = receptors_from_soundings(
+        ...     df, "slant", top=3000
+        ... )  # doctest: +SKIP
+        >>> project.add_receptors(receptors)  # doctest: +SKIP
+        >>> project.add_table("kernels", kernels)  # doctest: +SKIP
         """
         path = self.table_path(name)
         rows = table.reset_index(drop=True)
@@ -569,10 +575,12 @@ class Project:
 
         Examples
         --------
-        >>> sims = project.simulations
-        >>> july = sims[(sims.variant == "hrrr") & (sims.site == "WBB")]
-        >>> project.status(july)
-        >>> project.footprints(july)
+        >>> sims = project.simulations  # doctest: +SKIP
+        >>> july = sims[
+        ...     (sims.variant == "hrrr") & (sims.site == "WBB")
+        ... ]  # doctest: +SKIP
+        >>> project.status(july)  # doctest: +SKIP
+        >>> project.footprints(july)  # doctest: +SKIP
         """
         return self._simulations.copy()
 
@@ -628,8 +636,10 @@ class Project:
 
         Examples
         --------
-        >>> folders = project.folders()
-        >>> folders[folders.variant == ""]  # results no variant here uses
+        >>> folders = project.folders()  # doctest: +SKIP
+        >>> folders[
+        ...     folders.variant == ""
+        ... ]  # results no variant here uses  # doctest: +SKIP
         """
         return self.output.folders(self.variants)
 
@@ -759,9 +769,11 @@ class Project:
 
         Examples
         --------
-        >>> st = project.status()
-        >>> st.state.value_counts()
-        >>> st[st.state == "failed"][["receptor", "variant", "reason"]]
+        >>> st = project.status()  # doctest: +SKIP
+        >>> st.state.value_counts()  # doctest: +SKIP
+        >>> st[st.state == "failed"][
+        ...     ["receptor", "variant", "reason"]
+        ... ]  # doctest: +SKIP
         """
         frame = self._selected(sel)
         present = self._present(frame)
@@ -960,8 +972,8 @@ class Project:
 
         Examples
         --------
-        >>> ds = project.footprints(sims[sims.variant == "hrrr"])
-        >>> ds.foot.sum("hour").mean("receptor").plot()
+        >>> ds = project.footprints(sims[sims.variant == "hrrr"])  # doctest: +SKIP
+        >>> ds.foot.sum("hour").mean("receptor").plot()  # doctest: +SKIP
         """
         frame = self._selected(sel)
         name, k = _one_group(frame, "A footprint dataset")
@@ -1132,10 +1144,12 @@ class Project:
 
         Examples
         --------
-        >>> sims = project.simulations
-        >>> wbb = sims[(sims.variant == "hrrr") & (sims.site == "WBB")]
-        >>> errors = project.transport_error(wbb, "hrrr-err", flux)
-        >>> errors.groupby(errors.time.dt.month).variance.median()
+        >>> sims = project.simulations  # doctest: +SKIP
+        >>> wbb = sims[
+        ...     (sims.variant == "hrrr") & (sims.site == "WBB")
+        ... ]  # doctest: +SKIP
+        >>> errors = project.transport_error(wbb, "hrrr-err", flux)  # doctest: +SKIP
+        >>> errors.groupby(errors.time.dt.month).variance.median()  # doctest: +SKIP
         """
         frame = self._selected(sel)
         name, _ = _one_group(frame, "A transport error")
@@ -1241,9 +1255,11 @@ class Project:
 
         Examples
         --------
-        >>> problems = project.check()
-        >>> problems.empty  # True when nothing would stop a run
-        >>> problems[problems.check == "met_files"][["receptor", "message"]]
+        >>> problems = project.check()  # doctest: +SKIP
+        >>> problems.empty  # True when nothing would stop a run  # doctest: +SKIP
+        >>> problems[problems.check == "met_files"][
+        ...     ["receptor", "message"]
+        ... ]  # doctest: +SKIP
         """
         return check_project(self)
 

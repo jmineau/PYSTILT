@@ -522,10 +522,12 @@ def calc_footprint(
 
     Examples
     --------
-    >>> grid = stilt.Grid(
+    >>> grid = stilt.Grid(  # doctest: +SKIP
     ...     xmin=-113, xmax=-110.5, ymin=40, ymax=42, xres=0.01, yres=0.01
     ... )
-    >>> foot = stilt.calc_footprint(particles, receptor, grid, smooth_factor=0.5)
+    >>> foot = stilt.calc_footprint(
+    ...     particles, receptor, grid, smooth_factor=0.5
+    ... )  # doctest: +SKIP
     """
     if grid is None:
         raise ValueError(

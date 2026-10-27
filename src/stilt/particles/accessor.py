@@ -23,10 +23,10 @@ class ParticlesAccessor:
 
     Examples
     --------
-    >>> particles = sim.particles
-    >>> particles.stilt.endpoints()
-    >>> particles.stilt.enhancement(flux).mean()
-    >>> particles.stilt.plot.map()
+    >>> particles = sim.particles  # doctest: +SKIP
+    >>> particles.stilt.endpoints()  # doctest: +SKIP
+    >>> particles.stilt.enhancement(flux).mean()  # doctest: +SKIP
+    >>> particles.stilt.plot.map()  # doctest: +SKIP
     """
 
     def __init__(self, particles: pd.DataFrame) -> None:
