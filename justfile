@@ -107,7 +107,7 @@ check-dist:
     assert not binaries, f"{sdist.name} holds {binaries}"
     print(f"{sdist.name}: no binary")
 
-# Draft CHANGELOG entries from the commits since the last release
+# At release, draft the CHANGELOG entries from the commits since the last release
 changelog:
     @uv run git-cliff --unreleased --strip all
 

@@ -1,0 +1,94 @@
+name: Upgrade lock
+
+# Once a month, re-lock every dependency to its newest release and open one pull
+# request when uv.lock changes (`uv lock --upgrade`). It is the only thing that
+# updates uv.lock (Dependabot does actions and pre-commit hooks). Dependabot's uv
+# updates would leave a package whose newest release needs a newer Python than the
+# oldest one this project supports at its old version, so CI would test a release
+# that users on a newer Python no longer get. `uv lock --upgrade` locks the newest
+# release for each Python (a fork in uv.lock).
+#
+# Setup, once: Settings > Actions > General > Workflow permissions > tick "Allow
+# GitHub Actions to create and approve pull requests".
+#
+# A pull request opened with the workflow's own token does not start the other
+# workflows, so this one starts Tests, Code Quality and Documentation on the
+# branch itself (workflow_dispatch is the one event the token may trigger); their
+# results show on the pull request.
+on:
+  schedule:
+    - cron: "0 6 1 * *"  # 06:00 UTC on the 1st of each month
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lock-upgrade
+  cancel-in-progress: false
+
+env:
+  BRANCH: chore/lock-upgrade
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # push the branch
+      pull-requests: write  # open or update the pull request
+      actions: write  # start the other workflows on the branch
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # setuptools-scm reads the version from tags
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.23"
+          python-version: "3.14"
+
+      - name: Upgrade uv.lock
+        id: upgrade
+        run: |
+          set -euo pipefail
+          uv lock --upgrade 2>&1 | tee "$RUNNER_TEMP/lock.log"
+          if git diff --quiet -- uv.lock; then
+            echo "uv.lock is already up to date."
+            exit 0
+          fi
+          {
+            echo "Monthly \`uv lock --upgrade\`: the newest release of every dependency, for each supported Python."
+            echo
+            echo '```'
+            grep -E '^(Added|Removed|Updated) ' "$RUNNER_TEMP/lock.log" || true
+            echo '```'
+            echo
+            echo "Tests, Code Quality and Documentation were started on this branch by the workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "Merge it when they pass."
+          } > "$RUNNER_TEMP/body.md"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Push the branch, open or update the pull request, start the checks
+        if: steps.upgrade.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh auth setup-git
+          git checkout --quiet -b "$BRANCH"
+          git add uv.lock
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet -m "chore(deps): upgrade uv.lock"
+          git push --quiet --force origin "$BRANCH"  # the branch belongs to this workflow
+          number="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$number" ]; then
+            gh pr edit "$number" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh pr create --base main --head "$BRANCH" --title "chore(deps): upgrade uv.lock" \
+              --body-file "$RUNNER_TEMP/body.md"
+          fi
+          for workflow in tests.yml quality.yml docs.yml; do
+            gh workflow run "$workflow" --ref "$BRANCH"
+          done

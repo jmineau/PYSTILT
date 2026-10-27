@@ -140,11 +140,12 @@ Driven by [`just`](https://github.com/casey/just) and
 | Command | What it does |
 |---|---|
 | `just sync` | `uv sync`: the package and the dev tools into `.venv` |
-| `just test` | the unit tests, in parallel (extra args go to pytest; `-n 0` for serial) |
+| `just test` | the unit tests and the `>>>` examples under `src/`, in parallel (extra args go to pytest; `-n 0` for serial) |
 | `just lint` / `just format` | ruff check and format check / fix and format |
 | `just type-check` | pyrefly, against Python 3.11 (set in `pyproject.toml`) |
 | `just imports` / `just docstr` | the import contracts / docstring coverage of the public API (95%) |
 | `just quality-check` | lint, type check, import contracts, docstrings, unit tests |
+| `just changelog` | draft the CHANGELOG entries from the commits since the last release (at release) |
 | `just pre-commit` | every pre-commit hook on every file |
 | `just build-docs` | a clean Sphinx build that runs every example; warnings are errors |
 | `just dist` | the sdist and one wheel per bundled HYSPLIT build, then `just check-dist` |
@@ -161,6 +162,11 @@ are errors (a test that expects one uses `pytest.warns`). CI also runs
 - `fidelity`: PYSTILT against STILT-R, both running HYSPLIT. Needs the met,
   `STILT_R_DIR` (a STILT-R checkout built as `tests.yml` builds it), `Rscript`.
 - `r_only`: STILT-R comparisons with no met or HYSPLIT (`STILT_R_DIR`, `Rscript`).
+
+Docstring examples (`>>>` lines under `src/`) run as tests too
+(`--doctest-modules`), so an example that stops matching the code fails
+`just test`. One that needs a HYSPLIT run, met files or the network gets
+`# doctest: +SKIP` on its `>>>` line.
 
 pytest loads a local `.env` for such variables. Test folders follow the
 package. `tests/observations/` is self-contained (its own `conftest.py` and
@@ -216,9 +222,13 @@ machine-written, is "Writing documentation" in `CONTRIBUTING.md`. Words:
 
 ### Commits, releases, issues
 
-- Conventional Commits (`fix(slurm): ...`, `docs: ...`); user-visible changes
-  go under `## [Unreleased]` in `CHANGELOG.md`. The version comes from git tags
+- Conventional Commits (`fix(slurm): ...`, `docs: ...`). A pull request leaves
+  `CHANGELOG.md` alone: at release, `just changelog` drafts the entries from the
+  commit messages (`cliff.toml`) and the maintainer edits them in, so write each
+  message as the line a user would read. The version comes from git tags
   (setuptools-scm). Releases are cut by the maintainer (CONTRIBUTING.md).
+- `uv.lock` is updated by the Upgrade lock workflow (`lock-upgrade.yml`, monthly,
+  opens the `chore/lock-upgrade` pull request), not by Dependabot.
 - Open work is in [GitHub issues](https://github.com/jmineau/PYSTILT/issues);
   read one before working on it. Feature status lives in `docs/development/roadmap.rst`
   (update its row when a feature lands). Over-engineered code goes on the
@@ -268,3 +278,6 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
 - **Never name a workdir from the simulation alone**: each run gets a new path
   in the compute root (`_new_workdir`), so projects can share one. Real runs
   are heavy: on a shared HPC system use Slurm or an allocation.
+- **Docs `.. ipython::` blocks**: no multi-line statement may be a block's 10th
+  (or 100th) statement, because the directive runs only that statement's first
+  line. Split the block.
