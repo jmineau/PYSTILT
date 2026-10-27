@@ -230,7 +230,7 @@ The reasons
        - ``The particles stopped ... h into the ... h run, up to ... grid
          cells inside the met's domain``: the particles stopped before
          ``n_hours`` and at least one was more than 5 grid cells from
-         every edge of the met's domain, the domain top included.
+         every side of the met grid.
          Particles that leave the domain end within 2 cells of its edge,
          so the met ran out, though HYSPLIT may have written no warning
          and ``Complete Hysplit``. Look for a met file with fewer hours

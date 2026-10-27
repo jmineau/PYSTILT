@@ -24,9 +24,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - A HYSPLIT run that stopped before `n_hours` fails as `MET_COVERAGE` when
   any particle at its last time step is more than 5 grid cells from every
-  edge of the met's domain, the domain top included. Particles that leave
-  the domain end within 2 cells of its edge, so such a run is one the met
-  stopped. HYSPLIT can stop every particle where the met runs out, write no
+  side of the met grid. Particles that leave the domain end within 2 cells
+  of its edge, so such a run is one the met stopped. HYSPLIT can stop every particle where the met runs out, write no
   warning, and report `Complete Hysplit`; that run used to count as
   complete when the met files looked whole before the run. The check runs
   only when `outdt` is 0, the default. Runs already in an output directory

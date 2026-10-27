@@ -492,11 +492,6 @@ def test_a_perturbed_run_is_one_hycs_std_call_with_winderr(
 # check_met_stop: met that ran out, told from a domain exit (#213)
 # ---------------------------------------------------------------------------
 
-#: The levels of the met in these tests: a cell at the 25 km top is 625 m deep.
-LEVELS = 40
-Z_TOP = 25000.0
-TOP_CELL = Z_TOP / LEVELS
-
 
 def _grid(nx: int = 50, ny: int = 50, west: float = 20.0, south: float = -10.0):
     """A 1 degree lat/lon grid of *nx* by *ny* points from (*west*, *south*)."""
@@ -539,22 +534,20 @@ def _stopped_at(minute: float, *positions: tuple[float, float, float]):
 
 
 def _check(particles, n_hours: int = -24, grid=None) -> None:
-    check_met_stop(particles, n_hours, grid or _grid(), LEVELS, Z_TOP)
+    check_met_stop(particles, n_hours, grid or _grid())
 
 
-def test_cells_from_edge_counts_grid_cells_to_the_nearest_side_or_the_top():
-    grid = _grid()
-    lon = [44.5, 21.5, 66.0, 44.5, 44.5]
-    lat = [14.5, 14.5, 14.5, -8.0, 14.5]
-    zagl = [10.0, 10.0, 10.0, 10.0, Z_TOP - 2 * TOP_CELL]
+def test_cells_from_edge_counts_grid_cells_to_the_nearest_side():
+    lon = [44.5, 21.5, 66.0, 44.5]
+    lat = [14.5, 14.5, 14.5, -8.0]
 
-    cells = cells_from_edge(lon, lat, zagl, grid, Z_TOP, LEVELS)
+    cells = cells_from_edge(lon, lat, _grid())
 
-    assert cells.tolist() == pytest.approx([24.5, 1.5, 3.0, 2.0, 2.0])
+    assert cells.tolist() == pytest.approx([24.5, 1.5, 3.0, 2.0])
 
 
 def test_cells_from_edge_is_negative_outside_the_grid():
-    assert cells_from_edge([10.0], [14.5], [10.0], _grid(), Z_TOP, LEVELS)[0] < 0
+    assert cells_from_edge([10.0], [14.5], _grid())[0] < 0
 
 
 def test_a_global_grid_has_no_east_or_west_side():
@@ -562,10 +555,10 @@ def test_a_global_grid_has_no_east_or_west_side():
     grid = _grid(nx=360, ny=181, west=0.0, south=-90.0)
     assert grid.wraps_lon
 
-    cells = cells_from_edge([0.5], [0.0], [10.0], grid, Z_TOP, LEVELS)
+    cells = cells_from_edge([0.5], [0.0], grid)
 
-    # Half a cell east of the seam, 90 cells from the poles: the top is nearest.
-    assert cells[0] == pytest.approx((Z_TOP - 10.0) / TOP_CELL)
+    # Half a cell east of the seam and 90 cells from each pole.
+    assert cells[0] == pytest.approx(90.0)
 
 
 def test_a_run_the_met_stopped_inside_the_domain_fails():
@@ -588,7 +581,6 @@ def test_a_run_the_met_stopped_inside_the_domain_fails():
         (67.5, 14.5, 10.0),  # 1.5 from the east side
         (44.5, -8.5, 10.0),  # 1.5 from the south side
         (44.5, 37.0, 10.0),  # 2.0 from the north side
-        (*MIDDLE, Z_TOP - 2 * TOP_CELL),  # 2.0 below the top
     ],
 )
 def test_particles_that_stop_within_two_cells_of_an_edge_left_the_domain(position):
@@ -607,11 +599,10 @@ def test_one_particle_more_than_the_limit_inside_fails_the_run():
     assert caught.value.reason == FailureReason.MET_COVERAGE
 
 
-def test_a_particle_below_the_top_by_more_than_the_limit_fails_the_run():
-    top = Z_TOP - (MET_STOP_CELLS + 1) * TOP_CELL
-
+def test_a_particle_near_the_domain_top_still_fails_the_run():
+    """HYSPLIT keeps particles from rising above the top, so the top cannot end a run."""
     with pytest.raises(SimulationError):
-        _check(_stopped_at(13 * 60, (*MIDDLE, top)))
+        _check(_stopped_at(13 * 60, (*MIDDLE, 24900.0)))
 
 
 def test_only_the_particles_at_the_last_time_step_count():
@@ -636,7 +627,7 @@ def test_a_forward_run_is_checked_the_same():
 
 
 def test_particles_without_positions_are_not_checked():
-    _check(_stopped_at(360, (*MIDDLE, 10.0)).drop(columns="zagl"))
+    _check(_stopped_at(360, (*MIDDLE, 10.0)).drop(columns="lat"))
 
 
 def _rows_inside(minute: int) -> list[list[float]]:
@@ -648,7 +639,7 @@ def test_run_fails_a_run_whose_particles_stopped_inside_the_met(
     tmp_path, point_receptor, monkeypatch
 ):
     _fake_hysplit(monkeypatch, log=" Complete Hysplit\n", rows=_rows_inside(360))
-    monkeypatch.setattr(model, "_met_domain", lambda path: (_grid(), LEVELS))
+    monkeypatch.setattr(model, "_met_grid", lambda path: _grid())
 
     with pytest.raises(SimulationError, match="the met ran out") as caught:
         _run(tmp_path, point_receptor)
@@ -661,19 +652,19 @@ def test_run_does_not_check_where_particles_stopped_when_outdt_is_set(
 ):
     """With a row only every outdt minutes, a particle's last row can be far from where it left."""
     _fake_hysplit(monkeypatch, log="", rows=_rows_inside(360))
-    monkeypatch.setattr(model, "_met_domain", lambda path: (_grid(), LEVELS))
+    monkeypatch.setattr(model, "_met_grid", lambda path: _grid())
 
     run = _run(tmp_path, point_receptor, _config(outdt=60))
 
     assert run.particles["age"].min() == -360
 
 
-def test_met_domain_is_the_grid_and_levels_of_a_met_file(tmp_path):
+def test_met_grid_is_the_grid_of_a_met_file(tmp_path):
     from ...fixtures.factories import write_arl_file
 
-    grid, levels = model._met_domain(write_arl_file(tmp_path / "met.arl"))
+    grid = model._met_grid(write_arl_file(tmp_path / "met.arl"))
 
-    assert (grid.nx, grid.ny, levels) == (20, 20, 2)
+    assert (grid.nx, grid.ny) == (20, 20)
 
 
 # ---------------------------------------------------------------------------

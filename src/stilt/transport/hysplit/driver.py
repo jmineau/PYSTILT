@@ -236,34 +236,27 @@ def check_release(workdir: Path, receptor: Receptor, config: HysplitConfig) -> N
 
 #: How far inside the met's domain, in grid cells, a particle at the last time
 #: step of a run that stopped early must be for :func:`check_met_stop` to fail
-#: the run. Measured with the test met and stored HRRR runs: particles that
-#: left the domain ended 1 to 2 cells from its edge, and in runs the met
-#: stopped, the particle furthest inside was 34 cells in or more.
+#: the run. Measured on HRRR (3 km), NAM (12 km) and NARR (32 km) grids and
+#: crops of them: particles that left the domain ended 1 to 2 cells from its
+#: edge, and in runs the met stopped on a domain a hundred cells across or
+#: more, the particle furthest inside was 34 cells in or more.
 MET_STOP_CELLS = 5
 
 
-def cells_from_edge(
-    lon: Any, lat: Any, zagl: Any, grid: "Grid", z_top: float, levels: int
-) -> np.ndarray:
+def cells_from_edge(lon: Any, lat: Any, grid: "Grid") -> np.ndarray:
     """
-    Return how far each position is from the nearest edge of the met's domain, in grid cells.
+    Return how far each position is from the nearest side of the met grid, in grid cells.
 
-    The edges are the four sides of *grid* and the domain top, *z_top*
-    meters above ground. A cell at the top is ``z_top / levels`` deep: the
-    met's *levels* spread evenly up to the top. A global grid's columns
-    wrap around in longitude, so it has no east or west side. A position
-    outside the grid has a negative distance.
+    A global grid's columns wrap around in longitude, so it has no east or
+    west side. A position outside the grid has a negative distance. The
+    domain top is not an edge: HYSPLIT keeps particles from rising above it.
 
     Parameters
     ----------
-    lon, lat, zagl : array-like
-        Positions: degrees, and meters above ground.
+    lon, lat : array-like
+        Positions, in degrees.
     grid : arlmet.Grid
         The met's horizontal grid.
-    z_top : float
-        The top of the domain, in meters above ground.
-    levels : int
-        The number of vertical levels in the met.
 
     Returns
     -------
@@ -274,13 +267,10 @@ def cells_from_edge(
     edges = [y, grid.ny - 1 - y]
     if not grid.wraps_lon:
         edges += [x, grid.nx - 1 - x]
-    edges.append((z_top - np.asarray(zagl, dtype=float)) / (z_top / levels))
     return np.minimum.reduce(edges)
 
 
-def check_met_stop(
-    particles: pd.DataFrame, n_hours: int, grid: "Grid", levels: int, z_top: float
-) -> None:
+def check_met_stop(particles: pd.DataFrame, n_hours: int, grid: "Grid") -> None:
     """
     Raise when a run stopped before ``n_hours`` with particles well inside the met's domain.
 
@@ -289,13 +279,16 @@ def check_met_stop(
     can stop every particle where it is, write no warning, and report a
     complete run. So a run that stopped before ``n_hours`` fails when any
     particle at its last time step is more than :data:`MET_STOP_CELLS`
-    grid cells from every edge of the domain (:func:`cells_from_edge`):
-    the sides of the met grid and the top.
+    grid cells from every side of the met grid (:func:`cells_from_edge`).
+
+    On a domain only a few dozen cells across, a met stop late in a run,
+    when nearly every particle has already left, can pass as a domain exit.
+    The footprint lost in such a run is small.
 
     The particle table must hold a row for every time step (``outdt: 0``).
     With fewer rows, the last row of a particle that left can be far
     inside the domain. A table without the ``particle``, ``age``, ``lon``,
-    ``lat``, and ``zagl`` columns is not checked.
+    and ``lat`` columns is not checked.
 
     Parameters
     ----------
@@ -305,19 +298,15 @@ def check_met_stop(
         The length of the run asked for, negative for a backward run.
     grid : arlmet.Grid
         The horizontal grid of the met the run read.
-    levels : int
-        The number of vertical levels in that met.
-    z_top : float
-        The top of the domain, in meters above ground.
 
     Raises
     ------
     SimulationError
         With ``reason`` ``MET_COVERAGE``, when the particles stopped
         before ``n_hours`` and one at the last time step is more than
-        :data:`MET_STOP_CELLS` grid cells inside the domain.
+        :data:`MET_STOP_CELLS` grid cells inside the met grid.
     """
-    if particles.empty or not {"particle", "age", "lon", "lat", "zagl"} <= set(
+    if particles.empty or not {"particle", "age", "lon", "lat"} <= set(
         particles.columns
     ):
         return
@@ -326,9 +315,7 @@ def check_met_stop(
     if stop >= abs(n_hours) * 60:
         return
     last = particles[reach == stop]
-    inside = cells_from_edge(
-        last["lon"], last["lat"], last["zagl"], grid, z_top, levels
-    ).max()
+    inside = cells_from_edge(last["lon"], last["lat"], grid).max()
     if inside > MET_STOP_CELLS:
         share = len(last) / particles["particle"].nunique()
         raise SimulationError(
