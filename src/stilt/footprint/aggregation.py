@@ -246,13 +246,11 @@ class Jacobian(NamedTuple):
             # pyrefly: ignore[missing-attribute]
             stored = pd.DataFrame.sparse.from_spmatrix(self.data)
             # A cell not stored is zero. pandas 3 fills from_spmatrix's
-            # columns with NaN, so each is rebuilt with a fill of 0.
+            # columns with NaN, so each is relabeled with a fill of 0: a
+            # SparseArray built from a SparseArray keeps its stored positions
+            # and values (the NaN was only the fill, never a stored value).
             columns = {
-                j: pd.arrays.SparseArray(
-                    stored[j].array.sp_values,
-                    sparse_index=stored[j].array.sp_index,
-                    fill_value=0.0,
-                )
+                j: pd.arrays.SparseArray(stored[j].array, fill_value=0.0)
                 for j in stored.columns
             }
             frame = pd.DataFrame(columns, index=self.receptors)

@@ -8,8 +8,9 @@ import pandas as pd
 import pytest
 import xarray as xr
 import yaml
+from scipy import sparse
 
-from stilt.footprint import jacobian, open_footprints
+from stilt.footprint import Jacobian, jacobian, open_footprints
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.targets import Mesh
 from stilt.identity import footprint_hash, footprint_settings, settings_hash
@@ -603,6 +604,29 @@ def test_a_grid_jacobian_names_its_cell_levels(written_footprints):
     np.testing.assert_array_equal(
         sparse_frame.sparse.to_dense().to_numpy(), H.to_frame().to_numpy()
     )
+
+
+def test_a_sparse_jacobian_frame_keeps_the_stored_cells_and_fills_zero():
+    # An empty column, a stored zero and a full column; a cell not stored is 0.
+    data = sparse.csr_matrix(np.array([[0.0, 2.0, 0.0, 1.0], [0.0, 0.0, 0.0, 3.0]]))
+    data.data[0] = 0.0
+    columns = pd.MultiIndex.from_product([[0], [1, 2, 3, 4]], names=["time", "cell"])
+    H = Jacobian(data, pd.Index(["a", "b"]), columns, empty=[], missing=[])
+
+    frame = H.to_frame(sparse=True)
+
+    assert list(frame.columns) == list(columns)
+    assert list(frame.index) == ["a", "b"]
+    arrays = [frame.iloc[:, j].array for j in range(frame.shape[1])]
+    assert [a.fill_value for a in arrays] == [0.0] * 4
+    assert [a.sp_index.to_int_index().indices.tolist() for a in arrays] == [
+        [],
+        [0],
+        [],
+        [0, 1],
+    ]
+    assert [a.sp_values.tolist() for a in arrays] == [[], [0.0], [], [1.0, 3.0]]
+    np.testing.assert_array_equal(frame.sparse.to_dense().to_numpy(), H.data.toarray())
 
 
 # ---------------------------------------------------------------------------
