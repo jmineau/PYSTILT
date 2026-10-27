@@ -463,15 +463,20 @@ per file in a process).
 After the run, the driver's ``check_met_stop`` catches a silent stop that the
 check before it missed, whatever its cause. A run that stopped before
 ``n_hours`` fails as ``MET_COVERAGE`` when any particle at its last time step
-is more than ``MET_STOP_CELLS`` (5) grid cells from every edge of the met's
-domain: the sides of the first met file's grid, and ``z_top``, where a cell is
-``z_top`` divided by the met's number of levels. Particles that left the test
-met's crop ended 1.6 to 2.0 cells in, and a larger HRRR crop dropped them at about 1;
-the furthest-inside particle of runs the met stopped was 34 cells in or more.
-HYSPLIT writes ``off spatial domain of all grids`` for both, so its log cannot
-tell them apart. The check runs only when ``outdt`` is 0: with fewer rows, a
+is more than ``MET_STOP_CELLS`` (5) grid cells from every side of the first
+met file's grid. The top is not an edge: HYSPLIT's particle mode holds a
+particle that rises above it at the top (``advpnt.f``), so the top cannot end
+a run. HYSPLIT limits a step to ``tratio`` (0.75) of a cell, so the limit is in
+cells, not distance. On HRRR (3 km), NAM (12 km) and NARR (32 km) grids and
+their crops, particles that left ended at most 2.0 cells in; on domains a
+hundred cells across or more, the furthest-inside particle of runs the met
+stopped was 34 cells in or more. On crops 45 to 120 cells across, 3 to 9 % of
+the met stops tested passed as domain exits, none in a run's first 6 hours,
+with at most one particle in six still in the air and under 3 % of the
+footprint lost. HYSPLIT writes ``off spatial domain of all grids`` after a
+domain exit and after a silent met stop, so its log cannot tell them apart. The check runs only when ``outdt`` is 0: with fewer rows, a
 particle's last row can be far inside the domain though it left. It takes a
-particle table, a grid, and the domain top, nothing of HYSPLIT's, so the core
+particle table and a grid, nothing of HYSPLIT's, so the core
 can call it for another transport model that knows its domain.
 
 Realizations

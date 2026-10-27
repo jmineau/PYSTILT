@@ -171,7 +171,7 @@ class HysplitModel:
             HYSPLIT wrote no particle file. A run whose particles stopped
             before ``n_hours`` well inside the met's domain fails as
             ``MET_COVERAGE`` too, when ``outdt`` is 0: more than 5 grid
-            cells from every edge, the domain top included.
+            cells from every side of the met grid.
             Particles that all left the met's domain before the end of the
             run are kept.
         MeteorologyError
@@ -199,8 +199,7 @@ class HysplitModel:
                 )
             particles = read_particle_dat(path, config.varsiwant)
             if config.outdt == 0:  # the check needs a row every time step
-                grid, levels = _met_domain(readable[0])
-                check_met_stop(particles, config.n_hours, grid, levels, config.z_top)
+                check_met_stop(particles, config.n_hours, _met_grid(readable[0]))
         except SimulationError as error:
             error.log = _read_log(workdir)
             raise
@@ -209,12 +208,12 @@ class HysplitModel:
         return ModelRun(particles=particles, log=_read_log(workdir), met_files=source)
 
 
-def _met_domain(path: Path) -> tuple[Grid, int]:
-    """Return the horizontal grid of the ARL file at *path* and its number of levels."""
+def _met_grid(path: Path) -> Grid:
+    """Return the horizontal grid of the ARL file at *path*."""
     from arlmet import File
 
     with File(path) as met:
-        return met.grid, len(met.vertical_axis)
+        return met.grid
 
 
 def _read_log(workdir: Path) -> str:
