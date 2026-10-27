@@ -869,6 +869,8 @@ def _run_docstring_examples(func, **names):
     """Run the ``>>>`` examples in *func*'s docstring with *names* defined; return what they defined."""
     (test,) = doctest.DocTestFinder().find(func, globs=names)
     assert test.examples, f"{func.__name__} has no docstring examples"
+    for example in test.examples:  # the docstring skips them for pytest's doctest run
+        example.options.pop(doctest.SKIP, None)
     runner = doctest.DocTestRunner()
     runner.run(test, clear_globs=False)  # pytest shows what a failure printed
     assert runner.failures == 0
