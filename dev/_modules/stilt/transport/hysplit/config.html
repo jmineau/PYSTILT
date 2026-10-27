@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../../_static/documentation_options.js?v=e8afc500"></script>
+    <script src="../../../../_static/documentation_options.js?v=72ef73c6"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev4+gac0d6191b" />
+  <meta name="docsearch:version" content="0.1.0a26.dev6+g6a93fb769" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -810,7 +810,10 @@
         <span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">&quot;Interval between particle outputs in ``PARTICLE_STILT.DAT``, in &quot;</span>
-            <span class="s2">&quot;minutes. 0 writes every time step and a negative value writes none.&quot;</span>
+            <span class="s2">&quot;minutes. 0 writes every time step and a negative value writes none. &quot;</span>
+            <span class="s2">&quot;Only at 0 does PYSTILT check where the particles of a run that &quot;</span>
+            <span class="s2">&quot;stopped early ended, to tell met that ran out from particles that &quot;</span>
+            <span class="s2">&quot;left the met&#39;s domain.&quot;</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">p10f</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>

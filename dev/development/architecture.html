@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=e8afc500"></script>
+    <script src="../_static/documentation_options.js?v=72ef73c6"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Development" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev4+gac0d6191b" />
+  <meta name="docsearch:version" content="0.1.0a26.dev6+g6a93fb769" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -892,6 +892,24 @@ So <code class="docutils literal notranslate"><span class="pre">Met.files_for</s
 hours, and <code class="docutils literal notranslate"><span class="pre">Met.check</span></code> fails when a file is damaged or the files lack a time
 step the run needs (arlmet’s <code class="docutils literal notranslate"><span class="pre">File.check()</span></code> and <code class="docutils literal notranslate"><span class="pre">File.times</span></code>, read once
 per file in a process).</p>
+<p>After the run, the driver’s <code class="docutils literal notranslate"><span class="pre">check_met_stop</span></code> catches a silent stop that the
+check before it missed, whatever its cause. A run that stopped before
+<code class="docutils literal notranslate"><span class="pre">n_hours</span></code> fails as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code> when any particle at its last time step
+is more than <code class="docutils literal notranslate"><span class="pre">MET_STOP_CELLS</span></code> (5) grid cells from every side of the first
+met file’s grid. The top is not an edge: HYSPLIT’s particle mode holds a
+particle that rises above it at the top (<code class="docutils literal notranslate"><span class="pre">advpnt.f</span></code>), so the top cannot end
+a run. HYSPLIT limits a step to <code class="docutils literal notranslate"><span class="pre">tratio</span></code> (0.75) of a cell, so the limit is in
+cells, not distance. On HRRR (3 km), NAM (12 km) and NARR (32 km) grids and
+their crops, particles that left ended at most 2.0 cells in; on domains a
+hundred cells across or more, the furthest-inside particle of runs the met
+stopped was 34 cells in or more. On crops 45 to 120 cells across, 3 to 9 % of
+the met stops tested passed as domain exits, none in a run’s first 6 hours,
+with at most one particle in six still in the air and under 3 % of the
+footprint lost. HYSPLIT writes <code class="docutils literal notranslate"><span class="pre">off</span> <span class="pre">spatial</span> <span class="pre">domain</span> <span class="pre">of</span> <span class="pre">all</span> <span class="pre">grids</span></code> after a
+domain exit and after a silent met stop, so its log cannot tell them apart. The check runs only when <code class="docutils literal notranslate"><span class="pre">outdt</span></code> is 0: with fewer rows, a
+particle’s last row can be far inside the domain though it left. It takes a
+particle table and a grid, nothing of HYSPLIT’s, so the core
+can call it for another transport model that knows its domain.</p>
 </section>
 <section id="realizations">
 <h3>Realizations<a class="headerlink" href="#realizations" title="Link to this heading">#</a></h3>

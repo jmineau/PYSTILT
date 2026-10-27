@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=e8afc500"></script>
+    <script src="../_static/documentation_options.js?v=72ef73c6"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="stilt.footprint.Jacobian.to_xarray" href="_api/stilt.footprint.Jacobian.to_xarray.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev4+gac0d6191b" />
+  <meta name="docsearch:version" content="0.1.0a26.dev6+g6a93fb769" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -910,7 +910,11 @@ near-field correction are PYSTILT’s steps, the same for any model
 <section id="failure-reasons">
 <h2>Failure reasons<a class="headerlink" href="#failure-reasons" title="Link to this heading">#</a></h2>
 <p>When a run ends, PYSTILT reads HYSPLIT’s log for the messages it knows.
-A known failure, a timeout, or a run without particle output raises a
+When the particles stopped before <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, it also checks where: a
+particle more than 5 grid cells inside the met’s domain means the met ran
+out (<code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>), since particles that leave the domain end at its
+edge (<a class="reference internal" href="../guides/checking.html"><span class="doc">Checking A Run</span></a>). A known failure, a timeout, or a run
+without particle output raises a
 <a class="reference internal" href="_api/stilt.exceptions.SimulationError.html#stilt.exceptions.SimulationError" title="stilt.exceptions.SimulationError"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimulationError</span></code></a> whose <code class="docutils literal notranslate"><span class="pre">reason</span></code> is a
 <a class="reference internal" href="_api/stilt.transport.hysplit.FailureReason.html#stilt.transport.hysplit.FailureReason" title="stilt.transport.hysplit.FailureReason"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transport.hysplit.FailureReason</span></code></a>. The worker records it, and
 <a class="reference internal" href="_api/stilt.Simulation.failure.html#stilt.Simulation.failure" title="stilt.Simulation.failure"><code class="xref py py-attr docutils literal notranslate"><span class="pre">stilt.Simulation.failure</span></code></a> and <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> report it.</p>

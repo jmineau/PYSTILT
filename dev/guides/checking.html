@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=e8afc500"></script>
+    <script src="../_static/documentation_options.js?v=72ef73c6"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="In Containers (Kubernetes)" href="containers.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev4+gac0d6191b" />
+  <meta name="docsearch:version" content="0.1.0a26.dev6+g6a93fb769" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -753,6 +753,16 @@ before HYSPLIT runs (<a class="reference external" href="https://jmineau.github.
 <li><p><code class="docutils literal notranslate"><span class="pre">no</span> <span class="pre">more</span> <span class="pre">meteorology</span></code>: the particles reached a time that no met
 file holds. HYSPLIT says so in the <code class="docutils literal notranslate"><span class="pre">WARNING</span></code> file of the kept
 workdir.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">particles</span> <span class="pre">stopped</span> <span class="pre">...</span> <span class="pre">h</span> <span class="pre">into</span> <span class="pre">the</span> <span class="pre">...</span> <span class="pre">h</span> <span class="pre">run,</span> <span class="pre">up</span> <span class="pre">to</span> <span class="pre">...</span> <span class="pre">grid</span>
+<span class="pre">cells</span> <span class="pre">inside</span> <span class="pre">the</span> <span class="pre">met's</span> <span class="pre">domain</span></code>: the particles stopped before
+<code class="docutils literal notranslate"><span class="pre">n_hours</span></code> and at least one was more than 5 grid cells from
+every side of the met grid.
+Particles that leave the domain end within 2 cells of its edge,
+so the met ran out, though HYSPLIT may have written no warning
+and <code class="docutils literal notranslate"><span class="pre">Complete</span> <span class="pre">Hysplit</span></code>. Look for a met file with fewer hours
+than its name says, and download or crop it again. PYSTILT
+checks this only when <code class="docutils literal notranslate"><span class="pre">outdt</span></code> is 0, the default: with fewer
+rows, a particle’s last row can be far from where it left.</p></li>
 <li><p>A HYSPLIT message, such as <code class="docutils literal notranslate"><span class="pre">start</span> <span class="pre">point</span> <span class="pre">not</span> <span class="pre">within</span> <span class="pre">(x,y,t)</span> <span class="pre">any</span>
 <span class="pre">data</span> <span class="pre">file</span></code>: the receptor is outside the files, in time or in
 space.</p></li>

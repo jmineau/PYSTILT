@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=e8afc500"></script>
+    <script src="../_static/documentation_options.js?v=72ef73c6"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Receptors" href="receptors.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev4+gac0d6191b" />
+  <meta name="docsearch:version" content="0.1.0a26.dev6+g6a93fb769" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -566,6 +566,16 @@ every record’s header: a few seconds for a 1 GB HRRR file. Particles that
 all leave the meteorology’s domain, or its crop, before the end of the run
 are not a failure. The run is complete, and its footprint holds the hours
 the particles were inside (<a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>).</p>
+<p>After the run, PYSTILT checks where the particles stopped. Particles that
+leave the domain end within 2 grid cells of its edge. If the run stopped
+before <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> and a particle at its last time step is more than 5
+grid cells from every side of the met grid, the met ran out: the run fails
+as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>, even when HYSPLIT wrote no warning. This check needs a
+particle row every time step, so it runs only when <code class="docutils literal notranslate"><span class="pre">outdt</span></code> is 0, the
+default. The top of the domain is not an edge: HYSPLIT keeps particles
+from rising above it. On a domain only a few dozen grid cells across, a met stop late
+in a run, when nearly every particle has already left, can pass as a domain
+exit. The footprint lost in such a run was under 3 % in every case measured.</p>
 <p>In Python, the same settings are a dictionary or a
 <a class="reference internal" href="../reference/_api/stilt.transport.hysplit.MetConfig.html#stilt.transport.hysplit.MetConfig" title="stilt.transport.hysplit.MetConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">MetConfig</span></code></a>, HYSPLIT’s met config:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetConfig</span>

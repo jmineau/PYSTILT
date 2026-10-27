@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../../_static/documentation_options.js?v=e8afc500"></script>
+    <script src="../../../../_static/documentation_options.js?v=72ef73c6"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev4+gac0d6191b" />
+  <meta name="docsearch:version" content="0.1.0a26.dev6+g6a93fb769" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -479,9 +479,11 @@
 <span class="c1">#: Phrases HYSPLIT (or the driver) writes to stilt.log or HYSPLIT&#39;s WARNING</span>
 <span class="c1">#: file, mapped to their FailureReason. The four ``metpos`` warnings say a</span>
 <span class="c1">#: particle inside the met&#39;s grid reached a time no met file holds: the met</span>
-<span class="c1">#: ran out. HYSPLIT writes only the first such warning of a run, and</span>
+<span class="c1">#: ran out. HYSPLIT writes only the first such warning of a run. It writes</span>
 <span class="c1">#: ``off spatial domain of all grids`` when every particle left the met&#39;s</span>
-<span class="c1">#: domain, which is not a failure.</span>
+<span class="c1">#: domain, which is not a failure, and also when the met ran out, so that</span>
+<span class="c1">#: line tells nothing; ``check_met_stop`` in the driver reads where the</span>
+<span class="c1">#: particles stopped instead.</span>
 <span class="n">FAILURE_PHRASES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">FailureReason</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;start point not within (x,y,t) any data file&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
     <span class="s2">&quot;start time after end of meteorology data&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
