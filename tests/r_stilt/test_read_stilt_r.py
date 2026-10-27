@@ -6,7 +6,8 @@
 committed sample, and R reads it back with ``readRDS``. The reader must give
 the same receptor time and the same particles as R, the release points of
 ``CONTROL``, and the same footprint as the file, made with the
-``smooth_factor`` of ``params.RDS``.
+``smooth_factor`` of ``params.RDS``, and with ``error=True`` the
+transport-error particles R reads.
 """
 
 from __future__ import annotations
@@ -34,10 +35,14 @@ for (dir in list.dirs(args[1], recursive = FALSE)) {
   out <- readRDS(file.path(dir, paste0(basename(dir), '_traj.rds')))
   writeLines(sprintf('%.17g', as.numeric(out$receptor$run_time)),
              file.path(args[2], paste0(basename(dir), '_time.txt')))
-  p <- as.data.frame(out$particle)
-  p[] <- lapply(p, function(x) sprintf('%.17g', x))
-  write.csv(p, file.path(args[2], paste0(basename(dir), '_particles.csv')),
-            row.names = FALSE, quote = FALSE)
+  sets <- list(particles = out$particle, error = out$particle_error)
+  for (set in names(sets)) {
+    if (is.null(sets[[set]])) next
+    p <- as.data.frame(sets[[set]])
+    p[] <- lapply(p, function(x) sprintf('%.17g', x))
+    write.csv(p, file.path(args[2], paste0(basename(dir), '_', set, '.csv')),
+              row.names = FALSE, quote = FALSE)
+  }
 }
 """
 
@@ -101,3 +106,18 @@ def test_footprint_is_the_file_written(written):
         np.testing.assert_array_equal(foot["time"].to_numpy(), stamps.to_numpy())
         np.testing.assert_array_equal(foot.to_numpy(), raw.to_numpy().astype(float))
         assert foot.stilt.config.smooth_factor == 0.5
+
+
+def test_error_particles_are_what_r_reads(written):
+    by_id, dumped = written
+    # Only the point receptor, the first folder, has a transport-error run.
+    (path,) = dumped.glob("*_error.csv")
+    receptor, particles, foot = next(read_stilt_r(by_id, error=True))
+    assert f"{receptor.id}_error.csv" == path.name
+    from_r = pd.read_csv(path, float_precision="round_trip").rename(
+        columns=_PYSTILT_NAMES
+    )
+    mine = particles.drop(columns="time")
+    assert list(mine.columns) == list(from_r.columns)
+    np.testing.assert_array_equal(mine.to_numpy(), from_r.to_numpy())
+    assert foot is None

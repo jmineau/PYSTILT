@@ -68,7 +68,7 @@ src/stilt/
   cli.py          Typer CLI, a thin adapter over Project and execution
   project.py      Project: inputs, the simulations table, run/submit, bulk reads
   check.py        check_project: what would stop a project's runs, from its inputs
-  migration.py    read_stilt_r: STILT-R and X-STILT by-id output, read with rdata
+  migration.py    read_stilt_r, import_stilt_r: STILT-R and X-STILT by-id output, read with rdata
   output.py       Output: the output directory; `completed`, the completion rule
   simulation.py   Simulation: a frozen (receptor, variant, output) value
   config.py       ProjectConfig and Variant;  identity.py  settings records, hashes
@@ -76,7 +76,8 @@ src/stilt/
   particles/      the particle table and files, release heights, near-field correction
   footprint/      FootprintConfig, calc_footprint (gridding.py), aggregation, io, targets
   transforms/     pre-footprint particle transforms, one module each
-  transport/      TransportModel/TransportConfig protocols, MODELS, get_model, run_model
+  transport/      TransportModel/TransportConfig protocols, MODELS, get_model, run_model;
+                  stilt_r.py, the stilt-r model of imported runs (runs nothing)
     hysplit/      config, met, driver, CONTROL and SETUP.CFG writers, failures, bin/, data/
   execution/      ExecutionConfig, runner (plan, local run, Slurm submit), worker
   observations/   the X-STILT port: readers, sounding selection, slant receptors, columns

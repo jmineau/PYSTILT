@@ -1,5 +1,5 @@
 """
-Writer for HYSPLIT's ``SETUP.CFG`` namelist.
+Writer and reader for HYSPLIT's ``SETUP.CFG`` namelist.
 
 HYSPLIT v5 reads the old DEC/VMS ``$NAME ... $END`` namelist format. The
 Fortran 90 ``&name ... /`` format that f90nml writes does not work.
@@ -10,7 +10,9 @@ point and reads the rest as the next variable name. Whole-number floats are
 therefore written without a decimal point (``80``).
 """
 
+import re
 from pathlib import Path
+from typing import Any
 
 
 class NameList:
@@ -88,3 +90,50 @@ class NameList:
         if isinstance(value, float):
             return f"{value:.10g}"
         return str(value)
+
+
+#: One ``KEY=value,`` line of a namelist.
+_ENTRY = re.compile(r"^\s*([A-Za-z][A-Za-z0-9_]*)\s*=(.*?),?\s*$")
+
+
+def read_namelist(path: str | Path) -> dict[str, Any]:
+    """
+    Return the entries of a ``SETUP.CFG`` namelist, by lowercase name.
+
+    It reads the file as :class:`NameList` and STILT-R write it, one entry a
+    line. A value in quotes is a list of strings (``VARSIWANT``), ``TRUE``
+    and ``FALSE`` (with or without dots) are booleans, a number is an ``int``
+    or a ``float`` as written, and anything else, such as an empty
+    ``EFILE``, is a string.
+
+    Raises
+    ------
+    ValueError
+        If the file is not a ``$SETUP ... $END`` namelist, or a line between
+        them is not ``KEY=value``.
+    """
+    lines = [line.strip() for line in Path(path).read_text().splitlines()]
+    lines = [line for line in lines if line]
+    if not lines or lines[0].upper() != "$SETUP" or lines[-1].upper() != "$END":
+        raise ValueError(f"{path} is not a $SETUP ... $END namelist.")
+    entries = {}
+    for line in lines[1:-1]:
+        match = _ENTRY.match(line)
+        if match is None:
+            raise ValueError(f"{path}: {line!r} is not a KEY=value entry.")
+        entries[match.group(1).lower()] = _parse(match.group(2).strip())
+    return entries
+
+
+def _parse(text: str) -> Any:
+    """Return one namelist value as Python reads it (:func:`read_namelist`)."""
+    if "'" in text:
+        return re.findall(r"'([^']*)'", text)
+    if text.strip(".").upper() in ("TRUE", "FALSE"):
+        return text.strip(".").upper() == "TRUE"
+    if re.fullmatch(r"[+-]?\d+", text):
+        return int(text)
+    try:
+        return float(text)
+    except ValueError:
+        return text

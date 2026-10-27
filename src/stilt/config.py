@@ -234,7 +234,8 @@ class ProjectConfig(BaseModel):
         "hysplit",
         description=(
             "Transport model the variants run with, unless a variant names "
-            "another: ``hysplit``, or the import path of a model class in "
+            "another: ``hysplit``, ``stilt-r`` (runs imported from STILT-R, "
+            "which cannot run), or the import path of a model class in "
             "another package, such as ``mypkg.models.MyModel``. Its parameters "
             "are top-level keys of the config."
         ),
