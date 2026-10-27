@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Roadmap &#8212; PYSTILT 0.1.0a25</title>
+    <title>Roadmap &#8212; PYSTILT 0.1.0a26</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=4b942876"></script>
+    <script src="../_static/documentation_options.js?v=7c6ca21c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a26';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="STILT-R Parity" href="stilt_r_parity.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25" />
+  <meta name="docsearch:version" content="0.1.0a26" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a25</p>
+    <p class="title logo__title">PYSTILT 0.1.0a26</p>
   
 </a></div>
     
@@ -490,7 +490,9 @@ change between releases until v1.0.</p>
 project. Transport-error ensembles and extra footprints are variants too.</p></li>
 <li><p>Helpers for column and satellite observations</p></li>
 <li><p>Reading the <code class="docutils literal notranslate"><span class="pre">by-id</span></code> output of STILT-R and X-STILT as receptors, particles,
-and footprints (<a class="reference internal" href="../reference/_api/stilt.migration.read_stilt_r.html#stilt.migration.read_stilt_r" title="stilt.migration.read_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.migration.read_stilt_r()</span></code></a>)</p></li>
+and footprints (<a class="reference internal" href="../reference/_api/stilt.migration.read_stilt_r.html#stilt.migration.read_stilt_r" title="stilt.migration.read_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.migration.read_stilt_r()</span></code></a>), and importing it
+into an output directory, where a <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> variant reads it
+(<a class="reference internal" href="../reference/_api/stilt.migration.import_stilt_r.html#stilt.migration.import_stilt_r" title="stilt.migration.import_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.migration.import_stilt_r()</span></code></a>)</p></li>
 </ul>
 <p>Footprints can also be summed onto other geometries. A footprint is computed
 on a rectangular grid and then summed onto a <a class="reference internal" href="../reference/_api/stilt.Grid.html#stilt.Grid" title="stilt.Grid"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Grid</span></code></a>, a
@@ -605,26 +607,29 @@ feature.</p>
 <tr class="row-odd"><td><p>Transport error on the modeled enhancement (<code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>Modeled enhancement from a flux field (<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>)</p></td>
+<tr class="row-even"><td><p>Transport error over a selection, averaging every realization that has run (<code class="docutils literal notranslate"><span class="pre">project.transport_error</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-odd"><td><p>Background from a mole-fraction field at the trajectory endpoints (<code class="docutils literal notranslate"><span class="pre">sim.background</span></code>)</p></td>
+<tr class="row-odd"><td><p>Modeled enhancement from a flux field (<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>The retrieval’s prior term in a modeled column (<code class="docutils literal notranslate"><span class="pre">modelled_column</span></code>)</p></td>
+<tr class="row-even"><td><p>Background from a mole-fraction field at the trajectory endpoints (<code class="docutils literal notranslate"><span class="pre">sim.background</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-odd"><td><p>Satellite-derived plume background (forward trajectories)</p></td>
+<tr class="row-odd"><td><p>The retrieval’s prior term in a modeled column (<code class="docutils literal notranslate"><span class="pre">modelled_column</span></code>)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-even"><td><p>Satellite-derived plume background (forward trajectories)</p></td>
 <td><p>Implemented (see the <em>Plume Background</em> guide)</p></td>
 </tr>
-<tr class="row-even"><td><p>Forward runs (positive <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>) for plume and dispersion studies</p></td>
+<tr class="row-odd"><td><p>Forward runs (positive <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>) for plume and dispersion studies</p></td>
 <td><p>Implemented (see the <em>Plume Background</em> guide)</p></td>
 </tr>
-<tr class="row-odd"><td><p>Emission-error propagation to the modeled enhancement</p></td>
+<tr class="row-even"><td><p>Emission-error propagation to the modeled enhancement</p></td>
 <td><p>A recipe on <code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> (see the <em>Transport Error</em> guide); the
 correlated case is fips’s <code class="docutils literal notranslate"><span class="pre">prior_obs_error</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p>Inventory readers</p></td>
+<tr class="row-odd"><td><p>Inventory readers</p></td>
 <td><p>Out of scope; a flux field is an xarray array</p></td>
 </tr>
 </tbody>

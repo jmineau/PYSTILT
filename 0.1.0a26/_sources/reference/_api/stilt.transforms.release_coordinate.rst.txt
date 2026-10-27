@@ -1,0 +1,6 @@
+﻿stilt.transforms.release\_coordinate
+====================================
+
+.. currentmodule:: stilt.transforms
+
+.. autofunction:: release_coordinate

@@ -1,0 +1,39 @@
+﻿stilt.transport.TransportConfig
+===============================
+
+.. currentmodule:: stilt.transport
+
+
+
+
+.. class-signature:: stilt.transport.TransportConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.transport.TransportConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~TransportConfig.UNRECORDED
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~TransportConfig.realizations
+   ~TransportConfig.settings
+
+
+

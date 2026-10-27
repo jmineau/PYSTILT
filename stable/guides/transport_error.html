@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Transport Error &#8212; PYSTILT 0.1.0a25</title>
+    <title>Transport Error &#8212; PYSTILT 0.1.0a26</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=4b942876"></script>
+    <script src="../_static/documentation_options.js?v=7c6ca21c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a26';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -63,7 +63,7 @@
     <link rel="prev" title="Summing Footprints: Areas And The Jacobian" href="aggregation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25" />
+  <meta name="docsearch:version" content="0.1.0a26" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -134,7 +134,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a25</p>
+    <p class="title logo__title">PYSTILT 0.1.0a26</p>
   
 </a></div>
     
@@ -445,13 +445,10 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1 has-children"><a class="reference internal" href="migration/index.html">Coming From Another STILT</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="migration/stilt_r.html">Coming From STILT-R</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migration/x_stilt.html">Coming From X-STILT</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migration/stiltctl.html">Coming From stiltctl</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migration/jena_stilt.html">Coming From Jena STILT</a></li>
-</ul>
-</details></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/stilt_r.html">Coming From STILT-R</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/x_stilt.html">Coming From X-STILT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/stiltctl.html">Coming From stiltctl</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/jena_stilt.html">Coming From Jena STILT</a></li>
 </ul>
 </div>
 </nav></div>
@@ -590,7 +587,9 @@ and a rerun reproduces every realization exactly.</p></li>
 <p>PYSTILT rejects any other setting when it reads the config, because every
 realization would get the same draw. Each realization is its own
 simulation, so a rerun only does the missing ones. You can raise
-<code class="docutils literal notranslate"><span class="pre">realizations</span></code> later and only the new realizations run.</p>
+<code class="docutils literal notranslate"><span class="pre">realizations</span></code> later and only the new realizations run. If the variant
+also has a grid, <a class="reference internal" href="aggregation.html#jacobian-per-realization"><span class="std std-ref">One Jacobian per realization</span></a> shows a Jacobian for each
+realization.</p>
 <p>Pass all the realizations to <code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code> as a list. It averages
 them before taking the difference:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
@@ -652,25 +651,39 @@ the total error of a modeled value.</p>
 </section>
 <section id="the-transport-error">
 <h2>The transport error<a class="headerlink" href="#the-transport-error" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code> takes the same receptor under the wind-error
-variant and the flux field:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-
-<span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">project</span><span class="o">.</span><span class="n">receptors</span><span class="o">.</span><span class="n">receptor</span><span class="p">:</span>
-    <span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
-    <span class="n">err</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">&quot;hrrr-err&quot;</span><span class="p">)</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">transport_error</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span>
-    <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;receptor&quot;</span><span class="p">:</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;enhancement&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">enhancement</span><span class="p">,</span>
-                 <span class="s2">&quot;variance&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span> <span class="s2">&quot;noise&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">noise</span><span class="p">})</span>
-<span class="n">errors</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span>
+<p><code class="docutils literal notranslate"><span class="pre">project.transport_error</span></code> takes a selection of the unperturbed run, the
+name of the wind-error variant, and the flux field:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
+<span class="n">wbb</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">site</span> <span class="o">==</span> <span class="s2">&quot;WBB&quot;</span><span class="p">)]</span>
+<span class="n">errors</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">transport_error</span><span class="p">(</span><span class="n">wbb</span><span class="p">,</span> <span class="s2">&quot;hrrr-err&quot;</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span>
+<span class="n">errors</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">errors</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="p">)</span><span class="o">.</span><span class="n">variance</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">result.variance</span></code> is the transport-error variance of the modeled
-enhancement, in the enhancement’s units squared. <code class="docutils literal notranslate"><span class="pre">result.sd</span></code> is its
-square root. The particles are weighted the way the footprint weights
-them, with the variant’s transforms: the averaging kernel (including one
-from a per-receptor table), pressure weighting, and lifetime decay.
+<p><code class="docutils literal notranslate"><span class="pre">errors</span></code> is <code class="docutils literal notranslate"><span class="pre">wbb</span></code> with six more columns. <code class="docutils literal notranslate"><span class="pre">variance</span></code> is the
+transport-error variance of the modeled enhancement, in the enhancement’s
+units squared, and <code class="docutils literal notranslate"><span class="pre">noise</span></code> is its noise (<a class="reference internal" href="#is-the-estimate-meaningful">Is the estimate meaningful?</a>).
+<code class="docutils literal notranslate"><span class="pre">enhancement</span></code> and <code class="docutils literal notranslate"><span class="pre">enhancement_perturbed</span></code> are the modeled enhancement
+without and with the perturbation, and <code class="docutils literal notranslate"><span class="pre">background</span></code> is 0 unless you pass
+a background field (<a class="reference internal" href="background.html"><span class="doc">Background</span></a>). <code class="docutils literal notranslate"><span class="pre">realizations</span></code> is how many
+realizations of the error variant went into the estimate: every one that
+has run. A receptor without particles in either variant gets NaN and
+<code class="docutils literal notranslate"><span class="pre">realizations</span></code> 0.</p>
+<p>Each receptor’s particles are read whole. A table of 1.4 million rows
+takes about a second to read, so a selection of hundreds of receptors takes
+minutes. For a whole large project, make the call in a Slurm job.
+<code class="docutils literal notranslate"><span class="pre">workers</span></code> sets how many receptors are read at once (up to 8 by
+default).</p>
+<p><code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code> gives the same estimate for one receptor, and
+keeps the per-level table described below:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">transport_error</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">&quot;hrrr-err&quot;</span><span class="p">),</span> <span class="n">flux</span><span class="p">)</span>
+<span class="n">result</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">noise</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">result.sd</span></code> is the square root of <code class="docutils literal notranslate"><span class="pre">result.variance</span></code>. In both calls the
+particles are weighted the way the unperturbed variant’s footprint weights
+them, with its transforms: the averaging kernel (including one from a
+per-receptor table), pressure weighting, and lifetime decay.
 <a class="reference internal" href="../reference/_api/stilt.particles.transport_error.html#stilt.particles.transport_error" title="stilt.particles.transport_error"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.particles.transport_error()</span></code></a> does the same for particle tables
 you have without a project.</p>
 </section>

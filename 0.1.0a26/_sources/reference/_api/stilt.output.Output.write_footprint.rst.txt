@@ -1,0 +1,6 @@
+stilt.output.Output.write\_footprint
+====================================
+
+.. currentmodule:: stilt.output
+
+.. automethod:: Output.write_footprint

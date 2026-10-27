@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Architecture &#8212; PYSTILT 0.1.0a25</title>
+    <title>Architecture &#8212; PYSTILT 0.1.0a26</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=4b942876"></script>
+    <script src="../_static/documentation_options.js?v=7c6ca21c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a26';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Development" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25" />
+  <meta name="docsearch:version" content="0.1.0a26" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -133,7 +133,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a25</p>
+    <p class="title logo__title">PYSTILT 0.1.0a26</p>
   
 </a></div>
     
@@ -511,7 +511,8 @@ code that writes results.</p>
 <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> is a pandas DataFrame, one row per simulation. Select
 it as in pandas (<code class="docutils literal notranslate"><span class="pre">sims[sims.variant</span> <span class="pre">==</span> <span class="pre">&quot;hrrr&quot;]</span></code>) and pass the selection to
 the project: <code class="docutils literal notranslate"><span class="pre">status</span></code>, <code class="docutils literal notranslate"><span class="pre">incomplete</span></code>, <code class="docutils literal notranslate"><span class="pre">particles</span></code> (one long table),
-<code class="docutils literal notranslate"><span class="pre">footprints</span></code> (one lazy dataset stacked on the hour), or <code class="docutils literal notranslate"><span class="pre">jacobian</span></code>. A
+<code class="docutils literal notranslate"><span class="pre">footprints</span></code> (one lazy dataset stacked on the hour), <code class="docutils literal notranslate"><span class="pre">jacobian</span></code>, or
+<code class="docutils literal notranslate"><span class="pre">transport_error</span></code> (the selection with the estimate’s columns). A
 selection is any table with <code class="docutils literal notranslate"><span class="pre">receptor</span></code> and <code class="docutils literal notranslate"><span class="pre">variant</span></code> columns (pandas,
 polars, pyarrow) or a boolean mask over <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>, and the
 methods read only those two columns. <code class="docutils literal notranslate"><span class="pre">project.receptors</span></code> is a plain
@@ -541,7 +542,9 @@ surface. Everything else is internal and can change.</p>
                      one receptor&#39;s file (read) or many at once (table),
                      failure records, writing
   migration.py       read_stilt_r: STILT-R and X-STILT by-id output as
-                     receptors, particle tables, and footprints
+                     receptors, particle tables, and footprints;
+                     import_stilt_r writes it into an output directory
+                     with the settings its files record
   simulation.py      Simulation: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
   config.py          ProjectConfig: reads config.yaml, splits the flat keys
@@ -564,7 +567,8 @@ surface. Everything else is internal and can change.</p>
                      near-field plume correction
     accessor.py      the .stilt pandas accessor
     background.py    the background at a receptor (sim.background)
-    transport_error.py  the transport error of the enhancement
+    transport_error.py  the transport error of the enhancement, one
+                        receptor or a selection in threads
   footprint/         the footprint (a DataArray)
     config.py        FootprintConfig and the geometry specs
     gridding.py      calc_footprint, as STILT-R&#39;s (fidelity-guarded)
@@ -597,13 +601,15 @@ surface. Everything else is internal and can change.</p>
   transport/         the TransportModel and TransportConfig protocols,
                      ModelRun, ModelInfo, get_model and its MODELS table,
                      run_model and run_trajectories (__init__.py); one
-                     subpackage per transport model, which owns its config
+                     subpackage per transport model, which owns its config;
+                     stilt_r.py, the stilt-r model of imported STILT-R
+                     runs, which runs nothing
     hysplit/         HYSPLIT: HysplitConfig (config.py); MetConfig and Met,
                      ARL file discovery, download, and cropping through
                      arlmet (met.py); HysplitModel (model.py); the driver
                      (driver.py: write_inputs, read_particle_dat); the
                      CONTROL file (control.py) and SETUP.CFG namelist
-                     (namelist.py) writers; failure reasons read from its
+                     (namelist.py) writers and readers; failure reasons read from its
                      log (failures.py); the bundled binaries (bin/, Linux
                      and macOS x86-64) and data tables (data/)
 
@@ -744,9 +750,13 @@ directory; deletion is by hand.</p>
 top-level module from the CLI down to <code class="docutils literal notranslate"><span class="pre">_paths</span></code> and <code class="docutils literal notranslate"><span class="pre">exceptions</span></code>. A module
 imports only the layers below it, and modules that import each other share a
 layer. The contract is exhaustive, so a new top-level module fails until it
-is placed. Two short contracts hold what a layer cannot: only
-<code class="docutils literal notranslate"><span class="pre">stilt.transport</span></code> (its <code class="docutils literal notranslate"><span class="pre">get_model</span></code>) imports HYSPLIT’s package, and the
-project config reads no results and runs nothing.</p>
+is placed. <code class="docutils literal notranslate"><span class="pre">stilt.migration</span></code> sits above the project config, because
+<code class="docutils literal notranslate"><span class="pre">import_stilt_r</span></code> writes into an output directory through variants. Two
+short contracts hold what a layer cannot: only <code class="docutils literal notranslate"><span class="pre">stilt.transport</span></code> (its
+<code class="docutils literal notranslate"><span class="pre">get_model</span></code>) imports HYSPLIT’s package, and the project config reads no
+results and runs nothing. STILT-R ran HYSPLIT, so the STILT-R reader and the
+<code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> model are the named exceptions: they read HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>
+and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> files and record HYSPLIT’s settings.</p>
 </section>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">#</a></h2>
@@ -845,7 +855,7 @@ user’s new column stays theirs. <code class="docutils literal notranslate"><sp
 receptor ids. It never builds a <code class="docutils literal notranslate"><span class="pre">Simulation</span></code> per row, which costs
 milliseconds each and adds up to many minutes on tens of thousands of
 footprints. It opens a file per row only when the file’s contents are the
-answer (<code class="docutils literal notranslate"><span class="pre">footprints</span></code>, <code class="docutils literal notranslate"><span class="pre">jacobian</span></code>), and builds receptors together
+answer (<code class="docutils literal notranslate"><span class="pre">footprints</span></code>, <code class="docutils literal notranslate"><span class="pre">jacobian</span></code>, <code class="docutils literal notranslate"><span class="pre">transport_error</span></code>), and builds receptors together
 (<code class="docutils literal notranslate"><span class="pre">Project._receptors</span></code>) when it needs them.</p>
 <p><code class="docutils literal notranslate"><span class="pre">Output.directory</span></code> is a <code class="docutils literal notranslate"><span class="pre">Path</span></code> on a filesystem and a universal path
 (<code class="docutils literal notranslate"><span class="pre">UPath</span></code>) for a URL (<code class="docutils literal notranslate"><span class="pre">stilt._paths.location</span></code>). Code that touches the
@@ -890,6 +900,24 @@ So <code class="docutils literal notranslate"><span class="pre">Met.files_for</s
 hours, and <code class="docutils literal notranslate"><span class="pre">Met.check</span></code> fails when a file is damaged or the files lack a time
 step the run needs (arlmet’s <code class="docutils literal notranslate"><span class="pre">File.check()</span></code> and <code class="docutils literal notranslate"><span class="pre">File.times</span></code>, read once
 per file in a process).</p>
+<p>After the run, the driver’s <code class="docutils literal notranslate"><span class="pre">check_met_stop</span></code> catches a silent stop that the
+check before it missed, whatever its cause. A run that stopped before
+<code class="docutils literal notranslate"><span class="pre">n_hours</span></code> fails as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code> when any particle at its last time step
+is more than <code class="docutils literal notranslate"><span class="pre">MET_STOP_CELLS</span></code> (5) grid cells from every side of the first
+met file’s grid. The top is not an edge: HYSPLIT’s particle mode holds a
+particle that rises above it at the top (<code class="docutils literal notranslate"><span class="pre">advpnt.f</span></code>), so the top cannot end
+a run. HYSPLIT limits a step to <code class="docutils literal notranslate"><span class="pre">tratio</span></code> (0.75) of a cell, so the limit is in
+cells, not distance. On HRRR (3 km), NAM (12 km) and NARR (32 km) grids and
+their crops, particles that left ended at most 2.0 cells in; on domains a
+hundred cells across or more, the furthest-inside particle of runs the met
+stopped was 34 cells in or more. On crops 45 to 120 cells across, 3 to 9 % of
+the met stops tested passed as domain exits, none in a run’s first 6 hours,
+with at most one particle in six still in the air and under 3 % of the
+footprint lost. HYSPLIT writes <code class="docutils literal notranslate"><span class="pre">off</span> <span class="pre">spatial</span> <span class="pre">domain</span> <span class="pre">of</span> <span class="pre">all</span> <span class="pre">grids</span></code> after a
+domain exit and after a silent met stop, so its log cannot tell them apart. The check runs only when <code class="docutils literal notranslate"><span class="pre">outdt</span></code> is 0: with fewer rows, a
+particle’s last row can be far inside the domain though it left. It takes a
+particle table and a grid, nothing of HYSPLIT’s, so the core
+can call it for another transport model that knows its domain.</p>
 </section>
 <section id="realizations">
 <h3>Realizations<a class="headerlink" href="#realizations" title="Link to this heading">#</a></h3>

@@ -1,0 +1,6 @@
+﻿stilt.read\_particles
+=====================
+
+.. currentmodule:: stilt
+
+.. autofunction:: read_particles

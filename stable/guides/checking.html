@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Checking A Run &#8212; PYSTILT 0.1.0a25</title>
+    <title>Checking A Run &#8212; PYSTILT 0.1.0a26</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=4b942876"></script>
+    <script src="../_static/documentation_options.js?v=7c6ca21c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a26';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="In Containers (Kubernetes)" href="containers.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25" />
+  <meta name="docsearch:version" content="0.1.0a26" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -133,7 +133,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a25</p>
+    <p class="title logo__title">PYSTILT 0.1.0a26</p>
   
 </a></div>
     
@@ -444,13 +444,10 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1 has-children"><a class="reference internal" href="migration/index.html">Coming From Another STILT</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="migration/stilt_r.html">Coming From STILT-R</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migration/x_stilt.html">Coming From X-STILT</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migration/stiltctl.html">Coming From stiltctl</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migration/jena_stilt.html">Coming From Jena STILT</a></li>
-</ul>
-</details></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/stilt_r.html">Coming From STILT-R</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/x_stilt.html">Coming From X-STILT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/stiltctl.html">Coming From stiltctl</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/jena_stilt.html">Coming From Jena STILT</a></li>
 </ul>
 </div>
 </nav></div>
@@ -756,6 +753,16 @@ before HYSPLIT runs (<a class="reference external" href="https://jmineau.github.
 <li><p><code class="docutils literal notranslate"><span class="pre">no</span> <span class="pre">more</span> <span class="pre">meteorology</span></code>: the particles reached a time that no met
 file holds. HYSPLIT says so in the <code class="docutils literal notranslate"><span class="pre">WARNING</span></code> file of the kept
 workdir.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">particles</span> <span class="pre">stopped</span> <span class="pre">...</span> <span class="pre">h</span> <span class="pre">into</span> <span class="pre">the</span> <span class="pre">...</span> <span class="pre">h</span> <span class="pre">run,</span> <span class="pre">up</span> <span class="pre">to</span> <span class="pre">...</span> <span class="pre">grid</span>
+<span class="pre">cells</span> <span class="pre">inside</span> <span class="pre">the</span> <span class="pre">met's</span> <span class="pre">domain</span></code>: the particles stopped before
+<code class="docutils literal notranslate"><span class="pre">n_hours</span></code> and at least one was more than 5 grid cells from
+every side of the met grid.
+Particles that leave the domain end within 2 cells of its edge,
+so the met ran out, though HYSPLIT may have written no warning
+and <code class="docutils literal notranslate"><span class="pre">Complete</span> <span class="pre">Hysplit</span></code>. Look for a met file with fewer hours
+than its name says, and download or crop it again. PYSTILT
+checks this only when <code class="docutils literal notranslate"><span class="pre">outdt</span></code> is 0, the default: with fewer
+rows, a particle’s last row can be far from where it left.</p></li>
 <li><p>A HYSPLIT message, such as <code class="docutils literal notranslate"><span class="pre">start</span> <span class="pre">point</span> <span class="pre">not</span> <span class="pre">within</span> <span class="pre">(x,y,t)</span> <span class="pre">any</span>
 <span class="pre">data</span> <span class="pre">file</span></code>: the receptor is outside the files, in time or in
 space.</p></li>

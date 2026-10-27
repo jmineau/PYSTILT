@@ -1,0 +1,6 @@
+﻿stilt.observations.slant\_points
+================================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: slant_points

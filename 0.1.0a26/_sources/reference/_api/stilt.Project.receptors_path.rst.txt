@@ -1,0 +1,6 @@
+stilt.Project.receptors\_path
+=============================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Project.receptors_path

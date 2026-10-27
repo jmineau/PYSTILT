@@ -1,0 +1,6 @@
+stilt.transforms.AveragingKernel.apply
+======================================
+
+.. currentmodule:: stilt.transforms
+
+.. automethod:: AveragingKernel.apply

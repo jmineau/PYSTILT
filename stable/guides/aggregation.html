@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Summing Footprints: Areas And The Jacobian &#8212; PYSTILT 0.1.0a25</title>
+    <title>Summing Footprints: Areas And The Jacobian &#8212; PYSTILT 0.1.0a26</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=4b942876"></script>
+    <script src="../_static/documentation_options.js?v=7c6ca21c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a26';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Footprints And Particles" href="outputs.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25" />
+  <meta name="docsearch:version" content="0.1.0a26" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -133,7 +133,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a25</p>
+    <p class="title logo__title">PYSTILT 0.1.0a26</p>
   
 </a></div>
     
@@ -444,13 +444,10 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1 has-children"><a class="reference internal" href="migration/index.html">Coming From Another STILT</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="migration/stilt_r.html">Coming From STILT-R</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migration/x_stilt.html">Coming From X-STILT</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migration/stiltctl.html">Coming From stiltctl</a></li>
-<li class="toctree-l2"><a class="reference internal" href="migration/jena_stilt.html">Coming From Jena STILT</a></li>
-</ul>
-</details></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/stilt_r.html">Coming From STILT-R</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/x_stilt.html">Coming From X-STILT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/stiltctl.html">Coming From stiltctl</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/jena_stilt.html">Coming From Jena STILT</a></li>
 </ul>
 </div>
 </nav></div>
@@ -613,6 +610,26 @@ in <code class="docutils literal notranslate"><span class="pre">H.empty</span></
 <code class="docutils literal notranslate"><span class="pre">time,</span> <span class="pre">cell</span></code> for zones or a mesh, and <code class="docutils literal notranslate"><span class="pre">time,</span> <span class="pre">lon,</span> <span class="pre">lat</span></code> for a grid
 (<code class="docutils literal notranslate"><span class="pre">time,</span> <span class="pre">x,</span> <span class="pre">y</span></code> when it is projected). For a grid,
 <code class="docutils literal notranslate"><span class="pre">H.to_xarray().unstack(&quot;cell&quot;)</span></code> has <code class="docutils literal notranslate"><span class="pre">lon</span></code> and <code class="docutils literal notranslate"><span class="pre">lat</span></code> dimensions.</p>
+<section id="one-jacobian-per-realization">
+<span id="jacobian-per-realization"></span><h3>One Jacobian per realization<a class="headerlink" href="#one-jacobian-per-realization" title="Link to this heading">#</a></h3>
+<p>A variant with a grid and <code class="docutils literal notranslate"><span class="pre">realizations</span></code> makes a footprint for each
+receptor and each realization, <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">N</span> <span class="pre">-</span> <span class="pre">1</span></code>
+(<a class="reference internal" href="transport_error.html"><span class="doc">Transport Error</span></a>). <a class="reference internal" href="../reference/_api/stilt.Project.jacobian.html#stilt.Project.jacobian" title="stilt.Project.jacobian"><code class="xref py py-meth docutils literal notranslate"><span class="pre">jacobian()</span></code></a> makes a Jacobian
+from one realization, so select each realization by the <code class="docutils literal notranslate"><span class="pre">realization</span></code>
+column of <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> and loop:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ens</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;hrrr-err&quot;</span><span class="p">]</span>
+<span class="n">H</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">k</span><span class="p">:</span> <span class="n">project</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">ens</span><span class="p">[</span><span class="n">ens</span><span class="o">.</span><span class="n">realization</span> <span class="o">==</span> <span class="n">k</span><span class="p">],</span> <span class="n">counties</span><span class="p">,</span> <span class="n">bins</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>   <span class="c1"># realizations 0 to 3</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">H[k]</span></code> is the Jacobian of realization <code class="docutils literal notranslate"><span class="pre">k</span></code>, as above, with its own
+<code class="docutils literal notranslate"><span class="pre">receptors</span></code>, <code class="docutils literal notranslate"><span class="pre">empty</span></code> and <code class="docutils literal notranslate"><span class="pre">missing</span></code>: a receptor that has not run for
+one realization is missing from that matrix alone. The dict holds every
+matrix at once. When each is large, loop with <code class="docutils literal notranslate"><span class="pre">for</span></code> instead and keep
+only what you compute from each one, such as a posterior.</p>
+</section>
 </section>
 </section>
 
@@ -664,7 +681,10 @@ in <code class="docutils literal notranslate"><span class="pre">H.empty</span></
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-footprint-over-areas">One footprint over areas</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#many-footprints-the-jacobian">Many footprints: the Jacobian</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#many-footprints-the-jacobian">Many footprints: the Jacobian</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#one-jacobian-per-realization">One Jacobian per realization</a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 

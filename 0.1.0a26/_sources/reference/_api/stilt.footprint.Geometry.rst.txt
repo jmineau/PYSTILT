@@ -1,0 +1,6 @@
+﻿stilt.footprint.Geometry
+========================
+
+.. currentmodule:: stilt.footprint
+
+.. autodata:: Geometry

@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.project &#8212; PYSTILT 0.1.0a25</title>
+    <title>stilt.project &#8212; PYSTILT 0.1.0a26</title>
   
   
   
@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=4b942876"></script>
+    <script src="../../_static/documentation_options.js?v=7c6ca21c"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -50,7 +50,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a26';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25" />
+  <meta name="docsearch:version" content="0.1.0a26" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -130,7 +130,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a25</p>
+    <p class="title logo__title">PYSTILT 0.1.0a26</p>
   
 </a></div>
     
@@ -480,9 +480,10 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint</span><span class="w"> </span><span class="kn">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Jacobian</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.aggregation</span><span class="w"> </span><span class="kn">import</span> <span class="n">_jacobian</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">open_footprints</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">_threads</span><span class="p">,</span> <span class="n">open_footprints</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.output</span><span class="w"> </span><span class="kn">import</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">Output</span><span class="p">,</span> <span class="n">completed</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">particles_from_table</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">particles_from_table</span><span class="p">,</span> <span class="n">read_particles</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles.transport_error</span><span class="w"> </span><span class="kn">import</span> <span class="n">_transport_errors</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">read_receptors</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors.table</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">COLUMNS</span><span class="p">,</span>
@@ -558,6 +559,15 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">what</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the one ``(variant, realization)`` of a selection, or raise.&quot;&quot;&quot;</span>
     <span class="n">groups</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">((</span><span class="n">v</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_rows</span><span class="p">(</span><span class="n">frame</span><span class="p">)))</span>
+    <span class="n">variants</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">variants</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">realizations</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">]</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> is made from one realization of an ensemble; this &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;selection holds realizations </span><span class="si">{</span><span class="n">realizations</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">variants</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">. &quot;</span>
+            <span class="s2">&quot;Pick one with the realization column, as in &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;ens[ens.realization == </span><span class="si">{</span><span class="n">realizations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">].&quot;</span>
+        <span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> is made from one variant (and one realization of an &quot;</span>
@@ -1030,7 +1040,8 @@
 <span class="sd">        transport model), then the other columns of :attr:`receptors`. Rows</span>
 <span class="sd">        run receptor by receptor, with variants in config order. Select rows as in pandas</span>
 <span class="sd">        and pass the selection to :meth:`status`, :meth:`incomplete`,</span>
-<span class="sd">        :meth:`particles`, :meth:`footprints`, or :meth:`jacobian`.</span>
+<span class="sd">        :meth:`particles`, :meth:`footprints`, :meth:`jacobian`, or</span>
+<span class="sd">        :meth:`transport_error`.</span>
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
@@ -1432,9 +1443,9 @@
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If the selection holds more or fewer than one variant, the</span>
-<span class="sd">            variant has no grid, or no selected simulation has a footprint</span>
-<span class="sd">            file yet.</span>
+<span class="sd">            If the selection holds more or fewer than one variant, or</span>
+<span class="sd">            several realizations of an ensemble, the variant has no grid, or</span>
+<span class="sd">            no selected simulation has a footprint file yet.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -1488,7 +1499,8 @@
 <span class="sd">        footprint at once. Each footprint cell is split among the target</span>
 <span class="sd">        cells it overlaps in proportion to area, time layers are summed</span>
 <span class="sd">        within each of *time_bins*, and cells or layers outside the target</span>
-<span class="sd">        or the bins are dropped. The selection must hold one variant.</span>
+<span class="sd">        or the bins are dropped. The selection must hold one variant, and</span>
+<span class="sd">        one realization of an ensemble: ``ens[ens.realization == k]``.</span>
 
 <span class="sd">        Footprints are read and summed one receptor at a time, in *workers*</span>
 <span class="sd">        threads. Each thread holds one footprint, so memory stays at a few</span>
@@ -1498,7 +1510,8 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        sel : DataFrame or mask</span>
-<span class="sd">            The simulations, as for :meth:`status`, all of one variant.</span>
+<span class="sd">            The simulations, as for :meth:`status`, all of one variant (and</span>
+<span class="sd">            one realization of an ensemble).</span>
 <span class="sd">        target : Geometry</span>
 <span class="sd">            Where the fluxes are: a grid, mesh, or set of zones.</span>
 <span class="sd">        time_bins : pandas.IntervalIndex</span>
@@ -1523,9 +1536,9 @@
 <span class="sd">        TypeError</span>
 <span class="sd">            If ``time_bins`` is not a :class:`pandas.IntervalIndex`.</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If the selection holds more or fewer than one variant, the</span>
-<span class="sd">            variant has no grid or no footprints yet, or ``time_bins`` is not</span>
-<span class="sd">            closed on the left.</span>
+<span class="sd">            If the selection holds more or fewer than one variant, or</span>
+<span class="sd">            several realizations of an ensemble, the variant has no grid or</span>
+<span class="sd">            no footprints yet, or ``time_bins`` is not closed on the left.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
         <span class="n">name</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">&quot;A Jacobian&quot;</span><span class="p">)</span>
@@ -1548,6 +1561,140 @@
             <span class="n">geometry_hash</span><span class="o">=</span><span class="n">variant</span><span class="o">.</span><span class="n">geometry_hash</span><span class="p">,</span>
             <span class="n">workers</span><span class="o">=</span><span class="n">workers</span><span class="p">,</span>
         <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Project.transport_error">
+<a class="viewcode-back" href="../../reference/_api/stilt.Project.transport_error.html#stilt.Project.transport_error">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">transport_error</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">sel</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">error</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">flux</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the transport error of each selected simulation&#39;s modeled enhancement.</span>
+
+<span class="sd">        The same estimate as ``sim.transport_error``, for every selected</span>
+<span class="sd">        receptor at once (Lin and Gerbig, 2005; the *Transport Error* guide).</span>
+<span class="sd">        *sel* is the unperturbed run, and *error* names the wind-error</span>
+<span class="sd">        variant of the same receptors. Every realization of *error* that has</span>
+<span class="sd">        run is averaged, so a receptor whose ensemble is still running gets</span>
+<span class="sd">        an estimate from the realizations it has.</span>
+
+<span class="sd">        Receptors are read and estimated one at a time, in *workers*</span>
+<span class="sd">        threads. Each thread holds one receptor&#39;s particle tables: the</span>
+<span class="sd">        unperturbed one and one per realization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sel : DataFrame or mask</span>
+<span class="sd">            The simulations, as for :meth:`status`, all of one variant that</span>
+<span class="sd">            runs once (no ``realizations``).</span>
+<span class="sd">        error : str</span>
+<span class="sd">            The wind-error variant, such as ``&quot;hrrr-err&quot;``.</span>
+<span class="sd">        flux : xarray.DataArray</span>
+<span class="sd">            Surface flux field, in µmol m⁻² s⁻¹, the same for every receptor.</span>
+<span class="sd">        workers : int, optional</span>
+<span class="sd">            Threads that read and estimate receptors. Defaults to the CPUs</span>
+<span class="sd">            this process may use (in a Slurm job, the job&#39;s), at most 8.</span>
+<span class="sd">        **options</span>
+<span class="sd">            Passed to :func:`stilt.particles.transport_error`: ``levels``,</span>
+<span class="sd">            ``length_scale``, ``percentile``, ``noise_splits``, and</span>
+<span class="sd">            ``background``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pandas.DataFrame</span>
+<span class="sd">            The selection with six more columns, from</span>
+<span class="sd">            :class:`~stilt.particles.TransportError`: ``enhancement``,</span>
+<span class="sd">            ``enhancement_perturbed``, ``background``, ``variance``,</span>
+<span class="sd">            ``noise``, and ``realizations`` (how many realizations of</span>
+<span class="sd">            *error* were averaged). A receptor without particles in the</span>
+<span class="sd">            selected variant or in any realization of *error* gets NaN and</span>
+<span class="sd">            ``realizations`` 0.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        KeyError</span>
+<span class="sd">            If the project has no variant named *error*.</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the selection holds more or fewer than one variant, that</span>
+<span class="sd">            variant is an ensemble, or it is *error* itself.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Each receptor&#39;s particles are read whole. A table of 1.4 million</span>
+<span class="sd">        rows takes about a second to read, so a selection of hundreds of</span>
+<span class="sd">        receptors takes minutes. The per-level tables of</span>
+<span class="sd">        :class:`~stilt.particles.TransportError` are not kept; get them for</span>
+<span class="sd">        one receptor with ``sim.transport_error``.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; sims = project.simulations</span>
+<span class="sd">        &gt;&gt;&gt; wbb = sims[(sims.variant == &quot;hrrr&quot;) &amp; (sims.site == &quot;WBB&quot;)]</span>
+<span class="sd">        &gt;&gt;&gt; errors = project.transport_error(wbb, &quot;hrrr-err&quot;, flux)</span>
+<span class="sd">        &gt;&gt;&gt; errors.groupby(errors.time.dt.month).variance.median()</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">&quot;A transport error&quot;</span><span class="p">)</span>
+        <span class="n">variant</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">variant</span><span class="o">.</span><span class="n">realizations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is an ensemble (realizations: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">variant</span><span class="o">.</span><span class="n">realizations</span><span class="si">}</span><span class="s2">); the selection is the unperturbed run, &quot;</span>
+                <span class="s2">&quot;a variant that runs once.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">error</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No variant </span><span class="si">{</span><span class="n">error</span><span class="si">!r}</span><span class="s2">; the variants are </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">error</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;The selection is of </span><span class="si">{</span><span class="n">error</span><span class="si">!r}</span><span class="s2"> itself; select the unperturbed variant.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">perturbed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">error</span><span class="p">]</span>
+        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">]))</span>
+        <span class="n">have</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">requested</span><span class="p">)</span>
+        <span class="n">ran</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">,</span> <span class="n">requested</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">perturbed</span><span class="o">.</span><span class="n">realization_numbers</span>
+        <span class="p">}</span>
+        <span class="c1"># Each receptor with both sides, and the realizations of *error* it has.</span>
+        <span class="n">runs</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">r</span><span class="p">:</span> <span class="n">ks</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">requested</span>
+            <span class="k">if</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">have</span> <span class="ow">and</span> <span class="p">(</span><span class="n">ks</span> <span class="o">:=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">found</span> <span class="ow">in</span> <span class="n">ran</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">found</span><span class="p">])</span>
+        <span class="p">}</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">particles</span><span class="p">(</span><span class="n">v</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">rid</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">rid</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># the listing found the file</span>
+            <span class="k">return</span> <span class="n">read_particles</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">read</span><span class="p">(</span><span class="n">rid</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]]:</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">particles</span><span class="p">(</span><span class="n">variant</span><span class="p">,</span> <span class="n">rid</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                <span class="p">[</span><span class="n">particles</span><span class="p">(</span><span class="n">perturbed</span><span class="p">,</span> <span class="n">rid</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">[</span><span class="n">rid</span><span class="p">]],</span>
+            <span class="p">)</span>
+
+        <span class="n">found</span> <span class="o">=</span> <span class="n">_transport_errors</span><span class="p">(</span>
+            <span class="n">read</span><span class="p">,</span>
+            <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_receptors</span><span class="p">(</span><span class="n">runs</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+            <span class="n">flux</span><span class="p">,</span>
+            <span class="n">transforms</span><span class="o">=</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">transforms</span><span class="p">,</span>
+            <span class="n">directory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span>
+            <span class="n">workers</span><span class="o">=</span><span class="n">_threads</span><span class="p">(</span><span class="n">workers</span><span class="p">),</span>
+            <span class="o">**</span><span class="n">options</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;realizations&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;realizations&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;int64&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">columns</span><span class="p">})</span></div>
 
 
     <span class="c1"># -- running ---------------------------------------------------------------</span>

@@ -1,0 +1,6 @@
+﻿stilt.identity.transport\_from\_settings
+========================================
+
+.. currentmodule:: stilt.identity
+
+.. autofunction:: transport_from_settings

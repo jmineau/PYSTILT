@@ -1,0 +1,6 @@
+stilt.transport.hysplit.Met.readable
+====================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+.. automethod:: Met.readable

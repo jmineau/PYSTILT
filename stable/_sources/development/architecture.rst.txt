@@ -45,7 +45,8 @@ Tables are plain DataFrames, and the verbs are on ``Project``.
 ``project.simulations`` is a pandas DataFrame, one row per simulation. Select
 it as in pandas (``sims[sims.variant == "hrrr"]``) and pass the selection to
 the project: ``status``, ``incomplete``, ``particles`` (one long table),
-``footprints`` (one lazy dataset stacked on the hour), or ``jacobian``. A
+``footprints`` (one lazy dataset stacked on the hour), ``jacobian``, or
+``transport_error`` (the selection with the estimate's columns). A
 selection is any table with ``receptor`` and ``variant`` columns (pandas,
 polars, pyarrow) or a boolean mask over ``project.simulations``, and the
 methods read only those two columns. ``project.receptors`` is a plain
@@ -79,7 +80,9 @@ Module map
                         one receptor's file (read) or many at once (table),
                         failure records, writing
      migration.py       read_stilt_r: STILT-R and X-STILT by-id output as
-                        receptors, particle tables, and footprints
+                        receptors, particle tables, and footprints;
+                        import_stilt_r writes it into an output directory
+                        with the settings its files record
      simulation.py      Simulation: a frozen value (receptor, variant, output)
                         that knows where its results are and whether they exist
      config.py          ProjectConfig: reads config.yaml, splits the flat keys
@@ -102,7 +105,8 @@ Module map
                         near-field plume correction
        accessor.py      the .stilt pandas accessor
        background.py    the background at a receptor (sim.background)
-       transport_error.py  the transport error of the enhancement
+       transport_error.py  the transport error of the enhancement, one
+                           receptor or a selection in threads
      footprint/         the footprint (a DataArray)
        config.py        FootprintConfig and the geometry specs
        gridding.py      calc_footprint, as STILT-R's (fidelity-guarded)
@@ -135,13 +139,15 @@ Module map
      transport/         the TransportModel and TransportConfig protocols,
                         ModelRun, ModelInfo, get_model and its MODELS table,
                         run_model and run_trajectories (__init__.py); one
-                        subpackage per transport model, which owns its config
+                        subpackage per transport model, which owns its config;
+                        stilt_r.py, the stilt-r model of imported STILT-R
+                        runs, which runs nothing
        hysplit/         HYSPLIT: HysplitConfig (config.py); MetConfig and Met,
                         ARL file discovery, download, and cropping through
                         arlmet (met.py); HysplitModel (model.py); the driver
                         (driver.py: write_inputs, read_particle_dat); the
                         CONTROL file (control.py) and SETUP.CFG namelist
-                        (namelist.py) writers; failure reasons read from its
+                        (namelist.py) writers and readers; failure reasons read from its
                         log (failures.py); the bundled binaries (bin/, Linux
                         and macOS x86-64) and data tables (data/)
 
@@ -301,9 +307,13 @@ The import contracts in ``pyproject.toml``, checked by ``lint-imports`` in CI
 top-level module from the CLI down to ``_paths`` and ``exceptions``. A module
 imports only the layers below it, and modules that import each other share a
 layer. The contract is exhaustive, so a new top-level module fails until it
-is placed. Two short contracts hold what a layer cannot: only
-``stilt.transport`` (its ``get_model``) imports HYSPLIT's package, and the
-project config reads no results and runs nothing.
+is placed. ``stilt.migration`` sits above the project config, because
+``import_stilt_r`` writes into an output directory through variants. Two
+short contracts hold what a layer cannot: only ``stilt.transport`` (its
+``get_model``) imports HYSPLIT's package, and the project config reads no
+results and runs nothing. STILT-R ran HYSPLIT, so the STILT-R reader and the
+``stilt-r`` model are the named exceptions: they read HYSPLIT's ``CONTROL``
+and ``SETUP.CFG`` files and record HYSPLIT's settings.
 
 Configuration
 -------------
@@ -407,7 +417,7 @@ A method of ``Project`` that takes a selection works from folder listings and
 receptor ids. It never builds a ``Simulation`` per row, which costs
 milliseconds each and adds up to many minutes on tens of thousands of
 footprints. It opens a file per row only when the file's contents are the
-answer (``footprints``, ``jacobian``), and builds receptors together
+answer (``footprints``, ``jacobian``, ``transport_error``), and builds receptors together
 (``Project._receptors``) when it needs them.
 
 ``Output.directory`` is a ``Path`` on a filesystem and a universal path
@@ -457,6 +467,25 @@ So ``Met.files_for`` fails before running when a file is missing, naming the
 hours, and ``Met.check`` fails when a file is damaged or the files lack a time
 step the run needs (arlmet's ``File.check()`` and ``File.times``, read once
 per file in a process).
+
+After the run, the driver's ``check_met_stop`` catches a silent stop that the
+check before it missed, whatever its cause. A run that stopped before
+``n_hours`` fails as ``MET_COVERAGE`` when any particle at its last time step
+is more than ``MET_STOP_CELLS`` (5) grid cells from every side of the first
+met file's grid. The top is not an edge: HYSPLIT's particle mode holds a
+particle that rises above it at the top (``advpnt.f``), so the top cannot end
+a run. HYSPLIT limits a step to ``tratio`` (0.75) of a cell, so the limit is in
+cells, not distance. On HRRR (3 km), NAM (12 km) and NARR (32 km) grids and
+their crops, particles that left ended at most 2.0 cells in; on domains a
+hundred cells across or more, the furthest-inside particle of runs the met
+stopped was 34 cells in or more. On crops 45 to 120 cells across, 3 to 9 % of
+the met stops tested passed as domain exits, none in a run's first 6 hours,
+with at most one particle in six still in the air and under 3 % of the
+footprint lost. HYSPLIT writes ``off spatial domain of all grids`` after a
+domain exit and after a silent met stop, so its log cannot tell them apart. The check runs only when ``outdt`` is 0: with fewer rows, a
+particle's last row can be far inside the domain though it left. It takes a
+particle table and a grid, nothing of HYSPLIT's, so the core
+can call it for another transport model that knows its domain.
 
 Realizations
 ^^^^^^^^^^^^

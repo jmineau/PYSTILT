@@ -1,0 +1,6 @@
+﻿stilt.observations.modelled\_column
+===================================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: modelled_column

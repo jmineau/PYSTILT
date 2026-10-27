@@ -1,0 +1,6 @@
+stilt.footprint.Jacobian.to\_xarray
+===================================
+
+.. currentmodule:: stilt.footprint
+
+.. automethod:: Jacobian.to_xarray

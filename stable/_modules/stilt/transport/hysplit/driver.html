@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.transport.hysplit.driver &#8212; PYSTILT 0.1.0a25</title>
+    <title>stilt.transport.hysplit.driver &#8212; PYSTILT 0.1.0a26</title>
   
   
   
@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../../_static/documentation_options.js?v=4b942876"></script>
+    <script src="../../../../_static/documentation_options.js?v=7c6ca21c"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -50,7 +50,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a26';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25" />
+  <meta name="docsearch:version" content="0.1.0a26" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -130,7 +130,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a25</p>
+    <p class="title logo__title">PYSTILT 0.1.0a26</p>
   
 </a></div>
     
@@ -466,7 +466,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">importlib.resources</span><span class="w"> </span><span class="kn">import</span> <span class="n">files</span> <span class="k">as</span> <span class="n">pkg_files</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
@@ -485,6 +485,9 @@
     <span class="n">failure_in</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.namelist</span><span class="w"> </span><span class="kn">import</span> <span class="n">NameList</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">arlmet</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span>
 
 <span class="n">CONTROL_FILE</span> <span class="o">=</span> <span class="s2">&quot;CONTROL&quot;</span>
 <span class="n">SETUP_FILE</span> <span class="o">=</span> <span class="s2">&quot;SETUP.CFG&quot;</span>
@@ -681,6 +684,99 @@
             <span class="sa">f</span><span class="s2">&quot;before each of the receptor&#39;s </span><span class="si">{</span><span class="n">locations</span><span class="si">}</span><span class="s2"> locations got its share of &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;numpar = </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">numpar</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">fix</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
             <span class="n">reason</span><span class="o">=</span><span class="n">FailureReason</span><span class="o">.</span><span class="n">PARTICLE_LIMIT</span><span class="p">,</span>
+        <span class="p">)</span>
+
+
+<span class="c1">#: How far inside the met&#39;s domain, in grid cells, a particle at the last time</span>
+<span class="c1">#: step of a run that stopped early must be for :func:`check_met_stop` to fail</span>
+<span class="c1">#: the run. Measured on HRRR (3 km), NAM (12 km) and NARR (32 km) grids and</span>
+<span class="c1">#: crops of them: particles that left the domain ended 1 to 2 cells from its</span>
+<span class="c1">#: edge, and in runs the met stopped on a domain a hundred cells across or</span>
+<span class="c1">#: more, the particle furthest inside was 34 cells in or more.</span>
+<span class="n">MET_STOP_CELLS</span> <span class="o">=</span> <span class="mi">5</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">cells_from_edge</span><span class="p">(</span><span class="n">lon</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">lat</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">grid</span><span class="p">:</span> <span class="s2">&quot;Grid&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return how far each position is from the nearest side of the met grid, in grid cells.</span>
+
+<span class="sd">    A global grid&#39;s columns wrap around in longitude, so it has no east or</span>
+<span class="sd">    west side. A position outside the grid has a negative distance. The</span>
+<span class="sd">    domain top is not an edge: HYSPLIT keeps particles from rising above it.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lon, lat : array-like</span>
+<span class="sd">        Positions, in degrees.</span>
+<span class="sd">    grid : arlmet.Grid</span>
+<span class="sd">        The met&#39;s horizontal grid.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        The distance of each position, in grid cells.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">fractional_indices</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lon</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lat</span><span class="p">))</span>
+    <span class="n">edges</span> <span class="o">=</span> <span class="p">[</span><span class="n">y</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">ny</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">y</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">grid</span><span class="o">.</span><span class="n">wraps_lon</span><span class="p">:</span>
+        <span class="n">edges</span> <span class="o">+=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">nx</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">x</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">check_met_stop</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">grid</span><span class="p">:</span> <span class="s2">&quot;Grid&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Raise when a run stopped before ``n_hours`` with particles well inside the met&#39;s domain.</span>
+
+<span class="sd">    Particles that leave the met&#39;s domain end at its edge, and a run whose</span>
+<span class="sd">    particles all left early is complete. When the met runs out, HYSPLIT</span>
+<span class="sd">    can stop every particle where it is, write no warning, and report a</span>
+<span class="sd">    complete run. So a run that stopped before ``n_hours`` fails when any</span>
+<span class="sd">    particle at its last time step is more than :data:`MET_STOP_CELLS`</span>
+<span class="sd">    grid cells from every side of the met grid (:func:`cells_from_edge`).</span>
+
+<span class="sd">    On a domain only a few dozen cells across, a met stop late in a run,</span>
+<span class="sd">    when nearly every particle has already left, can pass as a domain exit.</span>
+<span class="sd">    The footprint lost in such a run is small.</span>
+
+<span class="sd">    The particle table must hold a row for every time step (``outdt: 0``).</span>
+<span class="sd">    With fewer rows, the last row of a particle that left can be far</span>
+<span class="sd">    inside the domain. A table without the ``particle``, ``age``, ``lon``,</span>
+<span class="sd">    and ``lat`` columns is not checked.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    particles : pandas.DataFrame</span>
+<span class="sd">        The particles of one run.</span>
+<span class="sd">    n_hours : int</span>
+<span class="sd">        The length of the run asked for, negative for a backward run.</span>
+<span class="sd">    grid : arlmet.Grid</span>
+<span class="sd">        The horizontal grid of the met the run read.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    SimulationError</span>
+<span class="sd">        With ``reason`` ``MET_COVERAGE``, when the particles stopped</span>
+<span class="sd">        before ``n_hours`` and one at the last time step is more than</span>
+<span class="sd">        :data:`MET_STOP_CELLS` grid cells inside the met grid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">particles</span><span class="o">.</span><span class="n">empty</span> <span class="ow">or</span> <span class="ow">not</span> <span class="p">{</span><span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">}</span> <span class="o">&lt;=</span> <span class="nb">set</span><span class="p">(</span>
+        <span class="n">particles</span><span class="o">.</span><span class="n">columns</span>
+    <span class="p">):</span>
+        <span class="k">return</span>
+    <span class="n">reach</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span>
+    <span class="n">stop</span> <span class="o">=</span> <span class="n">reach</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">stop</span> <span class="o">&gt;=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">n_hours</span><span class="p">)</span> <span class="o">*</span> <span class="mi">60</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">last</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="n">reach</span> <span class="o">==</span> <span class="n">stop</span><span class="p">]</span>
+    <span class="n">inside</span> <span class="o">=</span> <span class="n">cells_from_edge</span><span class="p">(</span><span class="n">last</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">],</span> <span class="n">last</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">],</span> <span class="n">grid</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">inside</span> <span class="o">&gt;</span> <span class="n">MET_STOP_CELLS</span><span class="p">:</span>
+        <span class="n">share</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">last</span><span class="p">)</span> <span class="o">/</span> <span class="n">particles</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
+        <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;The particles stopped </span><span class="si">{</span><span class="n">stop</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> h into the </span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">n_hours</span><span class="p">)</span><span class="si">}</span><span class="s2"> h &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;run, up to </span><span class="si">{</span><span class="n">inside</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> grid cells inside the met&#39;s domain, not &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;at its edge: the met ran out (</span><span class="si">{</span><span class="n">share</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2"> of the particles were &quot;</span>
+            <span class="s2">&quot;still in the air).&quot;</span><span class="p">,</span>
+            <span class="n">reason</span><span class="o">=</span><span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
         <span class="p">)</span>
 
 

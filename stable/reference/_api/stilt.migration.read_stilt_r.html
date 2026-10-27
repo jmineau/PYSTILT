@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.migration.read_stilt_r &#8212; PYSTILT 0.1.0a25</title>
+    <title>stilt.migration.read_stilt_r &#8212; PYSTILT 0.1.0a26</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=4b942876"></script>
+    <script src="../../_static/documentation_options.js?v=7c6ca21c"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,18 +51,18 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a25';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a26';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="stilt.particles.background" href="stilt.particles.background.html" />
+    <link rel="next" title="stilt.migration.import_stilt_r" href="stilt.migration.import_stilt_r.html" />
     <link rel="prev" title="stilt.footprint.FootprintAccessor.to_netcdf" href="stilt.footprint.FootprintAccessor.to_netcdf.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a25" />
+  <meta name="docsearch:version" content="0.1.0a26" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -133,7 +133,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a25</p>
+    <p class="title logo__title">PYSTILT 0.1.0a26</p>
   
 </a></div>
     
@@ -436,6 +436,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.status.html">stilt.Project.status</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.submit.html">stilt.Project.submit</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.table_path.html">stilt.Project.table_path</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Project.transport_error.html">stilt.Project.transport_error</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Receptor.html">stilt.Receptor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -535,6 +536,7 @@
 </ul>
 </details></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">stilt.migration.read_stilt_r</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.migration.import_stilt_r.html">stilt.migration.import_stilt_r</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.particles.background.html">stilt.particles.background</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.particles.Background-class.html">stilt.particles.Background</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.particles.transport_error.html">stilt.particles.transport_error</a></li>
@@ -687,6 +689,21 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.data_files.html">stilt.transport.hysplit.HysplitModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.run.html">stilt.transport.hysplit.HysplitModel.run</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.version.html">stilt.transport.hysplit.HysplitModel.version</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.html">stilt.transport.stilt_r.StiltRModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.needs_workdir.html">stilt.transport.stilt_r.StiltRModel.needs_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.data_files.html">stilt.transport.stilt_r.StiltRModel.data_files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.run.html">stilt.transport.stilt_r.StiltRModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.version.html">stilt.transport.stilt_r.StiltRModel.version</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.stilt_r.StiltRConfig.html">stilt.transport.stilt_r.StiltRConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRConfig.UNRECORDED.html">stilt.transport.stilt_r.StiltRConfig.UNRECORDED</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.stilt_r.StiltRMetConfig.html">stilt.transport.stilt_r.StiltRMetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRMetConfig.settings.html">stilt.transport.stilt_r.StiltRMetConfig.settings</a></li>
 </ul>
 </details></li>
 </ul>
@@ -858,7 +875,7 @@
 <h1>stilt.migration.read_stilt_r<a class="headerlink" href="#stilt-migration-read-stilt-r" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="stilt.migration.read_stilt_r">
-<span class="sig-prename descclassname"><span class="pre">stilt.migration.</span></span><span class="sig-name descname"><span class="pre">read_stilt_r</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">by_id_dir</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/migration.html#read_stilt_r"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.migration.read_stilt_r" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">stilt.migration.</span></span><span class="sig-name descname"><span class="pre">read_stilt_r</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">by_id_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/migration.html#read_stilt_r"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.migration.read_stilt_r" title="Link to this definition">#</a></dt>
 <dd><p>Read STILT-R or X-STILT <code class="docutils literal notranslate"><span class="pre">by-id</span></code> output, one simulation at a time.</p>
 <p>Each folder of <em>by_id_dir</em> that holds <code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_traj.rds</span></code> is a
 simulation. Its receptor, particles, and footprint come back as
@@ -867,6 +884,13 @@ PYSTILT’s: a <a class="reference internal" href="stilt.Receptor.html#stilt.Rec
 <a class="reference internal" href="stilt.read_particles.html#stilt.read_particles" title="stilt.read_particles"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.read_particles()</span></code></a> and <a class="reference internal" href="stilt.read_footprint.html#stilt.read_footprint" title="stilt.read_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.read_footprint()</span></code></a> return
 them. The folders are read in name order, which is time order, and each
 one only when the loop reaches it.</p>
+<p>The receptor’s release points are the ones in the folder’s <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>
+file, the numbers HYSPLIT read, so a point receptor’s id is the folder’s
+name. Its time is the <code class="docutils literal notranslate"><span class="pre">.rds</span></code> file’s, which keeps the seconds that
+<code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> drops. A receptor with one release point is a
+<a class="reference internal" href="stilt.PointReceptor.html#stilt.PointReceptor" title="stilt.PointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointReceptor</span></code></a>, two heights at one place are a
+<a class="reference internal" href="stilt.ColumnReceptor.html#stilt.ColumnReceptor" title="stilt.ColumnReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnReceptor</span></code></a>, and release points at different places,
+such as X-STILT’s slant columns, are a <a class="reference internal" href="stilt.MultiPointReceptor.html#stilt.MultiPointReceptor" title="stilt.MultiPointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code></a>.</p>
 <p>The particle columns get PYSTILT’s names: <code class="docutils literal notranslate"><span class="pre">indx</span></code>, <code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">long</span></code>,
 <code class="docutils literal notranslate"><span class="pre">lati</span></code>, and <code class="docutils literal notranslate"><span class="pre">xhgt</span></code> become <code class="docutils literal notranslate"><span class="pre">particle</span></code>, <code class="docutils literal notranslate"><span class="pre">age</span></code> (minutes since
 release), <code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code>, and <code class="docutils literal notranslate"><span class="pre">release_height</span></code>. <code class="docutils literal notranslate"><span class="pre">time</span></code> is then the
@@ -875,22 +899,27 @@ keeps its STILT-R name, <code class="docutils literal notranslate"><span class="
 near-field correction STILT-R applied stays as it is.</p>
 <p>The footprint is <code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_foot.nc</span></code>, on the grid its file gives, with
 layers stamped at the receptor time plus whole hours, as STILT-R stamps
-them. Its settings hold that grid and <code class="docutils literal notranslate"><span class="pre">time_integrate</span></code> (true for a
-backward run with one layer at the receptor time). The file does not
-record <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>, so the settings give the default of 1, which
-is STILT-R’s default too. Other <code class="docutils literal notranslate"><span class="pre">_foot.nc</span></code> files in the folder, such as
-X-STILT’s footprints at other resolutions, are not read.</p>
-<p>The receptor’s coordinates are the ones HYSPLIT ran, to the 15
-significant digits STILT-R writes in its CONTROL file and simulation id,
-so a point receptor’s id is the folder’s name. A receptor with one
-release point is a <a class="reference internal" href="stilt.PointReceptor.html#stilt.PointReceptor" title="stilt.PointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointReceptor</span></code></a>. Several heights at one
-place are a <a class="reference internal" href="stilt.ColumnReceptor.html#stilt.ColumnReceptor" title="stilt.ColumnReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnReceptor</span></code></a> from the lowest to the
-highest, as STILT-R spreads its particles; release points at different
-places, such as X-STILT’s slant columns, are a
-<a class="reference internal" href="stilt.MultiPointReceptor.html#stilt.MultiPointReceptor" title="stilt.MultiPointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code></a>.</p>
+them. Its settings hold that grid, <code class="docutils literal notranslate"><span class="pre">time_integrate</span></code> (true for a
+backward run with one layer at the receptor time), and
+<code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>. The footprint file does not record <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>.
+It comes from <code class="docutils literal notranslate"><span class="pre">params.RDS</span></code>, which STILT-R’s Slurm runs (rslurm) leave
+in <code class="docutils literal notranslate"><span class="pre">_rslurm_&lt;project&gt;/</span></code> beside <code class="docutils literal notranslate"><span class="pre">out/</span></code>, or else from the
+<em>smooth_factor</em> argument. <code class="docutils literal notranslate"><span class="pre">params.RDS</span></code> is used only when its
+<code class="docutils literal notranslate"><span class="pre">n_hours</span></code> and <code class="docutils literal notranslate"><span class="pre">numpar</span></code> are the run’s (<code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>, and the HYSPLIT
+settings the <code class="docutils literal notranslate"><span class="pre">.rds</span></code> saved). Other <code class="docutils literal notranslate"><span class="pre">_foot.nc</span></code> files in the folder,
+such as X-STILT’s footprints at other resolutions, are not read.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>by_id_dir</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span>) – The <code class="docutils literal notranslate"><span class="pre">by-id</span></code> folder, such as <code class="docutils literal notranslate"><span class="pre">my_project/out/by-id</span></code>.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>by_id_dir</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span>) – The <code class="docutils literal notranslate"><span class="pre">by-id</span></code> folder, such as <code class="docutils literal notranslate"><span class="pre">my_project/out/by-id</span></code>.</p></li>
+<li><p><strong>smooth_factor</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – The <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> STILT-R made the footprints with, for a project
+without <code class="docutils literal notranslate"><span class="pre">params.RDS</span></code> (one run without Slurm). Not needed to read
+folders without a footprint.</p></li>
+<li><p><strong>error</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – Read the second set of particles a run with transport error saved
+(<code class="docutils literal notranslate"><span class="pre">particle_error</span></code>), the run with perturbed winds, in place of the
+first. STILT-R makes no footprint of it, so the footprint is
+<code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Yields<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
@@ -903,18 +932,23 @@ STILT-R made particles only, or no particle reached the grid.</p></li>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ImportError" title="(in Python v3.15)"><strong>ImportError</strong></a> – If the rdata package is not installed.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#FileNotFoundError" title="(in Python v3.15)"><strong>FileNotFoundError</strong></a> – If <em>by_id_dir</em> does not exist, or no folder in it holds a
-    <code class="docutils literal notranslate"><span class="pre">_traj.rds</span></code> file.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#FileNotFoundError" title="(in Python v3.15)"><strong>FileNotFoundError</strong></a> – If <em>by_id_dir</em> does not exist, no folder in it holds a <code class="docutils literal notranslate"><span class="pre">_traj.rds</span></code>
+    file, or a folder that does has no <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> file.</p></li>
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – When a simulation is read, if its files are not as STILT-R writes
-    them: a <code class="docutils literal notranslate"><span class="pre">_traj.rds</span></code> without the particle columns or the receptor,
-    or a footprint on a projected grid (only longitude/latitude grids
-    are read) or with layers that are not whole hours from the
-    receptor time.</p></li>
+    them: a <code class="docutils literal notranslate"><span class="pre">_traj.rds</span></code> without the particle columns or the receptor
+    time, a <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> file that cannot be read, or a footprint on a
+    projected grid (only longitude/latitude grids are read) or with
+    layers that are not whole hours from the receptor time. When a
+    footprint is read, if its <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> is not known (no
+    <code class="docutils literal notranslate"><span class="pre">params.RDS</span></code> and no <em>smooth_factor</em>), if <code class="docutils literal notranslate"><span class="pre">params.RDS</span></code> disagrees
+    with the run’s <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> or <code class="docutils literal notranslate"><span class="pre">numpar</span></code>, or if it records a
+    <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> other than <em>smooth_factor</em> or more than one. With
+    <em>error</em>, if a <code class="docutils literal notranslate"><span class="pre">.rds</span></code> holds no <code class="docutils literal notranslate"><span class="pre">particle_error</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Warns<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>UserWarning</strong> – When folders hold a <code class="docutils literal notranslate"><span class="pre">_foot.nc</span></code> but no <code class="docutils literal notranslate"><span class="pre">_traj.rds</span></code>. They are
-skipped: the receptor is read from the <code class="docutils literal notranslate"><span class="pre">.rds</span></code>.</p>
+skipped: the particles are read from the <code class="docutils literal notranslate"><span class="pre">.rds</span></code>.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator" title="(in Python v3.15)"><em>Iterator</em></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)">tuple</a>[TypeAliasForwardRef(‘stilt.receptor.Receptor’), <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><em>DataFrame</em></a>, <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><em>DataArray</em></a> | None]]</p>
@@ -922,14 +956,27 @@ skipped: the receptor is read from the <code class="docutils literal notranslate
 </dl>
 <p class="rubric">Notes</p>
 <p>A run with transport error stores a second set of particles in the same
-<code class="docutils literal notranslate"><span class="pre">.rds</span></code> (<code class="docutils literal notranslate"><span class="pre">particle_error</span></code>); only the first set is read. The HYSPLIT
-settings in the <code class="docutils literal notranslate"><span class="pre">.rds</span></code> (<code class="docutils literal notranslate"><span class="pre">params</span></code>) are not returned. X-STILT weights
+<code class="docutils literal notranslate"><span class="pre">.rds</span></code> (<code class="docutils literal notranslate"><span class="pre">particle_error</span></code>), which <em>error</em> reads. The HYSPLIT
+settings in the <code class="docutils literal notranslate"><span class="pre">.rds</span></code> (<code class="docutils literal notranslate"><span class="pre">params</span></code>) are not returned;
+<a class="reference internal" href="stilt.migration.import_stilt_r.html#stilt.migration.import_stilt_r" title="stilt.migration.import_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">import_stilt_r()</span></code></a> records the settings of each run. X-STILT weights
 <code class="docutils literal notranslate"><span class="pre">foot</span></code> by the averaging kernel and pressure weighting after it saves
 the <code class="docutils literal notranslate"><span class="pre">.rds</span></code>, so its particles are unweighted and its footprint is
 weighted.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">foot</span> <span class="ow">in</span> <span class="n">stilt</span><span class="o">.</span><span class="n">migration</span><span class="o">.</span><span class="n">read_stilt_r</span><span class="p">(</span><span class="s2">&quot;out/by-id&quot;</span><span class="p">):</span>
 <span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">),</span> <span class="n">foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A project run on one machine has no <code class="docutils literal notranslate"><span class="pre">params.RDS</span></code>; give the
+<code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> from its <code class="docutils literal notranslate"><span class="pre">run_stilt.r</span></code>:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sims</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">migration</span><span class="o">.</span><span class="n">read_stilt_r</span><span class="p">(</span><span class="s2">&quot;out/by-id&quot;</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The particles of the transport-error run:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">stilt</span><span class="o">.</span><span class="n">migration</span><span class="o">.</span><span class="n">read_stilt_r</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="s2">&quot;out/by-id&quot;</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="kc">True</span>
+<span class="gp">... </span><span class="p">):</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">perturbed</span><span class="p">))</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -956,11 +1003,11 @@ weighted.</p>
       </div>
     </a>
     <a class="right-next"
-       href="stilt.particles.background.html"
+       href="stilt.migration.import_stilt_r.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">stilt.particles.background</p>
+        <p class="prev-next-title">stilt.migration.import_stilt_r</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

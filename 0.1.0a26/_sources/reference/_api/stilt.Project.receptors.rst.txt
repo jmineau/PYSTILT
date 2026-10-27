@@ -1,0 +1,6 @@
+stilt.Project.receptors
+=======================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Project.receptors

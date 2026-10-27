@@ -1,0 +1,39 @@
+﻿stilt.transport.hysplit.Met
+===========================
+
+.. currentmodule:: stilt.transport.hysplit
+
+
+
+
+.. class-signature:: stilt.transport.hysplit.Met
+
+
+.. class-parameters:: stilt.transport.hysplit.Met
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~Met.crop_dir
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~Met.check
+   ~Met.check_receptors
+   ~Met.files_for
+   ~Met.missing_hours
+   ~Met.readable
+
+
+
