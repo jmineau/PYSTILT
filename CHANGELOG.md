@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a26] - 2026-10-27
+
 ### Added
 
 - `project.transport_error(sel, "hrrr-err", flux)` estimates the transport
