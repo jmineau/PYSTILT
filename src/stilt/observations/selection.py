@@ -46,7 +46,9 @@ def group_by_overpass(
     stamps = pd.to_datetime(series)
     if stamps.isna().any():
         raise ValueError("group_by_overpass: times contain NaT.")
-    labels = pd.Series(np.empty(len(stamps), dtype=object), index=stamps.index)
+    labels = pd.Series(
+        np.empty(len(stamps), dtype=object), index=stamps.index, dtype=object
+    )
     if stamps.empty:
         return labels
 

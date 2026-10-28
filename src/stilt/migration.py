@@ -277,7 +277,9 @@ def _posixct(obj: Any, attrs: Mapping[str, Any]) -> pd.DatetimeIndex:
     count of seconds holds no more.
     """
     millis = np.round(np.asarray(obj, dtype=float) * 1000)
-    return pd.DatetimeIndex(pd.to_datetime(millis, unit="ms"))
+    # int64 holds no NaN, so NA seconds are cast as 0 and set to NaT after
+    times = pd.to_datetime(np.nan_to_num(millis).astype(np.int64), unit="ms")
+    return pd.DatetimeIndex(times.where(~np.isnan(millis)))
 
 
 def _read_rds(path: Path, rdata: Any) -> dict[str, Any]:
