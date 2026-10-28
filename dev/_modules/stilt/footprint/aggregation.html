@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=aa117bec"></script>
+    <script src="../../../_static/documentation_options.js?v=8c127773"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev3+gf2afb27ac" />
+  <meta name="docsearch:version" content="0.1.0a27.dev4+g8e3c3e6ea" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -697,13 +697,11 @@
             <span class="c1"># pyrefly: ignore[missing-attribute]</span>
             <span class="n">stored</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">from_spmatrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
             <span class="c1"># A cell not stored is zero. pandas 3 fills from_spmatrix&#39;s</span>
-            <span class="c1"># columns with NaN, so each is rebuilt with a fill of 0.</span>
+            <span class="c1"># columns with NaN, so each is relabeled with a fill of 0: a</span>
+            <span class="c1"># SparseArray built from a SparseArray keeps its stored positions</span>
+            <span class="c1"># and values (the NaN was only the fill, never a stored value).</span>
             <span class="n">columns</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="n">j</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">arrays</span><span class="o">.</span><span class="n">SparseArray</span><span class="p">(</span>
-                    <span class="n">stored</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">sp_values</span><span class="p">,</span>
-                    <span class="n">sparse_index</span><span class="o">=</span><span class="n">stored</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">sp_index</span><span class="p">,</span>
-                    <span class="n">fill_value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
-                <span class="p">)</span>
+                <span class="n">j</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">arrays</span><span class="o">.</span><span class="n">SparseArray</span><span class="p">(</span><span class="n">stored</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">stored</span><span class="o">.</span><span class="n">columns</span>
             <span class="p">}</span>
             <span class="n">frame</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">receptors</span><span class="p">)</span>
