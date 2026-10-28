@@ -55,6 +55,19 @@ _PYSTILT_NAMES = {
 }
 
 
+def _read_dump(path: Path) -> pd.DataFrame:
+    """
+    Read a CSV R dumped, every digit exact.
+
+    ``float_precision="round_trip"`` did this, but pandas 3.1 deprecates it
+    (every mode now uses one converter), and pandas 3.0's default parser is
+    off in the last digit for some ``%.17g`` values. Casting the text with
+    ``astype(float)`` is exact on both, and ``dtype=str`` keeps ``read_csv``
+    from parsing the numbers first.
+    """
+    return pd.read_csv(path, dtype=str).astype(float)
+
+
 @pytest.fixture(scope="module")
 def written(rscript, r_stilt_dir, tmp_path_factory) -> tuple[Path, Path]:
     """Return a by-id folder STILT-R wrote, and a folder of what R reads from it."""
@@ -87,9 +100,9 @@ def test_receptor_time_and_particles_are_what_r_reads(written):
             tuple(map(float, line.split())) for line in lines[2 : 2 + int(lines[1])]
         ]
         assert receptor.coords() == points
-        from_r = pd.read_csv(
-            dumped / f"{name}_particles.csv", float_precision="round_trip"
-        ).rename(columns=_PYSTILT_NAMES)
+        from_r = _read_dump(dumped / f"{name}_particles.csv").rename(
+            columns=_PYSTILT_NAMES
+        )
         mine = particles.drop(columns="time")
         assert list(mine.columns) == list(from_r.columns)
         np.testing.assert_array_equal(mine.to_numpy(), from_r.to_numpy())
@@ -114,9 +127,7 @@ def test_error_particles_are_what_r_reads(written):
     (path,) = dumped.glob("*_error.csv")
     receptor, particles, foot = next(read_stilt_r(by_id, error=True))
     assert f"{receptor.id}_error.csv" == path.name
-    from_r = pd.read_csv(path, float_precision="round_trip").rename(
-        columns=_PYSTILT_NAMES
-    )
+    from_r = _read_dump(path).rename(columns=_PYSTILT_NAMES)
     mine = particles.drop(columns="time")
     assert list(mine.columns) == list(from_r.columns)
     np.testing.assert_array_equal(mine.to_numpy(), from_r.to_numpy())
