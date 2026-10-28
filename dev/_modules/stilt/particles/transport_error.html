@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=5b5959a5"></script>
+    <script src="../../../_static/documentation_options.js?v=aa117bec"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev8+g8f4bf432d" />
+  <meta name="docsearch:version" content="0.1.0a27.dev3+gf2afb27ac" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -838,14 +838,18 @@
 <span class="sd">    a wrong variance. Without the receptor, each realization&#39;s table holds</span>
 <span class="sd">    every receptor&#39;s particles.</span>
 
-<span class="sd">    &gt;&gt;&gt; from stilt.particles import transport_error</span>
-<span class="sd">    &gt;&gt;&gt; sim = project.simulation(rid, &quot;hrrr&quot;)</span>
-<span class="sd">    &gt;&gt;&gt; sims = project.simulations</span>
-<span class="sd">    &gt;&gt;&gt; ensemble = sims[(sims.variant == &quot;hrrr-err&quot;) &amp; (sims.receptor == rid)]</span>
-<span class="sd">    &gt;&gt;&gt; by_realization = project.particles(ensemble).groupby(&quot;realization&quot;)</span>
-<span class="sd">    &gt;&gt;&gt; error_particles = [rows for _, rows in by_realization]</span>
-<span class="sd">    &gt;&gt;&gt; result = transport_error(sim.particles, error_particles, flux)</span>
-<span class="sd">    &gt;&gt;&gt; result.realizations</span>
+<span class="sd">    &gt;&gt;&gt; from stilt.particles import transport_error  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; sim = project.simulation(rid, &quot;hrrr&quot;)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; sims = project.simulations  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; ensemble = sims[</span>
+<span class="sd">    ...     (sims.variant == &quot;hrrr-err&quot;) &amp; (sims.receptor == rid)</span>
+<span class="sd">    ... ]  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; by_realization = project.particles(ensemble).groupby(</span>
+<span class="sd">    ...     &quot;realization&quot;</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; error_particles = [rows for _, rows in by_realization]  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; result = transport_error(sim.particles, error_particles, flux)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; result.realizations  # doctest: +SKIP</span>
 <span class="sd">    4</span>
 
 <span class="sd">    ``sim.transport_error(realizations, flux)`` builds this list from the</span>

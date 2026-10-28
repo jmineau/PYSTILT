@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=5b5959a5"></script>
+    <script src="../../_static/documentation_options.js?v=aa117bec"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev8+g8f4bf432d" />
+  <meta name="docsearch:version" content="0.1.0a27.dev3+gf2afb27ac" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -1041,11 +1041,17 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; receptor = stilt.PointReceptor(</span>
+<span class="sd">    &gt;&gt;&gt; receptor = stilt.PointReceptor(  # doctest: +SKIP</span>
 <span class="sd">    ...     time=&quot;2023-07-15 18:00&quot;, longitude=-111.848, latitude=40.766, altitude=10</span>
 <span class="sd">    ... )</span>
-<span class="sd">    &gt;&gt;&gt; met = {&quot;directory&quot;: &quot;/data/hrrr&quot;, &quot;file_format&quot;: &quot;%Y%m%d_%H&quot;, &quot;file_tres&quot;: &quot;6h&quot;}</span>
-<span class="sd">    &gt;&gt;&gt; particles = stilt.run_trajectories(receptor, met, n_hours=-24, numpar=200)</span>
+<span class="sd">    &gt;&gt;&gt; met = {</span>
+<span class="sd">    ...     &quot;directory&quot;: &quot;/data/hrrr&quot;,</span>
+<span class="sd">    ...     &quot;file_format&quot;: &quot;%Y%m%d_%H&quot;,</span>
+<span class="sd">    ...     &quot;file_tres&quot;: &quot;6h&quot;,</span>
+<span class="sd">    ... }  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; particles = stilt.run_trajectories(</span>
+<span class="sd">    ...     receptor, met, n_hours=-24, numpar=200</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">transport_model</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">transport_model</span><span class="o">.</span><span class="n">config_class</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>

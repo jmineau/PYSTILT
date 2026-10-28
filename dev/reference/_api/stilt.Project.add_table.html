@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=5b5959a5"></script>
+    <script src="../../_static/documentation_options.js?v=aa117bec"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="stilt.Project.add_receptors" href="stilt.Project.add_receptors.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev8+g8f4bf432d" />
+  <meta name="docsearch:version" content="0.1.0a27.dev3+gf2afb27ac" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -901,7 +901,9 @@ the same kernels again changes nothing.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">receptors</span><span class="p">,</span> <span class="n">kernels</span> <span class="o">=</span> <span class="n">receptors_from_soundings</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s2">&quot;slant&quot;</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mi">3000</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">receptors</span><span class="p">,</span> <span class="n">kernels</span> <span class="o">=</span> <span class="n">receptors_from_soundings</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">df</span><span class="p">,</span> <span class="s2">&quot;slant&quot;</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mi">3000</span>
+<span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">project</span><span class="o">.</span><span class="n">add_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">project</span><span class="o">.</span><span class="n">add_table</span><span class="p">(</span><span class="s2">&quot;kernels&quot;</span><span class="p">,</span> <span class="n">kernels</span><span class="p">)</span>
 </pre></div>

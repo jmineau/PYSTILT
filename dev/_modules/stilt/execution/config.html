@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=5b5959a5"></script>
+    <script src="../../../_static/documentation_options.js?v=aa117bec"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev8+g8f4bf432d" />
+  <meta name="docsearch:version" content="0.1.0a27.dev3+gf2afb27ac" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -475,7 +475,9 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; ExecutionConfig(backend=&quot;slurm&quot;, n_workers=100, time=&quot;02:00:00&quot;, mem=&quot;8G&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; config = ExecutionConfig(backend=&quot;slurm&quot;, n_workers=100, time=&quot;02:00:00&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; config.n_workers</span>
+<span class="sd">    100</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">extra</span><span class="o">=</span><span class="s2">&quot;forbid&quot;</span><span class="p">,</span> <span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>

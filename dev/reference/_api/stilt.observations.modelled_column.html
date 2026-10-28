@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=5b5959a5"></script>
+    <script src="../../_static/documentation_options.js?v=aa117bec"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="stilt.observations.plumes.density_polygon" href="stilt.observations.plumes.density_polygon.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev8+g8f4bf432d" />
+  <meta name="docsearch:version" content="0.1.0a27.dev3+gf2afb27ac" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -917,7 +917,9 @@ is <code class="docutils literal notranslate"><span class="pre">-np.diff(p)</spa
 </dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">bg</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">background</span><span class="p">(</span><span class="n">cams</span><span class="p">)</span><span class="o">.</span><span class="n">value</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dxch4</span> <span class="o">=</span> <span class="mi">1000</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>  <span class="c1"># ppb</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dxch4</span> <span class="o">=</span> <span class="mi">1000</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="gp">... </span><span class="p">)</span>  <span class="c1"># ppb</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">pressure_levels</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">modelled_column</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">dxch4</span><span class="p">,</span>

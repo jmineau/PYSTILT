@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=5b5959a5"></script>
+    <script src="../../_static/documentation_options.js?v=aa117bec"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev8+g8f4bf432d" />
+  <meta name="docsearch:version" content="0.1.0a27.dev3+gf2afb27ac" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -640,17 +640,21 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; for receptor, particles, foot in stilt.migration.read_stilt_r(&quot;out/by-id&quot;):</span>
+<span class="sd">    &gt;&gt;&gt; for receptor, particles, foot in stilt.migration.read_stilt_r(</span>
+<span class="sd">    ...     &quot;out/by-id&quot;</span>
+<span class="sd">    ... ):  # doctest: +SKIP</span>
 <span class="sd">    ...     print(receptor.id, len(particles), foot is not None)</span>
 
 <span class="sd">    A project run on one machine has no ``params.RDS``; give the</span>
 <span class="sd">    ``smooth_factor`` from its ``run_stilt.r``:</span>
 
-<span class="sd">    &gt;&gt;&gt; sims = stilt.migration.read_stilt_r(&quot;out/by-id&quot;, smooth_factor=1)</span>
+<span class="sd">    &gt;&gt;&gt; sims = stilt.migration.read_stilt_r(</span>
+<span class="sd">    ...     &quot;out/by-id&quot;, smooth_factor=1</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
 
 <span class="sd">    The particles of the transport-error run:</span>
 
-<span class="sd">    &gt;&gt;&gt; for receptor, perturbed, _ in stilt.migration.read_stilt_r(</span>
+<span class="sd">    &gt;&gt;&gt; for receptor, perturbed, _ in stilt.migration.read_stilt_r(  # doctest: +SKIP</span>
 <span class="sd">    ...     &quot;out/by-id&quot;, error=True</span>
 <span class="sd">    ... ):</span>
 <span class="sd">    ...     print(receptor.id, len(perturbed))</span>
@@ -1081,7 +1085,7 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; receptors = stilt.migration.import_stilt_r(</span>
+<span class="sd">    &gt;&gt;&gt; receptors = stilt.migration.import_stilt_r(  # doctest: +SKIP</span>
 <span class="sd">    ...     &quot;my_project/out/by-id&quot;, &quot;output&quot;, version=&quot;1d936c1&quot;</span>
 <span class="sd">    ... )</span>
 <span class="sd">    mets:</span>
@@ -1094,7 +1098,7 @@
 <span class="sd">        version: 1d936c1</span>
 <span class="sd">        capemin: -1</span>
 <span class="sd">        ...</span>
-<span class="sd">    &gt;&gt;&gt; project = stilt.Project.init(&quot;my_project_py&quot;, receptors, output=&quot;output&quot;, ...)</span>
+<span class="sd">    &gt;&gt;&gt; project = stilt.Project.init(&quot;my_project_py&quot;, receptors, output=&quot;output&quot;, ...)  # doctest: +SKIP</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">VARIANT_NAME_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>

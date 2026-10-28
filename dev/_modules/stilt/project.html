@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=5b5959a5"></script>
+    <script src="../../_static/documentation_options.js?v=aa117bec"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev8+g8f4bf432d" />
+  <meta name="docsearch:version" content="0.1.0a27.dev3+gf2afb27ac" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -627,12 +627,16 @@
 <span class="sd">    --------</span>
 <span class="sd">    Make a project, run it, and load a footprint:</span>
 
-<span class="sd">    &gt;&gt;&gt; import stilt</span>
-<span class="sd">    &gt;&gt;&gt; receptor = stilt.PointReceptor(</span>
+<span class="sd">    &gt;&gt;&gt; import stilt  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; receptor = stilt.PointReceptor(  # doctest: +SKIP</span>
 <span class="sd">    ...     time=&quot;2023-07-15 18:00&quot;, longitude=-111.848, latitude=40.766, altitude=10</span>
 <span class="sd">    ... )</span>
-<span class="sd">    &gt;&gt;&gt; met = {&quot;directory&quot;: &quot;/data/hrrr&quot;, &quot;file_format&quot;: &quot;%Y%m%d_%H&quot;, &quot;file_tres&quot;: &quot;6h&quot;}</span>
-<span class="sd">    &gt;&gt;&gt; project = stilt.Project.init(</span>
+<span class="sd">    &gt;&gt;&gt; met = {</span>
+<span class="sd">    ...     &quot;directory&quot;: &quot;/data/hrrr&quot;,</span>
+<span class="sd">    ...     &quot;file_format&quot;: &quot;%Y%m%d_%H&quot;,</span>
+<span class="sd">    ...     &quot;file_tres&quot;: &quot;6h&quot;,</span>
+<span class="sd">    ... }  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; project = stilt.Project.init(  # doctest: +SKIP</span>
 <span class="sd">    ...     &quot;./my_project&quot;,</span>
 <span class="sd">    ...     receptors=[receptor],</span>
 <span class="sd">    ...     mets={&quot;hrrr&quot;: met},</span>
@@ -647,14 +651,14 @@
 <span class="sd">    ...         &quot;yres&quot;: 0.01,</span>
 <span class="sd">    ...     },</span>
 <span class="sd">    ... )</span>
-<span class="sd">    &gt;&gt;&gt; project.run()</span>
-<span class="sd">    &gt;&gt;&gt; foot = project.simulation(receptor.id, &quot;hrrr&quot;).footprint</span>
+<span class="sd">    &gt;&gt;&gt; project.run()  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; foot = project.simulation(receptor.id, &quot;hrrr&quot;).footprint  # doctest: +SKIP</span>
 
 <span class="sd">    Open it again later and check a selection of simulations:</span>
 
-<span class="sd">    &gt;&gt;&gt; project = stilt.Project(&quot;./my_project&quot;)</span>
-<span class="sd">    &gt;&gt;&gt; sims = project.simulations</span>
-<span class="sd">    &gt;&gt;&gt; project.status(sims[sims.variant == &quot;hrrr&quot;])</span>
+<span class="sd">    &gt;&gt;&gt; project = stilt.Project(&quot;./my_project&quot;)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; sims = project.simulations  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; project.status(sims[sims.variant == &quot;hrrr&quot;])  # doctest: +SKIP</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -992,9 +996,11 @@
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; receptors, kernels = receptors_from_soundings(df, &quot;slant&quot;, top=3000)</span>
-<span class="sd">        &gt;&gt;&gt; project.add_receptors(receptors)</span>
-<span class="sd">        &gt;&gt;&gt; project.add_table(&quot;kernels&quot;, kernels)</span>
+<span class="sd">        &gt;&gt;&gt; receptors, kernels = receptors_from_soundings(</span>
+<span class="sd">        ...     df, &quot;slant&quot;, top=3000</span>
+<span class="sd">        ... )  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; project.add_receptors(receptors)  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; project.add_table(&quot;kernels&quot;, kernels)  # doctest: +SKIP</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">table_path</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
         <span class="n">rows</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -1045,10 +1051,12 @@
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; sims = project.simulations</span>
-<span class="sd">        &gt;&gt;&gt; july = sims[(sims.variant == &quot;hrrr&quot;) &amp; (sims.site == &quot;WBB&quot;)]</span>
-<span class="sd">        &gt;&gt;&gt; project.status(july)</span>
-<span class="sd">        &gt;&gt;&gt; project.footprints(july)</span>
+<span class="sd">        &gt;&gt;&gt; sims = project.simulations  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; july = sims[</span>
+<span class="sd">        ...     (sims.variant == &quot;hrrr&quot;) &amp; (sims.site == &quot;WBB&quot;)</span>
+<span class="sd">        ... ]  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; project.status(july)  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; project.footprints(july)  # doctest: +SKIP</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_simulations</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
@@ -1109,8 +1117,10 @@
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; folders = project.folders()</span>
-<span class="sd">        &gt;&gt;&gt; folders[folders.variant == &quot;&quot;]  # results no variant here uses</span>
+<span class="sd">        &gt;&gt;&gt; folders = project.folders()  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; folders[</span>
+<span class="sd">        ...     folders.variant == &quot;&quot;</span>
+<span class="sd">        ... ]  # results no variant here uses  # doctest: +SKIP</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">folders</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">)</span></div>
 
@@ -1246,9 +1256,11 @@
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; st = project.status()</span>
-<span class="sd">        &gt;&gt;&gt; st.state.value_counts()</span>
-<span class="sd">        &gt;&gt;&gt; st[st.state == &quot;failed&quot;][[&quot;receptor&quot;, &quot;variant&quot;, &quot;reason&quot;]]</span>
+<span class="sd">        &gt;&gt;&gt; st = project.status()  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; st.state.value_counts()  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; st[st.state == &quot;failed&quot;][</span>
+<span class="sd">        ...     [&quot;receptor&quot;, &quot;variant&quot;, &quot;reason&quot;]</span>
+<span class="sd">        ... ]  # doctest: +SKIP</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
         <span class="n">present</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_present</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
@@ -1456,8 +1468,8 @@
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; ds = project.footprints(sims[sims.variant == &quot;hrrr&quot;])</span>
-<span class="sd">        &gt;&gt;&gt; ds.foot.sum(&quot;hour&quot;).mean(&quot;receptor&quot;).plot()</span>
+<span class="sd">        &gt;&gt;&gt; ds = project.footprints(sims[sims.variant == &quot;hrrr&quot;])  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; ds.foot.sum(&quot;hour&quot;).mean(&quot;receptor&quot;).plot()  # doctest: +SKIP</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
         <span class="n">name</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">&quot;A footprint dataset&quot;</span><span class="p">)</span>
@@ -1634,10 +1646,12 @@
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; sims = project.simulations</span>
-<span class="sd">        &gt;&gt;&gt; wbb = sims[(sims.variant == &quot;hrrr&quot;) &amp; (sims.site == &quot;WBB&quot;)]</span>
-<span class="sd">        &gt;&gt;&gt; errors = project.transport_error(wbb, &quot;hrrr-err&quot;, flux)</span>
-<span class="sd">        &gt;&gt;&gt; errors.groupby(errors.time.dt.month).variance.median()</span>
+<span class="sd">        &gt;&gt;&gt; sims = project.simulations  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; wbb = sims[</span>
+<span class="sd">        ...     (sims.variant == &quot;hrrr&quot;) &amp; (sims.site == &quot;WBB&quot;)</span>
+<span class="sd">        ... ]  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; errors = project.transport_error(wbb, &quot;hrrr-err&quot;, flux)  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; errors.groupby(errors.time.dt.month).variance.median()  # doctest: +SKIP</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
         <span class="n">name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">&quot;A transport error&quot;</span><span class="p">)</span>
@@ -1746,9 +1760,11 @@
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; problems = project.check()</span>
-<span class="sd">        &gt;&gt;&gt; problems.empty  # True when nothing would stop a run</span>
-<span class="sd">        &gt;&gt;&gt; problems[problems.check == &quot;met_files&quot;][[&quot;receptor&quot;, &quot;message&quot;]]</span>
+<span class="sd">        &gt;&gt;&gt; problems = project.check()  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; problems.empty  # True when nothing would stop a run  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; problems[problems.check == &quot;met_files&quot;][</span>
+<span class="sd">        ...     [&quot;receptor&quot;, &quot;message&quot;]</span>
+<span class="sd">        ... ]  # doctest: +SKIP</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">check_project</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
 

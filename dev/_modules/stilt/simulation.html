@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=5b5959a5"></script>
+    <script src="../../_static/documentation_options.js?v=aa117bec"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev8+g8f4bf432d" />
+  <meta name="docsearch:version" content="0.1.0a27.dev3+gf2afb27ac" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -649,7 +649,7 @@
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; sim.failure</span>
+<span class="sd">        &gt;&gt;&gt; sim.failure  # doctest: +SKIP</span>
 <span class="sd">        {&#39;step&#39;: &#39;particles&#39;, &#39;reason&#39;: &#39;MET_COVERAGE&#39;,</span>
 <span class="sd">         &#39;message&#39;: &#39;HYSPLIT: start point not within (x,y,t) any data file&#39;, ...}</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -775,8 +775,10 @@
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; smoother = sim.calc_footprint(smooth_factor=2.0)</span>
-<span class="sd">        &gt;&gt;&gt; fine = sim.calc_footprint(grid=hexes.to_grid(cells_per_target=4))</span>
+<span class="sd">        &gt;&gt;&gt; smoother = sim.calc_footprint(smooth_factor=2.0)  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; fine = sim.calc_footprint(</span>
+<span class="sd">        ...     grid=hexes.to_grid(cells_per_target=4)</span>
+<span class="sd">        ... )  # doctest: +SKIP</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">own</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">footprint</span>
         <span class="k">if</span> <span class="n">own</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -833,8 +835,8 @@
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; ct = xr.open_dataarray(&quot;ct_ch4.nc&quot;).rename(level=&quot;pres&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; sim.background(ct).value</span>
+<span class="sd">        &gt;&gt;&gt; ct = xr.open_dataarray(&quot;ct_ch4.nc&quot;).rename(level=&quot;pres&quot;)  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; sim.background(ct).value  # doctest: +SKIP</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">background</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span>
@@ -872,10 +874,12 @@
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; err = project.simulation(sim.receptor.id, &quot;hrrr-err&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; sim.transport_error(err, flux).variance</span>
-<span class="sd">        &gt;&gt;&gt; ensemble = [project.simulation(rid, &quot;hrrr-err&quot;, k) for k in range(10)]</span>
-<span class="sd">        &gt;&gt;&gt; sim.transport_error(ensemble, flux)</span>
+<span class="sd">        &gt;&gt;&gt; err = project.simulation(sim.receptor.id, &quot;hrrr-err&quot;)  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; sim.transport_error(err, flux).variance  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; ensemble = [</span>
+<span class="sd">        ...     project.simulation(rid, &quot;hrrr-err&quot;, k) for k in range(10)</span>
+<span class="sd">        ... ]  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; sim.transport_error(ensemble, flux)  # doctest: +SKIP</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">sims</span> <span class="o">=</span> <span class="p">[</span><span class="n">error</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">Simulation</span><span class="p">)</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">transport_error</span><span class="p">(</span>

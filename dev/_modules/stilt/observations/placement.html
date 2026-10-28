@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=5b5959a5"></script>
+    <script src="../../../_static/documentation_options.js?v=aa117bec"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev8+g8f4bf432d" />
+  <meta name="docsearch:version" content="0.1.0a27.dev3+gf2afb27ac" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -764,10 +764,14 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; df = read_tropomi_ch4(path, lon_range=(-113.5, -110.5), lat_range=(39.5, 42))</span>
-<span class="sd">    &gt;&gt;&gt; receptors, kernels = receptors_from_soundings(df[df.good], &quot;slant&quot;, top=3000)</span>
-<span class="sd">    &gt;&gt;&gt; project.add_receptors(receptors)</span>
-<span class="sd">    &gt;&gt;&gt; project.add_table(&quot;kernels&quot;, kernels)</span>
+<span class="sd">    &gt;&gt;&gt; df = read_tropomi_ch4(</span>
+<span class="sd">    ...     path, lon_range=(-113.5, -110.5), lat_range=(39.5, 42)</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; receptors, kernels = receptors_from_soundings(</span>
+<span class="sd">    ...     df[df.good], &quot;slant&quot;, top=3000</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; project.add_receptors(receptors)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; project.add_table(&quot;kernels&quot;, kernels)  # doctest: +SKIP</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">kind</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;column&quot;</span><span class="p">,</span> <span class="s2">&quot;slant&quot;</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;kind is &#39;column&#39; or &#39;slant&#39;, not </span><span class="si">{</span><span class="n">kind</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>

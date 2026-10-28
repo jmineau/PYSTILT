@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=5b5959a5"></script>
+    <script src="../../_static/documentation_options.js?v=aa117bec"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Core Objects" href="../core.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev8+g8f4bf432d" />
+  <meta name="docsearch:version" content="0.1.0a27.dev3+gf2afb27ac" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -916,8 +916,14 @@ in a temporary directory that is removed.</p></li>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00&quot;</span><span class="p">,</span> <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span> <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span> <span class="n">altitude</span><span class="o">=</span><span class="mi">10</span>
 <span class="gp">... </span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">met</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;directory&quot;</span><span class="p">:</span> <span class="s2">&quot;/data/hrrr&quot;</span><span class="p">,</span> <span class="s2">&quot;file_format&quot;</span><span class="p">:</span> <span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">_%H&quot;</span><span class="p">,</span> <span class="s2">&quot;file_tres&quot;</span><span class="p">:</span> <span class="s2">&quot;6h&quot;</span><span class="p">}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">particles</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">run_trajectories</span><span class="p">(</span><span class="n">receptor</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span> <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">met</span> <span class="o">=</span> <span class="p">{</span>
+<span class="gp">... </span>    <span class="s2">&quot;directory&quot;</span><span class="p">:</span> <span class="s2">&quot;/data/hrrr&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s2">&quot;file_format&quot;</span><span class="p">:</span> <span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">_%H&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s2">&quot;file_tres&quot;</span><span class="p">:</span> <span class="s2">&quot;6h&quot;</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">particles</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">run_trajectories</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">receptor</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span> <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span>
+<span class="gp">... </span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>

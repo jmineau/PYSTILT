@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=5b5959a5"></script>
+    <script src="../../../_static/documentation_options.js?v=aa117bec"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26.dev8+g8f4bf432d" />
+  <meta name="docsearch:version" content="0.1.0a27.dev3+gf2afb27ac" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -971,10 +971,12 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; grid = stilt.Grid(</span>
+<span class="sd">    &gt;&gt;&gt; grid = stilt.Grid(  # doctest: +SKIP</span>
 <span class="sd">    ...     xmin=-113, xmax=-110.5, ymin=40, ymax=42, xres=0.01, yres=0.01</span>
 <span class="sd">    ... )</span>
-<span class="sd">    &gt;&gt;&gt; foot = stilt.calc_footprint(particles, receptor, grid, smooth_factor=0.5)</span>
+<span class="sd">    &gt;&gt;&gt; foot = stilt.calc_footprint(</span>
+<span class="sd">    ...     particles, receptor, grid, smooth_factor=0.5</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
