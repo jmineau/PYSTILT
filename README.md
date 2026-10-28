@@ -284,6 +284,14 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set
 
 PYSTILT is released under the MIT License. See the LICENSE file.
 
+PYSTILT's wheels also carry a compiled `hycs_std`, the HYSPLIT build that STILT-R
+distributes. It is NOAA Air Resources Laboratory (ARL) software, not covered by the MIT
+License, and is subject to the
+[HYSPLIT terms of use](https://www.ready.noaa.gov/HYSPLIT_agreement.php), which ask that
+publications using it cite NOAA ARL (Stein et al., 2015,
+[doi:10.1175/BAMS-D-14-00110.1](https://doi.org/10.1175/BAMS-D-14-00110.1)) and do not
+present results as official NOAA material.
+
 ## Author
 
 **James Mineau** - [jmineau](https://github.com/jmineau)
