@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=6d4f2463"></script>
+    <script src="../_static/documentation_options.js?v=6232c0c9"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
+  <meta name="docsearch:version" content="0.1.0a27.dev11+gca31854a2" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -514,10 +514,11 @@
 <h1>Trajectory-Style Analyses<a class="headerlink" href="#trajectory-style-analyses" title="Link to this heading">#</a></h1>
 <p>Tools such as HyTraj and pysplit work with a few trajectories per
 measurement: residence time, potential source contribution (PSCF),
-concentration-weighted trajectories (CWT), a mean path. This page does
-the same with PYSTILT’s results. A run gives hundreds of particles per
-receptor, and a footprint that already weights them by their time near
-the ground, so most of these analyses get simpler.</p>
+concentration-weighted trajectories (CWT), a mean path, the time the
+air took from a source. This page does the same with PYSTILT’s results.
+A run gives hundreds of particles per receptor, and a footprint that
+already weights them by their time near the ground, so most of these
+analyses get simpler.</p>
 <p>The examples use a month of receptors at one site, and a table of your
 measurements with a <code class="docutils literal notranslate"><span class="pre">receptor</span></code> column, such as <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>
 merged with your data:</p>
@@ -597,6 +598,112 @@ output step:</p>
 <p>A mean path hides how the particles spread, which is what the footprint
 keeps. <code class="docutils literal notranslate"><span class="pre">sim.particles.stilt.plot.map()</span></code> draws them all.</p>
 </section>
+<section id="transit-time-from-a-source">
+<h2>Transit time from a source<a class="headerlink" href="#transit-time-from-a-source" title="Link to this heading">#</a></h2>
+<p>How long did the air take to get here from a source region, and how many
+of those hours were in sunlight? For smoke at a mountain site, these say
+more about the ozone the smoke made on the way than the time it arrived.
+A backward run answers both for each particle. Its <em>transit time</em> is the
+smallest <code class="docutils literal notranslate"><span class="pre">|age|</span></code> among its rows inside the region: the time since it
+last left the region before it reached the receptor. A particle that
+never enters the region did not come from it.</p>
+<p>Draw the region as a shapely polygon in longitude and latitude, around a
+fire, a city, or a basin. <code class="docutils literal notranslate"><span class="pre">top</span></code> limits it to the air below a height
+above ground. Leave it <code class="docutils literal notranslate"><span class="pre">None</span></code> for smoke that may have been lofted, or
+use each row’s <code class="docutils literal notranslate"><span class="pre">mlht</span></code> (read it too) for air in the mixed layer over a
+surface source:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">shapely</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Polygon</span>
+
+<span class="n">source</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">([(</span><span class="o">-</span><span class="mf">113.1</span><span class="p">,</span> <span class="mf">40.7</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mf">112.2</span><span class="p">,</span> <span class="mf">40.7</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mf">112.2</span><span class="p">,</span> <span class="mf">41.7</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mf">113.1</span><span class="p">,</span> <span class="mf">41.7</span><span class="p">)])</span>
+<span class="n">top</span> <span class="o">=</span> <span class="kc">None</span>   <span class="c1"># meters above ground; None for any height</span>
+
+<span class="n">particles</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">particles</span><span class="p">(</span><span class="n">july</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">])</span>
+<span class="n">particles</span><span class="p">[</span><span class="s2">"hours"</span><span class="p">]</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span> <span class="o">/</span> <span class="mi">60</span>
+
+<span class="n">inside</span> <span class="o">=</span> <span class="n">shapely</span><span class="o">.</span><span class="n">contains_xy</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">],</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">])</span>
+<span class="k">if</span> <span class="n">top</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">inside</span> <span class="o">&amp;=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"zagl"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="n">top</span>
+<span class="n">transit</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">particles</span><span class="p">[</span><span class="n">inside</span><span class="p">]</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"particle"</span><span class="p">])[</span><span class="s2">"hours"</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s2">"transit"</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The sun’s elevation at each row’s time and place comes from <a class="reference external" href="https://pvlib-python.readthedocs.io">pvlib</a> (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pvlib</span></code>), whose
+<code class="docutils literal notranslate"><span class="pre">spa_python</span></code> takes arrays of times and positions. Only the rows between
+leaving the region and arriving count, and each counts for one output
+step:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pvlib</span>
+
+<span class="n">route</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">transit</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"particle"</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s2">"inner"</span><span class="p">)</span>
+<span class="n">route</span> <span class="o">=</span> <span class="n">route</span><span class="p">[</span><span class="n">route</span><span class="p">[</span><span class="s2">"hours"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">route</span><span class="p">[</span><span class="s2">"transit"</span><span class="p">]]</span>
+<span class="n">sun</span> <span class="o">=</span> <span class="n">pvlib</span><span class="o">.</span><span class="n">solarposition</span><span class="o">.</span><span class="n">spa_python</span><span class="p">(</span>
+    <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">route</span><span class="p">[</span><span class="s2">"time"</span><span class="p">])</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="s2">"UTC"</span><span class="p">),</span>
+    <span class="n">route</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+    <span class="n">route</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+<span class="p">)</span>
+<span class="n">route</span><span class="p">[</span><span class="s2">"sunlit"</span><span class="p">]</span> <span class="o">=</span> <span class="n">sun</span><span class="p">[</span><span class="s2">"elevation"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span>
+<span class="n">step</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span><span class="o">.</span><span class="n">sort_values</span><span class="p">()</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span><span class="o">.</span><span class="n">median</span><span class="p">()</span> <span class="o">/</span> <span class="mi">60</span>   <span class="c1"># hours per row</span>
+<span class="n">sunlit</span> <span class="o">=</span> <span class="n">route</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"particle"</span><span class="p">])[</span><span class="s2">"sunlit"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">step</span><span class="p">)</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s2">"sunlit"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Then, for each receptor, the fraction of particles that came from the
+region, their mean transit time and its spread, and their mean hours in
+sunlight:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">per_particle</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">transit</span><span class="p">,</span> <span class="n">sunlit</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">({</span><span class="s2">"sunlit"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">})</span>
+<span class="n">numpar</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
+<span class="n">summary</span> <span class="o">=</span> <span class="n">per_particle</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span>
+    <span class="n">transit_mean</span><span class="o">=</span><span class="p">(</span><span class="s2">"transit"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">),</span>
+    <span class="n">transit_sd</span><span class="o">=</span><span class="p">(</span><span class="s2">"transit"</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">),</span>
+    <span class="n">sunlit_mean</span><span class="o">=</span><span class="p">(</span><span class="s2">"sunlit"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">),</span>
+<span class="p">)</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">numpar</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+<span class="n">summary</span><span class="p">[</span><span class="s2">"from_source"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">per_particle</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">numpar</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">numpar</span>
+<span class="p">)</span>
+<span class="n">summary</span><span class="p">[</span><span class="s2">"sunlit_fraction"</span><span class="p">]</span> <span class="o">=</span> <span class="n">summary</span><span class="p">[</span><span class="s2">"sunlit_mean"</span><span class="p">]</span> <span class="o">/</span> <span class="n">summary</span><span class="p">[</span><span class="s2">"transit_mean"</span><span class="p">]</span>
+
+<span class="n">both</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A receptor whose particles never reached the region has <code class="docutils literal notranslate"><span class="pre">from_source</span></code>
+0 and NaN for the rest. <code class="docutils literal notranslate"><span class="pre">from_source</span></code> is itself a marker of the
+source’s air that needs no inventory. With a ratio of enhancements in
+<code class="docutils literal notranslate"><span class="pre">obs</span></code>, such as ozone to CO for smoke, plot it against
+<code class="docutils literal notranslate"><span class="pre">transit_mean</span></code> and color it by <code class="docutils literal notranslate"><span class="pre">sunlit_fraction</span></code>. The transit times
+of one receptor’s particles, <code class="docutils literal notranslate"><span class="pre">per_particle.loc[rid,</span> <span class="pre">&quot;transit&quot;]</span></code>, give
+the whole distribution.</p>
+<p>A few things to know:</p>
+<ul class="simple">
+<li><p><strong>The run must be longer than the transit.</strong> A particle that would
+reach the region only after <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> is not counted, so
+<code class="docutils literal notranslate"><span class="pre">from_source</span></code> comes out low and <code class="docutils literal notranslate"><span class="pre">transit_mean</span></code> short. If the
+distribution runs up to <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, run longer.</p></li>
+<li><p><strong>Memory.</strong> A 24-hour run of 1,000 particles is 1.4 million rows, so a
+day of hourly receptors is about 35 million, and this recipe peaked near
+10 GB on one. For more, run it a day at a time and concatenate the
+summaries.</p></li>
+<li><p><strong>The horizon.</strong> <code class="docutils literal notranslate"><span class="pre">elevation</span> <span class="pre">&gt;</span> <span class="pre">0</span></code> counts the hours the sun is up.
+Photolysis falls off quickly once it sets; <code class="docutils literal notranslate"><span class="pre">&gt;</span> <span class="pre">-6</span></code> adds civil
+twilight.</p></li>
+<li><p><strong>Transport, not chemistry.</strong> The transit time is how long the air
+traveled, not a chemical age from ratios of species.</p></li>
+</ul>
+<p>Some variations:</p>
+<ul class="simple">
+<li><p><strong>A source that moves or switches on and off,</strong> such as a fire’s daily
+hotspots: make <code class="docutils literal notranslate"><span class="pre">inside</span></code> from a 0/1 field with a <code class="docutils literal notranslate"><span class="pre">time</span></code> dimension,
+<code class="docutils literal notranslate"><span class="pre">sample_field(mask,</span> <span class="pre">particles[&quot;lon&quot;],</span> <span class="pre">particles[&quot;lat&quot;],</span> <span class="pre">times=particles[&quot;time&quot;],</span> <span class="pre">fill_value=0)</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>
+(<a class="reference internal" href="../reference/_api/stilt.sampling.sample_field.html#stilt.sampling.sample_field" title="stilt.sampling.sample_field"><code class="xref py py-func docutils literal notranslate"><span class="pre">sample_field()</span></code></a>).</p></li>
+<li><p><strong>Weighting by emissions.</strong> With an emission field, <code class="docutils literal notranslate"><span class="pre">foot</span></code> times the
+emission at each row is what that row picked up, and the mean of
+<code class="docutils literal notranslate"><span class="pre">hours</span></code> weighted by it is the age of what was emitted into the air.
+<code class="docutils literal notranslate"><span class="pre">foot</span></code> counts only the lower half of the mixed layer, though, so
+smoke injected above the boundary layer drops out. The region version
+above does not depend on <code class="docutils literal notranslate"><span class="pre">foot</span></code>.</p></li>
+<li><p><strong>Forward runs from the source.</strong> When the release is the source, a
+row’s <code class="docutils literal notranslate"><span class="pre">age</span></code> is already its transit time (<a class="reference internal" href="plume_background.html"><span class="doc">Plume Background</span></a>).</p></li>
+</ul>
+</section>
 <section id="comparing-variants">
 <h2>Comparing variants<a class="headerlink" href="#comparing-variants" title="Link to this heading">#</a></h2>
 <p>Variants with different meteorology or settings run the same receptors,
@@ -666,6 +773,7 @@ each particle’s last position.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#potential-source-contribution-pscf">Potential source contribution (PSCF)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#concentration-weighted-trajectories-cwt">Concentration-weighted trajectories (CWT)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-mean-path">A mean path</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#transit-time-from-a-source">Transit time from a source</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#comparing-variants">Comparing variants</a></li>
 </ul>
   </nav></div>
