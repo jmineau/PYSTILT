@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/receptors/models';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -445,13 +447,13 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.receptors.models</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">The receptor models, their times, and their ids.</span>
 
 <span class="sd">A :class:`PointReceptor` releases from one point, a :class:`ColumnReceptor`</span>
 <span class="sd">from a vertical line, and a :class:`MultiPointReceptor` from several points</span>
 <span class="sd">at once (for example a slanted satellite sounding).</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -490,7 +492,7 @@
 <span class="n">TimeLike</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span> <span class="o">|</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span> <span class="o">|</span> <span class="nb">str</span>
 
 <span class="c1">#: Whether an altitude is above ground level or above mean sea level.</span>
-<span class="n">VerticalReference</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;agl&quot;</span><span class="p">,</span> <span class="s2">&quot;msl&quot;</span><span class="p">]</span>
+<span class="n">VerticalReference</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"agl"</span><span class="p">,</span> <span class="s2">"msl"</span><span class="p">]</span>
 
 
 <span class="c1"># ---------------------------------------------------------------------------</span>
@@ -499,43 +501,43 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">parse_time</span><span class="p">(</span><span class="n">time</span><span class="p">:</span> <span class="n">TimeLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return *time* as a naive UTC datetime.</span>
 
 <span class="sd">    Accepts datetimes (aware ones are converted to UTC), pandas and numpy</span>
-<span class="sd">    times, ISO strings, and the compact ``&quot;YYYYMMDDHHMM&quot;`` form.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    times, ISO strings, and the compact ``"YYYYMMDDHHMM"`` form.</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;time&#39; must be provided for all receptor types.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"'time' must be provided for all receptor types."</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">)):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="s2">&quot;Numeric receptor times are not accepted. Pass a datetime-like value &quot;</span>
-            <span class="s2">&quot;or a string such as &#39;202301011200&#39; or &#39;2023-01-01T12:00:00Z&#39;.&quot;</span>
+            <span class="s2">"Numeric receptor times are not accepted. Pass a datetime-like value "</span>
+            <span class="s2">"or a string such as '202301011200' or '2023-01-01T12:00:00Z'."</span>
         <span class="p">)</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\d</span><span class="si">{12}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">time</span><span class="p">):</span>
-        <span class="n">parsed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">%H%M&quot;</span><span class="p">,</span> <span class="n">utc</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\d</span><span class="si">{12}</span><span class="s2">"</span><span class="p">,</span> <span class="n">time</span><span class="p">):</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">%H%M"</span><span class="p">,</span> <span class="n">utc</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
         <span class="n">parsed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">time</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="s2">&quot;Receptor time must be a datetime-like value or supported time string.&quot;</span>
+            <span class="s2">"Receptor time must be a datetime-like value or supported time string."</span>
         <span class="p">)</span>
-    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">parsed</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;NaT&quot;</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Receptor time cannot be NaT.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">parsed</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"NaT"</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Receptor time cannot be NaT."</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">parsed</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="s2">&quot;UTC&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="s2">"UTC"</span><span class="p">)</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">parsed</span><span class="o">.</span><span class="n">to_pydatetime</span><span class="p">())</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="parse_receptor_id">
 <a class="viewcode-back" href="../../../reference/_api/stilt.receptors.parse_receptor_id.html#stilt.parse_receptor_id">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">parse_receptor_id</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Split a receptor id into its release time and location id.</span>
 
-<span class="sd">    An id is ``&quot;&lt;YYYYMMDDHHMM&gt;_&lt;location&gt;&quot;``, where the location is</span>
-<span class="sd">    ``&quot;&lt;lon&gt;_&lt;lat&gt;_&lt;alt&gt;&quot;`` for a point, ``&quot;&lt;lon&gt;_&lt;lat&gt;_X&lt;bottom&gt;-&lt;top&gt;&quot;``</span>
-<span class="sd">    for a column, and ``&quot;multi_&lt;hash&gt;&quot;`` for a multipoint receptor. Heights</span>
+<span class="sd">    An id is ``"&lt;YYYYMMDDHHMM&gt;_&lt;location&gt;"``, where the location is</span>
+<span class="sd">    ``"&lt;lon&gt;_&lt;lat&gt;_&lt;alt&gt;"`` for a point, ``"&lt;lon&gt;_&lt;lat&gt;_X&lt;bottom&gt;-&lt;top&gt;"``</span>
+<span class="sd">    for a column, and ``"multi_&lt;hash&gt;"`` for a multipoint receptor. Heights</span>
 <span class="sd">    above mean sea level end the location with ``msl``.</span>
 
 <span class="sd">    Raises</span>
@@ -543,46 +545,46 @@
 <span class="sd">    ValueError</span>
 <span class="sd">        If *receptor_id* does not start with a ``YYYYMMDDHHMM`` time and an</span>
 <span class="sd">        underscore.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">stamp</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">location</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">stamp</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">location</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">stamp</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">12</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">stamp</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">location</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span>
-        <span class="n">time</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">stamp</span><span class="p">,</span> <span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">%H%M&quot;</span><span class="p">)</span>
+        <span class="n">time</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">stamp</span><span class="p">,</span> <span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">%H%M"</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Receptor id </span><span class="si">{</span><span class="n">receptor_id</span><span class="si">!r}</span><span class="s2"> is not of the form &quot;</span>
-            <span class="s2">&quot;&#39;</span><span class="si">{YYYYMMDDHHMM}</span><span class="s2">_</span><span class="si">{location_id}</span><span class="s2">&#39;.&quot;</span>
+            <span class="sa">f</span><span class="s2">"Receptor id </span><span class="si">{</span><span class="n">receptor_id</span><span class="si">!r}</span><span class="s2"> is not of the form "</span>
+            <span class="s2">"'</span><span class="si">{YYYYMMDDHHMM}</span><span class="s2">_</span><span class="si">{location_id}</span><span class="s2">'."</span>
         <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
     <span class="k">return</span> <span class="n">time</span><span class="p">,</span> <span class="n">location</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_format_coord</span><span class="p">(</span><span class="n">val</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Format a coordinate without a decimal point when it is a whole number.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Format a coordinate without a decimal point when it is a whole number."""</span>
     <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="p">))</span> <span class="k">if</span> <span class="n">val</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_ref_suffix</span><span class="p">(</span><span class="n">altitude_ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the end of a location id for a vertical reference: ``&quot;msl&quot;`` or nothing.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="s2">&quot;msl&quot;</span> <span class="k">if</span> <span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">&quot;msl&quot;</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the end of a location id for a vertical reference: ``"msl"`` or nothing."""</span>
+    <span class="k">return</span> <span class="s2">"msl"</span> <span class="k">if</span> <span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">"msl"</span> <span class="k">else</span> <span class="s2">""</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_point_location</span><span class="p">(</span><span class="n">lon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">lat</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">alt</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">altitude_ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Location id of a point receptor, ``&quot;&lt;lon&gt;_&lt;lat&gt;_&lt;alt&gt;&quot;`` (``msl`` appended above sea level).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Location id of a point receptor, ``"&lt;lon&gt;_&lt;lat&gt;_&lt;alt&gt;"`` (``msl`` appended above sea level)."""</span>
     <span class="k">return</span> <span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">alt</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_ref_suffix</span><span class="p">(</span><span class="n">altitude_ref</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">alt</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_ref_suffix</span><span class="p">(</span><span class="n">altitude_ref</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
     <span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_column_location</span><span class="p">(</span>
     <span class="n">lon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">lat</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">bottom</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">top</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">altitude_ref</span><span class="p">:</span> <span class="nb">str</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Location id of a column receptor, ``&quot;&lt;lon&gt;_&lt;lat&gt;_X&lt;bottom&gt;-&lt;top&gt;&quot;`` (``msl`` appended above sea level).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Location id of a column receptor, ``"&lt;lon&gt;_&lt;lat&gt;_X&lt;bottom&gt;-&lt;top&gt;"`` (``msl`` appended above sea level)."""</span>
     <span class="k">return</span> <span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;_X</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">bottom</span><span class="p">)</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">top</span><span class="p">)</span><span class="si">}{</span><span class="n">_ref_suffix</span><span class="p">(</span><span class="n">altitude_ref</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"_X</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">bottom</span><span class="p">)</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">_format_coord</span><span class="p">(</span><span class="n">top</span><span class="p">)</span><span class="si">}{</span><span class="n">_ref_suffix</span><span class="p">(</span><span class="n">altitude_ref</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
     <span class="p">)</span>
 
 
@@ -592,27 +594,27 @@
     <span class="n">alts</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
     <span class="n">altitude_ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Location id of a multipoint receptor, ``&quot;multi_&lt;hash&gt;&quot;`` (``msl`` appended above sea level).</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Location id of a multipoint receptor, ``"multi_&lt;hash&gt;"`` (``msl`` appended above sea level).</span>
 
 <span class="sd">    The hash covers the sorted points, with longitudes and latitudes rounded</span>
 <span class="sd">    to 5 decimals and altitudes to 0.01 m. A whole-meter altitude hashes as</span>
 <span class="sd">    its integer, so ids made before heights were kept to 0.01 m still match.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">lons</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">group</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lon</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">_multipoint_locations</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">lats</span><span class="p">,</span> <span class="n">alts</span><span class="p">,</span> <span class="p">[</span><span class="n">altitude_ref</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_rounded</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">decimals</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return each value as Python&#39;s ``round(value, decimals)`` gives it, for a whole array at once.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return each value as Python's ``round(value, decimals)`` gives it, for a whole array at once.</span>
 
 <span class="sd">    ``rint(v * 10**d) / 10**d`` is the same double as ``round(v, d)``,</span>
 <span class="sd">    except where ``v * 10**d`` lies within its rounding error of a half and</span>
 <span class="sd">    the product can round to the other side. Those few values go through</span>
 <span class="sd">    ``round`` itself, so the result is exact.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">scale</span> <span class="o">=</span> <span class="mf">10.0</span><span class="o">**</span><span class="n">decimals</span>
     <span class="n">scaled</span> <span class="o">=</span> <span class="n">values</span> <span class="o">*</span> <span class="n">scale</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">scaled</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale</span>
@@ -628,15 +630,15 @@
     <span class="n">alts</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
     <span class="n">refs</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the location id of each multipoint receptor in a table of points, by group.</span>
 
 <span class="sd">    *groups* numbers the receptor each point belongs to, and ``refs[g]`` is</span>
-<span class="sd">    group ``g``&#39;s vertical reference. The ids are :func:`_multipoint_location`&#39;s:</span>
+<span class="sd">    group ``g``'s vertical reference. The ids are :func:`_multipoint_location`'s:</span>
 <span class="sd">    the JSON text of the sorted, rounded points, hashed. It is written out</span>
 <span class="sd">    directly, with the floats as ``repr`` gives them as ``json`` does, and</span>
 <span class="sd">    the rounding is done for all points at once.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lons</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lats</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">alt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">alts</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
@@ -647,17 +649,17 @@
     <span class="n">ralt</span> <span class="o">=</span> <span class="n">_rounded</span><span class="p">(</span><span class="n">alt</span><span class="p">[</span><span class="n">order</span><span class="p">],</span> <span class="mi">2</span><span class="p">)</span>
     <span class="n">whole</span> <span class="o">=</span> <span class="p">(</span><span class="n">ralt</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">trunc</span><span class="p">(</span><span class="n">ralt</span><span class="p">))</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
     <span class="n">points</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">x</span><span class="si">!r}</span><span class="s2">,</span><span class="si">{</span><span class="n">y</span><span class="si">!r}</span><span class="s2">,</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">z</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="nb">repr</span><span class="p">(</span><span class="n">z</span><span class="p">)</span><span class="si">}</span><span class="s2">]&quot;</span>
+        <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">x</span><span class="si">!r}</span><span class="s2">,</span><span class="si">{</span><span class="n">y</span><span class="si">!r}</span><span class="s2">,</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">z</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="nb">repr</span><span class="p">(</span><span class="n">z</span><span class="p">)</span><span class="si">}</span><span class="s2">]"</span>
         <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">rlon</span><span class="p">,</span> <span class="n">rlat</span><span class="p">,</span> <span class="n">ralt</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">whole</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="p">]</span>
     <span class="n">starts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="n">groups</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">!=</span> <span class="n">groups</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
     <span class="n">ends</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="n">starts</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)]</span>
     <span class="n">locations</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">starts</span><span class="p">,</span> <span class="n">ends</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="n">canonical</span> <span class="o">=</span> <span class="s2">&quot;[&quot;</span> <span class="o">+</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;]&quot;</span>
+        <span class="n">canonical</span> <span class="o">=</span> <span class="s2">"["</span> <span class="o">+</span> <span class="s2">","</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">])</span> <span class="o">+</span> <span class="s2">"]"</span>
         <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">canonical</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">10</span><span class="p">]</span>
         <span class="n">group</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">groups</span><span class="p">[</span><span class="n">start</span><span class="p">])</span>
-        <span class="n">locations</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;multi_</span><span class="si">{</span><span class="n">digest</span><span class="si">}{</span><span class="n">_ref_suffix</span><span class="p">(</span><span class="n">refs</span><span class="p">[</span><span class="n">group</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">locations</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"multi_</span><span class="si">{</span><span class="n">digest</span><span class="si">}{</span><span class="n">_ref_suffix</span><span class="p">(</span><span class="n">refs</span><span class="p">[</span><span class="n">group</span><span class="p">])</span><span class="si">}</span><span class="s2">"</span>
     <span class="k">return</span> <span class="n">locations</span>
 
 
@@ -669,7 +671,7 @@
 <div class="viewcode-block" id="Receptor">
 <a class="viewcode-back" href="../../../reference/_api/stilt.Receptor.html#stilt.Receptor">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Receptor</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Base class of the receptor types.</span>
 
 <span class="sd">    A receptor is a frozen value: its release time, its release points, and</span>
@@ -677,62 +679,62 @@
 <span class="sd">    ``(lat, lon, alt)`` for each release point. Two receptors are equal when</span>
 <span class="sd">    their type, time, points, and ``altitude_ref`` match; ``attrs`` do not</span>
 <span class="sd">    count.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;forbid&quot;</span><span class="p">)</span>
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">"forbid"</span><span class="p">)</span>
 
-    <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Receptor type: point, column, or multipoint.&quot;</span><span class="p">)</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Receptor type: point, column, or multipoint."</span><span class="p">)</span>
     <span class="n">time</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Release time, UTC. A time-zone-aware value is converted to UTC and &quot;</span>
-            <span class="s2">&quot;a naive one taken as UTC. A string may be ISO or ``YYYYMMDDHHMM``.&quot;</span>
+            <span class="s2">"Release time, UTC. A time-zone-aware value is converted to UTC and "</span>
+            <span class="s2">"a naive one taken as UTC. A string may be ISO or ``YYYYMMDDHHMM``."</span>
         <span class="p">)</span>
     <span class="p">)</span>
     <span class="n">altitude_ref</span><span class="p">:</span> <span class="n">VerticalReference</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;agl&quot;</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether heights are above ground (agl) or sea level (msl).&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">"agl"</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Whether heights are above ground (agl) or sea level (msl)."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">,</span>
         <span class="n">exclude</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Extra labels, such as a site or scene name: the columns of &quot;</span>
-            <span class="s2">&quot;``receptors.csv`` that PYSTILT does not use. They are kept when the &quot;</span>
-            <span class="s2">&quot;receptors are written back, and are columns of &quot;</span>
-            <span class="s2">&quot;``project.receptors`` and ``project.simulations`` to select on. &quot;</span>
-            <span class="s2">&quot;They are not part of the receptor&#39;s id or of equality.&quot;</span>
+            <span class="s2">"Extra labels, such as a site or scene name: the columns of "</span>
+            <span class="s2">"``receptors.csv`` that PYSTILT does not use. They are kept when the "</span>
+            <span class="s2">"receptors are written back, and are columns of "</span>
+            <span class="s2">"``project.receptors`` and ``project.simulations`` to select on. "</span>
+            <span class="s2">"They are not part of the receptor's id or of equality."</span>
         <span class="p">),</span>
     <span class="p">)</span>
 
-    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"time"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_parse_time</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Parse the release time to a naive UTC datetime.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Parse the release time to a naive UTC datetime."""</span>
         <span class="k">return</span> <span class="n">parse_time</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
 
-    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;altitude_ref&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"altitude_ref"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_lower_ref</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Accept the altitude reference in any case.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Accept the altitude reference in any case."""</span>
         <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">value</span>
 
     <span class="c1"># -- identity ----------------------------------------------------------</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">location_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Identifier of this receptor&#39;s location.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Identifier of this receptor's location."""</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Receptor id, the release time followed by the location id.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="si">:</span><span class="s2">%Y%m%d%H%M</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">location_id</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="sd">"""Receptor id, the release time followed by the location id."""</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="si">:</span><span class="s2">%Y%m%d%H%M</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">location_id</span><span class="si">}</span><span class="s2">"</span>
 
 <div class="viewcode-block" id="Receptor.coords">
 <a class="viewcode-back" href="../../../reference/_api/stilt.Receptor.coords.html#stilt.Receptor.coords">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">coords</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return ``(lat, lon, alt)`` of each release point.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return ``(lat, lon, alt)`` of each release point."""</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
 
 
@@ -757,27 +759,27 @@
     <span class="c1"># -- geometry ----------------------------------------------------------</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_build_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Geometry</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the shapely geometry of the release points.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the shapely geometry of the release points."""</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
 <div class="viewcode-block" id="Receptor.geometry">
 <a class="viewcode-back" href="../../../reference/_api/stilt.Receptor.geometry.html#stilt.Receptor.geometry">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Geometry</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Shapely geometry of the release points.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Shapely geometry of the release points."""</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_geometry</span><span class="p">()</span></div>
 
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">points</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Point</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Release points as shapely ``Point(lon, lat, alt)`` objects.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Release points as shapely ``Point(lon, lat, alt)`` objects."""</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">Point</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">alt</span><span class="p">)</span> <span class="k">for</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">alt</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coords</span><span class="p">()]</span>
 
 <div class="viewcode-block" id="Receptor.plot">
 <a class="viewcode-back" href="../../../reference/_api/stilt.Receptor.plot.html#stilt.Receptor.plot">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ReceptorPlotAccessor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plotting methods, such as ``receptor.plot.map()``.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Plotting methods, such as ``receptor.plot.map()``."""</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.visualization</span><span class="w"> </span><span class="kn">import</span> <span class="n">ReceptorPlotAccessor</span>
 
         <span class="k">return</span> <span class="n">ReceptorPlotAccessor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
@@ -788,14 +790,14 @@
 <div class="viewcode-block" id="Receptor.to_dict">
 <a class="viewcode-back" href="../../../reference/_api/stilt.Receptor.to_dict.html#stilt.Receptor.to_dict">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return this receptor as a plain dict that :meth:`from_dict` reads back.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)</span></div>
+<span class="w">        </span><span class="sd">"""Return this receptor as a plain dict that :meth:`from_dict` reads back."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Receptor.to_json">
 <a class="viewcode-back" href="../../../reference/_api/stilt.Receptor.to_json.html#stilt.Receptor.to_json">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return this receptor as JSON, as result files record it; :meth:`from_json` reads it back.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return this receptor as JSON, as result files record it; :meth:`from_json` reads it back."""</span>
         <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span></div>
 
 
@@ -803,7 +805,7 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.Receptor.from_json.html#stilt.Receptor.from_json">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Receptor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a receptor from the JSON :meth:`to_json` wrote.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Build a receptor from the JSON :meth:`to_json` wrote."""</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">text</span><span class="p">))</span></div>
 
 
@@ -811,17 +813,17 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.Receptor.from_dict.html#stilt.Receptor.from_dict">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Receptor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Build a receptor of the right type from a dict made by :meth:`to_dict`.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
 <span class="sd">            If the dict has no ``kind`` key, or names no known kind.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
-        <span class="k">if</span> <span class="s2">&quot;kind&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Receptor dict must contain a &#39;kind&#39; key.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">"kind"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Receptor dict must contain a 'kind' key."</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">_ANY_RECEPTOR</span><span class="o">.</span><span class="n">validate_python</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
 
 
@@ -833,10 +835,10 @@
         <span class="n">time</span><span class="p">:</span> <span class="n">TimeLike</span><span class="p">,</span>
         <span class="n">points</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
         <span class="o">*</span><span class="p">,</span>
-        <span class="n">altitude_ref</span><span class="p">:</span> <span class="n">VerticalReference</span> <span class="o">=</span> <span class="s2">&quot;agl&quot;</span><span class="p">,</span>
+        <span class="n">altitude_ref</span><span class="p">:</span> <span class="n">VerticalReference</span> <span class="o">=</span> <span class="s2">"agl"</span><span class="p">,</span>
         <span class="n">attrs</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Receptor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Build the right receptor type for a list of points.</span>
 
 <span class="sd">        Parameters</span>
@@ -845,7 +847,7 @@
 <span class="sd">            Release time (UTC).</span>
 <span class="sd">        points : iterable of tuple of float</span>
 <span class="sd">            ``(longitude, latitude, altitude)`` of each release point.</span>
-<span class="sd">        altitude_ref : {&quot;agl&quot;, &quot;msl&quot;}, default &quot;agl&quot;</span>
+<span class="sd">        altitude_ref : {"agl", "msl"}, default "agl"</span>
 <span class="sd">            Whether altitudes are above ground level or above mean sea level.</span>
 <span class="sd">        attrs : mapping, optional</span>
 <span class="sd">            Extra labels.</span>
@@ -856,10 +858,10 @@
 <span class="sd">            A :class:`PointReceptor` for one point, a :class:`ColumnReceptor`</span>
 <span class="sd">            for two points at the same longitude and latitude, and a</span>
 <span class="sd">            :class:`MultiPointReceptor` otherwise.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">pts</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">float</span><span class="p">(</span><span class="n">lon</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">alt</span><span class="p">))</span> <span class="k">for</span> <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">alt</span> <span class="ow">in</span> <span class="n">points</span><span class="p">]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">pts</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;At least one point must be provided.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"At least one point must be provided."</span><span class="p">)</span>
         <span class="n">labels</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">attrs</span> <span class="ow">or</span> <span class="p">{})</span>
         <span class="n">time</span> <span class="o">=</span> <span class="n">parse_time</span><span class="p">(</span><span class="n">time</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
@@ -899,28 +901,28 @@
 <div class="viewcode-block" id="PointReceptor">
 <a class="viewcode-back" href="../../../reference/_api/stilt.PointReceptor.html#stilt.PointReceptor">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">PointReceptor</span><span class="p">(</span><span class="n">Receptor</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Receptor that releases particles from one point.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; r = PointReceptor(</span>
-<span class="sd">    ...     time=&quot;2023-07-15 18:00&quot;, longitude=-111.848, latitude=40.766, altitude=10</span>
+<span class="sd">    ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; r.id</span>
-<span class="sd">    &#39;202307151800_-111.848_40.766_10&#39;</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    '202307151800_-111.848_40.766_10'</span>
+<span class="sd">    """</span>
 
-    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;point&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;point&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Receptor type.&quot;</span><span class="p">)</span>
-    <span class="n">longitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Longitude in degrees, from -180 to 180.&quot;</span><span class="p">)</span>
-    <span class="n">latitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Latitude in degrees, from -90 to 90.&quot;</span><span class="p">)</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"point"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">"point"</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Receptor type."</span><span class="p">)</span>
+    <span class="n">longitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Longitude in degrees, from -180 to 180."</span><span class="p">)</span>
+    <span class="n">latitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Latitude in degrees, from -90 to 90."</span><span class="p">)</span>
     <span class="n">altitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Release height in meters, above ground or sea level (``altitude_ref``).&quot;</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Release height in meters, above ground or sea level (``altitude_ref``)."</span>
     <span class="p">)</span>
 
-    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;after&quot;</span><span class="p">)</span>
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PointReceptor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check the coordinates and the height.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Check the coordinates and the height."""</span>
         <span class="n">_raise_first</span><span class="p">(</span>
             <span class="n">point_errors</span><span class="p">(</span>
                 <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="p">],</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">],</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span>
@@ -930,7 +932,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">location_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Location id, ``&quot;&lt;lon&gt;_&lt;lat&gt;_&lt;alt&gt;&quot;``, ending in ``msl`` above sea level.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Location id, ``"&lt;lon&gt;_&lt;lat&gt;_&lt;alt&gt;"``, ending in ``msl`` above sea level."""</span>
         <span class="k">return</span> <span class="n">_point_location</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span>
         <span class="p">)</span>
@@ -938,18 +940,18 @@
 <div class="viewcode-block" id="PointReceptor.coords">
 <a class="viewcode-back" href="../../../reference/_api/stilt.PointReceptor.coords.html#stilt.PointReceptor.coords">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">coords</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return ``(lat, lon, alt)`` of the release point.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return ``(lat, lon, alt)`` of the release point."""</span>
         <span class="k">return</span> <span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitude</span><span class="p">)]</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;PointReceptor(id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">!r}</span><span class="s2">, lon=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">, &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;lat=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">, alt=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="sa">f</span><span class="s2">"PointReceptor(id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">!r}</span><span class="s2">, lon=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"lat=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">, alt=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span><span class="si">}</span><span class="s2">)"</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_build_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Point</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a shapely Point at the release point.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return a shapely Point at the release point."""</span>
         <span class="k">return</span> <span class="n">Point</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitude</span><span class="p">)</span></div>
 
 
@@ -957,21 +959,21 @@
 <div class="viewcode-block" id="ColumnReceptor">
 <a class="viewcode-back" href="../../../reference/_api/stilt.ColumnReceptor.html#stilt.ColumnReceptor">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ColumnReceptor</span><span class="p">(</span><span class="n">Receptor</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Receptor that releases particles evenly along a vertical line.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;column&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;column&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Receptor type.&quot;</span><span class="p">)</span>
-    <span class="n">longitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Longitude in degrees, from -180 to 180.&quot;</span><span class="p">)</span>
-    <span class="n">latitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Latitude in degrees, from -90 to 90.&quot;</span><span class="p">)</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"column"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">"column"</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Receptor type."</span><span class="p">)</span>
+    <span class="n">longitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Longitude in degrees, from -180 to 180."</span><span class="p">)</span>
+    <span class="n">latitude</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Latitude in degrees, from -90 to 90."</span><span class="p">)</span>
     <span class="n">bottom</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Bottom of the column in meters. Must be less than ``top``.&quot;</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Bottom of the column in meters. Must be less than ``top``."</span>
     <span class="p">)</span>
-    <span class="n">top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Top of the column in meters.&quot;</span><span class="p">)</span>
+    <span class="n">top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Top of the column in meters."</span><span class="p">)</span>
 
-    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;after&quot;</span><span class="p">)</span>
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ColumnReceptor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check the coordinates and that the bottom is below the top.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Check the coordinates and that the bottom is below the top."""</span>
         <span class="n">_raise_first</span><span class="p">(</span>
             <span class="p">[</span>
                 <span class="o">*</span><span class="n">point_errors</span><span class="p">(</span>
@@ -984,7 +986,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">location_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Location id, ``&quot;&lt;lon&gt;_&lt;lat&gt;_X&lt;bottom&gt;-&lt;top&gt;&quot;``, ending in ``msl`` above sea level.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Location id, ``"&lt;lon&gt;_&lt;lat&gt;_X&lt;bottom&gt;-&lt;top&gt;"``, ending in ``msl`` above sea level."""</span>
         <span class="k">return</span> <span class="n">_column_location</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bottom</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">top</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span>
         <span class="p">)</span>
@@ -992,7 +994,7 @@
 <div class="viewcode-block" id="ColumnReceptor.coords">
 <a class="viewcode-back" href="../../../reference/_api/stilt.ColumnReceptor.coords.html#stilt.ColumnReceptor.coords">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">coords</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return ``(lat, lon, alt)`` of the bottom and the top of the column.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return ``(lat, lon, alt)`` of the bottom and the top of the column."""</span>
         <span class="k">return</span> <span class="p">[</span>
             <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bottom</span><span class="p">),</span>
             <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">top</span><span class="p">),</span>
@@ -1001,13 +1003,13 @@
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;ColumnReceptor(id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">!r}</span><span class="s2">, lon=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">, &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;lat=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">, bottom=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">bottom</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span><span class="si">}</span><span class="s2">, &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;top=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">top</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="sa">f</span><span class="s2">"ColumnReceptor(id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">!r}</span><span class="s2">, lon=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"lat=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">, bottom=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">bottom</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"top=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">top</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span><span class="si">}</span><span class="s2">)"</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_build_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LineString</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a shapely LineString from the bottom to the top.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return a shapely LineString from the bottom to the top."""</span>
         <span class="k">return</span> <span class="n">LineString</span><span class="p">(</span>
             <span class="p">[</span>
                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bottom</span><span class="p">),</span>
@@ -1020,7 +1022,7 @@
 <div class="viewcode-block" id="MultiPointReceptor">
 <a class="viewcode-back" href="../../../reference/_api/stilt.MultiPointReceptor.html#stilt.MultiPointReceptor">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">MultiPointReceptor</span><span class="p">(</span><span class="n">Receptor</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Receptor that releases particles from several points at once.</span>
 
 <span class="sd">    Use it for a slanted column, such as a satellite sounding sampled at</span>
@@ -1033,31 +1035,31 @@
 <span class="sd">    ValueError</span>
 <span class="sd">        If the arrays differ in length, a coordinate is out of range, or two</span>
 <span class="sd">        points share a horizontal location.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;multipoint&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;multipoint&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Receptor type.&quot;</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"multipoint"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">"multipoint"</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Receptor type."</span>
     <span class="p">)</span>
     <span class="n">longitudes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Longitude of each point in degrees, from -180 to 180.&quot;</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Longitude of each point in degrees, from -180 to 180."</span>
     <span class="p">)</span>
     <span class="n">latitudes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Latitude of each point in degrees, from -90 to 90.&quot;</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Latitude of each point in degrees, from -90 to 90."</span>
     <span class="p">)</span>
-    <span class="n">altitudes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Height of each point in meters.&quot;</span><span class="p">)</span>
+    <span class="n">altitudes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Height of each point in meters."</span><span class="p">)</span>
 
-    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;longitudes&quot;</span><span class="p">,</span> <span class="s2">&quot;latitudes&quot;</span><span class="p">,</span> <span class="s2">&quot;altitudes&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"longitudes"</span><span class="p">,</span> <span class="s2">"latitudes"</span><span class="p">,</span> <span class="s2">"altitudes"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_as_floats</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the values as a tuple of floats.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the values as a tuple of floats."""</span>
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
 
-    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;after&quot;</span><span class="p">)</span>
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MultiPointReceptor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check the points, and that no two share a horizontal location.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Check the points, and that no two share a horizontal location."""</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">longitudes</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latitudes</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">altitudes</span><span class="p">)):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;longitudes, latitudes, and altitudes must have the same length.&quot;</span>
+                <span class="s2">"longitudes, latitudes, and altitudes must have the same length."</span>
             <span class="p">)</span>
         <span class="n">_raise_first</span><span class="p">(</span>
             <span class="p">[</span>
@@ -1073,13 +1075,13 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">location_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Location id, ``&quot;multi_&lt;hash&gt;&quot;``, ending in ``msl`` above sea level.</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Location id, ``"multi_&lt;hash&gt;"``, ending in ``msl`` above sea level.</span>
 
 <span class="sd">        The hash covers the sorted points, with longitudes and latitudes</span>
 <span class="sd">        rounded to 5 decimals and altitudes to 0.01 m. A whole-meter</span>
 <span class="sd">        altitude hashes as its integer.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">_multipoint_location</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">longitudes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">latitudes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitudes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span>
         <span class="p">)</span>
@@ -1087,18 +1089,18 @@
 <div class="viewcode-block" id="MultiPointReceptor.coords">
 <a class="viewcode-back" href="../../../reference/_api/stilt.MultiPointReceptor.coords.html#stilt.MultiPointReceptor.coords">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">coords</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return ``(lat, lon, alt)`` of each release point.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return ``(lat, lon, alt)`` of each release point."""</span>
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latitudes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">longitudes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitudes</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;MultiPointReceptor(id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">!r}</span><span class="s2">, n_points=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coords</span><span class="p">())</span><span class="si">}</span><span class="s2">, &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;altitude_ref=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="sa">f</span><span class="s2">"MultiPointReceptor(id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">!r}</span><span class="s2">, n_points=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coords</span><span class="p">())</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"altitude_ref=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span><span class="si">}</span><span class="s2">)"</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_build_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MultiPoint</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a shapely MultiPoint of the release points.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return a shapely MultiPoint of the release points."""</span>
         <span class="k">return</span> <span class="n">MultiPoint</span><span class="p">(</span>
             <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">longitudes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">latitudes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitudes</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
         <span class="p">)</span></div>
@@ -1107,7 +1109,7 @@
 
 <span class="c1">#: Any receptor, for validating a dict of unknown kind.</span>
 <span class="n">AnyReceptor</span> <span class="o">=</span> <span class="n">Annotated</span><span class="p">[</span>
-    <span class="n">PointReceptor</span> <span class="o">|</span> <span class="n">ColumnReceptor</span> <span class="o">|</span> <span class="n">MultiPointReceptor</span><span class="p">,</span> <span class="n">Field</span><span class="p">(</span><span class="n">discriminator</span><span class="o">=</span><span class="s2">&quot;kind&quot;</span><span class="p">)</span>
+    <span class="n">PointReceptor</span> <span class="o">|</span> <span class="n">ColumnReceptor</span> <span class="o">|</span> <span class="n">MultiPointReceptor</span><span class="p">,</span> <span class="n">Field</span><span class="p">(</span><span class="n">discriminator</span><span class="o">=</span><span class="s2">"kind"</span><span class="p">)</span>
 <span class="p">]</span>
 <span class="n">_ANY_RECEPTOR</span><span class="p">:</span> <span class="n">TypeAdapter</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]</span> <span class="o">=</span> <span class="n">TypeAdapter</span><span class="p">(</span><span class="n">AnyReceptor</span><span class="p">)</span>
 </pre></div>
@@ -1139,8 +1141,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1166,14 +1168,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

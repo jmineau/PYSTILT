@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/project';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -445,7 +447,7 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.project</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">The :class:`Project`: a directory of receptors and settings, and a view of their results.</span>
 
 <span class="sd">A project is a directory holding what the user wrote::</span>
@@ -458,7 +460,7 @@
 <span class="sd">project defines are its receptors crossed with the variants in</span>
 <span class="sd">``config.yaml``. A project reads; the workers in :mod:`stilt.execution` are</span>
 <span class="sd">the only code that writes results.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -502,16 +504,16 @@
 
 
 <span class="c1">#: The columns of :attr:`Project.receptors` before the label columns.</span>
-<span class="n">RECEPTOR_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="s2">&quot;kind&quot;</span><span class="p">,</span> <span class="s2">&quot;location&quot;</span><span class="p">)</span>
+<span class="n">RECEPTOR_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">,</span> <span class="s2">"kind"</span><span class="p">,</span> <span class="s2">"location"</span><span class="p">)</span>
 
 <span class="c1">#: Where a simulation stands, the ``state`` column of :meth:`Project.status`.</span>
-<span class="n">STATES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;complete&quot;</span><span class="p">,</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span> <span class="s2">&quot;interrupted&quot;</span><span class="p">,</span> <span class="s2">&quot;pending&quot;</span><span class="p">)</span>
+<span class="n">STATES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"complete"</span><span class="p">,</span> <span class="s2">"failed"</span><span class="p">,</span> <span class="s2">"interrupted"</span><span class="p">,</span> <span class="s2">"pending"</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_as_receptors</span><span class="p">(</span>
     <span class="n">receptors</span><span class="p">:</span> <span class="n">Receptor</span> <span class="o">|</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return receptors given as one, several, or the path of a receptors CSV.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return receptors given as one, several, or the path of a receptors CSV."""</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">)):</span>
         <span class="k">return</span> <span class="n">read_receptors</span><span class="p">(</span><span class="n">absolute</span><span class="p">(</span><span class="n">receptors</span><span class="p">))</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">Receptor</span><span class="p">):</span>
@@ -519,8 +521,8 @@
     <span class="n">items</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">Receptor</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="s2">&quot;Receptors must be a Receptor, an iterable of Receptors, or the path &quot;</span>
-            <span class="s2">&quot;of a receptors CSV.&quot;</span>
+            <span class="s2">"Receptors must be a Receptor, an iterable of Receptors, or the path "</span>
+            <span class="s2">"of a receptors CSV."</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">items</span>
 
@@ -532,24 +534,24 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_realization</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a ``realization`` cell as an int, or ``None`` for a single run.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return a ``realization`` cell as an int, or ``None`` for a single run."""</span>
     <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_rows</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return each row&#39;s ``(receptor, variant, realization)``.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return each row's ``(receptor, variant, realization)``."""</span>
     <span class="k">return</span> <span class="p">[</span>
         <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">),</span> <span class="n">_realization</span><span class="p">(</span><span class="n">k</span><span class="p">))</span>
         <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
-            <span class="n">frame</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">],</span> <span class="n">frame</span><span class="p">[</span><span class="s2">&quot;variant&quot;</span><span class="p">],</span> <span class="n">frame</span><span class="p">[</span><span class="s2">&quot;realization&quot;</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span>
+            <span class="n">frame</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">],</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"variant"</span><span class="p">],</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"realization"</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span>
         <span class="p">)</span>
     <span class="p">]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_groups</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Yield the rows of each variant and realization in *frame*.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Yield the rows of each variant and realization in *frame*."""</span>
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">rows</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span>
-        <span class="p">[</span><span class="s2">&quot;variant&quot;</span><span class="p">,</span> <span class="s2">&quot;realization&quot;</span><span class="p">],</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dropna</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">[</span><span class="s2">"variant"</span><span class="p">,</span> <span class="s2">"realization"</span><span class="p">],</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dropna</span><span class="o">=</span><span class="kc">False</span>
     <span class="p">):</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span>  <span class="c1"># grouped by two columns</span>
         <span class="n">name</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">key</span>
@@ -557,37 +559,37 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">what</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the one ``(variant, realization)`` of a selection, or raise.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the one ``(variant, realization)`` of a selection, or raise."""</span>
     <span class="n">groups</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">((</span><span class="n">v</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_rows</span><span class="p">(</span><span class="n">frame</span><span class="p">)))</span>
     <span class="n">variants</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">))</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">variants</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
         <span class="n">realizations</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">]</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> is made from one realization of an ensemble; this &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;selection holds realizations </span><span class="si">{</span><span class="n">realizations</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">variants</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">. &quot;</span>
-            <span class="s2">&quot;Pick one with the realization column, as in &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;ens[ens.realization == </span><span class="si">{</span><span class="n">realizations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">].&quot;</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> is made from one realization of an ensemble; this "</span>
+            <span class="sa">f</span><span class="s2">"selection holds realizations </span><span class="si">{</span><span class="n">realizations</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">variants</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">. "</span>
+            <span class="s2">"Pick one with the realization column, as in "</span>
+            <span class="sa">f</span><span class="s2">"ens[ens.realization == </span><span class="si">{</span><span class="n">realizations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">]."</span>
         <span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> is made from one variant (and one realization of an &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;ensemble); this selection has </span><span class="si">{</span><span class="n">groups</span><span class="si">}</span><span class="s2">. Select one first, as in &quot;</span>
-            <span class="s2">&quot;sims[sims.variant == &#39;hrrr&#39;].&quot;</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> is made from one variant (and one realization of an "</span>
+            <span class="sa">f</span><span class="s2">"ensemble); this selection has </span><span class="si">{</span><span class="n">groups</span><span class="si">}</span><span class="s2">. Select one first, as in "</span>
+            <span class="s2">"sims[sims.variant == 'hrrr']."</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">groups</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_is_mask</span><span class="p">(</span><span class="n">sel</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return whether *sel* is a boolean mask (a Series, an array, or a list of booleans).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return whether *sel* is a boolean mask (a Series, an array, or a list of booleans)."""</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sel</span><span class="p">,</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)):</span>
-        <span class="k">return</span> <span class="n">sel</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="nb">bool</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">sel</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;boolean&quot;</span>
+        <span class="k">return</span> <span class="n">sel</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="nb">bool</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">sel</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"boolean"</span>
     <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sel</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sel</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_column</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return one column of a pandas, polars, or pyarrow table as a list of strings.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return one column of a pandas, polars, or pyarrow table as a list of strings."""</span>
     <span class="n">column</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
-    <span class="k">for</span> <span class="n">convert</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;to_pylist&quot;</span><span class="p">,</span> <span class="s2">&quot;to_list&quot;</span><span class="p">,</span> <span class="s2">&quot;tolist&quot;</span><span class="p">):</span>  <span class="c1"># pyarrow, polars, pandas</span>
+    <span class="k">for</span> <span class="n">convert</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"to_pylist"</span><span class="p">,</span> <span class="s2">"to_list"</span><span class="p">,</span> <span class="s2">"tolist"</span><span class="p">):</span>  <span class="c1"># pyarrow, polars, pandas</span>
         <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">convert</span><span class="p">):</span>
             <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">convert</span><span class="p">)()]</span>
     <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">column</span><span class="p">]</span>
@@ -596,7 +598,7 @@
 <div class="viewcode-block" id="Project">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.html#stilt.Project">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Project</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    A STILT project: receptors, settings, and the simulations they define.</span>
 
 <span class="sd">    ``Project(path)`` opens a project directory and reads it. It is every</span>
@@ -616,7 +618,7 @@
 <span class="sd">        Read and write results here instead of the output directory</span>
 <span class="sd">        ``config.yaml`` names: a path, or a URL such as</span>
 <span class="sd">        ``s3://bucket/output``. For a container whose output is somewhere</span>
-<span class="sd">        else than the project&#39;s.</span>
+<span class="sd">        else than the project's.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
@@ -629,37 +631,37 @@
 
 <span class="sd">    &gt;&gt;&gt; import stilt  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; receptor = stilt.PointReceptor(  # doctest: +SKIP</span>
-<span class="sd">    ...     time=&quot;2023-07-15 18:00&quot;, longitude=-111.848, latitude=40.766, altitude=10</span>
+<span class="sd">    ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; met = {</span>
-<span class="sd">    ...     &quot;directory&quot;: &quot;/data/hrrr&quot;,</span>
-<span class="sd">    ...     &quot;file_format&quot;: &quot;%Y%m%d_%H&quot;,</span>
-<span class="sd">    ...     &quot;file_tres&quot;: &quot;6h&quot;,</span>
+<span class="sd">    ...     "directory": "/data/hrrr",</span>
+<span class="sd">    ...     "file_format": "%Y%m%d_%H",</span>
+<span class="sd">    ...     "file_tres": "6h",</span>
 <span class="sd">    ... }  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; project = stilt.Project.init(  # doctest: +SKIP</span>
-<span class="sd">    ...     &quot;./my_project&quot;,</span>
+<span class="sd">    ...     "./my_project",</span>
 <span class="sd">    ...     receptors=[receptor],</span>
-<span class="sd">    ...     mets={&quot;hrrr&quot;: met},</span>
-<span class="sd">    ...     variants={&quot;hrrr&quot;: {}},</span>
+<span class="sd">    ...     mets={"hrrr": met},</span>
+<span class="sd">    ...     variants={"hrrr": {}},</span>
 <span class="sd">    ...     n_hours=-24,</span>
 <span class="sd">    ...     grid={</span>
-<span class="sd">    ...         &quot;xmin&quot;: -113,</span>
-<span class="sd">    ...         &quot;xmax&quot;: -110.5,</span>
-<span class="sd">    ...         &quot;ymin&quot;: 40,</span>
-<span class="sd">    ...         &quot;ymax&quot;: 42,</span>
-<span class="sd">    ...         &quot;xres&quot;: 0.01,</span>
-<span class="sd">    ...         &quot;yres&quot;: 0.01,</span>
+<span class="sd">    ...         "xmin": -113,</span>
+<span class="sd">    ...         "xmax": -110.5,</span>
+<span class="sd">    ...         "ymin": 40,</span>
+<span class="sd">    ...         "ymax": 42,</span>
+<span class="sd">    ...         "xres": 0.01,</span>
+<span class="sd">    ...         "yres": 0.01,</span>
 <span class="sd">    ...     },</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; project.run()  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; foot = project.simulation(receptor.id, &quot;hrrr&quot;).footprint  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; foot = project.simulation(receptor.id, "hrrr").footprint  # doctest: +SKIP</span>
 
 <span class="sd">    Open it again later and check a selection of simulations:</span>
 
-<span class="sd">    &gt;&gt;&gt; project = stilt.Project(&quot;./my_project&quot;)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; project = stilt.Project("./my_project")  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; sims = project.simulations  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; project.status(sims[sims.variant == &quot;hrrr&quot;])  # doctest: +SKIP</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    &gt;&gt;&gt; project.status(sims[sims.variant == "hrrr"])  # doctest: +SKIP</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">=</span> <span class="n">absolute</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
@@ -679,7 +681,7 @@
         <span class="n">starter</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="o">**</span><span class="n">settings</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Project</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Make a new project and return it.</span>
 
 <span class="sd">        Writes ``config.yaml``, with only the settings given, and</span>
@@ -712,26 +714,26 @@
 <span class="sd">            If both *config* and keyword settings are given, or either is</span>
 <span class="sd">            given with ``starter=True``.</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If a variant&#39;s settings are invalid. Nothing is written.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">            If a variant's settings are invalid. Nothing is written.</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">settings</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Give a ProjectConfig or keyword settings, not both.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"Give a ProjectConfig or keyword settings, not both."</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">starter</span> <span class="ow">and</span> <span class="p">(</span><span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">settings</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="s2">&quot;A starter config takes no settings; edit its config.yaml instead.&quot;</span>
+                <span class="s2">"A starter config takes no settings; edit its config.yaml instead."</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">starter</span><span class="p">:</span>
             <span class="n">config</span> <span class="o">=</span> <span class="n">ProjectConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">STARTER_CONFIG</span><span class="p">))</span>
         <span class="k">elif</span> <span class="n">config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">config</span> <span class="o">=</span> <span class="n">ProjectConfig</span><span class="p">(</span><span class="o">**</span><span class="n">settings</span><span class="p">)</span>
         <span class="n">project</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-        <span class="c1"># The config checks a variant&#39;s transport settings only when it is</span>
+        <span class="c1"># The config checks a variant's transport settings only when it is</span>
         <span class="c1"># resolved; do it now, so a bad config is never written.</span>
         <span class="n">config</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">project</span><span class="o">.</span><span class="n">config_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2"> already has a config.yaml. Open it with &quot;</span>
-                <span class="s2">&quot;Project(path), and edit config.yaml to change its settings.&quot;</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2"> already has a config.yaml. Open it with "</span>
+                <span class="s2">"Project(path), and edit config.yaml to change its settings."</span>
             <span class="p">)</span>
         <span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">starter</span><span class="p">:</span>
@@ -742,46 +744,46 @@
             <span class="n">project</span><span class="o">.</span><span class="n">add_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">starter</span><span class="p">:</span>
             <span class="c1"># Header only: every other line of a receptors file is a receptor.</span>
-            <span class="n">project</span><span class="o">.</span><span class="n">receptors_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">&quot;time,longitude,latitude,altitude</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">project</span><span class="o">.</span><span class="n">receptors_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">"time,longitude,latitude,altitude</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">project</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Project(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"Project(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span><span class="si">!r}</span><span class="s2">)"</span>
 
     <span class="c1"># -- inputs ----------------------------------------------------------------</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The project&#39;s name, which is the name of its directory.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""The project's name, which is the name of its directory."""</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="o">.</span><span class="n">name</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">config_path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The project&#39;s ``config.yaml``.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">&quot;config.yaml&quot;</span>
+<span class="w">        </span><span class="sd">"""The project's ``config.yaml``."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">"config.yaml"</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">receptors_path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The project&#39;s ``receptors.csv``.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">&quot;receptors.csv&quot;</span>
+<span class="w">        </span><span class="sd">"""The project's ``receptors.csv``."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">"receptors.csv"</span>
 
 <div class="viewcode-block" id="Project.config">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.config.html#stilt.Project.config">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectConfig</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        The settings, read from ``config.yaml``.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        FileNotFoundError</span>
 <span class="sd">            If the project has no ``config.yaml``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;No config.yaml in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2">. Make a project with &quot;</span>
-                <span class="s2">&quot;stilt.Project.init(...) or `stilt init`.&quot;</span>
+                <span class="sa">f</span><span class="s2">"No config.yaml in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2">. Make a project with "</span>
+                <span class="s2">"stilt.Project.init(...) or `stilt init`."</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">ProjectConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="p">)</span></div>
 
@@ -790,12 +792,12 @@
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.output.html#stilt.Project.output">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Output</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        The output directory.</span>
 
 <span class="sd">        The ``output`` the project was opened with, or else ``config.output``</span>
 <span class="sd">        (``./output`` by default), relative to the project.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">Output</span><span class="p">(</span><span class="n">location</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_output</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">Output</span><span class="p">(</span><span class="n">location</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">))</span></div>
@@ -805,75 +807,75 @@
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.variants.html#stilt.Project.variants">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">variants</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Variant</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Each variant, resolved, by name, in config order.</span>
 
 <span class="sd">        An ensemble (``realizations: N``) is one variant; its realizations</span>
 <span class="sd">        are the ``realization`` column of :attr:`simulations`. A footprint given by a geometry gets its grid</span>
 <span class="sd">        here, so the geometry is read on first use (:meth:`stilt.ProjectConfig.resolve`),</span>
 <span class="sd">        and a relative geometry file starts from the project directory.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span></div>
 
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        The rows of ``receptors.csv``, checked, with each row&#39;s receptor id.</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        The rows of ``receptors.csv``, checked, with each row's receptor id.</span>
 
 <span class="sd">        No receptor is built here; :meth:`receptor` builds one when asked.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_taken_rows</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_taken_rows</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">receptors_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-            <span class="n">empty</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span><span class="p">,</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;altitude&quot;</span><span class="p">])</span>
+            <span class="n">empty</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"longitude"</span><span class="p">,</span> <span class="s2">"latitude"</span><span class="p">,</span> <span class="s2">"altitude"</span><span class="p">])</span>
             <span class="k">return</span> <span class="n">receptor_rows</span><span class="p">(</span><span class="n">empty</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">receptor_rows</span><span class="p">(</span><span class="n">read_receptor_frame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">receptors_path</span><span class="p">))</span>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_positions</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Where each receptor&#39;s rows are in :attr:`_rows`, by id, so :meth:`receptor` need not search.&quot;&quot;&quot;</span>
-        <span class="n">groups</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">indices</span>
+<span class="w">        </span><span class="sd">"""Where each receptor's rows are in :attr:`_rows`, by id, so :meth:`receptor` need not search."""</span>
+        <span class="n">groups</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">indices</span>
         <span class="k">return</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">rid</span><span class="p">):</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span> <span class="k">for</span> <span class="n">rid</span><span class="p">,</span> <span class="n">positions</span> <span class="ow">in</span> <span class="n">groups</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
 
 <div class="viewcode-block" id="Project.receptors">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.receptors.html#stilt.Project.receptors">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">receptors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        The receptors, one row per receptor, in file order.</span>
 
 <span class="sd">        The columns are ``receptor`` (the id), ``time``, ``kind``</span>
 <span class="sd">        (``point``, ``column``, or ``multipoint``), ``location`` (the</span>
 <span class="sd">        location id), and one column per label from ``receptors.csv``.</span>
 <span class="sd">        :meth:`receptor` gives the receptor itself.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span>
         <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">COLUMNS</span> <span class="ow">and</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROW_COLUMNS</span><span class="p">]</span>
-        <span class="n">first</span> <span class="o">=</span> <span class="n">rows</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="n">rows</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="o">*</span><span class="n">RECEPTOR_COLUMNS</span><span class="p">,</span> <span class="o">*</span><span class="n">labels</span><span class="p">]]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="s2">&quot;datetime64[ns]&quot;</span><span class="p">})</span></div>
+        <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s2">"time"</span><span class="p">:</span> <span class="s2">"datetime64[ns]"</span><span class="p">})</span></div>
 
 
 <div class="viewcode-block" id="Project.receptor">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.receptor.html#stilt.Project.receptor">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">receptor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Receptor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return one receptor by id, built from its rows.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        KeyError</span>
 <span class="sd">            If the project has no receptor with that id.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_receptors</span><span class="p">([</span><span class="n">receptor_id</span><span class="p">])[</span><span class="n">receptor_id</span><span class="p">]</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_receptors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Receptor</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return receptors by id, built together from their rows.</span>
 
-<span class="sd">        Selecting a receptor&#39;s rows from a large table is most of the cost</span>
+<span class="sd">        Selecting a receptor's rows from a large table is most of the cost</span>
 <span class="sd">        of building it, so a selection builds all of its receptors in one</span>
 <span class="sd">        pass: on a project of millions of rows that is about 0.05 ms a</span>
 <span class="sd">        receptor, against several ms one at a time.</span>
@@ -882,7 +884,7 @@
 <span class="sd">        ------</span>
 <span class="sd">        KeyError</span>
 <span class="sd">            If the project has no receptor with one of the ids.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">))</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">ids</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">{}</span>
@@ -890,32 +892,32 @@
         <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">ids</span><span class="p">,</span> <span class="n">receptors_from_rows</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rows_of</span><span class="p">(</span><span class="n">ids</span><span class="p">)),</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_rows_of</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the checked rows of *receptor_ids*, in that order.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        KeyError</span>
 <span class="sd">            If the project has no receptor with one of the ids.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">for</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">receptor_ids</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">rid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_positions</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No receptor </span><span class="si">{</span><span class="n">rid</span><span class="si">!r}</span><span class="s2"> in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No receptor </span><span class="si">{</span><span class="n">rid</span><span class="si">!r}</span><span class="s2"> in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span>
             <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_positions</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptor_ids</span><span class="p">])</span>
         <span class="p">]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_take_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rows</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Use *rows*, checked receptor rows (:func:`~stilt.receptors.table.receptor_rows`), in place of ``receptors.csv``.</span>
 
-<span class="sd">        A Slurm task reads the rows of its submission&#39;s receptors</span>
+<span class="sd">        A Slurm task reads the rows of its submission's receptors</span>
 <span class="sd">        (``receptors.parquet``, written by :func:`stilt.execution.submit`)</span>
 <span class="sd">        rather than reading and checking the whole file again. The project</span>
 <span class="sd">        then knows only those receptors.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_taken_rows</span> <span class="o">=</span> <span class="n">rows</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;_rows&quot;</span><span class="p">,</span> <span class="s2">&quot;_positions&quot;</span><span class="p">,</span> <span class="s2">&quot;receptors&quot;</span><span class="p">,</span> <span class="s2">&quot;_simulations&quot;</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"_rows"</span><span class="p">,</span> <span class="s2">"_positions"</span><span class="p">,</span> <span class="s2">"receptors"</span><span class="p">,</span> <span class="s2">"_simulations"</span><span class="p">):</span>
             <span class="nb">vars</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Project.add_receptors">
@@ -923,7 +925,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">add_receptors</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">Receptor</span> <span class="o">|</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Add receptors to ``receptors.csv`` and return the ids of the new ones.</span>
 
 <span class="sd">        The file is created if needed, and otherwise only appended to, in its</span>
@@ -939,8 +941,8 @@
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
 <span class="sd">            If a new receptor has the id of a different receptor, since an</span>
-<span class="sd">            id names a receptor&#39;s result files.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">            id names a receptor's result files.</span>
+<span class="sd">        """</span>
         <span class="n">batch</span> <span class="o">=</span> <span class="n">_as_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
         <span class="n">known</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">receptor</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">batch</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_positions</span><span class="p">]</span>
         <span class="n">check_distinct_ids</span><span class="p">([</span><span class="o">*</span><span class="n">known</span><span class="p">,</span> <span class="o">*</span><span class="n">batch</span><span class="p">])</span>
@@ -953,7 +955,7 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">receptors_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">receptors_to_csv</span><span class="p">(</span><span class="n">new</span><span class="p">))</span>
             <span class="c1"># These were read from the file that just changed.</span>
-            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;_rows&quot;</span><span class="p">,</span> <span class="s2">&quot;_positions&quot;</span><span class="p">,</span> <span class="s2">&quot;receptors&quot;</span><span class="p">,</span> <span class="s2">&quot;_simulations&quot;</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"_rows"</span><span class="p">,</span> <span class="s2">"_positions"</span><span class="p">,</span> <span class="s2">"receptors"</span><span class="p">,</span> <span class="s2">"_simulations"</span><span class="p">):</span>
                 <span class="nb">vars</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">new</span><span class="p">]</span></div>
 
@@ -961,19 +963,19 @@
 <div class="viewcode-block" id="Project.table_path">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.table_path.html#stilt.Project.table_path">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">table_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return where the project&#39;s table *name* is kept: ``tables/&lt;name&gt;.parquet``.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[A-Za-z0-9_-]+&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return where the project's table *name* is kept: ``tables/&lt;name&gt;.parquet``."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[A-Za-z0-9_-]+"</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;A table name is letters, digits, &#39;_&#39;, and &#39;-&#39;; got </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">.&quot;</span>
+                <span class="sa">f</span><span class="s2">"A table name is letters, digits, '_', and '-'; got </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">."</span>
             <span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">&quot;tables&quot;</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.parquet&quot;</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">"tables"</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.parquet"</span></div>
 
 
 <div class="viewcode-block" id="Project.add_table">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.add_table.html#stilt.Project.add_table">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">add_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Add rows to one of the project&#39;s input tables, and return its path.</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Add rows to one of the project's input tables, and return its path.</span>
 
 <span class="sd">        A table is an input, like ``receptors.csv``: the averaging kernels of</span>
 <span class="sd">        satellite soundings, for one, which a transform names as ``table:</span>
@@ -985,7 +987,7 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        name : str</span>
-<span class="sd">            The table&#39;s name: letters, digits, ``_``, and ``-``.</span>
+<span class="sd">            The table's name: letters, digits, ``_``, and ``-``.</span>
 <span class="sd">        table : pandas.DataFrame</span>
 <span class="sd">            Rows to add, in the columns of the table.</span>
 
@@ -997,22 +999,22 @@
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; receptors, kernels = receptors_from_soundings(</span>
-<span class="sd">        ...     df, &quot;slant&quot;, top=3000</span>
+<span class="sd">        ...     df, "slant", top=3000</span>
 <span class="sd">        ... )  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; project.add_receptors(receptors)  # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; project.add_table(&quot;kernels&quot;, kernels)  # doctest: +SKIP</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        &gt;&gt;&gt; project.add_table("kernels", kernels)  # doctest: +SKIP</span>
+<span class="sd">        """</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">table_path</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
         <span class="n">rows</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="n">held</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">list</span><span class="p">(</span><span class="n">held</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">list</span><span class="p">(</span><span class="n">rows</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Table </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> has the columns </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">held</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">, &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;not </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">rows</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+                    <span class="sa">f</span><span class="s2">"Table </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> has the columns </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">held</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">, "</span>
+                    <span class="sa">f</span><span class="s2">"not </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">rows</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
                 <span class="p">)</span>
-            <span class="k">if</span> <span class="s2">&quot;receptor&quot;</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-                <span class="n">rows</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="o">~</span><span class="n">rows</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">held</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">])]</span>
+            <span class="k">if</span> <span class="s2">"receptor"</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">rows</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="o">~</span><span class="n">rows</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">held</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">])]</span>
             <span class="n">rows</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">held</span><span class="p">,</span> <span class="n">rows</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">write_parquet</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">preserve_index</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">path</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">path</span></div>
@@ -1022,22 +1024,22 @@
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_simulations</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The table :attr:`simulations` copies, built once.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""The table :attr:`simulations` copies, built once."""</span>
         <span class="n">variants</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
             <span class="p">[</span>
                 <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
                 <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">realization_numbers</span>
             <span class="p">],</span>
-            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;variant&quot;</span><span class="p">,</span> <span class="s2">&quot;realization&quot;</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">],</span>
-        <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s2">&quot;realization&quot;</span><span class="p">:</span> <span class="s2">&quot;Int64&quot;</span><span class="p">})</span>
-        <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">receptors</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">variants</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;cross&quot;</span><span class="p">)</span>
-        <span class="n">first</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;variant&quot;</span><span class="p">,</span> <span class="s2">&quot;realization&quot;</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">]</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"variant"</span><span class="p">,</span> <span class="s2">"realization"</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">],</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s2">"realization"</span><span class="p">:</span> <span class="s2">"Int64"</span><span class="p">})</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">receptors</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">variants</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">"cross"</span><span class="p">)</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">,</span> <span class="s2">"realization"</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">first</span> <span class="o">+</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">first</span><span class="p">]]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">simulations</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Every receptor under every variant, one row per simulation.</span>
 
 <span class="sd">        A pandas DataFrame with the columns ``receptor``, ``variant``,</span>
@@ -1053,11 +1055,11 @@
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; sims = project.simulations  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; july = sims[</span>
-<span class="sd">        ...     (sims.variant == &quot;hrrr&quot;) &amp; (sims.site == &quot;WBB&quot;)</span>
+<span class="sd">        ...     (sims.variant == "hrrr") &amp; (sims.site == "WBB")</span>
 <span class="sd">        ... ]  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; project.status(july)  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; project.footprints(july)  # doctest: +SKIP</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_simulations</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
 <div class="viewcode-block" id="Project.simulation">
@@ -1065,7 +1067,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">simulation</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Simulation</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return one simulation: a receptor under a variant, and a realization of an ensemble.</span>
 
 <span class="sd">        A simulation is a value built from its receptor, its variant, and the</span>
@@ -1079,10 +1081,10 @@
 <span class="sd">        ValueError</span>
 <span class="sd">            If *realization* is not one the variant runs as: ``0`` to</span>
 <span class="sd">            ``N - 1`` for ``realizations: N``, ``None`` otherwise.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">variant</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;No variant </span><span class="si">{</span><span class="n">variant</span><span class="si">!r}</span><span class="s2">; the variants are </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="sa">f</span><span class="s2">"No variant </span><span class="si">{</span><span class="n">variant</span><span class="si">!r}</span><span class="s2">; the variants are </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">Simulation</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">receptor</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">),</span>
@@ -1096,7 +1098,7 @@
 <div class="viewcode-block" id="Project.folders">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.folders.html#stilt.Project.folders">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">folders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return every settings folder in the output directory, and which variants use it.</span>
 
 <span class="sd">        A settings folder holds the results of one set of settings, named</span>
@@ -1113,15 +1115,15 @@
 <span class="sd">            ``settings=`` value), ``name`` (the variant that made it),</span>
 <span class="sd">            ``files`` (the result files it holds), ``variant`` (the variants</span>
 <span class="sd">            here that use it, empty when none does), and ``differs`` (how an</span>
-<span class="sd">            unused folder&#39;s settings differ from the variant of its name).</span>
+<span class="sd">            unused folder's settings differ from the variant of its name).</span>
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; folders = project.folders()  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; folders[</span>
-<span class="sd">        ...     folders.variant == &quot;&quot;</span>
+<span class="sd">        ...     folders.variant == ""</span>
 <span class="sd">        ... ]  # results no variant here uses  # doctest: +SKIP</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">folders</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">)</span></div>
 
 
@@ -1129,16 +1131,16 @@
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.plot.html#stilt.Project.plot">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectPlotAccessor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plotting methods, such as ``project.plot.availability()``.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Plotting methods, such as ``project.plot.availability()``."""</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.visualization</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProjectPlotAccessor</span>
 
         <span class="k">return</span> <span class="n">ProjectPlotAccessor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
 
 
-    <span class="c1"># -- the simulations&#39; results ----------------------------------------------</span>
+    <span class="c1"># -- the simulations' results ----------------------------------------------</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_selected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sel</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the rows of :attr:`simulations` that *sel* selects.</span>
 
 <span class="sd">        *sel* is ``None`` (every simulation), a pandas table with</span>
@@ -1153,7 +1155,7 @@
 <span class="sd">            If the table lacks the ``receptor`` or ``variant`` column.</span>
 <span class="sd">        KeyError</span>
 <span class="sd">            If it names a variant the project does not have.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">sel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulations</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sel</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
@@ -1163,63 +1165,63 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">frame</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-                    <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">_column</span><span class="p">(</span><span class="n">sel</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;variant&quot;</span><span class="p">)}</span>
+                    <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">_column</span><span class="p">(</span><span class="n">sel</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">)}</span>
                 <span class="p">)</span>
             <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span>
                 <span class="n">frame</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
-        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;variant&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;A selection of simulations is a table with &#39;receptor&#39; and &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;&#39;variant&#39; columns, or a mask over project.simulations; this &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;one has no </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="s2">"A selection of simulations is a table with 'receptor' and "</span>
+                <span class="sa">f</span><span class="s2">"'variant' columns, or a mask over project.simulations; this "</span>
+                <span class="sa">f</span><span class="s2">"one has no </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
-        <span class="n">unknown</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">&quot;variant&quot;</span><span class="p">])</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">))</span>
+        <span class="n">unknown</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"variant"</span><span class="p">])</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;No variant </span><span class="si">{</span><span class="n">unknown</span><span class="si">}</span><span class="s2">; the variants are </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="sa">f</span><span class="s2">"No variant </span><span class="si">{</span><span class="n">unknown</span><span class="si">}</span><span class="s2">; the variants are </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
-        <span class="k">if</span> <span class="s2">&quot;realization&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"realization"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
             <span class="c1"># Every realization of an ensemble, and the rest of each row.</span>
             <span class="n">sims</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulations</span>
             <span class="n">keep</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">sims</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
             <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span>
-                <span class="n">sims</span><span class="p">[[</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;variant&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">keep</span><span class="p">]],</span>
-                <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;variant&quot;</span><span class="p">],</span>
-                <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span>
+                <span class="n">sims</span><span class="p">[[</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">,</span> <span class="o">*</span><span class="n">keep</span><span class="p">]],</span>
+                <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">],</span>
+                <span class="n">how</span><span class="o">=</span><span class="s2">"left"</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">frame</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_present</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="n">_Key</span><span class="p">,</span> <span class="n">_Present</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return, per variant and realization, the selected receptors with particles and with a footprint.</span>
 
 <span class="sd">        Read from a listing of the date folders the selection falls in</span>
 <span class="sd">        (:meth:`stilt.output.Output.present`), in place of a file check per</span>
 <span class="sd">        simulation: on a large project the checks are the slow part. The</span>
 <span class="sd">        footprint set is ``None`` for a variant that makes no footprint.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">present</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">_Key</span><span class="p">,</span> <span class="n">_Present</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">rows</span> <span class="ow">in</span> <span class="n">_groups</span><span class="p">(</span><span class="n">frame</span><span class="p">):</span>
             <span class="n">variant</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
-            <span class="n">among</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">])</span>
-            <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">among</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="n">among</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">])</span>
+            <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">among</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
             <span class="n">footprints</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">if</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">footprints</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">among</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+                <span class="n">footprints</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"footprints"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">among</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
             <span class="n">present</span><span class="p">[(</span><span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">)]</span> <span class="o">=</span> <span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">footprints</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">present</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_complete</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">present</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">_Key</span><span class="p">,</span> <span class="n">_Present</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return whether each row is complete (:func:`stilt.output.completed`), from :meth:`_present`.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return whether each row is complete (:func:`stilt.output.completed`), from :meth:`_present`."""</span>
         <span class="n">done</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">completed</span><span class="p">(</span><span class="o">*</span><span class="n">sets</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">sets</span> <span class="ow">in</span> <span class="n">present</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">r</span> <span class="ow">in</span> <span class="n">done</span><span class="p">[(</span><span class="n">v</span><span class="p">,</span> <span class="n">k</span><span class="p">)]</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_rows</span><span class="p">(</span><span class="n">frame</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Project.status">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.status.html#stilt.Project.status">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sel</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the selected simulations with what each has, and where it stands.</span>
 
 <span class="sd">        Whether a result exists comes from a listing of the date folders, so</span>
@@ -1258,10 +1260,10 @@
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; st = project.status()  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; st.state.value_counts()  # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; st[st.state == &quot;failed&quot;][</span>
-<span class="sd">        ...     [&quot;receptor&quot;, &quot;variant&quot;, &quot;reason&quot;]</span>
+<span class="sd">        &gt;&gt;&gt; st[st.state == "failed"][</span>
+<span class="sd">        ...     ["receptor", "variant", "reason"]</span>
 <span class="sd">        ... ]  # doctest: +SKIP</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
         <span class="n">present</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_present</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
         <span class="n">rows</span> <span class="o">=</span> <span class="n">_rows</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
@@ -1275,22 +1277,22 @@
         <span class="n">records</span> <span class="o">=</span> <span class="p">[</span><span class="n">found</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="p">{})</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
         <span class="n">started</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_started</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">present</span><span class="p">,</span> <span class="n">found</span><span class="p">)</span>
         <span class="n">state</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="s2">&quot;complete&quot;</span>
+            <span class="s2">"complete"</span>
             <span class="k">if</span> <span class="n">done</span>
-            <span class="k">else</span> <span class="s2">&quot;failed&quot;</span>
+            <span class="k">else</span> <span class="s2">"failed"</span>
             <span class="k">if</span> <span class="n">record</span>
-            <span class="k">else</span> <span class="s2">&quot;interrupted&quot;</span>
+            <span class="k">else</span> <span class="s2">"interrupted"</span>
             <span class="k">if</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">started</span>
-            <span class="k">else</span> <span class="s2">&quot;pending&quot;</span>
+            <span class="k">else</span> <span class="s2">"pending"</span>
             <span class="k">for</span> <span class="n">done</span><span class="p">,</span> <span class="n">record</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">complete</span><span class="p">,</span> <span class="n">records</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="p">]</span>
         <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span>
-            <span class="n">particles</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;boolean&quot;</span><span class="p">),</span>
-            <span class="n">footprint</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">feet</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;boolean&quot;</span><span class="p">),</span>
+            <span class="n">particles</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"boolean"</span><span class="p">),</span>
+            <span class="n">footprint</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">feet</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"boolean"</span><span class="p">),</span>
             <span class="n">state</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Categorical</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">categories</span><span class="o">=</span><span class="n">STATES</span><span class="p">),</span>
             <span class="o">**</span><span class="p">{</span>
-                <span class="n">column</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">column</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">records</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;string&quot;</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;step&quot;</span><span class="p">,</span> <span class="s2">&quot;reason&quot;</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">)</span>
+                <span class="n">column</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">column</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">records</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"string"</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"step"</span><span class="p">,</span> <span class="s2">"reason"</span><span class="p">,</span> <span class="s2">"message"</span><span class="p">)</span>
             <span class="p">},</span>
         <span class="p">)</span></div>
 
@@ -1298,24 +1300,24 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_failure_records</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">present</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">_Key</span><span class="p">,</span> <span class="n">_Present</span><span class="p">]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the failure record of each selected simulation missing a result, by ``(receptor, variant, realization)``.</span>
 
-<span class="sd">        A simulation without particles is explained by its particles&#39;</span>
-<span class="sd">        record, one with particles but no footprint by its footprint&#39;s</span>
-<span class="sd">        (:attr:`stilt.Simulation.failure`). Only those receptors&#39; date</span>
+<span class="sd">        A simulation without particles is explained by its particles'</span>
+<span class="sd">        record, one with particles but no footprint by its footprint's</span>
+<span class="sd">        (:attr:`stilt.Simulation.failure`). Only those receptors' date</span>
 <span class="sd">        folders are listed, and only the records found are read.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">found</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">rows</span> <span class="ow">in</span> <span class="n">_groups</span><span class="p">(</span><span class="n">frame</span><span class="p">):</span>
             <span class="n">variant</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
             <span class="n">particles</span><span class="p">,</span> <span class="n">feet</span> <span class="o">=</span> <span class="n">present</span><span class="p">[(</span><span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">)]</span>
-            <span class="n">receptors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">])</span>
+            <span class="n">receptors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">])</span>
             <span class="n">no_particles</span> <span class="o">=</span> <span class="n">receptors</span> <span class="o">-</span> <span class="n">particles</span>
             <span class="n">no_footprint</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span> <span class="k">if</span> <span class="n">feet</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">receptors</span> <span class="o">&amp;</span> <span class="n">particles</span><span class="p">)</span> <span class="o">-</span> <span class="n">feet</span>
             <span class="n">missing</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Kind</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[</span>
-                <span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">no_particles</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">no_footprint</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">no_particles</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">"footprints"</span><span class="p">,</span> <span class="n">no_footprint</span><span class="p">),</span>
             <span class="p">]</span>
             <span class="k">for</span> <span class="n">kind</span><span class="p">,</span> <span class="n">among</span> <span class="ow">in</span> <span class="n">missing</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">among</span><span class="p">:</span>
@@ -1330,15 +1332,15 @@
         <span class="n">present</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">_Key</span><span class="p">,</span> <span class="n">_Present</span><span class="p">],</span>
         <span class="n">failed</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the selected simulations whose particles run started and did not finish.</span>
 
 <span class="sd">        That is a log with no particles and no failure record. Only the</span>
 <span class="sd">        date folders of receptors without particles are listed.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">started</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">rows</span> <span class="ow">in</span> <span class="n">_groups</span><span class="p">(</span><span class="n">frame</span><span class="p">):</span>
-            <span class="n">missing</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">])</span> <span class="o">-</span> <span class="n">present</span><span class="p">[(</span><span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">)][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">missing</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">])</span> <span class="o">-</span> <span class="n">present</span><span class="p">[(</span><span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">)][</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">missing</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="n">logged</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">logged</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">missing</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
@@ -1350,13 +1352,13 @@
 <div class="viewcode-block" id="Project.incomplete">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.incomplete.html#stilt.Project.incomplete">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">incomplete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sel</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the selected simulations that are missing an expected result.</span>
 
 <span class="sd">        The rows :meth:`status` does not mark ``complete``. It reads no</span>
 <span class="sd">        failure record, so it is the quickest way to see what is left.</span>
 <span class="sd">        *sel* is as for :meth:`status`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">_complete</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_present</span><span class="p">(</span><span class="n">frame</span><span class="p">))]</span></div>
 
@@ -1366,7 +1368,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">particles</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">sel</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Load the particles of every selected simulation that has them, as one table.</span>
 
 <span class="sd">        Parameters</span>
@@ -1374,8 +1376,8 @@
 <span class="sd">        sel : DataFrame or mask, optional</span>
 <span class="sd">            The simulations, as for :meth:`status`. All of them by default.</span>
 <span class="sd">        columns : list of str, optional</span>
-<span class="sd">            Only these particle columns, such as ``[&quot;particle&quot;, &quot;age&quot;,</span>
-<span class="sd">            &quot;lon&quot;, &quot;lat&quot;, &quot;foot&quot;]``, after ``receptor``, ``variant``, and</span>
+<span class="sd">            Only these particle columns, such as ``["particle", "age",</span>
+<span class="sd">            "lon", "lat", "foot"]``, after ``receptor``, ``variant``, and</span>
 <span class="sd">            ``realization``. ``time`` (UTC) is built from ``age``. Every</span>
 <span class="sd">            column by default. Fewer columns read faster and take less</span>
 <span class="sd">            memory.</span>
@@ -1396,26 +1398,26 @@
 <span class="sd">        some 250 MB in memory, so this suits a selection of tens. For a</span>
 <span class="sd">        whole large project, read the ``particles/`` tree of the output</span>
 <span class="sd">        directory with pyarrow, DuckDB, or polars instead.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">first</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;variant&quot;</span><span class="p">,</span> <span class="s2">&quot;realization&quot;</span><span class="p">]</span>
-        <span class="n">with_time</span> <span class="o">=</span> <span class="n">columns</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="s2">&quot;time&quot;</span> <span class="ow">in</span> <span class="n">columns</span>
+<span class="sd">        """</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">,</span> <span class="s2">"realization"</span><span class="p">]</span>
+        <span class="n">with_time</span> <span class="o">=</span> <span class="n">columns</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="s2">"time"</span> <span class="ow">in</span> <span class="n">columns</span>
         <span class="n">stored</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">columns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">stored</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="n">first</span><span class="p">,</span> <span class="s2">&quot;time&quot;</span><span class="p">)]</span>
-            <span class="k">if</span> <span class="n">with_time</span> <span class="ow">and</span> <span class="s2">&quot;age&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stored</span><span class="p">:</span>
-                <span class="n">stored</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;age&quot;</span><span class="p">)</span>
+            <span class="n">stored</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="n">first</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="n">with_time</span> <span class="ow">and</span> <span class="s2">"age"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stored</span><span class="p">:</span>
+                <span class="n">stored</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"age"</span><span class="p">)</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
         <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">rows</span> <span class="ow">in</span> <span class="n">_groups</span><span class="p">(</span><span class="n">frame</span><span class="p">):</span>
             <span class="n">variant</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
-            <span class="n">present</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">rows</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">],</span> <span class="n">k</span><span class="p">)</span>
-            <span class="c1"># In selection order: a set would follow each process&#39;s string hashing.</span>
-            <span class="n">receptors</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">present</span><span class="p">]</span>
-            <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">table</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptors</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">stored</span><span class="p">)</span>
+            <span class="n">present</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">rows</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">],</span> <span class="n">k</span><span class="p">)</span>
+            <span class="c1"># In selection order: a set would follow each process's string hashing.</span>
+            <span class="n">receptors</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">])</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">present</span><span class="p">]</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">table</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptors</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">stored</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">table</span><span class="o">.</span><span class="n">num_rows</span><span class="p">:</span>
                 <span class="n">part</span> <span class="o">=</span> <span class="n">particles_from_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">with_time</span><span class="p">)</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
                 <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                    <span class="n">part</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">realization</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">k</span><span class="p">],</span> <span class="s2">&quot;Int64&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">part</span><span class="p">)))</span>
+                    <span class="n">part</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">realization</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">k</span><span class="p">],</span> <span class="s2">"Int64"</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">part</span><span class="p">)))</span>
                 <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">parts</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">first</span><span class="p">))</span>
@@ -1427,12 +1429,12 @@
 <div class="viewcode-block" id="Project.footprints">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.footprints.html#stilt.Project.footprints">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">footprints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sel</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Open the footprints of the selected simulations as one dataset.</span>
 
 <span class="sd">        Footprints are stacked by their hour from the receptor time, so</span>
 <span class="sd">        receptors at any time share one ``hour`` axis; the ``time``</span>
-<span class="sd">        coordinate says when each layer starts. Only the files&#39; metadata is</span>
+<span class="sd">        coordinate says when each layer starts. Only the files' metadata is</span>
 <span class="sd">        read here. The values load with dask when they are used, in blocks</span>
 <span class="sd">        of receptors from one date folder. The selection must hold one</span>
 <span class="sd">        variant, as for :meth:`jacobian`.</span>
@@ -1449,8 +1451,8 @@
 <span class="sd">            ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and</span>
 <span class="sd">            ``x`` on a projected grid), in selection order. A receptor with</span>
 <span class="sd">            an empty footprint has no row and is listed in</span>
-<span class="sd">            ``attrs[&quot;empty&quot;]``; one not run yet is listed in</span>
-<span class="sd">            ``attrs[&quot;missing&quot;]``.</span>
+<span class="sd">            ``attrs["empty"]``; one not run yet is listed in</span>
+<span class="sd">            ``attrs["missing"]``.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
@@ -1468,29 +1470,29 @@
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; ds = project.footprints(sims[sims.variant == &quot;hrrr&quot;])  # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; ds.foot.sum(&quot;hour&quot;).mean(&quot;receptor&quot;).plot()  # doctest: +SKIP</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        &gt;&gt;&gt; ds = project.footprints(sims[sims.variant == "hrrr"])  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; ds.foot.sum("hour").mean("receptor").plot()  # doctest: +SKIP</span>
+<span class="sd">        """</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
-        <span class="n">name</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">&quot;A footprint dataset&quot;</span><span class="p">)</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">"A footprint dataset"</span><span class="p">)</span>
         <span class="n">variant</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> makes no footprints (no grid).&quot;</span><span class="p">)</span>
-        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">]))</span>
-        <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">requested</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> makes no footprints (no grid)."</span><span class="p">)</span>
+        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]))</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"footprints"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">requested</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
         <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">path</span>
             <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">requested</span>
             <span class="k">if</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">found</span>
-            <span class="ow">and</span> <span class="p">(</span><span class="n">path</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">k</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">and</span> <span class="p">(</span><span class="n">path</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"footprints"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">k</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
         <span class="p">]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">paths</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;None of the </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">requested</span><span class="p">)</span><span class="si">}</span><span class="s2"> selected simulations of </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> &quot;</span>
-                <span class="s2">&quot;has a footprint yet.&quot;</span>
+                <span class="sa">f</span><span class="s2">"None of the </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">requested</span><span class="p">)</span><span class="si">}</span><span class="s2"> selected simulations of </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> "</span>
+                <span class="s2">"has a footprint yet."</span>
             <span class="p">)</span>
         <span class="n">ds</span> <span class="o">=</span> <span class="n">open_footprints</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span>
-        <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;missing&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">requested</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">found</span><span class="p">]</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"missing"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">requested</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">found</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">ds</span></div>
 
 
@@ -1504,7 +1506,7 @@
         <span class="o">*</span><span class="p">,</span>
         <span class="n">workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Jacobian</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Sum the selected footprints onto a target, per time bin, as one sparse matrix.</span>
 
 <span class="sd">        The same operation as ``foot.stilt.aggregate``, for every selected</span>
@@ -1516,7 +1518,7 @@
 
 <span class="sd">        Footprints are read and summed one receptor at a time, in *workers*</span>
 <span class="sd">        threads. Each thread holds one footprint, so memory stays at a few</span>
-<span class="sd">        footprints whatever the selection&#39;s size; the result itself is</span>
+<span class="sd">        footprints whatever the selection's size; the result itself is</span>
 <span class="sd">        sparse.</span>
 
 <span class="sd">        Parameters</span>
@@ -1527,12 +1529,12 @@
 <span class="sd">        target : Geometry</span>
 <span class="sd">            Where the fluxes are: a grid, mesh, or set of zones.</span>
 <span class="sd">        time_bins : pandas.IntervalIndex</span>
-<span class="sd">            Flux time bins, such as a flux inventory&#39;s steps. They must be</span>
-<span class="sd">            closed on the left (``closed=&quot;left&quot;``): each bin holds the</span>
+<span class="sd">            Flux time bins, such as a flux inventory's steps. They must be</span>
+<span class="sd">            closed on the left (``closed="left"``): each bin holds the</span>
 <span class="sd">            footprint hours that start in it.</span>
 <span class="sd">        workers : int, optional</span>
 <span class="sd">            Threads that read and sum batches. Defaults to the CPUs this</span>
-<span class="sd">            process may use (in a Slurm job, the job&#39;s), at most 8: more</span>
+<span class="sd">            process may use (in a Slurm job, the job's), at most 8: more</span>
 <span class="sd">            threads add memory and stop adding speed.</span>
 
 <span class="sd">        Returns</span>
@@ -1551,19 +1553,19 @@
 <span class="sd">            If the selection holds more or fewer than one variant, or</span>
 <span class="sd">            several realizations of an ensemble, the variant has no grid or</span>
 <span class="sd">            no footprints yet, or ``time_bins`` is not closed on the left.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
-        <span class="n">name</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">&quot;A Jacobian&quot;</span><span class="p">)</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">"A Jacobian"</span><span class="p">)</span>
         <span class="n">variant</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> makes no footprints (no grid).&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">folder</span><span class="p">(</span><span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> has no footprints yet.&quot;</span><span class="p">)</span>
-        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">]))</span>
-        <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">requested</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> makes no footprints (no grid)."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">folder</span><span class="p">(</span><span class="s2">"footprints"</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> has no footprints yet."</span><span class="p">)</span>
+        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]))</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"footprints"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">requested</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">_jacobian</span><span class="p">(</span>
             <span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">read</span><span class="p">(</span>
-                <span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;hour&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;foot&quot;</span><span class="p">]</span>
+                <span class="s2">"footprints"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"hour"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">,</span> <span class="s2">"x"</span><span class="p">,</span> <span class="s2">"foot"</span><span class="p">]</span>
             <span class="p">),</span>
             <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">requested</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">found</span><span class="p">],</span>
             <span class="n">variant</span><span class="o">.</span><span class="n">footprint</span><span class="p">,</span>
@@ -1586,8 +1588,8 @@
         <span class="n">workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return the transport error of each selected simulation&#39;s modeled enhancement.</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the transport error of each selected simulation's modeled enhancement.</span>
 
 <span class="sd">        The same estimate as ``sim.transport_error``, for every selected</span>
 <span class="sd">        receptor at once (Lin and Gerbig, 2005; the *Transport Error* guide).</span>
@@ -1597,7 +1599,7 @@
 <span class="sd">        an estimate from the realizations it has.</span>
 
 <span class="sd">        Receptors are read and estimated one at a time, in *workers*</span>
-<span class="sd">        threads. Each thread holds one receptor&#39;s particle tables: the</span>
+<span class="sd">        threads. Each thread holds one receptor's particle tables: the</span>
 <span class="sd">        unperturbed one and one per realization.</span>
 
 <span class="sd">        Parameters</span>
@@ -1606,12 +1608,12 @@
 <span class="sd">            The simulations, as for :meth:`status`, all of one variant that</span>
 <span class="sd">            runs once (no ``realizations``).</span>
 <span class="sd">        error : str</span>
-<span class="sd">            The wind-error variant, such as ``&quot;hrrr-err&quot;``.</span>
+<span class="sd">            The wind-error variant, such as ``"hrrr-err"``.</span>
 <span class="sd">        flux : xarray.DataArray</span>
 <span class="sd">            Surface flux field, in µmol m⁻² s⁻¹, the same for every receptor.</span>
 <span class="sd">        workers : int, optional</span>
 <span class="sd">            Threads that read and estimate receptors. Defaults to the CPUs</span>
-<span class="sd">            this process may use (in a Slurm job, the job&#39;s), at most 8.</span>
+<span class="sd">            this process may use (in a Slurm job, the job's), at most 8.</span>
 <span class="sd">        **options</span>
 <span class="sd">            Passed to :func:`stilt.particles.transport_error`: ``levels``,</span>
 <span class="sd">            ``length_scale``, ``percentile``, ``noise_splits``, and</span>
@@ -1638,7 +1640,7 @@
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        Each receptor&#39;s particles are read whole. A table of 1.4 million</span>
+<span class="sd">        Each receptor's particles are read whole. A table of 1.4 million</span>
 <span class="sd">        rows takes about a second to read, so a selection of hundreds of</span>
 <span class="sd">        receptors takes minutes. The per-level tables of</span>
 <span class="sd">        :class:`~stilt.particles.TransportError` are not kept; get them for</span>
@@ -1648,33 +1650,33 @@
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; sims = project.simulations  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; wbb = sims[</span>
-<span class="sd">        ...     (sims.variant == &quot;hrrr&quot;) &amp; (sims.site == &quot;WBB&quot;)</span>
+<span class="sd">        ...     (sims.variant == "hrrr") &amp; (sims.site == "WBB")</span>
 <span class="sd">        ... ]  # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; errors = project.transport_error(wbb, &quot;hrrr-err&quot;, flux)  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; errors = project.transport_error(wbb, "hrrr-err", flux)  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; errors.groupby(errors.time.dt.month).variance.median()  # doctest: +SKIP</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
-        <span class="n">name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">&quot;A transport error&quot;</span><span class="p">)</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">"A transport error"</span><span class="p">)</span>
         <span class="n">variant</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">variant</span><span class="o">.</span><span class="n">realizations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is an ensemble (realizations: &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">variant</span><span class="o">.</span><span class="n">realizations</span><span class="si">}</span><span class="s2">); the selection is the unperturbed run, &quot;</span>
-                <span class="s2">&quot;a variant that runs once.&quot;</span>
+                <span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is an ensemble (realizations: "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">variant</span><span class="o">.</span><span class="n">realizations</span><span class="si">}</span><span class="s2">); the selection is the unperturbed run, "</span>
+                <span class="s2">"a variant that runs once."</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">error</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;No variant </span><span class="si">{</span><span class="n">error</span><span class="si">!r}</span><span class="s2">; the variants are </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="sa">f</span><span class="s2">"No variant </span><span class="si">{</span><span class="n">error</span><span class="si">!r}</span><span class="s2">; the variants are </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">error</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;The selection is of </span><span class="si">{</span><span class="n">error</span><span class="si">!r}</span><span class="s2"> itself; select the unperturbed variant.&quot;</span>
+                <span class="sa">f</span><span class="s2">"The selection is of </span><span class="si">{</span><span class="n">error</span><span class="si">!r}</span><span class="s2"> itself; select the unperturbed variant."</span>
             <span class="p">)</span>
         <span class="n">perturbed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">error</span><span class="p">]</span>
-        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">]))</span>
-        <span class="n">have</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">requested</span><span class="p">)</span>
+        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]))</span>
+        <span class="n">have</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">requested</span><span class="p">)</span>
         <span class="n">ran</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">,</span> <span class="n">requested</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">,</span> <span class="n">requested</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">perturbed</span><span class="o">.</span><span class="n">realization_numbers</span>
         <span class="p">}</span>
         <span class="c1"># Each receptor with both sides, and the realizations of *error* it has.</span>
@@ -1685,7 +1687,7 @@
         <span class="p">}</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">particles</span><span class="p">(</span><span class="n">v</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">rid</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-            <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">rid</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">rid</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
             <span class="k">assert</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># the listing found the file</span>
             <span class="k">return</span> <span class="n">read_particles</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
@@ -1706,8 +1708,8 @@
             <span class="n">workers</span><span class="o">=</span><span class="n">_threads</span><span class="p">(</span><span class="n">workers</span><span class="p">),</span>
             <span class="o">**</span><span class="n">options</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
-        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;realizations&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;realizations&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;int64&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"realizations"</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">"realizations"</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"int64"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">columns</span><span class="p">})</span></div>
 
 
@@ -1716,16 +1718,16 @@
 <div class="viewcode-block" id="Project.check">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.check.html#stilt.Project.check">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return what would stop the project&#39;s simulations, found before any run.</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return what would stop the project's simulations, found before any run.</span>
 
 <span class="sd">        Looks only at the inputs, and runs and downloads nothing. For each</span>
 <span class="sd">        variant it checks that:</span>
 
-<span class="sd">        - the met&#39;s ``directory`` exists and holds an ARL file (``met_directory``);</span>
-<span class="sd">        - every met file each receptor&#39;s run needs is there, naming the</span>
+<span class="sd">        - the met's ``directory`` exists and holds an ARL file (``met_directory``);</span>
+<span class="sd">        - every met file each receptor's run needs is there, naming the</span>
 <span class="sd">          hours (``met_files``);</span>
-<span class="sd">        - each receptor is inside the met&#39;s crop box, ``subgrid_bounds``,</span>
+<span class="sd">        - each receptor is inside the met's crop box, ``subgrid_bounds``,</span>
 <span class="sd">          when the crop is on (``met_crop``);</span>
 <span class="sd">        - each receptor is inside the footprint grid (``grid``);</span>
 <span class="sd">        - each ``averaging_kernel`` table exists (``kernel_table``), has a</span>
@@ -1762,10 +1764,10 @@
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; problems = project.check()  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; problems.empty  # True when nothing would stop a run  # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; problems[problems.check == &quot;met_files&quot;][</span>
-<span class="sd">        ...     [&quot;receptor&quot;, &quot;message&quot;]</span>
+<span class="sd">        &gt;&gt;&gt; problems[problems.check == "met_files"][</span>
+<span class="sd">        ...     ["receptor", "message"]</span>
 <span class="sd">        ... ]  # doctest: +SKIP</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">check_project</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
 
 
@@ -1780,12 +1782,12 @@
         <span class="n">receptors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">task</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Run every simulation that has not finished, and wait for it.</span>
 
 <span class="sd">        Shorthand for :func:`stilt.execution.run`, which documents the</span>
 <span class="sd">        parameters. Use :meth:`submit` to submit to Slurm and return at once.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution</span><span class="w"> </span><span class="kn">import</span> <span class="n">run</span>
 
         <span class="k">return</span> <span class="n">run</span><span class="p">(</span>
@@ -1808,13 +1810,13 @@
         <span class="o">*</span><span class="p">,</span>
         <span class="n">receptors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Submit every simulation that has not finished to Slurm, and return at once.</span>
 
 <span class="sd">        Shorthand for :func:`stilt.execution.submit`, which documents the</span>
 <span class="sd">        parameters. Returns the Slurm job id, or ``None`` when nothing needs</span>
 <span class="sd">        to run.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution</span><span class="w"> </span><span class="kn">import</span> <span class="n">submit</span>
 
         <span class="k">return</span> <span class="n">submit</span><span class="p">(</span>
@@ -1828,7 +1830,7 @@
 
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Project&quot;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Project"</span><span class="p">]</span>
 </pre></div>
 
                 </article>
@@ -1858,8 +1860,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1885,14 +1887,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

@@ -26,22 +26,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -49,7 +50,7 @@
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'guides/receptors';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -61,8 +62,9 @@
     <link rel="next" title="Meteorology" href="meteorology.html" />
     <link rel="prev" title="User Guide" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -555,7 +557,7 @@ sample at one height.</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
 <span class="gp">In [2]: </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
-<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00:00&quot;</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">"2023-07-15 18:00:00"</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">altitude</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>          <span class="c1"># meters above ground</span>
@@ -574,12 +576,12 @@ sample at one height.</p>
 HYSPLIT releases the particles evenly in height between <code class="docutils literal notranslate"><span class="pre">bottom</span></code> and
 <code class="docutils literal notranslate"><span class="pre">top</span></code>.</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [4]: </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">ColumnReceptor</span><span class="p">(</span>
-<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00:00&quot;</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">"2023-07-15 18:00:00"</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">bottom</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">top</span><span class="o">=</span><span class="mf">6000.0</span><span class="p">,</span>
-<span class="gp">   ...: </span>    <span class="n">altitude_ref</span><span class="o">=</span><span class="s2">&quot;msl&quot;</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">altitude_ref</span><span class="o">=</span><span class="s2">"msl"</span><span class="p">,</span>
 <span class="gp">   ...: </span><span class="p">)</span>
 <span class="gp">   ...: </span>
 
@@ -601,11 +603,11 @@ other satellite views with a full line-of-sight geometry are examples.</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="gp">In [7]: </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">MultiPointReceptor</span><span class="p">(</span>
-<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00:00&quot;</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">"2023-07-15 18:00:00"</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">longitudes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mf">111.85</span><span class="p">,</span> <span class="o">-</span><span class="mf">111.80</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
 <span class="gp">   ...: </span>    <span class="n">latitudes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">40.76</span><span class="p">,</span>  <span class="mf">40.80</span><span class="p">,</span>  <span class="mi">10</span><span class="p">),</span>
 <span class="gp">   ...: </span>    <span class="n">altitudes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span>    <span class="mf">8000.0</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
-<span class="gp">   ...: </span>    <span class="n">altitude_ref</span><span class="o">=</span><span class="s2">&quot;msl&quot;</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">altitude_ref</span><span class="o">=</span><span class="s2">"msl"</span><span class="p">,</span>
 <span class="gp">   ...: </span><span class="p">)</span>
 <span class="gp">   ...: </span>
 
@@ -660,10 +662,10 @@ different locations make a <a class="reference internal" href="../reference/_api
 <code class="docutils literal notranslate"><span class="pre">project.receptors</span></code> and <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>, so you can select
 results by it with pandas (see <a class="reference internal" href="outputs.html"><span class="doc">Footprints And Particles</span></a>):</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
-<span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">scene</span> <span class="o">==</span> <span class="s2">&quot;A&quot;</span><span class="p">]</span>
+<span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">scene</span> <span class="o">==</span> <span class="s2">"A"</span><span class="p">]</span>
 
 <span class="n">receptors</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">receptors</span>          <span class="c1"># one row per receptor</span>
-<span class="n">receptors</span><span class="p">[</span><span class="n">receptors</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s2">&quot;WBB&quot;</span><span class="p">,</span> <span class="s2">&quot;UOU&quot;</span><span class="p">])]</span>
+<span class="n">receptors</span><span class="p">[</span><span class="n">receptors</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s2">"WBB"</span><span class="p">,</span> <span class="s2">"UOU"</span><span class="p">])]</span>
 </pre></div>
 </div>
 <p>For a receptor built from several rows, the first row’s labels are used.
@@ -676,8 +678,8 @@ or a column of equal heights is an error at once.
 table with a row per release point, in the same columns as the file.</p>
 <p>A project’s <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> is read automatically. To load another CSV,
 use <a class="reference internal" href="../reference/_api/stilt.read_receptors.html#stilt.read_receptors" title="stilt.read_receptors"><code class="xref py py-func docutils literal notranslate"><span class="pre">read_receptors()</span></code></a>, or pass the path to the project:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">receptors</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">read_receptors</span><span class="p">(</span><span class="s2">&quot;my_receptors.csv&quot;</span><span class="p">)</span>
-<span class="n">project</span><span class="o">.</span><span class="n">add_receptors</span><span class="p">(</span><span class="s2">&quot;my_receptors.csv&quot;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">receptors</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">read_receptors</span><span class="p">(</span><span class="s2">"my_receptors.csv"</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">add_receptors</span><span class="p">(</span><span class="s2">"my_receptors.csv"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Receptors you add to a project later are appended to its <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>
@@ -777,11 +779,11 @@ name, so a longitude cannot be passed as a latitude by mistake.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt</span><span class="w"> </span><span class="kn">import</span> <span class="n">ColumnReceptor</span><span class="p">,</span> <span class="n">MultiPointReceptor</span><span class="p">,</span> <span class="n">PointReceptor</span>
 
 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">receptor</span><span class="p">,</span> <span class="n">PointReceptor</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Single point at </span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">altitude</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Single point at </span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">altitude</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
 <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">receptor</span><span class="p">,</span> <span class="n">ColumnReceptor</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column from </span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">bottom</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">top</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Column from </span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">bottom</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">top</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
 <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">receptor</span><span class="p">,</span> <span class="n">MultiPointReceptor</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Multi-point with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">coords</span><span class="p">())</span><span class="si">}</span><span class="s2"> locations&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Multi-point with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">coords</span><span class="p">())</span><span class="si">}</span><span class="s2"> locations"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>All three are subclasses of <a class="reference internal" href="../reference/_api/stilt.Receptor.html#stilt.Receptor" title="stilt.Receptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Receptor</span></code></a>.</p>
@@ -797,7 +799,7 @@ name, so a longitude cannot be passed as a latitude by mistake.</p>
 <li><p>anything else gives a <a class="reference internal" href="../reference/_api/stilt.MultiPointReceptor.html#stilt.MultiPointReceptor" title="stilt.MultiPointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code></a>.</p></li>
 </ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">r</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Receptor</span><span class="o">.</span><span class="n">from_points</span><span class="p">(</span>
-    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2023-07-15 18:00:00&quot;</span><span class="p">,</span>
+    <span class="n">time</span><span class="o">=</span><span class="s2">"2023-07-15 18:00:00"</span><span class="p">,</span>
     <span class="n">points</span><span class="o">=</span><span class="p">[(</span><span class="o">-</span><span class="mf">111.848</span><span class="p">,</span> <span class="mf">40.766</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">)],</span>
 <span class="p">)</span>
 <span class="c1"># PointReceptor</span>
@@ -891,8 +893,8 @@ name, so a longitude cannot be passed as a latitude by mistake.</p>
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -918,14 +920,14 @@ name, so a longitude cannot be passed as a latitude by mistake.</p>
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/spatial';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -445,7 +447,7 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.spatial</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">Rasters and coordinate systems: bounding boxes, grids, and CRS helpers.</span>
 
 <span class="sd">:class:`Bounds` is a longitude/latitude box, such as the crop box of a met.</span>
@@ -453,7 +455,7 @@
 <span class="sd">and the grid a flux field is put on to be compared with it. This module</span>
 <span class="sd">does not need shapely, so any part of PYSTILT can use it. Polygons</span>
 <span class="sd">(``Mesh``, ``Zones``), which do, are in :mod:`stilt.footprint.targets`.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -473,7 +475,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_grid_cell_starts</span><span class="p">(</span><span class="n">minimum</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">maximum</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">resolution</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the lower edges of the whole cells between two grid bounds.</span>
 
 <span class="sd">    Cells start at ``minimum`` and step by ``resolution`` while the whole cell</span>
@@ -483,30 +485,30 @@
 <span class="sd">    Decimal bounds are not exact in binary, so ``maximum - minimum`` carries a</span>
 <span class="sd">    rounding error that grows with the bounds (``40.93 - 40.45`` is</span>
 <span class="sd">    ``0.4799999999999969``). The tolerance is sized to that error so the last</span>
-<span class="sd">    intended cell is kept (48 cells here at 0.01, as STILT-R&#39;s ``seq()``</span>
+<span class="sd">    intended cell is kept (48 cells here at 0.01, as STILT-R's ``seq()``</span>
 <span class="sd">    gives) and a partial cell is still dropped.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">resolution</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Grid resolution must be positive.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Grid resolution must be positive."</span><span class="p">)</span>
     <span class="n">quotient</span> <span class="o">=</span> <span class="p">(</span><span class="n">maximum</span> <span class="o">-</span> <span class="n">minimum</span><span class="p">)</span> <span class="o">/</span> <span class="n">resolution</span>
     <span class="n">scale</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">minimum</span><span class="p">),</span> <span class="nb">abs</span><span class="p">(</span><span class="n">maximum</span><span class="p">),</span> <span class="nb">abs</span><span class="p">(</span><span class="n">maximum</span> <span class="o">-</span> <span class="n">minimum</span><span class="p">))</span>
     <span class="n">tol</span> <span class="o">=</span> <span class="mi">16</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span> <span class="o">*</span> <span class="n">scale</span> <span class="o">/</span> <span class="n">resolution</span>
     <span class="n">n_cells</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">quotient</span> <span class="o">+</span> <span class="n">tol</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">n_cells</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Grid extent must contain at least one complete cell.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Grid extent must contain at least one complete cell."</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">minimum</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="n">resolution</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_cf_grid_mapping_attrs</span><span class="p">(</span><span class="n">projection</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return CF-style grid-mapping attributes for a PROJ string.&quot;&quot;&quot;</span>
-    <span class="n">attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;proj4_params&quot;</span><span class="p">:</span> <span class="n">projection</span><span class="p">}</span>
+<span class="w">    </span><span class="sd">"""Return CF-style grid-mapping attributes for a PROJ string."""</span>
+    <span class="n">attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"proj4_params"</span><span class="p">:</span> <span class="n">projection</span><span class="p">}</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">CRS</span>
 
     <span class="n">crs</span> <span class="o">=</span> <span class="n">CRS</span><span class="o">.</span><span class="n">from_user_input</span><span class="p">(</span><span class="n">projection</span><span class="p">)</span>
     <span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">crs</span><span class="o">.</span><span class="n">to_cf</span><span class="p">())</span>
     <span class="n">wkt</span> <span class="o">=</span> <span class="n">crs</span><span class="o">.</span><span class="n">to_wkt</span><span class="p">()</span>
-    <span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;spatial_ref&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">wkt</span>
-    <span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;crs_wkt&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">wkt</span>
+    <span class="n">attrs</span><span class="p">[</span><span class="s2">"spatial_ref"</span><span class="p">]</span> <span class="o">=</span> <span class="n">wkt</span>
+    <span class="n">attrs</span><span class="p">[</span><span class="s2">"crs_wkt"</span><span class="p">]</span> <span class="o">=</span> <span class="n">wkt</span>
     <span class="k">return</span> <span class="p">{</span>
         <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
@@ -515,71 +517,71 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">cf_axis_attrs</span><span class="p">(</span><span class="n">dim</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the CF attributes for one coordinate axis: ``lon``, ``lat``, ``x`` or ``y``.</span>
 
 <span class="sd">    Grids and footprints both use this, so their axes carry the same</span>
 <span class="sd">    attributes.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="p">{</span>
-        <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;standard_name&quot;</span><span class="p">:</span> <span class="s2">&quot;longitude&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;longitude&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;degrees_east&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;axis&quot;</span><span class="p">:</span> <span class="s2">&quot;X&quot;</span><span class="p">,</span>
+        <span class="s2">"lon"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"standard_name"</span><span class="p">:</span> <span class="s2">"longitude"</span><span class="p">,</span>
+            <span class="s2">"long_name"</span><span class="p">:</span> <span class="s2">"longitude"</span><span class="p">,</span>
+            <span class="s2">"units"</span><span class="p">:</span> <span class="s2">"degrees_east"</span><span class="p">,</span>
+            <span class="s2">"axis"</span><span class="p">:</span> <span class="s2">"X"</span><span class="p">,</span>
         <span class="p">},</span>
-        <span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;standard_name&quot;</span><span class="p">:</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;degrees_north&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;axis&quot;</span><span class="p">:</span> <span class="s2">&quot;Y&quot;</span><span class="p">,</span>
+        <span class="s2">"lat"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"standard_name"</span><span class="p">:</span> <span class="s2">"latitude"</span><span class="p">,</span>
+            <span class="s2">"long_name"</span><span class="p">:</span> <span class="s2">"latitude"</span><span class="p">,</span>
+            <span class="s2">"units"</span><span class="p">:</span> <span class="s2">"degrees_north"</span><span class="p">,</span>
+            <span class="s2">"axis"</span><span class="p">:</span> <span class="s2">"Y"</span><span class="p">,</span>
         <span class="p">},</span>
-        <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;standard_name&quot;</span><span class="p">:</span> <span class="s2">&quot;projection_x_coordinate&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;x coordinate of projection&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;m&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;axis&quot;</span><span class="p">:</span> <span class="s2">&quot;X&quot;</span><span class="p">,</span>
+        <span class="s2">"x"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"standard_name"</span><span class="p">:</span> <span class="s2">"projection_x_coordinate"</span><span class="p">,</span>
+            <span class="s2">"long_name"</span><span class="p">:</span> <span class="s2">"x coordinate of projection"</span><span class="p">,</span>
+            <span class="s2">"units"</span><span class="p">:</span> <span class="s2">"m"</span><span class="p">,</span>
+            <span class="s2">"axis"</span><span class="p">:</span> <span class="s2">"X"</span><span class="p">,</span>
         <span class="p">},</span>
-        <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;standard_name&quot;</span><span class="p">:</span> <span class="s2">&quot;projection_y_coordinate&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;y coordinate of projection&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;m&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;axis&quot;</span><span class="p">:</span> <span class="s2">&quot;Y&quot;</span><span class="p">,</span>
+        <span class="s2">"y"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"standard_name"</span><span class="p">:</span> <span class="s2">"projection_y_coordinate"</span><span class="p">,</span>
+            <span class="s2">"long_name"</span><span class="p">:</span> <span class="s2">"y coordinate of projection"</span><span class="p">,</span>
+            <span class="s2">"units"</span><span class="p">:</span> <span class="s2">"m"</span><span class="p">,</span>
+            <span class="s2">"axis"</span><span class="p">:</span> <span class="s2">"Y"</span><span class="p">,</span>
         <span class="p">},</span>
     <span class="p">}[</span><span class="n">dim</span><span class="p">]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_with_cf_grid</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">,</span> <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add the CF-1.8 grid mapping for *crs* and the axis attributes to *ds*, and return it.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Add the CF-1.8 grid mapping for *crs* and the axis attributes to *ds*, and return it."""</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
-    <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;Conventions&quot;</span><span class="p">,</span> <span class="s2">&quot;CF-1.8&quot;</span><span class="p">)</span>
-    <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;crs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">_cf_grid_mapping_attrs</span><span class="p">(</span><span class="n">crs</span><span class="p">))</span>
-    <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">):</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"Conventions"</span><span class="p">,</span> <span class="s2">"CF-1.8"</span><span class="p">)</span>
+    <span class="n">ds</span><span class="p">[</span><span class="s2">"crs"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">_cf_grid_mapping_attrs</span><span class="p">(</span><span class="n">crs</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">coords</span><span class="p">:</span>
             <span class="n">ds</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">cf_axis_attrs</span><span class="p">(</span><span class="n">dim</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">ds</span>
 
 
-<span class="n">_HORIZONTAL_DIMS</span> <span class="o">=</span> <span class="p">((</span><span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">))</span>
+<span class="n">_HORIZONTAL_DIMS</span> <span class="o">=</span> <span class="p">((</span><span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"y"</span><span class="p">,</span> <span class="s2">"x"</span><span class="p">))</span>
 
 
 <div class="viewcode-block" id="horizontal_dims">
 <a class="viewcode-back" href="../../reference/_api/stilt.spatial.horizontal_dims.html#stilt.horizontal_dims">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">horizontal_dims</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the names of the horizontal dimensions, ``(y_dim, x_dim)``.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        If *data* has neither ``lat``/``lon`` nor ``y``/``x`` dimensions.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">for</span> <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span> <span class="ow">in</span> <span class="n">_HORIZONTAL_DIMS</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">y_dim</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">dims</span> <span class="ow">and</span> <span class="n">x_dim</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span>
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;Expected &#39;lat&#39;/&#39;lon&#39; or &#39;y&#39;/&#39;x&#39; dimensions; got </span><span class="si">{</span><span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="sa">f</span><span class="s2">"Expected 'lat'/'lon' or 'y'/'x' dimensions; got </span><span class="si">{</span><span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
     <span class="p">)</span></div>
 
 
@@ -587,73 +589,73 @@
 <div class="viewcode-block" id="Bounds">
 <a class="viewcode-back" href="../../reference/_api/stilt.Bounds.html#stilt.Bounds">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Bounds</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Longitude/latitude bounding box, in degrees.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Longitude/latitude bounding box, in degrees."""</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Western edge, in degrees longitude.&quot;</span><span class="p">)</span>
-    <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Eastern edge, in degrees longitude.&quot;</span><span class="p">)</span>
-    <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Southern edge, in degrees latitude.&quot;</span><span class="p">)</span>
-    <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Northern edge, in degrees latitude.&quot;</span><span class="p">)</span></div>
+    <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Western edge, in degrees longitude."</span><span class="p">)</span>
+    <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Eastern edge, in degrees longitude."</span><span class="p">)</span>
+    <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Southern edge, in degrees latitude."</span><span class="p">)</span>
+    <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Northern edge, in degrees latitude."</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="Grid">
 <a class="viewcode-back" href="../../reference/_api/stilt.Grid.html#stilt.Grid">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Grid</span><span class="p">(</span><span class="n">Bounds</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Footprint grid: longitude/latitude bounds, cell size, and CRS.</span>
 
 <span class="sd">    The bounds are always longitude/latitude. With a projected ``crs``,</span>
-<span class="sd">    the grid covers the bounds&#39; extent in that projection and ``xres`` and</span>
+<span class="sd">    the grid covers the bounds' extent in that projection and ``xres`` and</span>
 <span class="sd">    ``yres`` are in its units.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="o">...</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Cell width in projection units (degrees for longlat, meters for UTM).&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Cell width in projection units (degrees for longlat, meters for UTM)."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="o">...</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Cell height in projection units (degrees for longlat, meters for UTM).&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Cell height in projection units (degrees for longlat, meters for UTM)."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="s2">&quot;+proj=longlat&quot;</span><span class="p">,</span>
-        <span class="n">validation_alias</span><span class="o">=</span><span class="n">AliasChoices</span><span class="p">(</span><span class="s2">&quot;crs&quot;</span><span class="p">,</span> <span class="s2">&quot;projection&quot;</span><span class="p">),</span>
+        <span class="s2">"+proj=longlat"</span><span class="p">,</span>
+        <span class="n">validation_alias</span><span class="o">=</span><span class="n">AliasChoices</span><span class="p">(</span><span class="s2">"crs"</span><span class="p">,</span> <span class="s2">"projection"</span><span class="p">),</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Coordinate reference system of the footprint grid, such as a PROJ &quot;</span>
-            <span class="s2">&quot;string or ``EPSG:32612``. Particles and bounds are projected to it &quot;</span>
-            <span class="s2">&quot;before gridding. Also read under STILT-R&#39;s name, ``projection``.&quot;</span>
+            <span class="s2">"Coordinate reference system of the footprint grid, such as a PROJ "</span>
+            <span class="s2">"string or ``EPSG:32612``. Particles and bounds are projected to it "</span>
+            <span class="s2">"before gridding. Also read under STILT-R's name, ``projection``."</span>
         <span class="p">),</span>
     <span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether the grid is in longitude/latitude degrees.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Whether the grid is in longitude/latitude degrees."""</span>
         <span class="k">return</span> <span class="n">is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">dims</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The names of a footprint&#39;s horizontal dimensions on this grid, ``(&quot;lat&quot;, &quot;lon&quot;)`` or ``(&quot;y&quot;, &quot;x&quot;)``.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span> <span class="k">else</span> <span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">"""The names of a footprint's horizontal dimensions on this grid, ``("lat", "lon")`` or ``("y", "x")``."""</span>
+        <span class="k">return</span> <span class="p">(</span><span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span> <span class="k">else</span> <span class="p">(</span><span class="s2">"y"</span><span class="p">,</span> <span class="s2">"x"</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">axes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Cell-center coordinates ``(x, y)`` in projection units, ascending.</span>
 
-<span class="sd">        These are the footprint&#39;s coordinates on this grid. They are rounded</span>
+<span class="sd">        These are the footprint's coordinates on this grid. They are rounded</span>
 <span class="sd">        to 10 decimals (``40.35`` rather than ``40.349999999999994``) so they</span>
 <span class="sd">        match labels built elsewhere from the same bounds and resolution.</span>
 <span class="sd">        Projected grids need ``pyproj``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
 
-            <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">corners_x</span><span class="p">,</span> <span class="n">corners_y</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">],</span> <span class="p">[</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">])</span>
             <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">corners_x</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">corners_x</span><span class="p">))</span>
             <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">corners_y</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">corners_y</span><span class="p">))</span>
@@ -664,29 +666,29 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">cells</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Every cell center as flat ``(x, y)`` arrays, with ``x`` varying slowest.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Every cell center as flat ``(x, y)`` arrays, with ``x`` varying slowest."""</span>
         <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span>
-        <span class="n">xx</span><span class="p">,</span> <span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">&quot;ij&quot;</span><span class="p">)</span>
+        <span class="n">xx</span><span class="p">,</span> <span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">"ij"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">xx</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">yy</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">MultiIndex</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Index of every cell, in the same order as ``cells``.</span>
 
 <span class="sd">        The levels are named ``lon`` and ``lat`` for a longitude/latitude grid</span>
 <span class="sd">        and ``x`` and ``y`` for a projected one, as in the footprint.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
         <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span>
-        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span> <span class="k">else</span> <span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span> <span class="k">else</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">MultiIndex</span><span class="o">.</span><span class="n">from_product</span><span class="p">([</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">y</span><span class="p">)],</span> <span class="n">names</span><span class="o">=</span><span class="n">names</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Grid.to_xarray">
 <a class="viewcode-back" href="../../reference/_api/stilt.Grid.to_xarray.html#stilt.Grid.to_xarray">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_xarray</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the grid as a CF-1.8 dataset of cell centers.</span>
 
 <span class="sd">        The dataset has ``lon`` and ``lat`` coordinates (``x`` and ``y`` when</span>
@@ -695,7 +697,7 @@
 <span class="sd">        with other tools that read CF grids. To sum a footprint onto this</span>
 <span class="sd">        grid, pass the grid itself to ``foot.stilt.aggregate``. Projected</span>
 <span class="sd">        grids need ``pyproj``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
         <span class="n">x_centers</span><span class="p">,</span> <span class="n">y_centers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span>
@@ -715,18 +717,18 @@
 <a class="viewcode-back" href="../../reference/_api/stilt.spatial.is_longlat.html#stilt.is_longlat">[docs]</a>
 <span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">64</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">is_longlat</span><span class="p">(</span><span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return whether ``crs`` is geographic (longitude/latitude degrees).</span>
 
 <span class="sd">    This is the one test PYSTILT uses, for grids, meshes, and plots alike.</span>
 <span class="sd">    PROJ strings are read by eye; other forms, such as ``EPSG:4326``, by</span>
 <span class="sd">    pyproj.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="s2">&quot;+proj=longlat&quot;</span> <span class="ow">in</span> <span class="n">crs</span><span class="p">:</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="s2">"+proj=longlat"</span> <span class="ow">in</span> <span class="n">crs</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">True</span>
-    <span class="k">if</span> <span class="n">crs</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">,</span> <span class="s2">&quot;WGS84&quot;</span><span class="p">,</span> <span class="s2">&quot;OGC:CRS84&quot;</span><span class="p">}:</span>
+    <span class="k">if</span> <span class="n">crs</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="s2">"WGS84"</span><span class="p">,</span> <span class="s2">"OGC:CRS84"</span><span class="p">}:</span>
         <span class="k">return</span> <span class="kc">True</span>
-    <span class="k">if</span> <span class="n">crs</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;+&quot;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">crs</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"+"</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">False</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">CRS</span>
@@ -740,7 +742,7 @@
 <div class="viewcode-block" id="same_crs">
 <a class="viewcode-back" href="../../reference/_api/stilt.spatial.same_crs.html#stilt.same_crs">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">same_crs</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return whether two CRS strings describe the same CRS, however they are spelled.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return whether two CRS strings describe the same CRS, however they are spelled."""</span>
     <span class="k">if</span> <span class="n">a</span> <span class="o">==</span> <span class="n">b</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">True</span>
     <span class="k">if</span> <span class="n">is_longlat</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="n">is_longlat</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
@@ -760,7 +762,7 @@
     <span class="n">lon2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">lat2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the great-circle distance in km, broadcasting over the inputs.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the great-circle distance in km, broadcasting over the inputs."""</span>
     <span class="n">d_lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lat2</span> <span class="o">-</span> <span class="n">lat1</span><span class="p">)</span>
     <span class="n">d_lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lon2</span> <span class="o">-</span> <span class="n">lon1</span><span class="p">)</span>
     <span class="n">a</span> <span class="o">=</span> <span class="p">(</span>
@@ -771,13 +773,13 @@
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;Bounds&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;Grid&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;cf_axis_attrs&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;haversine_km&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;horizontal_dims&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;is_longlat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;same_crs&quot;</span><span class="p">,</span>
+    <span class="s2">"Bounds"</span><span class="p">,</span>
+    <span class="s2">"Grid"</span><span class="p">,</span>
+    <span class="s2">"cf_axis_attrs"</span><span class="p">,</span>
+    <span class="s2">"haversine_km"</span><span class="p">,</span>
+    <span class="s2">"horizontal_dims"</span><span class="p">,</span>
+    <span class="s2">"is_longlat"</span><span class="p">,</span>
+    <span class="s2">"same_crs"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 
@@ -808,8 +810,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -835,14 +837,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

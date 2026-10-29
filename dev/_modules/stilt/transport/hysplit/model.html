@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/transport/hysplit/model';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -448,7 +450,7 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.transport.hysplit.model</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;HYSPLIT as a transport model.&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""HYSPLIT as a transport model."""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -484,52 +486,52 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">hysplit_version</span><span class="p">(</span><span class="n">exe_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the version of the HYSPLIT build in *exe_dir*, or of the bundled build.</span>
 
 <span class="sd">    A build directory names its version in a ``version`` file beside</span>
 <span class="sd">    ``hycs_std``, as the bundled one does. Two builds with the same settings</span>
-<span class="sd">    can give different particles, so the version is part of a run&#39;s</span>
+<span class="sd">    can give different particles, so the version is part of a run's</span>
 <span class="sd">    identity.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    FileNotFoundError</span>
 <span class="sd">        If *exe_dir* has no ``version`` file.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">exe_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pkg_files</span><span class="p">(</span><span class="s2">&quot;stilt.transport.hysplit&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;bin&quot;</span> <span class="o">/</span> <span class="s2">&quot;version&quot;</span><span class="p">))</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pkg_files</span><span class="p">(</span><span class="s2">"stilt.transport.hysplit"</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"bin"</span> <span class="o">/</span> <span class="s2">"version"</span><span class="p">))</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">exe_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;version&quot;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">exe_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"version"</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">exe_dir</span><span class="si">}</span><span class="s2"> has no &#39;version&#39; file. A custom hycs_std build needs &quot;</span>
-                <span class="s2">&quot;one beside the binary, holding its version string (such as &quot;</span>
-                <span class="s2">&quot;v5.3.2+t0-rows), so its runs are told apart from other builds&#39;.&quot;</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">exe_dir</span><span class="si">}</span><span class="s2"> has no 'version' file. A custom hycs_std build needs "</span>
+                <span class="s2">"one beside the binary, holding its version string (such as "</span>
+                <span class="s2">"v5.3.2+t0-rows), so its runs are told apart from other builds'."</span>
             <span class="p">)</span>
     <span class="k">return</span> <span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_sha256</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the SHA-256 hex digest of a file.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the SHA-256 hex digest of a file."""</span>
     <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="HysplitModel">
 <a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.HysplitModel.html#stilt.transport.hysplit.HysplitModel">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">HysplitModel</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    HYSPLIT as a transport model, the object ``get_model(&quot;hysplit&quot;)`` returns.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    HYSPLIT as a transport model, the object ``get_model("hysplit")`` returns.</span>
 
-<span class="sd">    :meth:`run` picks the met files a receptor needs, writes HYSPLIT&#39;s input</span>
+<span class="sd">    :meth:`run` picks the met files a receptor needs, writes HYSPLIT's input</span>
 <span class="sd">    files (:func:`~stilt.transport.hysplit.write_inputs`), runs ``hycs_std``,</span>
 <span class="sd">    and reads the particles it writes</span>
 <span class="sd">    (:func:`~stilt.transport.hysplit.read_particle_dat`). HYSPLIT reads the</span>
 <span class="sd">    met where it is (the cropped copies when the met is cropped), so nothing</span>
 <span class="sd">    is staged per run.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;hysplit&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"hysplit"</span>
     <span class="n">config_class</span> <span class="o">=</span> <span class="n">HysplitConfig</span>
     <span class="c1">#: HYSPLIT reads ARL files, found, downloaded, or cropped as a met says.</span>
     <span class="n">met_config_class</span> <span class="o">=</span> <span class="n">MetConfig</span>
@@ -541,19 +543,19 @@
 <div class="viewcode-block" id="HysplitModel.version">
 <a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.HysplitModel.version.html#stilt.transport.hysplit.HysplitModel.version">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the version of the bundled build, or of the one in ``config.exe_dir``.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the version of the bundled build, or of the one in ``config.exe_dir``."""</span>
         <span class="k">return</span> <span class="n">hysplit_version</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">exe_dir</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="HysplitModel.data_files">
 <a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.HysplitModel.data_files.html#stilt.transport.hysplit.HysplitModel.data_files">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">data_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the SHA-256 of each table in ``config.data_dir`` that differs from the bundled one.</span>
 
 <span class="sd">        ``None`` when there is no ``data_dir`` or every table in it matches</span>
 <span class="sd">        the bundled table of the same name.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">data_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="n">bundled</span> <span class="o">=</span> <span class="n">_bundled_data_dir</span><span class="p">()</span>
@@ -573,12 +575,12 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">check_met</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">met</span><span class="p">:</span> <span class="n">MetConfig</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return what would stop HYSPLIT from running *receptors* with *met*, found before any run.</span>
 
-<span class="sd">        The checks of :meth:`Met.check_receptors`: the met&#39;s directory</span>
+<span class="sd">        The checks of :meth:`Met.check_receptors`: the met's directory</span>
 <span class="sd">        holds ARL files, every file a run needs is there, and the receptors</span>
-<span class="sd">        are inside the crop. Nothing is run, opened past the first file&#39;s</span>
+<span class="sd">        are inside the crop. Nothing is run, opened past the first file's</span>
 <span class="sd">        header, or downloaded.</span>
 
 <span class="sd">        Parameters</span>
@@ -596,8 +598,8 @@
 <span class="sd">        pandas.DataFrame</span>
 <span class="sd">            ``check``, ``receptor`` (``NA`` for a problem of the met</span>
 <span class="sd">            itself), and ``message`` columns, one row for each problem.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">Met</span><span class="p">(</span><span class="s2">&quot;met&quot;</span><span class="p">,</span> <span class="n">met</span><span class="p">)</span><span class="o">.</span><span class="n">check_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">)</span></div>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">Met</span><span class="p">(</span><span class="s2">"met"</span><span class="p">,</span> <span class="n">met</span><span class="p">)</span><span class="o">.</span><span class="n">check_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="HysplitModel.run">
@@ -611,13 +613,13 @@
         <span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelRun</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Run HYSPLIT for one receptor in *workdir* and return its particles.</span>
 
 <span class="sd">        HYSPLIT finds the met files that cover *window* (and, for a backward</span>
 <span class="sd">        run, the hour after the release, which it interpolates), cropped</span>
 <span class="sd">        when the met is. Its output is ``stilt.log`` in *workdir*, returned</span>
-<span class="sd">        as the run&#39;s log. Without *workdir* it runs in a temporary</span>
+<span class="sd">        as the run's log. Without *workdir* it runs in a temporary</span>
 <span class="sd">        directory. The release heights and the near-field correction are</span>
 <span class="sd">        added by the caller, as for any model</span>
 <span class="sd">        (:func:`stilt.transport.run_model`).</span>
@@ -625,27 +627,27 @@
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        SimulationError</span>
-<span class="sd">            With HYSPLIT&#39;s log in ``log``, and ``reason`` ``TIMEOUT`` when</span>
+<span class="sd">            With HYSPLIT's log in ``log``, and ``reason`` ``TIMEOUT`` when</span>
 <span class="sd">            the run exceeded *timeout* seconds; the :class:`FailureReason`</span>
 <span class="sd">            of a known failure message in the log or ``WARNING`` file, such</span>
 <span class="sd">            as the met running out (``MET_COVERAGE``); ``PARTICLE_LIMIT``</span>
 <span class="sd">            when ``maxpar`` stopped a release from several locations before</span>
 <span class="sd">            the last ones got their particles; or ``NO_PARTICLE_DATA`` when</span>
 <span class="sd">            HYSPLIT wrote no particle file. A run whose particles stopped</span>
-<span class="sd">            before ``n_hours`` well inside the met&#39;s domain fails as</span>
+<span class="sd">            before ``n_hours`` well inside the met's domain fails as</span>
 <span class="sd">            ``MET_COVERAGE`` too, when ``outdt`` is 0: more than 5 grid</span>
 <span class="sd">            cells from every side of the met grid.</span>
-<span class="sd">            Particles that all left the met&#39;s domain before the end of the</span>
+<span class="sd">            Particles that all left the met's domain before the end of the</span>
 <span class="sd">            run are kept.</span>
 <span class="sd">        MeteorologyError</span>
 <span class="sd">            Before HYSPLIT runs, when a met file the run needs is missing or</span>
 <span class="sd">            damaged, or the files do not hold every time the run covers</span>
 <span class="sd">            (:meth:`Met.check`).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">workdir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;stilt-&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"stilt-"</span><span class="p">)</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
                 <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">window</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">),</span> <span class="n">timeout</span><span class="p">)</span>
-        <span class="n">files</span> <span class="o">=</span> <span class="n">Met</span><span class="p">(</span><span class="s2">&quot;met&quot;</span><span class="p">,</span> <span class="n">met</span><span class="p">)</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="n">Met</span><span class="p">(</span><span class="s2">"met"</span><span class="p">,</span> <span class="n">met</span><span class="p">)</span>
         <span class="n">hour_after</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">n_hours</span> <span class="o">&lt;</span> <span class="mi">0</span>
         <span class="n">source</span> <span class="o">=</span> <span class="n">files</span><span class="o">.</span><span class="n">files_for</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">hour_after</span><span class="o">=</span><span class="n">hour_after</span><span class="p">)</span>
         <span class="n">readable</span> <span class="o">=</span> <span class="n">files</span><span class="o">.</span><span class="n">readable</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
@@ -657,7 +659,7 @@
             <span class="n">path</span> <span class="o">=</span> <span class="n">workdir</span> <span class="o">/</span> <span class="n">PARTICLE_STILT_FILE</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
                 <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;HYSPLIT wrote no </span><span class="si">{</span><span class="n">PARTICLE_STILT_FILE</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s2">"HYSPLIT wrote no </span><span class="si">{</span><span class="n">PARTICLE_STILT_FILE</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
                     <span class="n">reason</span><span class="o">=</span><span class="n">FailureReason</span><span class="o">.</span><span class="n">NO_PARTICLE_DATA</span><span class="p">,</span>
                 <span class="p">)</span>
             <span class="n">particles</span> <span class="o">=</span> <span class="n">read_particle_dat</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">varsiwant</span><span class="p">)</span>
@@ -667,14 +669,14 @@
             <span class="n">error</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">_read_log</span><span class="p">(</span><span class="n">workdir</span><span class="p">)</span>
             <span class="k">raise</span>
         <span class="c1"># The record names the source files; the crop settings are in the</span>
-        <span class="c1"># run&#39;s settings.</span>
+        <span class="c1"># run's settings.</span>
         <span class="k">return</span> <span class="n">ModelRun</span><span class="p">(</span><span class="n">particles</span><span class="o">=</span><span class="n">particles</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">_read_log</span><span class="p">(</span><span class="n">workdir</span><span class="p">),</span> <span class="n">met_files</span><span class="o">=</span><span class="n">source</span><span class="p">)</span></div>
 </div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_met_grid</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Grid</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the horizontal grid of the ARL file at *path*.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the horizontal grid of the ARL file at *path*."""</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">arlmet</span><span class="w"> </span><span class="kn">import</span> <span class="n">File</span>
 
     <span class="k">with</span> <span class="n">File</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">met</span><span class="p">:</span>
@@ -682,12 +684,12 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_read_log</span><span class="p">(</span><span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return HYSPLIT&#39;s log in *workdir*, or an empty string when it wrote none.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return HYSPLIT's log in *workdir*, or an empty string when it wrote none."""</span>
     <span class="n">path</span> <span class="o">=</span> <span class="n">workdir</span> <span class="o">/</span> <span class="n">LOG_FILE</span>
-    <span class="k">return</span> <span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="s2">""</span>
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HysplitModel&quot;</span><span class="p">,</span> <span class="s2">&quot;hysplit_version&quot;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"HysplitModel"</span><span class="p">,</span> <span class="s2">"hysplit_version"</span><span class="p">]</span>
 </pre></div>
 
                 </article>
@@ -717,8 +719,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -744,14 +746,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

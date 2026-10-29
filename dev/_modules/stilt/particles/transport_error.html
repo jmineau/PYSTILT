@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/particles/transport_error';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -445,14 +447,14 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.particles.transport_error</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">Transport error of the modeled enhancement, from wind-perturbed trajectories.</span>
 
 <span class="sd">The method is that of Lin and Gerbig (2005, GRL, doi:10.1029/2004GL021127).</span>
 <span class="sd">A variant with wind-error settings (``siguverr``, ``tluverr``,</span>
 <span class="sd">``zcoruverr``, ``horcoruverr``) runs the particles again with an extra</span>
-<span class="sd">random wind that has the statistics of the meteorology&#39;s errors. Each</span>
-<span class="sd">particle&#39;s enhancement is its ``foot × flux`` summed along its trajectory.</span>
+<span class="sd">random wind that has the statistics of the meteorology's errors. Each</span>
+<span class="sd">particle's enhancement is its ``foot × flux`` summed along its trajectory.</span>
 <span class="sd">The perturbed particles sample more of the flux field, so the enhancement</span>
 <span class="sd">varies more across them. The increase is the transport-error variance</span>
 <span class="sd">(their equation 4)::</span>
@@ -465,7 +467,7 @@
 <span class="sd">sample variances is noisy and can be negative. It is returned with its sign</span>
 <span class="sd">and with an estimate of its noise, so many receptors can be combined with a</span>
 <span class="sd">median and a single value can be compared with its noise.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -483,17 +485,17 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_transforms</span><span class="p">,</span> <span class="n">release_coordinate</span>
 
-<span class="c1">#: X-STILT&#39;s empirical mean vertical correlation length of transport errors, m.</span>
+<span class="c1">#: X-STILT's empirical mean vertical correlation length of transport errors, m.</span>
 <span class="n">DEFAULT_LENGTH_SCALE</span> <span class="o">=</span> <span class="mf">356.0</span>
 
 <span class="c1">#: The results :func:`_transport_errors` keeps for each receptor, in column order.</span>
 <span class="n">_RESULT_COLUMNS</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="s2">&quot;enhancement&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;enhancement_perturbed&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;background&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;variance&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;noise&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;realizations&quot;</span><span class="p">,</span>
+    <span class="s2">"enhancement"</span><span class="p">,</span>
+    <span class="s2">"enhancement_perturbed"</span><span class="p">,</span>
+    <span class="s2">"background"</span><span class="p">,</span>
+    <span class="s2">"variance"</span><span class="p">,</span>
+    <span class="s2">"noise"</span><span class="p">,</span>
+    <span class="s2">"realizations"</span><span class="p">,</span>
 <span class="p">)</span>
 
 
@@ -501,15 +503,15 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.particles.TransportError.html#stilt.particles.TransportError">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">TransportError</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Transport error of a modeled enhancement, returned by :func:`transport_error`.</span>
 
-<span class="sd">    Values are in the flux&#39;s units times the footprint&#39;s, which is ppm for a</span>
+<span class="sd">    Values are in the flux's units times the footprint's, which is ppm for a</span>
 <span class="sd">    flux in µmol m⁻² s⁻¹, and squared for variances. With a ``background``</span>
 <span class="sd">    field, the per-particle values are modeled mole fractions (enhancement</span>
 <span class="sd">    plus background at the endpoint), so ``enhancement`` and</span>
 <span class="sd">    ``enhancement_perturbed`` are mole fractions and ``variance`` includes</span>
-<span class="sd">    the background&#39;s response to the wind errors.</span>
+<span class="sd">    the background's response to the wind errors.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
@@ -540,7 +542,7 @@
 <span class="sd">        enhancement alone.</span>
 <span class="sd">    realizations : int</span>
 <span class="sd">        Number of error realizations in the estimate.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">variance</span><span class="p">:</span> <span class="nb">float</span>
     <span class="n">noise</span><span class="p">:</span> <span class="nb">float</span>
@@ -553,24 +555,24 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">sd</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Transport-error standard deviation, or 0 when ``variance`` is negative.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Transport-error standard deviation, or 0 when ``variance`` is negative."""</span>
         <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)))</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_level_edges</span><span class="p">(</span><span class="n">heights</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">levels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the release-height bin edges of the levels.</span>
 
 <span class="sd">    Given edges are used as they are. With a number of levels, the edges</span>
 <span class="sd">    split the height range evenly, or fall halfway between the distinct</span>
 <span class="sd">    heights when there are no more of them than ``levels``. The outer edges</span>
 <span class="sd">    are then open, so the perturbed particles fall in the same levels.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">levels</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;levels must be &gt;= 1.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"levels must be &gt;= 1."</span><span class="p">)</span>
     <span class="n">unique</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">heights</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">unique</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="n">levels</span><span class="p">:</span>
         <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(([</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">],</span> <span class="p">(</span><span class="n">unique</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">unique</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">,</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">]))</span>
@@ -581,19 +583,19 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_level_labels</span><span class="p">(</span><span class="n">heights</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">edges</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return each particle&#39;s level number, NaN outside the edges.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return each particle's level number, NaN outside the edges."""</span>
     <span class="n">label</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">heights</span><span class="p">,</span> <span class="n">edges</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">labels</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">include_lowest</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">heights</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_level_stats</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">percentile</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return each level&#39;s mean and variance of ``x``, indexed by level.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return each level's mean and variance of ``x``, indexed by level.</span>
 
-<span class="sd">    The mean is over all the level&#39;s finite values and the variance over</span>
+<span class="sd">    The mean is over all the level's finite values and the variance over</span>
 <span class="sd">    those at or below ``percentile``. A level with fewer than two such</span>
 <span class="sd">    values has NaN variance.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">var</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
         <span class="n">v</span> <span class="o">=</span> <span class="n">_finite</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
@@ -602,40 +604,40 @@
         <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
 
     <span class="n">groups</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;mean&quot;</span><span class="p">:</span> <span class="n">groups</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">_mean</span><span class="p">),</span> <span class="s2">&quot;var&quot;</span><span class="p">:</span> <span class="n">groups</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">var</span><span class="p">)})</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"mean"</span><span class="p">:</span> <span class="n">groups</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">_mean</span><span class="p">),</span> <span class="s2">"var"</span><span class="p">:</span> <span class="n">groups</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">var</span><span class="p">)})</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_finite</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the finite values as an array.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the finite values as an array."""</span>
     <span class="n">v</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">v</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">v</span><span class="p">)]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_mean</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return numpy&#39;s mean of the finite values, or NaN when there are none.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return numpy's mean of the finite values, or NaN when there are none."""</span>
     <span class="n">v</span> <span class="o">=</span> <span class="n">_finite</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_signed_sqrt</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return ``sign(v) * sqrt(|v|)``, with NaN as 0.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return ``sign(v) * sqrt(|v|)``, with NaN as 0."""</span>
     <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_combine</span><span class="p">(</span><span class="n">levels</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">length_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the column variance ``Σ_i w_i² v_i + Σ_{i≠j} w_i w_j s_i s_j corr_ij``.</span>
 
 <span class="sd">    ``s`` is the per-level ``sd_trans``. On the diagonal, ``v`` is the</span>
 <span class="sd">    signed variance difference, so a level whose spread fell counts</span>
 <span class="sd">    negatively. The cross terms use the signed square roots, so correlated levels of the</span>
 <span class="sd">    same sign add and levels of opposite sign cancel.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">w</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">s</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;sd_trans&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">h</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;height&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">diag</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">levels</span><span class="p">[</span><span class="s2">&quot;dvar&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span><span class="s2">"weight"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span><span class="s2">"sd_trans"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span><span class="s2">"height"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">diag</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">levels</span><span class="p">[</span><span class="s2">"dvar"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">length_scale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">corr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">))</span>
     <span class="k">else</span><span class="p">:</span>
@@ -654,13 +656,13 @@
     <span class="o">*</span><span class="p">,</span>
     <span class="n">percentile</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the table of means, variances, and weights per release level.</span>
 
 <span class="sd">    The perturbed mean and variance of each level are averaged over the</span>
 <span class="sd">    error realizations (one ``x_errs`` and ``label_errs`` pair each) before</span>
 <span class="sd">    ``dvar`` is taken.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">orig</span> <span class="o">=</span> <span class="n">_level_stats</span><span class="p">(</span><span class="n">x_orig</span><span class="p">,</span> <span class="n">label_orig</span><span class="p">,</span> <span class="n">percentile</span><span class="p">)</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">level_height</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
     <span class="n">errs</span> <span class="o">=</span> <span class="p">[</span>
         <span class="n">_level_stats</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">percentile</span><span class="p">)</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">level_height</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
@@ -669,22 +671,22 @@
     <span class="n">n</span> <span class="o">=</span> <span class="n">label_orig</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">level_height</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">table</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
         <span class="p">{</span>
-            <span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="n">level_height</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
-            <span class="s2">&quot;n&quot;</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">),</span>
-            <span class="s2">&quot;weight&quot;</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_orig</span><span class="p">),</span>
-            <span class="s2">&quot;mean_orig&quot;</span><span class="p">:</span> <span class="n">orig</span><span class="p">[</span><span class="s2">&quot;mean&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
-            <span class="s2">&quot;mean_err&quot;</span><span class="p">:</span> <span class="n">_nanmean</span><span class="p">([</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;mean&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">errs</span><span class="p">]),</span>
-            <span class="s2">&quot;var_orig&quot;</span><span class="p">:</span> <span class="n">orig</span><span class="p">[</span><span class="s2">&quot;var&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
-            <span class="s2">&quot;var_err&quot;</span><span class="p">:</span> <span class="n">_nanmean</span><span class="p">([</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;var&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">errs</span><span class="p">]),</span>
+            <span class="s2">"height"</span><span class="p">:</span> <span class="n">level_height</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+            <span class="s2">"n"</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">),</span>
+            <span class="s2">"weight"</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_orig</span><span class="p">),</span>
+            <span class="s2">"mean_orig"</span><span class="p">:</span> <span class="n">orig</span><span class="p">[</span><span class="s2">"mean"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+            <span class="s2">"mean_err"</span><span class="p">:</span> <span class="n">_nanmean</span><span class="p">([</span><span class="n">e</span><span class="p">[</span><span class="s2">"mean"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">errs</span><span class="p">]),</span>
+            <span class="s2">"var_orig"</span><span class="p">:</span> <span class="n">orig</span><span class="p">[</span><span class="s2">"var"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+            <span class="s2">"var_err"</span><span class="p">:</span> <span class="n">_nanmean</span><span class="p">([</span><span class="n">e</span><span class="p">[</span><span class="s2">"var"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">errs</span><span class="p">]),</span>
         <span class="p">}</span>
     <span class="p">)</span>
-    <span class="n">table</span><span class="p">[</span><span class="s2">&quot;dvar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;var_err&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;var_orig&quot;</span><span class="p">]</span>
-    <span class="n">table</span><span class="p">[</span><span class="s2">&quot;sd_trans&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_signed_sqrt</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;dvar&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+    <span class="n">table</span><span class="p">[</span><span class="s2">"dvar"</span><span class="p">]</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">"var_err"</span><span class="p">]</span> <span class="o">-</span> <span class="n">table</span><span class="p">[</span><span class="s2">"var_orig"</span><span class="p">]</span>
+    <span class="n">table</span><span class="p">[</span><span class="s2">"sd_trans"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_signed_sqrt</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">"dvar"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
     <span class="k">return</span> <span class="n">table</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_nanmean</span><span class="p">(</span><span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the mean across *columns* per row, ignoring NaN; NaN where all are.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the mean across *columns* per row, ignoring NaN; NaN where all are."""</span>
     <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
     <span class="n">ok</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
     <span class="n">count</span> <span class="o">=</span> <span class="n">ok</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -701,7 +703,7 @@
     <span class="n">percentile</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">length_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the standard deviation of ``variance`` with no perturbation.</span>
 
 <span class="sd">    The unperturbed particles of each level are split into two random halves,</span>
@@ -709,9 +711,9 @@
 <span class="sd">    estimate over ``splits`` random splits, divided by ``sqrt(2)`` to go from</span>
 <span class="sd">    half to full ensembles, is the noise. Returns NaN for fewer than two</span>
 <span class="sd">    splits.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">splits</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">)</span>
     <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">indx</span> <span class="o">=</span> <span class="n">x_orig</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
     <span class="n">lab</span> <span class="o">=</span> <span class="n">label_orig</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">indx</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
@@ -731,7 +733,7 @@
             <span class="n">level_height</span><span class="p">,</span>
             <span class="n">percentile</span><span class="o">=</span><span class="n">percentile</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;n&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;n&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">"weight"</span><span class="p">]</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">"n"</span><span class="p">]</span> <span class="o">/</span> <span class="n">table</span><span class="p">[</span><span class="s2">"n"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
         <span class="n">estimates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_combine</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">length_scale</span><span class="p">))</span>
     <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">estimates</span><span class="p">,</span> <span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span><span class="p">))</span>
 
@@ -752,7 +754,7 @@
     <span class="n">noise_splits</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span>
     <span class="n">background</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TransportError</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the transport-error variance of a modeled enhancement (Lin and Gerbig, 2005).</span>
 
 <span class="sd">    Parameters</span>
@@ -762,17 +764,17 @@
 <span class="sd">    error_particles : pandas.DataFrame or sequence of pandas.DataFrame</span>
 <span class="sd">        Particle table of a wind-error variant of the same receptor, or one</span>
 <span class="sd">        table per realization for a variant with ``realizations: N`` (see</span>
-<span class="sd">        Examples). A table is one simulation&#39;s particles: one receptor and</span>
+<span class="sd">        Examples). A table is one simulation's particles: one receptor and</span>
 <span class="sd">        one realization.</span>
 <span class="sd">    flux : xarray.DataArray</span>
 <span class="sd">        Surface flux field (see ``particles.stilt.enhancement``).</span>
 <span class="sd">    transforms : sequence, optional</span>
-<span class="sd">        The footprint&#39;s particle transforms (``sim.variant.footprint.transforms``),</span>
+<span class="sd">        The footprint's particle transforms (``sim.variant.footprint.transforms``),</span>
 <span class="sd">        applied to both tables so the error is weighted like the footprint.</span>
 <span class="sd">    receptor : Receptor, optional</span>
 <span class="sd">        The receptor (``sim.receptor``), for the transforms.</span>
 <span class="sd">    directory : str or Path, optional</span>
-<span class="sd">        Where a kernel table&#39;s relative path starts (``project.directory``).</span>
+<span class="sd">        Where a kernel table's relative path starts (``project.directory``).</span>
 <span class="sd">    levels : int or sequence of float, default 20</span>
 <span class="sd">        Release-height levels to compute statistics on: a number of</span>
 <span class="sd">        equal-width bins between the lowest and highest release height, or</span>
@@ -781,7 +783,7 @@
 <span class="sd">        is a level. A point receptor is one level.</span>
 <span class="sd">    length_scale : float or None, default 356.0</span>
 <span class="sd">        Vertical e-folding length of the error correlation between levels,</span>
-<span class="sd">        in meters (X-STILT&#39;s value). ``None`` treats the levels as</span>
+<span class="sd">        in meters (X-STILT's value). ``None`` treats the levels as</span>
 <span class="sd">        uncorrelated. It has no effect for a point receptor.</span>
 <span class="sd">    percentile : float, default 1.0</span>
 <span class="sd">        In each level, drop particles above this quantile of the enhancement</span>
@@ -792,7 +794,7 @@
 <span class="sd">        Number of random half-splits of the unperturbed particles used to</span>
 <span class="sd">        estimate ``noise``. Fewer than 2 skips it and gives NaN.</span>
 <span class="sd">    background : xarray.DataArray, optional</span>
-<span class="sd">        Background field sampled at each particle&#39;s endpoint (see</span>
+<span class="sd">        Background field sampled at each particle's endpoint (see</span>
 <span class="sd">        :func:`background`). Wind errors move the</span>
 <span class="sd">        endpoints as well as the surface contact, so with a field the</span>
 <span class="sd">        statistics are of the modeled mole fraction per particle, as X-STILT</span>
@@ -812,9 +814,9 @@
 <span class="sd">    transforms are applied to the particles first, so the level statistics</span>
 <span class="sd">    are already column-weighted and the level weights are particle counts.</span>
 
-<span class="sd">    With several error realizations, each level&#39;s ``mean_err`` and</span>
+<span class="sd">    With several error realizations, each level's ``mean_err`` and</span>
 <span class="sd">    ``var_err`` are averaged over them before ``dvar`` is formed, so the</span>
-<span class="sd">    perturbed side&#39;s sampling noise falls as ``1/sqrt(N)``. The unperturbed</span>
+<span class="sd">    perturbed side's sampling noise falls as ``1/sqrt(N)``. The unperturbed</span>
 <span class="sd">    side is the same particles in every realization, so its noise does not</span>
 <span class="sd">    fall: with ``N`` realizations the null spread of ``variance`` is</span>
 <span class="sd">    ``sqrt((1 + 1/N) / 2)`` times the single-realization ``noise``, which</span>
@@ -833,19 +835,19 @@
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    For the variant ``hrrr-err`` with ``realizations: 4``, select one</span>
-<span class="sd">    receptor&#39;s simulations and group their particles by realization. Grouping</span>
+<span class="sd">    receptor's simulations and group their particles by realization. Grouping</span>
 <span class="sd">    by ``variant`` gives one table, which counts as one realization and gives</span>
-<span class="sd">    a wrong variance. Without the receptor, each realization&#39;s table holds</span>
-<span class="sd">    every receptor&#39;s particles.</span>
+<span class="sd">    a wrong variance. Without the receptor, each realization's table holds</span>
+<span class="sd">    every receptor's particles.</span>
 
 <span class="sd">    &gt;&gt;&gt; from stilt.particles import transport_error  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; sim = project.simulation(rid, &quot;hrrr&quot;)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; sim = project.simulation(rid, "hrrr")  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; sims = project.simulations  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; ensemble = sims[</span>
-<span class="sd">    ...     (sims.variant == &quot;hrrr-err&quot;) &amp; (sims.receptor == rid)</span>
+<span class="sd">    ...     (sims.variant == "hrrr-err") &amp; (sims.receptor == rid)</span>
 <span class="sd">    ... ]  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; by_realization = project.particles(ensemble).groupby(</span>
-<span class="sd">    ...     &quot;realization&quot;</span>
+<span class="sd">    ...     "realization"</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; error_particles = [rows for _, rows in by_realization]  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; result = transport_error(sim.particles, error_particles, flux)  # doctest: +SKIP</span>
@@ -853,16 +855,16 @@
 <span class="sd">    4</span>
 
 <span class="sd">    ``sim.transport_error(realizations, flux)`` builds this list from the</span>
-<span class="sd">    realizations&#39; simulations. It also passes ``transforms``, ``receptor``,</span>
+<span class="sd">    realizations' simulations. It also passes ``transforms``, ``receptor``,</span>
 <span class="sd">    and ``directory``, which a variant with footprint transforms needs and</span>
 <span class="sd">    this call leaves out.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">percentile</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;percentile must be in (0, 1].&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"percentile must be in (0, 1]."</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">length_scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">length_scale</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;length_scale must be &gt; 0 or None.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"length_scale must be &gt; 0 or None."</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">noise_splits</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;noise_splits must be &gt;= 0.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"noise_splits must be &gt;= 0."</span><span class="p">)</span>
     <span class="n">transforms</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">transforms</span><span class="p">)</span>
     <span class="n">error_tables</span> <span class="o">=</span> <span class="p">(</span>
         <span class="p">[</span><span class="n">error_particles</span><span class="p">]</span>
@@ -870,12 +872,12 @@
         <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">error_particles</span><span class="p">)</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">error_tables</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;error_particles must hold at least one realization.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"error_particles must hold at least one realization."</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_prepare</span><span class="p">(</span>
         <span class="n">table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the modeled value and release height per particle, and the background.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the modeled value and release height per particle, and the background."""</span>
         <span class="n">weighted</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">apply_transforms</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">transforms</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">transforms</span>
@@ -891,8 +893,8 @@
             <span class="n">receptor</span><span class="o">=</span><span class="n">receptor</span><span class="p">,</span>
             <span class="n">directory</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="c1"># Each particle&#39;s background, weighted like its enhancement. A</span>
-        <span class="c1"># particle&#39;s enhancement is N times its share of the footprint&#39;s.</span>
+        <span class="c1"># Each particle's background, weighted like its enhancement. A</span>
+        <span class="c1"># particle's enhancement is N times its share of the footprint's.</span>
         <span class="n">filled</span> <span class="o">=</span> <span class="n">_fill_missing</span><span class="p">(</span><span class="n">bg</span><span class="o">.</span><span class="n">per_particle</span><span class="p">,</span> <span class="n">bg</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bg</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span> <span class="o">*</span> <span class="n">bg</span><span class="o">.</span><span class="n">weights</span> <span class="o">*</span> <span class="n">filled</span><span class="p">)</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">_release_heights</span><span class="p">(</span><span class="n">weighted</span><span class="p">),</span> <span class="n">bg</span><span class="o">.</span><span class="n">value</span>
@@ -919,9 +921,9 @@
     <span class="p">)</span>
     <span class="n">n_real</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">error_tables</span><span class="p">)</span>
     <span class="c1"># The main particles are shared by every realization, so only the</span>
-    <span class="c1"># perturbed side&#39;s noise averages down; see the Notes.</span>
+    <span class="c1"># perturbed side's noise averages down; see the Notes.</span>
     <span class="n">noise_factor</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_real</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span>
-    <span class="n">w</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">"weight"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">TransportError</span><span class="p">(</span>
         <span class="n">variance</span><span class="o">=</span><span class="n">_combine</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">length_scale</span><span class="p">),</span>
         <span class="n">noise</span><span class="o">=</span><span class="n">noise_factor</span>
@@ -933,8 +935,8 @@
             <span class="n">percentile</span><span class="o">=</span><span class="n">percentile</span><span class="p">,</span>
             <span class="n">length_scale</span><span class="o">=</span><span class="n">length_scale</span><span class="p">,</span>
         <span class="p">),</span>
-        <span class="n">enhancement</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">w</span> <span class="o">*</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;mean_orig&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())),</span>
-        <span class="n">enhancement_perturbed</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">w</span> <span class="o">*</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;mean_err&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())),</span>
+        <span class="n">enhancement</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">w</span> <span class="o">*</span> <span class="n">table</span><span class="p">[</span><span class="s2">"mean_orig"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())),</span>
+        <span class="n">enhancement_perturbed</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">w</span> <span class="o">*</span> <span class="n">table</span><span class="p">[</span><span class="s2">"mean_err"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())),</span>
         <span class="n">levels</span><span class="o">=</span><span class="n">table</span><span class="p">,</span>
         <span class="n">length_scale</span><span class="o">=</span><span class="n">length_scale</span><span class="p">,</span>
         <span class="n">background</span><span class="o">=</span><span class="n">background_value</span><span class="p">,</span>
@@ -953,20 +955,20 @@
     <span class="n">workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the transport error of many receptors, one receptor at a time.</span>
 
-<span class="sd">    ``read(receptor_id)`` returns that receptor&#39;s unperturbed particle table</span>
+<span class="sd">    ``read(receptor_id)`` returns that receptor's unperturbed particle table</span>
 <span class="sd">    and one table per error realization, as :func:`transport_error` takes</span>
 <span class="sd">    them; every receptor must have both. Each receptor is read and estimated</span>
-<span class="sd">    in one of *workers* threads, which holds only that receptor&#39;s tables.</span>
-<span class="sd">    *transforms* are the unperturbed variant&#39;s footprint transforms, as</span>
+<span class="sd">    in one of *workers* threads, which holds only that receptor's tables.</span>
+<span class="sd">    *transforms* are the unperturbed variant's footprint transforms, as</span>
 <span class="sd">    ``sim.transport_error`` passes them, and *options* go to</span>
 <span class="sd">    :func:`transport_error` unchanged.</span>
 
 <span class="sd">    Returns one row per receptor, indexed by receptor id in *receptors*</span>
 <span class="sd">    order, with the columns in :data:`_RESULT_COLUMNS`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">one</span><span class="p">(</span><span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
         <span class="n">particles</span><span class="p">,</span> <span class="n">error_particles</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
@@ -995,16 +997,16 @@
             <span class="n">rows</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">receptors</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
         <span class="n">rows</span><span class="p">,</span>
-        <span class="n">index</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">([</span><span class="n">r</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;receptor&quot;</span><span class="p">),</span>
+        <span class="n">index</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">([</span><span class="n">r</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">"receptor"</span><span class="p">),</span>
         <span class="n">columns</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">_RESULT_COLUMNS</span><span class="p">),</span>
-    <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s2">&quot;realizations&quot;</span><span class="p">:</span> <span class="s2">&quot;int64&quot;</span><span class="p">})</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s2">"realizations"</span><span class="p">:</span> <span class="s2">"int64"</span><span class="p">})</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_release_heights</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return each particle&#39;s release height (``release_height``), or zeros without ``release_height``.&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="s2">&quot;release_height&quot;</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">&quot;release_height&quot;</span><span class="p">)</span>
-    <span class="n">indx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+<span class="w">    </span><span class="sd">"""Return each particle's release height (``release_height``), or zeros without ``release_height``."""</span>
+    <span class="k">if</span> <span class="s2">"release_height"</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">"release_height"</span><span class="p">)</span>
+    <span class="n">indx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
     <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">indx</span><span class="p">)</span>
 </pre></div>
 
@@ -1035,8 +1037,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1062,14 +1064,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/transforms/pressure_weighting';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -448,12 +450,12 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.transforms.pressure_weighting</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">The pressure-weighting transform: weight each particle by its share of the column&#39;s air.</span>
+<span></span><span class="sd">"""</span>
+<span class="sd">The pressure-weighting transform: weight each particle by its share of the column's air.</span>
 
-<span class="sd">:func:`particle_pwf` derives the weights from the particles&#39; own</span>
+<span class="sd">:func:`particle_pwf` derives the weights from the particles' own</span>
 <span class="sd">pressures; it is public so your own transforms can use it.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -475,13 +477,13 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">particle_pwf</span><span class="p">(</span>
     <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">surface_pressure</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">altitude_ref</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;agl&quot;</span><span class="p">,</span> <span class="s2">&quot;msl&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;agl&quot;</span><span class="p">,</span>
+    <span class="n">altitude_ref</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"agl"</span><span class="p">,</span> <span class="s2">"msl"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"agl"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return each particle&#39;s release pressure and pressure weight.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return each particle's release pressure and pressure weight.</span>
 
-<span class="sd">    As in X-STILT&#39;s ``get.wgt.*.func``, a hypsometric curve</span>
-<span class="sd">    ``ln p = b + a·z`` is fit to the particles&#39; first-step heights and</span>
+<span class="sd">    As in X-STILT's ``get.wgt.*.func``, a hypsometric curve</span>
+<span class="sd">    ``ln p = b + a·z`` is fit to the particles' first-step heights and</span>
 <span class="sd">    pressures. The fit smooths out the one time step of turbulence between</span>
 <span class="sd">    release and the first output, and gives a surface pressure when none is</span>
 <span class="sd">    supplied. It is evaluated at each release height, and the spacing</span>
@@ -495,7 +497,7 @@
 <span class="sd">    top slab extends above its release height as far as it does below.</span>
 
 <span class="sd">    A multipoint receptor releases several particles from each point. Those</span>
-<span class="sd">    particles share one release height, so the point&#39;s slab is split evenly</span>
+<span class="sd">    particles share one release height, so the point's slab is split evenly</span>
 <span class="sd">    among them.</span>
 
 <span class="sd">    Parameters</span>
@@ -507,9 +509,9 @@
 <span class="sd">        terrain height (m above sea level).</span>
 <span class="sd">    surface_pressure : float, optional</span>
 <span class="sd">        Surface pressure in hPa. Defaults to the fitted curve at the ground.</span>
-<span class="sd">    altitude_ref : {&quot;agl&quot;, &quot;msl&quot;}, default &quot;agl&quot;</span>
+<span class="sd">    altitude_ref : {"agl", "msl"}, default "agl"</span>
 <span class="sd">        Vertical reference of the release heights, ``receptor.altitude_ref``.</span>
-<span class="sd">        With ``&quot;msl&quot;`` the fit is made against ``zagl + zsfc`` so that it can</span>
+<span class="sd">        With ``"msl"`` the fit is made against ``zagl + zsfc`` so that it can</span>
 <span class="sd">        be evaluated at the release heights, and the ground closing the</span>
 <span class="sd">        bottom slab is the terrain under the lowest release height.</span>
 
@@ -519,50 +521,50 @@
 <span class="sd">        Release pressure of each particle in hPa, indexed by ``particle``.</span>
 <span class="sd">    pwf : pandas.Series</span>
 <span class="sd">        Pressure weight of each particle, indexed by ``particle``. The weights</span>
-<span class="sd">        sum to the fraction of the atmosphere&#39;s mass inside the column,</span>
+<span class="sd">        sum to the fraction of the atmosphere's mass inside the column,</span>
 <span class="sd">        ``(p_sfc - p_top) / p_sfc``. The rest lies above the column top,</span>
 <span class="sd">        where surface fluxes do not reach the receptor.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;pres&quot;</span><span class="p">,</span> <span class="s2">&quot;zagl&quot;</span><span class="p">):</span>
+<span class="sd">    """</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"pres"</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Pressure weighting requires the </span><span class="si">{</span><span class="n">col</span><span class="si">!r}</span><span class="s2"> particle variable; &quot;</span>
-                <span class="s2">&quot;include it in varsiwant.&quot;</span>
+                <span class="sa">f</span><span class="s2">"Pressure weighting requires the </span><span class="si">{</span><span class="n">col</span><span class="si">!r}</span><span class="s2"> particle variable; "</span>
+                <span class="s2">"include it in varsiwant."</span>
             <span class="p">)</span>
-    <span class="n">pres</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">&quot;pres&quot;</span><span class="p">)</span>
-    <span class="n">zagl</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">&quot;zagl&quot;</span><span class="p">)</span>
+    <span class="n">pres</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">"pres"</span><span class="p">)</span>
+    <span class="n">zagl</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">)</span>
 
-    <span class="c1"># Particle heights in the receptor&#39;s own vertical reference, so the fit</span>
+    <span class="c1"># Particle heights in the receptor's own vertical reference, so the fit</span>
     <span class="c1"># can be evaluated at the release heights.</span>
-    <span class="k">if</span> <span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">&quot;msl&quot;</span><span class="p">:</span>
-        <span class="k">if</span> <span class="s2">&quot;zsfc&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">"msl"</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"zsfc"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;Pressure weighting for a receptor with altitude_ref=&#39;msl&#39; &quot;</span>
-                <span class="s2">&quot;requires the &#39;zsfc&#39; particle variable; include it in &quot;</span>
-                <span class="s2">&quot;varsiwant.&quot;</span>
+                <span class="s2">"Pressure weighting for a receptor with altitude_ref='msl' "</span>
+                <span class="s2">"requires the 'zsfc' particle variable; include it in "</span>
+                <span class="s2">"varsiwant."</span>
             <span class="p">)</span>
-        <span class="n">zsfc</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">&quot;zsfc&quot;</span><span class="p">)</span>
+        <span class="n">zsfc</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">"zsfc"</span><span class="p">)</span>
         <span class="n">z_fit</span> <span class="o">=</span> <span class="n">zagl</span> <span class="o">+</span> <span class="n">zsfc</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">zsfc</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">z_fit</span> <span class="o">=</span> <span class="n">zagl</span>
     <span class="n">z_release</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">&quot;release_height&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="s2">&quot;release_height&quot;</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span>
+        <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">"release_height"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">"release_height"</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span>
         <span class="k">else</span> <span class="n">z_fit</span>
     <span class="p">)</span>
 
     <span class="n">heights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">z_release</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>  <span class="c1"># distinct release heights, ascending</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">heights</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">z_fit</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;Pressure weighting needs particles released over a range of heights &quot;</span>
-            <span class="s2">&quot;(a ColumnReceptor); all particles share one release height.&quot;</span>
+            <span class="s2">"Pressure weighting needs particles released over a range of heights "</span>
+            <span class="s2">"(a ColumnReceptor); all particles share one release height."</span>
         <span class="p">)</span>
     <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyfit</span><span class="p">(</span><span class="n">z_fit</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">pres</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()),</span> <span class="mi">1</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">a</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;Could not fit a pressure profile to the particles (pressure does &quot;</span>
-            <span class="s2">&quot;not decrease with height).&quot;</span>
+            <span class="s2">"Could not fit a pressure profile to the particles (pressure does "</span>
+            <span class="s2">"not decrease with height)."</span>
         <span class="p">)</span>
 
     <span class="c1"># The ground closes the bottom slab: z = 0 above ground, or the terrain</span>
@@ -598,28 +600,28 @@
 <div class="viewcode-block" id="PressureWeighting">
 <a class="viewcode-back" href="../../../reference/_api/stilt.transforms.PressureWeighting.html#stilt.transforms.PressureWeighting">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">PressureWeighting</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Transform that weights each particle by its share of the column&#39;s air mass.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Transform that weights each particle by its share of the column's air mass.</span>
 
-<span class="sd">    The weights come from the particles&#39; own first-step heights and</span>
+<span class="sd">    The weights come from the particles' own first-step heights and</span>
 <span class="sd">    pressures (see :func:`particle_pwf`). :func:`stilt.calc_footprint`</span>
 <span class="sd">    divides by the particle count, so the weights are multiplied by the</span>
 <span class="sd">    number of particles and the weighted footprint does not change with</span>
-<span class="sd">    ``numpar``. The particles of a multipoint receptor share their point&#39;s</span>
+<span class="sd">    ``numpar``. The particles of a multipoint receptor share their point's</span>
 <span class="sd">    weight evenly. Adds ``xpres`` (release pressure, hPa) and ``pwf``</span>
 <span class="sd">    columns. Requires ``pres`` and ``zagl`` in ``varsiwant``, which are both</span>
-<span class="sd">    in the default, and ``zsfc`` for a receptor with ``altitude_ref=&quot;msl&quot;``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    in the default, and ``zsfc`` for a receptor with ``altitude_ref="msl"``.</span>
+<span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;pressure_weighting&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;pressure_weighting&quot;</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"pressure_weighting"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"pressure_weighting"</span>
     <span class="n">surface_pressure</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">gt</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Surface pressure at the bottom of the column, in hPa. Unset &quot;</span>
-            <span class="s2">&quot;estimates it from the particles.&quot;</span>
+            <span class="s2">"Surface pressure at the bottom of the column, in hPa. Unset "</span>
+            <span class="s2">"estimates it from the particles."</span>
         <span class="p">),</span>
     <span class="p">)</span>
 
@@ -631,19 +633,19 @@
         <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the particles with ``foot`` weighted by pressure.</span>
 
-<span class="sd">        The release heights are in the receptor&#39;s ``altitude_ref``, and</span>
+<span class="sd">        The release heights are in the receptor's ``altitude_ref``, and</span>
 <span class="sd">        taken to be above ground without a receptor.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">altitude_ref</span> <span class="o">=</span> <span class="n">receptor</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="k">if</span> <span class="n">receptor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;agl&quot;</span>
+<span class="sd">        """</span>
+        <span class="n">altitude_ref</span> <span class="o">=</span> <span class="n">receptor</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="k">if</span> <span class="n">receptor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">"agl"</span>
         <span class="n">xpres</span><span class="p">,</span> <span class="n">pwf</span> <span class="o">=</span> <span class="n">particle_pwf</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">surface_pressure</span><span class="p">,</span> <span class="n">altitude_ref</span><span class="p">)</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">ids</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;xpres&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xpres</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;pwf&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pwf</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;pwf&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">pwf</span><span class="p">)</span>
+        <span class="n">ids</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"xpres"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xpres</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"pwf"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pwf</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">]</span> <span class="o">*</span> <span class="n">out</span><span class="p">[</span><span class="s2">"pwf"</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">pwf</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">out</span></div>
 </div>
 
@@ -676,8 +678,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -703,14 +705,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

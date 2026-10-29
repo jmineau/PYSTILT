@@ -26,22 +26,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -49,7 +50,7 @@
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'getting_started/quickstart';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -61,8 +62,9 @@
     <link rel="next" title="Glossary" href="glossary.html" />
     <link rel="prev" title="Installation" href="installation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -498,19 +500,19 @@ fails, naming the hours.</p>
 the folder they are in, a pattern for their names, and how many hours each
 file covers. For files named like <code class="docutils literal notranslate"><span class="pre">20210115_06</span></code>, each holding six hours:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">met</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;directory&quot;</span><span class="p">:</span> <span class="s2">&quot;/path/to/arl/hrrr&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;file_format&quot;</span><span class="p">:</span> <span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">_%H&quot;</span><span class="p">,</span>   <span class="c1"># date codes: %Y year, %m month, %d day, %H hour</span>
-    <span class="s2">&quot;file_tres&quot;</span><span class="p">:</span> <span class="s2">&quot;6h&quot;</span><span class="p">,</span>            <span class="c1"># each file covers 6 hours</span>
+    <span class="s2">"directory"</span><span class="p">:</span> <span class="s2">"/path/to/arl/hrrr"</span><span class="p">,</span>
+    <span class="s2">"file_format"</span><span class="p">:</span> <span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">_%H"</span><span class="p">,</span>   <span class="c1"># date codes: %Y year, %m month, %d day, %H hour</span>
+    <span class="s2">"file_tres"</span><span class="p">:</span> <span class="s2">"6h"</span><span class="p">,</span>            <span class="c1"># each file covers 6 hours</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 <p>If you don’t have ARL files, PYSTILT can download them from NOAA’s archive
 into a folder you choose. This needs <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;pystilt[download]&quot;</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">met</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;download&quot;</span><span class="p">:</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">,</span>                   <span class="c1"># which NOAA ARL archive</span>
-    <span class="s2">&quot;directory&quot;</span><span class="p">:</span> <span class="s2">&quot;/path/to/download/folder&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;subgrid_enable&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>               <span class="c1"># keep only your region</span>
-    <span class="s2">&quot;subgrid_bounds&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;xmin&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">114</span><span class="p">,</span> <span class="s2">&quot;xmax&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">110</span><span class="p">,</span> <span class="s2">&quot;ymin&quot;</span><span class="p">:</span> <span class="mi">39</span><span class="p">,</span> <span class="s2">&quot;ymax&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">},</span>
+    <span class="s2">"download"</span><span class="p">:</span> <span class="s2">"hrrr"</span><span class="p">,</span>                   <span class="c1"># which NOAA ARL archive</span>
+    <span class="s2">"directory"</span><span class="p">:</span> <span class="s2">"/path/to/download/folder"</span><span class="p">,</span>
+    <span class="s2">"subgrid_enable"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>               <span class="c1"># keep only your region</span>
+    <span class="s2">"subgrid_bounds"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"xmin"</span><span class="p">:</span> <span class="o">-</span><span class="mi">114</span><span class="p">,</span> <span class="s2">"xmax"</span><span class="p">:</span> <span class="o">-</span><span class="mi">110</span><span class="p">,</span> <span class="s2">"ymin"</span><span class="p">:</span> <span class="mi">39</span><span class="p">,</span> <span class="s2">"ymax"</span><span class="p">:</span> <span class="mi">42</span><span class="p">},</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -529,7 +531,7 @@ the ground on the University of Utah campus, at 08:00 UTC on 15 January 2021:</p
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
 <span class="gp">In [2]: </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
-<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">&quot;2021-01-15 08:00&quot;</span><span class="p">,</span>   <span class="c1"># UTC</span>
+<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">"2021-01-15 08:00"</span><span class="p">,</span>   <span class="c1"># UTC</span>
 <span class="gp">   ...: </span>    <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">altitude</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>               <span class="c1"># meters above ground level</span>
@@ -573,12 +575,12 @@ The particles are a <a class="reference external" href="https://pandas.pydata.or
 time step:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [4]: </span><span class="n">particles</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 <span class="gh">Out[4]: </span>
-<span class="go">   age  particle       lon      lat  ...  samt   sigw     tlgr  foot_no_hnf_dilution</span>
-<span class="go">0 -1.0       1.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
-<span class="go">1 -1.0       2.0 -111.8473  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
-<span class="go">2 -1.0       3.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
-<span class="go">3 -1.0       4.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
-<span class="go">4 -1.0       5.0 -111.8474  40.7658  ...   1.0  0.038  43.3137              0.021248</span>
+<span class="go">   age  particle       lon  ...   sigw     tlgr  foot_no_hnf_dilution</span>
+<span class="go">0 -1.0       1.0 -111.8474  ...  0.038  43.3137              0.021248</span>
+<span class="go">1 -1.0       2.0 -111.8473  ...  0.038  43.3137              0.021248</span>
+<span class="go">2 -1.0       3.0 -111.8474  ...  0.038  43.3137              0.021248</span>
+<span class="go">3 -1.0       4.0 -111.8474  ...  0.038  43.3137              0.021248</span>
+<span class="go">4 -1.0       5.0 -111.8474  ...  0.038  43.3137              0.021248</span>
 
 <span class="go">[5 rows x 13 columns]</span>
 
@@ -591,7 +593,7 @@ time step:</p>
 only a small region around Salt Lake, and the particles leave it before the 24
 hours are up. A particle that leaves the met stops there. This is how many hours
 they went (<code class="docutils literal notranslate"><span class="pre">age</span></code> is in minutes):</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">particles</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> hours&quot;</span><span class="p">)</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">particles</span><span class="p">[</span><span class="s1">'age'</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> hours"</span><span class="p">)</span>
 <span class="go">12.0 hours</span>
 </pre></div>
 </div>
@@ -624,10 +626,10 @@ time, on a log scale. Cells with more color influenced the measurement more.</p>
 each hour the particles were still inside the met files. Sum it over time with
 xarray:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [10]: </span><span class="n">foot</span><span class="o">.</span><span class="n">sizes</span>
-<span class="gh">Out[10]: </span><span class="go">Frozen({&#39;time&#39;: 12, &#39;lat&#39;: 200, &#39;lon&#39;: 250})</span>
+<span class="gh">Out[10]: </span><span class="go">Frozen({'time': 12, 'lat': 200, 'lon': 250})</span>
 
-<span class="gp">In [11]: </span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sizes</span>
-<span class="gh">Out[11]: </span><span class="go">Frozen({&#39;lat&#39;: 200, &#39;lon&#39;: 250})</span>
+<span class="gp">In [11]: </span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"time"</span><span class="p">)</span><span class="o">.</span><span class="n">sizes</span>
+<span class="gh">Out[11]: </span><span class="go">Frozen({'lat': 200, 'lon': 250})</span>
 </pre></div>
 </div>
 <p>PYSTILT’s own methods on the particles and the footprint are under
@@ -640,10 +642,10 @@ xarray:</p>
 runs every receptor, and keeps the results. <a class="reference internal" href="../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Project.init</span></code></a> creates the folder and writes both to it. The
 settings are the ones above:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [12]: </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
-<span class="gp">   ....: </span>    <span class="s2">&quot;./my_first_project&quot;</span><span class="p">,</span>
+<span class="gp">   ....: </span>    <span class="s2">"./my_first_project"</span><span class="p">,</span>
 <span class="gp">   ....: </span>    <span class="n">receptors</span><span class="o">=</span><span class="p">[</span><span class="n">receptor</span><span class="p">],</span>
-<span class="gp">   ....: </span>    <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="n">met</span><span class="p">},</span>          <span class="c1"># &quot;hrrr&quot; is a name you choose</span>
-<span class="gp">   ....: </span>    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="p">{}},</span>       <span class="c1"># one variant: these settings, met hrrr</span>
+<span class="gp">   ....: </span>    <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="n">met</span><span class="p">},</span>          <span class="c1"># "hrrr" is a name you choose</span>
+<span class="gp">   ....: </span>    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{}},</span>       <span class="c1"># one variant: these settings, met hrrr</span>
 <span class="gp">   ....: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>
 <span class="gp">   ....: </span>    <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
 <span class="gp">   ....: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
@@ -677,16 +679,16 @@ returns when they are done.</p>
 there is one variant, named <code class="docutils literal notranslate"><span class="pre">hrrr</span></code> after the met. One receptor under
 one variant is a <a class="reference internal" href="glossary.html#term-simulation"><span class="xref std std-term">simulation</span></a>. Look yours up by the receptor’s id and
 the variant name:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [15]: </span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [15]: </span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">"hrrr"</span><span class="p">)</span>
 
 <span class="gp">In [16]: </span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 <span class="gh">Out[16]: </span>
-<span class="go">   age  particle       lon  ...     tlgr  foot_no_hnf_dilution                time</span>
-<span class="go">0 -1.0       1.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
-<span class="go">1 -1.0       2.0 -111.8473  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
-<span class="go">2 -1.0       3.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
-<span class="go">3 -1.0       4.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
-<span class="go">4 -1.0       5.0 -111.8474  ...  43.3137              0.021248 2021-01-15 07:59:00</span>
+<span class="go">   age  particle  ...  foot_no_hnf_dilution                time</span>
+<span class="go">0 -1.0       1.0  ...              0.021248 2021-01-15 07:59:00</span>
+<span class="go">1 -1.0       2.0  ...              0.021248 2021-01-15 07:59:00</span>
+<span class="go">2 -1.0       3.0  ...              0.021248 2021-01-15 07:59:00</span>
+<span class="go">3 -1.0       4.0  ...              0.021248 2021-01-15 07:59:00</span>
+<span class="go">4 -1.0       5.0  ...              0.021248 2021-01-15 07:59:00</span>
 
 <span class="go">[5 rows x 14 columns]</span>
 
@@ -721,7 +723,7 @@ run writes to a new folder, so nothing is overwritten. The file name is
 the <a class="reference internal" href="glossary.html#term-receptor-id"><span class="xref std std-term">receptor id</span></a>: the time, longitude, latitude, and altitude.</p>
 <p>Your settings and receptors are saved in the folder, so you can open the
 project again later without repeating them:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">&quot;./my_first_project&quot;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"./my_first_project"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">Project.init</span></code> runs once per project. It stops with a
@@ -743,7 +745,7 @@ above:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/arl/hrrr</span>
-<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;%Y%m%d_%H&quot;</span>
+<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">"%Y%m%d_%H"</span>
 <span class="w">    </span><span class="nt">file_tres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6h</span>
 
 <span class="nt">variants</span><span class="p">:</span>
@@ -868,8 +870,8 @@ everything is in place.</p>
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -895,14 +897,14 @@ everything is in place.</p>
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

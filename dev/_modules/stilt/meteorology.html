@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/meteorology';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -445,12 +447,12 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.meteorology</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">Meteorology for any transport model: the time a run covers (:func:`run_window`), and wind-error statistics.</span>
 
 <span class="sd">A transport model reads its meteorology itself, from a met config of its</span>
-<span class="sd">own: HYSPLIT&#39;s is :class:`stilt.transport.hysplit.MetConfig`.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">own: HYSPLIT's is :class:`stilt.transport.hysplit.MetConfig`.</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -465,22 +467,22 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_time</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return *value* as a Timestamp, raising for a missing time.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return *value* as a Timestamp, raising for a missing time."""</span>
     <span class="n">time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">):</span>  <span class="c1"># NaT</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not a time: </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Not a time: </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">time</span>
 
 
 <div class="viewcode-block" id="run_window">
 <a class="viewcode-back" href="../../reference/_api/stilt.meteorology.run_window.html#stilt.meteorology.run_window">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">run_window</span><span class="p">(</span><span class="n">r_time</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the time a run covers, ``(start, end)`` in time order.</span>
 
 <span class="sd">    From the receptor time *r_time* to *n_hours* later, or earlier for a</span>
-<span class="sd">    backward run. This is what a transport model&#39;s meteorology must cover.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    backward run. This is what a transport model's meteorology must cover.</span>
+<span class="sd">    """</span>
     <span class="n">start</span> <span class="o">=</span> <span class="n">_time</span><span class="p">(</span><span class="n">r_time</span><span class="p">)</span>
     <span class="n">other</span> <span class="o">=</span> <span class="n">_time</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="n">n_hours</span><span class="p">))</span>
     <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">other</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span></div>
@@ -492,7 +494,7 @@
 <span class="c1">#</span>
 <span class="c1"># Variograms of wind errors, for setting up transport-error runs.</span>
 <span class="c1">#</span>
-<span class="c1"># HYSPLIT&#39;s wind-error perturbation needs the standard deviation of the</span>
+<span class="c1"># HYSPLIT's wind-error perturbation needs the standard deviation of the</span>
 <span class="c1"># analysis wind error (``siguverr``) and its correlation scales in time</span>
 <span class="c1"># (``tluverr``), height (``zcoruverr``), and horizontal distance</span>
 <span class="c1"># (``horcoruverr``). Lin and Gerbig (2005, section 2.1) derive them from the</span>
@@ -509,8 +511,8 @@
 <span class="c1"># The errors are the analyzed wind minus the observed wind at each</span>
 <span class="c1"># observation. arlmet samples the analysis at the observation points::</span>
 <span class="c1">#</span>
-<span class="c1">#     met = arlmet.sample_points(files, points, [&quot;UWND&quot;, &quot;VWND&quot;], earth_relative=True)</span>
-<span class="c1">#     u_err = met[&quot;UWND&quot;] - observed_u</span>
+<span class="c1">#     met = arlmet.sample_points(files, points, ["UWND", "VWND"], earth_relative=True)</span>
+<span class="c1">#     u_err = met["UWND"] - observed_u</span>
 <span class="c1">#</span>
 <span class="c1"># The Wind Error Statistics guide goes from there to the four settings.</span>
 <span class="c1"># ---------------------------------------------------------------------------</span>
@@ -522,7 +524,7 @@
     <span class="n">lag</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">sq</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add pairs to the per-bin sums of squared difference, lag, and count.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Add pairs to the per-bin sums of squared difference, lag, and count."""</span>
     <span class="n">keep</span> <span class="o">=</span> <span class="p">(</span><span class="n">lag</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lag</span> <span class="o">&lt;</span> <span class="n">edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
     <span class="n">lag</span><span class="p">,</span> <span class="n">sq</span> <span class="o">=</span> <span class="n">lag</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span> <span class="n">sq</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span>
     <span class="n">sums</span><span class="p">[</span><span class="mi">0</span><span class="p">][:]</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">lag</span><span class="p">,</span> <span class="n">edges</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">sq</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
@@ -531,8 +533,8 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_pairs_1d</span><span class="p">(</span><span class="n">sums</span><span class="p">,</span> <span class="n">edges</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">errors</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">coord</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Bin all pairs of one group closer than the last edge along a 1-D coordinate.&quot;&quot;&quot;</span>
-    <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;stable&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">"""Bin all pairs of one group closer than the last edge along a 1-D coordinate."""</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"stable"</span><span class="p">)</span>
     <span class="n">e</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">errors</span><span class="p">[</span><span class="n">order</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="n">order</span><span class="p">]</span>
     <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
@@ -546,7 +548,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_pairs_geo</span><span class="p">(</span>
     <span class="n">sums</span><span class="p">,</span> <span class="n">edges</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">errors</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lon</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Bin all pairs of one group by great-circle distance in km.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Bin all pairs of one group by great-circle distance in km."""</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">errors</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
         <span class="k">return</span>
     <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">triu_indices</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">errors</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
@@ -563,7 +565,7 @@
     <span class="n">group</span><span class="p">:</span> <span class="n">ArrayLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">bins</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the empirical semivariogram of ``errors`` over a separation coordinate.</span>
 
 <span class="sd">    For every pair of points in the same group, the squared difference of</span>
@@ -596,20 +598,20 @@
 <span class="sd">        One row per non-empty bin, with columns ``lag`` (mean separation of</span>
 <span class="sd">        the pairs), ``gamma`` (semivariogram, in the units of ``errors``</span>
 <span class="sd">        squared), and ``n`` (number of pairs).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">e</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">errors</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">coord</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lag</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">bins</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">edges</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">edges</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;bins must be increasing edges with at least two values.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"bins must be increasing edges with at least two values."</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">coord</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="n">geo</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="k">elif</span> <span class="n">coord</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">coord</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
         <span class="n">geo</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;lag must be 1-D, or (n, 2) longitude/latitude.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"lag must be 1-D, or (n, 2) longitude/latitude."</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="o">!=</span> <span class="n">e</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;errors and lag must have the same length.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"errors and lag must have the same length."</span><span class="p">)</span>
 
     <span class="n">valid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">group</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -617,12 +619,12 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">labels</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">factorize</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)))[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">!=</span> <span class="n">e</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;group must have one label per point.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"group must have one label per point."</span><span class="p">)</span>
         <span class="n">valid</span> <span class="o">&amp;=</span> <span class="n">labels</span> <span class="o">&gt;=</span> <span class="mi">0</span>
 
     <span class="n">sums</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">edges</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
     <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">valid</span><span class="p">)</span>
-    <span class="n">order</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">labels</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;stable&quot;</span><span class="p">)]</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">labels</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"stable"</span><span class="p">)]</span>
     <span class="n">boundaries</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">labels</span><span class="p">[</span><span class="n">order</span><span class="p">]))</span> <span class="o">+</span> <span class="mi">1</span>
     <span class="k">for</span> <span class="n">members</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">boundaries</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">members</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
@@ -636,9 +638,9 @@
     <span class="n">keep</span> <span class="o">=</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">0</span>
     <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
         <span class="p">{</span>
-            <span class="s2">&quot;lag&quot;</span><span class="p">:</span> <span class="n">lag_sum</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span> <span class="o">/</span> <span class="n">n</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span>
-            <span class="s2">&quot;gamma&quot;</span><span class="p">:</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">sq</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span> <span class="o">/</span> <span class="n">n</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span>
-            <span class="s2">&quot;n&quot;</span><span class="p">:</span> <span class="n">n</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span>
+            <span class="s2">"lag"</span><span class="p">:</span> <span class="n">lag_sum</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span> <span class="o">/</span> <span class="n">n</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span>
+            <span class="s2">"gamma"</span><span class="p">:</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">sq</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span> <span class="o">/</span> <span class="n">n</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span>
+            <span class="s2">"n"</span><span class="p">:</span> <span class="n">n</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span>
         <span class="p">}</span>
     <span class="p">)</span></div>
 
@@ -648,7 +650,7 @@
 <a class="viewcode-back" href="../../reference/_api/stilt.meteorology.VariogramFit.html#stilt.meteorology.VariogramFit">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">VariogramFit</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Exponential variogram ``σ² (1 − exp(−h / l))``, returned by :func:`fit_variogram`.</span>
 
 <span class="sd">    Call it with separations to evaluate the model.</span>
@@ -660,7 +662,7 @@
 <span class="sd">    length : float</span>
 <span class="sd">        E-folding correlation scale, in the units of the separation it was</span>
 <span class="sd">        fitted over.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span>
     <span class="n">length</span><span class="p">:</span> <span class="nb">float</span>
@@ -668,7 +670,7 @@
 <div class="viewcode-block" id="VariogramFit.__call__">
 <a class="viewcode-back" href="../../reference/_api/stilt.meteorology.VariogramFit.__call__.html#stilt.meteorology.VariogramFit.__call__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lag</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the model at ``lag``.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the model at ``lag``."""</span>
         <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lag</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">h</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">))</span></div>
 </div>
@@ -680,7 +682,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">fit_variogram</span><span class="p">(</span>
     <span class="n">lag</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">gamma</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VariogramFit</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Fit an exponential variogram to an empirical one.</span>
 
 <span class="sd">    Parameters</span>
@@ -690,13 +692,13 @@
 <span class="sd">    sigma : float, optional</span>
 <span class="sd">        Error standard deviation. When given, the sill is fixed at</span>
 <span class="sd">        ``sigma²`` and only the correlation scale is fitted, as Lin and</span>
-<span class="sd">        Gerbig&#39;s definition implies. Use it when the sample standard</span>
+<span class="sd">        Gerbig's definition implies. Use it when the sample standard</span>
 <span class="sd">        deviation is known. ``None`` fits both.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    VariogramFit</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">curve_fit</span>
 
     <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lag</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
@@ -705,7 +707,7 @@
     <span class="n">h</span><span class="p">,</span> <span class="n">g</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span> <span class="n">g</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">sigma</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;fit_variogram needs at least one finite point.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"fit_variogram needs at least one finite point."</span><span class="p">)</span>
         <span class="p">(</span><span class="n">length</span><span class="p">,)</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span>
             <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">ell</span><span class="p">:</span> <span class="n">VariogramFit</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">ell</span><span class="p">)(</span><span class="n">x</span><span class="p">),</span>
             <span class="n">h</span><span class="p">,</span>
@@ -716,7 +718,7 @@
         <span class="k">return</span> <span class="n">VariogramFit</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">sigma</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;fit_variogram needs at least two finite points to fit sigma too.&quot;</span>
+            <span class="s2">"fit_variogram needs at least two finite points to fit sigma too."</span>
         <span class="p">)</span>
     <span class="p">(</span><span class="n">length</span><span class="p">,</span> <span class="n">sig</span><span class="p">)</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span>
         <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">ell</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">VariogramFit</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">ell</span><span class="p">)(</span><span class="n">x</span><span class="p">),</span>
@@ -730,10 +732,10 @@
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;VariogramFit&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;fit_variogram&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;run_window&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;variogram&quot;</span><span class="p">,</span>
+    <span class="s2">"VariogramFit"</span><span class="p">,</span>
+    <span class="s2">"fit_variogram"</span><span class="p">,</span>
+    <span class="s2">"run_window"</span><span class="p">,</span>
+    <span class="s2">"variogram"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 
@@ -764,8 +766,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -791,14 +793,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/execution/runner';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -445,14 +447,14 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.execution.runner</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">Running a project: finding the receptors with missing results and handing them to workers.</span>
 
 <span class="sd">With ``backend: slurm``, :func:`submit` writes a job array script into</span>
 <span class="sd">``_slurm/&lt;stamp&gt;/`` in the project and submits it with ``sbatch``. Each task</span>
 <span class="sd">of the array runs ``stilt run --task``, so a task is a command line that can</span>
 <span class="sd">be read, and run again, by hand.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -487,7 +489,7 @@
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
-<span class="c1">#: Seconds before a Slurm task&#39;s time limit that Slurm sends it SIGUSR1,</span>
+<span class="c1">#: Seconds before a Slurm task's time limit that Slurm sends it SIGUSR1,</span>
 <span class="c1">#: which stops the task and requeues it (``--signal=B:USR1@120``).</span>
 <span class="n">NOTICE_SECONDS</span> <span class="o">=</span> <span class="mi">120</span>
 
@@ -496,23 +498,23 @@
 
 <span class="c1">#: Seconds :func:`run` waits to list the results once more when some look</span>
 <span class="c1">#: unfinished after a job array ends. On a network filesystem the</span>
-<span class="c1">#: submitting node can see a compute node&#39;s new files up to a minute late.</span>
+<span class="c1">#: submitting node can see a compute node's new files up to a minute late.</span>
 <span class="n">RELIST_SECONDS</span> <span class="o">=</span> <span class="mi">60</span>
 
 <span class="c1">#: Slurm job states of a task that has not ended.</span>
 <span class="n">_ACTIVE</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
     <span class="p">{</span>
-        <span class="s2">&quot;PENDING&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;RUNNING&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;REQUEUED&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;REQUEUE_HOLD&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;REQUEUE_FED&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;RESIZING&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;SUSPENDED&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;CONFIGURING&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;COMPLETING&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;SIGNALING&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;STAGE_OUT&quot;</span><span class="p">,</span>
+        <span class="s2">"PENDING"</span><span class="p">,</span>
+        <span class="s2">"RUNNING"</span><span class="p">,</span>
+        <span class="s2">"REQUEUED"</span><span class="p">,</span>
+        <span class="s2">"REQUEUE_HOLD"</span><span class="p">,</span>
+        <span class="s2">"REQUEUE_FED"</span><span class="p">,</span>
+        <span class="s2">"RESIZING"</span><span class="p">,</span>
+        <span class="s2">"SUSPENDED"</span><span class="p">,</span>
+        <span class="s2">"CONFIGURING"</span><span class="p">,</span>
+        <span class="s2">"COMPLETING"</span><span class="p">,</span>
+        <span class="s2">"SIGNALING"</span><span class="p">,</span>
+        <span class="s2">"STAGE_OUT"</span><span class="p">,</span>
     <span class="p">}</span>
 <span class="p">)</span>
 
@@ -525,8 +527,8 @@
 <div class="viewcode-block" id="task_share">
 <a class="viewcode-back" href="../../../reference/_api/stilt.execution.task_share.html#stilt.execution.task_share">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">task_share</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">task</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_tasks</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return task *task*&#39;s share of *receptor_ids*, split *n_tasks* ways.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return task *task*'s share of *receptor_ids*, split *n_tasks* ways.</span>
 
 <span class="sd">    The share is every *n_tasks*-th receptor, starting at *task*, which runs</span>
 <span class="sd">    from 0 to ``n_tasks - 1`` as the index of a job array does.</span>
@@ -535,10 +537,10 @@
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        If *task* is not from 0 to ``n_tasks - 1``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">n_tasks</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">task</span> <span class="o">&lt;</span> <span class="n">n_tasks</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;A task runs from 0 to n_tasks - 1; got task </span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">n_tasks</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="sa">f</span><span class="s2">"A task runs from 0 to n_tasks - 1; got task </span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">n_tasks</span><span class="si">}</span><span class="s2">."</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">receptor_ids</span><span class="p">[</span><span class="n">task</span><span class="p">::</span><span class="n">n_tasks</span><span class="p">]</span></div>
 
@@ -550,10 +552,10 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_project_slug</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a lowercase, hyphenated name for a project directory, for the Slurm job name.&quot;&quot;&quot;</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">name</span> <span class="ow">or</span> <span class="s2">&quot;project&quot;</span>
-    <span class="n">slug</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[^a-z0-9-]+&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;-{2,}&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">slug</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;project&quot;</span>
+<span class="w">    </span><span class="sd">"""Return a lowercase, hyphenated name for a project directory, for the Slurm job name."""</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">))</span><span class="o">.</span><span class="n">name</span> <span class="ow">or</span> <span class="s2">"project"</span>
+    <span class="n">slug</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^a-z0-9-]+"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"-{2,}"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="n">slug</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"project"</span>
 
 
 <div class="viewcode-block" id="resolve_compute_root">
@@ -561,7 +563,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">resolve_compute_root</span><span class="p">(</span>
     <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">compute_root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the compute root of *project*: the directory its workdirs are made in.</span>
 
 <span class="sd">    That is *compute_root* when given, else the ``PYSTILT_COMPUTE_ROOT``</span>
@@ -569,13 +571,13 @@
 <span class="sd">    ``$TMPDIR/pystilt/&lt;project name&gt;``. The path is absolute and resolved, so</span>
 <span class="sd">    a worker handed it gets the same directory. Projects can share one</span>
 <span class="sd">    compute root, since each run gets a new workdir in it.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">compute_root</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">compute_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;PYSTILT_COMPUTE_ROOT&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="kc">None</span>
+        <span class="n">compute_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"PYSTILT_COMPUTE_ROOT"</span><span class="p">)</span> <span class="ow">or</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">compute_root</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">absolute</span><span class="p">(</span><span class="n">compute_root</span><span class="p">)</span>
-    <span class="n">tmp_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;TMPDIR&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">absolute</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">tmp_root</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;pystilt&quot;</span> <span class="o">/</span> <span class="n">project</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+    <span class="n">tmp_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"TMPDIR"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">absolute</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">tmp_root</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"pystilt"</span> <span class="o">/</span> <span class="n">project</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
 
 
 
@@ -588,7 +590,7 @@
     <span class="n">task</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the ids of the receptors a run would run, each once, in project order.</span>
 
 <span class="sd">    A driver that starts tasks itself writes these to the ``receptors.txt``</span>
@@ -612,9 +614,9 @@
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        If a receptor in *receptors* is not in the project.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
-    <span class="n">every</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">]))</span>
+    <span class="n">every</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]))</span>
     <span class="k">if</span> <span class="n">receptors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">chosen</span> <span class="o">=</span> <span class="n">every</span>
     <span class="k">else</span><span class="p">:</span>
@@ -623,27 +625,27 @@
         <span class="n">unknown</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">chosen</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">known</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">unknown</span><span class="p">)</span><span class="si">}</span><span class="s2"> receptor ids are not in this project, such as &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">unknown</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">unknown</span><span class="p">)</span><span class="si">}</span><span class="s2"> receptor ids are not in this project, such as "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">unknown</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
     <span class="k">if</span> <span class="n">task</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">chosen</span> <span class="o">=</span> <span class="n">task_share</span><span class="p">(</span><span class="n">chosen</span><span class="p">,</span> <span class="o">*</span><span class="n">task</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">skip_existing</span> <span class="ow">and</span> <span class="n">chosen</span><span class="p">:</span>
-        <span class="n">left</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">incomplete</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">chosen</span><span class="p">)])[</span><span class="s2">&quot;receptor&quot;</span><span class="p">])</span>
+        <span class="n">left</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">incomplete</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">chosen</span><span class="p">)])[</span><span class="s2">"receptor"</span><span class="p">])</span>
         <span class="n">chosen</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">chosen</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">left</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">chosen</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_status</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the status table of the simulations of *receptor_ids*.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the status table of the simulations of *receptor_ids*."""</span>
     <span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
-    <span class="k">return</span> <span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">)])</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_unfinished</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether a status table has simulations that did not finish (pending or interrupted).&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;state&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s2">&quot;pending&quot;</span><span class="p">,</span> <span class="s2">&quot;interrupted&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">())</span>
+<span class="w">    </span><span class="sd">"""Whether a status table has simulations that did not finish (pending or interrupted)."""</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">"state"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s2">"pending"</span><span class="p">,</span> <span class="s2">"interrupted"</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">())</span>
 
 
 <div class="viewcode-block" id="run">
@@ -657,7 +659,7 @@
     <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">compute_root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Run every simulation of a project that has not finished, and wait for it.</span>
 
 <span class="sd">    Each receptor with missing results runs once: the transport model once for each</span>
@@ -685,7 +687,7 @@
 <span class="sd">        receptors the same way whenever it starts.</span>
 <span class="sd">    execution : ExecutionConfig, optional</span>
 <span class="sd">        Where to run and with what resources. Defaults to the ``execution``</span>
-<span class="sd">        settings of the project&#39;s config.</span>
+<span class="sd">        settings of the project's config.</span>
 <span class="sd">    skip_existing : bool, default True</span>
 <span class="sd">        Skip simulations whose results all exist. ``False`` runs every</span>
 <span class="sd">        simulation again.</span>
@@ -711,30 +713,30 @@
 <span class="sd">    -----</span>
 <span class="sd">    In a Slurm job, a task (``task`` given) that stops with work left</span>
 <span class="sd">    requeues itself with ``scontrol requeue`` when it was preempted (Slurm</span>
-<span class="sd">    set the job&#39;s ``PreemptTime``) or got SIGUSR1, which the job array</span>
+<span class="sd">    set the job's ``PreemptTime``) or got SIGUSR1, which the job array</span>
 <span class="sd">    script asks Slurm to send :data:`NOTICE_SECONDS` before the time</span>
 <span class="sd">    limit. It starts again later and skips what it finished. A task</span>
 <span class="sd">    stopped by ``scancel`` is not requeued.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">execution</span> <span class="o">=</span> <span class="n">execution</span> <span class="k">if</span> <span class="n">execution</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">project</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">execution</span>
     <span class="n">todo</span> <span class="o">=</span> <span class="n">pending</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">receptors</span><span class="o">=</span><span class="n">receptors</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="n">task</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">todo</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;run: every simulation is complete; nothing to do&quot;</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">execution</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">&quot;slurm&quot;</span> <span class="ow">and</span> <span class="n">task</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"run: every simulation is complete; nothing to do"</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">execution</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"slurm"</span> <span class="ow">and</span> <span class="n">task</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">job_id</span><span class="p">,</span> <span class="n">cluster</span> <span class="o">=</span> <span class="n">_submit</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">todo</span><span class="p">,</span> <span class="n">execution</span><span class="p">,</span> <span class="n">skip_existing</span><span class="p">,</span> <span class="n">compute_root</span><span class="p">)</span>
         <span class="n">wait</span><span class="p">(</span><span class="n">job_id</span><span class="p">,</span> <span class="n">cluster</span><span class="o">=</span><span class="n">cluster</span><span class="p">)</span>
         <span class="n">table</span> <span class="o">=</span> <span class="n">_status</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">todo</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">_unfinished</span><span class="p">(</span><span class="n">table</span><span class="p">):</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                <span class="s2">&quot;Some simulations look unfinished; listing again in </span><span class="si">%d</span><span class="s2"> s, in &quot;</span>
-                <span class="s2">&quot;case this node sees the compute nodes&#39; files late.&quot;</span><span class="p">,</span>
+                <span class="s2">"Some simulations look unfinished; listing again in </span><span class="si">%d</span><span class="s2"> s, in "</span>
+                <span class="s2">"case this node sees the compute nodes' files late."</span><span class="p">,</span>
                 <span class="n">RELIST_SECONDS</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">RELIST_SECONDS</span><span class="p">)</span>
             <span class="n">table</span> <span class="o">=</span> <span class="n">_status</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">todo</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">table</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;run(</span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> receptors&quot;</span><span class="p">,</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">variants</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">todo</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"run(</span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> receptors"</span><span class="p">,</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">variants</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">todo</span><span class="p">))</span>
         <span class="c1"># In this process, so Ctrl-C and SIGTERM stop the workers cleanly</span>
         <span class="c1"># and progress prints as it happens.</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_receptors</span>
@@ -766,7 +768,7 @@
     <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">compute_root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Submit every simulation of a project that has not finished to Slurm.</span>
 
 <span class="sd">    The receptors with missing results are split among up to ``n_workers``</span>
@@ -775,7 +777,7 @@
 <span class="sd">    ``receptors.txt`` lists the receptors to run, ``receptors.parquet``</span>
 <span class="sd">    holds their checked rows from ``receptors.csv``, ``execution.yaml``</span>
 <span class="sd">    holds the execution settings, ``job.sh`` is the script given to</span>
-<span class="sd">    ``sbatch``, and ``&lt;task&gt;.log`` is each task&#39;s log. Task ``i`` runs</span>
+<span class="sd">    ``sbatch``, and ``&lt;task&gt;.log`` is each task's log. Task ``i`` runs</span>
 <span class="sd">    ``stilt run &lt;project&gt; --receptors receptors.parquet --task i/N``, so it</span>
 <span class="sd">    does not read and check all of ``receptors.csv`` again. A task</span>
 <span class="sd">    that is preempted or nears its time limit requeues itself and skips</span>
@@ -796,16 +798,16 @@
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        If the execution backend is not Slurm.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">execution</span> <span class="o">=</span> <span class="n">execution</span> <span class="k">if</span> <span class="n">execution</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">project</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">execution</span>
-    <span class="k">if</span> <span class="n">execution</span><span class="o">.</span><span class="n">backend</span> <span class="o">!=</span> <span class="s2">&quot;slurm&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">execution</span><span class="o">.</span><span class="n">backend</span> <span class="o">!=</span> <span class="s2">"slurm"</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;submit sends work to Slurm, and this run&#39;s backend is &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">execution</span><span class="o">.</span><span class="n">backend</span><span class="si">!r}</span><span class="s2">. Use run(), or set execution.backend to slurm.&quot;</span>
+            <span class="sa">f</span><span class="s2">"submit sends work to Slurm, and this run's backend is "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">execution</span><span class="o">.</span><span class="n">backend</span><span class="si">!r}</span><span class="s2">. Use run(), or set execution.backend to slurm."</span>
         <span class="p">)</span>
     <span class="n">todo</span> <span class="o">=</span> <span class="n">pending</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">receptors</span><span class="o">=</span><span class="n">receptors</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">todo</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;submit: every simulation is complete; nothing to do&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"submit: every simulation is complete; nothing to do"</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="n">job_id</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_submit</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">todo</span><span class="p">,</span> <span class="n">execution</span><span class="p">,</span> <span class="n">skip_existing</span><span class="p">,</span> <span class="n">compute_root</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">job_id</span></div>
@@ -813,13 +815,13 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_sbatch_lines</span><span class="p">(</span><span class="n">options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return ``#SBATCH`` lines; ``True`` is a bare flag, and ``None`` and ``False`` are left out.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return ``#SBATCH`` lines; ``True`` is a bare flag, and ``None`` and ``False`` are left out."""</span>
     <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
             <span class="k">continue</span>
-        <span class="n">flag</span> <span class="o">=</span> <span class="s2">&quot;--&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">)</span>
-        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;#SBATCH </span><span class="si">{</span><span class="n">flag</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">True</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;#SBATCH </span><span class="si">{</span><span class="n">flag</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="s2">"--"</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">)</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"#SBATCH </span><span class="si">{</span><span class="n">flag</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">True</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"#SBATCH </span><span class="si">{</span><span class="n">flag</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">lines</span>
 
 
@@ -834,7 +836,7 @@
     <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">compute_root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the ``sbatch`` script of a job array whose tasks each run a share of the receptors.</span>
 
 <span class="sd">    Task ``i`` runs ``stilt run &lt;project&gt; --receptors &lt;folder&gt;/receptors.parquet</span>
@@ -843,64 +845,64 @@
 <span class="sd">    resources, ``--requeue``, ``--signal=B:USR1@120`` (see :func:`run`),</span>
 <span class="sd">    and its ``slurm`` options, which can replace any of them. Its ``setup``</span>
 <span class="sd">    commands run before the task.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;job-name&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;pystilt-</span><span class="si">{</span><span class="n">_project_slug</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;array&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;0-</span><span class="si">{</span><span class="n">n_tasks</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;%</span><span class="si">{</span><span class="n">execution</span><span class="o">.</span><span class="n">array_parallelism</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">execution</span><span class="o">.</span><span class="n">array_parallelism</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
-        <span class="s2">&quot;cpus-per-task&quot;</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">cpus</span><span class="p">,</span>
-        <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
-        <span class="s2">&quot;mem&quot;</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">mem</span><span class="p">,</span>
-        <span class="s2">&quot;partition&quot;</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">partition</span><span class="p">,</span>
-        <span class="s2">&quot;account&quot;</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">account</span><span class="p">,</span>
-        <span class="s2">&quot;qos&quot;</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">qos</span><span class="p">,</span>
-        <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;</span><span class="si">%a</span><span class="s2">.log&quot;</span><span class="p">,</span>
+        <span class="s2">"job-name"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"pystilt-</span><span class="si">{</span><span class="n">_project_slug</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="s2">"array"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"0-</span><span class="si">{</span><span class="n">n_tasks</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span>
+        <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"%</span><span class="si">{</span><span class="n">execution</span><span class="o">.</span><span class="n">array_parallelism</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">execution</span><span class="o">.</span><span class="n">array_parallelism</span> <span class="k">else</span> <span class="s2">""</span><span class="p">),</span>
+        <span class="s2">"cpus-per-task"</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">cpus</span><span class="p">,</span>
+        <span class="s2">"time"</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
+        <span class="s2">"mem"</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">mem</span><span class="p">,</span>
+        <span class="s2">"partition"</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">partition</span><span class="p">,</span>
+        <span class="s2">"account"</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">account</span><span class="p">,</span>
+        <span class="s2">"qos"</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">qos</span><span class="p">,</span>
+        <span class="s2">"output"</span><span class="p">:</span> <span class="n">folder</span> <span class="o">/</span> <span class="s2">"</span><span class="si">%a</span><span class="s2">.log"</span><span class="p">,</span>
         <span class="c1"># A requeued task writes on at the end of its log.</span>
-        <span class="s2">&quot;open-mode&quot;</span><span class="p">:</span> <span class="s2">&quot;append&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;requeue&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-        <span class="s2">&quot;signal&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;B:USR1@</span><span class="si">{</span><span class="n">NOTICE_SECONDS</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">"open-mode"</span><span class="p">:</span> <span class="s2">"append"</span><span class="p">,</span>
+        <span class="s2">"requeue"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s2">"signal"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"B:USR1@</span><span class="si">{</span><span class="n">NOTICE_SECONDS</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
     <span class="p">}</span>
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">execution</span><span class="o">.</span><span class="n">slurm</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">options</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="n">options</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">)]</span> <span class="o">=</span> <span class="n">value</span>
 
     <span class="n">command</span> <span class="o">=</span> <span class="p">[</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span>
-        <span class="s2">&quot;-m&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;stilt&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;run&quot;</span><span class="p">,</span>
+        <span class="s2">"-m"</span><span class="p">,</span>
+        <span class="s2">"stilt"</span><span class="p">,</span>
+        <span class="s2">"run"</span><span class="p">,</span>
         <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="p">),</span>
-        <span class="s2">&quot;--receptors&quot;</span><span class="p">,</span>
-        <span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;receptors.parquet&quot;</span><span class="p">),</span>
-        <span class="s2">&quot;--task&quot;</span><span class="p">,</span>
-        <span class="sa">f</span><span class="s2">&quot;$SLURM_ARRAY_TASK_ID/</span><span class="si">{</span><span class="n">n_tasks</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;--execution&quot;</span><span class="p">,</span>
-        <span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;execution.yaml&quot;</span><span class="p">),</span>
-        <span class="c1"># The output the submitting process uses, which may not be config.yaml&#39;s.</span>
-        <span class="s2">&quot;--output&quot;</span><span class="p">,</span>
+        <span class="s2">"--receptors"</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"receptors.parquet"</span><span class="p">),</span>
+        <span class="s2">"--task"</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">"$SLURM_ARRAY_TASK_ID/</span><span class="si">{</span><span class="n">n_tasks</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="s2">"--execution"</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"execution.yaml"</span><span class="p">),</span>
+        <span class="c1"># The output the submitting process uses, which may not be config.yaml's.</span>
+        <span class="s2">"--output"</span><span class="p">,</span>
         <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">directory</span><span class="p">),</span>
     <span class="p">]</span>
     <span class="k">if</span> <span class="n">compute_root</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">command</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;--compute-root&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">resolve_compute_root</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">compute_root</span><span class="p">))]</span>
-    <span class="c1"># $SLURM_ARRAY_TASK_ID must expand, so that word is quoted with &quot;&quot;.</span>
-    <span class="n">words</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">w</span><span class="si">}</span><span class="s1">&quot;&#39;</span> <span class="k">if</span> <span class="n">w</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;$&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">command</span><span class="p">]</span>
-    <span class="c1"># A task&#39;s log starts with where and when it ran, again after a requeue,</span>
+        <span class="n">command</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--compute-root"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">resolve_compute_root</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">compute_root</span><span class="p">))]</span>
+    <span class="c1"># $SLURM_ARRAY_TASK_ID must expand, so that word is quoted with "".</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">'"</span><span class="si">{</span><span class="n">w</span><span class="si">}</span><span class="s1">"'</span> <span class="k">if</span> <span class="n">w</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"$"</span><span class="p">)</span> <span class="k">else</span> <span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">command</span><span class="p">]</span>
+    <span class="c1"># A task's log starts with where and when it ran, again after a requeue,</span>
     <span class="c1"># so a task on a bad node can be found from its log.</span>
     <span class="n">header</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="s1">&#39;echo &quot;$(date -u +</span><span class="si">%F</span><span class="s1">T%TZ) $SLURMD_NODENAME &#39;</span>
-        <span class="s2">&quot;job $</span><span class="si">{SLURM_ARRAY_JOB_ID}</span><span class="s2">_$</span><span class="si">{SLURM_ARRAY_TASK_ID}</span><span class="s2"> &quot;</span>
-        <span class="s1">&#39;restart $</span><span class="si">{SLURM_RESTART_COUNT:-0}</span><span class="s1">&quot;&#39;</span>
+        <span class="s1">'echo "$(date -u +</span><span class="si">%F</span><span class="s1">T%TZ) $SLURMD_NODENAME '</span>
+        <span class="s2">"job $</span><span class="si">{SLURM_ARRAY_JOB_ID}</span><span class="s2">_$</span><span class="si">{SLURM_ARRAY_TASK_ID}</span><span class="s2"> "</span>
+        <span class="s1">'restart $</span><span class="si">{SLURM_RESTART_COUNT:-0}</span><span class="s1">"'</span>
     <span class="p">)</span>
-    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;#!/bin/bash&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">_sbatch_lines</span><span class="p">(</span><span class="n">options</span><span class="p">),</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="o">*</span><span class="n">execution</span><span class="o">.</span><span class="n">setup</span><span class="p">]</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"#!/bin/bash"</span><span class="p">,</span> <span class="o">*</span><span class="n">_sbatch_lines</span><span class="p">(</span><span class="n">options</span><span class="p">),</span> <span class="s2">""</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="o">*</span><span class="n">execution</span><span class="o">.</span><span class="n">setup</span><span class="p">]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_existing</span><span class="p">:</span>
         <span class="c1"># A requeued task keeps what it finished before.</span>
         <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span>
-            <span class="s1">&#39;skip=&quot;--no-skip&quot;&#39;</span><span class="p">,</span>
-            <span class="s1">&#39;[ &quot;$</span><span class="si">{SLURM_RESTART_COUNT:-0}</span><span class="s1">&quot; -gt 0 ] &amp;&amp; skip=&quot;&quot;&#39;</span><span class="p">,</span>
+            <span class="s1">'skip="--no-skip"'</span><span class="p">,</span>
+            <span class="s1">'[ "$</span><span class="si">{SLURM_RESTART_COUNT:-0}</span><span class="s1">" -gt 0 ] &amp;&amp; skip=""'</span><span class="p">,</span>
         <span class="p">]</span>
-        <span class="n">words</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;$skip&quot;</span><span class="p">)</span>
+        <span class="n">words</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"$skip"</span><span class="p">)</span>
     <span class="c1"># exec, so this process is the one Slurm signals.</span>
-    <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;exec &quot;</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">words</span><span class="p">))</span>
-    <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span></div>
+    <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"exec "</span> <span class="o">+</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">words</span><span class="p">))</span>
+    <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span></div>
 
 
 
@@ -911,27 +913,27 @@
     <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
     <span class="n">compute_root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Write a submission folder for *pending* receptors, submit its job array, and return its job id and cluster.</span>
 
 <span class="sd">    The cluster is the one ``sbatch`` sent the job to when it is not the</span>
 <span class="sd">    default (``clusters`` in the Slurm options), else ``None``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># One folder per submission, so a later array never overwrites these.</span>
-    <span class="n">stamp</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="si">:</span><span class="s2">%Y%m%d_%H%M%S</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
-    <span class="n">folder</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">&quot;_slurm&quot;</span> <span class="o">/</span> <span class="n">stamp</span>
+    <span class="n">stamp</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="si">:</span><span class="s2">%Y%m%d_%H%M%S</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+    <span class="n">folder</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">"_slurm"</span> <span class="o">/</span> <span class="n">stamp</span>
     <span class="n">folder</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;receptors.txt&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pending</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"receptors.txt"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pending</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
     <span class="c1"># The checked rows, in the order the tasks split them (task_share).</span>
     <span class="n">rows</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">_rows_of</span><span class="p">(</span><span class="n">pending</span><span class="p">)</span>
     <span class="n">write_parquet</span><span class="p">(</span>
-        <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">preserve_index</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;receptors.parquet&quot;</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">preserve_index</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">folder</span> <span class="o">/</span> <span class="s2">"receptors.parquet"</span>
     <span class="p">)</span>
-    <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;execution.yaml&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
+    <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"execution.yaml"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
         <span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">execution</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">exclude_unset</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="p">)</span>
     <span class="n">n_tasks</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">execution</span><span class="o">.</span><span class="n">n_workers</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">pending</span><span class="p">)))</span>
-    <span class="n">script</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;job.sh&quot;</span>
+    <span class="n">script</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="s2">"job.sh"</span>
     <span class="n">script</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
         <span class="n">job_script</span><span class="p">(</span>
             <span class="n">project</span><span class="p">,</span>
@@ -943,21 +945,21 @@
         <span class="p">)</span>
     <span class="p">)</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-        <span class="p">[</span><span class="s2">&quot;sbatch&quot;</span><span class="p">,</span> <span class="s2">&quot;--parsable&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">script</span><span class="p">)],</span>
+        <span class="p">[</span><span class="s2">"sbatch"</span><span class="p">,</span> <span class="s2">"--parsable"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">script</span><span class="p">)],</span>
         <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;sbatch refused </span><span class="si">{</span><span class="n">script</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"sbatch refused </span><span class="si">{</span><span class="n">script</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
-    <span class="c1"># --parsable prints &quot;&lt;id&gt;&quot;, or &quot;&lt;id&gt;;&lt;cluster&gt;&quot; for a job on another cluster.</span>
-    <span class="n">job_id</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">cluster</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot;;&quot;</span><span class="p">)</span>
+    <span class="c1"># --parsable prints "&lt;id&gt;", or "&lt;id&gt;;&lt;cluster&gt;" for a job on another cluster.</span>
+    <span class="n">job_id</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">cluster</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">";"</span><span class="p">)</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-        <span class="s2">&quot;Submitted job: </span><span class="si">%s%s</span><span class="s2"> (</span><span class="si">%d</span><span class="s2"> tasks); logs in </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">"Submitted job: </span><span class="si">%s%s</span><span class="s2"> (</span><span class="si">%d</span><span class="s2"> tasks); logs in </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
         <span class="n">job_id</span><span class="p">,</span>
-        <span class="sa">f</span><span class="s2">&quot; on cluster </span><span class="si">{</span><span class="n">cluster</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">cluster</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">" on cluster </span><span class="si">{</span><span class="n">cluster</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">cluster</span> <span class="k">else</span> <span class="s2">""</span><span class="p">,</span>
         <span class="n">n_tasks</span><span class="p">,</span>
         <span class="n">folder</span><span class="p">,</span>
     <span class="p">)</span>
@@ -965,29 +967,29 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_on_cluster</span><span class="p">(</span><span class="n">cluster</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the words that send a Slurm command to *cluster* (``-M``); none for the default one.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="p">[</span><span class="s2">&quot;-M&quot;</span><span class="p">,</span> <span class="n">cluster</span><span class="p">]</span> <span class="k">if</span> <span class="n">cluster</span> <span class="k">else</span> <span class="p">[]</span>
+<span class="w">    </span><span class="sd">"""Return the words that send a Slurm command to *cluster* (``-M``); none for the default one."""</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s2">"-M"</span><span class="p">,</span> <span class="n">cluster</span><span class="p">]</span> <span class="k">if</span> <span class="n">cluster</span> <span class="k">else</span> <span class="p">[]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_task_states</span><span class="p">(</span>
     <span class="n">job_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">cluster</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return ``{task: (state, exit code)}`` for the tasks of a job array, from ``sacct``.</span>
 
 <span class="sd">    ``None`` when ``sacct`` cannot answer, as when the accounting database</span>
 <span class="sd">    is slow to hear of a new job.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
         <span class="p">[</span>
-            <span class="s2">&quot;sacct&quot;</span><span class="p">,</span>
+            <span class="s2">"sacct"</span><span class="p">,</span>
             <span class="o">*</span><span class="n">_on_cluster</span><span class="p">(</span><span class="n">cluster</span><span class="p">),</span>
-            <span class="s2">&quot;-j&quot;</span><span class="p">,</span>
+            <span class="s2">"-j"</span><span class="p">,</span>
             <span class="n">job_id</span><span class="p">,</span>
-            <span class="s2">&quot;-X&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;-n&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;-P&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;--format=JobID,State,ExitCode&quot;</span><span class="p">,</span>
+            <span class="s2">"-X"</span><span class="p">,</span>
+            <span class="s2">"-n"</span><span class="p">,</span>
+            <span class="s2">"-P"</span><span class="p">,</span>
+            <span class="s2">"--format=JobID,State,ExitCode"</span><span class="p">,</span>
         <span class="p">],</span>
         <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -997,10 +999,10 @@
         <span class="k">return</span> <span class="kc">None</span>
     <span class="n">states</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
-        <span class="n">parts</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"|"</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="n">task</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">code</span> <span class="o">=</span> <span class="n">parts</span>
-            <span class="n">states</span><span class="p">[</span><span class="n">task</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">state</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">code</span><span class="p">)</span>
+            <span class="n">states</span><span class="p">[</span><span class="n">task</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">state</span> <span class="k">else</span> <span class="s2">""</span><span class="p">,</span> <span class="n">code</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">states</span> <span class="ow">or</span> <span class="kc">None</span>
 
 
@@ -1009,7 +1011,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">wait</span><span class="p">(</span>
     <span class="n">job_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">poll</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">cluster</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Wait until every task of a Slurm job array has ended, and return how each ended.</span>
 
 <span class="sd">    Polls ``sacct`` every *poll* seconds. A task that ended other than</span>
@@ -1020,7 +1022,7 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    job_id : str</span>
-<span class="sd">        The job array&#39;s id.</span>
+<span class="sd">        The job array's id.</span>
 <span class="sd">    poll : float, default 30</span>
 <span class="sd">        Seconds between ``sacct`` calls.</span>
 <span class="sd">    cluster : str, optional</span>
@@ -1031,17 +1033,17 @@
 <span class="sd">    -------</span>
 <span class="sd">    dict</span>
 <span class="sd">        ``{task: (state, exit code)}`` as ``sacct`` gives them, such as</span>
-<span class="sd">        ``{&quot;123_0&quot;: (&quot;COMPLETED&quot;, &quot;0:0&quot;)}``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">        ``{"123_0": ("COMPLETED", "0:0")}``.</span>
+<span class="sd">    """</span>
     <span class="n">states</span> <span class="o">=</span> <span class="n">_task_states</span><span class="p">(</span><span class="n">job_id</span><span class="p">,</span> <span class="n">cluster</span><span class="p">)</span>
     <span class="k">while</span> <span class="n">states</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">s</span> <span class="ow">in</span> <span class="n">_ACTIVE</span> <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">states</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">poll</span><span class="p">)</span>
         <span class="n">states</span> <span class="o">=</span> <span class="n">_task_states</span><span class="p">(</span><span class="n">job_id</span><span class="p">,</span> <span class="n">cluster</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">task</span><span class="p">,</span> <span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">code</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">states</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
-        <span class="k">if</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;COMPLETED&quot;</span> <span class="ow">or</span> <span class="p">(</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;FAILED&quot;</span> <span class="ow">and</span> <span class="n">code</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;1:0&quot;</span><span class="p">,</span> <span class="s2">&quot;3:0&quot;</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">"COMPLETED"</span> <span class="ow">or</span> <span class="p">(</span><span class="n">state</span> <span class="o">==</span> <span class="s2">"FAILED"</span> <span class="ow">and</span> <span class="n">code</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"1:0"</span><span class="p">,</span> <span class="s2">"3:0"</span><span class="p">)):</span>
             <span class="k">continue</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-            <span class="s2">&quot;Slurm task </span><span class="si">%s</span><span class="s2"> ended </span><span class="si">%s</span><span class="s2"> (exit </span><span class="si">%s</span><span class="s2">); see its log&quot;</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">code</span>
+            <span class="s2">"Slurm task </span><span class="si">%s</span><span class="s2"> ended </span><span class="si">%s</span><span class="s2"> (exit </span><span class="si">%s</span><span class="s2">); see its log"</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">code</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">states</span></div>
 
@@ -1053,13 +1055,13 @@
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">_Notice</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Whether SIGUSR1 has arrived.</span>
 
 <span class="sd">    While ``armed``, its first arrival raises ``KeyboardInterrupt`` to stop</span>
 <span class="sd">    the work. Later ones, and any after the work, are only recorded, so</span>
 <span class="sd">    they cannot cut a cleanup short or end the process.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">received</span> <span class="o">=</span> <span class="kc">False</span>
@@ -1077,7 +1079,7 @@
 
 <span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">_usr1_noticed</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">_Notice</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Record SIGUSR1 inside the block (:class:`_Notice`); outside the main thread, where handlers cannot be set, nothing is.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Record SIGUSR1 inside the block (:class:`_Notice`); outside the main thread, where handlers cannot be set, nothing is."""</span>
     <span class="n">notice</span> <span class="o">=</span> <span class="n">_Notice</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">threading</span><span class="o">.</span><span class="n">current_thread</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">threading</span><span class="o">.</span><span class="n">main_thread</span><span class="p">():</span>
         <span class="k">yield</span> <span class="n">notice</span>
@@ -1092,12 +1094,12 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_run_task</span><span class="p">(</span>
     <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">pending</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">work</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="kc">None</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Run a task&#39;s receptors and return their status table; requeue the task when Slurm stopped it.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Run a task's receptors and return their status table; requeue the task when Slurm stopped it.</span>
 
 <span class="sd">    A task that stops with simulations left is requeued when it got</span>
 <span class="sd">    SIGUSR1 (the time limit is near) or was preempted.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">with</span> <span class="n">_usr1_noticed</span><span class="p">()</span> <span class="k">as</span> <span class="n">notice</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">work</span><span class="p">()</span>
@@ -1113,64 +1115,64 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_this_cluster</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the words that send a Slurm command to the cluster this task runs on.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">_on_cluster</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;SLURM_CLUSTER_NAME&quot;</span><span class="p">))</span>
+<span class="w">    </span><span class="sd">"""Return the words that send a Slurm command to the cluster this task runs on."""</span>
+    <span class="k">return</span> <span class="n">_on_cluster</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"SLURM_CLUSTER_NAME"</span><span class="p">))</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_preempted</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether Slurm has selected this job for preemption (``scontrol show job`` gives a ``PreemptTime``).&quot;&quot;&quot;</span>
-    <span class="n">job_id</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;SLURM_JOB_ID&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">"""Whether Slurm has selected this job for preemption (``scontrol show job`` gives a ``PreemptTime``)."""</span>
+    <span class="n">job_id</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"SLURM_JOB_ID"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">job_id</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">False</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-        <span class="p">[</span><span class="s2">&quot;scontrol&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">_this_cluster</span><span class="p">(),</span> <span class="s2">&quot;show&quot;</span><span class="p">,</span> <span class="s2">&quot;job&quot;</span><span class="p">,</span> <span class="n">job_id</span><span class="p">],</span>
+        <span class="p">[</span><span class="s2">"scontrol"</span><span class="p">,</span> <span class="o">*</span><span class="n">_this_cluster</span><span class="p">(),</span> <span class="s2">"show"</span><span class="p">,</span> <span class="s2">"job"</span><span class="p">,</span> <span class="n">job_id</span><span class="p">],</span>
         <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;PreemptTime=(\S+)&quot;</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">match</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;None&quot;</span><span class="p">,</span> <span class="s2">&quot;Unknown&quot;</span><span class="p">)</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">"PreemptTime=(\S+)"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">match</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"None"</span><span class="p">,</span> <span class="s2">"Unknown"</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_requeue</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Put this Slurm task back in the queue with ``scontrol requeue``; return whether it was.&quot;&quot;&quot;</span>
-    <span class="n">job_id</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;SLURM_JOB_ID&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">"""Put this Slurm task back in the queue with ``scontrol requeue``; return whether it was."""</span>
+    <span class="n">job_id</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"SLURM_JOB_ID"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">job_id</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Told to stop outside a Slurm job; not requeued.&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Told to stop outside a Slurm job; not requeued."</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span>
-    <span class="n">restarts</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;SLURM_RESTART_COUNT&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">restarts</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"SLURM_RESTART_COUNT"</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">restarts</span> <span class="o">&gt;=</span> <span class="n">MAX_REQUEUES</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-            <span class="s2">&quot;Slurm task </span><span class="si">%s</span><span class="s2"> has been requeued </span><span class="si">%d</span><span class="s2"> times; not again. Run the &quot;</span>
-            <span class="s2">&quot;project again, or raise execution.time.&quot;</span><span class="p">,</span>
+            <span class="s2">"Slurm task </span><span class="si">%s</span><span class="s2"> has been requeued </span><span class="si">%d</span><span class="s2"> times; not again. Run the "</span>
+            <span class="s2">"project again, or raise execution.time."</span><span class="p">,</span>
             <span class="n">job_id</span><span class="p">,</span>
             <span class="n">restarts</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-        <span class="p">[</span><span class="s2">&quot;scontrol&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">_this_cluster</span><span class="p">(),</span> <span class="s2">&quot;requeue&quot;</span><span class="p">,</span> <span class="n">job_id</span><span class="p">],</span>
+        <span class="p">[</span><span class="s2">"scontrol"</span><span class="p">,</span> <span class="o">*</span><span class="n">_this_cluster</span><span class="p">(),</span> <span class="s2">"requeue"</span><span class="p">,</span> <span class="n">job_id</span><span class="p">],</span>
         <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;scontrol requeue </span><span class="si">%s</span><span class="s2"> failed: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">job_id</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"scontrol requeue </span><span class="si">%s</span><span class="s2"> failed: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">job_id</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
         <span class="k">return</span> <span class="kc">False</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-        <span class="s2">&quot;Requeued Slurm task </span><span class="si">%s</span><span class="s2">; it starts again and skips what finished.&quot;</span><span class="p">,</span> <span class="n">job_id</span>
+        <span class="s2">"Requeued Slurm task </span><span class="si">%s</span><span class="s2">; it starts again and skips what finished."</span><span class="p">,</span> <span class="n">job_id</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="kc">True</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;MAX_REQUEUES&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;NOTICE_SECONDS&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;RELIST_SECONDS&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;job_script&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;resolve_compute_root&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;run&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;submit&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;task_share&quot;</span><span class="p">,</span>
+    <span class="s2">"MAX_REQUEUES"</span><span class="p">,</span>
+    <span class="s2">"NOTICE_SECONDS"</span><span class="p">,</span>
+    <span class="s2">"RELIST_SECONDS"</span><span class="p">,</span>
+    <span class="s2">"job_script"</span><span class="p">,</span>
+    <span class="s2">"resolve_compute_root"</span><span class="p">,</span>
+    <span class="s2">"run"</span><span class="p">,</span>
+    <span class="s2">"submit"</span><span class="p">,</span>
+    <span class="s2">"task_share"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 
@@ -1201,8 +1203,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1228,14 +1230,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

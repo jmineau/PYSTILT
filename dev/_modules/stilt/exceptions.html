@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/exceptions';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -445,14 +447,14 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.exceptions</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">Exceptions PYSTILT raises.</span>
 
 <span class="sd">Every one is a :class:`StiltError`, so ``except stilt.StiltError`` catches</span>
 <span class="sd">anything PYSTILT raised on purpose. Each also subclasses the builtin that</span>
 <span class="sd">describes it, so ``except RuntimeError`` or ``except FileNotFoundError``</span>
 <span class="sd">keeps working. Plain input checks raise builtins such as ``ValueError``.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -460,14 +462,14 @@
 <div class="viewcode-block" id="StiltError">
 <a class="viewcode-back" href="../../reference/_api/stilt.StiltError.html#stilt.StiltError">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">StiltError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for every exception PYSTILT raises.&quot;&quot;&quot;</span></div>
+<span class="w">    </span><span class="sd">"""Base class for every exception PYSTILT raises."""</span></div>
 
 
 
 <div class="viewcode-block" id="SimulationError">
 <a class="viewcode-back" href="../../reference/_api/stilt.exceptions.SimulationError.html#stilt.SimulationError">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">SimulationError</span><span class="p">(</span><span class="n">StiltError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    A simulation failed while it ran.</span>
 
 <span class="sd">    The worker catches it, records it with the simulation</span>
@@ -478,11 +480,11 @@
 <span class="sd">    message : str</span>
 <span class="sd">        What went wrong.</span>
 <span class="sd">    reason : str, optional</span>
-<span class="sd">        A short name for the cause, such as ``&quot;MET_COVERAGE&quot;`` or</span>
-<span class="sd">        ``&quot;TIMEOUT&quot;`` (:class:`stilt.transport.hysplit.FailureReason` lists</span>
-<span class="sd">        HYSPLIT&#39;s). ``stilt status`` counts failures by it.</span>
+<span class="sd">        A short name for the cause, such as ``"MET_COVERAGE"`` or</span>
+<span class="sd">        ``"TIMEOUT"`` (:class:`stilt.transport.hysplit.FailureReason` lists</span>
+<span class="sd">        HYSPLIT's). ``stilt status`` counts failures by it.</span>
 <span class="sd">    log : str, optional</span>
-<span class="sd">        The transport model&#39;s log of the failed run, kept with the</span>
+<span class="sd">        The transport model's log of the failed run, kept with the</span>
 <span class="sd">        simulation (:attr:`stilt.Simulation.log`).</span>
 
 <span class="sd">    Attributes</span>
@@ -492,13 +494,13 @@
 <span class="sd">        ``FailureReason`` is stored by its value), or ``None`` when it has no</span>
 <span class="sd">        short name.</span>
 <span class="sd">    log : str</span>
-<span class="sd">        The model&#39;s log, empty when it wrote none.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">        The model's log, empty when it wrote none.</span>
+<span class="sd">    """</span>
 
     <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">log</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">log</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">log</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">log</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">reason</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">reason</span><span class="p">)</span>  <span class="c1"># a plain string, as the failure record stores it</span>
@@ -509,46 +511,46 @@
 <div class="viewcode-block" id="MeteorologyError">
 <a class="viewcode-back" href="../../reference/_api/stilt.exceptions.MeteorologyError.html#stilt.MeteorologyError">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">MeteorologyError</span><span class="p">(</span><span class="n">SimulationError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;The meteorology files a simulation needs could not be found or staged.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""The meteorology files a simulation needs could not be found or staged."""</span>
 
-    <span class="n">reason</span> <span class="o">=</span> <span class="s2">&quot;MET_COVERAGE&quot;</span></div>
+    <span class="n">reason</span> <span class="o">=</span> <span class="s2">"MET_COVERAGE"</span></div>
 
 
 
 <div class="viewcode-block" id="HYSPLITNotFoundError">
 <a class="viewcode-back" href="../../reference/_api/stilt.exceptions.HYSPLITNotFoundError.html#stilt.HYSPLITNotFoundError">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">HYSPLITNotFoundError</span><span class="p">(</span><span class="n">StiltError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    The HYSPLIT executable (``hycs_std``) is missing.</span>
 
 <span class="sd">    Raised when there is no bundled build for this platform, and when</span>
 <span class="sd">    ``exe_dir`` holds no ``hycs_std``. Build ``hycs_std`` and set</span>
 <span class="sd">    ``exe_dir`` in ``config.yaml`` to the directory that holds it.</span>
-<span class="sd">    &quot;&quot;&quot;</span></div>
+<span class="sd">    """</span></div>
 
 
 
 <div class="viewcode-block" id="EmptyFootprint">
 <a class="viewcode-back" href="../../reference/_api/stilt.exceptions.EmptyFootprint.html#stilt.EmptyFootprint">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">EmptyFootprint</span><span class="p">(</span><span class="n">StiltError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    No particle is over the footprint grid, so there is no footprint.</span>
 
 <span class="sd">    An empty footprint is a finished result, not a failure. The worker</span>
 <span class="sd">    catches it and writes a footprint file with no rows, marked empty.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;No particle is over the footprint grid.&quot;</span><span class="p">)</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">"No particle is over the footprint grid."</span><span class="p">)</span></div>
 
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;EmptyFootprint&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;HYSPLITNotFoundError&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;MeteorologyError&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;SimulationError&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;StiltError&quot;</span><span class="p">,</span>
+    <span class="s2">"EmptyFootprint"</span><span class="p">,</span>
+    <span class="s2">"HYSPLITNotFoundError"</span><span class="p">,</span>
+    <span class="s2">"MeteorologyError"</span><span class="p">,</span>
+    <span class="s2">"SimulationError"</span><span class="p">,</span>
+    <span class="s2">"StiltError"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 
@@ -579,8 +581,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -606,14 +608,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

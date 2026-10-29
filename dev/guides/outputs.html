@@ -26,22 +26,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -49,7 +50,7 @@
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'guides/outputs';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -61,8 +62,9 @@
     <link rel="next" title="Summing Footprints: Areas And The Jacobian" href="aggregation.html" />
     <link rel="prev" title="Checking A Run" href="checking.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -527,9 +529,9 @@ Jacobian.</p>
 <p>Open the project, pick a simulation, and plot it:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
-<span class="gp">In [2]: </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">&quot;./my_project&quot;</span><span class="p">)</span>
+<span class="gp">In [2]: </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"./my_project"</span><span class="p">)</span>
 
-<span class="gp">In [3]: </span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="s2">&quot;202101150800_-111.848_40.766_10&quot;</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
+<span class="gp">In [3]: </span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="s2">"202101150800_-111.848_40.766_10"</span><span class="p">,</span> <span class="s2">"hrrr"</span><span class="p">)</span>
 
 <span class="gp">In [4]: </span><span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>   <span class="c1"># footprint, summed over time</span>
 
@@ -546,7 +548,7 @@ Jacobian.</p>
 </a>
 <p>A simulation is named by its receptor id and its variant. To see them all,
 look at <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>, a DataFrame with one row per simulation:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [7]: </span><span class="n">project</span><span class="o">.</span><span class="n">simulations</span><span class="p">[[</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;variant&quot;</span><span class="p">]]</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [7]: </span><span class="n">project</span><span class="o">.</span><span class="n">simulations</span><span class="p">[[</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">]]</span>
 <span class="gh">Out[7]: </span>
 <span class="go">                          receptor variant</span>
 <span class="go">0  202101150600_-111.848_40.766_10    hrrr</span>
@@ -584,7 +586,7 @@ when the map is drawn, and <code class="docutils literal notranslate"><span clas
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cartopy.io.img_tiles</span><span class="w"> </span><span class="kn">import</span> <span class="n">GoogleTiles</span>
 
 <span class="n">usgs</span> <span class="o">=</span> <span class="n">GoogleTiles</span><span class="p">(</span>
-    <span class="n">url</span><span class="o">=</span><span class="s2">&quot;https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/</span><span class="si">{z}</span><span class="s2">/</span><span class="si">{y}</span><span class="s2">/</span><span class="si">{x}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="n">url</span><span class="o">=</span><span class="s2">"https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/</span><span class="si">{z}</span><span class="s2">/</span><span class="si">{y}</span><span class="s2">/</span><span class="si">{x}</span><span class="s2">"</span><span class="p">,</span>
     <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">sim</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">tiler</span><span class="o">=</span><span class="n">usgs</span><span class="p">)</span>
@@ -605,30 +607,30 @@ grid. There is one map for each hour back from the receptor time, in units
 of ppm per (µmol m⁻² s⁻¹). With <code class="docutils literal notranslate"><span class="pre">time_integrate:</span> <span class="pre">true</span></code> in the footprint
 settings there is a single time step. Use xarray as you would on any other
 array:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [13]: </span><span class="n">total</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">)</span>                                     <span class="c1"># summed over time</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [13]: </span><span class="n">total</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"time"</span><span class="p">)</span>                                     <span class="c1"># summed over time</span>
 
-<span class="gp">In [14]: </span><span class="n">last_hours</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="s2">&quot;2021-01-15 02:00&quot;</span><span class="p">,</span> <span class="s2">&quot;2021-01-15 07:00&quot;</span><span class="p">))</span>
+<span class="gp">In [14]: </span><span class="n">last_hours</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="s2">"2021-01-15 02:00"</span><span class="p">,</span> <span class="s2">"2021-01-15 07:00"</span><span class="p">))</span>
 </pre></div>
 </div>
 <p>Methods that need the receptor or the grid are under <code class="docutils literal notranslate"><span class="pre">foot.stilt</span></code>:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [15]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">receptor</span>      <span class="c1"># the receptor</span>
-<span class="gh">Out[15]: </span><span class="go">PointReceptor(id=&#39;202101150800_-111.848_40.766_10&#39;, lon=-111.84800, lat=40.76600, alt=10 agl)</span>
+<span class="gh">Out[15]: </span><span class="go">PointReceptor(id='202101150800_-111.848_40.766_10', lon=-111.84800, lat=40.76600, alt=10 agl)</span>
 
 <span class="gp">In [16]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">grid</span>          <span class="c1"># the grid it was made on</span>
-<span class="gh">Out[16]: </span><span class="go">Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs=&#39;+proj=longlat&#39;)</span>
+<span class="gh">Out[16]: </span><span class="go">Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat')</span>
 
 <span class="gp">In [17]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">config</span>        <span class="c1"># all the footprint settings</span>
-<span class="gh">Out[17]: </span><span class="go">FootprintConfig(grid=Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs=&#39;+proj=longlat&#39;), geometry=None, cells_per_target=4.0, smooth_factor=1.0, time_integrate=False, transforms=[])</span>
+<span class="gh">Out[17]: </span><span class="go">FootprintConfig(grid=Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat'), geometry=None, cells_per_target=4.0, smooth_factor=1.0, time_integrate=False, transforms=[])</span>
 </pre></div>
 </div>
 <p>The receptor id is also a coordinate, <code class="docutils literal notranslate"><span class="pre">foot.receptor</span></code>. It stays on the
 array through sums and arithmetic.</p>
 <p>To write a footprint as a CF NetCDF file for other tools, and read one
 back:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [18]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s2">&quot;footprint_2021-01-15_08.nc&quot;</span><span class="p">)</span>
-<span class="gh">Out[18]: </span><span class="go">PosixPath(&#39;footprint_2021-01-15_08.nc&#39;)</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [18]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s2">"footprint_2021-01-15_08.nc"</span><span class="p">)</span>
+<span class="gh">Out[18]: </span><span class="go">PosixPath('footprint_2021-01-15_08.nc')</span>
 
-<span class="gp">In [19]: </span><span class="n">foot</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">read_footprint</span><span class="p">(</span><span class="s2">&quot;footprint_2021-01-15_08.nc&quot;</span><span class="p">)</span>
+<span class="gp">In [19]: </span><span class="n">foot</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">read_footprint</span><span class="p">(</span><span class="s2">"footprint_2021-01-15_08.nc"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The file records the receptor and the settings used to make it.
@@ -715,8 +717,8 @@ what a transport model must write.</p>
 </a>
 <p>To open a particle file without a project:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">path</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="s2">&quot;output/particles/settings=hrrr-a3f9c2/date=2021-01-15/&quot;</span>
-    <span class="s2">&quot;202101150800_-111.848_40.766_10.parquet&quot;</span>
+    <span class="s2">"output/particles/settings=hrrr-a3f9c2/date=2021-01-15/"</span>
+    <span class="s2">"202101150800_-111.848_40.766_10.parquet"</span>
 <span class="p">)</span>
 <span class="n">particles</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">read_particles</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 <span class="n">meta</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">particles_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
@@ -753,8 +755,8 @@ project to load its results:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [24]: </span><span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
 
 <span class="gp">In [25]: </span><span class="n">morning</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span>
-<span class="gp">   ....: </span>    <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
-<span class="gp">   ....: </span>    <span class="o">&amp;</span> <span class="n">sims</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="s2">&quot;2021-01-15 06:00&quot;</span><span class="p">,</span> <span class="s2">&quot;2021-01-15 09:00&quot;</span><span class="p">)</span>   <span class="c1"># both ends included</span>
+<span class="gp">   ....: </span>    <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr"</span><span class="p">)</span>
+<span class="gp">   ....: </span>    <span class="o">&amp;</span> <span class="n">sims</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="s2">"2021-01-15 06:00"</span><span class="p">,</span> <span class="s2">"2021-01-15 09:00"</span><span class="p">)</span>   <span class="c1"># both ends included</span>
 <span class="gp">   ....: </span><span class="p">]</span>
 <span class="gp">   ....: </span>
 
@@ -776,20 +778,20 @@ after each receptor’s time, where a backward run’s first hour is -1. The
 
 <span class="gp">In [29]: </span><span class="n">rid</span> <span class="o">=</span> <span class="n">morning</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>                         <span class="c1"># the first receptor</span>
 
-<span class="gp">In [30]: </span><span class="n">mean</span> <span class="o">=</span> <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;hour&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span>    <span class="c1"># the mean footprint</span>
+<span class="gp">In [30]: </span><span class="n">mean</span> <span class="o">=</span> <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"hour"</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span>    <span class="c1"># the mean footprint</span>
 
 <span class="gp">In [31]: </span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mean</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">plot</span><span class="p">();</span>                 <span class="c1"># most cells are 0: use a log scale</span>
 
-<span class="gp">In [32]: </span><span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>                      <span class="c1"># one receptor&#39;s hours</span>
+<span class="gp">In [32]: </span><span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>                      <span class="c1"># one receptor's hours</span>
 <span class="gh">Out[32]: </span>
-<span class="go">&lt;xarray.DataArray &#39;foot&#39; (hour: 14, lat: 200, lon: 250)&gt; Size: 3MB</span>
+<span class="go">&lt;xarray.DataArray 'foot' (hour: 14, lat: 200, lon: 250)&gt; Size: 3MB</span>
 <span class="go">dask.array&lt;getitem, shape=(14, 200, 250), dtype=float32, chunksize=(14, 200, 250), chunktype=numpy.ndarray&gt;</span>
 <span class="go">Coordinates:</span>
 <span class="go">  * hour      (hour) int64 112B -14 -13 -12 -11 -10 -9 -8 -7 -6 -5 -4 -3 -2 -1</span>
 <span class="go">    time      (hour) datetime64[us] 112B 2021-01-14T16:00:00 ... 2021-01-15T0...</span>
 <span class="go">  * lat       (lat) float64 2kB 40.01 40.02 40.02 40.03 ... 41.98 41.98 41.99</span>
 <span class="go">  * lon       (lon) float64 2kB -113.0 -113.0 -113.0 ... -110.5 -110.5 -110.5</span>
-<span class="go">    receptor  &lt;U31 124B &#39;202101150600_-111.848_40.766_10&#39;</span>
+<span class="go">    receptor  &lt;U31 124B '202101150600_-111.848_40.766_10'</span>
 <span class="go">Attributes:</span>
 <span class="go">    units:         ppm m2 s umol-1</span>
 <span class="go">    long_name:     footprint</span>
@@ -797,19 +799,19 @@ after each receptor’s time, where a backward run’s first hour is -1. The
 
 <span class="gp">In [33]: </span><span class="n">footprints</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>                      <span class="c1"># and when they start</span>
 <span class="gh">Out[33]: </span>
-<span class="go">&lt;xarray.DataArray &#39;time&#39; (hour: 14)&gt; Size: 112B</span>
-<span class="go">array([&#39;2021-01-14T16:00:00.000000&#39;, &#39;2021-01-14T17:00:00.000000&#39;,</span>
-<span class="go">       &#39;2021-01-14T18:00:00.000000&#39;, &#39;2021-01-14T19:00:00.000000&#39;,</span>
-<span class="go">       &#39;2021-01-14T20:00:00.000000&#39;, &#39;2021-01-14T21:00:00.000000&#39;,</span>
-<span class="go">       &#39;2021-01-14T22:00:00.000000&#39;, &#39;2021-01-14T23:00:00.000000&#39;,</span>
-<span class="go">       &#39;2021-01-15T00:00:00.000000&#39;, &#39;2021-01-15T01:00:00.000000&#39;,</span>
-<span class="go">       &#39;2021-01-15T02:00:00.000000&#39;, &#39;2021-01-15T03:00:00.000000&#39;,</span>
-<span class="go">       &#39;2021-01-15T04:00:00.000000&#39;, &#39;2021-01-15T05:00:00.000000&#39;],</span>
-<span class="go">      dtype=&#39;datetime64[us]&#39;)</span>
+<span class="go">&lt;xarray.DataArray 'time' (hour: 14)&gt; Size: 112B</span>
+<span class="go">array(['2021-01-14T16:00:00.000000', '2021-01-14T17:00:00.000000',</span>
+<span class="go">       '2021-01-14T18:00:00.000000', '2021-01-14T19:00:00.000000',</span>
+<span class="go">       '2021-01-14T20:00:00.000000', '2021-01-14T21:00:00.000000',</span>
+<span class="go">       '2021-01-14T22:00:00.000000', '2021-01-14T23:00:00.000000',</span>
+<span class="go">       '2021-01-15T00:00:00.000000', '2021-01-15T01:00:00.000000',</span>
+<span class="go">       '2021-01-15T02:00:00.000000', '2021-01-15T03:00:00.000000',</span>
+<span class="go">       '2021-01-15T04:00:00.000000', '2021-01-15T05:00:00.000000'],</span>
+<span class="go">      dtype='datetime64[us]')</span>
 <span class="go">Coordinates:</span>
 <span class="go">  * hour      (hour) int64 112B -14 -13 -12 -11 -10 -9 -8 -7 -6 -5 -4 -3 -2 -1</span>
 <span class="go">    time      (hour) datetime64[us] 112B 2021-01-14T16:00:00 ... 2021-01-15T0...</span>
-<span class="go">    receptor  &lt;U31 124B &#39;202101150600_-111.848_40.766_10&#39;</span>
+<span class="go">    receptor  &lt;U31 124B '202101150600_-111.848_40.766_10'</span>
 <span class="go">Attributes:</span>
 <span class="go">    standard_name:  time</span>
 <span class="go">    axis:           T</span>
@@ -830,7 +832,7 @@ footprint as a <a class="reference external" href="https://docs.xarray.dev/en/st
 <p>To sum a selection’s footprints onto your flux cells, as one matrix, use
 <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> (<a class="reference internal" href="aggregation.html"><span class="doc">Summing Footprints: Areas And The Jacobian</span></a>).</p>
 <p>The particles come back as one table, so pandas can group them:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [34]: </span><span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [34]: </span><span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)[</span><span class="s2">"foot"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
 <span class="gh">Out[34]: </span>
 <span class="go">receptor</span>
 <span class="go">202101150600_-111.848_40.766_10    151.455553</span>
@@ -846,15 +848,15 @@ read the <code class="docutils literal notranslate"><span class="pre">particles/
 DuckDB, or polars instead. To find a single file, use
 <code class="docutils literal notranslate"><span class="pre">sim.footprint_path</span></code> or <code class="docutils literal notranslate"><span class="pre">sim.particles_path</span></code>.</p>
 <p>To work with one simulation of a selection, look it up by its row:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [35]: </span><span class="k">for</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">variant</span> <span class="ow">in</span> <span class="n">morning</span><span class="p">[[</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;variant&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">itertuples</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [35]: </span><span class="k">for</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">variant</span> <span class="ow">in</span> <span class="n">morning</span><span class="p">[[</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">]]</span><span class="o">.</span><span class="n">itertuples</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="gp">   ....: </span>    <span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">receptor</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
 <span class="gp">   ....: </span>
 </pre></div>
 </div>
 <p>The extra columns of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> select one satellite scene or one
 site:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">scene</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">scene</span> <span class="o">==</span> <span class="s2">&quot;A&quot;</span><span class="p">)]</span>
-<span class="n">ensemble</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;hrrr-err&quot;</span><span class="p">]</span>        <span class="c1"># every realization of every receptor</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">scene</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr"</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">scene</span> <span class="o">==</span> <span class="s2">"A"</span><span class="p">)]</span>
+<span class="n">ensemble</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr-err"</span><span class="p">]</span>        <span class="c1"># every realization of every receptor</span>
 </pre></div>
 </div>
 <p>To see what is left to do:</p>
@@ -875,7 +877,7 @@ site:</p>
 <span class="go">pending        0</span>
 <span class="go">Name: count, dtype: int64</span>
 
-<span class="gp">In [39]: </span><span class="n">st</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;failed&quot;</span><span class="p">]</span>   <span class="c1"># the failed simulations, and why</span>
+<span class="gp">In [39]: </span><span class="n">st</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">"failed"</span><span class="p">]</span>   <span class="c1"># the failed simulations, and why</span>
 <span class="gh">Out[39]: </span>
 <span class="go">Empty DataFrame</span>
 <span class="go">Columns: [receptor, variant, realization, model, time, kind, location, particles, footprint, state, step, reason, message]</span>
@@ -883,11 +885,11 @@ site:</p>
 
 <span class="gp">In [40]: </span><span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">morning</span><span class="p">)</span>    <span class="c1"># the same, for a selection</span>
 <span class="gh">Out[40]: </span>
-<span class="go">                          receptor variant  realization  ...  step reason message</span>
-<span class="go">0  202101150600_-111.848_40.766_10    hrrr         &lt;NA&gt;  ...  &lt;NA&gt;   &lt;NA&gt;    &lt;NA&gt;</span>
-<span class="go">1  202101150700_-111.848_40.766_10    hrrr         &lt;NA&gt;  ...  &lt;NA&gt;   &lt;NA&gt;    &lt;NA&gt;</span>
-<span class="go">2  202101150800_-111.848_40.766_10    hrrr         &lt;NA&gt;  ...  &lt;NA&gt;   &lt;NA&gt;    &lt;NA&gt;</span>
-<span class="go">3  202101150900_-111.848_40.766_10    hrrr         &lt;NA&gt;  ...  &lt;NA&gt;   &lt;NA&gt;    &lt;NA&gt;</span>
+<span class="go">                          receptor variant  ... reason message</span>
+<span class="go">0  202101150600_-111.848_40.766_10    hrrr  ...   &lt;NA&gt;    &lt;NA&gt;</span>
+<span class="go">1  202101150700_-111.848_40.766_10    hrrr  ...   &lt;NA&gt;    &lt;NA&gt;</span>
+<span class="go">2  202101150800_-111.848_40.766_10    hrrr  ...   &lt;NA&gt;    &lt;NA&gt;</span>
+<span class="go">3  202101150900_-111.848_40.766_10    hrrr  ...   &lt;NA&gt;    &lt;NA&gt;</span>
 
 <span class="go">[4 rows x 13 columns]</span>
 </pre></div>
@@ -910,18 +912,18 @@ reader in another language.</p>
 question about thousands of simulations is one query:</p>
 <div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="c1">-- footprints per settings folder and day</span>
 <span class="k">SELECT</span><span class="w"> </span><span class="n">settings</span><span class="p">,</span><span class="w"> </span><span class="nb">date</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">receptor</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">footprints</span>
-<span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">&#39;output/footprints/*/*/*.parquet&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">'output/footprints/*/*/*.parquet'</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
 <span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">settings</span><span class="p">,</span><span class="w"> </span><span class="nb">date</span>
 <span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">settings</span><span class="p">,</span><span class="w"> </span><span class="nb">date</span><span class="p">;</span>
 
-<span class="c1">-- the total influence of each receptor&#39;s footprint</span>
+<span class="c1">-- the total influence of each receptor's footprint</span>
 <span class="k">SELECT</span><span class="w"> </span><span class="n">receptor</span><span class="p">,</span><span class="w"> </span><span class="k">sum</span><span class="p">(</span><span class="n">foot</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span>
-<span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">&#39;output/footprints/settings=hrrr-93278c/*/*.parquet&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">'output/footprints/settings=hrrr-93278c/*/*.parquet'</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
 <span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">receptor</span><span class="p">;</span>
 
-<span class="c1">-- where each particle of one day&#39;s receptors ended up</span>
+<span class="c1">-- where each particle of one day's receptors ended up</span>
 <span class="k">SELECT</span><span class="w"> </span><span class="n">receptor</span><span class="p">,</span><span class="w"> </span><span class="n">particle</span><span class="p">,</span><span class="w"> </span><span class="n">arg_min</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span><span class="w"> </span><span class="k">time</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">lon</span><span class="p">,</span><span class="w"> </span><span class="n">arg_min</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="k">time</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">lat</span>
-<span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">&#39;output/particles/settings=hrrr-a3f9c2/date=2021-01-15/*.parquet&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">'output/particles/settings=hrrr-a3f9c2/date=2021-01-15/*.parquet'</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
 <span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">receptor</span><span class="p">,</span><span class="w"> </span><span class="n">particle</span><span class="p">;</span>
 </pre></div>
 </div>
@@ -1012,8 +1014,8 @@ no rows, so a count of rows leaves it out. An ensemble’s folders have a
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1039,14 +1041,14 @@ no rows, so a count of rows leaves it out. An ensemble’s folders have a
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/transport/hysplit/driver';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -448,15 +450,15 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.transport.hysplit.driver</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Write HYSPLIT&#39;s input files, run ``hycs_std``, and read the particles it writes.</span>
+<span></span><span class="sd">"""</span>
+<span class="sd">Write HYSPLIT's input files, run ``hycs_std``, and read the particles it writes.</span>
 
 <span class="sd">:func:`write_inputs` fills a working directory with everything</span>
 <span class="sd">``hycs_std`` reads, and :func:`read_particle_dat` reads the particle file</span>
 <span class="sd">it writes. :class:`~stilt.transport.hysplit.HysplitModel` runs the two</span>
 <span class="sd">around ``hycs_std`` in one directory; call them yourself to look at the</span>
 <span class="sd">input files of a run, or to read a ``PARTICLE_STILT.DAT`` from elsewhere.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">platform</span>
@@ -489,28 +491,28 @@
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">arlmet</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span>
 
-<span class="n">CONTROL_FILE</span> <span class="o">=</span> <span class="s2">&quot;CONTROL&quot;</span>
-<span class="n">SETUP_FILE</span> <span class="o">=</span> <span class="s2">&quot;SETUP.CFG&quot;</span>
-<span class="n">HYCS_STD_FILE</span> <span class="o">=</span> <span class="s2">&quot;hycs_std&quot;</span>
-<span class="n">PARTICLE_STILT_FILE</span> <span class="o">=</span> <span class="s2">&quot;PARTICLE_STILT.DAT&quot;</span>
-<span class="n">WINDERR_FILE</span> <span class="o">=</span> <span class="s2">&quot;WINDERR&quot;</span>
-<span class="n">ZIERR_FILE</span> <span class="o">=</span> <span class="s2">&quot;ZIERR&quot;</span>
-<span class="n">ZICONTROL_FILE</span> <span class="o">=</span> <span class="s2">&quot;ZICONTROL&quot;</span>
-<span class="n">LOG_FILE</span> <span class="o">=</span> <span class="s2">&quot;stilt.log&quot;</span>
-<span class="c1">#: HYSPLIT&#39;s own file of warnings, such as the met running out.</span>
-<span class="n">WARNING_FILE</span> <span class="o">=</span> <span class="s2">&quot;WARNING&quot;</span>
+<span class="n">CONTROL_FILE</span> <span class="o">=</span> <span class="s2">"CONTROL"</span>
+<span class="n">SETUP_FILE</span> <span class="o">=</span> <span class="s2">"SETUP.CFG"</span>
+<span class="n">HYCS_STD_FILE</span> <span class="o">=</span> <span class="s2">"hycs_std"</span>
+<span class="n">PARTICLE_STILT_FILE</span> <span class="o">=</span> <span class="s2">"PARTICLE_STILT.DAT"</span>
+<span class="n">WINDERR_FILE</span> <span class="o">=</span> <span class="s2">"WINDERR"</span>
+<span class="n">ZIERR_FILE</span> <span class="o">=</span> <span class="s2">"ZIERR"</span>
+<span class="n">ZICONTROL_FILE</span> <span class="o">=</span> <span class="s2">"ZICONTROL"</span>
+<span class="n">LOG_FILE</span> <span class="o">=</span> <span class="s2">"stilt.log"</span>
+<span class="c1">#: HYSPLIT's own file of warnings, such as the met running out.</span>
+<span class="n">WARNING_FILE</span> <span class="o">=</span> <span class="s2">"WARNING"</span>
 
 <span class="c1">#: The settings ``CONTROL`` takes; :class:`ControlFile` writes them.</span>
-<span class="n">CONTROL_SETTINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;n_hours&quot;</span><span class="p">,</span> <span class="s2">&quot;emisshrs&quot;</span><span class="p">,</span> <span class="s2">&quot;w_option&quot;</span><span class="p">,</span> <span class="s2">&quot;z_top&quot;</span><span class="p">)</span>
+<span class="n">CONTROL_SETTINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"n_hours"</span><span class="p">,</span> <span class="s2">"emisshrs"</span><span class="p">,</span> <span class="s2">"w_option"</span><span class="p">,</span> <span class="s2">"z_top"</span><span class="p">)</span>
 
 <span class="c1">#: Settings PYSTILT uses itself, in no HYSPLIT input file.</span>
-<span class="n">PYSTILT_SETTINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;hnf_plume&quot;</span><span class="p">,</span> <span class="s2">&quot;exe_dir&quot;</span><span class="p">,</span> <span class="s2">&quot;data_dir&quot;</span><span class="p">)</span>
+<span class="n">PYSTILT_SETTINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"hnf_plume"</span><span class="p">,</span> <span class="s2">"exe_dir"</span><span class="p">,</span> <span class="s2">"data_dir"</span><span class="p">)</span>
 
 <span class="c1">#: Every setting that is not a ``SETUP.CFG`` entry. All other settings are.</span>
 <span class="n">NOT_IN_SETUP</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
     <span class="p">{</span>
         <span class="o">*</span><span class="n">CONTROL_SETTINGS</span><span class="p">,</span>
-        <span class="s2">&quot;ziscale&quot;</span><span class="p">,</span>  <span class="c1"># ZICONTROL</span>
+        <span class="s2">"ziscale"</span><span class="p">,</span>  <span class="c1"># ZICONTROL</span>
         <span class="o">*</span><span class="n">WIND_ERROR_SETTINGS</span><span class="p">,</span>
         <span class="o">*</span><span class="n">ZI_ERROR_SETTINGS</span><span class="p">,</span>
         <span class="o">*</span><span class="n">PYSTILT_SETTINGS</span><span class="p">,</span>
@@ -519,50 +521,50 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_bundled_exe_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the directory of the bundled ``hycs_std`` for this platform.</span>
 
 <span class="sd">    The bundled builds are x86-64 Linux and x86-64 macOS. The macOS build</span>
 <span class="sd">    also runs on Apple Silicon through Rosetta. Any other platform raises,</span>
 <span class="sd">    rather than running a binary the operating system cannot execute. So</span>
 <span class="sd">    does an install from the source archive, which carries no binary.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">system</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span>
     <span class="n">machine</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">machine</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
     <span class="n">subdir</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">if</span> <span class="n">system</span> <span class="o">==</span> <span class="s2">&quot;Linux&quot;</span> <span class="ow">and</span> <span class="n">machine</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;x86_64&quot;</span><span class="p">,</span> <span class="s2">&quot;amd64&quot;</span><span class="p">):</span>
-        <span class="n">subdir</span> <span class="o">=</span> <span class="s2">&quot;linux_x64&quot;</span>
-    <span class="k">elif</span> <span class="n">system</span> <span class="o">==</span> <span class="s2">&quot;Darwin&quot;</span> <span class="ow">and</span> <span class="n">machine</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;x86_64&quot;</span><span class="p">,</span> <span class="s2">&quot;arm64&quot;</span><span class="p">):</span>
-        <span class="n">subdir</span> <span class="o">=</span> <span class="s2">&quot;macos_x64&quot;</span>
+    <span class="k">if</span> <span class="n">system</span> <span class="o">==</span> <span class="s2">"Linux"</span> <span class="ow">and</span> <span class="n">machine</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"x86_64"</span><span class="p">,</span> <span class="s2">"amd64"</span><span class="p">):</span>
+        <span class="n">subdir</span> <span class="o">=</span> <span class="s2">"linux_x64"</span>
+    <span class="k">elif</span> <span class="n">system</span> <span class="o">==</span> <span class="s2">"Darwin"</span> <span class="ow">and</span> <span class="n">machine</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"x86_64"</span><span class="p">,</span> <span class="s2">"arm64"</span><span class="p">):</span>
+        <span class="n">subdir</span> <span class="o">=</span> <span class="s2">"macos_x64"</span>
     <span class="k">if</span> <span class="n">subdir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">exe_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pkg_files</span><span class="p">(</span><span class="s2">&quot;stilt.transport.hysplit&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;bin&quot;</span> <span class="o">/</span> <span class="n">subdir</span><span class="p">))</span>
+        <span class="n">exe_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pkg_files</span><span class="p">(</span><span class="s2">"stilt.transport.hysplit"</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"bin"</span> <span class="o">/</span> <span class="n">subdir</span><span class="p">))</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">exe_dir</span> <span class="o">/</span> <span class="n">HYCS_STD_FILE</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="k">return</span> <span class="n">exe_dir</span>
     <span class="k">raise</span> <span class="n">HYSPLITNotFoundError</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;No bundled HYSPLIT binary for </span><span class="si">{</span><span class="n">system</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">machine</span><span class="p">()</span><span class="si">}</span><span class="s2">. &quot;</span>
-        <span class="s2">&quot;Build hycs_std for this machine and set exe_dir in config.yaml &quot;</span>
-        <span class="s2">&quot;to the directory that holds it.&quot;</span>
+        <span class="sa">f</span><span class="s2">"No bundled HYSPLIT binary for </span><span class="si">{</span><span class="n">system</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">machine</span><span class="p">()</span><span class="si">}</span><span class="s2">. "</span>
+        <span class="s2">"Build hycs_std for this machine and set exe_dir in config.yaml "</span>
+        <span class="s2">"to the directory that holds it."</span>
     <span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_bundled_data_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the directory of HYSPLIT&#39;s bundled data tables.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pkg_files</span><span class="p">(</span><span class="s2">&quot;stilt.transport.hysplit&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span><span class="p">))</span>
+<span class="w">    </span><span class="sd">"""Return the directory of HYSPLIT's bundled data tables."""</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pkg_files</span><span class="p">(</span><span class="s2">"stilt.transport.hysplit"</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"data"</span><span class="p">))</span>
 
 
-<span class="c1">#: HYSPLIT&#39;s names for the columns the particle table names otherwise</span>
-<span class="c1">#: (:data:`stilt.particles.PARTICLE_SCHEMA`); the rest keep HYSPLIT&#39;s.</span>
-<span class="n">PARTICLE_COLUMNS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;indx&quot;</span><span class="p">:</span> <span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="s2">&quot;long&quot;</span><span class="p">:</span> <span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lati&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">}</span>
+<span class="c1">#: HYSPLIT's names for the columns the particle table names otherwise</span>
+<span class="c1">#: (:data:`stilt.particles.PARTICLE_SCHEMA`); the rest keep HYSPLIT's.</span>
+<span class="n">PARTICLE_COLUMNS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"indx"</span><span class="p">:</span> <span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">:</span> <span class="s2">"age"</span><span class="p">,</span> <span class="s2">"long"</span><span class="p">:</span> <span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lati"</span><span class="p">:</span> <span class="s2">"lat"</span><span class="p">}</span>
 
 
 <div class="viewcode-block" id="read_particle_dat">
 <a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.read_particle_dat.html#stilt.transport.hysplit.read_particle_dat">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">read_particle_dat</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Read a ``PARTICLE_STILT.DAT`` file as a particle table.</span>
 
 <span class="sd">    The ``varsiwant`` codes ``indx``, ``time``, ``long``, and ``lati``</span>
-<span class="sd">    become the particle table&#39;s ``particle``, ``age``, ``lon``, and ``lat``</span>
+<span class="sd">    become the particle table's ``particle``, ``age``, ``lon``, and ``lat``</span>
 <span class="sd">    (:data:`PARTICLE_COLUMNS`).</span>
 
 <span class="sd">    Parameters</span>
@@ -583,15 +585,15 @@
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        If the file has a different number of columns.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">PARTICLE_COLUMNS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">]</span>
     <span class="c1"># numpy.loadtxt reads large files much faster than pandas and handles</span>
-    <span class="c1"># HYSPLIT&#39;s variable-width spacing.</span>
+    <span class="c1"># HYSPLIT's variable-width spacing.</span>
     <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span>
-            <span class="s2">&quot;ignore&quot;</span><span class="p">,</span>
-            <span class="n">message</span><span class="o">=</span><span class="s2">&quot;loadtxt: input contained no data&quot;</span><span class="p">,</span>
+            <span class="s2">"ignore"</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s2">"loadtxt: input contained no data"</span><span class="p">,</span>
             <span class="n">category</span><span class="o">=</span><span class="ne">UserWarning</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ndmin</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
@@ -600,8 +602,8 @@
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">names</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has </span><span class="si">{</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> columns, expected </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;from varsiwant=</span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span><span class="si">!r}</span><span class="s2">.&quot;</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has </span><span class="si">{</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> columns, expected </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span><span class="si">}</span><span class="s2"> "</span>
+            <span class="sa">f</span><span class="s2">"from varsiwant=</span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span><span class="si">!r}</span><span class="s2">."</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">names</span><span class="p">))</span></div>
 
@@ -611,27 +613,27 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">setup_entries</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the ``SETUP.CFG`` namelist entries of *params*, leaving out unset ones.</span>
 
 <span class="sd">    Every setting not in :data:`NOT_IN_SETUP` is an entry, in declaration</span>
 <span class="sd">    order. The driver adds ``KMSL``, ``IVMAX``, and ``WINDERRTF``, and</span>
 <span class="sd">    ``MAXPAR`` when ``maxpar`` is unset, which depend on the receptor or</span>
 <span class="sd">    follow from other settings.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">entries</span> <span class="o">=</span> <span class="p">{</span>
         <span class="n">name</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">HysplitConfig</span><span class="o">.</span><span class="n">model_fields</span>
         <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">NOT_IN_SETUP</span> <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
     <span class="p">}</span>
-    <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;zicontroltf&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">zicontroltf</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">entries</span><span class="p">[</span><span class="s2">"zicontroltf"</span><span class="p">]</span> <span class="o">=</span> <span class="n">zicontroltf</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;seed&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">setup_seed</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+        <span class="n">entries</span><span class="p">[</span><span class="s2">"seed"</span><span class="p">]</span> <span class="o">=</span> <span class="n">setup_seed</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">entries</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">setup_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the ``SEED`` value written to ``SETUP.CFG`` for a user seed.</span>
 
 <span class="sd">    HYSPLIT sets its generator state to ``-1 + SEED``. Under ``krand=2`` it</span>
@@ -641,22 +643,22 @@
 <span class="sd">    never the unseeded default (``SEED = 0``). A patched HYSPLIT that uses</span>
 <span class="sd">    ``SEED`` directly maps a negative ``SEED`` to the same state, so the</span>
 <span class="sd">    value works with both builds.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="o">-</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">release_locations</span><span class="p">(</span><span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the number of horizontal locations *receptor* releases particles from.</span>
 
 <span class="sd">    HYSPLIT divides ``numpar`` among them. A :class:`~stilt.receptors.ColumnReceptor`</span>
 <span class="sd">    is one location: HYSPLIT joins its two heights into one line source.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="nb">len</span><span class="p">({(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span> <span class="k">for</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">receptor</span><span class="o">.</span><span class="n">coords</span><span class="p">()})</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">check_release</span><span class="p">(</span><span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Raise when HYSPLIT stopped releasing before every location of *receptor* got its particles.</span>
 
 <span class="sd">    HYSPLIT fills the locations in order and stops at ``MAXPAR``, writing</span>
@@ -670,24 +672,24 @@
 <span class="sd">        With ``reason`` ``PARTICLE_LIMIT``, when *receptor* has several</span>
 <span class="sd">        locations and the ``WARNING`` file in *workdir* says HYSPLIT</span>
 <span class="sd">        reached ``MAXPAR``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">locations</span> <span class="o">=</span> <span class="n">release_locations</span><span class="p">(</span><span class="n">receptor</span><span class="p">)</span>
     <span class="n">warning</span> <span class="o">=</span> <span class="n">workdir</span> <span class="o">/</span> <span class="n">WARNING_FILE</span>
     <span class="k">if</span> <span class="n">locations</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">warning</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
         <span class="k">return</span>
-    <span class="k">if</span> <span class="n">PARTICLE_LIMIT_PHRASE</span> <span class="ow">in</span> <span class="n">warning</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">PARTICLE_LIMIT_PHRASE</span> <span class="ow">in</span> <span class="n">warning</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">):</span>
         <span class="n">fix</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="s2">&quot;Raise maxpar or leave it unset.&quot;</span> <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">maxpar</span> <span class="k">else</span> <span class="s2">&quot;Set maxpar higher.&quot;</span>
+            <span class="s2">"Raise maxpar or leave it unset."</span> <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">maxpar</span> <span class="k">else</span> <span class="s2">"Set maxpar higher."</span>
         <span class="p">)</span>
         <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;HYSPLIT stopped releasing at maxpar = </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">maxpar_for</span><span class="p">(</span><span class="n">locations</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;before each of the receptor&#39;s </span><span class="si">{</span><span class="n">locations</span><span class="si">}</span><span class="s2"> locations got its share of &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;numpar = </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">numpar</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">fix</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"HYSPLIT stopped releasing at maxpar = </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">maxpar_for</span><span class="p">(</span><span class="n">locations</span><span class="p">)</span><span class="si">}</span><span class="s2"> "</span>
+            <span class="sa">f</span><span class="s2">"before each of the receptor's </span><span class="si">{</span><span class="n">locations</span><span class="si">}</span><span class="s2"> locations got its share of "</span>
+            <span class="sa">f</span><span class="s2">"numpar = </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">numpar</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">fix</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
             <span class="n">reason</span><span class="o">=</span><span class="n">FailureReason</span><span class="o">.</span><span class="n">PARTICLE_LIMIT</span><span class="p">,</span>
         <span class="p">)</span>
 
 
-<span class="c1">#: How far inside the met&#39;s domain, in grid cells, a particle at the last time</span>
+<span class="c1">#: How far inside the met's domain, in grid cells, a particle at the last time</span>
 <span class="c1">#: step of a run that stopped early must be for :func:`check_met_stop` to fail</span>
 <span class="c1">#: the run. Measured on HRRR (3 km), NAM (12 km) and NARR (32 km) grids and</span>
 <span class="c1">#: crops of them: particles that left the domain ended 1 to 2 cells from its</span>
@@ -696,11 +698,11 @@
 <span class="n">MET_STOP_CELLS</span> <span class="o">=</span> <span class="mi">5</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">cells_from_edge</span><span class="p">(</span><span class="n">lon</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">lat</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">grid</span><span class="p">:</span> <span class="s2">&quot;Grid&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">cells_from_edge</span><span class="p">(</span><span class="n">lon</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">lat</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">grid</span><span class="p">:</span> <span class="s2">"Grid"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return how far each position is from the nearest side of the met grid, in grid cells.</span>
 
-<span class="sd">    A global grid&#39;s columns wrap around in longitude, so it has no east or</span>
+<span class="sd">    A global grid's columns wrap around in longitude, so it has no east or</span>
 <span class="sd">    west side. A position outside the grid has a negative distance. The</span>
 <span class="sd">    domain top is not an edge: HYSPLIT keeps particles from rising above it.</span>
 
@@ -709,13 +711,13 @@
 <span class="sd">    lon, lat : array-like</span>
 <span class="sd">        Positions, in degrees.</span>
 <span class="sd">    grid : arlmet.Grid</span>
-<span class="sd">        The met&#39;s horizontal grid.</span>
+<span class="sd">        The met's horizontal grid.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    numpy.ndarray</span>
 <span class="sd">        The distance of each position, in grid cells.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">fractional_indices</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lon</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lat</span><span class="p">))</span>
     <span class="n">edges</span> <span class="o">=</span> <span class="p">[</span><span class="n">y</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">ny</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">y</span><span class="p">]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">grid</span><span class="o">.</span><span class="n">wraps_lon</span><span class="p">:</span>
@@ -723,11 +725,11 @@
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">check_met_stop</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">grid</span><span class="p">:</span> <span class="s2">&quot;Grid&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Raise when a run stopped before ``n_hours`` with particles well inside the met&#39;s domain.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_met_stop</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">grid</span><span class="p">:</span> <span class="s2">"Grid"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Raise when a run stopped before ``n_hours`` with particles well inside the met's domain.</span>
 
-<span class="sd">    Particles that leave the met&#39;s domain end at its edge, and a run whose</span>
+<span class="sd">    Particles that leave the met's domain end at its edge, and a run whose</span>
 <span class="sd">    particles all left early is complete. When the met runs out, HYSPLIT</span>
 <span class="sd">    can stop every particle where it is, write no warning, and report a</span>
 <span class="sd">    complete run. So a run that stopped before ``n_hours`` fails when any</span>
@@ -758,35 +760,35 @@
 <span class="sd">        With ``reason`` ``MET_COVERAGE``, when the particles stopped</span>
 <span class="sd">        before ``n_hours`` and one at the last time step is more than</span>
 <span class="sd">        :data:`MET_STOP_CELLS` grid cells inside the met grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">particles</span><span class="o">.</span><span class="n">empty</span> <span class="ow">or</span> <span class="ow">not</span> <span class="p">{</span><span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">}</span> <span class="o">&lt;=</span> <span class="nb">set</span><span class="p">(</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">particles</span><span class="o">.</span><span class="n">empty</span> <span class="ow">or</span> <span class="ow">not</span> <span class="p">{</span><span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">}</span> <span class="o">&lt;=</span> <span class="nb">set</span><span class="p">(</span>
         <span class="n">particles</span><span class="o">.</span><span class="n">columns</span>
     <span class="p">):</span>
         <span class="k">return</span>
-    <span class="n">reach</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span>
+    <span class="n">reach</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span>
     <span class="n">stop</span> <span class="o">=</span> <span class="n">reach</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">stop</span> <span class="o">&gt;=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">n_hours</span><span class="p">)</span> <span class="o">*</span> <span class="mi">60</span><span class="p">:</span>
         <span class="k">return</span>
     <span class="n">last</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="n">reach</span> <span class="o">==</span> <span class="n">stop</span><span class="p">]</span>
-    <span class="n">inside</span> <span class="o">=</span> <span class="n">cells_from_edge</span><span class="p">(</span><span class="n">last</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">],</span> <span class="n">last</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">],</span> <span class="n">grid</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="n">inside</span> <span class="o">=</span> <span class="n">cells_from_edge</span><span class="p">(</span><span class="n">last</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">],</span> <span class="n">last</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">],</span> <span class="n">grid</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">inside</span> <span class="o">&gt;</span> <span class="n">MET_STOP_CELLS</span><span class="p">:</span>
-        <span class="n">share</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">last</span><span class="p">)</span> <span class="o">/</span> <span class="n">particles</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
+        <span class="n">share</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">last</span><span class="p">)</span> <span class="o">/</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
         <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;The particles stopped </span><span class="si">{</span><span class="n">stop</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> h into the </span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">n_hours</span><span class="p">)</span><span class="si">}</span><span class="s2"> h &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;run, up to </span><span class="si">{</span><span class="n">inside</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> grid cells inside the met&#39;s domain, not &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;at its edge: the met ran out (</span><span class="si">{</span><span class="n">share</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2"> of the particles were &quot;</span>
-            <span class="s2">&quot;still in the air).&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"The particles stopped </span><span class="si">{</span><span class="n">stop</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> h into the </span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">n_hours</span><span class="p">)</span><span class="si">}</span><span class="s2"> h "</span>
+            <span class="sa">f</span><span class="s2">"run, up to </span><span class="si">{</span><span class="n">inside</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> grid cells inside the met's domain, not "</span>
+            <span class="sa">f</span><span class="s2">"at its edge: the met ran out (</span><span class="si">{</span><span class="n">share</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2"> of the particles were "</span>
+            <span class="s2">"still in the air)."</span><span class="p">,</span>
             <span class="n">reason</span><span class="o">=</span><span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
         <span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">ziscale_factors</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the hourly mixed-layer factors for ``ZICONTROL``, or ``None`` when unscaled.</span>
 
 <span class="sd">    A single ``ziscale`` value is repeated for every hour of the run and a</span>
 <span class="sd">    list is used as given. Factors that are all 1.0 give ``None``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">values</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">hourly_ziscale</span><span class="p">()</span>
     <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">v</span> <span class="o">==</span> <span class="mf">1.0</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span>
@@ -794,31 +796,31 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">zicontroltf</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return HYSPLIT&#39;s ``ZICONTROLTF`` flag: 1 when ``ziscale`` scales the mixed layer.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return HYSPLIT's ``ZICONTROLTF`` flag: 1 when ``ziscale`` scales the mixed layer."""</span>
     <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">ziscale_factors</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">winderr</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the ``WINDERR`` values, in the file&#39;s order, or ``None`` when unset.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the ``WINDERR`` values, in the file's order, or ``None`` when unset."""</span>
     <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">WIND_ERROR_SETTINGS</span><span class="p">]</span>
     <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">values</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">zierr</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the ``ZIERR`` values, in the file&#39;s order, or ``None`` when unset.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the ``ZIERR`` values, in the file's order, or ``None`` when unset."""</span>
     <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">ZI_ERROR_SETTINGS</span><span class="p">]</span>
     <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">values</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">winderrtf</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return HYSPLIT&#39;s ``WINDERRTF`` flag: 1 for wind errors, 2 for mixed-layer errors, 3 for both.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return HYSPLIT's ``WINDERRTF`` flag: 1 for wind errors, 2 for mixed-layer errors, 3 for both."""</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">winderr</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">zierr</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_write_values</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">values</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write one value per line to ``path``; nothing is written when ``values`` is ``None``.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Write one value per line to ``path``; nothing is written when ``values`` is ``None``."""</span>
     <span class="k">if</span> <span class="n">values</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="write_inputs">
@@ -829,11 +831,11 @@
     <span class="n">config</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">,</span>
     <span class="n">met_files</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Path</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Write everything ``hycs_std`` reads for one receptor into *workdir*.</span>
 
 <span class="sd">    Links ``hycs_std`` (from ``config.exe_dir``, or the bundled build) and</span>
-<span class="sd">    HYSPLIT&#39;s data tables (the bundled ones, replaced by any in</span>
+<span class="sd">    HYSPLIT's data tables (the bundled ones, replaced by any in</span>
 <span class="sd">    ``config.data_dir``), and writes ``CONTROL`` and ``SETUP.CFG``, plus</span>
 <span class="sd">    ``ZICONTROL``, ``WINDERR``, and ``ZIERR`` when the settings call for</span>
 <span class="sd">    them. *workdir* is created if needed, and should be empty.</span>
@@ -844,7 +846,7 @@
 <span class="sd">        Directory to write into.</span>
 <span class="sd">    receptor : Receptor</span>
 <span class="sd">        Where and when particles are released. Its ``altitude_ref`` sets</span>
-<span class="sd">        HYSPLIT&#39;s ``KMSL``.</span>
+<span class="sd">        HYSPLIT's ``KMSL``.</span>
 <span class="sd">    config : HysplitConfig</span>
 <span class="sd">        Transport and error settings.</span>
 <span class="sd">    met_files : sequence of Path</span>
@@ -854,7 +856,7 @@
 <span class="sd">    ------</span>
 <span class="sd">    HYSPLITNotFoundError</span>
 <span class="sd">        If there is no ``hycs_std`` to link.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">workdir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">workdir</span><span class="p">)</span>
     <span class="n">workdir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -865,7 +867,7 @@
     <span class="n">exe</span> <span class="o">=</span> <span class="n">exe_dir</span> <span class="o">/</span> <span class="n">HYCS_STD_FILE</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">exe</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
         <span class="k">raise</span> <span class="n">HYSPLITNotFoundError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;No </span><span class="si">{</span><span class="n">HYCS_STD_FILE</span><span class="si">!r}</span><span class="s2"> executable in </span><span class="si">{</span><span class="n">exe_dir</span><span class="si">}</span><span class="s2">. Check exe_dir.&quot;</span>
+            <span class="sa">f</span><span class="s2">"No </span><span class="si">{</span><span class="n">HYCS_STD_FILE</span><span class="si">!r}</span><span class="s2"> executable in </span><span class="si">{</span><span class="n">exe_dir</span><span class="si">}</span><span class="s2">. Check exe_dir."</span>
         <span class="p">)</span>
     <span class="n">links</span> <span class="o">=</span> <span class="p">{</span><span class="n">HYCS_STD_FILE</span><span class="p">:</span> <span class="n">exe</span><span class="p">}</span>
     <span class="n">links</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">_bundled_data_dir</span><span class="p">()</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()})</span>
@@ -886,19 +888,19 @@
     <span class="p">)</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">CONTROL_FILE</span><span class="p">)</span>
 
     <span class="n">entries</span> <span class="o">=</span> <span class="n">setup_entries</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-    <span class="c1"># HYSPLIT&#39;s KMSL: 0 for heights above ground, 1 above sea level.</span>
-    <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;kmsl&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">receptor</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">&quot;msl&quot;</span> <span class="k">else</span> <span class="mi">0</span>
-    <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;maxpar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">maxpar_for</span><span class="p">(</span><span class="n">release_locations</span><span class="p">(</span><span class="n">receptor</span><span class="p">))</span>
-    <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;ivmax&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">varsiwant</span><span class="p">)</span>  <span class="c1"># number of output variables</span>
-    <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;winderrtf&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">winderrtf</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-    <span class="n">setup</span> <span class="o">=</span> <span class="n">NameList</span><span class="p">(</span><span class="s2">&quot;SETUP&quot;</span><span class="p">)</span>
+    <span class="c1"># HYSPLIT's KMSL: 0 for heights above ground, 1 above sea level.</span>
+    <span class="n">entries</span><span class="p">[</span><span class="s2">"kmsl"</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">receptor</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">"msl"</span> <span class="k">else</span> <span class="mi">0</span>
+    <span class="n">entries</span><span class="p">[</span><span class="s2">"maxpar"</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">maxpar_for</span><span class="p">(</span><span class="n">release_locations</span><span class="p">(</span><span class="n">receptor</span><span class="p">))</span>
+    <span class="n">entries</span><span class="p">[</span><span class="s2">"ivmax"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">varsiwant</span><span class="p">)</span>  <span class="c1"># number of output variables</span>
+    <span class="n">entries</span><span class="p">[</span><span class="s2">"winderrtf"</span><span class="p">]</span> <span class="o">=</span> <span class="n">winderrtf</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="n">setup</span> <span class="o">=</span> <span class="n">NameList</span><span class="p">(</span><span class="s2">"SETUP"</span><span class="p">)</span>
     <span class="n">setup</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span>
     <span class="n">setup</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">SETUP_FILE</span><span class="p">)</span>
 
     <span class="n">factors</span> <span class="o">=</span> <span class="n">ziscale_factors</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">factors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">ZICONTROL_FILE</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
-            <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">factors</span><span class="p">)),</span> <span class="o">*</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">factors</span><span class="p">)])</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">factors</span><span class="p">)),</span> <span class="o">*</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">factors</span><span class="p">)])</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>
         <span class="p">)</span>
     <span class="n">_write_values</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">WINDERR_FILE</span><span class="p">,</span> <span class="n">winderr</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
     <span class="n">_write_values</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">ZIERR_FILE</span><span class="p">,</span> <span class="n">zierr</span><span class="p">(</span><span class="n">config</span><span class="p">))</span></div>
@@ -908,7 +910,7 @@
 <div class="viewcode-block" id="run_hycs_std">
 <a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.run_hycs_std.html#stilt.transport.hysplit.run_hycs_std">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">run_hycs_std</span><span class="p">(</span><span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Run the ``hycs_std`` in *workdir*, writing its output to ``stilt.log``.</span>
 
 <span class="sd">    *workdir* holds the inputs :func:`write_inputs` wrote. With *timeout*</span>
@@ -920,13 +922,13 @@
 <span class="sd">    SimulationError</span>
 <span class="sd">        With ``reason`` ``TIMEOUT`` when the run exceeded *timeout*</span>
 <span class="sd">        seconds, or the :class:`FailureReason` of a known failure message in</span>
-<span class="sd">        the log or HYSPLIT&#39;s ``WARNING`` file, such as ``no more</span>
-<span class="sd">        meteorology`` (``MET_COVERAGE``). Particles that all left the met&#39;s</span>
+<span class="sd">        the log or HYSPLIT's ``WARNING`` file, such as ``no more</span>
+<span class="sd">        meteorology`` (``MET_COVERAGE``). Particles that all left the met's</span>
 <span class="sd">        domain are not a failure.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">log_path</span> <span class="o">=</span> <span class="n">workdir</span> <span class="o">/</span> <span class="n">LOG_FILE</span>
     <span class="k">with</span> <span class="p">(</span>
-        <span class="n">log_path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">,</span>
+        <span class="n">log_path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">,</span>
         <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
             <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">HYCS_STD_FILE</span><span class="p">)],</span>
             <span class="n">cwd</span><span class="o">=</span><span class="n">workdir</span><span class="p">,</span>
@@ -940,22 +942,22 @@
         <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
             <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;HYSPLIT ran longer than the </span><span class="si">{</span><span class="n">timeout</span><span class="si">}</span><span class="s2"> s timeout.&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"HYSPLIT ran longer than the </span><span class="si">{</span><span class="n">timeout</span><span class="si">}</span><span class="s2"> s timeout."</span><span class="p">,</span>
                 <span class="n">reason</span><span class="o">=</span><span class="n">FailureReason</span><span class="o">.</span><span class="n">TIMEOUT</span><span class="p">,</span>
             <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
-    <span class="n">messages</span> <span class="o">=</span> <span class="n">log_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+    <span class="n">messages</span> <span class="o">=</span> <span class="n">log_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span>
     <span class="n">warnings</span> <span class="o">=</span> <span class="n">workdir</span> <span class="o">/</span> <span class="n">WARNING_FILE</span>
     <span class="k">if</span> <span class="n">warnings</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-        <span class="n">messages</span> <span class="o">+=</span> <span class="n">warnings</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+        <span class="n">messages</span> <span class="o">+=</span> <span class="n">warnings</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span>
     <span class="n">found</span> <span class="o">=</span> <span class="n">failure_in</span><span class="p">(</span><span class="n">messages</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">reason</span><span class="p">,</span> <span class="n">line</span> <span class="o">=</span> <span class="n">found</span>
-        <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;HYSPLIT: </span><span class="si">{</span><span class="n">line</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">)</span></div>
+        <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"HYSPLIT: </span><span class="si">{</span><span class="n">line</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">)</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">:</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stop a HYSPLIT process group with SIGTERM, then SIGKILL if it does not exit.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Stop a HYSPLIT process group with SIGTERM, then SIGKILL if it does not exit."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">os</span><span class="o">.</span><span class="n">killpg</span><span class="p">(</span><span class="n">proc</span><span class="o">.</span><span class="n">pid</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">ProcessLookupError</span><span class="p">:</span>
@@ -1002,8 +1004,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1029,14 +1031,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

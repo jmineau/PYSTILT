@@ -26,22 +26,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -49,7 +50,7 @@
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'guides/meteorology';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -61,8 +62,9 @@
     <link rel="next" title="Projects And Variants" href="projects.html" />
     <link rel="prev" title="Receptors" href="receptors.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -532,7 +534,7 @@ file covers:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/met/hrrr</span>
-<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;%Y%m%d_%H&quot;</span>
+<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">"%Y%m%d_%H"</span>
 <span class="w">    </span><span class="nt">file_tres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6h</span>
 </pre></div>
 </div>
@@ -581,9 +583,9 @@ exit. The footprint lost in such a run was under 3 % in every case measured.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetConfig</span>
 
 <span class="n">hrrr</span> <span class="o">=</span> <span class="n">MetConfig</span><span class="p">(</span>
-    <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;/data/met/hrrr&quot;</span><span class="p">,</span>
-    <span class="n">file_format</span><span class="o">=</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">_%H&quot;</span><span class="p">,</span>
-    <span class="n">file_tres</span><span class="o">=</span><span class="s2">&quot;6h&quot;</span><span class="p">,</span>
+    <span class="n">directory</span><span class="o">=</span><span class="s2">"/data/met/hrrr"</span><span class="p">,</span>
+    <span class="n">file_format</span><span class="o">=</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">_%H"</span><span class="p">,</span>
+    <span class="n">file_tres</span><span class="o">=</span><span class="s2">"6h"</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -591,11 +593,11 @@ exit. The footprint lost in such a run was under 3 % in every case measured.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/met/hrrr</span>
-<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;%Y%m%d_%H&quot;</span>
+<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">"%Y%m%d_%H"</span>
 <span class="w">    </span><span class="nt">file_tres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6h</span>
 <span class="w">  </span><span class="nt">gfs</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/met/gfs</span>
-<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gfs_%Y%m%d_%H&quot;</span>
+<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">"gfs_%Y%m%d_%H"</span>
 <span class="w">    </span><span class="nt">file_tres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3h</span>
 </pre></div>
 </div>
@@ -689,15 +691,15 @@ space.</p>
 <p>Some archives take extra options, which you write next to the other fields.
 For example, <code class="docutils literal notranslate"><span class="pre">nams</span></code> takes a <code class="docutils literal notranslate"><span class="pre">domain</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">nams_ak</span> <span class="o">=</span> <span class="n">MetConfig</span><span class="p">(</span>
-    <span class="n">download</span><span class="o">=</span><span class="s2">&quot;nams&quot;</span><span class="p">,</span>
-    <span class="n">domain</span><span class="o">=</span><span class="s2">&quot;ak&quot;</span><span class="p">,</span>            <span class="c1"># &quot;conus&quot; (default), &quot;ak&quot;, or &quot;hi&quot;</span>
-    <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;/data/met/nams_ak&quot;</span><span class="p">,</span>
+    <span class="n">download</span><span class="o">=</span><span class="s2">"nams"</span><span class="p">,</span>
+    <span class="n">domain</span><span class="o">=</span><span class="s2">"ak"</span><span class="p">,</span>            <span class="c1"># "conus" (default), "ak", or "hi"</span>
+    <span class="n">directory</span><span class="o">=</span><span class="s2">"/data/met/nams_ak"</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">download_from</span></code> picks the server. The default, <code class="docutils literal notranslate"><span class="pre">&quot;s3&quot;</span></code>, is NOAA’s
 archive on AWS. The others are <code class="docutils literal notranslate"><span class="pre">&quot;ftp&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;http&quot;</span></code>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">MetConfig</span><span class="p">(</span><span class="n">download</span><span class="o">=</span><span class="s2">&quot;gdas1&quot;</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;/data/met/gdas1&quot;</span><span class="p">,</span> <span class="n">download_from</span><span class="o">=</span><span class="s2">&quot;ftp&quot;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">MetConfig</span><span class="p">(</span><span class="n">download</span><span class="o">=</span><span class="s2">"gdas1"</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s2">"/data/met/gdas1"</span><span class="p">,</span> <span class="n">download_from</span><span class="o">=</span><span class="s2">"ftp"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Files already in <code class="docutils literal notranslate"><span class="pre">directory</span></code> are not downloaded again.</p>
@@ -710,7 +712,7 @@ convert it to ARL first. Then it is a met like any other:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">era5</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/met/era5</span>
-<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ERA5_%Y%m%d&quot;</span>
+<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">"ERA5_%Y%m%d"</span>
 <span class="w">    </span><span class="nt">file_tres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24h</span>
 <span class="nt">variants</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">era5</span><span class="p">:</span>
@@ -743,8 +745,8 @@ faster and use less memory. Cropping matters most for global products
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetConfig</span>
 
 <span class="n">hrrr</span> <span class="o">=</span> <span class="n">MetConfig</span><span class="p">(</span>
-    <span class="n">download</span><span class="o">=</span><span class="s2">&quot;hrrr&quot;</span><span class="p">,</span>
-    <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;/data/met/hrrr&quot;</span><span class="p">,</span>
+    <span class="n">download</span><span class="o">=</span><span class="s2">"hrrr"</span><span class="p">,</span>
+    <span class="n">directory</span><span class="o">=</span><span class="s2">"/data/met/hrrr"</span><span class="p">,</span>
     <span class="n">subgrid_enable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">subgrid_bounds</span><span class="o">=</span><span class="n">Bounds</span><span class="p">(</span><span class="n">xmin</span><span class="o">=-</span><span class="mi">114</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=-</span><span class="mi">110</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=</span><span class="mi">39</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mi">42</span><span class="p">),</span>
 <span class="p">)</span>
@@ -762,12 +764,12 @@ directory for the cropped copies. It is required, so that PYSTILT never
 writes into your met archive. Scratch space suits it well, and several
 projects can share one:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">MetConfig</span><span class="p">(</span>
-    <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;/data/met/hrrr&quot;</span><span class="p">,</span>
-    <span class="n">file_format</span><span class="o">=</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">_%H&quot;</span><span class="p">,</span>
-    <span class="n">file_tres</span><span class="o">=</span><span class="s2">&quot;6h&quot;</span><span class="p">,</span>
+    <span class="n">directory</span><span class="o">=</span><span class="s2">"/data/met/hrrr"</span><span class="p">,</span>
+    <span class="n">file_format</span><span class="o">=</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">_%H"</span><span class="p">,</span>
+    <span class="n">file_tres</span><span class="o">=</span><span class="s2">"6h"</span><span class="p">,</span>
     <span class="n">subgrid_enable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">subgrid_bounds</span><span class="o">=</span><span class="n">Bounds</span><span class="p">(</span><span class="n">xmin</span><span class="o">=-</span><span class="mi">114</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=-</span><span class="mi">110</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=</span><span class="mi">39</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mi">42</span><span class="p">),</span>
-    <span class="n">subgrid_dir</span><span class="o">=</span><span class="s2">&quot;/scratch/met_subgrid/hrrr_slv&quot;</span><span class="p">,</span>
+    <span class="n">subgrid_dir</span><span class="o">=</span><span class="s2">"/scratch/met_subgrid/hrrr_slv"</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -809,9 +811,9 @@ columns this way. Give it the files the run read:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample_met</span>
 
-<span class="n">particles</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;mlht&quot;</span><span class="p">,</span> <span class="s2">&quot;dens&quot;</span><span class="p">])</span>
+<span class="n">particles</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"mlht"</span><span class="p">,</span> <span class="s2">"dens"</span><span class="p">])</span>
 <span class="n">met_files</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">particles_metadata</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles_path</span><span class="p">)</span><span class="o">.</span><span class="n">met_files</span>
-<span class="n">sampled</span> <span class="o">=</span> <span class="n">sample_met</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">met_files</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;mlht&quot;</span><span class="p">,</span> <span class="s2">&quot;dens&quot;</span><span class="p">])</span>
+<span class="n">sampled</span> <span class="o">=</span> <span class="n">sample_met</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">met_files</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"mlht"</span><span class="p">,</span> <span class="s2">"dens"</span><span class="p">])</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">mlht</span></code> is the met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code> its <code class="docutils literal notranslate"><span class="pre">PRES</span></code>, <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> its
@@ -920,8 +922,8 @@ crop.</p>
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -947,14 +949,14 @@ crop.</p>
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

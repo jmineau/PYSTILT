@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/transport/stilt_r';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -448,16 +450,16 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.transport.stilt_r</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">STILT-R as a transport model that runs nothing: the settings of runs imported from STILT-R.</span>
 
 <span class="sd">STILT-R (`uataq/stilt &lt;https://github.com/uataq/stilt&gt;`_) runs HYSPLIT from</span>
 <span class="sd">R. :func:`stilt.migration.import_stilt_r` writes the runs of a STILT-R or</span>
-<span class="sd">X-STILT project into an output directory, each with the settings STILT-R&#39;s</span>
+<span class="sd">X-STILT project into an output directory, each with the settings STILT-R's</span>
 <span class="sd">files record. A variant with ``model: stilt-r`` names their folder, so</span>
 <span class="sd">``project.status``, ``project.particles``, and ``project.jacobian`` read</span>
 <span class="sd">them. PYSTILT cannot run STILT-R: a run of such a variant fails.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -478,42 +480,42 @@
 <div class="viewcode-block" id="StiltRConfig">
 <a class="viewcode-back" href="../../../reference/_api/stilt.transport.stilt_r.StiltRConfig.html#stilt.transport.stilt_r.StiltRConfig">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">StiltRConfig</span><span class="p">(</span><span class="n">HysplitConfig</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    The settings of imported STILT-R runs: HYSPLIT&#39;s, as STILT-R ran it, and the STILT-R version.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    The settings of imported STILT-R runs: HYSPLIT's, as STILT-R ran it, and the STILT-R version.</span>
 
-<span class="sd">    The settings are :class:`~stilt.transport.hysplit.HysplitConfig`&#39;s,</span>
-<span class="sd">    under the same names, as STILT-R&#39;s files record them (``SETUP.CFG``,</span>
+<span class="sd">    The settings are :class:`~stilt.transport.hysplit.HysplitConfig`'s,</span>
+<span class="sd">    under the same names, as STILT-R's files record them (``SETUP.CFG``,</span>
 <span class="sd">    ``CONTROL``, and the ``.rds`` file; see</span>
 <span class="sd">    :func:`stilt.migration.import_stilt_r`). Every one must be given:</span>
-<span class="sd">    none has a default, because an imported run&#39;s settings name its folder,</span>
+<span class="sd">    none has a default, because an imported run's settings name its folder,</span>
 <span class="sd">    and a default would stand in for a value no file gave. The</span>
 <span class="sd">    ``config.yaml`` variant the import prints gives them all.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="c1">#: Fields left out of a run&#39;s recorded settings. ``version`` is recorded</span>
-    <span class="c1">#: as the transport model&#39;s version instead, as HYSPLIT&#39;s build is.</span>
-    <span class="n">UNRECORDED</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;exe_dir&quot;</span><span class="p">,</span> <span class="s2">&quot;data_dir&quot;</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">})</span>
+    <span class="c1">#: Fields left out of a run's recorded settings. ``version`` is recorded</span>
+    <span class="c1">#: as the transport model's version instead, as HYSPLIT's build is.</span>
+    <span class="n">UNRECORDED</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"exe_dir"</span><span class="p">,</span> <span class="s2">"data_dir"</span><span class="p">,</span> <span class="s2">"version"</span><span class="p">})</span>
 
     <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;The STILT-R version that made the runs, such as a commit of &quot;</span>
-            <span class="s2">&quot;uataq/stilt. No STILT-R file records it, so the import is given &quot;</span>
-            <span class="s2">&quot;it. Recorded as the transport model&#39;s version.&quot;</span>
+            <span class="s2">"The STILT-R version that made the runs, such as a commit of "</span>
+            <span class="s2">"uataq/stilt. No STILT-R file records it, so the import is given "</span>
+            <span class="s2">"it. Recorded as the transport model's version."</span>
         <span class="p">),</span>
     <span class="p">)</span>
 
-    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_every_setting_given</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Require every recorded setting: an imported run has no defaults.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Require every recorded setting: an imported run has no defaults."""</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">model_fields</span><span class="p">)</span> <span class="o">-</span> <span class="bp">cls</span><span class="o">.</span><span class="n">UNRECORDED</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
             <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;An imported STILT-R run gives every setting, and these are &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;missing: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">. Copy the variant &quot;</span>
-                    <span class="s2">&quot;stilt.migration.import_stilt_r printed.&quot;</span>
+                    <span class="sa">f</span><span class="s2">"An imported STILT-R run gives every setting, and these are "</span>
+                    <span class="sa">f</span><span class="s2">"missing: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">. Copy the variant "</span>
+                    <span class="s2">"stilt.migration.import_stilt_r printed."</span>
                 <span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
@@ -522,29 +524,29 @@
 <div class="viewcode-block" id="StiltRMetConfig">
 <a class="viewcode-back" href="../../../reference/_api/stilt.transport.stilt_r.StiltRMetConfig.html#stilt.transport.stilt_r.StiltRMetConfig">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">StiltRMetConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    The met of imported STILT-R runs, as written under ``mets:`` in ``config.yaml``.</span>
 
-<span class="sd">    It is the directory the runs&#39; ``CONTROL`` files name, as they name it.</span>
-<span class="sd">    The met files need not exist any more; each run&#39;s own files are</span>
+<span class="sd">    It is the directory the runs' ``CONTROL`` files name, as they name it.</span>
+<span class="sd">    The met files need not exist any more; each run's own files are</span>
 <span class="sd">    recorded in its particle file (``stilt:met_files``).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">extra</span><span class="o">=</span><span class="s2">&quot;forbid&quot;</span><span class="p">,</span> <span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">extra</span><span class="o">=</span><span class="s2">"forbid"</span><span class="p">,</span> <span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">met_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="o">...</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Directory of the met files the runs read, as their CONTROL files &quot;</span>
-            <span class="s2">&quot;name it: the met_path of STILT-R&#39;s run_stilt.r, or a folder in it.&quot;</span>
+            <span class="s2">"Directory of the met files the runs read, as their CONTROL files "</span>
+            <span class="s2">"name it: the met_path of STILT-R's run_stilt.r, or a folder in it."</span>
         <span class="p">),</span>
     <span class="p">)</span>
 
 <div class="viewcode-block" id="StiltRMetConfig.settings">
 <a class="viewcode-back" href="../../../reference/_api/stilt.transport.stilt_r.StiltRMetConfig.settings.html#stilt.transport.stilt_r.StiltRMetConfig.settings">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return what an imported run records of its met: the directory, as written.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;met_path&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">met_path</span><span class="p">}</span></div>
+<span class="w">        </span><span class="sd">"""Return what an imported run records of its met: the directory, as written."""</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"met_path"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">met_path</span><span class="p">}</span></div>
 </div>
 
 
@@ -552,15 +554,15 @@
 <div class="viewcode-block" id="StiltRModel">
 <a class="viewcode-back" href="../../../reference/_api/stilt.transport.stilt_r.StiltRModel.html#stilt.transport.stilt_r.StiltRModel">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">StiltRModel</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    The ``stilt-r`` transport model, which ``get_model(&quot;stilt-r&quot;)`` returns.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    The ``stilt-r`` transport model, which ``get_model("stilt-r")`` returns.</span>
 
 <span class="sd">    It holds the settings of imported STILT-R runs and runs nothing.</span>
 <span class="sd">    :meth:`run` fails, so a ``stilt run`` of a receptor STILT-R did not run</span>
 <span class="sd">    records a failure for it.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;stilt-r&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"stilt-r"</span>
     <span class="n">config_class</span> <span class="o">=</span> <span class="n">StiltRConfig</span>
     <span class="n">met_config_class</span> <span class="o">=</span> <span class="n">StiltRMetConfig</span>
     <span class="c1">#: Nothing runs, so no files are written.</span>
@@ -570,18 +572,18 @@
 <div class="viewcode-block" id="StiltRModel.version">
 <a class="viewcode-back" href="../../../reference/_api/stilt.transport.stilt_r.StiltRModel.version.html#stilt.transport.stilt_r.StiltRModel.version">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">StiltRConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the STILT-R version of *config*.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
 <span class="sd">            If *config* gives none.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">version</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;A stilt-r variant needs version: the STILT-R version given to &quot;</span>
-                <span class="s2">&quot;stilt.migration.import_stilt_r, as it printed the variant.&quot;</span>
+                <span class="s2">"A stilt-r variant needs version: the STILT-R version given to "</span>
+                <span class="s2">"stilt.migration.import_stilt_r, as it printed the variant."</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">version</span></div>
 
@@ -589,7 +591,7 @@
 <div class="viewcode-block" id="StiltRModel.data_files">
 <a class="viewcode-back" href="../../../reference/_api/stilt.transport.stilt_r.StiltRModel.data_files.html#stilt.transport.stilt_r.StiltRModel.data_files">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">data_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">StiltRConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return ``None``: the data files are STILT-R&#39;s own, fixed by its version.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return ``None``: the data files are STILT-R's own, fixed by its version."""</span>
         <span class="k">return</span> <span class="kc">None</span></div>
 
 
@@ -604,25 +606,25 @@
         <span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelRun</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Fail: STILT-R runs are imported, not run.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        SimulationError</span>
 <span class="sd">            Always, with ``reason`` ``NOT_RUNNABLE``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: PYSTILT cannot run STILT-R. A stilt-r variant reads &quot;</span>
-            <span class="s2">&quot;the runs stilt.migration.import_stilt_r wrote; run the receptor &quot;</span>
-            <span class="s2">&quot;with a hysplit variant instead.&quot;</span><span class="p">,</span>
-            <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;NOT_RUNNABLE&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: PYSTILT cannot run STILT-R. A stilt-r variant reads "</span>
+            <span class="s2">"the runs stilt.migration.import_stilt_r wrote; run the receptor "</span>
+            <span class="s2">"with a hysplit variant instead."</span><span class="p">,</span>
+            <span class="n">reason</span><span class="o">=</span><span class="s2">"NOT_RUNNABLE"</span><span class="p">,</span>
         <span class="p">)</span></div>
 </div>
 
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;StiltRConfig&quot;</span><span class="p">,</span> <span class="s2">&quot;StiltRMetConfig&quot;</span><span class="p">,</span> <span class="s2">&quot;StiltRModel&quot;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"StiltRConfig"</span><span class="p">,</span> <span class="s2">"StiltRMetConfig"</span><span class="p">,</span> <span class="s2">"StiltRModel"</span><span class="p">]</span>
 </pre></div>
 
                 </article>
@@ -652,8 +654,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -679,14 +681,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

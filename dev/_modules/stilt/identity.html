@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/identity';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -445,25 +447,25 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.identity</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">What a result was made with, and the hash that names its folder.</span>
 
 <span class="sd">Every folder in an output directory holds the results of one set of</span>
 <span class="sd">settings, recorded in its ``_settings.yaml``. This module writes those</span>
-<span class="sd">records and hashes them. A run&#39;s settings are its transport config without</span>
+<span class="sd">records and hashes them. A run's settings are its transport config without</span>
 <span class="sd">the fields that change no particle (``exe_dir``, ``data_dir``), its met as</span>
 <span class="sd">the met config records it (for HYSPLIT, the weather product and the crop),</span>
 <span class="sd">the model build, and whether it is an ensemble (the realizations of one</span>
 <span class="sd">share a folder, a ``realization=k`` partition each, so the number is not</span>
 <span class="sd">in the hash). A</span>
-<span class="sd">footprint&#39;s settings are its footprint config, with the grid it is</span>
+<span class="sd">footprint's settings are its footprint config, with the grid it is</span>
 <span class="sd">computed on, and the hash of the geometry the grid was derived for.</span>
 
 <span class="sd">The hash depends on what the settings mean rather than how they were</span>
 <span class="sd">written. A stored record is read back through the current config classes,</span>
 <span class="sd">so a setting added since, with a default, still matches, and a changed</span>
-<span class="sd">default does not. The met&#39;s part is plain values and is kept as written.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">default does not. The met's part is plain values and is kept as written.</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -480,7 +482,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">canonical</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return *value* with the spellings that mean the same thing made equal.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return *value* with the spellings that mean the same thing made equal."""</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">canonical</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">())}</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
@@ -497,14 +499,14 @@
 <div class="viewcode-block" id="settings_hash">
 <a class="viewcode-back" href="../../reference/_api/stilt.identity.settings_hash.html#stilt.identity.settings_hash">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">settings_hash</span><span class="p">(</span><span class="n">settings</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the SHA-256 hex digest of *settings*.</span>
 
 <span class="sd">    Keys are sorted, whole-number floats equal their integers, and paths are</span>
 <span class="sd">    strings, so the hash depends on what the settings mean rather than how</span>
 <span class="sd">    they were written.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">text</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">canonical</span><span class="p">(</span><span class="n">settings</span><span class="p">),</span> <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="s2">&quot;:&quot;</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">canonical</span><span class="p">(</span><span class="n">settings</span><span class="p">),</span> <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s2">","</span><span class="p">,</span> <span class="s2">":"</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span></div>
 
 
@@ -520,41 +522,41 @@
     <span class="n">model</span><span class="p">:</span> <span class="n">ModelInfo</span><span class="p">,</span>
     <span class="n">ensemble</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the settings that identify a run, in canonical form.</span>
 
-<span class="sd">    The transport model&#39;s settings (``transport.settings()``) sit at the top</span>
-<span class="sd">    level, beside ``met`` (what the met config&#39;s ``settings()`` returns)</span>
+<span class="sd">    The transport model's settings (``transport.settings()``) sit at the top</span>
+<span class="sd">    level, beside ``met`` (what the met config's ``settings()`` returns)</span>
 <span class="sd">    and ``model``. An ensemble records ``ensemble: true`` and its base</span>
-<span class="sd">    seed; its realization ``k`` runs with ``seed + k`` in the folder&#39;s</span>
+<span class="sd">    seed; its realization ``k`` runs with ``seed + k`` in the folder's</span>
 <span class="sd">    ``realization=k`` partition.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">transport</span><span class="o">.</span><span class="n">settings</span><span class="p">())</span>
-    <span class="n">data</span><span class="p">[</span><span class="s2">&quot;met&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">met</span><span class="p">)</span>
-    <span class="n">data</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)</span>
+    <span class="n">data</span><span class="p">[</span><span class="s2">"met"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">met</span><span class="p">)</span>
+    <span class="n">data</span><span class="p">[</span><span class="s2">"model"</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">ensemble</span><span class="p">:</span>
-        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;ensemble&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">"ensemble"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">return</span> <span class="n">canonical</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_model_info</span><span class="p">(</span><span class="n">stored</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">ModelInfo</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the model build a run settings record names, dropping fields this version does not have.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the model build a run settings record names, dropping fields this version does not have."""</span>
     <span class="k">return</span> <span class="n">ModelInfo</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span>
-        <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">stored</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">ModelInfo</span><span class="o">.</span><span class="n">model_fields</span><span class="p">}</span>
+        <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">stored</span><span class="p">[</span><span class="s2">"model"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">ModelInfo</span><span class="o">.</span><span class="n">model_fields</span><span class="p">}</span>
     <span class="p">)</span>
 
 
 <div class="viewcode-block" id="transport_from_settings">
 <a class="viewcode-back" href="../../reference/_api/stilt.identity.transport_from_settings.html#stilt.identity.transport_from_settings">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">transport_from_settings</span><span class="p">(</span><span class="n">stored</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TransportConfig</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return the transport model&#39;s config a run settings record holds.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the transport model's config a run settings record holds.</span>
 
-<span class="sd">    ``model.name`` says which model&#39;s config class reads it. Settings this</span>
+<span class="sd">    ``model.name`` says which model's config class reads it. Settings this</span>
 <span class="sd">    version does not have are dropped. The fields a record leaves out</span>
 <span class="sd">    (``exe_dir`` and ``data_dir`` for HYSPLIT) come back unset.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">config_class</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">_model_info</span><span class="p">(</span><span class="n">stored</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">config_class</span>
     <span class="n">fields</span> <span class="o">=</span> <span class="n">config_class</span><span class="o">.</span><span class="n">model_fields</span>
     <span class="k">return</span> <span class="n">config_class</span><span class="o">.</span><span class="n">model_validate</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">stored</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">})</span></div>
@@ -564,7 +566,7 @@
 <div class="viewcode-block" id="read_run_settings">
 <a class="viewcode-back" href="../../reference/_api/stilt.identity.read_run_settings.html#stilt.identity.read_run_settings">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">read_run_settings</span><span class="p">(</span><span class="n">stored</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the run settings a ``_settings.yaml`` records, read through the current classes.</span>
 
 <span class="sd">    Settings this version does not have are dropped, so a folder written</span>
@@ -572,28 +574,28 @@
 <span class="sd">    that is not installed here is returned as written, with a warning. A folder of one realization,</span>
 <span class="sd">    as realizations were written before they were partitions, keeps its</span>
 <span class="sd">    number, so it hashes as it did and no current variant finds it.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">name</span> <span class="o">=</span> <span class="n">_model_info</span><span class="p">(</span><span class="n">stored</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">get_model</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-        <span class="c1"># Another project&#39;s folder in a shared output directory, made by a</span>
+        <span class="c1"># Another project's folder in a shared output directory, made by a</span>
         <span class="c1"># model not installed here: keep its record as written, so its hash</span>
         <span class="c1"># and everything else in the directory still read.</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Transport model </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> of a stored run could not be loaded &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">). Its settings are kept as written.&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"Transport model </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> of a stored run could not be loaded "</span>
+            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">). Its settings are kept as written."</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">stored</span><span class="p">)</span>
     <span class="n">record</span> <span class="o">=</span> <span class="n">run_settings</span><span class="p">(</span>
         <span class="n">transport_from_settings</span><span class="p">(</span><span class="n">stored</span><span class="p">),</span>
-        <span class="n">stored</span><span class="p">[</span><span class="s2">&quot;met&quot;</span><span class="p">],</span>
+        <span class="n">stored</span><span class="p">[</span><span class="s2">"met"</span><span class="p">],</span>
         <span class="n">_model_info</span><span class="p">(</span><span class="n">stored</span><span class="p">),</span>
-        <span class="n">ensemble</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ensemble&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)),</span>
+        <span class="n">ensemble</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ensemble"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)),</span>
     <span class="p">)</span>
-    <span class="k">if</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;realization&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">record</span><span class="p">[</span><span class="s2">&quot;realization&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">stored</span><span class="p">[</span><span class="s2">&quot;realization&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"realization"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">record</span><span class="p">[</span><span class="s2">"realization"</span><span class="p">]</span> <span class="o">=</span> <span class="n">stored</span><span class="p">[</span><span class="s2">"realization"</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">record</span></div>
 
 
@@ -602,21 +604,21 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_record_transform</span><span class="p">(</span><span class="n">transform</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a transform as recorded, its ``kind`` alone if it has no settings to write.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return a transform as recorded, its ``kind`` alone if it has no settings to write."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">dump_transform</span><span class="p">(</span><span class="n">transform</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="n">transform_kind</span><span class="p">(</span><span class="n">transform</span><span class="p">)}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"kind"</span><span class="p">:</span> <span class="n">transform_kind</span><span class="p">(</span><span class="n">transform</span><span class="p">)}</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_read_transform</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a recorded transform, or its mapping when it cannot be rebuilt here.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return a recorded transform, or its mapping when it cannot be rebuilt here."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">load_transform</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: transform </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;kind&#39;</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> could not be rebuilt &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">). It is kept as its settings and cannot be applied.&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: transform </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'kind'</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> could not be rebuilt "</span>
+            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">). It is kept as its settings and cannot be applied."</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">spec</span>
@@ -627,16 +629,16 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">footprint_settings</span><span class="p">(</span>
     <span class="n">footprint</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the settings that identify a footprint, besides its particles, in canonical form.</span>
 
-<span class="sd">    The same record goes in a footprint folder&#39;s ``_settings.yaml`` and in</span>
+<span class="sd">    The same record goes in a footprint folder's ``_settings.yaml`` and in</span>
 <span class="sd">    each footprint file and array. A transform that is not a pydantic model</span>
 <span class="sd">    is recorded by its ``kind`` alone.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">footprint</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;transforms&quot;</span><span class="p">})</span>
-    <span class="n">data</span><span class="p">[</span><span class="s2">&quot;transforms&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">_record_transform</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">footprint</span><span class="o">.</span><span class="n">transforms</span><span class="p">]</span>
-    <span class="n">data</span><span class="p">[</span><span class="s2">&quot;geometry_hash&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">geometry_hash</span>
+<span class="sd">    """</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">footprint</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="p">{</span><span class="s2">"transforms"</span><span class="p">})</span>
+    <span class="n">data</span><span class="p">[</span><span class="s2">"transforms"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">_record_transform</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">footprint</span><span class="o">.</span><span class="n">transforms</span><span class="p">]</span>
+    <span class="n">data</span><span class="p">[</span><span class="s2">"geometry_hash"</span><span class="p">]</span> <span class="o">=</span> <span class="n">geometry_hash</span>
     <span class="k">return</span> <span class="n">canonical</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
 
 
@@ -644,38 +646,38 @@
 <div class="viewcode-block" id="read_footprint_settings">
 <a class="viewcode-back" href="../../reference/_api/stilt.identity.read_footprint_settings.html#stilt.identity.read_footprint_settings">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">read_footprint_settings</span><span class="p">(</span>
-    <span class="n">stored</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;footprint settings&quot;</span>
+    <span class="n">stored</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"footprint settings"</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FootprintConfig</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the footprint config and geometry hash that :func:`footprint_settings` recorded.</span>
 
 <span class="sd">    A transform whose class cannot be imported here is kept as its mapping,</span>
 <span class="sd">    with a warning naming *source*, so the record still reads.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">stored</span><span class="p">)</span>
-    <span class="n">geometry_hash</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;geometry_hash&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="n">specs</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;transforms&quot;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="n">geometry_hash</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"geometry_hash"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">specs</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"transforms"</span><span class="p">,</span> <span class="p">[])</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
     <span class="c1"># model_copy skips validation, so a mapping stays a mapping.</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span>
-        <span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;transforms&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">_read_transform</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">specs</span><span class="p">]}</span>
+        <span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">"transforms"</span><span class="p">:</span> <span class="p">[</span><span class="n">_read_transform</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">specs</span><span class="p">]}</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">footprint_hash</span><span class="p">(</span><span class="n">particles_hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">settings</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the hash of footprints with *settings*, made from the particles hashed *particles_hash*.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">settings_hash</span><span class="p">({</span><span class="s2">&quot;particles&quot;</span><span class="p">:</span> <span class="n">particles_hash</span><span class="p">,</span> <span class="s2">&quot;footprint&quot;</span><span class="p">:</span> <span class="n">settings</span><span class="p">})</span>
+<span class="w">    </span><span class="sd">"""Return the hash of footprints with *settings*, made from the particles hashed *particles_hash*."""</span>
+    <span class="k">return</span> <span class="n">settings_hash</span><span class="p">({</span><span class="s2">"particles"</span><span class="p">:</span> <span class="n">particles_hash</span><span class="p">,</span> <span class="s2">"footprint"</span><span class="p">:</span> <span class="n">settings</span><span class="p">})</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;footprint_settings&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;read_footprint_settings&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;read_run_settings&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;run_settings&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;transport_from_settings&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;settings_hash&quot;</span><span class="p">,</span>
+    <span class="s2">"footprint_settings"</span><span class="p">,</span>
+    <span class="s2">"read_footprint_settings"</span><span class="p">,</span>
+    <span class="s2">"read_run_settings"</span><span class="p">,</span>
+    <span class="s2">"run_settings"</span><span class="p">,</span>
+    <span class="s2">"transport_from_settings"</span><span class="p">,</span>
+    <span class="s2">"settings_hash"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 
@@ -706,8 +708,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -733,14 +735,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

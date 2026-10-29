@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/execution/config';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -445,7 +447,7 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.execution.config</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Settings for where and how a project&#39;s receptors are run.&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""Settings for where and how a project's receptors are run."""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -463,8 +465,8 @@
 <div class="viewcode-block" id="ExecutionConfig">
 <a class="viewcode-back" href="../../../reference/_api/stilt.ExecutionConfig.html#stilt.ExecutionConfig">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ExecutionConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Where a project&#39;s receptors run, and with what resources.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Where a project's receptors run, and with what resources.</span>
 
 <span class="sd">    With ``backend: local`` the receptors run on this machine as one task.</span>
 <span class="sd">    With ``backend: slurm`` they are split among ``n_workers`` tasks of one</span>
@@ -475,113 +477,113 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; config = ExecutionConfig(backend=&quot;slurm&quot;, n_workers=100, time=&quot;02:00:00&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; config = ExecutionConfig(backend="slurm", n_workers=100, time="02:00:00")</span>
 <span class="sd">    &gt;&gt;&gt; config.n_workers</span>
 <span class="sd">    100</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">extra</span><span class="o">=</span><span class="s2">&quot;forbid&quot;</span><span class="p">,</span> <span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">extra</span><span class="o">=</span><span class="s2">"forbid"</span><span class="p">,</span> <span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="n">backend</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="s2">&quot;slurm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="s2">&quot;local&quot;</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Where to run: on this machine (``local``) or as a Slurm job array (``slurm``).&quot;</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"local"</span><span class="p">,</span> <span class="s2">"slurm"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="s2">"local"</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Where to run: on this machine (``local``) or as a Slurm job array (``slurm``)."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">n_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="mi">1</span><span class="p">,</span>
         <span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Number of Slurm array tasks, which the receptors are split evenly &quot;</span>
-            <span class="s2">&quot;among. A local run is one task.&quot;</span>
+            <span class="s2">"Number of Slurm array tasks, which the receptors are split evenly "</span>
+            <span class="s2">"among. A local run is one task."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">cpus</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="mi">1</span><span class="p">,</span>
         <span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Receptors each task runs at once: processes on this machine for a &quot;</span>
-            <span class="s2">&quot;local run, CPUs per array task on Slurm.&quot;</span>
+            <span class="s2">"Receptors each task runs at once: processes on this machine for a "</span>
+            <span class="s2">"local run, CPUs per array task on Slurm."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">time</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Slurm time limit per task, as ``HH:MM:SS``, ``D-HH:MM:SS``, or &quot;</span>
-            <span class="s2">&quot;minutes. Required with ``backend: slurm``: without it a task gets &quot;</span>
-            <span class="s2">&quot;the partition&#39;s default, which can be days.&quot;</span>
+            <span class="s2">"Slurm time limit per task, as ``HH:MM:SS``, ``D-HH:MM:SS``, or "</span>
+            <span class="s2">"minutes. Required with ``backend: slurm``: without it a task gets "</span>
+            <span class="s2">"the partition's default, which can be days."</span>
         <span class="p">),</span>
     <span class="p">)</span>
-    <span class="n">mem</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Memory per Slurm task, such as ``8G``.&quot;</span><span class="p">)</span>
-    <span class="n">partition</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Slurm partition.&quot;</span><span class="p">)</span>
-    <span class="n">account</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Slurm account.&quot;</span><span class="p">)</span>
-    <span class="n">qos</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Slurm quality of service.&quot;</span><span class="p">)</span>
+    <span class="n">mem</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Memory per Slurm task, such as ``8G``."</span><span class="p">)</span>
+    <span class="n">partition</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Slurm partition."</span><span class="p">)</span>
+    <span class="n">account</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Slurm account."</span><span class="p">)</span>
+    <span class="n">qos</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Slurm quality of service."</span><span class="p">)</span>
     <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
         <span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Time limit for one transport model run, in seconds. A run that &quot;</span>
-            <span class="s2">&quot;exceeds it is stopped and recorded as a failed simulation, and the &quot;</span>
-            <span class="s2">&quot;worker moves on. Unset waits indefinitely, so a hung run can hold &quot;</span>
-            <span class="s2">&quot;a worker until its job ends.&quot;</span>
+            <span class="s2">"Time limit for one transport model run, in seconds. A run that "</span>
+            <span class="s2">"exceeds it is stopped and recorded as a failed simulation, and the "</span>
+            <span class="s2">"worker moves on. Unset waits indefinitely, so a hung run can hold "</span>
+            <span class="s2">"a worker until its job ends."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">keep_workdir</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">False</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Keep every run&#39;s workdir, as the transport model left it, under &quot;</span>
-            <span class="s2">&quot;``scratch/`` in the output directory. A failed run&#39;s is always &quot;</span>
-            <span class="s2">&quot;kept.&quot;</span>
+            <span class="s2">"Keep every run's workdir, as the transport model left it, under "</span>
+            <span class="s2">"``scratch/`` in the output directory. A failed run's is always "</span>
+            <span class="s2">"kept."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">array_parallelism</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
         <span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Most Slurm tasks running at once. Unset leaves it to Slurm.&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Most Slurm tasks running at once. Unset leaves it to Slurm."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">setup</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Shell commands run in each Slurm task before the worker, such as &quot;</span>
-            <span class="s2">&quot;``module load`` lines. The worker itself runs with the Python &quot;</span>
-            <span class="s2">&quot;that submitted it.&quot;</span>
+            <span class="s2">"Shell commands run in each Slurm task before the worker, such as "</span>
+            <span class="s2">"``module load`` lines. The worker itself runs with the Python "</span>
+            <span class="s2">"that submitted it."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">slurm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Any other ``sbatch`` options by name, such as ``exclude: node1`` &quot;</span>
-            <span class="s2">&quot;or ``constraint: skl``. ``true`` writes the bare flag.&quot;</span>
+            <span class="s2">"Any other ``sbatch`` options by name, such as ``exclude: node1`` "</span>
+            <span class="s2">"or ``constraint: skl``. ``true`` writes the bare flag."</span>
         <span class="p">),</span>
     <span class="p">)</span>
 
-    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;setup&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"setup"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_one_command</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Accept one setup command as a string.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Accept one setup command as a string."""</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">value</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">value</span>
 
-    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">)</span>
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"time"</span><span class="p">)</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_slurm_time</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Raise on a time limit sbatch would not take.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Raise on a time limit sbatch would not take."""</span>
         <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">slurm_minutes</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>  <span class="c1"># raises on a form sbatch would not take</span>
         <span class="k">return</span> <span class="n">value</span>
 
-    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;after&quot;</span><span class="p">)</span>
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_slurm_needs_time</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Raise when a Slurm run has no time limit.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">&quot;slurm&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">&quot;time&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">slurm</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Raise when a Slurm run has no time limit."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"slurm"</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">"time"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">slurm</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;execution.time is required with backend: slurm, such as &quot;</span>
-                <span class="s2">&quot;time: &#39;02:00:00&#39;. Without it each task gets the partition&#39;s &quot;</span>
-                <span class="s2">&quot;default time limit, which can be days.&quot;</span>
+                <span class="s2">"execution.time is required with backend: slurm, such as "</span>
+                <span class="s2">"time: '02:00:00'. Without it each task gets the partition's "</span>
+                <span class="s2">"default time limit, which can be days."</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">slurm_minutes</span><span class="p">(</span><span class="n">time</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return a Slurm time limit in whole minutes, rounded up.</span>
 
 <span class="sd">    Accepts what ``sbatch --time`` does: minutes, ``MM:SS``, ``HH:MM:SS``,</span>
@@ -591,12 +593,12 @@
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        If *time* has none of these forms or is not positive.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">time</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-    <span class="n">days</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">clock</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">rpartition</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)</span>
-    <span class="n">parts</span> <span class="o">=</span> <span class="n">clock</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
+    <span class="n">days</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">clock</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">rpartition</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">clock</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">if</span> <span class="s2">&quot;-&quot;</span> <span class="ow">in</span> <span class="n">text</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">days</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"-"</span> <span class="ow">in</span> <span class="n">text</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">days</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span>
         <span class="n">numbers</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">]</span>
         <span class="n">d</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">days</span><span class="p">)</span> <span class="k">if</span> <span class="n">days</span> <span class="k">else</span> <span class="mi">0</span>
@@ -614,16 +616,16 @@
             <span class="k">raise</span> <span class="ne">ValueError</span>
     <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Not a Slurm time limit: </span><span class="si">{</span><span class="n">time</span><span class="si">!r}</span><span class="s2">. Use minutes, &#39;HH:MM:SS&#39;, or &quot;</span>
-            <span class="s2">&quot;&#39;D-HH:MM:SS&#39;.&quot;</span>
+            <span class="sa">f</span><span class="s2">"Not a Slurm time limit: </span><span class="si">{</span><span class="n">time</span><span class="si">!r}</span><span class="s2">. Use minutes, 'HH:MM:SS', or "</span>
+            <span class="s2">"'D-HH:MM:SS'."</span>
         <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
     <span class="n">total</span> <span class="o">=</span> <span class="p">((</span><span class="n">d</span> <span class="o">*</span> <span class="mi">24</span> <span class="o">+</span> <span class="n">hours</span><span class="p">)</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">+</span> <span class="n">minutes</span><span class="p">)</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">+</span> <span class="n">seconds</span>
     <span class="k">if</span> <span class="n">total</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The time limit must be positive, not </span><span class="si">{</span><span class="n">time</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The time limit must be positive, not </span><span class="si">{</span><span class="n">time</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
     <span class="k">return</span> <span class="o">-</span><span class="p">(</span><span class="o">-</span><span class="n">total</span> <span class="o">//</span> <span class="mi">60</span><span class="p">)</span>
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;ExecutionConfig&quot;</span><span class="p">,</span> <span class="s2">&quot;slurm_minutes&quot;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"ExecutionConfig"</span><span class="p">,</span> <span class="s2">"slurm_minutes"</span><span class="p">]</span>
 </pre></div>
 
                 </article>
@@ -653,8 +655,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -680,14 +682,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

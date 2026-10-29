@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/footprint/targets';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -445,11 +447,11 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.footprint.targets</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">The geometries a footprint is summed onto, and the weights that do it.</span>
 
 <span class="sd">Footprints are always computed on a rectilinear grid (:class:`~stilt.Grid`),</span>
-<span class="sd">as in STILT-R. An inversion&#39;s state vector may use another geometry: a</span>
+<span class="sd">as in STILT-R. An inversion's state vector may use another geometry: a</span>
 <span class="sd">coarser or shifted grid, hexagons, polygons from a shapefile, nested grids,</span>
 <span class="sd">or cells merged into larger regions. A footprint value is a per-cell</span>
 <span class="sd">sensitivity that adds up over area, so moving it onto another geometry is a</span>
@@ -473,7 +475,7 @@
 <span class="sd">:func:`overlap_weights` builds the weight matrix for any of them.</span>
 <span class="sd">:meth:`Mesh.to_grid` and :meth:`Zones.to_grid` return a footprint grid fine</span>
 <span class="sd">enough to resolve their cells. A ``Grid`` knows nothing of the other two.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -497,7 +499,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_transform_geometries</span><span class="p">(</span>
     <span class="n">geoms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">BaseGeometry</span><span class="p">],</span> <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">BaseGeometry</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return shapely geometries reprojected from ``src`` to ``dst``. Requires pyproj.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return shapely geometries reprojected from ``src`` to ``dst``. Requires pyproj."""</span>
     <span class="k">if</span> <span class="n">same_crs</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">geoms</span><span class="p">)</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
@@ -505,7 +507,7 @@
     <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_fn</span><span class="p">(</span><span class="n">coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return one array of coordinates reprojected.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return one array of coordinates reprojected."""</span>
         <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">coords</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
 
@@ -513,8 +515,8 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_grid_boxes</span><span class="p">(</span><span class="n">x_centers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">y_centers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a shapely box for every grid cell, with ``x`` varying fastest.&quot;&quot;&quot;</span>
-    <span class="n">xx</span><span class="p">,</span> <span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x_centers</span><span class="p">,</span> <span class="n">y_centers</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">&quot;xy&quot;</span><span class="p">)</span>  <span class="c1"># (ny, nx)</span>
+<span class="w">    </span><span class="sd">"""Return a shapely box for every grid cell, with ``x`` varying fastest."""</span>
+    <span class="n">xx</span><span class="p">,</span> <span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x_centers</span><span class="p">,</span> <span class="n">y_centers</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">"xy"</span><span class="p">)</span>  <span class="c1"># (ny, nx)</span>
     <span class="k">return</span> <span class="n">shapely</span><span class="o">.</span><span class="n">box</span><span class="p">(</span>
         <span class="p">(</span><span class="n">xx</span> <span class="o">-</span> <span class="n">xres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span>
         <span class="p">(</span><span class="n">yy</span> <span class="o">-</span> <span class="n">yres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span>
@@ -531,38 +533,38 @@
 <div class="viewcode-block" id="Mesh">
 <a class="viewcode-back" href="../../../reference/_api/stilt.Mesh.html#stilt.Mesh">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Mesh</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Polygon cells with ids, the most general geometry.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">arbitrary_types_allowed</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">ids</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Unique label for each cell. These become the ``index``.&quot;</span>
+        <span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Unique label for each cell. These become the ``index``."</span>
     <span class="p">)</span>
     <span class="n">geometries</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="o">...</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;One shapely Polygon or MultiPolygon per id, in ``crs`` coordinates.&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"One shapely Polygon or MultiPolygon per id, in ``crs`` coordinates."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="s2">&quot;+proj=longlat&quot;</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s1">&#39;PROJ string or ``&quot;EPSG:xxxx&quot;`` code of the polygon coordinates.&#39;</span><span class="p">,</span>
+        <span class="s2">"+proj=longlat"</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s1">'PROJ string or ``"EPSG:xxxx"`` code of the polygon coordinates.'</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;after&quot;</span><span class="p">)</span>
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Require unique ids, one non-empty polygon per id.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Require unique ids, one non-empty polygon per id."""</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ids</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Mesh requires at least one cell.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Mesh requires at least one cell."</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ids</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometries</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;ids and geometries must have the same length.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"ids and geometries must have the same length."</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ids</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ids</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;ids must be unique.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"ids must be unique."</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometries</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">BaseGeometry</span><span class="p">)</span> <span class="ow">or</span> <span class="n">g</span><span class="o">.</span><span class="n">is_empty</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;geometries must be non-empty shapely geometries.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"geometries must be non-empty shapely geometries."</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">shapely</span><span class="o">.</span><span class="n">get_type_id</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">6</span><span class="p">):</span>  <span class="c1"># Polygon, MultiPolygon</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Mesh geometries must be Polygon or MultiPolygon.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Mesh geometries must be Polygon or MultiPolygon."</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="c1"># -- constructors -------------------------------------------------------</span>
@@ -571,19 +573,19 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.Mesh.from_geodataframe.html#stilt.Mesh.from_geodataframe">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_geodataframe</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">gdf</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return a mesh of the polygons in a GeoDataFrame&#39;s geometry column.</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return a mesh of the polygons in a GeoDataFrame's geometry column.</span>
 
 <span class="sd">        ``ids`` is the name of a column holding the cell labels, or the</span>
-<span class="sd">        labels themselves. Defaults to the GeoDataFrame&#39;s index.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        labels themselves. Defaults to the GeoDataFrame's index.</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">gdf</span><span class="o">.</span><span class="n">index</span><span class="p">]</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ids</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">gdf</span><span class="p">[</span><span class="n">ids</span><span class="p">]]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">]</span>
-        <span class="n">crs</span> <span class="o">=</span> <span class="n">gdf</span><span class="o">.</span><span class="n">crs</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span> <span class="k">if</span> <span class="n">gdf</span><span class="o">.</span><span class="n">crs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;+proj=longlat&quot;</span>
+        <span class="n">crs</span> <span class="o">=</span> <span class="n">gdf</span><span class="o">.</span><span class="n">crs</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span> <span class="k">if</span> <span class="n">gdf</span><span class="o">.</span><span class="n">crs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">"+proj=longlat"</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">labels</span><span class="p">),</span> <span class="n">geometries</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">tolist</span><span class="p">()),</span> <span class="n">crs</span><span class="o">=</span><span class="n">crs</span><span class="p">)</span></div>
 
 
@@ -591,7 +593,7 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.Mesh.from_file.html#stilt.Mesh.from_file">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">read_kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a mesh read from a vector file such as a shapefile, with geopandas.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return a mesh read from a vector file such as a shapefile, with geopandas."""</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">geopandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gpd</span>
 
         <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_geodataframe</span><span class="p">(</span><span class="n">gpd</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">**</span><span class="n">read_kwargs</span><span class="p">),</span> <span class="n">ids</span><span class="o">=</span><span class="n">ids</span><span class="p">)</span></div>
@@ -606,28 +608,28 @@
         <span class="n">size</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">ids</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;+proj=longlat&quot;</span><span class="p">,</span>
+        <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"+proj=longlat"</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return rectangular windows centered on points, such as known point sources.</span>
 
 <span class="sd">        ``size`` is the window width, or ``(width, height)``, in ``crs``</span>
-<span class="sd">        units. Without ``ids``, each window is labeled ``&quot;x,y&quot;``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        units. Without ``ids``, each window is labeled ``"x,y"``.</span>
+<span class="sd">        """</span>
         <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">coords</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;coords must be a sequence of (x, y) pairs.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"coords must be a sequence of (x, y) pairs."</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
             <span class="n">w</span> <span class="o">=</span> <span class="n">h</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">w</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">h</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;window size must be positive.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"window size must be positive."</span><span class="p">)</span>
         <span class="n">boxes</span> <span class="o">=</span> <span class="n">shapely</span><span class="o">.</span><span class="n">box</span><span class="p">(</span>
             <span class="n">arr</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">w</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">arr</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">h</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">arr</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">w</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">arr</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">h</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="n">ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">labels</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">x</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">y</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">arr</span><span class="p">)</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">x</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">y</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">arr</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">labels</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span> <span class="n">geometries</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">boxes</span><span class="o">.</span><span class="n">tolist</span><span class="p">()),</span> <span class="n">crs</span><span class="o">=</span><span class="n">crs</span><span class="p">)</span></div>
@@ -637,12 +639,12 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.Mesh.from_grid.html#stilt.Mesh.from_grid">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_grid</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">grid</span><span class="p">:</span> <span class="n">Grid</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return every cell of a grid as a polygon, in ``grid.index`` order.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return every cell of a grid as a polygon, in ``grid.index`` order."""</span>
         <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">cells</span>
         <span class="n">boxes</span> <span class="o">=</span> <span class="n">shapely</span><span class="o">.</span><span class="n">box</span><span class="p">(</span>
             <span class="n">x</span> <span class="o">-</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">y</span> <span class="o">-</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">x</span> <span class="o">+</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">y</span> <span class="o">+</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="p">)</span>
-        <span class="n">labels</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">xi</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">yi</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">xi</span><span class="p">,</span> <span class="n">yi</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">xi</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">yi</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">xi</span><span class="p">,</span> <span class="n">yi</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span> <span class="n">geometries</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">boxes</span><span class="o">.</span><span class="n">tolist</span><span class="p">()),</span> <span class="n">crs</span><span class="o">=</span><span class="n">grid</span><span class="o">.</span><span class="n">crs</span><span class="p">)</span></div>
 
 
@@ -650,17 +652,17 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.Mesh.from_spec.html#stilt.Mesh.from_spec">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_spec</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">GeometrySpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return the mesh a footprint config&#39;s ``geometry`` describes, reading its source now.</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the mesh a footprint config's ``geometry`` describes, reading its source now.</span>
 
 <span class="sd">        A ``file`` spec needs geopandas and an ``h3`` spec needs ``h3``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">FileGeometrySpec</span><span class="p">):</span>
             <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;layer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">layer</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s2">"layer"</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">layer</span>
             <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">where</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;where&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">where</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s2">"where"</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">where</span>
             <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">ids</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">ids</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">H3GeometrySpec</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_h3</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">resolution</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">bounds</span><span class="p">)</span>
@@ -671,19 +673,19 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.Mesh.from_h3.html#stilt.Mesh.from_h3">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_h3</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">resolution</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the H3 hexagons of one resolution inside ``bounds``. Requires ``h3``.</span>
 
 <span class="sd">        ``bounds`` is a :class:`~stilt.Bounds` or ``Grid``, or an</span>
 <span class="sd">        ``(xmin, ymin, xmax, ymax)`` tuple in degrees. The cell ids are the H3</span>
 <span class="sd">        cell strings.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="kn">import</span><span class="w"> </span><span class="nn">h3</span>
         <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - optional dep</span>
-            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;Mesh.from_h3 requires the &#39;h3&#39; package.&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">"Mesh.from_h3 requires the 'h3' package."</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
 
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">bounds</span><span class="p">,</span> <span class="s2">&quot;xmin&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">bounds</span><span class="p">,</span> <span class="s2">"xmin"</span><span class="p">):</span>
             <span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">bounds</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">bounds</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="n">bounds</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span> <span class="n">bounds</span><span class="o">.</span><span class="n">ymax</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">bounds</span><span class="p">)</span>
@@ -691,12 +693,12 @@
         <span class="n">poly</span> <span class="o">=</span> <span class="n">h3</span><span class="o">.</span><span class="n">LatLngPoly</span><span class="p">(</span><span class="n">ring</span><span class="p">)</span>
         <span class="n">cells</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">h3</span><span class="o">.</span><span class="n">h3shape_to_cells</span><span class="p">(</span><span class="n">poly</span><span class="p">,</span> <span class="n">resolution</span><span class="p">))</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">cells</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No H3 cells found inside bounds at this resolution.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"No H3 cells found inside bounds at this resolution."</span><span class="p">)</span>
         <span class="n">polys</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">shapely</span><span class="o">.</span><span class="n">Polygon</span><span class="p">([(</span><span class="n">lng</span><span class="p">,</span> <span class="n">lat</span><span class="p">)</span> <span class="k">for</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lng</span> <span class="ow">in</span> <span class="n">h3</span><span class="o">.</span><span class="n">cell_to_boundary</span><span class="p">(</span><span class="n">c</span><span class="p">)])</span>
             <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cells</span>
         <span class="p">]</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">cells</span><span class="p">),</span> <span class="n">geometries</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">polys</span><span class="p">),</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;+proj=longlat&quot;</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">cells</span><span class="p">),</span> <span class="n">geometries</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">polys</span><span class="p">),</span> <span class="n">crs</span><span class="o">=</span><span class="s2">"+proj=longlat"</span><span class="p">)</span></div>
 
 
     <span class="c1"># -- properties ---------------------------------------------------------</span>
@@ -706,23 +708,23 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The cell ids, as an index named ``&quot;cell&quot;``.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ids</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">"""The cell ids, as an index named ``"cell"``."""</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ids</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">"cell"</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether the polygon coordinates are longitude/latitude degrees.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Whether the polygon coordinates are longitude/latitude degrees."""</span>
         <span class="k">return</span> <span class="n">is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;``(xmin, ymin, xmax, ymax)`` extent of all cells.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""``(xmin, ymin, xmax, ymax)`` extent of all cells."""</span>
         <span class="n">b</span> <span class="o">=</span> <span class="n">shapely</span><span class="o">.</span><span class="n">total_bounds</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometries</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">))</span>
         <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">min_cell_width</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Shortest side of any cell&#39;s bounding box, in ``crs`` units.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Shortest side of any cell's bounding box, in ``crs`` units."""</span>
         <span class="n">b</span> <span class="o">=</span> <span class="n">shapely</span><span class="o">.</span><span class="n">bounds</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometries</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">))</span>
         <span class="n">widths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">b</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">b</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">b</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="n">b</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
         <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">widths</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
@@ -731,7 +733,7 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.Mesh.hash.html#stilt.Mesh.hash">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;First 10 characters of a SHA-256 hash of the ids, polygons, and CRS.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""First 10 characters of a SHA-256 hash of the ids, polygons, and CRS."""</span>
         <span class="n">h</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">()</span>
         <span class="n">h</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">g</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ids</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometries</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
@@ -743,7 +745,7 @@
 <div class="viewcode-block" id="Mesh.to_crs">
 <a class="viewcode-back" href="../../../reference/_api/stilt.Mesh.to_crs.html#stilt.Mesh.to_crs">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_crs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the mesh reprojected to ``crs``. Requires pyproj.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the mesh reprojected to ``crs``. Requires pyproj."""</span>
         <span class="k">if</span> <span class="n">same_crs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">crs</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">self</span>
         <span class="k">return</span> <span class="n">Mesh</span><span class="p">(</span>
@@ -762,10 +764,10 @@
         <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">max_cells</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50_000_000</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Grid</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return a footprint grid fine enough to resolve the cells.</span>
 
-<span class="sd">        The bounds are the mesh&#39;s extent, rounded outward to whole cells.</span>
+<span class="sd">        The bounds are the mesh's extent, rounded outward to whole cells.</span>
 <span class="sd">        The cell size is the smallest cell width divided by</span>
 <span class="sd">        ``cells_per_target``, rounded down to one significant figure.</span>
 
@@ -774,7 +776,7 @@
 <span class="sd">        cells_per_target : float, default 4</span>
 <span class="sd">            Grid cells across the smallest mesh cell.</span>
 <span class="sd">        crs : str, optional</span>
-<span class="sd">            CRS of the grid. Defaults to the mesh&#39;s; the mesh is reprojected</span>
+<span class="sd">            CRS of the grid. Defaults to the mesh's; the mesh is reprojected</span>
 <span class="sd">            when they differ.</span>
 <span class="sd">        max_cells : int, default 50_000_000</span>
 <span class="sd">            Warn when the grid would have more cells than this.</span>
@@ -788,7 +790,7 @@
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; hexes = stilt.Mesh.from_h3(7, bounds)  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; grid = hexes.to_grid(cells_per_target=4)  # doctest: +SKIP</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 
@@ -796,10 +798,10 @@
 
         <span class="n">width</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">min_cell_width</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">cells_per_target</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">width</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Mesh cells must have positive width.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Mesh cells must have positive width."</span><span class="p">)</span>
         <span class="n">exp</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">width</span><span class="p">))</span>
         <span class="n">res</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">width</span> <span class="o">/</span> <span class="mi">10</span><span class="o">**</span><span class="n">exp</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="n">exp</span>  <span class="c1"># round down, 1 sig fig</span>
-        <span class="n">res</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">res</span><span class="si">:</span><span class="s2">.1g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">res</span><span class="si">:</span><span class="s2">.1g</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">bounds</span>
         <span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">xmin</span> <span class="o">/</span> <span class="n">res</span><span class="p">)</span> <span class="o">*</span> <span class="n">res</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">ymin</span> <span class="o">/</span> <span class="n">res</span><span class="p">)</span> <span class="o">*</span> <span class="n">res</span>
@@ -812,8 +814,8 @@
         <span class="n">n_cells</span> <span class="o">=</span> <span class="p">((</span><span class="n">xmax</span> <span class="o">-</span> <span class="n">xmin</span><span class="p">)</span> <span class="o">/</span> <span class="n">res</span><span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="n">ymax</span> <span class="o">-</span> <span class="n">ymin</span><span class="p">)</span> <span class="o">/</span> <span class="n">res</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">n_cells</span> <span class="o">&gt;</span> <span class="n">max_cells</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Derived grid has ~</span><span class="si">{</span><span class="n">n_cells</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2"> cells at resolution </span><span class="si">{</span><span class="n">res</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">; &quot;</span>
-                <span class="s2">&quot;consider a coarser cells_per_target or a smaller domain.&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"Derived grid has ~</span><span class="si">{</span><span class="n">n_cells</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2"> cells at resolution </span><span class="si">{</span><span class="n">res</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">; "</span>
+                <span class="s2">"consider a coarser cells_per_target or a smaller domain."</span><span class="p">,</span>
                 <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
             <span class="p">)</span>
 
@@ -825,7 +827,7 @@
             <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">xmin</span> <span class="o">-</span> <span class="n">res</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">+</span> <span class="n">res</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">-</span> <span class="n">res</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">+</span> <span class="n">res</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
 
-            <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="s2">&quot;EPSG:4326&quot;</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">xs</span><span class="p">,</span> <span class="n">ys</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">],</span> <span class="p">[</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">ymax</span><span class="p">])</span>
             <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">xs</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">xs</span><span class="p">))</span>
             <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">ys</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">ys</span><span class="p">))</span>
@@ -842,7 +844,7 @@
 
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Mesh(n_cells=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="si">}</span><span class="s2">, crs=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"Mesh(n_cells=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="si">}</span><span class="s2">, crs=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="si">!r}</span><span class="s2">)"</span>
 
     <span class="fm">__str__</span> <span class="o">=</span> <span class="fm">__repr__</span></div>
 
@@ -856,7 +858,7 @@
 <div class="viewcode-block" id="Zones">
 <a class="viewcode-back" href="../../../reference/_api/stilt.Zones.html#stilt.Zones">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Zones</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Regions made by merging the cells of a ``Grid`` or ``Mesh``.</span>
 
 <span class="sd">    Parameters</span>
@@ -867,20 +869,20 @@
 <span class="sd">        One label per cell of ``base``, in ``base.index`` order. Cells with</span>
 <span class="sd">        the same label form one region. The ``index`` lists the labels in</span>
 <span class="sd">        order of first appearance.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">arbitrary_types_allowed</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">base</span><span class="p">:</span> <span class="n">Grid</span> <span class="o">|</span> <span class="n">Mesh</span>
     <span class="n">labels</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
 
-    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;after&quot;</span><span class="p">)</span>
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Zones</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Require one label per base cell.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Require one label per base cell."""</span>
         <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;labels must have one entry per base cell (</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">), got </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="sa">f</span><span class="s2">"labels must have one entry per base cell (</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">), got </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>
 
@@ -888,7 +890,7 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.Zones.from_labels.html#stilt.Zones.from_labels">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_labels</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">base</span><span class="p">:</span> <span class="n">Grid</span> <span class="o">|</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Zones</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return zones from labels of any type, converted to strings.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return zones from labels of any type, converted to strings."""</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">base</span><span class="o">=</span><span class="n">base</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">))</span></div>
 
 
@@ -897,17 +899,17 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Unique labels in order of first appearance, as an index named ``&quot;cell&quot;``.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">"""Unique labels in order of first appearance, as an index named ``"cell"``."""</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)),</span> <span class="n">name</span><span class="o">=</span><span class="s2">"cell"</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">crs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;CRS of the base geometry.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""CRS of the base geometry."""</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">crs</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether the base geometry is in longitude/latitude degrees.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Whether the base geometry is in longitude/latitude degrees."""</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">is_longlat</span>
 
 <div class="viewcode-block" id="Zones.to_grid">
@@ -919,7 +921,7 @@
         <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">max_cells</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50_000_000</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Grid</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return a footprint grid fine enough to resolve the regions.</span>
 
 <span class="sd">        Each region is a union of base cells, so a grid that resolves the</span>
@@ -929,7 +931,7 @@
 <span class="sd">        reprojected as a mesh first.</span>
 
 <span class="sd">        Parameters are those of :meth:`Mesh.to_grid`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">Grid</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">crs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">same_crs</span><span class="p">(</span><span class="n">crs</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">crs</span><span class="p">):</span>
@@ -942,7 +944,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">membership</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sparse ``(n_regions, n_base_cells)`` matrix, 1 where a base cell is in a region.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Sparse ``(n_regions, n_base_cells)`` matrix, 1 where a base cell is in a region."""</span>
         <span class="n">codes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get_indexer</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">))</span>
         <span class="n">n_base</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span>
@@ -954,15 +956,15 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.Zones.hash.html#stilt.Zones.hash">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;First 10 characters of a SHA-256 hash of the base geometry and labels.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""First 10 characters of a SHA-256 hash of the base geometry and labels."""</span>
         <span class="n">h</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">()</span>
         <span class="n">h</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_geometry_key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
-        <span class="n">h</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\x1f</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
+        <span class="n">h</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">"</span><span class="se">\x1f</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
         <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">10</span><span class="p">]</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Zones(n_cells=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="si">}</span><span class="s2">, base=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"Zones(n_cells=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="si">}</span><span class="s2">, base=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="si">!r}</span><span class="s2">)"</span>
 
     <span class="fm">__str__</span> <span class="o">=</span> <span class="fm">__repr__</span></div>
 
@@ -973,24 +975,24 @@
 <span class="c1"># ---------------------------------------------------------------------------</span>
 
 <span class="n">Geometry</span> <span class="o">=</span> <span class="n">Grid</span> <span class="o">|</span> <span class="n">Mesh</span> <span class="o">|</span> <span class="n">Zones</span>
-<span class="sd">&quot;&quot;&quot;A geometry a footprint can be aggregated onto.&quot;&quot;&quot;</span>
+<span class="sd">"""A geometry a footprint can be aggregated onto."""</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_geometry_key</span><span class="p">(</span><span class="n">geometry</span><span class="p">:</span> <span class="n">Geometry</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a cache key identifying the geometry.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return a cache key identifying the geometry."""</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">Grid</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s2">&quot;grid:&quot;</span> <span class="o">+</span> <span class="n">geometry</span><span class="o">.</span><span class="n">model_dump_json</span><span class="p">()</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">geometry</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">geometry</span><span class="o">.</span><span class="n">hash</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="s2">"grid:"</span> <span class="o">+</span> <span class="n">geometry</span><span class="o">.</span><span class="n">model_dump_json</span><span class="p">()</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">geometry</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">geometry</span><span class="o">.</span><span class="n">hash</span><span class="si">}</span><span class="s2">"</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_raster_key</span><span class="p">(</span>
     <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a cache key identifying a raster&#39;s axes and projection.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return a cache key identifying a raster's axes and projection."""</span>
     <span class="n">h</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">()</span>
     <span class="n">h</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">tobytes</span><span class="p">())</span>
     <span class="n">h</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">tobytes</span><span class="p">())</span>
-    <span class="n">h</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">xres</span><span class="si">!r}</span><span class="s2">|</span><span class="si">{</span><span class="n">yres</span><span class="si">!r}</span><span class="s2">|</span><span class="si">{</span><span class="n">crs</span><span class="si">}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
+    <span class="n">h</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">xres</span><span class="si">!r}</span><span class="s2">|</span><span class="si">{</span><span class="n">yres</span><span class="si">!r}</span><span class="s2">|</span><span class="si">{</span><span class="n">crs</span><span class="si">}</span><span class="s2">"</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
     <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">16</span><span class="p">]</span>
 
 
@@ -1001,7 +1003,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_overlap_1d</span><span class="p">(</span><span class="n">src_edges</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">dst_edges</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the fraction of each source cell inside each destination cell, along one axis.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the fraction of each source cell inside each destination cell, along one axis."""</span>
     <span class="n">s_lo</span><span class="p">,</span> <span class="n">s_hi</span> <span class="o">=</span> <span class="n">src_edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">src_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
     <span class="n">d_lo</span><span class="p">,</span> <span class="n">d_hi</span> <span class="o">=</span> <span class="n">dst_edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">dst_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
     <span class="n">lo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">s_lo</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">d_lo</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">])</span>
@@ -1011,7 +1013,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_edges</span><span class="p">(</span><span class="n">centers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">res</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return cell edges from cell centers and a resolution.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return cell edges from cell centers and a resolution."""</span>
     <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">centers</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(([</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">res</span> <span class="o">/</span> <span class="mi">2</span><span class="p">],</span> <span class="n">c</span> <span class="o">+</span> <span class="n">res</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
 
@@ -1019,7 +1021,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_grid_weights</span><span class="p">(</span>
     <span class="n">grid</span><span class="p">:</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the weights of a grid in the raster&#39;s CRS, with rows in ``grid.index`` order.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the weights of a grid in the raster's CRS, with rows in ``grid.index`` order."""</span>
     <span class="n">tx</span><span class="p">,</span> <span class="n">ty</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">axes</span>
     <span class="n">px</span> <span class="o">=</span> <span class="n">_overlap_1d</span><span class="p">(</span><span class="n">_edges</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">xres</span><span class="p">),</span> <span class="n">_edges</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span><span class="p">))</span>  <span class="c1"># (Tx, Nx)</span>
     <span class="n">py</span> <span class="o">=</span> <span class="n">_overlap_1d</span><span class="p">(</span><span class="n">_edges</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">yres</span><span class="p">),</span> <span class="n">_edges</span><span class="p">(</span><span class="n">ty</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span><span class="p">))</span>  <span class="c1"># (Ty, Ny)</span>
@@ -1031,7 +1033,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_exactextract_available</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return whether the optional exactextract backend is importable.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return whether the optional exactextract backend is importable."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">exactextract</span>  <span class="c1"># noqa: F401</span>
     <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
@@ -1042,13 +1044,13 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_mesh_weights_exactextract</span><span class="p">(</span>
     <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return polygon weights computed with ``exactextract``.</span>
 
 <span class="sd">    Gives the same result as :func:`_mesh_weights`, about 100 times faster</span>
 <span class="sd">    on large rasters. ``exactextract`` numbers cells from the top row, so its</span>
 <span class="sd">    ``cell_id`` is renumbered to start from the bottom row.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">exactextract</span><span class="w"> </span><span class="kn">import</span> <span class="n">exact_extract</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">exactextract.raster</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
         <span class="n">NumPyRasterSource</span><span class="p">,</span>
@@ -1064,23 +1066,23 @@
     <span class="p">)</span>
     <span class="n">features</span> <span class="o">=</span> <span class="p">[</span>
         <span class="p">{</span>
-            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;Feature&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span>
-            <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;fid&quot;</span><span class="p">:</span> <span class="n">i</span><span class="p">},</span>
-            <span class="s2">&quot;geometry&quot;</span><span class="p">:</span> <span class="n">shapely</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">g</span><span class="p">),</span>
+            <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"Feature"</span><span class="p">,</span>
+            <span class="s2">"id"</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span>
+            <span class="s2">"properties"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"fid"</span><span class="p">:</span> <span class="n">i</span><span class="p">},</span>
+            <span class="s2">"geometry"</span><span class="p">:</span> <span class="n">shapely</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">g</span><span class="p">),</span>
         <span class="p">}</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">g</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">geometries</span><span class="p">)</span>
     <span class="p">]</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">exact_extract</span><span class="p">(</span>
-        <span class="n">raster</span><span class="p">,</span> <span class="n">features</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">,</span> <span class="s2">&quot;coverage&quot;</span><span class="p">],</span> <span class="n">include_cols</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;fid&quot;</span><span class="p">],</span> <span class="n">output</span><span class="o">=</span><span class="s2">&quot;pandas&quot;</span>
+        <span class="n">raster</span><span class="p">,</span> <span class="n">features</span><span class="p">,</span> <span class="p">[</span><span class="s2">"cell_id"</span><span class="p">,</span> <span class="s2">"coverage"</span><span class="p">],</span> <span class="n">include_cols</span><span class="o">=</span><span class="p">[</span><span class="s2">"fid"</span><span class="p">],</span> <span class="n">output</span><span class="o">=</span><span class="s2">"pandas"</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>  <span class="c1"># it returns None only when writing a file</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;exactextract returned </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">out</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">, not a table.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"exactextract returned </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">out</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">, not a table."</span><span class="p">)</span>
     <span class="n">rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">cols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">vals</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">fid</span><span class="p">,</span> <span class="n">cell_id</span><span class="p">,</span> <span class="n">coverage</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;fid&quot;</span><span class="p">],</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">],</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;coverage&quot;</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"fid"</span><span class="p">],</span> <span class="n">out</span><span class="p">[</span><span class="s2">"cell_id"</span><span class="p">],</span> <span class="n">out</span><span class="p">[</span><span class="s2">"coverage"</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span>
     <span class="p">):</span>
         <span class="n">cell_id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">cell_id</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
         <span class="n">coverage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">coverage</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
@@ -1103,11 +1105,11 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_mesh_weights</span><span class="p">(</span>
     <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return polygon weights from exact area intersections with shapely.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return polygon weights from exact area intersections with shapely."""</span>
     <span class="n">boxes</span> <span class="o">=</span> <span class="n">_grid_boxes</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">)</span>
     <span class="n">tree</span> <span class="o">=</span> <span class="n">shapely</span><span class="o">.</span><span class="n">STRtree</span><span class="p">(</span><span class="n">boxes</span><span class="p">)</span>
     <span class="n">polys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">geometries</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
-    <span class="n">p_idx</span><span class="p">,</span> <span class="n">b_idx</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">polys</span><span class="p">,</span> <span class="n">predicate</span><span class="o">=</span><span class="s2">&quot;intersects&quot;</span><span class="p">)</span>
+    <span class="n">p_idx</span><span class="p">,</span> <span class="n">b_idx</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">polys</span><span class="p">,</span> <span class="n">predicate</span><span class="o">=</span><span class="s2">"intersects"</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_idx</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">mesh</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">boxes</span><span class="p">)))</span>
     <span class="n">inter</span> <span class="o">=</span> <span class="n">shapely</span><span class="o">.</span><span class="n">area</span><span class="p">(</span><span class="n">shapely</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">polys</span><span class="p">[</span><span class="n">p_idx</span><span class="p">],</span> <span class="n">boxes</span><span class="p">[</span><span class="n">b_idx</span><span class="p">]))</span>
@@ -1121,7 +1123,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_polygon_weights</span><span class="p">(</span>
     <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a mesh&#39;s weights, with exactextract when it is installed.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return a mesh's weights, with exactextract when it is installed."""</span>
     <span class="k">if</span> <span class="n">_exactextract_available</span><span class="p">():</span>
         <span class="k">return</span> <span class="n">_mesh_weights_exactextract</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">_mesh_weights</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">)</span>
@@ -1137,7 +1139,7 @@
     <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the fraction of each raster cell inside each geometry cell.</span>
 
 <span class="sd">    Polygon overlaps (a ``Mesh``, or a ``Grid`` in another CRS) use</span>
@@ -1162,8 +1164,8 @@
 <span class="sd">    scipy.sparse.csr_matrix</span>
 <span class="sd">        Shape ``(n_cells, ny * nx)``, with rows in ``geometry.index`` order</span>
 <span class="sd">        and raster cells ordered with ``x`` varying fastest (the order of</span>
-<span class="sd">        ``data.transpose(&quot;time&quot;, y, x).reshape(nt, -1)``).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">        ``data.transpose("time", y, x).reshape(nt, -1)``).</span>
+<span class="sd">    """</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x_centers</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y_centers</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">_raster_key</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">,</span> <span class="n">crs</span><span class="p">),</span> <span class="n">_geometry_key</span><span class="p">(</span><span class="n">geometry</span><span class="p">))</span>
@@ -1192,35 +1194,35 @@
 <div class="viewcode-block" id="check_resolution">
 <a class="viewcode-back" href="../../../reference/_api/stilt.footprint.check_resolution.html#stilt.check_resolution">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">check_resolution</span><span class="p">(</span><span class="n">geometry</span><span class="p">:</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Warn when the raster is too coarse to resolve the smallest target cell.</span>
 
 <span class="sd">    The warning is about the error of rasterizing polygon boundaries, so</span>
-<span class="sd">    only a mesh can get it, or zones made from one. A grid in the raster&#39;s</span>
+<span class="sd">    only a mesh can get it, or zones made from one. A grid in the raster's</span>
 <span class="sd">    own CRS is exact at any resolution, and so are zones of its cells. A</span>
 <span class="sd">    geometry in a different CRS is skipped, since its units differ.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">target</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">base</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">Zones</span><span class="p">)</span> <span class="k">else</span> <span class="n">geometry</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">Grid</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">same_crs</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">crs</span><span class="p">):</span>
         <span class="k">return</span>
     <span class="n">width</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">min_cell_width</span>
     <span class="k">if</span> <span class="n">width</span> <span class="o">&lt;</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">):</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Smallest target cell (</span><span class="si">{</span><span class="n">width</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">) spans fewer than two native raster &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;cells (</span><span class="si">{</span><span class="n">xres</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">yres</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">); the aggregate is under-resolved. &quot;</span>
-            <span class="s2">&quot;Calculate the footprint again on a finer grid (sim.calc_footprint &quot;</span>
-            <span class="s2">&quot;with a grid from mesh.to_grid()) for boundary accuracy.&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"Smallest target cell (</span><span class="si">{</span><span class="n">width</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">) spans fewer than two native raster "</span>
+            <span class="sa">f</span><span class="s2">"cells (</span><span class="si">{</span><span class="n">xres</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">yres</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">); the aggregate is under-resolved. "</span>
+            <span class="s2">"Calculate the footprint again on a finer grid (sim.calc_footprint "</span>
+            <span class="s2">"with a grid from mesh.to_grid()) for boundary accuracy."</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;Geometry&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;Mesh&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;Zones&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;check_resolution&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;overlap_weights&quot;</span><span class="p">,</span>
+    <span class="s2">"Geometry"</span><span class="p">,</span>
+    <span class="s2">"Mesh"</span><span class="p">,</span>
+    <span class="s2">"Zones"</span><span class="p">,</span>
+    <span class="s2">"check_resolution"</span><span class="p">,</span>
+    <span class="s2">"overlap_weights"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 
@@ -1251,8 +1253,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1278,14 +1280,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

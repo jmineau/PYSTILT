@@ -26,22 +26,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -49,7 +50,7 @@
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'guides/aggregation';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -61,8 +62,9 @@
     <link rel="next" title="Transport Error" href="transport_error.html" />
     <link rel="prev" title="Footprints And Particles" href="outputs.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -522,9 +524,9 @@ hours in each time bin:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
-<span class="n">hours</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span>   <span class="c1"># the start of each footprint hour</span>
+<span class="n">hours</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span>   <span class="c1"># the start of each footprint hour</span>
 <span class="n">bins</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">interval_range</span><span class="p">(</span>
-    <span class="n">start</span><span class="o">=</span><span class="n">hours</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">periods</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">hours</span><span class="p">),</span> <span class="n">freq</span><span class="o">=</span><span class="s2">&quot;1h&quot;</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="s2">&quot;left&quot;</span>
+    <span class="n">start</span><span class="o">=</span><span class="n">hours</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">periods</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">hours</span><span class="p">),</span> <span class="n">freq</span><span class="o">=</span><span class="s2">"1h"</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="s2">"left"</span>
 <span class="p">)</span>
 <span class="n">state</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span><span class="n">xmin</span><span class="o">=-</span><span class="mf">112.3</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=-</span><span class="mf">111.6</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=</span><span class="mf">40.4</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mf">41.0</span><span class="p">,</span>
                    <span class="n">xres</span><span class="o">=</span><span class="mf">0.02</span><span class="p">,</span> <span class="n">yres</span><span class="o">=</span><span class="mf">0.02</span><span class="p">)</span>
@@ -551,11 +553,11 @@ larger groups by label.</p></li>
 centers, build the <a class="reference internal" href="../reference/_api/stilt.Grid.html#stilt.Grid" title="stilt.Grid"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Grid</span></code></a> they lie on and select the rows you
 need from the result.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sources</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">from_windows</span><span class="p">(</span>
-    <span class="p">[(</span><span class="o">-</span><span class="mf">111.97</span><span class="p">,</span> <span class="mf">40.515</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mf">112.015</span><span class="p">,</span> <span class="mf">40.779</span><span class="p">)],</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;landfill&quot;</span><span class="p">,</span> <span class="s2">&quot;wwtp&quot;</span><span class="p">]</span>
+    <span class="p">[(</span><span class="o">-</span><span class="mf">111.97</span><span class="p">,</span> <span class="mf">40.515</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mf">112.015</span><span class="p">,</span> <span class="mf">40.779</span><span class="p">)],</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">"landfill"</span><span class="p">,</span> <span class="s2">"wwtp"</span><span class="p">]</span>
 <span class="p">)</span>
-<span class="n">by_source</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">time_bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>   <span class="c1"># index == [&quot;landfill&quot;, &quot;wwtp&quot;]</span>
+<span class="n">by_source</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">time_bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>   <span class="c1"># index == ["landfill", "wwtp"]</span>
 
-<span class="n">counties</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;counties.shp&quot;</span><span class="p">,</span> <span class="n">ids</span><span class="o">=</span><span class="s2">&quot;NAME&quot;</span><span class="p">)</span>
+<span class="n">counties</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">"counties.shp"</span><span class="p">,</span> <span class="n">ids</span><span class="o">=</span><span class="s2">"NAME"</span><span class="p">)</span>
 <span class="n">by_county</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">counties</span><span class="p">,</span> <span class="n">time_bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
 
 <span class="n">sectors</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Zones</span><span class="o">.</span><span class="n">from_labels</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>       <span class="c1"># one label per cell of state</span>
@@ -590,9 +592,9 @@ overwrite the stored file.</p>
 per receptor: the Jacobian. <a class="reference internal" href="../reference/_api/stilt.Project.jacobian.html#stilt.Project.jacobian" title="stilt.Project.jacobian"><code class="xref py py-meth docutils literal notranslate"><span class="pre">jacobian()</span></code></a> does this for
 a selection of simulations (<a class="reference internal" href="outputs.html"><span class="doc">Footprints And Particles</span></a>), all of one variant:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
-<span class="n">july</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span> <span class="o">==</span> <span class="mi">7</span><span class="p">)]</span>
+<span class="n">july</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr"</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span> <span class="o">==</span> <span class="mi">7</span><span class="p">)]</span>
 <span class="n">bins</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">interval_range</span><span class="p">(</span>
-    <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">&quot;2023-06-30&quot;</span><span class="p">),</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">&quot;2023-08-01&quot;</span><span class="p">),</span> <span class="n">freq</span><span class="o">=</span><span class="s2">&quot;6h&quot;</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="s2">&quot;left&quot;</span>
+    <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">"2023-06-30"</span><span class="p">),</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">"2023-08-01"</span><span class="p">),</span> <span class="n">freq</span><span class="o">=</span><span class="s2">"6h"</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="s2">"left"</span>
 <span class="p">)</span>
 
 <span class="n">H</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">july</span><span class="p">,</span> <span class="n">counties</span><span class="p">,</span> <span class="n">bins</span><span class="p">)</span>
@@ -617,7 +619,7 @@ receptor and each realization, <code class="docutils literal notranslate"><span 
 (<a class="reference internal" href="transport_error.html"><span class="doc">Transport Error</span></a>). <a class="reference internal" href="../reference/_api/stilt.Project.jacobian.html#stilt.Project.jacobian" title="stilt.Project.jacobian"><code class="xref py py-meth docutils literal notranslate"><span class="pre">jacobian()</span></code></a> makes a Jacobian
 from one realization, so select each realization by the <code class="docutils literal notranslate"><span class="pre">realization</span></code>
 column of <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> and loop:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ens</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;hrrr-err&quot;</span><span class="p">]</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ens</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr-err"</span><span class="p">]</span>
 <span class="n">H</span> <span class="o">=</span> <span class="p">{</span>
     <span class="n">k</span><span class="p">:</span> <span class="n">project</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">ens</span><span class="p">[</span><span class="n">ens</span><span class="o">.</span><span class="n">realization</span> <span class="o">==</span> <span class="n">k</span><span class="p">],</span> <span class="n">counties</span><span class="p">,</span> <span class="n">bins</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>   <span class="c1"># realizations 0 to 3</span>
@@ -710,8 +712,8 @@ only what you compute from each one, such as a posterior.</p>
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -737,14 +739,14 @@ only what you compute from each one, such as a posterior.</p>
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

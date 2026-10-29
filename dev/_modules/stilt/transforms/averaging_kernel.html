@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/transforms/averaging_kernel';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -448,14 +450,14 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.transforms.averaging_kernel</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">The averaging-kernel transform: weight each particle by a retrieval&#39;s kernel.</span>
+<span></span><span class="sd">"""</span>
+<span class="sd">The averaging-kernel transform: weight each particle by a retrieval's kernel.</span>
 
 <span class="sd">A kernel is given inline as ``levels`` and ``values``, or per receptor in a</span>
 <span class="sd">table (:func:`averaging_kernel_table`, ``project.add_table``).</span>
-<span class="sd">:func:`ak_weights` holds X-STILT&#39;s kernel weighting, public so your own</span>
+<span class="sd">:func:`ak_weights` holds X-STILT's kernel weighting, public so your own</span>
 <span class="sd">transforms can use it.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -483,12 +485,12 @@
     <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">levels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
     <span class="n">values</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
-    <span class="n">coordinate</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;release_height&quot;</span><span class="p">,</span>
+    <span class="n">coordinate</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"release_height"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return the averaging kernel at each particle&#39;s release coordinate.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the averaging kernel at each particle's release coordinate.</span>
 
-<span class="sd">    The kernel is interpolated linearly to each particle&#39;s release value of</span>
+<span class="sd">    The kernel is interpolated linearly to each particle's release value of</span>
 <span class="sd">    ``coordinate`` and repeated on every row of that particle. Outside</span>
 <span class="sd">    ``levels`` it is held at its end values.</span>
 
@@ -500,7 +502,7 @@
 <span class="sd">        Levels the kernel is given on, in the units of ``coordinate``.</span>
 <span class="sd">    values : list of float</span>
 <span class="sd">        Kernel value at each level.</span>
-<span class="sd">    coordinate : str, default &quot;release_height&quot;</span>
+<span class="sd">    coordinate : str, default "release_height"</span>
 <span class="sd">        Particle column to interpolate on: ``release_height`` (release height, m) or</span>
 <span class="sd">        ``pres`` (hPa).</span>
 
@@ -508,26 +510,26 @@
 <span class="sd">    -------</span>
 <span class="sd">    numpy.ndarray</span>
 <span class="sd">        Kernel value for each row of ``particles``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">coordinate</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Particle DataFrame has no column </span><span class="si">{</span><span class="n">coordinate</span><span class="si">!r}</span><span class="s2">. &quot;</span>
-            <span class="s2">&quot;Assign release heights (&#39;release_height&#39;) before applying an averaging kernel, &quot;</span>
-            <span class="s2">&quot;or pass coordinate=&#39;pres&#39; for pressure-based interpolation.&quot;</span>
+            <span class="sa">f</span><span class="s2">"Particle DataFrame has no column </span><span class="si">{</span><span class="n">coordinate</span><span class="si">!r}</span><span class="s2">. "</span>
+            <span class="s2">"Assign release heights ('release_height') before applying an averaging kernel, "</span>
+            <span class="s2">"or pass coordinate='pres' for pressure-based interpolation."</span>
         <span class="p">)</span>
     <span class="n">lv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">va</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">lv</span><span class="p">)</span>
     <span class="n">lv</span><span class="p">,</span> <span class="n">va</span> <span class="o">=</span> <span class="n">lv</span><span class="p">[</span><span class="n">order</span><span class="p">],</span> <span class="n">va</span><span class="p">[</span><span class="n">order</span><span class="p">]</span>
     <span class="n">per_particle</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">coordinate</span><span class="p">)</span>
-    <span class="n">coords</span> <span class="o">=</span> <span class="n">per_particle</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span>
+    <span class="n">coords</span> <span class="o">=</span> <span class="n">per_particle</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span>
         <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">lv</span><span class="p">,</span> <span class="n">va</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="n">va</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">right</span><span class="o">=</span><span class="n">va</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span></div>
 
 
 
-<span class="n">KERNEL_TABLE_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;level&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">)</span>
+<span class="n">KERNEL_TABLE_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"level"</span><span class="p">,</span> <span class="s2">"value"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="averaging_kernel_table">
@@ -537,12 +539,12 @@
     <span class="n">levels</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">],</span>
     <span class="n">values</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return a table of averaging kernels, one per receptor, for :class:`AveragingKernel`.</span>
 
 <span class="sd">    The table is in long form, with ``receptor``, ``level``, and ``value``</span>
 <span class="sd">    columns and one row per kernel level. Add it to the project with</span>
-<span class="sd">    ``project.add_table(&quot;kernels&quot;, table)`` and name it as ``table:</span>
+<span class="sd">    ``project.add_table("kernels", table)`` and name it as ``table:</span>
 <span class="sd">    kernels`` in the ``averaging_kernel`` transform.</span>
 
 <span class="sd">    Parameters</span>
@@ -559,13 +561,13 @@
 <span class="sd">    -------</span>
 <span class="sd">    pandas.DataFrame</span>
 <span class="sd">        The kernel table.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">ids</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">r</span><span class="p">))</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">]</span>
+<span class="sd">    """</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="s2">"id"</span><span class="p">,</span> <span class="n">r</span><span class="p">))</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">]</span>
     <span class="n">value_arrays</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">]</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value_arrays</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;averaging_kernel_table: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span><span class="si">}</span><span class="s2"> receptors but &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">value_arrays</span><span class="p">)</span><span class="si">}</span><span class="s2"> kernels.&quot;</span>
+            <span class="sa">f</span><span class="s2">"averaging_kernel_table: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span><span class="si">}</span><span class="s2"> receptors but "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">value_arrays</span><span class="p">)</span><span class="si">}</span><span class="s2"> kernels."</span>
         <span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">shared</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
@@ -577,17 +579,17 @@
         <span class="n">level_arrays</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lv</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="k">for</span> <span class="n">lv</span> <span class="ow">in</span> <span class="n">levels</span><span class="p">]</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">level_arrays</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;averaging_kernel_table: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span><span class="si">}</span><span class="s2"> receptors but &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">level_arrays</span><span class="p">)</span><span class="si">}</span><span class="s2"> level arrays.&quot;</span>
+                <span class="sa">f</span><span class="s2">"averaging_kernel_table: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span><span class="si">}</span><span class="s2"> receptors but "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">level_arrays</span><span class="p">)</span><span class="si">}</span><span class="s2"> level arrays."</span>
             <span class="p">)</span>
     <span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">rid</span><span class="p">,</span> <span class="n">lv</span><span class="p">,</span> <span class="n">va</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ids</span><span class="p">,</span> <span class="n">level_arrays</span><span class="p">,</span> <span class="n">value_arrays</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">lv</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">lv</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">va</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;averaging_kernel_table: receptor </span><span class="si">{</span><span class="n">rid</span><span class="si">}</span><span class="s2"> has </span><span class="si">{</span><span class="n">lv</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> levels &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;and </span><span class="si">{</span><span class="n">va</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> values.&quot;</span>
+                <span class="sa">f</span><span class="s2">"averaging_kernel_table: receptor </span><span class="si">{</span><span class="n">rid</span><span class="si">}</span><span class="s2"> has </span><span class="si">{</span><span class="n">lv</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> levels "</span>
+                <span class="sa">f</span><span class="s2">"and </span><span class="si">{</span><span class="n">va</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> values."</span>
             <span class="p">)</span>
-        <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;receptor&quot;</span><span class="p">:</span> <span class="n">rid</span><span class="p">,</span> <span class="s2">&quot;level&quot;</span><span class="p">:</span> <span class="n">lv</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">va</span><span class="p">}))</span>
+        <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"receptor"</span><span class="p">:</span> <span class="n">rid</span><span class="p">,</span> <span class="s2">"level"</span><span class="p">:</span> <span class="n">lv</span><span class="p">,</span> <span class="s2">"value"</span><span class="p">:</span> <span class="n">va</span><span class="p">}))</span>
     <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
 
@@ -596,32 +598,32 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_read_kernel_table</span><span class="p">(</span>
     <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mtime</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Read a per-receptor averaging-kernel table from parquet or CSV.</span>
 
 <span class="sd">    Cached by ``path`` and its modification time ``mtime``, so an edited</span>
 <span class="sd">    table is read again.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">suffix</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">suffix</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;.parquet&quot;</span><span class="p">,</span> <span class="s2">&quot;.pq&quot;</span><span class="p">}:</span>
+    <span class="k">if</span> <span class="n">suffix</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">".parquet"</span><span class="p">,</span> <span class="s2">".pq"</span><span class="p">}:</span>
         <span class="n">table</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;.csv&quot;</span><span class="p">:</span>
+    <span class="k">elif</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s2">".csv"</span><span class="p">:</span>
         <span class="n">table</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;averaging_kernel table </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2"> must be a .parquet or .csv file.&quot;</span>
+            <span class="sa">f</span><span class="s2">"averaging_kernel table </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2"> must be a .parquet or .csv file."</span>
         <span class="p">)</span>
     <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">KERNEL_TABLE_COLUMNS</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;averaging_kernel table </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2"> lacks columns </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">; &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;expected </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">KERNEL_TABLE_COLUMNS</span><span class="p">)</span><span class="si">}</span><span class="s2"> (see averaging_kernel_table).&quot;</span>
+            <span class="sa">f</span><span class="s2">"averaging_kernel table </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2"> lacks columns </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">; "</span>
+            <span class="sa">f</span><span class="s2">"expected </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">KERNEL_TABLE_COLUMNS</span><span class="p">)</span><span class="si">}</span><span class="s2"> (see averaging_kernel_table)."</span>
         <span class="p">)</span>
     <span class="n">kernels</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">rid</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">rid</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="n">kernels</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">rid</span><span class="p">)]</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">group</span><span class="p">[</span><span class="s2">&quot;level&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
-            <span class="n">group</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+            <span class="n">group</span><span class="p">[</span><span class="s2">"level"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+            <span class="n">group</span><span class="p">[</span><span class="s2">"value"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">kernels</span>
 
@@ -629,8 +631,8 @@
 <div class="viewcode-block" id="AveragingKernel">
 <a class="viewcode-back" href="../../../reference/_api/stilt.transforms.AveragingKernel.html#stilt.transforms.AveragingKernel">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">AveragingKernel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Transform that weights each particle&#39;s ``foot`` by an averaging kernel.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Transform that weights each particle's ``foot`` by an averaging kernel.</span>
 
 <span class="sd">    Give the kernel as ``levels`` and ``values``, or name a ``table`` with</span>
 <span class="sd">    one kernel per receptor (see :func:`averaging_kernel_table`): a project</span>
@@ -640,65 +642,65 @@
 
 <span class="sd">    ``levels`` are release heights above ground in meters by default. Set</span>
 <span class="sd">    ``coordinate: pres`` for a kernel on pressure levels in hPa. Fold any</span>
-<span class="sd">    instrument-specific factor, such as TCCON&#39;s wet-air scaling, into the</span>
+<span class="sd">    instrument-specific factor, such as TCCON's wet-air scaling, into the</span>
 <span class="sd">    values. The kernel weight is added as an ``ak_weight`` column.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;averaging_kernel&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;averaging_kernel&quot;</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"averaging_kernel"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"averaging_kernel"</span>
     <span class="n">levels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Levels of the kernel, in meters above ground or hPa (see ``coordinate``).&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Levels of the kernel, in meters above ground or hPa (see ``coordinate``)."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">values</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Normalized averaging-kernel value at each level.&quot;</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Normalized averaging-kernel value at each level."</span>
     <span class="p">)</span>
     <span class="n">table</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">&quot;Table of kernels, one per receptor, with ``receptor``, ``level``, &quot;</span>
-            <span class="s2">&quot;and ``value`` columns: the name of a project table &quot;</span>
-            <span class="s2">&quot;(``project.add_table``), such as ``kernels``, or a .parquet or .csv &quot;</span>
-            <span class="s2">&quot;file. A relative path is relative to the project root.&quot;</span>
+            <span class="s2">"Table of kernels, one per receptor, with ``receptor``, ``level``, "</span>
+            <span class="s2">"and ``value`` columns: the name of a project table "</span>
+            <span class="s2">"(``project.add_table``), such as ``kernels``, or a .parquet or .csv "</span>
+            <span class="s2">"file. A relative path is relative to the project root."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">coordinate</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;release_height&quot;</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Particle column the levels refer to: ``release_height`` (release height) or ``pres``.&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">"release_height"</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Particle column the levels refer to: ``release_height`` (release height) or ``pres``."</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;after&quot;</span><span class="p">)</span>
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_inline_or_table</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Require either ``levels`` and ``values`` of equal length, or a ``table``.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Require either ``levels`` and ``values`` of equal length, or a ``table``."""</span>
         <span class="n">inline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">inline</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">&quot;averaging_kernel takes either levels/values or a table, not both.&quot;</span>
+                    <span class="s2">"averaging_kernel takes either levels/values or a table, not both."</span>
                 <span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;averaging_kernel table must be a file name.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"averaging_kernel table must be a file name."</span><span class="p">)</span>
             <span class="k">return</span> <span class="bp">self</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;averaging_kernel requires non-empty levels and values, or a table.&quot;</span>
+                <span class="s2">"averaging_kernel requires non-empty levels and values, or a table."</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;averaging_kernel levels (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span><span class="si">}</span><span class="s2">) and values &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">)</span><span class="si">}</span><span class="s2">) must have the same length.&quot;</span>
+                <span class="sa">f</span><span class="s2">"averaging_kernel levels (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span><span class="si">}</span><span class="s2">) and values "</span>
+                <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">)</span><span class="si">}</span><span class="s2">) must have the same length."</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_kernels</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the kernels of ``table`` by receptor id; a relative path starts from *directory*.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the kernels of ``table`` by receptor id; a relative path starts from *directory*."""</span>
         <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span>
-        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[A-Za-z0-9_-]+&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>  <span class="c1"># a project table&#39;s name</span>
-            <span class="n">path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;tables/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">.parquet&quot;</span>
+        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[A-Za-z0-9_-]+"</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>  <span class="c1"># a project table's name</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"tables/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">.parquet"</span>
         <span class="k">if</span> <span class="n">directory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
             <span class="n">path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="n">path</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">_read_kernel_table</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">st_mtime</span><span class="p">)</span>
@@ -706,7 +708,7 @@
 <div class="viewcode-block" id="AveragingKernel.table_receptors">
 <a class="viewcode-back" href="../../../reference/_api/stilt.transforms.AveragingKernel.table_receptors.html#stilt.transforms.AveragingKernel.table_receptors">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">table_receptors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the ids of the receptors the ``table`` has a kernel for.</span>
 
 <span class="sd">        A relative ``table`` path starts from *directory*, as for</span>
@@ -718,10 +720,10 @@
 <span class="sd">            If the transform has no ``table``, or the table lacks the</span>
 <span class="sd">            ``receptor``, ``level``, or ``value`` column.</span>
 <span class="sd">        FileNotFoundError</span>
-<span class="sd">            If the table&#39;s file does not exist.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">            If the table's file does not exist.</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;averaging_kernel has levels and values, not a table.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"averaging_kernel has levels and values, not a table."</span><span class="p">)</span>
         <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_kernels</span><span class="p">(</span><span class="n">directory</span><span class="p">))</span></div>
 
 
@@ -730,19 +732,19 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">kernel</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return ``(levels, values)`` of the kernel for *receptor*.</span>
 
-<span class="sd">        A ``table`` is looked up by the receptor&#39;s id, and a relative</span>
+<span class="sd">        A ``table`` is looked up by the receptor's id, and a relative</span>
 <span class="sd">        ``table`` path starts from *directory*.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span>
         <span class="k">if</span> <span class="n">receptor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;averaging_kernel with a table needs the receptor to know which &quot;</span>
-                <span class="s2">&quot;kernel to look up.&quot;</span>
+                <span class="s2">"averaging_kernel with a table needs the receptor to know which "</span>
+                <span class="s2">"kernel to look up."</span>
             <span class="p">)</span>
         <span class="n">kernels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernels</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
         <span class="n">rid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
@@ -750,8 +752,8 @@
             <span class="n">levels</span><span class="p">,</span> <span class="n">values</span> <span class="o">=</span> <span class="n">kernels</span><span class="p">[</span><span class="n">rid</span><span class="p">]</span>
         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;averaging_kernel table </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="si">!r}</span><span class="s2"> has no kernel for &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;receptor </span><span class="si">{</span><span class="n">rid</span><span class="si">!r}</span><span class="s2">.&quot;</span>
+                <span class="sa">f</span><span class="s2">"averaging_kernel table </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="si">!r}</span><span class="s2"> has no kernel for "</span>
+                <span class="sa">f</span><span class="s2">"receptor </span><span class="si">{</span><span class="n">rid</span><span class="si">!r}</span><span class="s2">."</span>
             <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
         <span class="k">return</span> <span class="n">levels</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span></div>
 
@@ -764,12 +766,12 @@
         <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the particles with ``foot`` weighted by the averaging kernel.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the particles with ``foot`` weighted by the averaging kernel."""</span>
         <span class="n">levels</span><span class="p">,</span> <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">(</span><span class="n">receptor</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
         <span class="n">weights</span> <span class="o">=</span> <span class="n">ak_weights</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">levels</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coordinate</span><span class="p">)</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;ak_weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">weights</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">weights</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"ak_weight"</span><span class="p">]</span> <span class="o">=</span> <span class="n">weights</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">]</span> <span class="o">*</span> <span class="n">weights</span>
         <span class="k">return</span> <span class="n">out</span></div>
 </div>
 
@@ -802,8 +804,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -829,14 +831,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

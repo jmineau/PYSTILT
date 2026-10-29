@@ -26,22 +26,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -50,7 +51,7 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'guides/transforms';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -62,8 +63,9 @@
     <link rel="next" title="Plume Background" href="plume_background.html" />
     <link rel="prev" title="Slant Columns" href="slant_columns.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -607,7 +609,7 @@ added and the kernels in your product, and add it to the project:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">averaging_kernel_table</span>
 
 <span class="n">table</span> <span class="o">=</span> <span class="n">averaging_kernel_table</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">ak_pressure</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">ak</span><span class="p">)</span>
-<span class="n">project</span><span class="o">.</span><span class="n">add_table</span><span class="p">(</span><span class="s2">&quot;kernels&quot;</span><span class="p">,</span> <span class="n">table</span><span class="p">)</span>     <span class="c1"># tables/kernels.parquet</span>
+<span class="n">project</span><span class="o">.</span><span class="n">add_table</span><span class="p">(</span><span class="s2">"kernels"</span><span class="p">,</span> <span class="n">table</span><span class="p">)</span>     <span class="c1"># tables/kernels.parquet</span>
 </pre></div>
 </div>
 <p><a class="reference internal" href="../reference/_api/stilt.observations.receptors_from_soundings.html#stilt.observations.receptors_from_soundings" title="stilt.observations.receptors_from_soundings"><code class="xref py py-func docutils literal notranslate"><span class="pre">receptors_from_soundings()</span></code></a> returns this table
@@ -640,7 +642,7 @@ nothing in the project changes. Without a simulation,
 <a class="reference internal" href="../reference/_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a> takes the same <code class="docutils literal notranslate"><span class="pre">transforms</span></code>.</p>
 <p>To see what a transform did, apply it to the particle table yourself:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">weighted</span> <span class="o">=</span> <span class="n">PressureWeighting</span><span class="p">()</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="p">)</span>
-<span class="n">weighted</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">&quot;particle&quot;</span><span class="p">)[[</span><span class="s2">&quot;release_height&quot;</span><span class="p">,</span> <span class="s2">&quot;xpres&quot;</span><span class="p">,</span> <span class="s2">&quot;pwf&quot;</span><span class="p">]]</span>
+<span class="n">weighted</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"particle"</span><span class="p">)[[</span><span class="s2">"release_height"</span><span class="p">,</span> <span class="s2">"xpres"</span><span class="p">,</span> <span class="s2">"pwf"</span><span class="p">]]</span>
 </pre></div>
 </div>
 </section>
@@ -658,15 +660,15 @@ unchanged.</p>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">BoundaryLayerOnly</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Drop influence from particles released above ``max_height`` m AGL.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Drop influence from particles released above ``max_height`` m AGL."""</span>
 
     <span class="n">max_height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1500.0</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="n">z</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">&quot;release_height&quot;</span><span class="p">)</span> <span class="c1"># one value per particle</span>
-        <span class="n">keep</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_height</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">"release_height"</span><span class="p">)</span> <span class="c1"># one value per particle</span>
+        <span class="n">keep</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_height</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">keep</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">keep</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">out</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">out</span>
 </pre></div>
 </div>
@@ -798,8 +800,8 @@ weighting from scratch.</p>
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -825,14 +827,14 @@ weighting from scratch.</p>
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

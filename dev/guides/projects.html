@@ -26,22 +26,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -49,7 +50,7 @@
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'guides/projects';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -61,8 +62,9 @@
     <link rel="next" title="Running" href="running.html" />
     <link rel="prev" title="Meteorology" href="meteorology.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -540,7 +542,7 @@ its job scripts and logs (<a class="reference internal" href="slurm.html"><span 
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/arl/hrrr</span>
-<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;%Y%m%d_%H&quot;</span>
+<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">"%Y%m%d_%H"</span>
 <span class="w">    </span><span class="nt">file_tres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6h</span>
 
 <span class="nt">variants</span><span class="p">:</span>
@@ -717,7 +719,7 @@ directory share it.</p>
     settings=hrrr-err-7be104/             # an ensemble: a folder per realization
       realization=0/date=2023-07-15/&lt;receptor id&gt;.parquet
   footprints/
-    settings=hrrr-93278c/                 # one folder per variant&#39;s footprint settings
+    settings=hrrr-93278c/                 # one folder per variant's footprint settings
       _settings.yaml                      # names the particles folder it was made from
       date=2023-07-15/&lt;receptor id&gt;.parquet
   logs/
@@ -900,8 +902,8 @@ R can tell the receptors apart.</p>
 <p>After the project is made, the folder is all you need:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
-<span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">&quot;./my_project&quot;</span><span class="p">)</span>
-<span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">()</span>   <span class="c1"># one row per simulation, with a &quot;state&quot; column</span>
+<span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"./my_project"</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">()</span>   <span class="c1"># one row per simulation, with a "state" column</span>
 </pre></div>
 </div>
 <p>Opening a project only reads it. To change a setting, edit <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.
@@ -920,20 +922,20 @@ Receptors already in the file are left as they are.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
 <span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
-    <span class="s2">&quot;./my_project&quot;</span><span class="p">,</span>
+    <span class="s2">"./my_project"</span><span class="p">,</span>
     <span class="n">mets</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;directory&quot;</span><span class="p">:</span> <span class="s2">&quot;/data/arl/hrrr&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;file_format&quot;</span><span class="p">:</span> <span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">_%H&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;file_tres&quot;</span><span class="p">:</span> <span class="s2">&quot;6h&quot;</span><span class="p">,</span>
+        <span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"directory"</span><span class="p">:</span> <span class="s2">"/data/arl/hrrr"</span><span class="p">,</span>
+            <span class="s2">"file_format"</span><span class="p">:</span> <span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">_%H"</span><span class="p">,</span>
+            <span class="s2">"file_tres"</span><span class="p">:</span> <span class="s2">"6h"</span><span class="p">,</span>
         <span class="p">}</span>
     <span class="p">},</span>
     <span class="n">grid</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">&quot;xmin&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">114.0</span><span class="p">,</span> <span class="s2">&quot;xmax&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">111.0</span><span class="p">,</span>
-        <span class="s2">&quot;ymin&quot;</span><span class="p">:</span> <span class="mf">39.0</span><span class="p">,</span> <span class="s2">&quot;ymax&quot;</span><span class="p">:</span> <span class="mf">42.0</span><span class="p">,</span>
-        <span class="s2">&quot;xres&quot;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s2">&quot;yres&quot;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+        <span class="s2">"xmin"</span><span class="p">:</span> <span class="o">-</span><span class="mf">114.0</span><span class="p">,</span> <span class="s2">"xmax"</span><span class="p">:</span> <span class="o">-</span><span class="mf">111.0</span><span class="p">,</span>
+        <span class="s2">"ymin"</span><span class="p">:</span> <span class="mf">39.0</span><span class="p">,</span> <span class="s2">"ymax"</span><span class="p">:</span> <span class="mf">42.0</span><span class="p">,</span>
+        <span class="s2">"xres"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s2">"yres"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
     <span class="p">},</span>
-    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="p">{},</span> <span class="s2">&quot;hrrr-zi08&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;ziscale&quot;</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">}},</span>
+    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{},</span> <span class="s2">"hrrr-zi08"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"ziscale"</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">}},</span>
     <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>
     <span class="n">numpar</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
 <span class="p">)</span>
@@ -945,10 +947,10 @@ check:</p>
 
 <span class="n">config</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">ProjectConfig</span><span class="p">(</span>
     <span class="n">mets</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="n">MetConfig</span><span class="p">(</span>
-            <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;/data/arl/hrrr&quot;</span><span class="p">,</span>
-            <span class="n">file_format</span><span class="o">=</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">_%H&quot;</span><span class="p">,</span>
-            <span class="n">file_tres</span><span class="o">=</span><span class="s2">&quot;6h&quot;</span><span class="p">,</span>
+        <span class="s2">"hrrr"</span><span class="p">:</span> <span class="n">MetConfig</span><span class="p">(</span>
+            <span class="n">directory</span><span class="o">=</span><span class="s2">"/data/arl/hrrr"</span><span class="p">,</span>
+            <span class="n">file_format</span><span class="o">=</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">_%H"</span><span class="p">,</span>
+            <span class="n">file_tres</span><span class="o">=</span><span class="s2">"6h"</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="p">},</span>
     <span class="n">grid</span><span class="o">=</span><span class="n">stilt</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span>
@@ -958,10 +960,10 @@ check:</p>
     <span class="p">),</span>
     <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>
     <span class="n">numpar</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
-    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hrrr&quot;</span><span class="p">:</span> <span class="p">{}},</span>
+    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{}},</span>
 <span class="p">)</span>
-<span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="s2">&quot;./my_project&quot;</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
-<span class="n">project</span><span class="o">.</span><span class="n">variants</span>        <span class="c1"># {&quot;hrrr&quot;: Variant(...)}, each with its full settings</span>
+<span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="s2">"./my_project"</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">variants</span>        <span class="c1"># {"hrrr": Variant(...)}, each with its full settings</span>
 </pre></div>
 </div>
 </section>
@@ -1056,8 +1058,8 @@ check:</p>
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1083,14 +1085,14 @@ check:</p>
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

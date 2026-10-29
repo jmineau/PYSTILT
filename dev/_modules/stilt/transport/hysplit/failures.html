@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=2650ab4f"></script>
+    <script src="../../../../_static/documentation_options.js?v=6d4f2463"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,7 +49,7 @@
     <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/transport/hysplit/failures';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev9+g0be154ab4" />
+  <meta name="docsearch:version" content="0.1.0a27.dev10+g751dc408c" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -448,7 +450,7 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.transport.hysplit.failures</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Why a HYSPLIT run failed, read from the messages in its log and its WARNING file.&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""Why a HYSPLIT run failed, read from the messages in its log and its WARNING file."""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -458,60 +460,60 @@
 <div class="viewcode-block" id="FailureReason">
 <a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.FailureReason.html#stilt.transport.hysplit.FailureReason">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">FailureReason</span><span class="p">(</span><span class="n">StrEnum</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Why a HYSPLIT run failed.</span>
 
-<span class="sd">    The driver reads it from HYSPLIT&#39;s log and ``WARNING`` file when the</span>
+<span class="sd">    The driver reads it from HYSPLIT's log and ``WARNING`` file when the</span>
 <span class="sd">    run ends, or knows it (a timeout, no particle output), and raises a</span>
 <span class="sd">    :class:`~stilt.exceptions.SimulationError` with it as ``reason``. The</span>
 <span class="sd">    worker records it with the simulation.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">MET_COVERAGE</span> <span class="o">=</span> <span class="s2">&quot;MET_COVERAGE&quot;</span>
-    <span class="n">VARYING_MET_INTERVAL</span> <span class="o">=</span> <span class="s2">&quot;VARYING_MET_INTERVAL&quot;</span>
-    <span class="n">NO_PARTICLE_DATA</span> <span class="o">=</span> <span class="s2">&quot;NO_PARTICLE_DATA&quot;</span>
-    <span class="n">FORTRAN_RUNTIME_ERROR</span> <span class="o">=</span> <span class="s2">&quot;FORTRAN_RUNTIME_ERROR&quot;</span>
-    <span class="n">TIMEOUT</span> <span class="o">=</span> <span class="s2">&quot;TIMEOUT&quot;</span>
-    <span class="n">PARTICLE_LIMIT</span> <span class="o">=</span> <span class="s2">&quot;PARTICLE_LIMIT&quot;</span></div>
+    <span class="n">MET_COVERAGE</span> <span class="o">=</span> <span class="s2">"MET_COVERAGE"</span>
+    <span class="n">VARYING_MET_INTERVAL</span> <span class="o">=</span> <span class="s2">"VARYING_MET_INTERVAL"</span>
+    <span class="n">NO_PARTICLE_DATA</span> <span class="o">=</span> <span class="s2">"NO_PARTICLE_DATA"</span>
+    <span class="n">FORTRAN_RUNTIME_ERROR</span> <span class="o">=</span> <span class="s2">"FORTRAN_RUNTIME_ERROR"</span>
+    <span class="n">TIMEOUT</span> <span class="o">=</span> <span class="s2">"TIMEOUT"</span>
+    <span class="n">PARTICLE_LIMIT</span> <span class="o">=</span> <span class="s2">"PARTICLE_LIMIT"</span></div>
 
 
 
-<span class="c1">#: Phrases HYSPLIT (or the driver) writes to stilt.log or HYSPLIT&#39;s WARNING</span>
+<span class="c1">#: Phrases HYSPLIT (or the driver) writes to stilt.log or HYSPLIT's WARNING</span>
 <span class="c1">#: file, mapped to their FailureReason. The four ``metpos`` warnings say a</span>
-<span class="c1">#: particle inside the met&#39;s grid reached a time no met file holds: the met</span>
+<span class="c1">#: particle inside the met's grid reached a time no met file holds: the met</span>
 <span class="c1">#: ran out. HYSPLIT writes only the first such warning of a run. It writes</span>
-<span class="c1">#: ``off spatial domain of all grids`` when every particle left the met&#39;s</span>
+<span class="c1">#: ``off spatial domain of all grids`` when every particle left the met's</span>
 <span class="c1">#: domain, which is not a failure, and also when the met ran out, so that</span>
 <span class="c1">#: line tells nothing; ``check_met_stop`` in the driver reads where the</span>
 <span class="c1">#: particles stopped instead.</span>
 <span class="n">FAILURE_PHRASES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">FailureReason</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;start point not within (x,y,t) any data file&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
-    <span class="s2">&quot;start time after end of meteorology data&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
-    <span class="s2">&quot;no more meteorology&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
-    <span class="s2">&quot;too much time between files&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
-    <span class="s2">&quot;no meteo data at current time&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
-    <span class="s2">&quot;no data at current time on any grid&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
-    <span class="s2">&quot;meteorological data time interval varies&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">VARYING_MET_INTERVAL</span><span class="p">,</span>
-    <span class="s2">&quot;PARTICLE_STILT.DAT does not contain any trajectory data&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">NO_PARTICLE_DATA</span><span class="p">,</span>
-    <span class="s2">&quot;Fortran runtime error&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">FORTRAN_RUNTIME_ERROR</span><span class="p">,</span>
+    <span class="s2">"start point not within (x,y,t) any data file"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
+    <span class="s2">"start time after end of meteorology data"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
+    <span class="s2">"no more meteorology"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
+    <span class="s2">"too much time between files"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
+    <span class="s2">"no meteo data at current time"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
+    <span class="s2">"no data at current time on any grid"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
+    <span class="s2">"meteorological data time interval varies"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">VARYING_MET_INTERVAL</span><span class="p">,</span>
+    <span class="s2">"PARTICLE_STILT.DAT does not contain any trajectory data"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">NO_PARTICLE_DATA</span><span class="p">,</span>
+    <span class="s2">"Fortran runtime error"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">FORTRAN_RUNTIME_ERROR</span><span class="p">,</span>
 <span class="p">}</span>
 
 
 <span class="c1">#: What HYSPLIT writes to its WARNING file when it reaches ``MAXPAR`` while</span>
 <span class="c1">#: releasing. Not in :data:`FAILURE_PHRASES`: a release from one location</span>
-<span class="c1">#: writes it too (HYSPLIT&#39;s rounding asks for one particle over ``numpar``</span>
+<span class="c1">#: writes it too (HYSPLIT's rounding asks for one particle over ``numpar``</span>
 <span class="c1">#: and keeps ``numpar``), which is harmless. From several locations it means</span>
 <span class="c1">#: the last ones got fewer particles or none (``PARTICLE_LIMIT``).</span>
-<span class="n">PARTICLE_LIMIT_PHRASE</span> <span class="o">=</span> <span class="s2">&quot;exceeding puff limit&quot;</span>
+<span class="n">PARTICLE_LIMIT_PHRASE</span> <span class="o">=</span> <span class="s2">"exceeding puff limit"</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">failure_in</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FailureReason</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return the first known failure in HYSPLIT&#39;s messages, as its reason and the line that says it.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the first known failure in HYSPLIT's messages, as its reason and the line that says it.</span>
 
 <span class="sd">    Phrases are tried in the order of :data:`FAILURE_PHRASES`. ``None``</span>
 <span class="sd">    when the log holds none of them.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">for</span> <span class="n">phrase</span><span class="p">,</span> <span class="n">reason</span> <span class="ow">in</span> <span class="n">FAILURE_PHRASES</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">if</span> <span class="n">phrase</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
             <span class="n">line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">text</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span> <span class="k">if</span> <span class="n">phrase</span> <span class="ow">in</span> <span class="n">line</span><span class="p">)</span>
@@ -546,8 +548,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -573,14 +575,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>
