@@ -68,6 +68,13 @@ processes runs one receptor at a time, with all of that receptor's
 variants. Set it no higher than the number of CPU cores you have. ``cpus``
 means the same on Slurm, per array task.
 
+A Python script that calls ``project.run()`` with ``cpus`` above 1 needs its
+code under ``if __name__ == "__main__":``. Python 3.14, macOS, and Windows
+start each worker by importing the script again, so anything at the top of the
+script runs again in every worker. ``Project.init`` there stops with a
+``FileExistsError`` because ``config.yaml`` exists. ``stilt run --cpus 4``
+needs no guard.
+
 Save now, run later
 -------------------
 

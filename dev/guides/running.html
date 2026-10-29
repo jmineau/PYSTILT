@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=29b85e12"></script>
+    <script src="../_static/documentation_options.js?v=36fcbf0b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev12+gfd949eee8" />
+  <meta name="docsearch:version" content="0.1.0a27.dev15+g1d7f772d1" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -579,6 +579,12 @@ again.</p>
 processes runs one receptor at a time, with all of that receptor’s
 variants. Set it no higher than the number of CPU cores you have. <code class="docutils literal notranslate"><span class="pre">cpus</span></code>
 means the same on Slurm, per array task.</p>
+<p>A Python script that calls <code class="docutils literal notranslate"><span class="pre">project.run()</span></code> with <code class="docutils literal notranslate"><span class="pre">cpus</span></code> above 1 needs its
+code under <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">__name__</span> <span class="pre">==</span> <span class="pre">&quot;__main__&quot;:</span></code>. Python 3.14, macOS, and Windows
+start each worker by importing the script again, so anything at the top of the
+script runs again in every worker. <code class="docutils literal notranslate"><span class="pre">Project.init</span></code> there stops with a
+<code class="docutils literal notranslate"><span class="pre">FileExistsError</span></code> because <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> exists. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--cpus</span> <span class="pre">4</span></code>
+needs no guard.</p>
 </section>
 <section id="save-now-run-later">
 <h2>Save now, run later<a class="headerlink" href="#save-now-run-later" title="Link to this heading">#</a></h2>
