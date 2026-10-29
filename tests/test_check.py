@@ -164,6 +164,68 @@ def test_a_receptor_missing_a_met_file_is_listed_with_its_hours(tmp_path):
     )
 
 
+def _one_period_files(tmp_path: Path) -> list[Path]:
+    """Rewrite the project's met files to hold one time period each, their own hour."""
+    files = sorted((tmp_path / "met").glob("2023*"))
+    for path in files:
+        hour = pd.Timestamp(dt.datetime.strptime(path.name, "%Y%m%d_%H"))
+        write_arl_file(path, times=[hour])
+    return files
+
+
+@pytest.mark.parametrize("n_hours", [-3, 4])
+def test_met_files_that_hold_one_time_period_are_found_once_for_the_met(
+    tmp_path, n_hours
+):
+    """HYSPLIT stops on a file with one time period, so every run of the met would fail (#286)."""
+    project = _project(tmp_path, [_receptor(12), _receptor(13)], n_hours=n_hours)
+    _one_period_files(tmp_path)
+
+    table = project.check()
+
+    assert list(table["check"]) == ["met_periods"]
+    assert table["receptor"].isna().all()
+    message = table["message"].iloc[0]
+    assert "holds one time period" in message
+    assert "Only one time period of meteo data" in message
+
+
+def test_the_file_with_one_time_period_is_named(tmp_path):
+    project = _project(tmp_path, [_receptor(12)])
+    _one_period_files(tmp_path)
+
+    table = project.check()
+
+    # a backward run of 3 hours from 12:00 starts in the file of 09:00
+    assert str(tmp_path / "met" / "20230101_09") in table["message"].iloc[0]
+
+
+def test_a_missing_first_file_is_not_also_a_file_with_one_time_period(tmp_path):
+    project = _project(tmp_path, [_receptor(12)])
+    _one_period_files(tmp_path)
+    (tmp_path / "met" / "20230101_09").unlink()
+
+    assert list(project.check()["check"]) == ["met_files"]
+
+
+def test_checking_opens_one_met_file(tmp_path, monkeypatch):
+    """The check counts the time periods of one file, not of every file the receptors need."""
+    import arlmet
+
+    project = _project(tmp_path, [_receptor(12), _receptor(13)])
+    opened: list[str] = []
+    real_file = arlmet.File
+
+    def counting_file(path, *args, **kwargs):
+        opened.append(Path(path).name)
+        return real_file(path, *args, **kwargs)
+
+    monkeypatch.setattr(arlmet, "File", counting_file)
+
+    assert project.check().empty
+    assert opened == ["20230101_09"]
+
+
 def test_a_met_file_the_hour_after_a_backward_run_needs_is_found_missing(tmp_path):
     """A backward run also reads the hour after the release, which HYSPLIT interpolates."""
     receptor = _receptor(12.5)

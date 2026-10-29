@@ -1220,6 +1220,8 @@ class Project:
         - the met's ``directory`` exists and holds an ARL file (``met_directory``);
         - every met file each receptor's run needs is there, naming the
           hours (``met_files``);
+        - the first met file they need holds at least two time periods, which
+          HYSPLIT needs (``met_periods``);
         - each receptor is inside the met's crop box, ``subgrid_bounds``,
           when the crop is on (``met_crop``);
         - each receptor is inside the footprint grid (``grid``);
@@ -1247,7 +1249,8 @@ class Project:
 
         Notes
         -----
-        The check looks for files, not inside them, and the crop box is the
+        The check looks for files, not inside them (except to count the time
+        periods of the first file a run needs), and the crop box is the
         only domain it knows. A run that passes it can still fail as
         ``MET_COVERAGE``: a met file that is damaged or cut short is found
         when the run opens it, and a receptor outside the domain of the

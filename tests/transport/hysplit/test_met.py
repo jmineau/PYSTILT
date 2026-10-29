@@ -1069,6 +1069,55 @@ def test_check_passes_files_that_hold_every_hour_the_run_needs(tmp_path):
     _make_met(tmp_path, "%Y%m%d_%H", "6h").check(files, _WINDOW, hour_after=True)
 
 
+def test_check_passes_files_of_two_time_periods(tmp_path):
+    files = [
+        write_arl_file(
+            tmp_path / f"20230101_{hour:02d}",
+            times=pd.date_range(f"2023-01-01 {hour:02d}:00", periods=2, freq="h"),
+        )
+        for hour in range(2, 11, 2)
+    ]
+    _make_met(tmp_path, "%Y%m%d_%H", "2h").check(files, _WINDOW)
+
+
+def test_check_refuses_files_that_hold_one_time_period(tmp_path):
+    """HYSPLIT stops on a file with one time period, so no run can use them (#286)."""
+    files = [
+        write_arl_file(
+            tmp_path / f"20230101_{hour:02d}", times=[f"2023-01-01 {hour:02d}:00"]
+        )
+        for hour in range(2, 12)
+    ]
+    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
+    with pytest.raises(
+        MeteorologyError,
+        match=f"met file {files[0]} holds one time period.*Only one time period of "
+        "meteo data",
+    ) as info:
+        met.check(files, _WINDOW)
+    assert info.value.reason == "MET_COVERAGE"
+
+
+def test_check_refuses_one_file_with_one_time_period_among_longer_ones(tmp_path):
+    files = _six_hour_files(
+        tmp_path, {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 11:00"}
+    )
+    short = write_arl_file(tmp_path / "20230101_12", times=["2023-01-01 12:00"])
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    with pytest.raises(MeteorologyError, match=f"met file {short} holds one time"):
+        met.check([*files, short], _WINDOW)
+
+
+def test_a_file_cut_to_one_hour_is_reported_as_the_gap_it_leaves(tmp_path):
+    """A file that is short because it was cut is a gap in the hours, which is the more useful thing to say."""
+    files = _six_hour_files(
+        tmp_path, {"20230101_00": "2023-01-01 00:00", "20230101_06": "2023-01-01 11:00"}
+    )
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    with pytest.raises(MeteorologyError, match="no time step between 2023-01-01 00:00"):
+        met.check(files, _WINDOW)
+
+
 def test_check_fails_a_file_cut_after_a_whole_hour(tmp_path):
     """A file that ends early looks whole to arlmet; the gap after it does not (#189)."""
     files = _six_hour_files(

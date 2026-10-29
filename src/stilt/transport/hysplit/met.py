@@ -537,9 +537,11 @@ class Met:
         receptor outside ``subgrid_bounds`` is listed too, since HYSPLIT
         cannot start a particle outside the files. A met with ``download``
         has no files to look for before a run, so only its crop is checked.
-        This looks for files, not inside them: :meth:`check` opens each file
-        at a run, and a run that passes this one can still fail as
-        ``MET_COVERAGE`` when a file is damaged or cut short.
+        This looks for files, not inside them, except that it opens the first
+        file the receptors need to count its time periods, which HYSPLIT
+        needs to be at least two. :meth:`check` opens each file at a run, and
+        a run that passes this one can still fail as ``MET_COVERAGE`` when a
+        file is damaged or cut short.
 
         Parameters
         ----------
@@ -553,7 +555,7 @@ class Met:
         -------
         pandas.DataFrame
             One row for each thing found, with ``check`` (``met_directory``,
-            ``met_files``, or ``met_crop``), ``receptor`` (``NA`` when the
+            ``met_files``, ``met_periods``, or ``met_crop``), ``receptor`` (``NA`` when the
             finding is about the met), and ``message`` columns. Empty when
             nothing would stop a run.
         """
@@ -564,6 +566,7 @@ class Met:
                 found.append(("met_directory", None, problem))
             else:
                 found += self._missing_files(receptors, n_hours)
+                found += self._one_period(receptors, n_hours)
         found += self._outside_crop(receptors)
         return pd.DataFrame(found, columns=["check", "receptor", "message"])
 
@@ -596,6 +599,18 @@ class Met:
             for rid, time in zip(first["receptor"], first["time"], strict=True)
             if (message := messages[time]) is not None
         ]
+
+    def _one_period(
+        self, receptors: pd.DataFrame, n_hours: int
+    ) -> list[tuple[str, str | None, str]]:
+        """List the met when the first file the receptors need holds one time period, which HYSPLIT cannot read."""
+        file_format, tres = self.config.file_format, self._file_freq
+        assert file_format is not None and tres is not None  # a local met has both
+        start = _time(run_window(receptors["time"].min(), n_hours)[0]).floor(tres)
+        found = self._matching(start.strftime(file_format))
+        if found and _count_times(found[0]) == 1:
+            return [("met_periods", None, _one_period_message(found[0]))]
+        return []
 
     def _outside_crop(
         self, receptors: pd.DataFrame
@@ -632,7 +647,9 @@ class Met:
         (:meth:`arlmet.File.check`), and together their time steps must
         reach from the first time the run needs to the last, with no gap
         wider than their spacing. That also finds a file cut after a whole
-        time step, which looks whole to arlmet.
+        time step, which looks whole to arlmet. Files that cover the run but
+        include one with a single time period are refused last, since HYSPLIT
+        cannot read it.
 
         Parameters
         ----------
@@ -646,10 +663,11 @@ class Met:
         Raises
         ------
         MeteorologyError
-            Naming the damaged file and its first problem, or the times the
-            files do not hold.
+            Naming the damaged file and its first problem, a file that holds
+            one time period, or the times the files do not hold.
         """
         held: set[pd.Timestamp] = set()
+        single: list[Path] = []
         for path in files:
             times, problems = _inspect(path)
             if problems:
@@ -657,6 +675,8 @@ class Met:
                 raise MeteorologyError(
                     f"The met file {path} is damaged: {problems[0]}{more}"
                 )
+            if len(times) == 1:
+                single.append(path)
             held.update(times)
 
         earlier, later = _cover(window, hour_after, self._file_freq)
@@ -677,6 +697,8 @@ class Met:
                     f"The met files hold no time step between "
                     f"{a:%Y-%m-%d %H:%M} and {b:%Y-%m-%d %H:%M}. {needs}"
                 )
+        if single:
+            raise MeteorologyError(_one_period_message(single[0]))
 
     def readable(self, files: list[Path]) -> list[Path]:
         """
@@ -769,6 +791,26 @@ def _inspect_file(
             return tuple(met.times), tuple(met.check())
     except ARLFormatError as exc:
         return (), (str(exc),)
+
+
+def _count_times(path: Path) -> int | None:
+    """Return the number of time periods in the ARL file at *path*, or ``None`` when it cannot be read as one."""
+    from arlmet import ARLFormatError, File
+
+    try:
+        with File(path) as met:
+            return len(met.times)
+    except (ARLFormatError, OSError):
+        return None
+
+
+def _one_period_message(path: Path) -> str:
+    """Return why the met file at *path*, which holds one time period, cannot be used."""
+    return (
+        f"The met file {path} holds one time period. HYSPLIT stops on a file "
+        "with one ('Only one time period of meteo data'), so each file must "
+        "hold at least two, such as the 6-hour files of NOAA's HRRR archive."
+    )
 
 
 def _walk(directory: Path) -> Iterator[tuple[str, list[str]]]:
