@@ -177,7 +177,7 @@ transforms:
 ```
 
 `"column"` makes vertical columns in place of slant lines of sight. The
-[satellite tutorial](https://jmineau.github.io/PYSTILT/tutorials/satellite_column.html) goes from
+[satellite tutorial](https://jmineau.github.io/PYSTILT/stable/tutorials/satellite_column.html) goes from
 an orbit to modeled and observed enhancements.
 
 ## Particle transforms
@@ -198,7 +198,7 @@ transforms:
 ```
 
 A transform is any object with an `apply(particles, receptor=None, directory=None)` method. The
-[transforms guide](https://jmineau.github.io/PYSTILT/guides/transforms.html)
+[transforms guide](https://jmineau.github.io/PYSTILT/stable/guides/transforms.html)
 covers the column-weighting science and how to write your own.
 
 ## Loading results
@@ -259,13 +259,13 @@ STILT-R made.
 PYSTILT footprints match the [STILT-R](https://github.com/uataq/stilt) footprints to a relative
 tolerance of 1e-7 in every grid cell. The test suite checks this against a pinned STILT-R
 commit. The NetCDF files are laid out differently from STILT-R's, so read them as standard
-CF-1.8 NetCDF. The [STILT-R parity page](https://jmineau.github.io/PYSTILT/development/stilt_r_parity.html)
+CF-1.8 NetCDF. The [STILT-R parity page](https://jmineau.github.io/PYSTILT/stable/development/stilt_r_parity.html)
 of the development docs has the details.
 
 ## Roadmap
 
 What is implemented and what is planned is on the
-[roadmap](https://jmineau.github.io/PYSTILT/development/roadmap.html) page of the documentation.
+[roadmap](https://jmineau.github.io/PYSTILT/stable/development/roadmap.html) page of the documentation.
 
 ## Use of AI coding agents
 
