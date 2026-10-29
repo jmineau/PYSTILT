@@ -308,6 +308,54 @@ def test_correct_near_field_grows_outward_from_release_when_forward():
     assert fwd_out["foot"].iloc[0] > fwd_out["foot"].iloc[1]
 
 
+def test_correct_near_field_starts_an_msl_receptor_at_the_ground():
+    """An MSL receptor's plume starts at its height above ground, not above sea level (#287)."""
+    p = _particles_basic().drop(columns=["zagl"]).assign(zsfc=1300.0)
+    agl = PointReceptor(
+        time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
+    msl = PointReceptor(
+        time="2023-01-01 12:00",
+        longitude=-111.85,
+        latitude=40.77,
+        altitude=1305.0,
+        altitude_ref="msl",
+    )
+
+    from_agl = correct_near_field(p, agl, 0.5)
+    from_msl = correct_near_field(p, msl, 0.5)
+
+    assert from_agl["foot"].iloc[0] != pytest.approx(p["foot"].iloc[0])
+    assert from_msl["foot"].to_numpy() == pytest.approx(from_agl["foot"].to_numpy())
+
+
+def test_correct_near_field_puts_an_msl_receptor_below_the_terrain_at_the_ground():
+    p = _particles_basic().drop(columns=["zagl"]).assign(zsfc=1300.0)
+    below = PointReceptor(
+        time="2023-01-01 12:00",
+        longitude=-111.85,
+        latitude=40.77,
+        altitude=1290.0,
+        altitude_ref="msl",
+    )
+    foot = correct_near_field(p, below, 0.5)["foot"]
+    assert np.isfinite(foot).all() and (foot > 0).all()
+
+
+def test_correct_near_field_needs_zsfc_for_an_msl_receptor():
+    p = _particles_basic().drop(columns=["zagl"]).assign(release_height=1305.0)
+    msl = ColumnReceptor(
+        time="2023-01-01 12:00",
+        longitude=-111.85,
+        latitude=40.77,
+        bottom=1300,
+        top=2300,
+        altitude_ref="msl",
+    )
+    with pytest.raises(ValueError, match="zsfc"):
+        correct_near_field(p, msl, 0.5)
+
+
 def test_finished_particles_column_receptor_assigns_release_height(
     column_receptor, tmp_path
 ):

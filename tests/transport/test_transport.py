@@ -269,3 +269,45 @@ def test_run_trajectories_checks_the_models_parameters(tmp_path, point_receptor,
 
     with pytest.raises(ValueError, match="nparticles"):
         run_trajectories(point_receptor, _met(tmp_path), model="echo", nparticles=5)
+
+
+def test_finish_skips_the_near_field_correction_of_an_msl_receptor_without_zsfc(
+    caplog,
+):
+    """An MSL receptor's plume starts at the ground, which needs zsfc (#287)."""
+    from stilt.receptors import PointReceptor
+    from stilt.transport import _finish
+
+    particles = pd.DataFrame(
+        {
+            "particle": [1.0, 1.0],
+            "age": [-1.0, -2.0],
+            "lon": [-111.9, -112.0],
+            "lat": [40.7, 40.6],
+            "zagl": [5.0, 20.0],
+            "foot": [1e-5, 2e-5],
+            "dens": 1.2,
+            "samt": 1.0,
+            "sigw": 0.1,
+            "tlgr": 10.0,
+            "mlht": 500.0,
+        }
+    )
+    receptor = PointReceptor(
+        time="2023-01-01 12:00",
+        longitude=-111.9,
+        latitude=40.7,
+        altitude=1305.0,
+        altitude_ref="msl",
+    )
+    config = HysplitConfig(n_hours=-1, numpar=1, hnf_plume=True)
+
+    with caplog.at_level("WARNING", logger="stilt.transport"):
+        run = _finish(ModelRun(particles, met_files=[]), receptor, config)
+
+    assert "near-field correction skipped: no zsfc" in caplog.text
+    assert "foot_no_hnf_dilution" not in run.particles.columns
+    corrected = _finish(
+        ModelRun(particles.assign(zsfc=1300.0), met_files=[]), receptor, config
+    )
+    assert corrected.particles["foot"].iloc[0] != pytest.approx(1e-5)

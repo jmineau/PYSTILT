@@ -96,7 +96,8 @@ among the points, so raise ``numpar`` when you add points.
 
 Also add ``zsfc`` to ``varsiwant`` in ``config.yaml``. PYSTILT needs it to
 work out which point each particle started from (see `How the release
-heights come back`_).
+heights come back`_), and to start the near-field correction at the ground:
+without it the correction is skipped and the run's log says so.
 
 Before running, check the geometry. Plot ``receptor.longitudes`` and
 ``receptor.latitudes`` against ``receptor.altitudes`` for a morning window
