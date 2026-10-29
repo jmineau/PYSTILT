@@ -49,7 +49,11 @@ file covers:
    How much time each file covers, such as ``1h``, ``3h``, or ``6h``.
 
 For each simulation, PYSTILT works out which files cover the hours the run
-spans (``n_hours`` from the receptor time) and looks for those. A 24-hour
+spans (``n_hours`` from the receptor time) and looks for those. HYSPLIT
+interpolates between the met times on either side of each step, so the
+files must also hold the hour after the run's last time, unless that time
+is on a file boundary. A backward run released at 23:30 needs the next
+day's first file, and so does a forward run that ends at 23:30. A 24-hour
 backward run with 6-hour HRRR files needs 5 or 6 files, depending on the
 receptor hour. Every one is needed. If one is missing, the simulation fails
 before HYSPLIT runs, as ``MET_COVERAGE``, naming the hours with no file.

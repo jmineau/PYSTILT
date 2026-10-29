@@ -22,7 +22,7 @@ from ...fixtures.factories import write_arl_file
 
 def _run_files(met, r_time, n_hours):
     """Return the met files of one run, as the HYSPLIT model asks for them."""
-    return met.files_for(run_window(r_time, n_hours), hour_after=n_hours < 0)
+    return met.files_for(run_window(r_time, n_hours))
 
 
 def _make_met(tmp_path: Path, file_format: str, tres: str) -> Met:
@@ -712,7 +712,7 @@ def test_a_folder_of_links_finds_each_file_once(tmp_path):
     nested = _linked_archive(tmp_path)
     met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
 
-    files = met.files_for(("2024-06-01 00:00", "2024-06-01 11:00"))
+    files = met.files_for(("2024-06-01 00:00", "2024-06-01 10:00"))
 
     assert files == [
         (nested / "20240601_00-05_hrrr").resolve(),
@@ -863,11 +863,9 @@ def test_a_block_with_only_a_copy_set_aside_is_missing(tmp_path):
     window = run_window(dt.datetime(2024, 7, 2, 3), -2)
 
     with pytest.raises(MeteorologyError, match="No met file") as info:
-        met.files_for(window, hour_after=True)
+        met.files_for(window)
     assert info.value.reason == "MET_COVERAGE"
-    assert met.missing_hours(window, hour_after=True) == [
-        pd.Timestamp("2024-07-02 00:00")
-    ]
+    assert met.missing_hours(window) == [pd.Timestamp("2024-07-02 00:00")]
 
 
 def test_the_source_is_not_read_from_a_copy_set_aside(tmp_path):
@@ -929,6 +927,99 @@ def test_local_hourly_met_on_the_hour_reads_no_extra_file(tmp_path):
 
     assert [p.name for p in on_the_hour] == ["20240718_17", "20240718_18"]
     assert [p.name for p in past_it] == ["20240718_17", "20240718_18", "20240718_19"]
+
+
+def _window_end_files(met, end):
+    """Return the names of the files a forward run ending at *end*, and a backward run released then, read."""
+    forward = _run_files(met, pd.Timestamp(end) - pd.Timedelta(hours=3), 3)
+    backward = _run_files(met, end, -3)
+    assert [p.name for p in forward][-1] == [p.name for p in backward][-1]
+    return [p.name for p in forward]
+
+
+@pytest.mark.parametrize(
+    ("end", "files"),
+    [
+        # the issue's run: 20:31 for 3 hours ends between 23:00 and the next file's 00:00
+        ("2021-01-14 23:31", ["20210114_18-23_hrrr", "20210115_00-05_hrrr"]),
+        ("2021-01-14 23:59", ["20210114_18-23_hrrr", "20210115_00-05_hrrr"]),
+        # on the file's last hour, as a backward run released then
+        ("2021-01-14 23:00", ["20210114_18-23_hrrr", "20210115_00-05_hrrr"]),
+        ("2021-01-14 22:59", ["20210114_18-23_hrrr"]),
+        ("2021-01-15 00:00", ["20210114_18-23_hrrr", "20210115_00-05_hrrr"]),
+        ("2021-01-15 00:01", ["20210114_18-23_hrrr", "20210115_00-05_hrrr"]),
+    ],
+)
+def test_a_forward_run_reads_the_hour_after_its_end_in_six_hour_files(
+    tmp_path, end, files
+):
+    """A forward run needs the met time after its end, as a backward run does after its release (#275)."""
+    _touch_files(
+        tmp_path,
+        ["20210114_12-17_hrrr", "20210114_18-23_hrrr", "20210115_00-05_hrrr"],
+    )
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+
+    assert _window_end_files(met, end)[-len(files) :] == files
+
+
+@pytest.mark.parametrize(
+    ("end", "last"),
+    [
+        ("2024-07-18 18:00", "20240718_18"),
+        ("2024-07-18 18:01", "20240718_19"),
+        ("2024-07-18 18:59", "20240718_19"),
+        ("2024-07-18 19:00", "20240718_19"),
+    ],
+)
+def test_a_forward_run_reads_the_hour_after_its_end_in_hourly_files(
+    tmp_path, end, last
+):
+    _touch_files(tmp_path, [f"20240718_{h:02d}" for h in range(14, 21)])
+    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
+
+    assert _window_end_files(met, end)[-1] == last
+
+
+@pytest.mark.parametrize(
+    ("end", "files"),
+    [
+        ("2015-01-01 22:00", ["20150101_nam12"]),
+        ("2015-01-01 23:30", ["20150101_nam12", "20150102_nam12"]),
+        ("2015-01-02 00:00", ["20150101_nam12", "20150102_nam12"]),
+    ],
+)
+def test_a_forward_run_reads_the_hour_after_its_end_in_daily_files(
+    tmp_path, end, files
+):
+    _touch_files(tmp_path, ["20150101_nam12", "20150102_nam12"])
+    met = _make_met(tmp_path, "%Y%m%d", "1D")
+
+    assert _window_end_files(met, end) == files
+
+
+def test_a_forward_run_missing_the_file_after_its_end_names_that_hour(tmp_path):
+    _touch_files(tmp_path, ["20210114_18-23_hrrr"])
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    window = run_window(dt.datetime(2021, 1, 14, 20, 31), 3)
+
+    with pytest.raises(MeteorologyError, match="for 2021-01-15 00:00 "):
+        met.files_for(window)
+    assert met.missing_hours(window) == [pd.Timestamp("2021-01-15 00:00")]
+
+
+def test_a_forward_download_asks_for_the_hour_after_its_end(tmp_path):
+    mock_archive = MagicMock()
+    mock_archive.fetch.return_value = [tmp_path / "file1"]
+    (tmp_path / "file1").touch()
+    met = _make_download_met(tmp_path)
+    met._archive = mock_archive
+
+    _run_files(met, "2021-01-14 20:31", 3)
+
+    start, end = mock_archive.fetch.call_args.args[:2]
+    assert start == pd.Timestamp("2021-01-14 20:31")
+    assert end == pd.Timestamp("2021-01-15 00:00")
 
 
 def test_met_config_construction(tmp_path):
@@ -1056,7 +1147,7 @@ def test_check_passes_files_that_hold_every_hour_the_run_needs(tmp_path):
     files = _six_hour_files(
         tmp_path, {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 11:00"}
     )
-    _make_met(tmp_path, "%Y%m%d_%H", "6h").check(files, _WINDOW, hour_after=True)
+    _make_met(tmp_path, "%Y%m%d_%H", "6h").check(files, _WINDOW)
 
 
 def test_check_fails_a_file_cut_after_a_whole_hour(tmp_path):
@@ -1069,7 +1160,7 @@ def test_check_fails_a_file_cut_after_a_whole_hour(tmp_path):
         MeteorologyError,
         match="no time step between 2023-01-01 03:00 and 2023-01-01 06:00",
     ) as info:
-        met.check(files, _WINDOW, hour_after=True)
+        met.check(files, _WINDOW)
     assert info.value.reason == "MET_COVERAGE"
 
 
@@ -1083,7 +1174,23 @@ def test_check_fails_files_that_end_before_the_run_does(tmp_path):
         match="hold 2023-01-01 00:00 to 2023-01-01 09:00. The run needs "
         "2023-01-01 02:00 to 2023-01-01 11:00",
     ):
-        met.check(files, _WINDOW, hour_after=True)
+        met.check(files, _WINDOW)
+
+
+def test_check_needs_the_hour_after_a_forward_run_ends(tmp_path):
+    """A forward run from 20:31 for 3 hours ends at 23:31, between two files (#275)."""
+    window = run_window(dt.datetime(2021, 1, 14, 20, 31), 3)
+    held = {"20210114_18": "2021-01-14 23:00", "20210115_00": "2021-01-15 05:00"}
+    files = _six_hour_files(tmp_path, held)
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+
+    met.check(files, window)
+    with pytest.raises(
+        MeteorologyError,
+        match="hold 2021-01-14 18:00 to 2021-01-14 23:00. The run needs "
+        "2021-01-14 20:31 to 2021-01-15 00:00",
+    ):
+        met.check(files[:1], window)
 
 
 def test_check_names_a_damaged_file(tmp_path):
@@ -1103,7 +1210,7 @@ def test_check_names_a_damaged_file(tmp_path):
         match=f"met file {damaged} is damaged: 2023-01-01 11:00 has 1 of the 2 data "
         "records",
     ):
-        met.check(files, _WINDOW, hour_after=True)
+        met.check(files, _WINDOW)
 
 
 def test_check_names_a_file_that_does_not_open(tmp_path):
@@ -1113,7 +1220,7 @@ def test_check_names_a_file_that_does_not_open(tmp_path):
     files[1].write_bytes(files[1].read_bytes()[:-10])  # cut inside a record
     met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
     with pytest.raises(MeteorologyError, match="is damaged: .*not a whole number"):
-        met.check(files, _WINDOW, hour_after=True)
+        met.check(files, _WINDOW)
 
 
 def test_check_reads_each_file_once_until_it_changes(tmp_path, monkeypatch):
@@ -1133,12 +1240,12 @@ def test_check_reads_each_file_once_until_it_changes(tmp_path, monkeypatch):
         tmp_path, {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 11:00"}
     )
     met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
-    met.check(files, _WINDOW, hour_after=True)
-    met.check(files, _WINDOW, hour_after=True)
+    met.check(files, _WINDOW)
+    met.check(files, _WINDOW)
     assert opened == ["20230101_00", "20230101_06"]
 
     # Rewritten with fewer hours, the file is read again.
     _six_hour_files(tmp_path, {"20230101_06": "2023-01-01 09:00"})
     with pytest.raises(MeteorologyError, match="to 2023-01-01 09:00"):
-        met.check(files, _WINDOW, hour_after=True)
+        met.check(files, _WINDOW)
     assert opened == ["20230101_00", "20230101_06", "20230101_06"]

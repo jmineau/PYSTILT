@@ -175,6 +175,16 @@ def test_a_met_file_the_hour_after_a_backward_run_needs_is_found_missing(tmp_pat
     assert list(table["message"]) == ["no met file for 2023-01-01 13:00"]
 
 
+def test_a_met_file_the_hour_after_a_forward_run_needs_is_found_missing(tmp_path):
+    """A forward run reads the hour after its end too, so `stilt check` lists it (#275)."""
+    project = _project(tmp_path, [_receptor(12.5)], n_hours=3)
+    (tmp_path / "met" / "20230101_16").unlink()
+
+    table = project.check()
+
+    assert list(table["message"]) == ["no met file for 2023-01-01 16:00"]
+
+
 @pytest.mark.parametrize("n_hours", [-3, -6, 4])
 def test_receptors_are_listed_when_the_run_would_stop_for_a_missing_file(
     tmp_path, n_hours
@@ -200,7 +210,7 @@ def test_receptors_are_listed_when_the_run_would_stop_for_a_missing_file(
     def fails(receptor) -> bool:
         window = run_window(receptor.time, n_hours)
         try:
-            met.files_for(window, hour_after=n_hours < 0)
+            met.files_for(window)
         except MeteorologyError:
             return True
         return False

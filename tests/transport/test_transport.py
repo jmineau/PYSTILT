@@ -122,7 +122,7 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     make_met_files(tmp_path / "archive", point_receptor.time, params.n_hours)
     met = make_met_config(tmp_path / "archive")
     window = run_window(point_receptor.time, params.n_hours)
-    source = Met("met", met).files_for(window, hour_after=True)
+    source = Met("met", met).files_for(window)
     cropped = [tmp_path / "crops" / path.name for path in source]
     for path, crop in zip(source, cropped, strict=True):
         crop.parent.mkdir(exist_ok=True)
