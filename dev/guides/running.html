@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=36fcbf0b"></script>
+    <script src="../_static/documentation_options.js?v=bd6c9876"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev15+g1d7f772d1" />
+  <meta name="docsearch:version" content="0.1.0a27.dev17+g157988047" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -643,7 +643,9 @@ use them. <code class="docutils literal notranslate"><span class="pre">--json</s
 </dl>
 <p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code> exits with 0 when every simulation it ran is complete, 1 when
 some failed, and 3 when some did not finish because the run was stopped. It
-exits with 2 when its command line is wrong.</p>
+exits with 2 when its command line is wrong, or when a met directory does
+not exist or holds no ARL file; <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code> and <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> do
+too.</p>
 </section>
 <section id="when-a-simulation-fails">
 <h2>When a simulation fails<a class="headerlink" href="#when-a-simulation-fails" title="Link to this heading">#</a></h2>

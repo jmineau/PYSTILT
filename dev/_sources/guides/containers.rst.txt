@@ -102,7 +102,9 @@ Exit codes
        retry runs them again, which helps only when the cause is fixed.
    * - 2
      - The command line was wrong: an unknown option, a bad value, or a
-       directory that is not a project. Nothing ran. Do not retry.
+       directory that is not a project. Or a met directory does not exist
+       or holds no ARL file (``stilt check`` lists it). Nothing ran. Do not
+       retry.
    * - 3
      - Some simulations did not finish, because the run was stopped (Ctrl-C,
        or a stop signal from Kubernetes or Slurm). A retry continues where
