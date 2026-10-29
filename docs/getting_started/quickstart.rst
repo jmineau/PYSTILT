@@ -253,15 +253,18 @@ folder.
      config.yaml                 # your settings
      receptors.csv               # your receptors
      output/
+       particles/settings=hrrr-a3f9c2/_settings.yaml     # the settings, written out in full
        particles/settings=hrrr-a3f9c2/date=2021-01-15/202101150800_-111.848_40.766_10.parquet
+       footprints/settings=hrrr-93278c/_settings.yaml
        footprints/settings=hrrr-93278c/date=2021-01-15/202101150800_-111.848_40.766_10.parquet
        logs/settings=hrrr-a3f9c2/date=2021-01-15/202101150800_-111.848_40.766_10.log
 
 Each folder under ``particles``, ``footprints``, and ``logs`` is a
 :term:`settings folder <settings folder>`: the variant's name, ``hrrr``,
-plus a short code made from its settings. Change a setting and the next
-run writes to a new folder, so nothing is overwritten. The file name is
-the :term:`receptor id`: the time, longitude, latitude, and altitude.
+plus a short code made from its settings. The ``_settings.yaml`` in a
+particles or footprints folder lists them. Change a setting and the next run
+writes to a new folder, so nothing is overwritten. The file name is the
+:term:`receptor id`: the time, longitude, latitude, and altitude.
 
 Your settings and receptors are saved in the folder, so you can open the
 project again later without repeating them:
@@ -312,6 +315,8 @@ above:
 
    n_hours: -24
    numpar: 200
+   krand: 2
+   seed: 42
 
 Add your receptor to ``my_first_project/receptors.csv`` below the header
 line, so the file reads:
@@ -330,8 +335,8 @@ Then check the project, run it, and look at the result:
    stilt status ./my_first_project
 
 ``stilt check`` lists what would stop a run, such as a met file that is not
-there, and exits with 1 when it lists anything. It prints no rows when
-everything is in place.
+there, and exits with 1 when it lists anything. When everything is in place it
+prints ``No problems found.`` and exits with 0.
 
 .. ipython:: python
    :suppress:
