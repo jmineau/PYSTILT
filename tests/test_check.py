@@ -208,6 +208,15 @@ def test_a_missing_first_file_is_not_also_a_file_with_one_time_period(tmp_path):
     assert list(project.check()["check"]) == ["met_files"]
 
 
+def test_a_damaged_first_file_is_left_to_the_run(tmp_path):
+    """The check counts time periods only; a file it cannot read as ARL fails at the run, which names the damage."""
+    project = _project(tmp_path, [_receptor(12)])
+    first = tmp_path / "met" / "20230101_09"
+    first.write_bytes(first.read_bytes()[:-10])  # cut inside a record
+
+    assert project.check().empty
+
+
 def test_checking_opens_one_met_file(tmp_path, monkeypatch):
     """The check counts the time periods of one file, not of every file the receptors need."""
     import arlmet
