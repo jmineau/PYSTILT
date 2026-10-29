@@ -3846,7 +3846,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.24" },
     { name = "pandas", specifier = ">=2.0" },
     { name = "pyarrow", specifier = ">=14.0" },
-    { name = "pydantic", specifier = ">=2.0" },
+    { name = "pydantic", specifier = ">=2.1.0" },
     { name = "pyproj", specifier = ">=3.5" },
     { name = "pystilt", extras = ["download"], marker = "extra == 'complete'" },
     { name = "pystilt", extras = ["geometry"], marker = "extra == 'complete'" },
@@ -3858,9 +3858,9 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.10" },
     { name = "shapely", specifier = ">=2.0" },
     { name = "sparse", marker = "extra == 'sparse'", specifier = ">=0.15" },
-    { name = "typer", specifier = ">=0.9" },
-    { name = "universal-pathlib", specifier = ">=0.2" },
-    { name = "xarray", specifier = ">=2023.6" },
+    { name = "typer", specifier = ">=0.15.4" },
+    { name = "universal-pathlib", specifier = ">=0.3.0" },
+    { name = "xarray", specifier = ">=2023.9.0" },
 ]
 provides-extras = ["geometry", "visualization", "download", "sparse", "stilt-r", "complete"]
 

@@ -645,7 +645,7 @@ class Output:
                 f"No {kind} folder for variant {variant.name!r} in {self.directory}."
             )
         with readable(path) as source:
-            return pq.read_table(source, columns=columns)
+            return pq.read_table(source, columns=columns, partitioning=None)
 
     def log_path(
         self, variant: Variant, receptor_id: str, realization: int | None = None
