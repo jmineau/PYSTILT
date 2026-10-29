@@ -914,16 +914,17 @@ def test_early_time_multi_timestep(rscript, r_stilt_dir, tmp_path):
     _assert_footprint_close(py_ds, r_ds, label="early_time_multi_timestep")
 
 
-def test_early_interpolation_with_hysplit_columns_matches_r_na_omit(
+def test_early_interpolation_with_hysplit_columns_matches_r(
     rscript, r_stilt_dir, tmp_path
 ):
     """
-    Fast early tracks with extra HYSPLIT columns follow STILT-R's na.omit path.
+    Fast early tracks with extra HYSPLIT columns are interpolated, as STILT-R does.
 
-    STILT-R requests sub-minute interpolation here, but inserted rows have NA
-    for non-interpolated HYSPLIT columns such as zagl/mlht/dens, so na.omit()
-    removes those inserted rows.  PYSTILT must preserve that behavior for real
-    trajectory tables even though minimal synthetic tables can still densify.
+    STILT-R's simulation_step passes calc_footprint only time, indx, long,
+    lati and foot, so the rows its sub-minute interpolation inserts survive
+    na.omit(). PYSTILT's calc_footprint keeps the same columns, so a real
+    trajectory table with zagl, mlht, dens and the rest is interpolated too
+    (#288).
     """
     rng = np.random.default_rng(17)
     n = 20

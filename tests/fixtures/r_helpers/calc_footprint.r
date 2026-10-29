@@ -45,6 +45,11 @@ for (f in list.files(src_dir, pattern = "\\.r$", full.names = TRUE)) {
 load_libs('arrow', 'dplyr', 'lubridate', 'ncdf4', 'proj4', 'raster', 'R.utils')
 p <- as.data.frame(read_parquet(particles_parquet))
 
+# STILT-R's simulation_step passes calc_footprint only these columns
+# (footprint_varsiwant), so the rows its early-time interpolation inserts have no
+# NA in other columns and survive na.omit(). Do the same here.
+p <- p[, c('time', 'indx', 'long', 'lati', 'foot')]
+
 # Synthetic test DataFrames sometimes contain only one early-time row per
 # particle, which causes two problems inside calc_footprint:
 #

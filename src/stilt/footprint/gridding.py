@@ -40,14 +40,29 @@ def _make_gauss_kernel(rs: tuple[float, float], sigma: float) -> np.ndarray:
     return np.where(np.isnan(w), 1.0, w)
 
 
+#: The particle columns a footprint is made from. STILT-R's ``simulation_step``
+#: passes ``calc_footprint`` only these (``footprint_varsiwant``), so the rows the
+#: early-time interpolation inserts have no missing values and are kept.
+_FOOTPRINT_INPUTS = ("particle", "age", "lon", "lat", "foot")
+
+
+def _r_seq(start: float, stop: float, by: float) -> np.ndarray:
+    """Return R's ``seq(start, stop, by = by)``: ``start + (0:n) * by``, capped at ``stop``."""
+    n = int((stop - start) / by + 1e-10)
+    return np.minimum(start + np.arange(n + 1) * by, stop)
+
+
 def _interpolation_times(time_sign: int) -> np.ndarray:
-    """Return STILT-R's interpolation times for the first 100 minutes, in minutes."""
+    """
+    Return STILT-R's interpolation times for the first 100 minutes, in minutes.
+
+    They are built as R builds them, so they match STILT-R's to the last bit:
+    R's ``seq(0, 10, by = 0.1)`` holds ``2.9000000000000004``, not ``2.9``.
+    A position interpolated at a time one bit off can fall in the next grid
+    cell, which moves that step's ``foot`` with it.
+    """
     times = np.concatenate(
-        [
-            np.arange(0, 101, dtype=float) / 10,
-            np.arange(102, 201, 2, dtype=float) / 10,
-            np.arange(205, 1001, 5, dtype=float) / 10,
-        ]
+        [_r_seq(0, 10, 0.1), _r_seq(10.2, 20, 0.2), _r_seq(20.5, 100, 0.5)]
     )
     return times * time_sign
 
@@ -558,7 +573,8 @@ def calc_footprint(
     if particles.empty:
         raise EmptyFootprint()
 
-    p = particles.copy(deep=False)
+    # Only the columns the footprint is made from, as STILT-R passes them.
+    p = particles.loc[:, list(_FOOTPRINT_INPUTS)]
     n_particles = p["particle"].nunique()
     # time_sign: -1 for backward runs, +1 for forward.
     time_sign = int(np.sign(p["age"].median()))
