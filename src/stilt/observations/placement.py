@@ -26,8 +26,6 @@ from stilt.transforms import averaging_kernel_table
 JitterMethod = Literal["regular", "random"]
 
 _EARTH_RADIUS_M = 6_371_000.0
-_R_DRY = 287.05  # J kg^-1 K^-1, dry air
-_GRAVITY = 9.80665  # m s^-2
 _STD_LAPSE_RATE = 0.0065  # K m^-1
 _STD_SEA_LEVEL_TEMPERATURE = 288.15  # K
 
@@ -134,6 +132,9 @@ def pressure_altitudes(
         Altitudes in meters above sea level, from the surface upward, so the
         first one anchors the slant at the sounding's location.
     """
+    # Imported here, as elsewhere in stilt: arlmet takes about a second to import.
+    from arlmet.vertical import R_D, G, hypsometric_z_agl
+
     p = np.asarray(pressures, dtype=float).ravel()
     if p.size == 0:
         raise ValueError("pressure_altitudes requires at least one pressure level.")
@@ -162,14 +163,10 @@ def pressure_altitudes(
 
     z_sfc = float(surface_altitude)
     if t is not None:
-        edges_p = np.concatenate(([surface_pressure], p))
-        edges_t = np.concatenate(([t[0]], t))
-        t_mean = 0.5 * (edges_t[:-1] + edges_t[1:])
-        dz = _R_DRY * t_mean / _GRAVITY * np.log(edges_p[:-1] / edges_p[1:])
-        z = z_sfc + np.cumsum(dz)
+        z = z_sfc + hypsometric_z_agl(p, surface_pressure, t)
     else:
         t_sfc = _STD_SEA_LEVEL_TEMPERATURE - _STD_LAPSE_RATE * z_sfc
-        exponent = _R_DRY * _STD_LAPSE_RATE / _GRAVITY
+        exponent = R_D * _STD_LAPSE_RATE / G
         z = z_sfc + t_sfc / _STD_LAPSE_RATE * (1 - (p / surface_pressure) ** exponent)
 
     if top is not None:
