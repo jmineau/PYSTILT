@@ -313,6 +313,50 @@ def test_check_exits_2_when_the_project_files_are_invalid(tmp_path):
     assert "nonsense" in result.output
 
 
+def _point_met_at(tmp_path, directory):
+    """Point the project's met at *directory*, as an unedited `stilt init` project's placeholder does."""
+    config = tmp_path / "config.yaml"
+    text = config.read_text()
+    assert str(tmp_path / "met") in text
+    config.write_text(text.replace(str(tmp_path / "met"), str(directory)))
+
+
+@pytest.mark.parametrize(
+    "command", [["run"], ["submit"], ["status"], ["status", "--json"]]
+)
+def test_a_met_directory_that_does_not_exist_exits_2_in_one_line(
+    tmp_path, calls, command
+):
+    """The line `stilt check` lists, not a traceback, and 2: nothing ran (#280)."""
+    _write_minimal_config(tmp_path)
+    missing = tmp_path / "no-such-met"
+    _point_met_at(tmp_path, missing)
+
+    result = runner.invoke(app, [*command, str(tmp_path)])
+
+    assert result.exit_code == 2, result.output
+    assert result.output == f"Error: Met 'hrrr': {missing} does not exist.\n"
+    assert calls == []
+    checked = runner.invoke(app, ["check", str(tmp_path)])
+    assert checked.exit_code == 1
+    assert f"{missing} does not exist." in checked.output
+
+
+def test_a_met_directory_with_no_arl_file_exits_2_in_one_line(tmp_path, calls):
+    _write_minimal_config(tmp_path)
+    empty = tmp_path / "empty-met"
+    empty.mkdir()
+    (empty / "README").write_text("not a met file")
+    _point_met_at(tmp_path, empty)
+
+    result = runner.invoke(app, ["run", str(tmp_path)])
+
+    assert result.exit_code == 2, result.output
+    assert result.output.startswith(f"Error: Met 'hrrr': No ARL file under {empty}.")
+    assert len(result.output.splitlines()) == 1
+    assert calls == []
+
+
 # ---------------------------------------------------------------------------
 # run command
 # ---------------------------------------------------------------------------

@@ -20,7 +20,9 @@ some failed, and 3 when some did not finish because the run was
 interrupted (Ctrl-C, or SIGTERM from a scheduler). ``stilt check`` exits
 with 0 when it finds nothing and 1 when it lists anything. Every command
 exits with 2 when its command line is wrong: an unknown option, a bad value,
-or a directory that is not a project.
+or a directory that is not a project. ``stilt run``, ``stilt submit``, and
+``stilt status`` also exit with 2 when a met directory does not exist or
+holds no ARL file, which ``stilt check`` lists.
 """
 
 from __future__ import annotations
@@ -106,6 +108,24 @@ def _resolve_project(path: str | Path | None) -> str:
         )
         raise typer.Exit(code=EXIT_USAGE)
     return str(resolved)
+
+
+def _open(project: str | Path | None, output: str | None = None) -> Project:
+    """
+    Open the project, exiting with 2 when the met of a variant cannot be read.
+
+    A variant's settings folder is named by its met's weather product, read
+    from the header of the met's first file. Without the file every command
+    that counts or runs simulations would stop with a traceback;
+    ``stilt check`` lists the same problem as a finding.
+    """
+    opened = Project(_resolve_project(project), output=output)
+    try:
+        for variant in opened.variants.values():
+            _ = variant.met_settings
+    except FileNotFoundError as error:
+        _fail(str(error))
+    return opened
 
 
 # ---------------------------------------------------------------------------
@@ -275,7 +295,7 @@ def _start(
     With *receptor_rows* (from ``--receptors receptors.parquet``) the
     project takes its receptors from them, not from ``receptors.csv``.
     """
-    opened = Project(_resolve_project(project), output=output)
+    opened = _open(project, output=output)
     if receptor_rows is not None:
         opened._take_rows(receptor_rows)
     if execution_file is None:
@@ -350,7 +370,7 @@ def run(
     I/N runs one share of them here, for each task of a job array or a
     Kubernetes indexed Job. Exits with 0 when every simulation that ran is
     complete, 1 when some failed, 3 when some did not finish, and 2 when
-    the command line is wrong.
+    the command line is wrong or a met cannot be read (nothing ran).
     """
     receptor_ids, rows = (
         (None, None) if receptors is None else _read_receptors(receptors)
@@ -437,9 +457,10 @@ def status(
     The counts are per variant when there are several. Each settings folder
     holds the results of one set of settings; the list says how many result
     files it holds, which variants use it, and, for a folder no variant
-    uses, how its settings differ from the variant of its name.
+    uses, how its settings differ from the variant of its name. Exits with
+    2 when the command line is wrong or a met cannot be read.
     """
-    opened = Project(_resolve_project(project), output=output)
+    opened = _open(project, output=output)
     if as_json:
         typer.echo(json.dumps(_status_data(opened), indent=2))
         return

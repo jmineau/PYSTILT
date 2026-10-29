@@ -978,6 +978,16 @@ def test_a_met_with_no_arl_file_cannot_say_its_source(tmp_path):
         _local(tmp_path).source()
 
 
+def test_a_met_whose_directory_does_not_exist_says_so(tmp_path):
+    config = MetConfig(
+        directory=tmp_path / "gone", file_format="%Y%m%d_%H", file_tres="1h"
+    )
+
+    with pytest.raises(FileNotFoundError) as info:
+        config.source()
+    assert str(info.value) == f"{tmp_path / 'gone'} does not exist."
+
+
 def test_where_the_files_are_and_how_they_are_named_are_not_recorded(tmp_path):
     for name in ("a", "b"):
         write_arl_file(tmp_path / name / "hrrr.20240718.t00z")

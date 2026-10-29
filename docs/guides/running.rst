@@ -133,7 +133,9 @@ Commands
 
 ``stilt run`` exits with 0 when every simulation it ran is complete, 1 when
 some failed, and 3 when some did not finish because the run was stopped. It
-exits with 2 when its command line is wrong.
+exits with 2 when its command line is wrong, or when a met directory does
+not exist or holds no ARL file; ``stilt submit`` and ``stilt status`` do
+too.
 
 When a simulation fails
 -----------------------
