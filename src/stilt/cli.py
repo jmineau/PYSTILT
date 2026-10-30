@@ -168,7 +168,8 @@ def check(project: str | None = _PROJECT_ARG) -> None:
 
     For each variant, checks that the met's directory exists and holds ARL
     files, that every met file each receptor's run needs is there (naming
-    the hours), that each receptor is inside the met's crop box and the
+    the hours), that the first of them holds more than one time period,
+    which HYSPLIT needs, that each receptor is inside the met's crop box and the
     footprint grid, and that an averaging-kernel table matches the
     receptors. Nothing is run or downloaded. It looks for files, not inside
     them: a run that passes can still fail as MET_COVERAGE, when a met file

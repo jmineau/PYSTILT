@@ -120,9 +120,10 @@ def make_met_files(directory: Path, time: Any, n_hours: int) -> list[Path]:
 
     They are named as :func:`make_met_config` expects, one hour beyond the
     run on each side, so :class:`stilt.transport.hysplit.Met` finds them.
-    Each holds its own hour (:func:`write_arl_file`), so they pass
-    :meth:`stilt.transport.hysplit.Met.check`; the transport model cannot
-    run on them.
+    Each holds its own hour and the next (:func:`write_arl_file`), since
+    HYSPLIT cannot read a file with one time period and
+    :meth:`stilt.transport.hysplit.Met.check` refuses it; the transport
+    model cannot run on them.
     """
     import pandas as pd
 
@@ -137,7 +138,8 @@ def make_met_files(directory: Path, time: Any, n_hours: int) -> list[Path]:
     directory.mkdir(parents=True, exist_ok=True)
     files = []
     for hour in hours:
-        files.append(write_arl_file(directory / f"{hour:%Y%m%d_%H}", times=[hour]))
+        times = [hour, hour + pd.Timedelta(hours=1)]
+        files.append(write_arl_file(directory / f"{hour:%Y%m%d_%H}", times=times))
     return files
 
 

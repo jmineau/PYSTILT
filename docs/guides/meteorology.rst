@@ -46,7 +46,10 @@ file covers:
    are skipped.
 
 ``file_tres``
-   How much time each file covers, such as ``1h``, ``3h``, or ``6h``.
+   How much time each file covers, such as ``6h`` or ``24h``. A file must
+   hold at least two time periods, because HYSPLIT stops on a file with one
+   ("Only one time period of meteo data"). Files of ``1h`` hold one period
+   of an hourly product, so they cannot be used.
 
 For each simulation, PYSTILT works out which files cover the hours the run
 spans (``n_hours`` from the receptor time) and looks for those. HYSPLIT
@@ -59,6 +62,10 @@ receptor hour. Every one is needed. If one is missing, the simulation fails
 before HYSPLIT runs, as ``MET_COVERAGE``, naming the hours with no file.
 ``stilt check`` makes this search for every receptor before any run starts
 (:doc:`checking`).
+
+A file that holds one time period fails the run before HYSPLIT runs, as
+``MET_COVERAGE``, naming the file. ``stilt check`` finds one in the first
+file a run needs (:doc:`checking`).
 
 A file that is there but damaged fails the run before HYSPLIT runs too,
 as ``MET_COVERAGE``: one cut short, holding an hour written partway, or
@@ -106,7 +113,7 @@ You can list several mets:
      gfs:
        directory: /data/met/gfs
        file_format: "gfs_%Y%m%d_%H"
-       file_tres: 3h
+       file_tres: 6h
 
 
 Download from NOAA

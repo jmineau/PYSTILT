@@ -255,8 +255,9 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
   damaged met before it starts (`FAILURE_PHRASES` maps the log afterwards),
   and `check_met_stop` fails a run that stopped early with a particle more
   than 5 grid cells inside the domain (only at `outdt: 0`).
-  `stilt check` runs the file search for every receptor early; it opens no met
-  file past one header, so a damaged file still fails at run time.
+  `stilt check` runs the file search for every receptor early; it opens one
+  met file per met, to count its time periods (HYSPLIT stops on a file with
+  one, and `Met.check` refuses it), so a damaged file still fails at run time.
 - **Realizations are an axis**: `realizations: N` is one variant with a
   `realization` column and `realization=k/` partitions, run with `seed + k`.
   HYSPLIT gets `SEED = -(|seed| + 1)` (`setup_seed`, mirrored by the R
