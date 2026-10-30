@@ -1,6 +1,7 @@
 """Tests for stilt.footprint.gridding: calc_footprint, its kernels, and its invariants."""
 
 import builtins
+import datetime as dt
 
 import numpy as np
 import pandas as pd
@@ -969,6 +970,92 @@ def test_unwrap_around_cloud_joins_a_cloud_across_180_degrees():
     out = _unwrap_around_cloud(p)[late]
     assert out.max() - out.min() < 5
     np.testing.assert_allclose(out.mean(), 179.9, atol=0.1)
+
+
+_UTM48 = "EPSG:32648"
+_HIMAWARI = "+proj=geos +h=35785831 +lon_0=140.7 +sweep=y +datum=WGS84 +units=m"
+
+
+def _tropical_run(far_lon: float = 20.0) -> pd.DataFrame:
+    """
+    Particles released at Singapore (103.85 E, 1.35 N), and ten days back a cloud at (far_lon, 2 N).
+
+    At 20 E the far cloud is 85 degrees from UTM 48N's meridian, where the
+    transverse Mercator has no value, and off Himawari's disk.
+    """
+    rng = np.random.default_rng(3)
+    n = 500
+
+    def step(age, lon, lat, sd, foot):
+        return pd.DataFrame(
+            {
+                "particle": np.arange(1, n + 1),
+                "age": age,
+                "lon": rng.normal(lon, sd, n),
+                "lat": rng.normal(lat, sd, n),
+                "zagl": 10.0,
+                "foot": foot,
+            }
+        )
+
+    return pd.concat(
+        [
+            step(-1.0, 103.85, 1.35, 0.001, 1e-3),
+            step(-600.0, 103.0, 1.6, 0.3, 1e-3),
+            step(-14400.0, far_lon, 2.0, 1.0, 1e-9),
+        ],
+        ignore_index=True,
+    )
+
+
+@pytest.mark.parametrize("crs", [_UTM48, _HIMAWARI], ids=["utm48n", "himawari"])
+def test_projected_footprint_is_made_when_a_far_step_is_where_the_projection_has_no_value(
+    crs,
+):
+    """
+    A step centered where the projection has no value is left out; the rest makes the footprint.
+
+    Its particles cannot reach the grid, so the footprint is the one made
+    without them. Before, that step's width was NaN and calc_footprint raised.
+    """
+    pytest.importorskip("pyproj")
+    p = _tropical_run()
+    receptor = PointReceptor(
+        time=dt.datetime(2023, 1, 1, 12), longitude=103.85, latitude=1.35, altitude=5.0
+    )
+    grid = Grid(
+        xmin=103.3, xmax=104.4, ymin=1.0, ymax=1.8, xres=1000, yres=1000, crs=crs
+    )
+    foot = calc_footprint(p, receptor, grid, time_integrate=True)
+    without_far = calc_footprint(
+        p[p["age"] > -14400], receptor, grid, time_integrate=True
+    )
+    assert float(foot.sum()) > 0
+    np.testing.assert_array_equal(foot.to_numpy(), without_far.to_numpy())
+
+
+def test_projected_kernel_leaves_out_only_the_steps_with_no_width():
+    """Of three steps, the one at 20 E on UTM 48N is left out and the others keep their widths."""
+    pytest.importorskip("pyproj")
+    p = _with_rtime(_tropical_run())
+    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0, crs=_UTM48)
+    near = _with_rtime(p[p["age"] > -14400])
+    near_df, w_near = _compute_kernel_bandwidths(near, smooth_factor=1.0, crs=_UTM48)
+    assert np.isfinite(w).all()
+    assert -14399.0 not in set(kernel_df["rtime"])
+    np.testing.assert_array_equal(kernel_df["rtime"], near_df["rtime"])
+    np.testing.assert_array_equal(w, w_near)
+
+
+def test_projected_kernel_is_zero_when_no_step_has_a_width():
+    """When every step is where the projection has no value, nothing is smoothed."""
+    pytest.importorskip("pyproj")
+    p = _tropical_run()
+    # Every step's cloud centered at 20 E, 85 degrees from the meridian.
+    centered = p["lon"] - p.groupby("age")["lon"].transform("mean") + 20.0
+    p = _with_rtime(p.assign(lon=centered, lat=p["lat"] - p["lat"].mean() + 2.0))
+    _, w = _compute_kernel_bandwidths(p, smooth_factor=1.0, crs=_UTM48)
+    np.testing.assert_array_equal(w, np.zeros(len(w)))
 
 
 def _smoothing_variance_km2(foot, unsmoothed, x_km, y_km) -> tuple[float, float]:
