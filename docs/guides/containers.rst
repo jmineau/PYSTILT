@@ -82,7 +82,9 @@ The met ``directory`` in ``config.yaml`` must be the path inside the
 container (``/met`` here). ``completions`` and the ``N`` in ``--task`` must
 match. ``--cpus 4`` runs four receptors at once in each pod. ``exec`` makes
 ``stilt`` the process that receives Kubernetes' stop signal, so a stopped
-pod stops its runs cleanly and exits with code 3.
+pod stops its runs cleanly and exits with code 3, within a few seconds of
+the signal and so inside Kubernetes' default 30 s grace period. That holds
+for ``--cpus`` above 1 too: the pod's workers and HYSPLIT runs stop with it.
 
 Exit codes
 ----------

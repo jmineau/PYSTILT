@@ -75,6 +75,13 @@ script runs again in every worker. ``Project.init`` there stops with a
 ``FileExistsError`` because ``config.yaml`` exists. ``stilt run --cpus 4``
 needs no guard.
 
+Ctrl-C, or ``SIGTERM`` from ``kill``, ``timeout``, Slurm, or Kubernetes, stops
+a run on any number of ``cpus`` the same way. The HYSPLIT runs are ended, the
+workers exit, and ``stilt run`` prints how many receptors had finished and
+exits with 3, within a few seconds. Receptors that finished stay finished.
+``stilt status`` counts a receptor that was cut off as ``interrupted``, and
+running again runs it from the start.
+
 Save now, run later
 -------------------
 
@@ -117,7 +124,8 @@ Commands
    as a Slurm job array. Its options:
 
    - ``--backend`` and ``--n-workers`` override ``config.yaml`` for this run.
-   - ``--cpus N`` runs ``N`` receptors at once.
+   - ``--cpus N`` runs ``N`` receptors at once. Ctrl-C or ``SIGTERM`` stops
+     them all and exits with 3.
    - ``--no-skip`` reruns every simulation, finished or not.
    - ``--receptors FILE`` runs only the receptors listed in ``FILE``, one
      id per line.
