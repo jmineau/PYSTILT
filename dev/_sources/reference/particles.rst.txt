@@ -99,11 +99,15 @@ columns above. Some that PYSTILT reads:
    * - ``zsfc``
      - m
      - Terrain height above sea level. It is not in the default
-       ``varsiwant``. Add it to weight a receptor given above sea level
-       (``altitude_ref="msl"``) by pressure, which raises without it.
+       ``varsiwant``. Add it for a receptor given above sea level
+       (``altitude_ref="msl"``): pressure weighting raises without it, and
+       the near-field correction is skipped without it.
 
 The near-field correction reads ``dens``, ``samt``, ``sigw``, ``tlgr``,
-``foot``, and ``mlht`` (:data:`HNF_PLUME_COLUMNS`).
+``foot``, and ``mlht`` (:data:`HNF_PLUME_COLUMNS`). The plume it models
+grows from the release height above ground, so for a receptor above sea
+level it also reads ``zsfc``. Without it the run's log says the correction
+was skipped.
 
 ``mlht``, ``dens``, ``pres``, and ``zsfc`` can also be sampled from the met
 files at each particle's position, for a model that writes only positions:

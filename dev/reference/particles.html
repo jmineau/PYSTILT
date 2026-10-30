@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=91eccd92"></script>
+    <script src="../_static/documentation_options.js?v=4ae6b310"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev21+g652357ee7" />
+  <meta name="docsearch:version" content="0.1.0a27.dev22+gacc3e438d" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -988,14 +988,18 @@ columns above. Some that PYSTILT reads:</p>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">zsfc</span></code></p></td>
 <td><p>m</p></td>
 <td><p>Terrain height above sea level. It is not in the default
-<code class="docutils literal notranslate"><span class="pre">varsiwant</span></code>. Add it to weight a receptor given above sea level
-(<code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code>) by pressure, which raises without it.</p></td>
+<code class="docutils literal notranslate"><span class="pre">varsiwant</span></code>. Add it for a receptor given above sea level
+(<code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code>): pressure weighting raises without it, and
+the near-field correction is skipped without it.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <p>The near-field correction reads <code class="docutils literal notranslate"><span class="pre">dens</span></code>, <code class="docutils literal notranslate"><span class="pre">samt</span></code>, <code class="docutils literal notranslate"><span class="pre">sigw</span></code>, <code class="docutils literal notranslate"><span class="pre">tlgr</span></code>,
-<code class="docutils literal notranslate"><span class="pre">foot</span></code>, and <code class="docutils literal notranslate"><span class="pre">mlht</span></code> (<a class="reference internal" href="_api/stilt.particles.HNF_PLUME_COLUMNS.html#stilt.particles.HNF_PLUME_COLUMNS" title="stilt.particles.HNF_PLUME_COLUMNS"><code class="xref py py-data docutils literal notranslate"><span class="pre">HNF_PLUME_COLUMNS</span></code></a>).</p>
+<code class="docutils literal notranslate"><span class="pre">foot</span></code>, and <code class="docutils literal notranslate"><span class="pre">mlht</span></code> (<a class="reference internal" href="_api/stilt.particles.HNF_PLUME_COLUMNS.html#stilt.particles.HNF_PLUME_COLUMNS" title="stilt.particles.HNF_PLUME_COLUMNS"><code class="xref py py-data docutils literal notranslate"><span class="pre">HNF_PLUME_COLUMNS</span></code></a>). The plume it models
+grows from the release height above ground, so for a receptor above sea
+level it also reads <code class="docutils literal notranslate"><span class="pre">zsfc</span></code>. Without it the run’s log says the correction
+was skipped.</p>
 <p><code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">dens</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code>, and <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> can also be sampled from the met
 files at each particle’s position, for a model that writes only positions:
 <a class="reference internal" href="_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.sample_met()</span></code></a>. The values are the met’s, so they differ

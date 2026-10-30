@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=91eccd92"></script>
+    <script src="../_static/documentation_options.js?v=4ae6b310"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev21+g652357ee7" />
+  <meta name="docsearch:version" content="0.1.0a27.dev22+gacc3e438d" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -587,6 +587,13 @@ STILT-R multiplies it by the mixed-layer height, which removes most of
 the footprint after the first hour
 (<a class="reference external" href="https://github.com/uataq/stilt/issues/142">uataq/stilt#142</a>). No
 fidelity scenario sets <code class="docutils literal notranslate"><span class="pre">veght</span></code> above 1.</p></li>
+<li><p><strong>The HNF correction of a receptor above sea level.</strong> PYSTILT grows the
+plume from the release height above ground, so it needs <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> in
+<code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> for an MSL receptor. STILT-R grows it from the
+receptor height as given, which with <code class="docutils literal notranslate"><span class="pre">kmsl=1</span></code> is above sea level, so
+over high terrain its correction does nothing. The <code class="docutils literal notranslate"><span class="pre">msl_altitude</span></code>
+scenario compares the uncorrected <code class="docutils literal notranslate"><span class="pre">foot_no_hnf_dilution</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">test_msl_hnf_foot_intentionally_differs_from_r</span></code> guards the difference.</p></li>
 <li><p><strong>Untested inputs.</strong> Runs longer than 24 h backward, latitudes above 80°,
 and grids finer than 0.001° have not been compared.</p></li>
 <li><p><strong>Other STILT-R commits.</strong> Nothing detects upstream changes to

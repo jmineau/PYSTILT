@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=91eccd92"></script>
+    <script src="../../_static/documentation_options.js?v=4ae6b310"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev21+g652357ee7" />
+  <meta name="docsearch:version" content="0.1.0a27.dev22+gacc3e438d" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -576,7 +576,7 @@
             <span class="s2">"near-field. This shrinks their effective dilution depth and raises "</span>
             <span class="s2">"the influence of fluxes close to the receptor. Needs the particle "</span>
             <span class="s2">"columns ``dens``, ``tlgr``, ``sigw``, ``foot``, ``mlht``, and "</span>
-            <span class="s2">"``samt``."</span>
+            <span class="s2">"``samt``, and ``zsfc`` for a receptor above sea level."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">veght</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -978,7 +978,12 @@
     <span class="n">check_particles</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="p">)</span>
     <span class="n">particles</span> <span class="o">=</span> <span class="n">add_release_heights</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">hnf_plume</span><span class="p">:</span>
-        <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">HNF_PLUME_COLUMNS</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
+        <span class="c1"># A receptor above sea level also needs the terrain, to start the plume</span>
+        <span class="c1"># at the ground (correct_near_field).</span>
+        <span class="n">needed</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">HNF_PLUME_COLUMNS</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span>
+            <span class="p">{</span><span class="s2">"zsfc"</span><span class="p">}</span> <span class="k">if</span> <span class="n">receptor</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">"msl"</span> <span class="k">else</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">needed</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
             <span class="n">note</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"near-field correction skipped: no </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2"> columns"</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">note</span><span class="p">)</span>
