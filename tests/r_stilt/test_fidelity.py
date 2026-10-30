@@ -397,6 +397,59 @@ def test_msl_hnf_foot_intentionally_differs_from_r(
     )
 
 
+def test_projected_smoothing_intentionally_differs_from_r(
+    scenario_outputs: dict,
+    rscript: str,
+    r_stilt_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """
+    On a projected grid PYSTILT's smoothed footprint must NOT match STILT-R's.
+
+    STILT-R applies its kernel width formula to the projected coordinates, so
+    on the 2 km UTM grid its kernel is meters wide, below one cell, and its
+    footprint with ``smooth_factor=1`` is its unsmoothed one. PYSTILT works the
+    width out in degrees and converts it to meters (#290), so its footprint
+    is spread over more cells with a lower peak. The scenario itself runs
+    unsmoothed, where both still match (test_footprint_matches_r). Guarding
+    the difference keeps someone from "restoring parity" by computing the
+    width in meters again.
+    """
+    import dataclasses
+
+    import stilt
+
+    s: ReferenceScenario = scenario_outputs["scenario"]
+    if "+proj=longlat" in s.projection:
+        pytest.skip("only the projected scenario smooths differently from STILT-R")
+    smoothed = dataclasses.replace(s, smooth_factor=1.0)
+
+    particles = stilt.read_particles(scenario_outputs["traj"])
+    py_foot = stilt.calc_footprint(
+        particles,
+        s.make_receptor(),
+        s.make_grid(),
+        smooth_factor=1.0,
+        time_integrate=s.time_integrate,
+    )
+    py = py_foot.fillna(0).to_numpy().astype(np.float64)
+    r_ds = _r_footprint_from_traj(
+        tmp_path / s.name, rscript, r_stilt_dir, scenario_outputs["traj"], smoothed
+    )
+    r_unsmoothed = _normalize_footprint_dims(xr.open_dataset(scenario_outputs["foot"]))
+    r_unsmoothed.load()
+
+    # STILT-R's smoothed footprint is PYSTILT's unsmoothed one (which matches
+    # STILT-R's unsmoothed one in test_footprint_matches_r).
+    _assert_footprint_deep(r_unsmoothed, r_ds, smoothed)
+    r = r_ds.foot.fillna(0).values.astype(np.float64)
+    assert np.count_nonzero(py) > 1.5 * np.count_nonzero(r), (
+        f"[{s.name}] PYSTILT's projected footprint is no longer spread wider "
+        "than STILT-R's; the kernel width may be computed in meters again."
+    )
+    assert py.max() < r.max(), f"[{s.name}] smoothing no longer lowers the peak."
+
+
 def test_trajectory_matches_r(
     scenario_outputs: dict,
     r_stilt_dir: Path,
