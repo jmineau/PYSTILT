@@ -68,6 +68,11 @@ def _interpolation_times(time_sign: int) -> np.ndarray:
     return times * time_sign
 
 
+def _wrap_longitudes(lon: Any, *, west: float = 0.0) -> Any:
+    """Return *lon* (a number, array, or Series) shifted by whole turns into ``[west, west + 360)``."""
+    return (((lon - west) % 360) + 360) % 360 + west
+
+
 def _wrap_antimeridian_longitudes(
     p: pd.DataFrame, *, xmin: float, xmax: float
 ) -> tuple[pd.DataFrame, float, float, bool]:
@@ -81,9 +86,9 @@ def _wrap_antimeridian_longitudes(
         return p, -180.0, 180.0, False
     if (xmax < xmin) or (xmax > 180):
         p = p.copy()
-        p["lon"] = ((p["lon"] % 360) + 360) % 360
-        xmin = ((xmin % 360) + 360) % 360
-        xmax = ((xmax % 360) + 360) % 360
+        p["lon"] = _wrap_longitudes(p["lon"])
+        xmin = _wrap_longitudes(xmin)
+        xmax = _wrap_longitudes(xmax)
         return p, xmin, xmax, True
     return p, xmin, xmax, False
 
@@ -249,7 +254,19 @@ def _compute_kernel_bandwidths(
     longitude/latitude grid. STILT-R applies the formula to the projected
     coordinates instead, which on a grid in meters gives a kernel a few
     meters wide.
+
+    On a projected grid the longitudes are first shifted by whole turns to
+    within 180 degrees of the release longitude (the particles' position at
+    their first step), so a cloud across 180 degrees has the spread and mean
+    position it has on the ground. A longitude/latitude grid that crosses
+    180 degrees has its longitudes shifted before this, by
+    ``_wrap_antimeridian_longitudes``.
     """
+    if not is_longlat(crs):
+        release_lon = float(
+            p["lon"].to_numpy()[np.argmin(np.abs(p["rtime"].to_numpy()))]
+        )
+        p = p.assign(lon=_wrap_longitudes(p["lon"], west=release_lon - 180))
     kernel_df = (
         p.groupby("rtime")
         .agg(
