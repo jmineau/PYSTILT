@@ -107,7 +107,7 @@ class HysplitConfig(TransportConfig):
             "pres",
             "whtf",
             "temz",
-            "zfx1",
+            "zcfx",
         ]
     ] = Field(
         default_factory=lambda: [
@@ -125,7 +125,11 @@ class HysplitConfig(TransportConfig):
             "tlgr",
         ],
         description=(
-            "Particle variables ``hycs_std`` writes to the trajectory output. "
+            "Particle variables ``hycs_std`` writes to the trajectory output, "
+            "by the lowercase four-letter names HYSPLIT reads. Each is a "
+            "column of the particles under the same name, except ``indx``, "
+            "``time``, ``long``, and ``lati``. ``zcfx`` is the vertical "
+            "displacement by convective flux along the trajectory, in m. "
             "The default is the set footprints need, plus ``pres`` for "
             "pressure weighting."
         ),
@@ -512,6 +516,20 @@ class HysplitConfig(TransportConfig):
         None,
         description="Horizontal correlation length of the mixed-layer height error, in km.",
     )
+
+    @field_validator("varsiwant", mode="before")
+    @classmethod
+    def _refuse_zfx1(cls, value: Any) -> Any:
+        """Refuse ``zfx1``, which ``hycs_std`` stops on, and name ``zcfx``, which it reads."""
+        if isinstance(value, list) and any(
+            isinstance(name, str) and name.lower() == "zfx1" for name in value
+        ):
+            raise ValueError(
+                "'zfx1' is not a varsiwant name: hycs_std stops with 'Weird "
+                "variable'. HYSPLIT reads 'zcfx' for the vertical displacement "
+                "by convective flux."
+            )
+        return value
 
     @field_validator("ziscale", mode="before")
     @classmethod

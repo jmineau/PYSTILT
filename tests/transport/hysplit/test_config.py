@@ -71,3 +71,23 @@ def test_krand_accepts_hysplit_modes(krand):
 def test_krand_rejects_undocumented_values(krand):
     with pytest.raises(ValueError, match="krand"):
         HysplitConfig(krand=krand)
+
+
+def test_varsiwant_takes_zcfx_the_name_hysplit_reads():
+    config = HysplitConfig(
+        hnf_plume=False, varsiwant=["time", "indx", "long", "lati", "zcfx"]
+    )
+    assert config.varsiwant[-1] == "zcfx"
+
+
+@pytest.mark.parametrize("name", ["zfx1", "ZFX1"])
+def test_varsiwant_refuses_zfx1_and_names_zcfx(name):
+    """hycs_std stops at lowercase `zfx1` and reads `ZFX1` only in capitals, which no other name takes (#324)."""
+    with pytest.raises(ValidationError, match="'zfx1' is not a varsiwant name.*'zcfx'"):
+        HysplitConfig(varsiwant=["time", "indx", "long", "lati", name])
+
+
+@pytest.mark.parametrize("name", ["zfxx", "TIME", "height"])
+def test_varsiwant_refuses_a_name_hysplit_does_not_read(name):
+    with pytest.raises(ValidationError, match="varsiwant"):
+        HysplitConfig(varsiwant=["time", "indx", "long", "lati", name])

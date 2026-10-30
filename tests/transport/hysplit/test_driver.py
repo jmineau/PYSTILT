@@ -275,6 +275,22 @@ def test_run_keeps_fortran_runtime_output_on_failure(tmp_path):
     )
 
 
+def test_a_varsiwant_name_hycs_std_stops_on_fails_with_its_line(tmp_path):
+    """The log's last line says why no particles were written, not only that none were (#324)."""
+    _script(
+        tmp_path,
+        "echo 'Weird variable in VARSIWANT(SETUP.CFG):  zfx1'\n"
+        "echo 'header' > PARTICLE_STILT.DAT\n",
+    )
+
+    with pytest.raises(SimulationError) as caught:
+        driver.run_hycs_std(tmp_path, timeout=5)
+    assert caught.value.reason == FailureReason.NO_PARTICLE_DATA
+    assert str(caught.value) == (
+        "HYSPLIT: Weird variable in VARSIWANT(SETUP.CFG):  zfx1"
+    )
+
+
 def test_met_that_ran_out_fails_from_hysplits_warning_file(tmp_path):
     """HYSPLIT says so in WARNING, not in its log (#189)."""
     _script(
@@ -427,6 +443,31 @@ def test_run_leaves_particles_that_stop_early_to_the_caller(
     _fake_hysplit(monkeypatch, log="", rows=_ending_at(13 * 60))
 
     assert _run(tmp_path, point_receptor).particles["age"].min() == -13 * 60
+
+
+def test_a_run_with_zcfx_in_varsiwant_gives_a_zcfx_column(
+    tmp_path, point_receptor, monkeypatch
+):
+    """`zcfx` is a column of the particles under that name, as in STILT-R (#324)."""
+    from stilt.transport import run_model
+
+    rows = [[*row, 2.5] for row in _ending_at(24 * 60)]
+    _fake_hysplit(monkeypatch, log="", rows=rows)
+    make_met_files(tmp_path / "met", point_receptor.time, -24)
+    met = make_met_config(tmp_path / "met")
+    (tmp_path / "run").mkdir()
+
+    run = run_model(
+        "hysplit",
+        point_receptor,
+        _config(varsiwant=[*VARS, "zcfx"]),
+        met,
+        tmp_path / "run",
+    )
+
+    assert run.particles["zcfx"].eq(2.5).all()
+    entries = setup_entries(_config(varsiwant=[*VARS, "zcfx"]))
+    assert entries["varsiwant"][-1] == "zcfx"
 
 
 def test_run_without_a_particle_file_fails(tmp_path, point_receptor, monkeypatch):

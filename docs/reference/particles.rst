@@ -67,9 +67,11 @@ position, and takes a column's particles to be released bottom to top in
 Columns the model adds
 ----------------------
 
-HYSPLIT writes the variables in ``varsiwant`` under HYSPLIT's names,
-except ``indx``, ``time``, ``long``, and ``lati``, which become the
-columns above. Some that PYSTILT reads:
+HYSPLIT writes the variables in ``varsiwant`` under HYSPLIT's lowercase
+four-letter names, except ``indx``, ``time``, ``long``, and ``lati``, which
+become the columns above. The allowed names are listed under ``varsiwant`` in
+:doc:`configuration`; the config refuses any other name when it is read.
+Some that PYSTILT reads:
 
 .. list-table::
    :header-rows: 1
@@ -102,6 +104,11 @@ columns above. Some that PYSTILT reads:
        ``varsiwant``. Add it for a receptor given above sea level
        (``altitude_ref="msl"``): pressure weighting raises without it, and
        the near-field correction is skipped without it.
+   * - ``zcfx``
+     - m
+     - Vertical displacement by convective flux along the trajectory,
+       summed over the steps (the Grell scheme, ``capemin: -2``). HYSPLIT
+       reads this name only: ``zfx1`` stops it, and the config refuses it.
 
 The near-field correction reads ``dens``, ``samt``, ``sigw``, ``tlgr``,
 ``foot``, and ``mlht`` (:data:`HNF_PLUME_COLUMNS`). The plume it models
