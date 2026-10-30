@@ -65,7 +65,8 @@ command line is wrong or the project's files are invalid.
        names the hours of the files, each as long as ``file_tres``.
      - Add the files, or check ``file_format`` and ``file_tres`` against the
        file names. A backward run needs files from ``n_hours`` before the
-       receptor time to just after it (:doc:`meteorology`).
+       receptor time to just after it, a forward run from the receptor
+       time to just after ``n_hours`` later (:doc:`meteorology`).
    * - ``met_crop``
      - With ``subgrid_enable`` on, a receptor lies outside
        ``subgrid_bounds``. HYSPLIT cannot start particles outside the
@@ -218,7 +219,8 @@ The reasons
        - ``No met file ... for <hours>``: a file the run needs is missing.
          Check the met's ``directory`` and ``file_format`` against the
          files on disk. A backward run needs files from ``n_hours`` before
-         the receptor time to just after it (:doc:`meteorology`).
+         the receptor time to just after it, a forward run from the
+         receptor time to just after ``n_hours`` later (:doc:`meteorology`).
          ``stilt check`` finds these before a run.
        - ``The met file ... is damaged`` or ``The met files hold no time
          step between ...``: a file is there but cut short, written

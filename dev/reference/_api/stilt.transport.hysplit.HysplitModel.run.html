@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=89c84c3b"></script>
+    <script src="../../_static/documentation_options.js?v=c87117b9"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev18+g669311ff8" />
+  <meta name="docsearch:version" content="0.1.0a27.dev19+g10bcef252" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -882,12 +882,11 @@
 <dt class="sig sig-object py" id="stilt.transport.hysplit.HysplitModel.run">
 <span class="sig-prename descclassname"><span class="pre">HysplitModel.</span></span><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">receptor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">met</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/transport/hysplit/model.html#HysplitModel.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.transport.hysplit.HysplitModel.run" title="Link to this definition">#</a></dt>
 <dd><p>Run HYSPLIT for one receptor in <em>workdir</em> and return its particles.</p>
-<p>HYSPLIT finds the met files that cover <em>window</em> (and, for a backward
-run, the hour after the release, which it interpolates), cropped
-when the met is. Its output is <code class="docutils literal notranslate"><span class="pre">stilt.log</span></code> in <em>workdir</em>, returned
-as the run’s log. Without <em>workdir</em> it runs in a temporary
-directory. The release heights and the near-field correction are
-added by the caller, as for any model
+<p>It finds the met files that cover <em>window</em> and the hour after it,
+which HYSPLIT interpolates, cropped when the met is. Its output is
+<code class="docutils literal notranslate"><span class="pre">stilt.log</span></code> in <em>workdir</em>, returned as the run’s log. Without
+<em>workdir</em> it runs in a temporary directory. The release heights and
+the near-field correction are added by the caller, as for any model
 (<a class="reference internal" href="stilt.transport.run_model.html#stilt.transport.run_model" title="stilt.transport.run_model"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.transport.run_model()</span></code></a>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>

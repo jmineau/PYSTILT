@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=89c84c3b"></script>
+    <script src="../_static/documentation_options.js?v=c87117b9"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev18+g669311ff8" />
+  <meta name="docsearch:version" content="0.1.0a27.dev19+g10bcef252" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -553,7 +553,11 @@ are skipped.</p>
 </dd>
 </dl>
 <p>For each simulation, PYSTILT works out which files cover the hours the run
-spans (<code class="docutils literal notranslate"><span class="pre">n_hours</span></code> from the receptor time) and looks for those. A 24-hour
+spans (<code class="docutils literal notranslate"><span class="pre">n_hours</span></code> from the receptor time) and looks for those. HYSPLIT
+interpolates between the met times on either side of each step, so the
+files must also hold the hour after the run’s last time, unless that time
+is on a file boundary. A backward run released at 23:30 needs the next
+day’s first file, and so does a forward run that ends at 23:30. A 24-hour
 backward run with 6-hour HRRR files needs 5 or 6 files, depending on the
 receptor hour. Every one is needed. If one is missing, the simulation fails
 before HYSPLIT runs, as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>, naming the hours with no file.
