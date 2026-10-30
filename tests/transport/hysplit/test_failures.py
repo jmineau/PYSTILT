@@ -29,6 +29,10 @@ def test_all_failure_reasons_exist():
         ("meteorological data time interval varies", "VARYING_MET_INTERVAL"),
         ("PARTICLE_STILT.DAT does not contain any trajectory data", "NO_PARTICLE_DATA"),
         ("Fortran runtime error: end of file", "FORTRAN_RUNTIME_ERROR"),
+        (
+            "Weird variable in VARSIWANT(SETUP.CFG):  zfx1",
+            "NO_PARTICLE_DATA",
+        ),
         ("start point not within (x,y,t) any data file", "MET_COVERAGE"),
         ("WARNING metpos: no more meteorology -     63723240", "MET_COVERAGE"),
         ("WARNING metpos: too much time between files - 1", "MET_COVERAGE"),

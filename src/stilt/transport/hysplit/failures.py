@@ -41,6 +41,10 @@ FAILURE_PHRASES: dict[str, FailureReason] = {
     "meteorological data time interval varies": FailureReason.VARYING_MET_INTERVAL,
     "PARTICLE_STILT.DAT does not contain any trajectory data": FailureReason.NO_PARTICLE_DATA,
     "Fortran runtime error": FailureReason.FORTRAN_RUNTIME_ERROR,
+    # hycs_std stops at the first varsiwant name it does not know, before it
+    # writes a particle; the config refuses such names, so this is for a
+    # custom build that reads fewer.
+    "Weird variable in VARSIWANT": FailureReason.NO_PARTICLE_DATA,
 }
 
 

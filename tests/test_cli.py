@@ -313,6 +313,21 @@ def test_check_exits_2_when_the_project_files_are_invalid(tmp_path):
     assert "nonsense" in result.output
 
 
+def test_check_exits_2_for_a_varsiwant_name_hycs_std_stops_on(tmp_path):
+    """`zfx1` passed validation and stopped hycs_std; now check names the spelling it reads (#324)."""
+    _write_checkable_config(tmp_path)
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        config.read_text() + "varsiwant: [time, indx, long, lati, zfx1]\n"
+    )
+
+    result = runner.invoke(app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert "zfx1" in result.output
+    assert "zcfx" in result.output
+
+
 def _point_met_at(tmp_path, directory):
     """Point the project's met at *directory*, as an unedited `stilt init` project's placeholder does."""
     config = tmp_path / "config.yaml"
