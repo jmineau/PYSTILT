@@ -1,5 +1,14 @@
 """Tests for stilt.cli - Typer command-line interface."""
 
+import errno
+import ftplib
+import io
+import os
+import socket
+import subprocess
+import sys
+import types
+import urllib.error
 from dataclasses import replace
 
 import pandas as pd
@@ -8,7 +17,7 @@ import yaml
 from typer.testing import CliRunner
 
 import stilt.__main__
-from stilt.cli import _resolve_project, app
+from stilt.cli import _error_exit_code, _resolve_project, app
 from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.project import Project
@@ -17,6 +26,10 @@ from stilt.spatial import Grid
 from .fixtures.factories import make_met_config, make_project_config
 
 runner = CliRunner()
+
+# s3fs's own numbers for errnos that macOS lacks.
+_EREMCHG = getattr(errno, "EREMCHG", 78)
+_EREMOTEIO = getattr(errno, "EREMOTEIO", 121)
 
 
 # ---------------------------------------------------------------------------
@@ -514,6 +527,423 @@ def test_run_exit_code_says_how_the_run_ended(tmp_path, calls, states, code):
     result = runner.invoke(app, ["run", str(tmp_path)])
 
     assert result.exit_code == code, result.output
+
+
+# ---------------------------------------------------------------------------
+# An error the command did not expect: 3 to retry, 4 not to (#310)
+# ---------------------------------------------------------------------------
+
+
+def _error_named(name, *bases):
+    """Return an exception of a class called *name*, as a cloud library would raise it."""
+    return type(name, bases or (Exception,), {})("it failed")
+
+
+def _client_error(status, code="Error"):
+    """Return what botocore raises for a response with this status and error code."""
+    error = _error_named("ClientError")
+    error.response = {
+        "ResponseMetadata": {"HTTPStatusCode": status},
+        "Error": {"Code": code},
+    }
+    return error
+
+
+def _with_status(attribute, status):
+    """Return an error that carries an HTTP status as aiohttp, requests or gcsfs set it."""
+    error = RuntimeError("the service answered")
+    setattr(error, attribute, status)
+    return error
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        # Connection and I/O errors: run it again.
+        (ConnectionRefusedError("refused"), 3),
+        (TimeoutError("slow"), 3),
+        (OSError(5, "Input/output error"), 3),
+        (OSError(errno.ESTALE, "Stale file handle"), 3),
+        # Cloud libraries' errors that are not OSError, matched by class name.
+        (_error_named("EndpointConnectionError"), 3),
+        (_error_named("ConnectTimeoutError"), 3),
+        (_error_named("ReadTimeoutError"), 3),
+        # aiohttp's ServerDisconnectedError is a ClientConnectionError.
+        (
+            _error_named(
+                "ServerDisconnectedError",
+                type("ClientConnectionError", (Exception,), {}),
+            ),
+            3,
+        ),
+        (_error_named("ClientConnectionError"), 3),
+        (_client_error(503, "SlowDown"), 3),
+        (_client_error(500, "InternalError"), 3),
+        (_client_error(400, "ThrottlingException"), 3),
+        (_client_error(429), 3),
+        # The status of a busy service, wherever the library keeps it.
+        (_with_status("status", 503), 3),
+        (_with_status("status_code", 429), 3),
+        (_with_status("code", 502), 3),
+        (_with_status("status", 404), 4),
+        (_with_status("code", "not a status"), 4),
+        # Not transient: the path or the credentials are wrong, or it is a bug.
+        (_client_error(403, "AccessDenied"), 4),
+        (_client_error(404, "NoSuchKey"), 4),
+        (_client_error(None, "NoSuchKey"), 4),
+        (FileNotFoundError("no such file"), 4),
+        (PermissionError("denied"), 4),
+        (IsADirectoryError("a directory"), 4),
+        (RuntimeError("a bug"), 4),
+        (KeyError("k"), 4),
+        (ValueError("bad"), 4),
+        (_error_named("SSLError"), 4),
+    ],
+)
+def test_error_exit_code_sorts_retry_from_bug(error, code):
+    assert _error_exit_code(error) == code
+
+
+def _as_s3fs_raises(error_errno, status, code):
+    """
+    Return what s3fs raises for a botocore ``ClientError``: an ``OSError`` with its errno, and the ``ClientError`` as ``__cause__``.
+
+    ``s3fs.errors.translate_boto_error`` does this for every code it knows.
+    """
+    wrapped = OSError(error_errno, "the store answered")
+    wrapped.__cause__ = _client_error(status, code)
+    return wrapped
+
+
+def _raised_from(outer, inner):
+    """Return *outer* with *inner* as its ``__cause__``, as ``raise outer from inner`` does."""
+    outer.__cause__ = inner
+    return outer
+
+
+def _http_error_of_requests(status):
+    """Return what ``requests`` raises for a response: an ``OSError`` that holds the response."""
+    error = type("HTTPError", (OSError,), {})("the server answered")
+    error.response = types.SimpleNamespace(status_code=status)
+    return error
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        # s3fs turns a permanent S3 answer into a plain OSError: a retry meets it again.
+        (_as_s3fs_raises(_EREMCHG, 301, "PermanentRedirect"), 4),
+        (_as_s3fs_raises(errno.EINVAL, 400, "AuthorizationHeaderMalformed"), 4),
+        (_as_s3fs_raises(errno.EINVAL, 400, "InvalidBucketName"), 4),
+        (_as_s3fs_raises(errno.EINVAL, 400, "InvalidArgument"), 4),
+        (_as_s3fs_raises(errno.EINVAL, 400, "400"), 4),
+        (_as_s3fs_raises(errno.EPERM, 405, "MethodNotAllowed"), 4),
+        (_as_s3fs_raises(errno.EIO, 418, "Teapot"), 4),
+        (
+            _raised_from(PermissionError("denied"), _client_error(403, "AccessDenied")),
+            4,
+        ),
+        (
+            _raised_from(FileNotFoundError("gone"), _client_error(404, "NoSuchBucket")),
+            4,
+        ),
+        # ... and a busy one, a retry may get past.
+        (_as_s3fs_raises(errno.EBUSY, 503, "SlowDown"), 3),
+        (_as_s3fs_raises(errno.EBUSY, 503, "ServiceUnavailable"), 3),
+        (_as_s3fs_raises(errno.EBUSY, 409, "OperationAborted"), 3),
+        (_as_s3fs_raises(_EREMOTEIO, 500, "InternalError"), 3),
+        (_as_s3fs_raises(errno.EIO, 502, "BadGateway"), 3),
+        (_raised_from(TimeoutError("slow"), _client_error(400, "RequestTimeout")), 3),
+        # requests and urllib raise OSErrors that hold an HTTP status.
+        (_http_error_of_requests(404), 4),
+        (_http_error_of_requests(403), 4),
+        (_http_error_of_requests(503), 3),
+        (_http_error_of_requests(429), 3),
+        (urllib.error.HTTPError("u", 404, "not found", {}, io.BytesIO()), 4),
+        (urllib.error.HTTPError("u", 503, "busy", {}, io.BytesIO()), 3),
+        # An OSError nothing explains is read by its errno.
+        (OSError(errno.EIO, "Input/output error"), 3),
+        (OSError(errno.ESTALE, "Stale file handle"), 3),
+        (OSError(errno.ETIMEDOUT, "timed out"), 3),
+        (socket.gaierror(socket.EAI_AGAIN, "try again"), 3),
+        (OSError(errno.EINVAL, "invalid"), 4),
+        (OSError(errno.ENOSPC, "no space left"), 4),
+        (OSError(errno.EROFS, "read-only"), 4),
+        (OSError("an OSError with no errno"), 4),
+        # The chain is read for a bug raised while handling or from a connection error.
+        (_raised_from(RuntimeError("wrapped"), ConnectionResetError("reset")), 3),
+        (_raised_from(RuntimeError("wrapped"), _client_error(403)), 4),
+    ],
+)
+def test_error_exit_code_reads_the_chain_and_the_status(error, code):
+    assert _error_exit_code(error) == code
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        # FTP: a 4xx reply is transient by the standard, a 5xx is not.
+        (ftplib.error_temp("421 There are too many connected users"), 3),
+        (ftplib.error_temp("425 Can't open data connection"), 3),
+        (ftplib.error_perm("550 No such file"), 4),
+        (ftplib.error_perm("530 Login incorrect"), 4),
+        (ftplib.error_reply("unexpected reply"), 4),
+        (ftplib.error_proto("no FTP reply"), 4),
+        # fsspec's HTTP filesystem raises FileNotFoundError for every failure,
+        # from the error that happened: that one decides.
+        (_raised_from(FileNotFoundError("http://x/f"), _with_status("status", 503)), 3),
+        (_raised_from(FileNotFoundError("http://x/f"), _with_status("status", 429)), 3),
+        (_raised_from(FileNotFoundError("http://x/f"), _with_status("status", 404)), 4),
+        (
+            _raised_from(FileNotFoundError("http://x/f"), ConnectionRefusedError()),
+            3,
+        ),
+        (_raised_from(FileNotFoundError("http://x/f"), TimeoutError()), 3),
+        (_raised_from(FileNotFoundError("http://x/f"), KeyError("k")), 4),
+        (
+            _raised_from(
+                FileNotFoundError("http://x/f"),
+                _error_named(
+                    "ClientOSError", type("ClientConnectionError", (Exception,), {})
+                ),
+            ),
+            3,
+        ),
+        (_raised_from(PermissionError("denied"), _with_status("status", 503)), 3),
+        (FileNotFoundError("no cause"), 4),
+    ],
+)
+def test_error_exit_code_ftp_replies_and_wrapped_http_errors(error, code):
+    assert _error_exit_code(error) == code
+
+
+def test_an_error_raised_while_handling_a_connection_error_is_read_with_it():
+    try:
+        try:
+            raise ConnectionRefusedError("refused")
+        except ConnectionRefusedError:
+            raise RuntimeError("the handler failed") from None
+    except RuntimeError as suppressed:
+        assert _error_exit_code(suppressed) == 4
+    try:
+        try:
+            raise ConnectionRefusedError("refused")
+        except ConnectionRefusedError:
+            raise RuntimeError("the handler failed")  # noqa: B904
+    except RuntimeError as handling:
+        assert _error_exit_code(handling) == 3
+
+
+def test_s3fs_own_translation_is_sorted_by_status():
+    """The real s3fs: every permanent code is 4 and a busy one 3, as the stand-ins above."""
+    translate = pytest.importorskip("s3fs.errors").translate_boto_error
+    for name, status, code in [
+        ("PermanentRedirect", 301, 4),
+        ("AuthorizationHeaderMalformed", 400, 4),
+        ("InvalidBucketName", 400, 4),
+        ("InvalidArgument", 400, 4),
+        ("AccessDenied", 403, 4),
+        ("NoSuchBucket", 404, 4),
+        ("SlowDown", 503, 3),
+        ("InternalError", 500, 3),
+        ("SomethingNew", 500, 3),
+        ("SomethingNew", 418, 4),
+    ]:
+        error = translate(_client_error(status, name))
+        assert _error_exit_code(error) == code, (name, status)
+
+
+def test_a_cloud_error_is_sorted_with_the_libraries_not_imported():
+    """A botocore error is 3 and a denied one 4, as for the stand-ins above."""
+    botocore = pytest.importorskip("botocore.exceptions")
+    refused = botocore.EndpointConnectionError(endpoint_url="http://127.0.0.1:9")
+    denied = botocore.ClientError(
+        {
+            "Error": {"Code": "AccessDenied"},
+            "ResponseMetadata": {"HTTPStatusCode": 403},
+        },
+        "ListObjectsV2",
+    )
+    assert _error_exit_code(refused) == 3
+    assert _error_exit_code(botocore.ReadTimeoutError(endpoint_url="u")) == 3
+    assert _error_exit_code(denied) == 4
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        (_error_named("EndpointConnectionError"), 3),
+        (ConnectionResetError("reset"), 3),
+        (OSError(5, "I/O error"), 3),
+        (RuntimeError("a bug"), 4),
+        (KeyError("k"), 4),
+        (FileNotFoundError("no such file"), 4),
+    ],
+)
+def test_run_exits_3_for_a_connection_error_and_4_for_any_other(
+    tmp_path, monkeypatch, error, code
+):
+    """An error that escapes the run is never 1, the code of "some simulations failed"."""
+    _write_minimal_config(tmp_path)
+
+    def run(self, **kwargs):
+        raise error
+
+    monkeypatch.setattr("stilt.cli.Project.run", run)
+    result = runner.invoke(app, ["run", str(tmp_path)])
+
+    assert result.exit_code == code, result.output
+    assert str(error) in result.output
+    assert f"stilt exits with {code}" in result.output
+    assert "Traceback (most recent call last)" in result.output
+
+
+def test_run_says_where_an_unexpected_error_happened(tmp_path, monkeypatch):
+    """The traceback is kept, so a bug can be found."""
+    _write_minimal_config(tmp_path)
+
+    def run(self, **kwargs):
+        raise RuntimeError("a bug somewhere")
+
+    monkeypatch.setattr("stilt.cli.Project.run", run)
+    result = runner.invoke(app, ["run", str(tmp_path)])
+
+    assert result.exit_code == 4
+    assert "in run" in result.output
+    assert "RuntimeError: a bug somewhere" in result.output
+
+
+def test_run_exits_3_when_ctrl_c_arrives_outside_the_workers(tmp_path, monkeypatch):
+    """Ctrl-C while waiting for a Slurm job was "Aborted!" with exit 1."""
+    _write_minimal_config(tmp_path)
+
+    def run(self, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("stilt.cli.Project.run", run)
+    result = runner.invoke(app, ["run", str(tmp_path)])
+
+    assert result.exit_code == 3, result.output
+
+
+def test_a_failed_simulation_is_still_1_and_a_wrong_command_line_2(tmp_path, calls):
+    _write_minimal_config(tmp_path)
+    calls.states = ["complete", "failed"]
+    assert runner.invoke(app, ["run", str(tmp_path)]).exit_code == 1
+    assert runner.invoke(app, ["run", str(tmp_path), "--task", "3/3"]).exit_code == 2
+    assert runner.invoke(app, ["run", str(tmp_path / "no_project")]).exit_code == 2
+    receptors = tmp_path / "missing.txt"
+    assert (
+        runner.invoke(app, ["run", str(tmp_path), "--receptors", str(receptors)])
+    ).exit_code == 2
+
+
+def test_a_value_error_of_the_run_is_still_2(tmp_path, monkeypatch):
+    """The run's own refusals (a receptor that is not in the project) are the command line's."""
+    _write_minimal_config(tmp_path)
+
+    def run(self, **kwargs):
+        raise ValueError("no such receptor")
+
+    monkeypatch.setattr("stilt.cli.Project.run", run)
+    result = runner.invoke(app, ["run", str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert "Error: no such receptor" in result.output
+
+
+@pytest.mark.parametrize(
+    ("command", "method"),
+    [("submit", "submit"), ("status", "status"), ("check", "check")],
+)
+def test_the_other_commands_exit_4_on_an_unexpected_error(
+    tmp_path, monkeypatch, command, method
+):
+    """Python's own 1 for `status` and `submit` was not a code anyone defined; `check`'s 1 is "found problems"."""
+    _write_minimal_config(tmp_path)
+
+    def broken(self, *args, **kwargs):
+        raise RuntimeError("a bug somewhere")
+
+    monkeypatch.setattr(f"stilt.cli.Project.{method}", broken)
+    result = runner.invoke(app, [command, str(tmp_path)])
+
+    assert result.exit_code == 4, result.output
+
+
+def test_status_exits_3_on_a_connection_error(tmp_path, monkeypatch):
+    _write_minimal_config(tmp_path)
+
+    def broken(self, *args, **kwargs):
+        raise ConnectionError("refused")
+
+    monkeypatch.setattr("stilt.cli.Project.status", broken)
+
+    assert runner.invoke(app, ["status", str(tmp_path)]).exit_code == 3
+
+
+def test_a_closed_stdout_ends_quietly_with_1_as_before(tmp_path, monkeypatch):
+    """`stilt status | head -0` raises BrokenPipeError: no traceback and no "retry" (#310)."""
+    _write_minimal_config(tmp_path)
+
+    def closed(self, *args, **kwargs):
+        raise BrokenPipeError(errno.EPIPE, "Broken pipe")
+
+    monkeypatch.setattr("stilt.cli.Project.status", closed)
+    result = runner.invoke(app, ["status", str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert "Traceback" not in result.output
+    assert "stilt exits with" not in result.output
+
+
+def test_status_into_a_closed_pipe_is_quiet_and_exits_1(tmp_path):
+    """A real pipe whose reader has gone: no traceback, and not Python's 120 at shutdown."""
+    _write_minimal_config(tmp_path)
+    child = subprocess.Popen(
+        [sys.executable, "-m", "stilt", "status", str(tmp_path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    assert child.stdout is not None
+    child.stdout.close()
+    _, stderr = child.communicate(timeout=300)
+
+    assert child.returncode == 1, stderr
+    assert "Traceback" not in stderr
+    assert "stilt exits with" not in stderr
+
+
+def test_an_unreachable_object_store_exits_3_not_1(tmp_path):
+    """The reproduction of #310: `stilt run` with an output bucket nothing answers."""
+    pytest.importorskip("s3fs")
+    _write_minimal_config(tmp_path)
+    env = {
+        **os.environ,
+        "AWS_ENDPOINT_URL": "http://127.0.0.1:9",
+        "AWS_ACCESS_KEY_ID": "x",
+        "AWS_SECRET_ACCESS_KEY": "x",
+        "AWS_DEFAULT_REGION": "us-east-1",
+    }
+    done = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "stilt",
+            "run",
+            str(tmp_path),
+            "--output",
+            "s3://stilt/output",
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=300,
+    )
+
+    assert done.returncode == 3, done.stderr
+    assert "stilt exits with 3" in done.stderr
 
 
 @pytest.mark.parametrize("args", [["run", "--bogus-flag"], ["nosuchcmd"]])

@@ -23,15 +23,25 @@ exits with 2 when its command line is wrong: an unknown option, a bad value,
 or a directory that is not a project. ``stilt run``, ``stilt submit``, and
 ``stilt status`` also exit with 2 when a met directory does not exist or
 holds no ARL file, which ``stilt check`` lists.
+
+An error the command did not expect ends it too, after its traceback: with
+3 when the error is a connection or an I/O error (a bucket that cannot be
+reached or is busy, a stale disk), which a retry may get past, and with 4 for
+any other (a bug in PYSTILT or the project, a bucket in the wrong region, a
+403 or a 404, which a retry will repeat).
+``_error_exit_code`` sorts them.
 """
 
 from __future__ import annotations
 
+import errno
 import json
 import logging
 import re
+import socket
+import traceback
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -39,15 +49,247 @@ import pandas as pd
 import typer
 import yaml
 from pydantic import ValidationError
+from typer.core import TyperGroup
 
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
 from stilt.project import STATES, Project
 
+#: Exit codes. 2 is also Click's own for an unknown option or command, so a
+#: driver never takes a typo for a run to retry. 3 says "run it again": the
+#: run was stopped, or hit a connection or I/O error; what finished is on
+#: disk. 4 says "do not": an unexpected error that a retry would repeat. 1 is
+#: the code of a run whose simulations failed, and no other.
+EXIT_COMPLETE, EXIT_FAILED, EXIT_USAGE, EXIT_INTERRUPTED, EXIT_BUG = 0, 1, 2, 3, 4
+
+#: Errors from the cloud libraries that do not inherit from ``OSError`` and
+#: mean the network failed or the service is briefly unavailable. Matched by
+#: class name along an exception's ``__mro__``, because botocore, aiohttp and
+#: urllib3 are optional and not imported here.
+_NETWORK_ERRORS = frozenset(
+    {
+        # botocore (also the errors s3fs and aiobotocore raise)
+        "EndpointConnectionError",
+        "ProxyConnectionError",
+        "ConnectTimeoutError",
+        "ReadTimeoutError",
+        "ConnectionClosedError",
+        "IncompleteReadError",
+        # aiohttp (s3fs, gcsfs, and fsspec's HTTP filesystem)
+        "ClientConnectionError",
+        "ServerConnectionError",
+        "ClientPayloadError",
+        # urllib3
+        "ProtocolError",
+        # ftplib: a 4xx reply ("421 too many users"), transient by the FTP
+        # standard; error_perm (5xx), error_reply and error_proto are not
+        "error_temp",
+    }
+)
+
+#: ``OSError`` subclasses that name a path, not the network: the file is not
+#: there, or may not be used, and a retry meets the same answer.
+_PATH_ERRORS = (
+    FileNotFoundError,
+    FileExistsError,
+    PermissionError,
+    IsADirectoryError,
+    NotADirectoryError,
+)
+
+#: HTTP statuses of a service that is busy or briefly down. Any other 3xx, 4xx
+#: or 5xx is an answer that a retry repeats: a bucket in another region, a bad
+#: request, a 403 or a 404.
+_BUSY_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
+
+#: Codes of botocore's ``ClientError`` for a service that asks the caller to slow
+#: down or try again, whatever the status that carries them.
+_BUSY_CODES = frozenset(
+    {
+        "Throttling",
+        "ThrottlingException",
+        "RequestLimitExceeded",
+        "RequestThrottled",
+        "SlowDown",
+        "RequestTimeout",
+        "TooManyRequestsException",
+        "ProvisionedThroughputExceededException",
+        "ServiceUnavailable",
+        "InternalError",
+        "OperationAborted",
+    }
+)
+
+#: Errnos of an ``OSError`` that no type, status or cause explains, which are
+#: input/output trouble that goes away: an I/O error, a stale NFS handle, a busy
+#: or interrupted call, a connection that failed. Any other errno (EINVAL,
+#: ENOSPC, EROFS, none at all) is a refusal or a full disk that a retry meets again.
+_TRANSIENT_ERRNOS = frozenset(
+    getattr(errno, name)
+    for name in (
+        "EIO",
+        "EREMOTEIO",
+        "ESTALE",
+        "EBUSY",
+        "EAGAIN",
+        "EINTR",
+        "ETIMEDOUT",
+        "ECONNRESET",
+        "ECONNREFUSED",
+        "ECONNABORTED",
+        "ENETDOWN",
+        "ENETUNREACH",
+        "EHOSTDOWN",
+        "EHOSTUNREACH",
+    )
+    if hasattr(errno, name)
+)
+
+
+def _http_status(error: BaseException) -> int | None:
+    """
+    Return the HTTP status an error from a cloud or HTTP library carries, or None.
+
+    Read from botocore's ``ClientError.response`` (a dict), from the
+    ``status_code`` or ``status`` of the response a ``requests`` error holds,
+    and from the error's own ``status``, ``status_code`` or ``code`` (aiohttp,
+    gcsfs, ``urllib.error.HTTPError``).
+    """
+    response = getattr(error, "response", None)
+    if isinstance(response, dict):  # botocore's ClientError
+        status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        return status if isinstance(status, int) else None
+    holders = (response, error) if response is not None else (error,)
+    for holder in holders:
+        for attribute in ("status", "status_code", "code"):
+            status = getattr(holder, attribute, None)
+            if isinstance(status, int) and 100 <= status <= 599:
+                return status
+    return None
+
+
+def _causes(error: BaseException) -> Iterator[BaseException]:
+    """Yield an error and what it was raised from or while handling, outermost first."""
+    seen: set[int] = set()
+    current: BaseException | None = error
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        yield current
+        if current.__cause__ is not None:
+            current = current.__cause__
+        else:
+            current = None if current.__suppress_context__ else current.__context__
+
+
+def _says(error: BaseException) -> int | None:
+    """Return 3 or 4 when this one error says so by its status, code or type; else None."""
+    response = getattr(error, "response", None)
+    code = response.get("Error", {}).get("Code") if isinstance(response, dict) else None
+    status = _http_status(error)
+    if code in _BUSY_CODES or status in _BUSY_STATUSES:
+        return EXIT_INTERRUPTED
+    if status is not None and status >= 300:
+        return EXIT_BUG
+    if isinstance(error, ConnectionError | TimeoutError | socket.gaierror):
+        return EXIT_INTERRUPTED
+    if not _NETWORK_ERRORS.isdisjoint(c.__name__ for c in type(error).__mro__):
+        return EXIT_INTERRUPTED
+    return None
+
+
+def _error_exit_code(error: Exception) -> int:
+    """
+    Return the exit code for an error the command did not expect.
+
+    3 (:data:`EXIT_INTERRUPTED`, "run it again") when the error is a
+    connection or I/O error that a retry may get past, 4
+    (:data:`EXIT_BUG`, "do not") when it is any other.
+
+    The error and its ``__cause__`` or ``__context__`` chain are read,
+    outermost first, and the first that says decides. An error says 3 by a
+    busy service's HTTP status (408, 429, 500, 502, 503, 504) or botocore
+    code (:data:`_BUSY_CODES`), by being a ``ConnectionError``,
+    ``TimeoutError`` or name-resolution error, or by a class named in
+    :data:`_NETWORK_ERRORS` (which includes ftplib's ``error_temp``, a 4xx
+    reply): the cloud libraries are optional, so the ``__mro__``'s class
+    names are read, not the classes imported. It says 4 by any other 3xx, 4xx
+    or 5xx status (a bucket in another region, a bad request, a 403, a 404).
+    s3fs turns a ``ClientError`` into a plain ``OSError`` and keeps it in
+    ``__cause__``, and fsspec's HTTP filesystem raises ``FileNotFoundError``
+    for every failure, so the chain is read before a path error (a file that
+    is not there or may not be used) is taken at its word. If nothing in the
+    chain says, an ``OSError`` that is not about a path is 3 when its errno
+    is input/output trouble that goes away (:data:`_TRANSIENT_ERRNOS`, such
+    as s3fs's ``EIO`` for a code it does not know), and anything else,
+    ftplib's ``error_perm``, ``error_reply`` and ``error_proto`` included,
+    is 4.
+
+    Parameters
+    ----------
+    error : Exception
+        The error that ended the command.
+
+    Returns
+    -------
+    int
+        3 or 4.
+    """
+    chain = list(_causes(error))
+    for each in chain:
+        verdict = _says(each)
+        if verdict is not None:
+            return verdict
+    transient = any(
+        isinstance(each, OSError)
+        and not isinstance(each, _PATH_ERRORS)
+        and each.errno in _TRANSIENT_ERRNOS
+        for each in chain
+    )
+    return EXIT_INTERRUPTED if transient else EXIT_BUG
+
+
+class _Group(TyperGroup):
+    """
+    The ``stilt`` command group, which ends a command that raised in an exit code.
+
+    Python's own exit code for an uncaught error is 1, which is also the
+    code of a run whose simulations failed. A driver that decides on a
+    retry from the code cannot tell the two apart. So an error the command
+    did not handle prints its traceback and ends with
+    ``_error_exit_code``'s 3 or 4, and a ``KeyboardInterrupt`` that no
+    worker caught (Ctrl-C while waiting for a Slurm job, say) with 3, as one
+    a worker caught does. Typer's and Click's own exceptions (an exit,
+    a wrong command line) pass, matched by module so that it holds whether
+    Typer vendors Click or not. So does a ``BrokenPipeError``, which is
+    stdout closed by ``head``: Click ends quietly, with 1, as it did before.
+    """
+
+    def invoke(self, *args: Any, **kwargs: Any) -> Any:
+        """Run the command, and turn an error it did not handle into an exit code."""
+        try:
+            return super().invoke(*args, **kwargs)
+        except KeyboardInterrupt:
+            typer.echo("Interrupted.", err=True)
+            raise typer.Exit(code=EXIT_INTERRUPTED) from None
+        except BrokenPipeError:
+            raise  # stdout was closed (`stilt status | head`): Click ends quietly, with 1
+        except Exception as error:
+            if type(error).__module__.partition(".")[0] in ("typer", "click"):
+                raise  # an exit, or a wrong command line: Click's own, and 2
+            code = _error_exit_code(error)
+            traceback.print_exception(error)
+            what = "a connection or I/O error, which a retry may get past"
+            if code == EXIT_BUG:
+                what = "an unexpected error, which a retry would repeat"
+            typer.echo(f"stilt exits with {code}: {what}.", err=True)
+            raise typer.Exit(code=code) from None
+
+
 app = typer.Typer(
     name="stilt",
     help="Run STILT simulations and check on a project.",
     no_args_is_help=True,
+    cls=_Group,
 )
 
 logger = logging.getLogger(__name__)
@@ -73,11 +315,6 @@ _COMPUTE_ROOT = typer.Option(
     "--compute-root",
     help="Directory the transport model runs under, a new workdir for each run. Defaults to PYSTILT_COMPUTE_ROOT, then $TMPDIR/pystilt/<project>.",
 )
-
-
-#: Exit codes. 2 is also Click's own for an unknown option or command, so a
-#: driver never takes a typo for a run to retry.
-EXIT_COMPLETE, EXIT_FAILED, EXIT_USAGE, EXIT_INTERRUPTED = 0, 1, 2, 3
 
 
 def _fail(message: str) -> NoReturn:
@@ -369,9 +606,15 @@ def run(
 
     --receptors limits the run to the receptors listed in a file. --task
     I/N runs one share of them here, for each task of a job array or a
-    Kubernetes indexed Job. Exits with 0 when every simulation that ran is
-    complete, 1 when some failed, 3 when some did not finish, and 2 when
-    the command line is wrong or a met cannot be read (nothing ran).
+    Kubernetes indexed Job.
+
+    Exits with 0 when every simulation that ran is complete, 1 when some
+    failed, 3 when some did not finish (the run was stopped), and 2 when
+    the command line is wrong or a met cannot be read (nothing ran). An
+    error the run did not expect prints its traceback and exits with 3 when
+    it is a connection or I/O error, such as an output bucket that cannot
+    be reached, which a retry may get past, and with 4 when it is any
+    other, which a retry would repeat.
     """
     receptor_ids, rows = (
         (None, None) if receptors is None else _read_receptors(receptors)

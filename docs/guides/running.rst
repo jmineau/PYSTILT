@@ -142,7 +142,10 @@ Commands
 some failed, and 3 when some did not finish because the run was stopped. It
 exits with 2 when its command line is wrong, or when a met directory does
 not exist or holds no ARL file; ``stilt submit`` and ``stilt status`` do
-too.
+too. An error the command did not expect prints its traceback and exits
+with 3 when it is a connection or I/O error, such as an output bucket that
+cannot be reached, and with 4 for any other (:ref:`exit-codes`). Every
+command does this, not only ``stilt run``.
 
 When a simulation fails
 -----------------------
