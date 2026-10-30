@@ -19,6 +19,7 @@ def test_all_failure_reasons_exist():
         "FORTRAN_RUNTIME_ERROR",
         "TIMEOUT",
         "PARTICLE_LIMIT",
+        "EXIT_STATUS",
     }
     assert {r.value for r in FailureReason} == expected
 
