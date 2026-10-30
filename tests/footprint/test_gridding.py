@@ -796,6 +796,77 @@ def test_projected_kernel_width_does_not_depend_on_how_the_axes_are_turned():
     np.testing.assert_allclose(w_turned, w_north, rtol=1e-6)
 
 
+def _cloud_at(lon0: float, lat0: float = 50.0) -> pd.DataFrame:
+    """
+    ``_spread_particles`` moved to (lon0, lat0), 0.3 degrees apart a day later.
+
+    Longitudes are written in [-180, 180), as HYSPLIT writes them, so a
+    cloud at 179.9 has particles on both sides of 180.
+    """
+    p = _spread_particles()
+    rng = np.random.default_rng(11)
+    late = p["age"] < -1
+    p.loc[late, "lon"] = rng.normal(0.0, 0.3, int(late.sum()))
+    p.loc[late, "lat"] = rng.normal(0.0, 0.3, int(late.sum()))
+    p.loc[~late, ["lon", "lat"]] = 0.0
+    p["lon"] = ((p["lon"] + lon0 + 180.0) % 360.0) - 180.0
+    p["lat"] = p["lat"] + lat0
+    return p
+
+
+def _lambert_at(lon0: float, lat0: float = 50.0) -> str:
+    return f"+proj=lcc +lat_1=45 +lat_2=55 +lat_0={lat0} +lon_0={lon0} +datum=WGS84 +units=m"
+
+
+def test_projected_kernel_of_a_cloud_across_180_degrees_is_the_cloud_at_0_degrees():
+    """
+    A cloud on both sides of 180 degrees gets the kernel of the same cloud at 0 degrees.
+
+    Each is on a Lambert grid centered on it, so the two are the same on the
+    ground. Without unwrapping, the longitudes near +180 and -180 give a
+    variance of thousands of square degrees and a kernel about 20 times too
+    wide.
+    """
+    pytest.importorskip("pyproj")
+    across = _with_rtime(_cloud_at(179.9))
+    assert across["lon"].min() < -179 and across["lon"].max() > 179
+    at_zero = _with_rtime(_cloud_at(0.0))
+    _, w_across = _compute_kernel_bandwidths(
+        across, smooth_factor=1.0, crs=_lambert_at(179.9)
+    )
+    _, w_zero = _compute_kernel_bandwidths(
+        at_zero, smooth_factor=1.0, crs=_lambert_at(0.0)
+    )
+    assert w_zero.max() > 3000  # a kernel of a few km, wider than a cell
+    np.testing.assert_allclose(w_across, w_zero, rtol=1e-6)
+
+
+def test_projected_footprint_of_a_cloud_across_180_degrees_keeps_its_total(
+    point_receptor,
+):
+    """On a 3 km Lambert grid across 180 degrees the footprint is the one at 0 degrees."""
+    pytest.importorskip("pyproj")
+    feet = []
+    for lon0, west, east in ((179.9, 177.9, -178.1), (0.0, -2.0, 2.0)):
+        grid = Grid(
+            xmin=west,
+            xmax=east,
+            ymin=48.0,
+            ymax=52.0,
+            xres=3000,
+            yres=3000,
+            crs=_lambert_at(lon0),
+        )
+        feet.append(
+            calc_footprint(_cloud_at(lon0), point_receptor, grid, time_integrate=True)
+        )
+    across, at_zero = (f.to_numpy() for f in feet)
+    np.testing.assert_allclose(across.sum(), at_zero.sum(), rtol=1e-6)
+    np.testing.assert_allclose(
+        np.count_nonzero(across), np.count_nonzero(at_zero), rtol=0.02
+    )
+
+
 def _smoothing_variance_km2(foot, unsmoothed, x_km, y_km) -> tuple[float, float]:
     """Return the variance smoothing adds to a footprint along x and y, in km**2."""
 
