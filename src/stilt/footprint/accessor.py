@@ -212,7 +212,7 @@ class FootprintAccessor:
             of zeros to end it). A flux labeled at the middle of its steps
             must be relabeled first: shift its labels back by half a step,
             ``flux.assign_coords(time=flux.time - half_step)``. The labels
-            must increase.
+            must strictly increase.
 
         Returns
         -------
@@ -227,7 +227,8 @@ class FootprintAccessor:
             If the flux has a ``time`` dimension and the footprint has none,
             since a time-summed footprint cannot say which flux step each
             hour meets, if the flux cells are finer than the footprint's, or
-            if the flux's time labels do not increase.
+            if the flux's time labels do not strictly increase (a repeated
+            label is an error).
         """
         from stilt.sampling import sample_field
 

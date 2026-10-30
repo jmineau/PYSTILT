@@ -130,7 +130,8 @@ def sample_field(
         at or before its time, the rule of ``foot.stilt.aggregate`` and
         ``project.jacobian``. A point before the first label takes
         ``fill_value`` and a point after the last takes the last step, since
-        the labels do not say where it ends. The labels must increase.
+        the labels do not say where it ends. The labels must strictly increase: a repeated label is an
+        error.
 
     Returns
     -------
@@ -171,7 +172,16 @@ def sample_field(
         if step_starts:
             if not index.is_monotonic_increasing:
                 raise ValueError(
-                    "The field's time labels must increase to be read as step starts."
+                    "The field's time labels must strictly increase to be read as "
+                    "step starts."
+                )
+            if not index.is_unique:
+                repeated = index[index.duplicated()][0]
+                raise ValueError(
+                    "The field's time labels must strictly increase to be read as "
+                    f"step starts, but {repeated} is repeated. Two steps cannot "
+                    "start at the same time; drop one, such as the overlap of two "
+                    "concatenated files."
                 )
             it = index.searchsorted(stamps, side="right") - 1
             inside = inside & (it >= 0)
