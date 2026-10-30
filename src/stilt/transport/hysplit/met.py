@@ -276,6 +276,10 @@ class Met:
         self._archive: Archive | None = None
         self._matches: dict[str, list[Path]] = {}
         self._sorted_tails: dict[int, tuple[list[str], list[Path]]] = {}
+        # The spacing of the met steps once read from one of its files, and
+        # why it was taken as one hour when no file could give it.
+        self._step: pd.Timedelta | None = None
+        self._step_problem: str | None = None
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -435,10 +439,12 @@ class Met:
         its times, so in either direction it needs the met step at or after
         the window's end: the release of a backward run, the end of a
         forward one. When the end is past the last met step of its file,
-        the next file is added. The spacing of the met steps is read once
-        from the first file under ``directory`` (one hour when it holds a
-        single time period). Downloads the files first when ``download`` is
-        set.
+        the next file is added. The spacing of the met steps is read once,
+        from the index records of the file that holds the window's end, as
+        ``file_format`` finds it; other products in ``directory`` do not
+        change it. When that file cannot be read or holds one time period,
+        the spacing is taken as one hour and :meth:`check` says so.
+        Downloads the files first when ``download`` is set.
 
         Parameters
         ----------
@@ -504,21 +510,35 @@ class Met:
         earlier, later = (_time(t) for t in window)
         last_file = later.floor(tres)
         next_file = _time(last_file + to_offset(tres))
-        if later > next_file - self._step:  # past the last step of its file
-            last_file = next_file
+        # An end on a file boundary needs nothing after it, whatever the step.
+        if later != last_file and later > next_file - self._step_at(last_file):
+            last_file = next_file  # past the last step of its file
         times = pd.date_range(earlier.floor(tres), last_file, freq=tres)
         return times, earlier, later
 
-    @cached_property
-    def _step(self) -> pd.Timedelta:
+    def _step_at(self, time: pd.Timestamp) -> pd.Timedelta:
         """
-        Return the spacing of the met steps, read from the first ARL file under :attr:`directory`.
+        Return the spacing of the met steps, read from this met's file for *time*.
 
-        It is the smallest spacing of that file's time periods. It is one
-        hour, the step of most met, when the file holds one time period or
-        no file there can be read as ARL.
+        The file is one ``file_format`` finds for *time*, so other products
+        in :attr:`directory` do not change it. Only its index records are
+        read, and the spacing is kept for the met once a file gives it. One
+        hour, the step of most met, when no file for *time* can be read or
+        it holds one time period; :meth:`check` then says why.
         """
-        return _first_step(self.directory) or pd.Timedelta(hours=1)
+        if self._step is None:
+            file_format = self.config.file_format
+            assert file_format is not None  # MetConfig requires it without download
+            pattern = time.strftime(file_format)
+            problem = f"no met file named {pattern}..."
+            for path in self._matching(pattern):
+                step, problem = _read_step(path)
+                if step is not None:
+                    self._step, self._step_problem = step, None
+                    return step
+            self._step_problem = problem
+            return pd.Timedelta(hours=1)
+        return self._step
 
     def missing_hours(self, window: tuple[Any, Any]) -> list[pd.Timestamp]:
         """
@@ -553,9 +573,9 @@ class Met:
         This looks for files, not inside them, except that it opens the first
         file the receptors need to count its time periods, which HYSPLIT
         needs to be at least two, and reads the spacing of the met steps from
-        the first file under ``directory``, as :meth:`files_for` does. :meth:`check` opens each file at a run, and
-        a run that passes this one can still fail as ``MET_COVERAGE`` when a
-        file is damaged or cut short.
+        the file of a run's end, as :meth:`files_for` does. :meth:`check`
+        opens each file at a run, and a run that passes this one can still
+        fail as ``MET_COVERAGE`` when a file is damaged or cut short.
 
         Parameters
         ----------
@@ -692,6 +712,11 @@ class Met:
 
         earlier, later = (_time(t) for t in window)
         needs = f"The run needs {earlier:%Y-%m-%d %H:%M} to {later:%Y-%m-%d %H:%M}."
+        if self._step_problem is not None:
+            needs += (
+                " The files were chosen with met steps taken as one hour, as "
+                f"their spacing could not be read: {self._step_problem}."
+            )
         steps = sorted(held)
         if not steps or steps[0] > earlier or steps[-1] < later:
             holds = (
@@ -897,25 +922,22 @@ def _first_source(directory: Path) -> str:
     )
 
 
-def _first_step(directory: Path) -> pd.Timedelta | None:
+def _read_step(path: Path) -> tuple[pd.Timedelta | None, str]:
     """
-    Return the smallest spacing of the time periods in the first ARL file under *directory*.
+    Return the smallest spacing of the time periods in the ARL file at *path*, or ``None`` and why not.
 
-    Files that are not ARL files are skipped, as :func:`_first_source` skips
-    them. Only the file's index records are read. ``None`` when that file
-    holds one time period, or no file under *directory* is an ARL file.
+    Only the file's index records are read.
     """
     from arlmet import File
 
-    for path in _arl_candidates(directory):
-        try:
-            with File(path) as met:
-                times = met.times
-        except (EOFError, OSError, ValueError):  # ARLFormatError is a ValueError
-            continue
-        if times:  # an empty file is not an ARL file
-            return min((b - a for a, b in pairwise(times)), default=None)
-    return None
+    try:
+        with File(path) as met:
+            times = met.times
+    except (EOFError, OSError, ValueError) as error:  # ARLFormatError is a ValueError
+        return None, f"{path} could not be read as an ARL file ({error})"
+    if len(times) < 2:
+        return None, f"{path} holds {'one time period' if times else 'no time period'}"
+    return min(b - a for a, b in pairwise(times)), ""
 
 
 __all__ = ["Met", "MetConfig"]

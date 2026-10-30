@@ -104,7 +104,7 @@ command line is wrong or the project's files are invalid.
 
 ``stilt check`` looks for files, not inside them, except to count the time
 periods of the first file a run needs and to read the spacing of the met
-steps from the first file in the met's directory. A run that passes can still
+steps from the file of a run's end. A run that passes can still
 fail as ``MET_COVERAGE``: a file that is damaged or cut short is found when
 the run opens it, and a receptor outside the domain of the files, when HYSPLIT
 starts it (the reasons are below).

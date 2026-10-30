@@ -2,6 +2,7 @@
 
 import datetime as dt
 import logging
+import re
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -1143,35 +1144,118 @@ def test_files_for_hourly_steps_drop_the_file_after_the_last_hour(
     met.check(found, window)
 
 
-def test_the_met_step_is_read_from_the_first_file(tmp_path):
-    _stepped_files(tmp_path, _NAM["names"], _NAM["file_format"], _NAM["tres"], "3h")
-    (tmp_path / "README").write_text("not an ARL file")
-
-    assert _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])._step == pd.Timedelta(
-        hours=3
+def _mixed_hourly(tmp_path: Path, other: str) -> Met:
+    """Write a 6-hour file of hourly steps beside *other*, a file that sorts first, and return the hourly met."""
+    write_arl_file(
+        tmp_path / "hrrr_20210115_00",
+        times=pd.date_range("2021-01-15 00:00", periods=6, freq="h"),
     )
+    if other == "3-hourly":
+        times = pd.date_range("2021-01-15 00:00", periods=8, freq="3h")
+        write_arl_file(tmp_path / "gfs_20210115", times=times)
+    elif other == "damaged":
+        (tmp_path / "aaa_20210115").write_bytes(b"not an ARL index record" * 50)
+    return _make_met(tmp_path, "hrrr_%Y%m%d_%H", "6h")
+
+
+@pytest.mark.parametrize("other", ["3-hourly", "damaged", "none"])
+@pytest.mark.parametrize("n_hours", [-3, 3])
+def test_the_met_step_comes_from_the_mets_own_files(tmp_path, other, n_hours):
+    """Another product in the folder, even one that sorts first, does not change the step (#283)."""
+    met = _mixed_hourly(tmp_path, other)
+    r_time = dt.datetime(2021, 1, 15, 3, 30)
+    window = run_window(
+        r_time if n_hours < 0 else r_time - dt.timedelta(hours=3), n_hours
+    )
+
+    files = met.files_for(window)
+
+    assert [p.name for p in files] == ["hrrr_20210115_00"]
+    met.check(files, window)
+
+
+def test_a_3_hourly_met_beside_an_hourly_file_that_sorts_first(tmp_path):
+    """The NAM12 run from 22:00 gets the next day's file though an hourly file sorts first (#283)."""
+    write_arl_file(
+        tmp_path / "20140101_00-05_hrrr",
+        times=pd.date_range("2014-01-01 00:00", periods=6, freq="h"),
+    )
+    names = ["20150101_nam12", "20150102_nam12"]
+    for name, day in zip(names, ["2015-01-01", "2015-01-02"], strict=True):
+        write_arl_file(tmp_path / name, times=pd.date_range(day, periods=8, freq="3h"))
+    met = _make_met(tmp_path, "%Y%m%d", "1D")
+    window = run_window(dt.datetime(2015, 1, 1, 22), -3)
+
+    files = met.files_for(window)
+
+    assert [p.name for p in files] == names
+    met.check(files, window)
+
+
+def test_the_met_step_skips_a_partial_download(tmp_path):
+    """A cut-short download beside a met file, with other steps, is not read for the step."""
+    _stepped_files(tmp_path, _NAM["names"], _NAM["file_format"], _NAM["tres"], "3h")
+    write_arl_file(
+        tmp_path / "20150101.partial",
+        times=pd.date_range("2015-01-01", periods=24, freq="h"),
+    )
+    met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
+
+    files = met.files_for(run_window(dt.datetime(2015, 1, 1, 22), -3))
+
+    assert [p.name for p in files] == _NAM["names"]
+
+
+_ONE_HOUR = "met steps taken as one hour, as their spacing could not be read: "
 
 
 @pytest.mark.parametrize(
-    "first",
+    ("end_file", "problem", "refused"),
     [
         pytest.param(
             lambda d: write_arl_file(d / "20150101", times=["2015-01-01"]),
+            "20150101 holds one time period",
+            _ONE_HOUR,
             id="one-period",
         ),
-        pytest.param(lambda d: (d / "20150101").touch(), id="empty"),
-        pytest.param(lambda d: None, id="no-file"),
+        pytest.param(
+            lambda d: (d / "20150101").touch(),
+            "20150101 holds no time period",
+            _ONE_HOUR,
+            id="empty",
+        ),
+        pytest.param(
+            lambda d: (d / "20150101").write_bytes(b"not an ARL index record" * 50),
+            "20150101 could not be read as an ARL file",
+            "20150101 is damaged: ",
+            id="damaged",
+        ),
     ],
 )
-def test_the_met_step_is_an_hour_when_no_file_gives_one(tmp_path, first):
-    """A met whose first file has no spacing to read keeps the hourly rule: a 22:00 end needs no next day."""
-    first(tmp_path)
+def test_a_step_that_cannot_be_read_is_an_hour_and_the_check_says_why(
+    tmp_path, end_file, problem, refused
+):
+    """The file search keeps the hourly rule rather than raising, and Met.check names the file (#283)."""
+    end_file(tmp_path)
+    met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
+    window = run_window(dt.datetime(2015, 1, 1, 22), -3)
+
+    files = met.files_for(window)  # does not raise
+
+    assert [p.name for p in files] == ["20150101"]
+    assert problem in str(met._step_problem)
+    with pytest.raises(MeteorologyError, match=re.escape(refused)) as info:
+        met.check(files, window)
+    if refused == _ONE_HOUR:
+        assert str(info.value).endswith(f"{tmp_path / problem}.")
+
+
+def test_a_missing_end_file_keeps_the_hourly_rule(tmp_path):
     met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
 
-    assert met._step == pd.Timedelta(hours=1)
-    assert met.missing_hours(run_window(dt.datetime(2015, 1, 1, 22), -3)) == (
-        [] if (tmp_path / "20150101").exists() else [pd.Timestamp("2015-01-01")]
-    )
+    assert met.missing_hours(run_window(dt.datetime(2015, 1, 1, 22), -3)) == [
+        pd.Timestamp("2015-01-01")
+    ]
 
 
 def test_a_forward_run_missing_the_file_after_its_end_names_that_hour(tmp_path):

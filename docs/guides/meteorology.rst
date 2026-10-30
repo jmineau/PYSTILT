@@ -62,8 +62,10 @@ day's first file, and so does a forward run that ends at 23:30; one
 released at 23:00 does not. With daily NAM12 files of 3-hourly steps
 (00:00 to 21:00), a run released at 22:00 needs the next day's file, and
 one released at 21:00 does not. The spacing of the steps is read from the
-first file in ``directory``; when that file holds one time period, it is
-taken as an hour. A 24-hour backward run with 6-hour HRRR files needs 5 or
+met's own file that holds the run's end (found by ``file_format``), so
+other products in ``directory`` do not change it. When that file holds one
+time period or cannot be read, the spacing is taken as an hour, and a run
+the files then do not cover fails naming that file. A 24-hour backward run with 6-hour HRRR files needs 5 or
 6 files, depending on the receptor hour. Every one is needed. If one is
 missing, the simulation fails before HYSPLIT runs, as ``MET_COVERAGE``,
 naming the hours with no file. ``stilt check`` makes this search for every

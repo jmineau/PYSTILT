@@ -217,13 +217,8 @@ def test_a_damaged_first_file_is_left_to_the_run(tmp_path):
     assert project.check().empty
 
 
-def test_checking_opens_two_met_files_however_many_receptors(tmp_path, monkeypatch):
-    """
-    The check counts the time periods of one file, not of every file the receptors need.
-
-    The first file under the met directory is opened too, once, for the
-    spacing of the met steps (#283).
-    """
+def test_checking_opens_one_met_file(tmp_path, monkeypatch):
+    """The check counts the time periods of one file, not of every file the receptors need."""
     import arlmet
 
     project = _project(tmp_path, [_receptor(12), _receptor(13)])
@@ -237,7 +232,7 @@ def test_checking_opens_two_met_files_however_many_receptors(tmp_path, monkeypat
     monkeypatch.setattr(arlmet, "File", counting_file)
 
     assert project.check().empty
-    assert sorted(opened) == ["20230101_08", "20230101_09"]
+    assert opened == ["20230101_09"]
 
 
 def test_a_met_file_the_hour_after_a_backward_run_needs_is_found_missing(tmp_path):
