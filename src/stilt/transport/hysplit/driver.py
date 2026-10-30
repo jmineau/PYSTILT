@@ -455,7 +455,8 @@ def run_hycs_std(workdir: Path, timeout: int | None = None) -> None:
 
     *workdir* holds the inputs :func:`write_inputs` wrote. With *timeout*
     seconds the run is stopped when it takes longer; without it, it may run
-    as long as HYSPLIT does.
+    as long as HYSPLIT does. If this process is interrupted while it waits
+    (``KeyboardInterrupt`` or ``SystemExit``), the run is stopped too.
 
     Raises
     ------
@@ -485,6 +486,11 @@ def run_hycs_std(workdir: Path, timeout: int | None = None) -> None:
                 f"HYSPLIT ran longer than the {timeout} s timeout.",
                 reason=FailureReason.TIMEOUT,
             ) from e
+        except BaseException:
+            # Ctrl-C, or a worker told to stop: HYSPLIT runs in a session of
+            # its own, so no signal reached it and it would run on, unseen.
+            _terminate(proc)
+            raise
     messages = log_path.read_text(encoding="utf-8", errors="replace")
     warnings = workdir / WARNING_FILE
     if warnings.exists():
