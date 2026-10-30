@@ -3,8 +3,9 @@ The check before a run: what would stop a project's simulations, found without r
 
 :func:`check_project` looks at the inputs of a project, never at its results
 or at HYSPLIT: the met files each receptor needs, whether each receptor is
-inside the footprint grid and the met's crop, and whether an averaging-kernel
-table matches the receptors. ``Project.check`` and ``stilt check`` call it.
+inside the footprint grid and the met's crop, whether an averaging-kernel
+table matches the receptors, and whether ``varsiwant`` holds ``zsfc`` where
+the project needs it. ``Project.check`` and ``stilt check`` call it.
 """
 
 from __future__ import annotations
@@ -14,7 +15,9 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
+from stilt.particles.table import needs_height_to_match
 from stilt.transforms.averaging_kernel import AveragingKernel
+from stilt.transforms.pressure_weighting import PressureWeighting
 from stilt.transport import get_model
 
 if TYPE_CHECKING:
@@ -55,6 +58,7 @@ def check_project(project: Project) -> pd.DataFrame:
             *_met_checks(variant, rows),
             *_grid_checks(variant, rows),
             *_kernel_checks(variant, project, ids),
+            *_zsfc_checks(variant, rows),
         )
         for key, make in checks:
             if key not in found:
@@ -155,6 +159,61 @@ def _compare_kernel_table(
         )
         for rid in sorted(held - set(ids))
     ]
+
+
+def _zsfc_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
+    """Yield the missing ``zsfc`` of a variant with receptors above sea level, which the run reads for them."""
+    varsiwant = getattr(variant.transport, "varsiwant", None)
+    if varsiwant is None or "zsfc" in varsiwant:
+        return
+    above_sea_level = rows[rows["altitude_ref"] == "msl"]
+    n_msl = above_sea_level["receptor"].nunique()
+    if n_msl == 0:
+        return
+    near_field = variant.transport.hnf_plume
+    weighting = variant.footprint is not None and any(
+        isinstance(t, PressureWeighting) for t in variant.footprint.transforms
+    )
+    n_by_height = sum(
+        needs_height_to_match(g["longitude"], g["latitude"], g["altitude"])
+        for _, g in above_sea_level[above_sea_level["kind"] == "multipoint"].groupby(
+            "receptor"
+        )
+    )
+    if not (near_field or n_by_height or weighting):
+        return
+    key = ("zsfc", tuple(varsiwant), n_msl, n_by_height, near_field, weighting)
+    message = _zsfc_message(varsiwant, n_msl, n_by_height, near_field, weighting)
+    yield key, lambda: [("zsfc", None, message)]
+
+
+def _zsfc_message(
+    varsiwant: list[str],
+    n_msl: int,
+    n_by_height: int,
+    near_field: bool,
+    weighting: bool,
+) -> str:
+    """Say what needs ``zsfc`` and the line that adds it to ``varsiwant``."""
+    reasons = []
+    if near_field:
+        reasons.append("the near-field correction (hnf_plume) is skipped for them")
+    if n_by_height:
+        reasons.append(
+            f"{n_by_height} of them {'is a multipoint receptor' if n_by_height == 1 else 'are multipoint receptors'} "
+            "whose points are less than 1 km apart and at different altitudes, "
+            "so the release heights of the particles are matched by position "
+            "and can come out wrong"
+        )
+    if weighting:
+        reasons.append("the pressure_weighting transform fails their footprints")
+    receptors = f"{n_msl} receptor is" if n_msl == 1 else f"{n_msl} receptors are"
+    fix = ", ".join([*varsiwant, "zsfc"])
+    return (
+        f"zsfc is not in varsiwant, and {receptors} above sea level: "
+        f"{'; '.join(reasons)}. Add it in config.yaml with varsiwant: [{fix}]. "
+        "That changes the settings folder, so the particles are made again"
+    )
 
 
 __all__ = ["CHECK_COLUMNS", "check_project"]

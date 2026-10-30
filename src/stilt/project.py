@@ -1227,7 +1227,12 @@ class Project:
         - each receptor is inside the footprint grid (``grid``);
         - each ``averaging_kernel`` table exists (``kernel_table``), has a
           kernel for every receptor (``kernel_missing``), and holds none for
-          a receptor the project lacks (``kernel_unused``).
+          a receptor the project lacks (``kernel_unused``);
+        - ``varsiwant`` holds ``zsfc`` when a receptor is above sea level
+          (``altitude_ref="msl"``) and a run reads it: the near-field
+          correction, the release heights of a multipoint receptor whose
+          points are less than 1 km apart and at different altitudes, or the
+          ``pressure_weighting`` transform (``zsfc``).
 
         A met with ``download`` has no files to look for: they are fetched
         when a run needs them, so only its crop is checked.

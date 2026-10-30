@@ -170,8 +170,9 @@ def check(project: str | None = _PROJECT_ARG) -> None:
     files, that every met file each receptor's run needs is there (naming
     the hours), that the first of them holds more than one time period,
     which HYSPLIT needs, that each receptor is inside the met's crop box and the
-    footprint grid, and that an averaging-kernel table matches the
-    receptors. Nothing is run or downloaded. It looks for files, not inside
+    footprint grid, that an averaging-kernel table matches the
+    receptors, and that ``varsiwant`` holds ``zsfc`` when receptors above sea
+    level need it. Nothing is run or downloaded. It looks for files, not inside
     them: a run that passes can still fail as MET_COVERAGE, when a met file
     is damaged or cut short, or the receptor is outside the files' domain.
     Exits with 0 when it finds nothing, 1 when it lists anything, and 2 when
