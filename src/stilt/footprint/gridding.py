@@ -299,6 +299,18 @@ def _compute_kernel_bandwidths(
         w = w * _grid_units_per_degree_longitude(
             crs, lon=lon_mean, lat=kernel_df["lat_mean"].to_numpy()
         )
+        # A step whose cloud is centered where the projection has no value
+        # (UTM near the equator 81 to 99 degrees from its meridian, a
+        # geostationary grid off the disk) has no width. Its particles cannot
+        # reach the grid, so the step is dropped, as STILT-R's na.omit drops a
+        # step whose particles project to infinity.
+        # If no step has a width, the particles are not smoothed, as when no
+        # step has a spread (above).
+        finite = np.isfinite(w)
+        if not finite.any():
+            w = np.zeros(len(w), dtype=float)
+        elif not finite.all():
+            kernel_df, w = kernel_df[finite].reset_index(drop=True), w[finite]
     return kernel_df, w
 
 
@@ -339,7 +351,8 @@ def _grid_units_per_degree_longitude(
     points a hundredth of a degree east and west, divided by the
     difference in degrees. So it includes the projection's scale at that
     point and its units (meters, feet, kilometers), and does not depend on
-    how the projection's axes are turned. Next to a projection's cut (a
+    how the projection's axes are turned. It is NaN where the projection
+    has no value. Next to a projection's cut (a
     Lambert conformal or Mercator grid is cut at ``lon_0 + 180``) one of
     the two points is across it, so the distances from the point to each
     side differ by more than a factor of two; there the shorter one is
@@ -352,10 +365,12 @@ def _grid_units_per_degree_longitude(
     x, y = (np.asarray(v) for v in tr.transform(lon, lat))
     x_west, y_west = (np.asarray(v) for v in tr.transform(lon - step, lat))
     x_east, y_east = (np.asarray(v) for v in tr.transform(lon + step, lat))
-    across = np.hypot(x_east - x_west, y_east - y_west) / (2 * step)
-    west = np.hypot(x - x_west, y - y_west) / step
-    east = np.hypot(x_east - x, y_east - y) / step
-    cut = np.maximum(west, east) > 2 * np.minimum(west, east)
+    # Where the projection has no value it gives inf, and the length is NaN.
+    with np.errstate(invalid="ignore"):
+        across = np.hypot(x_east - x_west, y_east - y_west) / (2 * step)
+        west = np.hypot(x - x_west, y - y_west) / step
+        east = np.hypot(x_east - x, y_east - y) / step
+        cut = np.maximum(west, east) > 2 * np.minimum(west, east)
     return np.where(cut, np.minimum(west, east), across)
 
 
