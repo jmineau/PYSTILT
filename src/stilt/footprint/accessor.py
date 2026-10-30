@@ -202,8 +202,17 @@ class FootprintAccessor:
         flux : xarray.DataArray
             Surface flux on a ``lat``/``lon`` grid (``y``/``x`` for a
             projected footprint), in µmol m⁻² s⁻¹ for an enhancement in
-            ppm. A flux with a ``time`` dimension is taken at each footprint
-            time step.
+            ppm. A flux with a ``time`` dimension is read as steps that start
+            at their labels, as ``aggregate`` and ``project.jacobian`` read
+            them: each footprint hour takes the last flux step that starts at
+            or before the hour's start. A monthly flux labeled on the 1st
+            gives every hour of July 20 July's flux. An hour before the first
+            label gets zero flux, and an hour after the last label takes the
+            last step, since the labels do not say where it ends (add a step
+            of zeros to end it). A flux labeled at the middle of its steps
+            must be relabeled first: shift its labels back by half a step,
+            ``flux.assign_coords(time=flux.time - half_step)``. The labels
+            must increase.
 
         Returns
         -------
@@ -217,7 +226,8 @@ class FootprintAccessor:
         ValueError
             If the flux has a ``time`` dimension and the footprint has none,
             since a time-summed footprint cannot say which flux step each
-            hour meets, or if the flux cells are finer than the footprint's.
+            hour meets, if the flux cells are finer than the footprint's, or
+            if the flux's time labels do not increase.
         """
         from stilt.sampling import sample_field
 
@@ -240,6 +250,7 @@ class FootprintAccessor:
                     yy.ravel(),
                     times=np.full(xx.size, t),
                     fill_value=0.0,
+                    step_starts=True,
                 ).reshape(yy.shape)
                 for t in foot["time"].to_numpy()
             ]
