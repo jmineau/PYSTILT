@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import tempfile
+from collections.abc import Iterable
 from importlib.resources import files as pkg_files
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -138,6 +139,31 @@ class HysplitModel:
             itself), and ``message`` columns, one row for each problem.
         """
         return Met("met", met).check_receptors(receptors, n_hours)
+
+    def fetch_met(
+        self, met: MetConfig, windows: Iterable[tuple[dt.datetime, dt.datetime]]
+    ) -> pd.DataFrame:
+        """
+        Get the met files that cover *windows*, downloading the ones a download lacks.
+
+        The files :meth:`run` would ask for, one request to the archive for
+        windows that overlap (:meth:`Met.fetch`). A met without ``download``
+        is only checked for missing files.
+
+        Parameters
+        ----------
+        met : MetConfig
+            The met, with an absolute directory in a project.
+        windows : iterable of tuple of datetime
+            The time each run covers (:func:`stilt.meteorology.run_window`).
+
+        Returns
+        -------
+        pandas.DataFrame
+            ``file`` and ``message`` columns: a row for each file, then a
+            row for each window whose files could not be had.
+        """
+        return Met("met", met).fetch(windows)
 
     def run(
         self,
