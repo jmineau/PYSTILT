@@ -5,8 +5,10 @@ A field is an :class:`xarray.DataArray` on a regular ``lat``/``lon`` grid
 (``y``/``x`` for a projected footprint grid), with an optional vertical
 dimension and an optional ``time`` dimension. Each point takes the value of
 the cell it falls in. ``foot.stilt.enhancement`` and
-``particles.stilt.enhancement`` sample a surface flux this way, and
-:func:`stilt.particles.background` a mole-fraction field. PYSTILT does
+``particles.stilt.enhancement`` sample a surface flux this way, taking the
+flux step that starts at or before each time, and
+:func:`stilt.particles.background` a mole-fraction field, taking the
+nearest time. PYSTILT does
 not convert units. A flux in µmol m⁻² s⁻¹ times a footprint in ppm per
 (µmol m⁻² s⁻¹) gives ppm.
 
@@ -92,6 +94,7 @@ def sample_field(
     z: ArrayLike | None = None,
     times: ArrayLike | None = None,
     fill_value: float = np.nan,
+    step_starts: bool = False,
 ) -> np.ndarray:
     """
     Return the field's value in the cell nearest each point.
@@ -114,12 +117,21 @@ def sample_field(
         nearest level, so a point above the top level takes the top level.
     times : array-like, optional
         Time of each point. Required when the field has a ``time``
-        dimension. Matched to the nearest time, so times outside the
-        field's span take the first or last step.
+        dimension. By default matched to the nearest time, so times
+        outside the field's span take the first or last step. See
+        ``step_starts``.
     fill_value : float, default NaN
         Value for points outside the field and for missing cells. Use 0 for
         a surface flux, where no data means no emission. ``NaN`` suits a
         mole fraction, which is unknown there.
+    step_starts : bool, default False
+        Whether the field's ``time`` labels are the starts of steps, as a
+        flux inventory's are. A point then takes the last step that starts
+        at or before its time, the rule of ``foot.stilt.aggregate`` and
+        ``project.jacobian``. A point before the first label takes
+        ``fill_value`` and a point after the last takes the last step, since
+        the labels do not say where it ends. The labels must strictly increase: a repeated label is an
+        error.
 
     Returns
     -------
@@ -156,7 +168,26 @@ def sample_field(
         stamps = pd.DatetimeIndex(pd.to_datetime(np.asarray(times).ravel()))
         if len(stamps) != len(xs):
             raise ValueError("times must have the same length as x and y.")
-        it = field.indexes["time"].get_indexer(stamps, method="nearest")
+        index = field.indexes["time"]
+        if step_starts:
+            if not index.is_monotonic_increasing:
+                raise ValueError(
+                    "The field's time labels must strictly increase to be read as "
+                    "step starts."
+                )
+            if not index.is_unique:
+                repeated = index[index.duplicated()][0]
+                raise ValueError(
+                    "The field's time labels must strictly increase to be read as "
+                    f"step starts, but {repeated} is repeated. Two steps cannot "
+                    "start at the same time; drop one, such as the overlap of two "
+                    "concatenated files."
+                )
+            it = index.searchsorted(stamps, side="right") - 1
+            inside = inside & (it >= 0)
+            it = np.clip(it, 0, None)
+        else:
+            it = index.get_indexer(stamps, method="nearest")
         indexers["time"] = xr.DataArray(it, dims="points")
     sampled = field.isel(indexers).to_numpy().astype(float)
     return np.where(inside & ~np.isnan(sampled), sampled, fill_value)
