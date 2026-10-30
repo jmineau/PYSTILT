@@ -556,12 +556,17 @@ def _above_sea_level_point() -> PointReceptor:
     )
 
 
-def _multipoint(altitude_ref: str) -> MultiPointReceptor:
+def _multipoint(
+    altitude_ref: str,
+    altitudes: tuple[float, ...] = (1500.0, 2200.0, 3000.0),
+    step: float = 0.005,
+) -> MultiPointReceptor:
+    """Return a multipoint receptor whose points are *step* degrees (about 425 m for 0.005) apart."""
     return MultiPointReceptor(
         time=NOON,
-        longitudes=(-111.50, -111.52, -111.54),
-        latitudes=(40.5, 40.5, 40.5),
-        altitudes=(1500.0, 2200.0, 3000.0),
+        longitudes=tuple(-111.50 - i * step for i in range(len(altitudes))),
+        latitudes=(40.5,) * len(altitudes),
+        altitudes=altitudes,
         altitude_ref=altitude_ref,
     )
 
@@ -617,7 +622,8 @@ def test_a_multipoint_receptor_above_sea_level_needs_zsfc_to_match_its_heights(
 
     message = _found(project.check(), "zsfc")["message"].iloc[0]
 
-    assert "multipoint" in message
+    assert "1 of them is a multipoint receptor" in message
+    assert "less than 1 km apart and at different altitudes" in message
     assert "near-field" not in message
 
 
@@ -648,6 +654,69 @@ def test_a_slant_receptor_from_soundings_is_one_the_check_finds(tmp_path):
         phrase in message
         for phrase in ("near-field correction", "multipoint", "pressure_weighting")
     )
+
+
+def test_a_slant_receptor_alone_is_found_by_its_release_heights(tmp_path):
+    points = slant_points(
+        -111.5, 40.5, [1500.0, 2200.0, 3000.0], zenith=40.0, azimuth=120.0
+    )
+    slant = Receptor.from_points(NOON, points, altitude_ref="msl")
+    project = _project(tmp_path, [slant], hnf_plume=False)
+
+    message = _found(project.check(), "zsfc")["message"].iloc[0]
+
+    assert "1 of them is a multipoint receptor" in message
+    assert "near-field" not in message
+    assert "pressure_weighting" not in message
+
+
+def test_a_multipoint_receptor_with_one_altitude_does_not_need_zsfc(tmp_path):
+    level = _multipoint("msl", altitudes=(2000.0, 2000.0, 2000.0))
+    project = _project(tmp_path, [level], hnf_plume=False)
+
+    assert _found(project.check(), "zsfc").empty
+
+
+def test_a_multipoint_receptor_with_two_points_at_one_altitude_does_not_need_zsfc(
+    tmp_path,
+):
+    shared = _multipoint("msl", altitudes=(1500.0, 1500.0, 3000.0))
+    project = _project(tmp_path, [shared], hnf_plume=False)
+
+    assert _found(project.check(), "zsfc").empty
+
+
+def test_a_multipoint_receptor_with_points_far_apart_does_not_need_zsfc(tmp_path):
+    spread = _multipoint("msl", step=0.05)  # about 4 km
+    project = _project(tmp_path, [spread], hnf_plume=False)
+
+    assert _found(project.check(), "zsfc").empty
+
+
+def test_a_multipoint_receptor_with_one_altitude_still_needs_zsfc_for_the_rest(
+    tmp_path,
+):
+    level = _multipoint("msl", altitudes=(2000.0, 2000.0, 2000.0))
+    project = _project(tmp_path, [level], variants={"hrrr": _WEIGHTING})
+
+    message = _found(project.check(), "zsfc")["message"].iloc[0]
+
+    assert "multipoint" not in message
+    assert "near-field correction" in message
+    assert "pressure_weighting" in message
+
+
+def test_only_the_receptors_above_sea_level_are_counted(tmp_path):
+    project = _project(
+        tmp_path,
+        [_receptor(), _above_sea_level_point()],
+        variants={"hrrr": _WEIGHTING},
+    )
+
+    message = _found(project.check(), "zsfc")["message"].iloc[0]
+
+    assert "1 receptor is above sea level" in message
+    assert "fails their footprints" in message
 
 
 def test_every_reason_is_named_once_for_all_the_receptors(tmp_path):

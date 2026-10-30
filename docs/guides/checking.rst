@@ -103,14 +103,24 @@ command line is wrong or the project's files are invalid.
        from the receptors' in a digit.
    * - ``zsfc``
      - A variant's ``varsiwant`` lacks ``zsfc``, and the project has a
-       receptor with ``altitude_ref="msl"`` and something that reads it.
-       The message names what: the near-field correction (``hnf_plume``),
-       which is skipped without it; the release heights of a multipoint
-       receptor, which are then matched by position and not by height; and
-       the ``pressure_weighting`` transform, which fails every footprint.
-       Not about one receptor, so ``receptor`` is empty, and the message
-       counts the receptors above sea level. A receptor above ground never
-       needs ``zsfc``.
+       receptor with ``altitude_ref="msl"`` that a run reads it for. The
+       message counts those receptors and names what reads it:
+
+       - the near-field correction (``hnf_plume``, on by default), which
+         starts the plume at the ground and is skipped without ``zsfc``;
+       - the release heights of a multipoint receptor, such as a slant
+         column. The particles are matched to their points by height
+         (``zagl + zsfc``) when every point has its own altitude and the
+         model writes no release-time rows, and by position otherwise.
+         Position fails only for points less than 1 km apart, so only a
+         multipoint receptor with different altitudes and such points is
+         counted. A HYSPLIT build that writes release-time rows
+         (``exe_dir``) needs no height, and the check cannot see the build;
+       - the ``pressure_weighting`` transform, which fails the footprints
+         of the receptors above sea level.
+
+       It is not about one receptor, so ``receptor`` is empty. A receptor
+       above ground never needs ``zsfc``.
      - Add ``zsfc`` to ``varsiwant`` in ``config.yaml``; the message has
        the line. ``varsiwant`` is part of the settings folder's name, so the
        particles are made again in a new folder: add it before the runs, not

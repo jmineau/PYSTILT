@@ -1230,7 +1230,8 @@ class Project:
           a receptor the project lacks (``kernel_unused``);
         - ``varsiwant`` holds ``zsfc`` when a receptor is above sea level
           (``altitude_ref="msl"``) and a run reads it: the near-field
-          correction, the release heights of a multipoint receptor, or the
+          correction, the release heights of a multipoint receptor whose
+          points are less than 1 km apart and at different altitudes, or the
           ``pressure_weighting`` transform (``zsfc``).
 
         A met with ``download`` has no files to look for: they are fetched

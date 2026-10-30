@@ -311,6 +311,41 @@ def write_particles(
 _MIN_RELIABLE_SPACING_M = 1000.0
 
 
+def _closest_points_m(longitudes: np.ndarray, latitudes: np.ndarray) -> float:
+    """Return the horizontal distance in meters between the two closest of at least two points."""
+    x = longitudes * np.cos(np.radians(latitudes.mean())) * 111_320.0
+    y = latitudes * 111_320.0
+    gaps = np.hypot(x[:, None] - x[None, :], y[:, None] - y[None, :])
+    return float(gaps[np.triu_indices(len(x), k=1)].min())
+
+
+def needs_height_to_match(
+    longitudes: Iterable[float],
+    latitudes: Iterable[float],
+    altitudes: Iterable[float],
+) -> bool:
+    """
+    Return whether a multipoint receptor's particles can be told from their points only by height.
+
+    :func:`add_release_heights` matches them by height when every point has its
+    own altitude and the model writes no release (``t = 0``) rows; for a
+    receptor above sea level that height is ``zagl + zsfc``. Points that share
+    an altitude are matched by position, and so are points more than
+    ``1000 m`` apart, which position tells apart reliably. This is the one
+    case left: every altitude differs and two points are closer than that.
+    A model that writes release rows needs no height at all; this function
+    does not know the model.
+    """
+    lons = np.asarray(list(longitudes), dtype=float)
+    lats = np.asarray(list(latitudes), dtype=float)
+    alts = np.asarray(list(altitudes), dtype=float)
+    return (
+        len(alts) > 1
+        and len(np.unique(alts)) == len(alts)
+        and _closest_points_m(lons, lats) < _MIN_RELIABLE_SPACING_M
+    )
+
+
 def add_release_heights(particles: pd.DataFrame, receptor: Receptor) -> pd.DataFrame:
     """
     Return *particles* with each particle's ``release_height``, for a column or multipoint receptor.
@@ -419,10 +454,7 @@ def _multipoint_release_heights(
             np.sum((xy[:, None, :] - pts[None, :, :]) ** 2, axis=2), axis=1
         )
         if not has_t0 and len(alts) > 1:
-            x = lons * np.cos(np.radians(lats.mean())) * 111_320.0
-            y = lats * 111_320.0
-            gaps = np.hypot(x[:, None] - x[None, :], y[:, None] - y[None, :])
-            spacing = float(gaps[np.triu_indices(len(alts), k=1)].min())
+            spacing = _closest_points_m(lons, lats)
             if spacing < _MIN_RELIABLE_SPACING_M:
                 warnings.warn(
                     f"MultiPointReceptor release points are as close as "
