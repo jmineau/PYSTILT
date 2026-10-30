@@ -310,6 +310,93 @@ def test_run_times_out_and_keeps_log_output(tmp_path):
     assert "starting hycs_std" in (tmp_path / "stilt.log").read_text()
 
 
+def _kill_when_started(workdir: Path, sig: int):
+    """Send *sig* to the script in *workdir* once it has written its pid, from another thread."""
+    import os
+    import threading
+    import time
+
+    def kill() -> None:
+        pid_file = workdir / "pid"
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if pid_file.exists() and pid_file.read_text().strip():
+                break
+            time.sleep(0.02)
+        os.kill(int(pid_file.read_text()), sig)
+
+    thread = threading.Thread(target=kill, daemon=True)
+    thread.start()
+    return thread
+
+
+def test_run_fails_when_hycs_std_is_killed_from_outside(tmp_path):
+    """A kill the run did not send, such as the out-of-memory killer's, is a failure (#318)."""
+    import signal
+
+    _script(
+        tmp_path,
+        "echo $$ > pid\n"
+        "echo 'starting hycs_std'\n"
+        "printf 'first line\\nlast line of MESSAGE\\n' > MESSAGE\n"
+        "exec sleep 60\n",
+    )
+    thread = _kill_when_started(tmp_path, signal.SIGKILL)
+
+    with pytest.raises(SimulationError) as caught:
+        driver.run_hycs_std(tmp_path, timeout=30)
+    thread.join()
+
+    assert caught.value.reason == FailureReason.EXIT_STATUS
+    assert str(caught.value) == "HYSPLIT was killed by SIGKILL before it finished."
+    log = (tmp_path / "stilt.log").read_text()
+    assert "starting hycs_std" in log
+    assert log.endswith("The end of MESSAGE:\nfirst line\nlast line of MESSAGE\n")
+
+
+def test_run_fails_when_hycs_std_exits_with_a_status(tmp_path):
+    _script(tmp_path, "echo 'starting hycs_std'\nexit 1\n")
+
+    with pytest.raises(SimulationError) as caught:
+        driver.run_hycs_std(tmp_path, timeout=5)
+
+    assert caught.value.reason == FailureReason.EXIT_STATUS
+    assert str(caught.value) == "HYSPLIT exited with status 1 before it finished."
+    # No MESSAGE file, so nothing is added to the log.
+    assert (tmp_path / "stilt.log").read_text() == "starting hycs_std\n"
+
+
+def test_the_end_of_message_is_the_last_twenty_lines(tmp_path):
+    _script(tmp_path, "seq 1 50 > MESSAGE\nexit 2\n")
+
+    with pytest.raises(SimulationError):
+        driver.run_hycs_std(tmp_path, timeout=5)
+
+    log = (tmp_path / "stilt.log").read_text()
+    assert log.splitlines()[-21:] == [
+        "PYSTILT: HYSPLIT exited with status 2. The end of MESSAGE:"
+    ] + [str(n) for n in range(31, 51)]
+
+
+def test_a_known_message_names_the_failure_before_the_exit_status(tmp_path):
+    """The met running out stays ``MET_COVERAGE`` when HYSPLIT also exits with a status."""
+    _script(
+        tmp_path,
+        "echo ' WARNING metpos: no more meteorology -     63723240' > WARNING\nexit 1\n",
+    )
+
+    with pytest.raises(SimulationError) as caught:
+        driver.run_hycs_std(tmp_path, timeout=5)
+
+    assert caught.value.reason == FailureReason.MET_COVERAGE
+
+
+def test_run_that_exits_with_status_zero_is_not_a_failure(tmp_path):
+    _script(tmp_path, "echo 'Complete Hysplit'\nexit 0\n")
+
+    driver.run_hycs_std(tmp_path, timeout=5)  # does not raise
+
+
 @pytest.mark.parametrize("stop", [KeyboardInterrupt, SystemExit])
 def test_run_stops_hysplit_when_this_process_is_stopped(tmp_path, stop):
     """Ctrl-C or a worker told to exit ends hycs_std too, which has a session of its own."""
