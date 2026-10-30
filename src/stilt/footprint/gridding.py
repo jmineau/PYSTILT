@@ -4,7 +4,7 @@ Calculating a footprint from particles, as STILT-R's ``calc_footprint`` does.
 Footprints match STILT-R at ``rtol=1e-7`` per cell, except the smoothing on a
 projected grid (``_compute_kernel_bandwidths``) and the smoothing of a cloud
 across 180 degrees on a grid that goes all the way around
-(``_unwrap_around_release``, ``_fold_padding_around_the_globe``). Run the
+(``_unwrap_around_cloud``, ``_fold_padding_around_the_globe``). Run the
 ``fidelity`` tests before merging any change to this module.
 """
 
@@ -70,8 +70,8 @@ def _interpolation_times(time_sign: int) -> np.ndarray:
     return times * time_sign
 
 
-def _wrap_longitudes(lon: Any, *, west: float = 0.0) -> Any:
-    """Return *lon* (a number, array, or Series) shifted by whole turns into ``[west, west + 360)``."""
+def _wrap_longitudes(lon: Any, *, west: Any = 0.0) -> Any:
+    """Return *lon* shifted by whole turns into ``[west, west + 360)``; both are numbers, arrays, or Series."""
     return (((lon - west) % 360) + 360) % 360 + west
 
 
@@ -263,15 +263,24 @@ def _compute_kernel_bandwidths(
     coordinates instead, which on a grid in meters gives a kernel a few
     meters wide.
 
-    The longitudes are first shifted by whole turns to within 180 degrees of
-    the release longitude (the particles' position at their first step), so a
-    cloud across 180 degrees has the spread and mean position it has on the
-    ground, on any grid. A longitude already within 180 degrees of it is not
-    touched. STILT-R measures the spread of the longitudes as written, so on a
-    global grid (where it does not shift them) a cloud across 180 degrees
-    gets a kernel many times too wide.
+    On a longitude/latitude grid, each ``rtime``'s longitudes are first
+    shifted by whole turns to within 180 degrees of that step's circular
+    mean (``_unwrap_around_cloud``), so a cloud across 180 degrees has the
+    spread it has on the ground, wherever on the globe it is. STILT-R
+    measures the spread of the longitudes as written, so on a global grid
+    (where it does not shift them) a cloud across 180 degrees gets a kernel
+    many times too wide.
+
+    On a projected grid the longitudes are shifted to within 180 degrees of
+    the release longitude (the particles' position at their first step).
     """
-    p = p.assign(lon=_unwrap_around_release(p))
+    if is_longlat(crs):
+        p = p.assign(lon=_unwrap_around_cloud(p))
+    else:
+        release_lon = float(
+            p["lon"].to_numpy()[np.argmin(np.abs(p["rtime"].to_numpy()))]
+        )
+        p = p.assign(lon=_wrap_longitudes(p["lon"], west=release_lon - 180))
     kernel_df = (
         p.groupby("rtime")
         .agg(
@@ -308,19 +317,30 @@ def _compute_kernel_bandwidths(
     return kernel_df, w
 
 
-def _unwrap_around_release(p: pd.DataFrame) -> pd.Series:
+def _unwrap_around_cloud(p: pd.DataFrame) -> pd.Series:
     """
-    Return the longitudes of *p* within 180 degrees of the release longitude.
+    Return the longitudes of *p*, each ``rtime``'s within 180 degrees of that step's circular mean.
 
-    The release longitude is that of the particle at its first step (the
-    smallest ``|rtime|``). A longitude outside that window is shifted by whole
-    turns (``_wrap_longitudes``); the others are returned as they are, to the
+    The circular mean is the direction of the mean of the unit vectors, so
+    it is the cloud's center wherever the cloud is, and the window it opens
+    has its seam on the far side of the globe from the cloud. The center is
+    expressed in the frame the longitudes are written in (-180 to 180, or
+    0 to 360 on a grid that crosses 180 degrees), so a longitude is shifted,
+    by whole turns (``_wrap_longitudes``), only when it lies more than 180
+    degrees from the center. The others are returned as they are, to the
     last bit.
     """
     lon = p["lon"]
-    release_lon = float(lon.to_numpy()[np.argmin(np.abs(p["rtime"].to_numpy()))])
-    west = release_lon - 180
-    outside = (lon < west) | (lon >= west + 360)
+    rad = np.radians(lon.to_numpy(dtype=float))
+    steps = p["rtime"]
+    mean_sin = pd.Series(np.sin(rad), index=p.index).groupby(steps).transform("mean")
+    mean_cos = pd.Series(np.cos(rad), index=p.index).groupby(steps).transform("mean")
+    circular = np.degrees(np.arctan2(mean_sin, mean_cos))
+    # The same center, a whole number of turns away, nearest the plain mean.
+    plain = lon.groupby(steps).transform("mean")
+    center = plain + ((circular - plain + 180.0) % 360.0 - 180.0)
+    west = center - 180.0
+    outside = (lon < west) | (lon >= west + 360.0)
     return lon.where(~outside, _wrap_longitudes(lon, west=west))
 
 

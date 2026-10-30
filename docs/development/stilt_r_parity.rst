@@ -116,16 +116,18 @@ What does not match
   day after release) on a 0.25° grid, a cloud at 175° covers 36 cells and
   keeps its whole footprint in both programs; at 179.9° STILT-R covers 1,242
   cells and loses 42 % of the footprint, and PYSTILT covers 34 cells and
-  keeps all of it. PYSTILT takes the longitudes within 180° of the release
-  longitude before it measures the spread, so the cloud is measured as one,
-  and adds the smoothing that passes one edge of such a grid to the cells at
-  the other edge. The footprint of a cloud near 180° is then the footprint
-  of the same cloud anywhere else, shifted. The longitudes are taken within
-  180° of the release on every longitude/latitude grid, which also fixes a
-  cloud around 0° on a wide grid that crosses 180°, where STILT-R's shift
-  to 0° to 360° cuts the cloud in two. A grid whose cells do not fit 360°
-  (0.7° cells leave 0.2°) has an edge, and smoothing is cut there as
-  before. Other footprints are not affected.
+  keeps all of it. PYSTILT takes the longitudes of each time step within
+  180° of that step's mean longitude (the circular mean, so the seam is on
+  the far side of the globe from the cloud) before it measures the spread.
+  The cloud is measured as one wherever it is, and a real spread of 10° stays
+  10°. PYSTILT also adds the smoothing that passes one edge of such a grid
+  to the cells at the other edge, so the footprint of a cloud near 180° is
+  the footprint of the same cloud anywhere else, shifted. The longitudes
+  are unwrapped this way on every longitude/latitude grid, which also fixes
+  a cloud around 0° on a wide grid that crosses 180°, where STILT-R's shift to 0° to 360° cuts the
+  cloud in two. A grid whose cells do not fit 360° (0.7° cells leave 0.2°)
+  has an edge, and smoothing is cut there as before. A cloud that is not
+  cut by the seam is measured as before, bit for bit.
   ``test_global_grid_across_180_intentionally_differs_from_r`` guards the
   difference.
 - **Forward runs with the HNF correction.** STILT-R accumulates the plume

@@ -901,12 +901,119 @@ def test_longlat_kernel_of_a_cloud_across_0_degrees_on_a_grid_in_0_to_360():
     np.testing.assert_allclose(w, w_ref, rtol=1e-6)
 
 
-def test_longlat_kernel_leaves_longitudes_within_180_degrees_of_the_release_alone():
-    """Longitudes within 180 degrees of the release are not changed, to the last bit."""
+def test_longlat_kernel_leaves_a_cloud_that_is_not_cut_alone_to_the_last_bit():
+    """Longitudes of a cloud that does not meet the seam are not changed, to the last bit."""
     p = _with_rtime(_spread_particles())
     reference = p.groupby("rtime")["lon"].var().to_numpy()
     kernel_df, _ = _compute_kernel_bandwidths(p, smooth_factor=1.0)
     np.testing.assert_array_equal(kernel_df["long_var"].to_numpy(), reference)
+
+
+def _cloud_from(
+    release_lon: float, cloud_lon: float, *, spread: float = 0.3, lat0: float = 45.0
+) -> pd.DataFrame:
+    """
+    Particles released at *release_lon* that are *spread* degrees apart ten days later at *cloud_lon*.
+
+    Longitudes are written in [-180, 180), as HYSPLIT writes them.
+    """
+    n = 300
+    rng = np.random.default_rng(7)
+    dlon, dlat = rng.normal(0.0, spread, n), rng.normal(0.0, spread, n)
+    lon = np.r_[np.full(n, release_lon), cloud_lon + dlon]
+    p = pd.DataFrame(
+        {
+            "particle": np.tile(np.arange(1, n + 1), 2),
+            "age": np.repeat([-1.0, -14401.0], n),
+            "lon": ((lon + 180.0) % 360.0) - 180.0,
+            "lat": np.r_[np.full(n, 40.77), lat0 + dlat],
+            "zagl": 5.0,
+            "foot": np.repeat([0.0, 1e-3], n),
+        }
+    )
+    return p
+
+
+@pytest.mark.parametrize("cloud_lon", [60.0, 68.15, 68.3, 75.0, 179.9, -111.85])
+@pytest.mark.parametrize("spread", [0.3, 10.0])
+def test_longlat_kernel_does_not_depend_on_where_the_release_was(cloud_lon, spread):
+    """
+    A cloud has the same kernel wherever its release was, even when it is on the far side of the globe.
+
+    Release at -111.85 degrees has its antipode at 68.15 degrees. A window
+    around the release put its seam there and cut a cloud that had drifted
+    that far (a kernel 21 times too wide). The window is around the cloud,
+    so the seam is on the far side of the globe from the cloud.
+    """
+    here = _with_rtime(_cloud_from(-111.85, cloud_lon, spread=spread))
+    there = _with_rtime(_cloud_from(cloud_lon, cloud_lon, spread=spread))
+    k_here, w_here = _compute_kernel_bandwidths(here, smooth_factor=1.0)
+    k_there, w_there = _compute_kernel_bandwidths(there, smooth_factor=1.0)
+    np.testing.assert_allclose(w_here, w_there, rtol=1e-9)
+    np.testing.assert_allclose(k_here["varsum"], k_there["varsum"], rtol=1e-9)
+
+
+def test_longlat_kernel_keeps_a_real_spread_of_10_degrees_across_180_degrees():
+    """A cloud the winds spread by 10 degrees is measured as 10 degrees, not folded and not cut."""
+    across = _with_rtime(_cloud_from(179.9, 179.9, spread=10.0))
+    assert across["lon"].min() < -170 and across["lon"].max() > 170
+    k_across, w_across = _compute_kernel_bandwidths(across, smooth_factor=1.0)
+    k_zero, w_zero = _compute_kernel_bandwidths(
+        _with_rtime(_cloud_from(0.0, 0.0, spread=10.0)), smooth_factor=1.0
+    )
+    late = k_across["rtime"] < -1
+    assert 80 < k_across.loc[late, "long_var"].iloc[0] < 125  # 10 degrees squared
+    np.testing.assert_allclose(w_across, w_zero, rtol=1e-9)
+
+
+def test_longlat_kernel_of_particles_that_circled_the_globe_is_the_kernel_of_their_positions():
+    """
+    A particle that went round the earth for days is where it is, not 720 degrees away.
+
+    Longitudes written unwrapped (here up to three turns either way) give
+    the kernel of the same positions written in -180 to 180.
+    """
+    p = _with_rtime(_cloud_from(-111.85, 179.9))
+    turns = np.random.default_rng(3).integers(-3, 4, len(p))
+    circled = p.assign(lon=p["lon"] + 360.0 * turns)
+    assert circled["lon"].abs().max() > 540
+    k_wrapped, w_wrapped = _compute_kernel_bandwidths(p, smooth_factor=1.0)
+    k_circled, w_circled = _compute_kernel_bandwidths(circled, smooth_factor=1.0)
+    np.testing.assert_allclose(w_circled, w_wrapped, rtol=1e-9)
+
+
+@pytest.mark.parametrize(
+    "grid_bounds",
+    [(40.0, 100.0), (-30.0, 30.0), (-180.0, 180.0)],
+    ids=["asia", "around_0", "global"],
+)
+@pytest.mark.parametrize("cloud_lon", [68.15, 68.3, 0.2])
+def test_footprint_does_not_depend_on_where_the_release_was(
+    point_receptor, grid_bounds, cloud_lon
+):
+    """
+    Whether the cloud is on the grid or not, its footprint does not depend on its release longitude.
+
+    On a regional grid nowhere near 180 degrees, the cloud at the antipode of
+    the release (68.15 degrees for a release at -111.85) had dozens of times
+    the nonzero cells it has at 60 degrees.
+    """
+    west, east = grid_bounds
+    if not west - 5 < cloud_lon < east + 5:
+        pytest.skip("a cloud this far from the grid leaves no footprint")
+    xres = 0.25 if east - west > 100 else 0.1
+    grid = Grid(xmin=west, xmax=east, ymin=20.0, ymax=70.0, xres=xres, yres=xres)
+    feet = []
+    for release_lon in (-111.85, 10.0):
+        receptor = point_receptor.model_copy(update={"longitude": release_lon})
+        particles = _cloud_from(release_lon, cloud_lon)
+        feet.append(
+            calc_footprint(particles, receptor, grid, time_integrate=True)
+            .isel(time=0)
+            .to_numpy()
+        )
+    np.testing.assert_allclose(feet[0], feet[1], atol=1e-14, rtol=0)
+    assert 100 < np.count_nonzero(feet[0]) < 2000
 
 
 _GLOBAL = {"xmin": -180.0, "xmax": 180.0, "ymin": 48.0, "ymax": 52.0}
