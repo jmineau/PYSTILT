@@ -1,8 +1,13 @@
 """Tests for stilt.cli - Typer command-line interface."""
 
+import errno
+import io
 import os
+import socket
 import subprocess
 import sys
+import types
+import urllib.error
 from dataclasses import replace
 
 import pandas as pd
@@ -594,6 +599,117 @@ def test_error_exit_code_sorts_retry_from_bug(error, code):
     assert _error_exit_code(error) == code
 
 
+def _as_s3fs_raises(error_errno, status, code):
+    """
+    Return what s3fs raises for a botocore ``ClientError``: an ``OSError`` with its errno, and the ``ClientError`` as ``__cause__``.
+
+    ``s3fs.errors.translate_boto_error`` does this for every code it knows.
+    """
+    wrapped = OSError(error_errno, "the store answered")
+    wrapped.__cause__ = _client_error(status, code)
+    return wrapped
+
+
+def _raised_from(outer, inner):
+    """Return *outer* with *inner* as its ``__cause__``, as ``raise outer from inner`` does."""
+    outer.__cause__ = inner
+    return outer
+
+
+def _http_error_of_requests(status):
+    """Return what ``requests`` raises for a response: an ``OSError`` that holds the response."""
+    error = type("HTTPError", (OSError,), {})("the server answered")
+    error.response = types.SimpleNamespace(status_code=status)
+    return error
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        # s3fs turns a permanent S3 answer into a plain OSError: a retry meets it again.
+        (_as_s3fs_raises(errno.EREMCHG, 301, "PermanentRedirect"), 4),
+        (_as_s3fs_raises(errno.EINVAL, 400, "AuthorizationHeaderMalformed"), 4),
+        (_as_s3fs_raises(errno.EINVAL, 400, "InvalidBucketName"), 4),
+        (_as_s3fs_raises(errno.EINVAL, 400, "InvalidArgument"), 4),
+        (_as_s3fs_raises(errno.EINVAL, 400, "400"), 4),
+        (_as_s3fs_raises(errno.EPERM, 405, "MethodNotAllowed"), 4),
+        (_as_s3fs_raises(errno.EIO, 418, "Teapot"), 4),
+        (
+            _raised_from(PermissionError("denied"), _client_error(403, "AccessDenied")),
+            4,
+        ),
+        (
+            _raised_from(FileNotFoundError("gone"), _client_error(404, "NoSuchBucket")),
+            4,
+        ),
+        # ... and a busy one, a retry may get past.
+        (_as_s3fs_raises(errno.EBUSY, 503, "SlowDown"), 3),
+        (_as_s3fs_raises(errno.EBUSY, 503, "ServiceUnavailable"), 3),
+        (_as_s3fs_raises(errno.EBUSY, 409, "OperationAborted"), 3),
+        (_as_s3fs_raises(errno.EREMOTEIO, 500, "InternalError"), 3),
+        (_as_s3fs_raises(errno.EIO, 502, "BadGateway"), 3),
+        (_raised_from(TimeoutError("slow"), _client_error(400, "RequestTimeout")), 3),
+        # requests and urllib raise OSErrors that hold an HTTP status.
+        (_http_error_of_requests(404), 4),
+        (_http_error_of_requests(403), 4),
+        (_http_error_of_requests(503), 3),
+        (_http_error_of_requests(429), 3),
+        (urllib.error.HTTPError("u", 404, "not found", {}, io.BytesIO()), 4),
+        (urllib.error.HTTPError("u", 503, "busy", {}, io.BytesIO()), 3),
+        # An OSError nothing explains is read by its errno.
+        (OSError(errno.EIO, "Input/output error"), 3),
+        (OSError(errno.ESTALE, "Stale file handle"), 3),
+        (OSError(errno.ETIMEDOUT, "timed out"), 3),
+        (socket.gaierror(socket.EAI_AGAIN, "try again"), 3),
+        (OSError(errno.EINVAL, "invalid"), 4),
+        (OSError(errno.ENOSPC, "no space left"), 4),
+        (OSError(errno.EROFS, "read-only"), 4),
+        (OSError("an OSError with no errno"), 4),
+        # The chain is read for a bug raised while handling or from a connection error.
+        (_raised_from(RuntimeError("wrapped"), ConnectionResetError("reset")), 3),
+        (_raised_from(RuntimeError("wrapped"), _client_error(403)), 4),
+    ],
+)
+def test_error_exit_code_reads_the_chain_and_the_status(error, code):
+    assert _error_exit_code(error) == code
+
+
+def test_an_error_raised_while_handling_a_connection_error_is_read_with_it():
+    try:
+        try:
+            raise ConnectionRefusedError("refused")
+        except ConnectionRefusedError:
+            raise RuntimeError("the handler failed") from None
+    except RuntimeError as suppressed:
+        assert _error_exit_code(suppressed) == 4
+    try:
+        try:
+            raise ConnectionRefusedError("refused")
+        except ConnectionRefusedError:
+            raise RuntimeError("the handler failed")  # noqa: B904
+    except RuntimeError as handling:
+        assert _error_exit_code(handling) == 3
+
+
+def test_s3fs_own_translation_is_sorted_by_status():
+    """The real s3fs: every permanent code is 4 and a busy one 3, as the stand-ins above."""
+    translate = pytest.importorskip("s3fs.errors").translate_boto_error
+    for name, status, code in [
+        ("PermanentRedirect", 301, 4),
+        ("AuthorizationHeaderMalformed", 400, 4),
+        ("InvalidBucketName", 400, 4),
+        ("InvalidArgument", 400, 4),
+        ("AccessDenied", 403, 4),
+        ("NoSuchBucket", 404, 4),
+        ("SlowDown", 503, 3),
+        ("InternalError", 500, 3),
+        ("SomethingNew", 500, 3),
+        ("SomethingNew", 418, 4),
+    ]:
+        error = translate(_client_error(status, name))
+        assert _error_exit_code(error) == code, (name, status)
+
+
 def test_a_cloud_error_is_sorted_with_the_libraries_not_imported():
     """A botocore error is 3 and a denied one 4, as for the stand-ins above."""
     botocore = pytest.importorskip("botocore.exceptions")
@@ -721,6 +837,39 @@ def test_status_exits_3_on_a_connection_error(tmp_path, monkeypatch):
     monkeypatch.setattr("stilt.cli.Project.status", broken)
 
     assert runner.invoke(app, ["status", str(tmp_path)]).exit_code == 3
+
+
+def test_a_closed_stdout_ends_quietly_with_1_as_before(tmp_path, monkeypatch):
+    """`stilt status | head -0` raises BrokenPipeError: no traceback and no "retry" (#310)."""
+    _write_minimal_config(tmp_path)
+
+    def closed(self, *args, **kwargs):
+        raise BrokenPipeError(errno.EPIPE, "Broken pipe")
+
+    monkeypatch.setattr("stilt.cli.Project.status", closed)
+    result = runner.invoke(app, ["status", str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert "Traceback" not in result.output
+    assert "stilt exits with" not in result.output
+
+
+def test_status_into_a_closed_pipe_is_quiet_and_exits_1(tmp_path):
+    """A real pipe whose reader has gone: no traceback, and not Python's 120 at shutdown."""
+    _write_minimal_config(tmp_path)
+    child = subprocess.Popen(
+        [sys.executable, "-m", "stilt", "status", str(tmp_path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    assert child.stdout is not None
+    child.stdout.close()
+    _, stderr = child.communicate(timeout=300)
+
+    assert child.returncode == 1, stderr
+    assert "Traceback" not in stderr
+    assert "stilt exits with" not in stderr
 
 
 def test_an_unreachable_object_store_exits_3_not_1(tmp_path):

@@ -117,15 +117,23 @@ Exit codes
      - A bug: any other error the command did not expect. Its traceback is
        printed. Do not retry; a retry meets the same error.
 
-A connection or I/O error is an ``OSError`` (a refused connection, a
-timeout, a stale or full disk), an error of the cloud libraries that is not
-(such as botocore's ``EndpointConnectionError`` and ``ReadTimeoutError``),
-or an error with the status of a busy or briefly unavailable service (429
-and 5xx, and the throttling codes). A file that is not there, a denied
-permission, and a 403 or 404 from a bucket are not: they are 4, because the
-path or the credentials stay wrong. Every ``stilt`` command ends this way
-on an error it did not expect, not only ``stilt run``. A simulation that
-fails inside a run, whatever the cause, is a failure record and exit 1.
+Whether an error is a connection or I/O error is read from the error and
+what it was raised from, not from its being an ``OSError``: s3fs turns many
+permanent answers of a bucket into a plain ``OSError``. It is 3 when it is a
+refused, reset or timed-out connection or a name-resolution failure, an error of
+the cloud libraries that is not an ``OSError`` (such as botocore's
+``EndpointConnectionError`` and ``ReadTimeoutError``), or has the status of a
+busy or briefly unavailable service (408, 429, 500, 502, 503, 504, and the
+throttling codes such as ``SlowDown``). An ``OSError`` that nothing explains is
+3 when its errno is input/output trouble that goes away (``EIO``, a stale
+NFS handle, a busy or interrupted call) and 4 otherwise, a full disk
+(``ENOSPC``) included. It is 4 when the status is any other 3xx, 4xx or 5xx (a
+bucket in another region, a bad request, a 403, a 404), a file that is not there
+or may not be used, or anything else. Every ``stilt`` command ends this way on
+an error it did not expect, not only ``stilt run``, except that a closed
+standard output (``stilt status | head``) ends quietly with 1, as it always
+has. A simulation that fails inside a run, whatever the cause, is a failure
+record and exit 1.
 
 For a Kubernetes indexed Job, a ``podFailurePolicy`` that retries on 3 and
 fails the task on 1 and 4 follows from this table.
