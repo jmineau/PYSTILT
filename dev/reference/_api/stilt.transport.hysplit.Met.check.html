@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=c87117b9"></script>
+    <script src="../../_static/documentation_options.js?v=585706c9"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev19+g10bcef252" />
+  <meta name="docsearch:version" content="0.1.0a27.dev20+gd40f099fd" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -890,7 +890,9 @@ why. Each file is checked once in a process
 (<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.File.check.html#arlmet.File.check" title="(in arl-met v0.1.0b5)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">arlmet.File.check()</span></code></a>), and together their time steps must
 reach from the first time the run needs to the last, with no gap
 wider than their spacing. That also finds a file cut after a whole
-time step, which looks whole to arlmet.</p>
+time step, which looks whole to arlmet. Files that cover the run but
+include one with a single time period are refused last, since HYSPLIT
+cannot read it.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -900,8 +902,8 @@ also hold the hour after its end, as <a class="reference internal" href="stilt.t
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="stilt.exceptions.MeteorologyError.html#stilt.exceptions.MeteorologyError" title="stilt.exceptions.MeteorologyError"><strong>MeteorologyError</strong></a> – Naming the damaged file and its first problem, or the times the
-    files do not hold.</p>
+<dd class="field-even"><p><a class="reference internal" href="stilt.exceptions.MeteorologyError.html#stilt.exceptions.MeteorologyError" title="stilt.exceptions.MeteorologyError"><strong>MeteorologyError</strong></a> – Naming the damaged file and its first problem, a file that holds
+    one time period, or the times the files do not hold.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>

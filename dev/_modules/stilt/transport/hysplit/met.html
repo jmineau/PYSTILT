@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=c87117b9"></script>
+    <script src="../../../../_static/documentation_options.js?v=585706c9"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev19+g10bcef252" />
+  <meta name="docsearch:version" content="0.1.0a27.dev20+gd40f099fd" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -1006,9 +1006,11 @@
 <span class="sd">        receptor outside ``subgrid_bounds`` is listed too, since HYSPLIT</span>
 <span class="sd">        cannot start a particle outside the files. A met with ``download``</span>
 <span class="sd">        has no files to look for before a run, so only its crop is checked.</span>
-<span class="sd">        This looks for files, not inside them: :meth:`check` opens each file</span>
-<span class="sd">        at a run, and a run that passes this one can still fail as</span>
-<span class="sd">        ``MET_COVERAGE`` when a file is damaged or cut short.</span>
+<span class="sd">        This looks for files, not inside them, except that it opens the first</span>
+<span class="sd">        file the receptors need to count its time periods, which HYSPLIT</span>
+<span class="sd">        needs to be at least two. :meth:`check` opens each file at a run, and</span>
+<span class="sd">        a run that passes this one can still fail as ``MET_COVERAGE`` when a</span>
+<span class="sd">        file is damaged or cut short.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1022,7 +1024,7 @@
 <span class="sd">        -------</span>
 <span class="sd">        pandas.DataFrame</span>
 <span class="sd">            One row for each thing found, with ``check`` (``met_directory``,</span>
-<span class="sd">            ``met_files``, or ``met_crop``), ``receptor`` (``NA`` when the</span>
+<span class="sd">            ``met_files``, ``met_periods``, or ``met_crop``), ``receptor`` (``NA`` when the</span>
 <span class="sd">            finding is about the met), and ``message`` columns. Empty when</span>
 <span class="sd">            nothing would stop a run.</span>
 <span class="sd">        """</span>
@@ -1033,6 +1035,7 @@
                 <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">"met_directory"</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">problem</span><span class="p">))</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">found</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_missing_files</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">)</span>
+                <span class="n">found</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_one_period</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">)</span>
         <span class="n">found</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outside_crop</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"check"</span><span class="p">,</span> <span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"message"</span><span class="p">])</span></div>
 
@@ -1066,6 +1069,18 @@
             <span class="k">for</span> <span class="n">rid</span><span class="p">,</span> <span class="n">time</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">first</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">],</span> <span class="n">first</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="k">if</span> <span class="p">(</span><span class="n">message</span> <span class="o">:=</span> <span class="n">messages</span><span class="p">[</span><span class="n">time</span><span class="p">])</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
         <span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_one_period</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""List the met when the first file the receptors need holds one time period, which HYSPLIT cannot read."""</span>
+        <span class="n">file_format</span><span class="p">,</span> <span class="n">tres</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">file_format</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_freq</span>
+        <span class="k">assert</span> <span class="n">file_format</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">tres</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># a local met has both</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">_time</span><span class="p">(</span><span class="n">run_window</span><span class="p">(</span><span class="n">receptors</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">n_hours</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">tres</span><span class="p">)</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_matching</span><span class="p">(</span><span class="n">start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">file_format</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="ow">and</span> <span class="n">_count_times</span><span class="p">(</span><span class="n">found</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="s2">"met_periods"</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">_one_period_message</span><span class="p">(</span><span class="n">found</span><span class="p">[</span><span class="mi">0</span><span class="p">]))]</span>
+        <span class="k">return</span> <span class="p">[]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_outside_crop</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
@@ -1102,7 +1117,9 @@
 <span class="sd">        (:meth:`arlmet.File.check`), and together their time steps must</span>
 <span class="sd">        reach from the first time the run needs to the last, with no gap</span>
 <span class="sd">        wider than their spacing. That also finds a file cut after a whole</span>
-<span class="sd">        time step, which looks whole to arlmet.</span>
+<span class="sd">        time step, which looks whole to arlmet. Files that cover the run but</span>
+<span class="sd">        include one with a single time period are refused last, since HYSPLIT</span>
+<span class="sd">        cannot read it.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1115,10 +1132,11 @@
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        MeteorologyError</span>
-<span class="sd">            Naming the damaged file and its first problem, or the times the</span>
-<span class="sd">            files do not hold.</span>
+<span class="sd">            Naming the damaged file and its first problem, a file that holds</span>
+<span class="sd">            one time period, or the times the files do not hold.</span>
 <span class="sd">        """</span>
         <span class="n">held</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">single</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
             <span class="n">times</span><span class="p">,</span> <span class="n">problems</span> <span class="o">=</span> <span class="n">_inspect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">problems</span><span class="p">:</span>
@@ -1126,6 +1144,8 @@
                 <span class="k">raise</span> <span class="n">MeteorologyError</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">"The met file </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is damaged: </span><span class="si">{</span><span class="n">problems</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}{</span><span class="n">more</span><span class="si">}</span><span class="s2">"</span>
                 <span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">single</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
             <span class="n">held</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">times</span><span class="p">)</span>
 
         <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="n">_cover</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_freq</span><span class="p">)</span>
@@ -1145,7 +1165,9 @@
                 <span class="k">raise</span> <span class="n">MeteorologyError</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">"The met files hold no time step between "</span>
                     <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">a</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">b</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">needs</span><span class="si">}</span><span class="s2">"</span>
-                <span class="p">)</span></div>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="n">single</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MeteorologyError</span><span class="p">(</span><span class="n">_one_period_message</span><span class="p">(</span><span class="n">single</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span></div>
 
 
 <div class="viewcode-block" id="Met.readable">
@@ -1243,6 +1265,26 @@
             <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">times</span><span class="p">),</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">check</span><span class="p">())</span>
     <span class="k">except</span> <span class="n">ARLFormatError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(),</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">),)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_count_times</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the number of time periods in the ARL file at *path*, or ``None`` when it cannot be read as one."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">arlmet</span><span class="w"> </span><span class="kn">import</span> <span class="n">ARLFormatError</span><span class="p">,</span> <span class="n">File</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">File</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">met</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">times</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">ARLFormatError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_one_period_message</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return why the met file at *path*, which holds one time period, cannot be used."""</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"The met file </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> holds one time period. HYSPLIT stops on a file "</span>
+        <span class="s2">"with one ('Only one time period of meteo data'), so each file must "</span>
+        <span class="s2">"hold at least two, such as the 6-hour files of NOAA's HRRR archive."</span>
+    <span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_walk</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]:</span>

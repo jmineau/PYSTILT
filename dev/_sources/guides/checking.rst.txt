@@ -23,8 +23,8 @@ Before a run
 The first failures a new project meets are in its inputs: a met folder
 with a typo, met files that miss some receptor's hours, a receptor off the
 grid. ``stilt check`` finds them before HYSPLIT starts. It reads the
-project's files and one met file's header for each met, and runs and
-downloads nothing:
+project's files and, for each met, the header of one file and the time
+periods of another, and runs and downloads nothing:
 
 .. code-block:: text
 
@@ -73,6 +73,13 @@ command line is wrong or the project's files are invalid.
        cropped files.
      - Widen ``subgrid_bounds``. It must hold the whole run, not only the
        footprint grid.
+   * - ``met_periods``
+     - The first file the receptors need holds one time period. HYSPLIT
+       stops on such a file ("Only one time period of meteo data"), so every
+       run of the met would fail as ``MET_COVERAGE``.
+     - Use files that each hold at least two time periods, such as 6-hour
+       files of hourly data, and set ``file_tres`` to match
+       (:doc:`meteorology`).
    * - ``grid``
      - A release point of a receptor lies outside the variant's footprint
        grid. Only the particles that travel into the grid add to its
@@ -94,7 +101,8 @@ command line is wrong or the project's files are invalid.
      - Nothing, if the table is shared. Otherwise look for ids that differ
        from the receptors' in a digit.
 
-``stilt check`` looks for files, not inside them. A run that passes can still
+``stilt check`` looks for files, not inside them, except to count the time
+periods of the first file a run needs. A run that passes can still
 fail as ``MET_COVERAGE``: a file that is damaged or cut short is found when
 the run opens it, and a receptor outside the domain of the files, when HYSPLIT
 starts it (the reasons are below).
@@ -227,6 +235,9 @@ The reasons
          partway, or has records lost to null bytes, so it lacks hours the
          run needs. Download or crop it again. PYSTILT checks each file
          before HYSPLIT runs (:meth:`arlmet.File.check`).
+       - ``The met file ... holds one time period``: HYSPLIT cannot read a
+         file with one time period. Use files that each hold at least two
+         (``stilt check`` finds this before a run).
        - ``no more meteorology``: the particles reached a time that no met
          file holds. HYSPLIT says so in the ``WARNING`` file of the kept
          workdir.

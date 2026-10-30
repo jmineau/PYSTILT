@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=c87117b9"></script>
+    <script src="../../_static/documentation_options.js?v=585706c9"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev19+g10bcef252" />
+  <meta name="docsearch:version" content="0.1.0a27.dev20+gd40f099fd" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -888,9 +888,11 @@ ARL file, and every file a run needs is there. With the crop on, a
 receptor outside <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code> is listed too, since HYSPLIT
 cannot start a particle outside the files. A met with <code class="docutils literal notranslate"><span class="pre">download</span></code>
 has no files to look for before a run, so only its crop is checked.
-This looks for files, not inside them: <a class="reference internal" href="stilt.transport.hysplit.Met.check.html#stilt.transport.hysplit.Met.check" title="stilt.transport.hysplit.Met.check"><code class="xref py py-meth docutils literal notranslate"><span class="pre">check()</span></code></a> opens each file
-at a run, and a run that passes this one can still fail as
-<code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code> when a file is damaged or cut short.</p>
+This looks for files, not inside them, except that it opens the first
+file the receptors need to count its time periods, which HYSPLIT
+needs to be at least two. <a class="reference internal" href="stilt.transport.hysplit.Met.check.html#stilt.transport.hysplit.Met.check" title="stilt.transport.hysplit.Met.check"><code class="xref py py-meth docutils literal notranslate"><span class="pre">check()</span></code></a> opens each file at a run, and
+a run that passes this one can still fail as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code> when a
+file is damaged or cut short.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -901,7 +903,7 @@ at a run, and a run that passes this one can still fail as
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>One row for each thing found, with <code class="docutils literal notranslate"><span class="pre">check</span></code> (<code class="docutils literal notranslate"><span class="pre">met_directory</span></code>,
-<code class="docutils literal notranslate"><span class="pre">met_files</span></code>, or <code class="docutils literal notranslate"><span class="pre">met_crop</span></code>), <code class="docutils literal notranslate"><span class="pre">receptor</span></code> (<code class="docutils literal notranslate"><span class="pre">NA</span></code> when the
+<code class="docutils literal notranslate"><span class="pre">met_files</span></code>, <code class="docutils literal notranslate"><span class="pre">met_periods</span></code>, or <code class="docutils literal notranslate"><span class="pre">met_crop</span></code>), <code class="docutils literal notranslate"><span class="pre">receptor</span></code> (<code class="docutils literal notranslate"><span class="pre">NA</span></code> when the
 finding is about the met), and <code class="docutils literal notranslate"><span class="pre">message</span></code> columns. Empty when
 nothing would stop a run.</p>
 </dd>

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=c87117b9"></script>
+    <script src="../../_static/documentation_options.js?v=585706c9"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev19+g10bcef252" />
+  <meta name="docsearch:version" content="0.1.0a27.dev20+gd40f099fd" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -1727,6 +1727,8 @@
 <span class="sd">        - the met's ``directory`` exists and holds an ARL file (``met_directory``);</span>
 <span class="sd">        - every met file each receptor's run needs is there, naming the</span>
 <span class="sd">          hours (``met_files``);</span>
+<span class="sd">        - the first met file they need holds at least two time periods, which</span>
+<span class="sd">          HYSPLIT needs (``met_periods``);</span>
 <span class="sd">        - each receptor is inside the met's crop box, ``subgrid_bounds``,</span>
 <span class="sd">          when the crop is on (``met_crop``);</span>
 <span class="sd">        - each receptor is inside the footprint grid (``grid``);</span>
@@ -1754,7 +1756,8 @@
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        The check looks for files, not inside them, and the crop box is the</span>
+<span class="sd">        The check looks for files, not inside them (except to count the time</span>
+<span class="sd">        periods of the first file a run needs), and the crop box is the</span>
 <span class="sd">        only domain it knows. A run that passes it can still fail as</span>
 <span class="sd">        ``MET_COVERAGE``: a met file that is damaged or cut short is found</span>
 <span class="sd">        when the run opens it, and a receptor outside the domain of the</span>
