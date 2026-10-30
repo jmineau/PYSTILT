@@ -310,6 +310,30 @@ def test_run_times_out_and_keeps_log_output(tmp_path):
     assert "starting hycs_std" in (tmp_path / "stilt.log").read_text()
 
 
+@pytest.mark.parametrize("stop", [KeyboardInterrupt, SystemExit])
+def test_run_stops_hysplit_when_this_process_is_stopped(tmp_path, stop):
+    """Ctrl-C or a worker told to exit ends hycs_std too, which has a session of its own."""
+    import os
+    import signal
+
+    _script(tmp_path, "echo $$ > pid\nexec sleep 60\n")
+
+    def interrupt(signum, frame):
+        raise stop
+
+    previous = signal.signal(signal.SIGALRM, interrupt)
+    signal.setitimer(signal.ITIMER_REAL, 1.0)
+    try:
+        with pytest.raises(stop):
+            driver.run_hycs_std(tmp_path)
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+    with pytest.raises(ProcessLookupError):
+        os.kill(int((tmp_path / "pid").read_text()), 0)
+
+
 def test_terminate_escalates_when_group_kill_does_not_finish(monkeypatch):
     import signal
     import subprocess

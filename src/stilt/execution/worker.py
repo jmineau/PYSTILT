@@ -48,6 +48,11 @@ def _raise_interrupt(signum: int, frame: object) -> None:
     raise KeyboardInterrupt
 
 
+def _exit_worker(signum: int, frame: object) -> None:
+    """Stop a pool worker: its ``finally`` blocks run, then the process exits."""
+    raise SystemExit(1)
+
+
 @contextlib.contextmanager
 def _sigterm_as_interrupt():
     """
@@ -547,7 +552,12 @@ def _init_pool_worker(
     rows: pd.DataFrame | None = None,
 ) -> None:
     """
-    Open the worker process's Project, on the parent's output, and make SIGTERM raise KeyboardInterrupt.
+    Open the worker process's Project, on the parent's output, and set how it stops.
+
+    The parent stops its workers with SIGTERM (:func:`run_receptors`). A
+    worker that gets it ends the transport model run it is in the middle
+    of and exits, so it never goes back to the pool's queue. It ignores
+    Ctrl-C, which the terminal also sends to it: the parent answers that.
 
     *rows* are the receptor rows the parent took in place of
     ``receptors.csv`` (a Slurm task's), if any.
@@ -555,7 +565,8 @@ def _init_pool_worker(
     from stilt.project import Project
 
     global _POOL_PROJECT, _POOL_COMPUTE_ROOT, _POOL_EXECUTION, _POOL_SKIP
-    signal.signal(signal.SIGTERM, _raise_interrupt)
+    signal.signal(signal.SIGTERM, _exit_worker)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
     _POOL_PROJECT = Project(project, output=output)
     if rows is not None:
         _POOL_PROJECT._take_rows(rows)
@@ -564,22 +575,18 @@ def _init_pool_worker(
     _POOL_SKIP = skip_existing
 
 
-def _pool_run(item: tuple[int, str]) -> tuple[int, list[str] | None]:
-    """Run one receptor in a pool worker, returning its index and problems, or ``None`` when it was stopped."""
+def _pool_run(item: tuple[int, str]) -> tuple[int, list[str]]:
+    """Run one receptor in a pool worker, returning its index and problems."""
     idx, receptor_id = item
     assert _POOL_PROJECT is not None and _POOL_COMPUTE_ROOT is not None
-    try:
-        return idx, run_receptor(
-            _POOL_PROJECT,
-            receptor_id,
-            compute_root=_POOL_COMPUTE_ROOT,
-            execution=_POOL_EXECUTION,
-            skip_existing=_POOL_SKIP,
-            batched=False,  # run_receptors ran those first
-        )
-    except KeyboardInterrupt:
-        # A pool task must return; the parent stops the pool when it sees this.
-        return idx, None
+    return idx, run_receptor(
+        _POOL_PROJECT,
+        receptor_id,
+        compute_root=_POOL_COMPUTE_ROOT,
+        execution=_POOL_EXECUTION,
+        skip_existing=_POOL_SKIP,
+        batched=False,  # run_receptors ran those first
+    )
 
 
 def run_receptors(
@@ -596,9 +603,11 @@ def run_receptors(
     The variants of a batched transport model run first, one model call
     for all the receptors that need their particles. Then each receptor
     runs its other variants. Pool workers open the project again from its
-    directory, with the same output directory. A SIGTERM, such as Slurm preemption or the end of the job's
-    time limit, stops the batch. What finished is in the output directory, with a failure record
-    for each simulation that failed.
+    directory, with the same output directory. Ctrl-C, or a SIGTERM such as Slurm preemption or a stopped
+    pod, stops the batch: the transport model runs in progress are ended, the workers exit, and this logs
+    how many receptors had finished and returns. What finished is in the output directory, with a failure
+    record for each simulation that failed; a run that was cut off leaves only its log line, so it is
+    ``interrupted`` in :meth:`stilt.Project.status`.
 
     Parameters
     ----------
@@ -671,19 +680,17 @@ def run_receptors(
             for idx, problems in pool.imap_unordered(
                 _pool_run, list(enumerate(receptor_ids))
             ):
-                if problems is None:
-                    logger.info("stopped at %s", receptor_ids[idx])
-                    pool.terminate()
-                    break
                 done += 1
                 rid = receptor_ids[idx]
                 _log_progress(rid, earlier.get(rid, []) + problems, done, total)
-            else:
-                # Normal completion: let workers exit cleanly. terminate() would
-                # SIGTERM idle workers, whose handler raises KeyboardInterrupt.
-                pool.close()
+            # Normal completion: let the workers exit on their own.
+            pool.close()
         except KeyboardInterrupt:
-            # Preempted or Ctrl-C: stop the workers; what finished is written.
+            # Preempted or Ctrl-C: SIGTERM the workers, which end their runs
+            # and exit; what finished is written.
+            logger.info(
+                "stopped after %d of %d receptors; the rest did not run", done, total
+            )
             pool.terminate()
         except SystemExit:
             # A requeued Slurm task exits here; its workers must not outlive it.
