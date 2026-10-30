@@ -47,7 +47,7 @@ def test_mixed_int_and_str_r_idx_does_not_split_a_receptor(tmp_path):
     df.to_csv(f, index=False)
 
     # sanity: the naive reader really does split it, so this test guards the fix
-    with pytest.warns(pd.errors.DtypeWarning, match="r_idx"):
+    with pytest.warns(pd.errors.DtypeWarning, match="mixed types"):
         naive = pd.read_csv(f)
     assert naive.r_idx.nunique() > df.r_idx.astype(str).nunique()
 

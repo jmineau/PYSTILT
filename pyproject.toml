@@ -33,13 +33,13 @@ dependencies = [
     "pandas>=2.0",
     "pyarrow>=14.0",
     "pyproj>=3.5",
-    "pydantic>=2.0",
+    "pydantic>=2.1.0",  # 2.0 fails the receptor tests (unhashable dict)
     "pyyaml>=6.0",
     "scipy>=1.10",
     "shapely>=2.0",
-    "typer>=0.9",
-    "universal-pathlib>=0.2",
-    "xarray>=2023.6",
+    "typer>=0.15.4",  # older ones fail with click 8.2 and later (make_metavar)
+    "universal-pathlib>=0.3.0",  # 0.2.x warns on S3 paths (PendingDeprecationWarning)
+    "xarray>=2023.9.0",  # 2023.8 and earlier fail Jacobian.to_xarray
 ]
 
 [project.optional-dependencies]
@@ -213,6 +213,8 @@ filterwarnings = [
     # numpy ignores this one itself (compiled packages such as netCDF4 raise it on
     # import); pytest's "error" filter would bring it back.
     "ignore:numpy.ndarray size changed:RuntimeWarning",
+    # matplotlib before 3.10.7 calls pyparsing methods that pyparsing 3.3 deprecates.
+    "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
 ]
 markers = [
     # Disjoint: a test has at most one of these. `just test` runs none of them;
