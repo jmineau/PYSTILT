@@ -88,6 +88,26 @@ What does not match
   fill value of ``-1``. PYSTILT writes CF-1.8 NetCDF with dimensions
   ``(time, lat, lon)``. Read PYSTILT files as ordinary CF NetCDF. Tools that
   expect STILT-R's layout will not read them.
+- **Smoothing on a projected grid.** The kernel width,
+  ``0.06 * (var(x) + var(y))**0.25 * sqrt(|rtime| / 1440)``, is made for
+  coordinates in degrees. STILT-R applies it to the projected coordinates,
+  so on a grid in meters the kernel is a few meters wide and the footprint
+  is hardly smoothed. On a 24 h run on 1 km UTM cells, STILT-R's footprint
+  has a third of the nonzero cells of the same run on a 0.01° grid (9,771
+  and 28,706), and PYSTILT's has 26,385. PYSTILT works the width out in
+  degrees from the particles' longitudes and latitudes, as on a
+  longitude/latitude grid, then multiplies it by the length of one degree
+  of longitude at the particles' mean position, measured in the grid's
+  projection and units. Each step's longitudes are first taken within 180°
+  of that step's circular mean, so a cloud is measured as one wherever it
+  is, on both sides of 180° included.
+  The kernel is then as wide from east to west, on the ground, as on a
+  longitude/latitude grid. On the projected grid it is round. On a
+  longitude/latitude grid it is ``1 / cos(lat)`` times wider from north to
+  south, because it has one width in degrees on both axes.
+  The fidelity suite's UTM scenario compares unsmoothed footprints, and
+  ``test_projected_smoothing_intentionally_differs_from_r`` guards the
+  difference. Longitude/latitude grids are not affected.
 - **Forward runs with the HNF correction.** STILT-R accumulates the plume
   from the far end of a forward trajectory back toward the release point,
   so its plume is widest at release. PYSTILT accumulates outward from the

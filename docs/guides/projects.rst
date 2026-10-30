@@ -107,7 +107,12 @@ These footprint settings sit next to ``grid`` at the top level:
 
 ``smooth_factor``
    Scales the Gaussian smoothing applied to each particle's influence. The
-   default, ``1.0``, is standard STILT. Smaller values smooth less.
+   default, ``1.0``, is standard STILT. Smaller values smooth less. The
+   kernel widens as the particles spread and age. Its width is worked out
+   in degrees. On a projected ``grid`` (a ``crs`` such as ``EPSG:32612``) it
+   is converted to the grid's units, so a footprint is smoothed about as
+   much on 1 km UTM cells as on 0.01° cells. STILT-R smooths a footprint on a
+   projected grid much less (:ref:`stilt-r-parity`).
 
 ``time_integrate``
    ``true`` sums the footprint over time into a single map, which makes

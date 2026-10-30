@@ -1,6 +1,7 @@
 """Tests for stilt.footprint.gridding: calc_footprint, its kernels, and its invariants."""
 
 import builtins
+import datetime as dt
 
 import numpy as np
 import pandas as pd
@@ -11,10 +12,12 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calc_footprint
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
+    _grid_units_per_degree_longitude,
     _interpolate_early_timesteps,
     _interpolation_times,
     _make_gauss_kernel,
     _project_particles_to_crs,
+    _unwrap_around_cloud,
     _wrap_antimeridian_longitudes,
 )
 from stilt.receptors import PointReceptor
@@ -697,7 +700,7 @@ def test_compute_kernel_bandwidths_single_particle_returns_zero_sigma():
             "foot": [1e-3, 1e-3],
         }
     )
-    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0, is_longlat=True)
+    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0)
     np.testing.assert_array_equal(w, np.zeros_like(w))
     assert len(kernel_df) == len(w)
 
@@ -714,8 +717,421 @@ def test_compute_kernel_bandwidths_two_coincident_particles_returns_zero_sigma()
             "foot": [1e-3] * 4,
         }
     )
-    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0, is_longlat=True)
+    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0)
     np.testing.assert_array_equal(w, np.zeros_like(w))
+
+
+_UTM12 = "+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs"
+
+
+def _spread_particles(n: int = 300, seed: int = 7) -> pd.DataFrame:
+    """
+    Particles at (-112, 40.5) at release and 0.03 degrees apart a day later.
+
+    A day after release the kernel is about 2 km wide, two cells of 1 km.
+    """
+    rng = np.random.default_rng(seed)
+    return pd.DataFrame(
+        {
+            "particle": np.tile(np.arange(1, n + 1), 2),
+            "age": np.repeat([-1.0, -1441.0], n),
+            "lon": np.concatenate([np.full(n, -112.0), rng.normal(-112.0, 0.03, n)]),
+            "lat": np.concatenate([np.full(n, 40.5), rng.normal(40.5, 0.03, n)]),
+            "zagl": np.full(2 * n, 5.0),
+            "foot": np.repeat([0.0, 1e-3], n),
+        }
+    )
+
+
+def _with_rtime(p: pd.DataFrame) -> pd.DataFrame:
+    """Add ``rtime`` as calc_footprint does for a backward run."""
+    p = p.copy()
+    p["rtime"] = p["age"] + p["age"].abs().groupby(p["particle"]).transform("min")
+    return p
+
+
+def test_projected_kernel_is_as_wide_east_to_west_as_the_longlat_kernel():
+    """
+    On a projected grid the kernel width is the longitude/latitude grid's, converted to meters.
+
+    The longitude/latitude width is in degrees of longitude, so in meters it
+    is that times the length of a degree of longitude along the parallel (the
+    geodesic on WGS84). The UTM width may differ from it only by UTM's scale
+    factor, within 0.1 % in a zone. STILT-R's formula on the projected
+    coordinates gives a kernel tens of meters wide here.
+    """
+    pyproj = pytest.importorskip("pyproj")
+    p = _with_rtime(_spread_particles())
+    kernel_ll, w_ll = _compute_kernel_bandwidths(p, smooth_factor=1.0)
+    _, w_utm = _compute_kernel_bandwidths(p, smooth_factor=1.0, crs=_UTM12)
+
+    lon = kernel_ll["lon_mean"].to_numpy()
+    lat = kernel_ll["lat_mean"].to_numpy()
+    _, _, meters_per_degree = pyproj.Geod(ellps="WGS84").inv(
+        lon - 0.5, lat, lon + 0.5, lat
+    )
+    assert w_utm.max() > 1000  # wider than a cell of 1 km
+    np.testing.assert_allclose(w_utm, w_ll * meters_per_degree, rtol=1e-3)
+
+
+def test_projected_kernel_width_follows_the_grid_units():
+    """The same particles get a kernel 1000 times smaller in kilometers than in meters."""
+    pytest.importorskip("pyproj")
+    p = _with_rtime(_spread_particles())
+    _, w_m = _compute_kernel_bandwidths(p, smooth_factor=1.0, crs=_UTM12)
+    _, w_km = _compute_kernel_bandwidths(
+        p, smooth_factor=1.0, crs=_UTM12.replace("+units=m", "+units=km")
+    )
+    np.testing.assert_allclose(w_km * 1000, w_m, rtol=1e-9)
+
+
+def test_projected_kernel_width_does_not_depend_on_how_the_axes_are_turned():
+    """An oblique Mercator grid turned by 45 degrees gets the kernel of the unturned one."""
+    pytest.importorskip("pyproj")
+    p = _with_rtime(_spread_particles())
+    omerc = "+proj=omerc +lat_0=40.5 +lonc=-112 +gamma=0 +k_0=1 +datum=WGS84 +units=m"
+    _, w_north = _compute_kernel_bandwidths(
+        p, smooth_factor=1.0, crs=f"{omerc} +alpha=0.0001"
+    )
+    _, w_turned = _compute_kernel_bandwidths(
+        p, smooth_factor=1.0, crs=f"{omerc} +alpha=45"
+    )
+    np.testing.assert_allclose(w_turned, w_north, rtol=1e-6)
+
+
+def _cloud_at(lon0: float, lat0: float = 50.0) -> pd.DataFrame:
+    """
+    ``_spread_particles`` moved to (lon0, lat0), 0.3 degrees apart a day later.
+
+    Longitudes are written in [-180, 180), as HYSPLIT writes them, so a
+    cloud at 179.9 has particles on both sides of 180.
+    """
+    p = _spread_particles()
+    rng = np.random.default_rng(11)
+    late = p["age"] < -1
+    p.loc[late, "lon"] = rng.normal(0.0, 0.3, int(late.sum()))
+    p.loc[late, "lat"] = rng.normal(0.0, 0.3, int(late.sum()))
+    p.loc[~late, ["lon", "lat"]] = 0.0
+    p["lon"] = ((p["lon"] + lon0 + 180.0) % 360.0) - 180.0
+    p["lat"] = p["lat"] + lat0
+    return p
+
+
+def _lambert_at(lon0: float, lat0: float = 50.0) -> str:
+    return f"+proj=lcc +lat_1=45 +lat_2=55 +lat_0={lat0} +lon_0={lon0} +datum=WGS84 +units=m"
+
+
+def test_projected_kernel_of_a_cloud_across_180_degrees_is_the_cloud_at_0_degrees():
+    """
+    A cloud on both sides of 180 degrees gets the kernel of the same cloud at 0 degrees.
+
+    Each is on a Lambert grid centered on it, so the two are the same on the
+    ground. Without unwrapping, the longitudes near +180 and -180 give a
+    variance of thousands of square degrees and a kernel about 20 times too
+    wide.
+    """
+    pytest.importorskip("pyproj")
+    across = _with_rtime(_cloud_at(179.9))
+    assert across["lon"].min() < -179 and across["lon"].max() > 179
+    at_zero = _with_rtime(_cloud_at(0.0))
+    _, w_across = _compute_kernel_bandwidths(
+        across, smooth_factor=1.0, crs=_lambert_at(179.9)
+    )
+    _, w_zero = _compute_kernel_bandwidths(
+        at_zero, smooth_factor=1.0, crs=_lambert_at(0.0)
+    )
+    assert w_zero.max() > 3000  # a kernel of a few km, wider than a cell
+    np.testing.assert_allclose(w_across, w_zero, rtol=1e-6)
+
+
+def test_projected_footprint_of_a_cloud_across_180_degrees_keeps_its_total(
+    point_receptor,
+):
+    """On a 3 km Lambert grid across 180 degrees the footprint is the one at 0 degrees."""
+    pytest.importorskip("pyproj")
+    feet = []
+    for lon0, west, east in ((179.9, 177.9, -178.1), (0.0, -2.0, 2.0)):
+        grid = Grid(
+            xmin=west,
+            xmax=east,
+            ymin=48.0,
+            ymax=52.0,
+            xres=3000,
+            yres=3000,
+            crs=_lambert_at(lon0),
+        )
+        feet.append(
+            calc_footprint(_cloud_at(lon0), point_receptor, grid, time_integrate=True)
+        )
+    across, at_zero = (f.to_numpy() for f in feet)
+    np.testing.assert_allclose(across.sum(), at_zero.sum(), rtol=1e-6)
+    np.testing.assert_allclose(
+        np.count_nonzero(across), np.count_nonzero(at_zero), rtol=0.02
+    )
+
+
+#: A Lambert conformal grid centered on a receptor in Utah. Its scale depends
+#: on latitude only, and it is cut at lon_0 + 180, the receptor's antipode.
+_UTAH = (-111.85, 40.77)
+_LAMBERT_UTAH = (
+    "+proj=lcc +lat_1=33 +lat_2=45 +lat_0=40.77 +lon_0=-111.85 +datum=WGS84 +units=m"
+)
+
+
+def _drifting_cloud(n_steps: int, deg_per_hour: float) -> pd.DataFrame:
+    """300 particles leaving Utah, spreading, and drifting west by *deg_per_hour*."""
+    rng = np.random.default_rng(5)
+    n = 300
+    dlon, dlat = rng.normal(0, 0.3, n), rng.normal(0, 0.3, n)
+    rows = []
+    for j in range(n_steps):
+        spread = 0.02 + 0.3 * j / max(n_steps - 1, 1)
+        lon = _UTAH[0] - deg_per_hour * j + spread * dlon
+        rows.append(
+            pd.DataFrame(
+                {
+                    "particle": np.arange(1, n + 1),
+                    "age": -1.0 - 60.0 * j,
+                    "lon": ((lon + 180.0) % 360.0) - 180.0,
+                    "lat": _UTAH[1] + spread * dlat,
+                    "zagl": 5.0,
+                    "foot": 1e-3,
+                }
+            )
+        )
+    return pd.concat(rows, ignore_index=True)
+
+
+def _far_cloud(lon0: float) -> pd.DataFrame:
+    """Particles released in Utah and, ten days back, a cloud at (lon0, 45 N)."""
+    p = _cloud_at(lon0, lat0=45.0)
+    p.loc[p["age"] > -2, ["lon", "lat"]] = _UTAH
+    p.loc[p["age"] < -2, "age"] = -14401.0
+    return p
+
+
+def test_projected_kernel_has_no_seam_at_the_release_antipode():
+    """
+    Ten days back, a cloud on the far side of the globe gets the same kernel wherever it is.
+
+    68.15 E is the antipode of the Utah release. Longitudes taken within 180
+    degrees of the release split a cloud there in two, and its kernel came
+    out over 20 times too wide.
+    """
+    pytest.importorskip("pyproj")
+    w = {}
+    for lon0 in (60.0, 68.15, 68.3):
+        _, widths = _compute_kernel_bandwidths(
+            _with_rtime(_far_cloud(lon0)), smooth_factor=1.0, crs=_LAMBERT_UTAH
+        )
+        w[lon0] = widths.max()
+    assert w[60.0] > 5000
+    np.testing.assert_allclose([w[68.15], w[68.3]], w[60.0], rtol=1e-6)
+
+
+def test_projected_kernel_of_a_cloud_circling_the_globe_is_the_standing_cloud():
+    """
+    A cloud drifting 360 degrees west in ten days gets, at each step, the kernel of the same cloud standing still.
+
+    On its way it crosses 180 degrees, the release's antipode, and the
+    Lambert grid's cut, and its kernel must not jump at any of them.
+    """
+    pytest.importorskip("pyproj")
+    _, circling = _compute_kernel_bandwidths(
+        _with_rtime(_drifting_cloud(241, 1.5)), smooth_factor=1.0, crs=_LAMBERT_UTAH
+    )
+    _, standing = _compute_kernel_bandwidths(
+        _with_rtime(_drifting_cloud(241, 0.0)), smooth_factor=1.0, crs=_LAMBERT_UTAH
+    )
+    np.testing.assert_allclose(circling, standing, rtol=1e-6, atol=1e-9)
+
+
+def test_grid_units_per_degree_longitude_ignores_a_projection_cut():
+    """At the Lambert grid's cut (lon_0 + 180) a degree is as long as one degree away."""
+    pytest.importorskip("pyproj")
+    lon = np.array([67.15, 68.145, 68.15, 68.155, 69.15])
+    lengths = _grid_units_per_degree_longitude(
+        _LAMBERT_UTAH, lon=lon, lat=np.full(lon.size, 45.0)
+    )
+    np.testing.assert_allclose(lengths, lengths[0], rtol=1e-6)
+
+
+def test_unwrap_around_cloud_keeps_a_cloud_away_from_any_seam_bit_for_bit():
+    """Longitudes already within 180 degrees of their step's mean come back unchanged."""
+    p = _with_rtime(_drifting_cloud(5, 0.0))
+    out = _unwrap_around_cloud(p)
+    assert out.to_numpy().tobytes() == p["lon"].to_numpy(dtype=float).tobytes()
+
+
+def test_unwrap_around_cloud_joins_a_cloud_across_180_degrees():
+    """A cloud with longitudes near +180 and -180 comes back on one side, as one cloud."""
+    p = _with_rtime(_cloud_at(179.9))
+    late = p["age"] < -1
+    out = _unwrap_around_cloud(p)[late]
+    assert out.max() - out.min() < 5
+    np.testing.assert_allclose(out.mean(), 179.9, atol=0.1)
+
+
+_UTM48 = "EPSG:32648"
+_HIMAWARI = "+proj=geos +h=35785831 +lon_0=140.7 +sweep=y +datum=WGS84 +units=m"
+
+
+def _tropical_run(far_lon: float = 20.0) -> pd.DataFrame:
+    """
+    Particles released at Singapore (103.85 E, 1.35 N), and ten days back a cloud at (far_lon, 2 N).
+
+    At 20 E the far cloud is 85 degrees from UTM 48N's meridian, where the
+    transverse Mercator has no value, and off Himawari's disk.
+    """
+    rng = np.random.default_rng(3)
+    n = 500
+
+    def step(age, lon, lat, sd, foot):
+        return pd.DataFrame(
+            {
+                "particle": np.arange(1, n + 1),
+                "age": age,
+                "lon": rng.normal(lon, sd, n),
+                "lat": rng.normal(lat, sd, n),
+                "zagl": 10.0,
+                "foot": foot,
+            }
+        )
+
+    return pd.concat(
+        [
+            step(-1.0, 103.85, 1.35, 0.001, 1e-3),
+            step(-600.0, 103.0, 1.6, 0.3, 1e-3),
+            step(-14400.0, far_lon, 2.0, 1.0, 1e-9),
+        ],
+        ignore_index=True,
+    )
+
+
+@pytest.mark.parametrize("crs", [_UTM48, _HIMAWARI], ids=["utm48n", "himawari"])
+def test_projected_footprint_is_made_when_a_far_step_is_where_the_projection_has_no_value(
+    crs,
+):
+    """
+    A step centered where the projection has no value is left out; the rest makes the footprint.
+
+    Its particles cannot reach the grid, so the footprint is the one made
+    without them. Before, that step's width was NaN and calc_footprint raised.
+    """
+    pytest.importorskip("pyproj")
+    p = _tropical_run()
+    receptor = PointReceptor(
+        time=dt.datetime(2023, 1, 1, 12), longitude=103.85, latitude=1.35, altitude=5.0
+    )
+    grid = Grid(
+        xmin=103.3, xmax=104.4, ymin=1.0, ymax=1.8, xres=1000, yres=1000, crs=crs
+    )
+    foot = calc_footprint(p, receptor, grid, time_integrate=True)
+    without_far = calc_footprint(
+        p[p["age"] > -14400], receptor, grid, time_integrate=True
+    )
+    assert float(foot.sum()) > 0
+    np.testing.assert_array_equal(foot.to_numpy(), without_far.to_numpy())
+
+
+def test_projected_kernel_leaves_out_only_the_steps_with_no_width():
+    """Of three steps, the one at 20 E on UTM 48N is left out and the others keep their widths."""
+    pytest.importorskip("pyproj")
+    p = _with_rtime(_tropical_run())
+    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0, crs=_UTM48)
+    near = _with_rtime(p[p["age"] > -14400])
+    near_df, w_near = _compute_kernel_bandwidths(near, smooth_factor=1.0, crs=_UTM48)
+    assert np.isfinite(w).all()
+    assert -14399.0 not in set(kernel_df["rtime"])
+    np.testing.assert_array_equal(kernel_df["rtime"], near_df["rtime"])
+    np.testing.assert_array_equal(w, w_near)
+
+
+def test_projected_kernel_is_zero_when_no_step_has_a_width():
+    """When every step is where the projection has no value, nothing is smoothed."""
+    pytest.importorskip("pyproj")
+    p = _tropical_run()
+    # Every step's cloud centered at 20 E, 85 degrees from the meridian.
+    centered = p["lon"] - p.groupby("age")["lon"].transform("mean") + 20.0
+    p = _with_rtime(p.assign(lon=centered, lat=p["lat"] - p["lat"].mean() + 2.0))
+    _, w = _compute_kernel_bandwidths(p, smooth_factor=1.0, crs=_UTM48)
+    np.testing.assert_array_equal(w, np.zeros(len(w)))
+
+
+def _smoothing_variance_km2(foot, unsmoothed, x_km, y_km) -> tuple[float, float]:
+    """Return the variance smoothing adds to a footprint along x and y, in km**2."""
+
+    def variances(f):
+        a = f.isel(time=0).to_numpy()
+        xx, yy = np.meshgrid(x_km, y_km)
+        mx, my = (a * xx).sum() / a.sum(), (a * yy).sum() / a.sum()
+        return (
+            (a * (xx - mx) ** 2).sum() / a.sum(),
+            (a * (yy - my) ** 2).sum() / a.sum(),
+        )
+
+    (vx, vy), (vx0, vy0) = variances(foot), variances(unsmoothed)
+    return vx - vx0, vy - vy0
+
+
+def test_projected_footprint_is_smoothed_like_the_longlat_footprint(point_receptor):
+    """
+    Smoothing spreads a 1 km UTM footprint east to west as much as a 0.01 degree one.
+
+    The variance the kernel adds is its width squared, about (1.3 km)**2
+    here. On the longitude/latitude grid the kernel is one width in degrees
+    on both axes, so it is ``1 / cos(lat)`` (1.31) times wider north to
+    south; the UTM kernel is round. With STILT-R's width on the projected
+    coordinates the UTM footprint was hardly smoothed at all.
+    """
+    pyproj = pytest.importorskip("pyproj")
+    p = _spread_particles()
+    bounds = {"xmin": -112.5, "xmax": -111.5, "ymin": 40.0, "ymax": 41.0}
+    geod = pyproj.Geod(ellps="WGS84")
+    km_per_lon = geod.inv(-112.5, 40.5, -111.5, 40.5)[2] / 1000
+    km_per_lat = geod.inv(-112.0, 40.0, -112.0, 41.0)[2] / 1000
+
+    added = {}
+    for name, grid in {
+        "lonlat": Grid(**bounds, xres=0.01, yres=0.01),
+        "utm": Grid(**bounds, xres=1000, yres=1000, crs=_UTM12),
+    }.items():
+        foot = calc_footprint(p, point_receptor, grid, time_integrate=True)
+        unsmoothed = calc_footprint(
+            p, point_receptor, grid, time_integrate=True, smooth_factor=0
+        )
+        if name == "lonlat":
+            x_km, y_km = foot.lon.values * km_per_lon, foot.lat.values * km_per_lat
+        else:
+            x_km, y_km = foot.x.values / 1000, foot.y.values / 1000
+        added[name] = _smoothing_variance_km2(foot, unsmoothed, x_km, y_km)
+
+    (ll_x, ll_y), (utm_x, utm_y) = added["lonlat"], added["utm"]
+    assert utm_x > 1.0  # a kernel over 1 km wide
+    np.testing.assert_allclose(utm_x, ll_x, rtol=0.1)
+    np.testing.assert_allclose(utm_y, utm_x, rtol=0.1)
+    np.testing.assert_allclose(ll_y, ll_x / np.cos(np.radians(40.5)) ** 2, rtol=0.1)
+
+
+def test_projected_footprint_on_cells_that_are_not_square_keeps_its_total(
+    point_receptor,
+):
+    """With 1000 m by 500 m cells, smoothing spreads the footprint and loses none of it."""
+    pytest.importorskip("pyproj")
+    p = _spread_particles()
+    grid = Grid(
+        xmin=-112.5, xmax=-111.5, ymin=40.0, ymax=41.0, xres=1000, yres=500, crs=_UTM12
+    )
+    smoothed = calc_footprint(p, point_receptor, grid, time_integrate=True)
+    unsmoothed = calc_footprint(
+        p, point_receptor, grid, time_integrate=True, smooth_factor=0
+    )
+    assert np.count_nonzero(smoothed.to_numpy()) > 2 * np.count_nonzero(
+        unsmoothed.to_numpy()
+    )
+    np.testing.assert_allclose(
+        float(smoothed.sum()), float(unsmoothed.sum()), rtol=1e-12
+    )
 
 
 def test_calc_footprint_returns_a_named_dataarray_with_its_receptor(point_receptor):
