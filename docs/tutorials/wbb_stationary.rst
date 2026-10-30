@@ -94,8 +94,9 @@ There are 168 simulations, so this takes a while, four at a time.
    In a script (``python wbb.py``), put everything from Step 1 on under
    ``if __name__ == "__main__":``. With ``cpus`` above 1, Python 3.14, macOS,
    and Windows start each worker by importing the script again, which would
-   run ``Project.init`` again and stop with a ``FileExistsError``. The command
-   ``stilt run ./wbb_project --cpus 4`` needs no guard.
+   run ``Project.init`` again and stop with a ``FileExistsError``. Without the
+   guard, PYSTILT stops with "A worker process could not start" and shows the
+   fix. The command ``stilt run ./wbb_project --cpus 4`` needs no guard.
 
 You can stop it at any time with Ctrl-C. Running it again picks up where it left
 off. To check progress from another terminal:
