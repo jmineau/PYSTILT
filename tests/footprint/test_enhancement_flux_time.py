@@ -161,8 +161,17 @@ def test_labels_at_the_middle_of_a_step_are_relabeled_by_half_a_step(foot):
 
 def test_flux_labels_that_do_not_increase_are_refused(foot):
     flux, _ = _step_flux(STARTS["3-hourly"])
-    with pytest.raises(ValueError, match="must increase"):
+    with pytest.raises(ValueError, match="strictly increase"):
         foot.stilt.enhancement(flux.isel(time=slice(None, None, -1)))
+
+
+def test_a_repeated_flux_label_is_refused_and_named(foot):
+    flux, _ = _step_flux(STARTS["3-hourly"])
+    repeated = flux.isel(time=[0, 1, 1, 2, 3])
+    with pytest.raises(
+        ValueError, match=r"strictly increase.*2023-07-19 03:00:00.*repeated"
+    ):
+        foot.stilt.enhancement(repeated)
 
 
 def test_sample_field_reads_labels_as_step_starts_only_when_asked():

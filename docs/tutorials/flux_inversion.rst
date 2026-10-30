@@ -120,7 +120,8 @@ Shift its labels back by half a step first:
 
 For steps of unequal length, such as calendar months, build the starts
 yourself, for example ``inventory.assign_coords(time=month_starts)``. The
-labels must increase.
+labels must strictly increase; a repeated label,
+such as the overlap of two concatenated files, is an error.
 
 Inventory and footprint grids
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
