@@ -378,6 +378,13 @@ def test_the_end_of_message_is_the_last_twenty_lines(tmp_path):
     ] + [str(n) for n in range(31, 51)]
 
 
+def test_a_signal_without_a_name_is_given_by_its_number(tmp_path):
+    error = driver._exit_status_error(tmp_path, -200)
+
+    assert str(error) == "HYSPLIT was killed by signal 200 before it finished."
+    assert error.reason == FailureReason.EXIT_STATUS
+
+
 def test_a_known_message_names_the_failure_before_the_exit_status(tmp_path):
     """The met running out stays ``MET_COVERAGE`` when HYSPLIT also exits with a status."""
     _script(
