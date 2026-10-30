@@ -80,7 +80,16 @@ For an emissions map, ``foot.stilt.enhancement`` does the
 multiplication. The inventory is an :class:`xarray.DataArray` in
 µmol m⁻² s⁻¹ with ``lat`` and ``lon`` dimensions. Each footprint cell takes
 the flux of the inventory cell it falls in. If the inventory has a ``time``
-dimension, each footprint hour uses the nearest inventory time.
+dimension, its labels are the starts of its steps, the convention of a
+CF-compliant inventory's time bounds, and each footprint hour takes the
+last step that starts at or before the hour's start. This is the rule
+``foot.stilt.aggregate`` and ``project.jacobian`` use, so an enhancement
+and a Jacobian built on the same inventory agree. A monthly inventory
+labeled on the 1st gives every hour of July 20 July's flux; a 3-hourly
+inventory labeled 09:00 gives the hours from 09:00 to 11:00 its 09:00 step.
+A footprint hour before the first label gets zero flux. An hour after the
+last label takes the last step, since the labels do not say where it ends;
+add a step of zeros after the last to end it.
 
 .. code-block:: python
 
@@ -94,6 +103,24 @@ dimension, each footprint hour uses the nearest inventory time.
        rows.append({"time": foot.stilt.receptor.time, "enhancement_ppm": enhancement})
 
    modeled = pd.DataFrame(rows).set_index("time").sort_index()
+
+.. _flux-step-labels:
+
+Labels at the middle of a step
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An inventory labeled at the middle of its steps (a monthly mean dated the
+15th, or a 3-hourly mean dated 10:30) would be read half a step late.
+Shift its labels back by half a step first:
+
+.. code-block:: python
+
+   half_step = (inventory.time[1] - inventory.time[0]) / 2   # for equal steps
+   inventory = inventory.assign_coords(time=inventory.time - half_step)
+
+For steps of unequal length, such as calendar months, build the starts
+yourself, for example ``inventory.assign_coords(time=month_starts)``. The
+labels must increase.
 
 Inventory and footprint grids
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

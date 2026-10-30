@@ -67,9 +67,14 @@ class ParticlesAccessor:
         ----------
         flux : xarray.DataArray
             Surface flux on a ``lat``/``lon`` grid, in µmol m⁻² s⁻¹ for an
-            enhancement in ppm. A flux with a ``time`` dimension is taken at
-            each particle's ``time``. Points outside it, and missing
-            cells, count as zero flux.
+            enhancement in ppm. A flux with a ``time`` dimension is read as
+            steps that start at their labels, as ``foot.stilt.enhancement``
+            reads it: each particle row takes the last flux step that
+            starts at or before the row's ``time``. A row before the first
+            label gets zero flux, and a row after the last label takes the
+            last step. A flux labeled at the middle of its steps must be
+            relabeled first (see ``foot.stilt.enhancement``). Points outside
+            the flux grid, and missing cells, count as zero flux.
 
         Returns
         -------
@@ -95,6 +100,7 @@ class ParticlesAccessor:
             p["lat"].to_numpy(),
             times=times,
             fill_value=0.0,
+            step_starts=True,
         )
         contribution = p["foot"].to_numpy(dtype=float) * sampled
         ids = p["particle"].to_numpy()
