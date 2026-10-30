@@ -26,6 +26,10 @@ from .fixtures.factories import make_met_config, make_project_config
 
 runner = CliRunner()
 
+# s3fs's own numbers for errnos that macOS lacks.
+_EREMCHG = getattr(errno, "EREMCHG", 78)
+_EREMOTEIO = getattr(errno, "EREMOTEIO", 121)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -627,7 +631,7 @@ def _http_error_of_requests(status):
     ("error", "code"),
     [
         # s3fs turns a permanent S3 answer into a plain OSError: a retry meets it again.
-        (_as_s3fs_raises(errno.EREMCHG, 301, "PermanentRedirect"), 4),
+        (_as_s3fs_raises(_EREMCHG, 301, "PermanentRedirect"), 4),
         (_as_s3fs_raises(errno.EINVAL, 400, "AuthorizationHeaderMalformed"), 4),
         (_as_s3fs_raises(errno.EINVAL, 400, "InvalidBucketName"), 4),
         (_as_s3fs_raises(errno.EINVAL, 400, "InvalidArgument"), 4),
@@ -646,7 +650,7 @@ def _http_error_of_requests(status):
         (_as_s3fs_raises(errno.EBUSY, 503, "SlowDown"), 3),
         (_as_s3fs_raises(errno.EBUSY, 503, "ServiceUnavailable"), 3),
         (_as_s3fs_raises(errno.EBUSY, 409, "OperationAborted"), 3),
-        (_as_s3fs_raises(errno.EREMOTEIO, 500, "InternalError"), 3),
+        (_as_s3fs_raises(_EREMOTEIO, 500, "InternalError"), 3),
         (_as_s3fs_raises(errno.EIO, 502, "BadGateway"), 3),
         (_raised_from(TimeoutError("slow"), _client_error(400, "RequestTimeout")), 3),
         # requests and urllib raise OSErrors that hold an HTTP status.
