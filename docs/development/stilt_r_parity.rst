@@ -100,6 +100,13 @@ What does not match
   the footprint after the first hour
   (`uataq/stilt#142 <https://github.com/uataq/stilt/issues/142>`_). No
   fidelity scenario sets ``veght`` above 1.
+- **The HNF correction of a receptor above sea level.** PYSTILT grows the
+  plume from the release height above ground, so it needs ``zsfc`` in
+  ``varsiwant`` for an MSL receptor. STILT-R grows it from the
+  receptor height as given, which with ``kmsl=1`` is above sea level, so
+  over high terrain its correction does nothing. The ``msl_altitude``
+  scenario compares the uncorrected ``foot_no_hnf_dilution``, and
+  ``test_msl_hnf_foot_intentionally_differs_from_r`` guards the difference.
 - **Untested inputs.** Runs longer than 24 h backward, latitudes above 80°,
   and grids finer than 0.001° have not been compared.
 - **Other STILT-R commits.** Nothing detects upstream changes to

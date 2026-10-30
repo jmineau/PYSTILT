@@ -439,6 +439,24 @@ def _multipoint_release_heights(
     return pd.Series(p["particle"].to_numpy(), index=p.index).map(mapping.get)
 
 
+def _above_ground(p: pd.DataFrame, start: pd.Series) -> pd.Series:
+    """
+    Return release heights above sea level (*start*, one per row) as heights above ground.
+
+    The terrain under a release height is the median ``zsfc`` of the first
+    rows of the particles released there: a step after release they have
+    moved a little, so the median stands for the terrain at the release
+    point. A height below that terrain is the ground.
+    """
+    first = (
+        p.assign(_age=p["age"].abs(), _start=start)
+        .sort_values("_age", kind="stable")
+        .drop_duplicates(subset="particle")
+    )
+    terrain = first.groupby("_start")["zsfc"].median()
+    return (start - start.map(terrain)).clip(lower=0.0)
+
+
 def correct_near_field(
     particles: pd.DataFrame, receptor: Receptor, veght: float
 ) -> pd.DataFrame:
@@ -460,7 +478,10 @@ def correct_near_field(
 
     Needs the columns :data:`HNF_PLUME_COLUMNS`, and the release height:
     ``release_height`` (:func:`add_release_heights`) or the altitude of a point
-    receptor.
+    receptor. The plume grows from the ground, so for a receptor whose
+    heights are above sea level (``altitude_ref="msl"``) it starts at the
+    release height minus the terrain under it, the median ``zsfc`` of the
+    first rows of the particles released there, which must be a column too.
 
     Parameters
     ----------
@@ -485,6 +506,8 @@ def correct_near_field(
         If a required column is missing, or the release height is unknown.
     """
     missing = set(HNF_PLUME_COLUMNS) - set(particles.columns)
+    if receptor.altitude_ref == "msl" and "zsfc" not in particles.columns:
+        missing.add("zsfc")
     if missing:
         raise ValueError(
             "The near-field correction needs the particle columns "
@@ -514,6 +537,9 @@ def correct_near_field(
             "The near-field correction needs each particle's release height: "
             "add release_height first (add_release_heights)."
         )
+    if receptor.altitude_ref == "msl":
+        # mlht and veght are heights above ground, so the plume is too.
+        start_h = _above_ground(p, pd.Series(start_h, index=p.index, dtype=float))
     # The plume grows outward from the release point, so the cumsum must walk
     # each particle track in order of elapsed time since release. That is
     # |time| ascending, which covers forward runs as well as backward ones.

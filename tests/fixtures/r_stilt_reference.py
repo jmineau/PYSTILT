@@ -158,6 +158,9 @@ class ReferenceScenario:
     projection: str = field(default="+proj=longlat")
     # Receptor vertical reference: "agl" (default) or "msl".
     altitude_ref: str = field(default="agl")
+    # Particle columns PYSTILT asks HYSPLIT for beyond REFERENCE_VARSIWANT
+    # (STILT-R's run keeps its own varsiwant).
+    extra_varsiwant: tuple[str, ...] = field(default=())
     # XY wind-error parameters; all four must be set together or all None.
     siguverr: float | None = field(default=None)
     tluverr: float | None = field(default=None)
@@ -244,7 +247,7 @@ class ReferenceScenario:
             "krand": self.krand,
             "seed": self.seed,
             "hnf_plume": self.hnf_plume,
-            "varsiwant": REFERENCE_VARSIWANT,
+            "varsiwant": [*REFERENCE_VARSIWANT, *self.extra_varsiwant],
             # The fidelity tests read SETUP.CFG afterwards.
             "execution": {"keep_workdir": True},
             "variants": {REFERENCE_MET: {}},
@@ -469,12 +472,14 @@ PROJECTED_CRS = ReferenceScenario(
 #: MSL-altitude receptor — WBB sits at ~1330 m MSL; 5 m AGL = 1335 m MSL.
 #: Setting altitude_ref="msl" sets kmsl=1 in SETUP.CFG so HYSPLIT interprets
 #: the release height as MSL.  Trajectory should be nearly identical to POINT
-#: (negligible height difference) but validates the kmsl pathway.
+#: (negligible height difference) but validates the kmsl pathway. PYSTILT also
+#: asks for zsfc, which its near-field correction of an MSL receptor needs.
 MSL_ALTITUDE = ReferenceScenario(
     name="msl_altitude",
     description="Point receptor at 1335 m MSL (altitude_ref='msl', kmsl=1) — tests kmsl pathway",
     altitude=1335.0,
     altitude_ref="msl",
+    extra_varsiwant=("zsfc",),
 )
 
 #: XY wind-error trajectory — sets siguverr/tluverr/zcoruverr/horcoruverr,

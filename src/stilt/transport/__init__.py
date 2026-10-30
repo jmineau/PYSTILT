@@ -119,7 +119,7 @@ class TransportConfig(BaseModel):
             "near-field. This shrinks their effective dilution depth and raises "
             "the influence of fluxes close to the receptor. Needs the particle "
             "columns ``dens``, ``tlgr``, ``sigw``, ``foot``, ``mlht``, and "
-            "``samt``."
+            "``samt``, and ``zsfc`` for a receptor above sea level."
         ),
     )
     veght: float = Field(
@@ -487,7 +487,12 @@ def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> Model
     check_particles(run.particles)
     particles = add_release_heights(run.particles, receptor)
     if config.hnf_plume:
-        missing = sorted(set(HNF_PLUME_COLUMNS) - set(particles.columns))
+        # A receptor above sea level also needs the terrain, to start the plume
+        # at the ground (correct_near_field).
+        needed = set(HNF_PLUME_COLUMNS) | (
+            {"zsfc"} if receptor.altitude_ref == "msl" else set()
+        )
+        missing = sorted(needed - set(particles.columns))
         if missing:
             note = f"near-field correction skipped: no {', '.join(missing)} columns"
             logger.warning("%s: %s", receptor.id, note)

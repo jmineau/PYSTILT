@@ -205,6 +205,14 @@ def _trajectory_compare_columns(scenario: ReferenceScenario) -> tuple[str, ...]:
         # HNF-corrected foot intentionally differs because PYSTILT maps
         # particles to their actual multipoint release altitudes.
         return tuple(c for c in scenario.compare_columns if c != "foot")
+    if scenario.altitude_ref == "msl" and scenario.hnf_plume:
+        # STILT-R starts the near-field plume at the receptor's height as
+        # given, here above sea level, so over WBB's 1330 m of terrain its
+        # correction never applies. PYSTILT starts it at the ground (#287),
+        # so its corrected foot intentionally differs; the uncorrected
+        # foot_no_hnf_dilution still matches.
+        # test_msl_hnf_foot_intentionally_differs_from_r pins the gap.
+        return tuple(c for c in scenario.compare_columns if c != "foot")
     return scenario.compare_columns
 
 
@@ -351,6 +359,42 @@ def test_forward_hnf_foot_intentionally_differs_from_r(
     # PYSTILT's plume is smallest just after release, so its foot starts higher
     first = py["age"].abs() == py["age"].abs().min()
     assert py_foot[first.to_numpy()].mean() > r_foot[first.to_numpy()].mean()
+
+
+def test_msl_hnf_foot_intentionally_differs_from_r(
+    scenario_outputs: dict,
+    r_stilt_dir: Path,
+) -> None:
+    """
+    For a receptor above sea level, PYSTILT's HNF-corrected foot must NOT match STILT-R's.
+
+    STILT-R grows the plume from the receptor height as given, 1335 m above
+    sea level, which is above the mixing height, so it corrects nothing.
+    PYSTILT grows it from the height above ground (#287), so its foot near
+    the receptor is larger. Guarding the difference keeps someone from
+    "restoring parity" by reintroducing the bug.
+    """
+    s: ReferenceScenario = scenario_outputs["scenario"]
+    if not (s.altitude_ref == "msl" and s.hnf_plume):
+        pytest.skip("only the msl hnf_plume scenario diverges from STILT-R")
+    _assert_hysplit_binary_matches_r(r_stilt_dir)
+
+    cols = ("particle", "age", "foot", "foot_no_hnf_dilution")
+    py = _sorted_trajectory(pd.read_parquet(scenario_outputs["traj"]), cols)
+    r = _sorted_trajectory(scenario_outputs["r_traj"], cols)
+
+    np.testing.assert_allclose(
+        py["foot_no_hnf_dilution"].to_numpy(dtype=float),
+        r["foot_no_hnf_dilution"].to_numpy(dtype=float),
+        rtol=1e-7,
+        atol=1e-10,
+        err_msg=f"[{s.name}] uncorrected foot should still match STILT-R.",
+    )
+    first_hour = (py["age"].abs() <= 60).to_numpy()
+    assert py["foot"][first_hour].sum() > r["foot"][first_hour].sum(), (
+        f"[{s.name}] PYSTILT's near-field correction of an MSL receptor no "
+        "longer raises the first hour's foot above STILT-R's."
+    )
 
 
 def test_trajectory_matches_r(
