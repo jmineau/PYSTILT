@@ -164,7 +164,9 @@ class HysplitModel:
             With HYSPLIT's log in ``log``, and ``reason`` ``TIMEOUT`` when
             the run exceeded *timeout* seconds; the :class:`FailureReason`
             of a known failure message in the log or ``WARNING`` file, such
-            as the met running out (``MET_COVERAGE``); ``PARTICLE_LIMIT``
+            as the met running out (``MET_COVERAGE``); ``EXIT_STATUS`` when
+            ``hycs_std`` was killed by a signal or exited with a non-zero
+            status, whatever it had written; ``PARTICLE_LIMIT``
             when ``maxpar`` stopped a release from several locations before
             the last ones got their particles; or ``NO_PARTICLE_DATA`` when
             HYSPLIT wrote no particle file. A run whose particles stopped

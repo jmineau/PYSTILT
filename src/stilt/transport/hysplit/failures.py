@@ -10,7 +10,8 @@ class FailureReason(StrEnum):
     Why a HYSPLIT run failed.
 
     The driver reads it from HYSPLIT's log and ``WARNING`` file when the
-    run ends, or knows it (a timeout, no particle output), and raises a
+    run ends, or knows it (a timeout, no particle output, its exit
+    status), and raises a
     :class:`~stilt.exceptions.SimulationError` with it as ``reason``. The
     worker records it with the simulation.
     """
@@ -21,6 +22,7 @@ class FailureReason(StrEnum):
     FORTRAN_RUNTIME_ERROR = "FORTRAN_RUNTIME_ERROR"
     TIMEOUT = "TIMEOUT"
     PARTICLE_LIMIT = "PARTICLE_LIMIT"
+    EXIT_STATUS = "EXIT_STATUS"
 
 
 #: Phrases HYSPLIT (or the driver) writes to stilt.log or HYSPLIT's WARNING
