@@ -11,11 +11,17 @@ from pydantic import BaseModel, ConfigDict
 from stilt import transport
 from stilt.exceptions import MeteorologyError
 from stilt.meteorology import run_window
+from stilt.observations.placement import slant_points
 from stilt.project import Project
-from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
+from stilt.receptors import (
+    ColumnReceptor,
+    MultiPointReceptor,
+    PointReceptor,
+    Receptor,
+)
 from stilt.spatial import Grid
 from stilt.transforms import averaging_kernel_table
-from stilt.transport.hysplit import Met
+from stilt.transport.hysplit import HysplitConfig, Met
 
 from .fixtures.factories import (
     make_met_config,
@@ -530,6 +536,182 @@ def test_an_inline_kernel_has_no_table_to_check(tmp_path):
     }
 
     assert _project(tmp_path, variants=variants).check().empty
+
+
+# ---------------------------------------------------------------------------
+# zsfc in varsiwant
+# ---------------------------------------------------------------------------
+
+_WEIGHTING = {"transforms": [{"kind": "pressure_weighting"}]}
+_WITH_ZSFC = [*HysplitConfig().varsiwant, "zsfc"]
+
+
+def _above_sea_level_point() -> PointReceptor:
+    return PointReceptor(
+        time=NOON,
+        longitude=-111.85,
+        latitude=40.77,
+        altitude=1500.0,
+        altitude_ref="msl",
+    )
+
+
+def _multipoint(altitude_ref: str) -> MultiPointReceptor:
+    return MultiPointReceptor(
+        time=NOON,
+        longitudes=(-111.50, -111.52, -111.54),
+        latitudes=(40.5, 40.5, 40.5),
+        altitudes=(1500.0, 2200.0, 3000.0),
+        altitude_ref=altitude_ref,
+    )
+
+
+def _column(altitude_ref: str) -> ColumnReceptor:
+    return ColumnReceptor(
+        time=NOON,
+        longitude=-111.5,
+        latitude=40.5,
+        bottom=1500.0,
+        top=3000.0,
+        altitude_ref=altitude_ref,
+    )
+
+
+def test_a_receptor_above_sea_level_needs_zsfc_for_the_near_field_correction(tmp_path):
+    project = _project(tmp_path, [_above_sea_level_point()])
+
+    table = _found(project.check(), "zsfc")
+
+    assert len(table) == 1
+    assert pd.isna(table["receptor"].iloc[0])
+    message = table["message"].iloc[0]
+    assert "1 receptor is above sea level" in message
+    assert "near-field correction" in message
+    assert "pressure_weighting" not in message
+    assert "multipoint" not in message
+
+
+def test_the_message_gives_the_varsiwant_line_that_adds_zsfc(tmp_path):
+    project = _project(
+        tmp_path, [_multipoint("msl")], varsiwant=["pres", "zagl"], hnf_plume=False
+    )
+
+    message = _found(project.check(), "zsfc")["message"].iloc[0]
+
+    assert "varsiwant: [pres, zagl, zsfc]" in message
+
+
+def test_the_default_varsiwant_line_keeps_the_defaults(tmp_path):
+    project = _project(tmp_path, [_above_sea_level_point()])
+
+    message = _found(project.check(), "zsfc")["message"].iloc[0]
+
+    assert "varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, " in message
+    assert message.count("zsfc") == 2
+
+
+def test_a_multipoint_receptor_above_sea_level_needs_zsfc_to_match_its_heights(
+    tmp_path,
+):
+    project = _project(tmp_path, [_multipoint("msl")], hnf_plume=False)
+
+    message = _found(project.check(), "zsfc")["message"].iloc[0]
+
+    assert "multipoint" in message
+    assert "near-field" not in message
+
+
+def test_pressure_weighting_of_a_receptor_above_sea_level_needs_zsfc(tmp_path):
+    project = _project(
+        tmp_path,
+        [_column("msl")],
+        hnf_plume=False,
+        variants={"hrrr": _WEIGHTING},
+    )
+
+    message = _found(project.check(), "zsfc")["message"].iloc[0]
+
+    assert "pressure_weighting" in message
+    assert "multipoint" not in message
+
+
+def test_a_slant_receptor_from_soundings_is_one_the_check_finds(tmp_path):
+    points = slant_points(
+        -111.5, 40.5, [1500.0, 2200.0, 3000.0], zenith=40.0, azimuth=120.0
+    )
+    slant = Receptor.from_points(NOON, points, altitude_ref="msl")
+    project = _project(tmp_path, [slant], variants={"hrrr": _WEIGHTING})
+
+    message = _found(project.check(), "zsfc")["message"].iloc[0]
+
+    assert all(
+        phrase in message
+        for phrase in ("near-field correction", "multipoint", "pressure_weighting")
+    )
+
+
+def test_every_reason_is_named_once_for_all_the_receptors(tmp_path):
+    project = _project(
+        tmp_path,
+        [_above_sea_level_point(), _multipoint("msl")],
+        variants={"hrrr": _WEIGHTING},
+    )
+
+    table = _found(project.check(), "zsfc")
+
+    assert len(table) == 1
+    assert "2 receptors are above sea level" in table["message"].iloc[0]
+
+
+def test_no_zsfc_is_needed_when_it_is_in_varsiwant(tmp_path):
+    project = _project(
+        tmp_path,
+        [_above_sea_level_point(), _multipoint("msl")],
+        variants={"hrrr": _WEIGHTING},
+        varsiwant=_WITH_ZSFC,
+    )
+
+    assert _found(project.check(), "zsfc").empty
+
+
+def test_no_zsfc_is_needed_for_receptors_above_ground(tmp_path):
+    project = _project(
+        tmp_path,
+        [_receptor(), _multipoint("agl"), _column("agl")],
+        variants={"hrrr": _WEIGHTING},
+    )
+
+    assert _found(project.check(), "zsfc").empty
+
+
+def test_no_zsfc_is_needed_when_nothing_reads_it(tmp_path):
+    project = _project(tmp_path, [_above_sea_level_point()], hnf_plume=False)
+
+    assert _found(project.check(), "zsfc").empty
+
+
+def test_variants_that_need_zsfc_for_the_same_reason_share_the_row(tmp_path):
+    project = _project(
+        tmp_path,
+        [_above_sea_level_point()],
+        variants={"hrrr": {}, "hrrr-b": {"veght": 0.3}},
+    )
+
+    table = _found(project.check(), "zsfc")
+
+    assert list(table["variant"]) == ["hrrr, hrrr-b"]
+
+
+def test_a_variant_with_zsfc_is_not_listed_with_one_without(tmp_path):
+    project = _project(
+        tmp_path,
+        [_above_sea_level_point()],
+        variants={"hrrr": {}, "hrrr-z": {"varsiwant": _WITH_ZSFC}},
+    )
+
+    table = _found(project.check(), "zsfc")
+
+    assert list(table["variant"]) == ["hrrr"]
 
 
 # ---------------------------------------------------------------------------
