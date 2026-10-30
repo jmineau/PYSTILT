@@ -11,10 +11,12 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calc_footprint
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
+    _grid_units_per_degree_longitude,
     _interpolate_early_timesteps,
     _interpolation_times,
     _make_gauss_kernel,
     _project_particles_to_crs,
+    _unwrap_around_circular_mean,
     _wrap_antimeridian_longitudes,
 )
 from stilt.receptors import PointReceptor
@@ -865,6 +867,108 @@ def test_projected_footprint_of_a_cloud_across_180_degrees_keeps_its_total(
     np.testing.assert_allclose(
         np.count_nonzero(across), np.count_nonzero(at_zero), rtol=0.02
     )
+
+
+#: A Lambert conformal grid centered on a receptor in Utah. Its scale depends
+#: on latitude only, and it is cut at lon_0 + 180, the receptor's antipode.
+_UTAH = (-111.85, 40.77)
+_LAMBERT_UTAH = (
+    "+proj=lcc +lat_1=33 +lat_2=45 +lat_0=40.77 +lon_0=-111.85 +datum=WGS84 +units=m"
+)
+
+
+def _drifting_cloud(n_steps: int, deg_per_hour: float) -> pd.DataFrame:
+    """300 particles leaving Utah, spreading, and drifting west by *deg_per_hour*."""
+    rng = np.random.default_rng(5)
+    n = 300
+    dlon, dlat = rng.normal(0, 0.3, n), rng.normal(0, 0.3, n)
+    rows = []
+    for j in range(n_steps):
+        spread = 0.02 + 0.3 * j / max(n_steps - 1, 1)
+        lon = _UTAH[0] - deg_per_hour * j + spread * dlon
+        rows.append(
+            pd.DataFrame(
+                {
+                    "particle": np.arange(1, n + 1),
+                    "age": -1.0 - 60.0 * j,
+                    "lon": ((lon + 180.0) % 360.0) - 180.0,
+                    "lat": _UTAH[1] + spread * dlat,
+                    "zagl": 5.0,
+                    "foot": 1e-3,
+                }
+            )
+        )
+    return pd.concat(rows, ignore_index=True)
+
+
+def _far_cloud(lon0: float) -> pd.DataFrame:
+    """Particles released in Utah and, ten days back, a cloud at (lon0, 45 N)."""
+    p = _cloud_at(lon0, lat0=45.0)
+    p.loc[p["age"] > -2, ["lon", "lat"]] = _UTAH
+    p.loc[p["age"] < -2, "age"] = -14401.0
+    return p
+
+
+def test_projected_kernel_has_no_seam_at_the_release_antipode():
+    """
+    Ten days back, a cloud on the far side of the globe gets the same kernel wherever it is.
+
+    68.15 E is the antipode of the Utah release. Longitudes taken within 180
+    degrees of the release split a cloud there in two, and its kernel came
+    out over 20 times too wide.
+    """
+    pytest.importorskip("pyproj")
+    w = {}
+    for lon0 in (60.0, 68.15, 68.3):
+        _, widths = _compute_kernel_bandwidths(
+            _with_rtime(_far_cloud(lon0)), smooth_factor=1.0, crs=_LAMBERT_UTAH
+        )
+        w[lon0] = widths.max()
+    assert w[60.0] > 5000
+    np.testing.assert_allclose([w[68.15], w[68.3]], w[60.0], rtol=1e-6)
+
+
+def test_projected_kernel_of_a_cloud_circling_the_globe_is_the_standing_cloud():
+    """
+    A cloud drifting 360 degrees west in ten days gets, at each step, the kernel of the same cloud standing still.
+
+    On its way it crosses 180 degrees, the release's antipode, and the
+    Lambert grid's cut, and its kernel must not jump at any of them.
+    """
+    pytest.importorskip("pyproj")
+    _, circling = _compute_kernel_bandwidths(
+        _with_rtime(_drifting_cloud(241, 1.5)), smooth_factor=1.0, crs=_LAMBERT_UTAH
+    )
+    _, standing = _compute_kernel_bandwidths(
+        _with_rtime(_drifting_cloud(241, 0.0)), smooth_factor=1.0, crs=_LAMBERT_UTAH
+    )
+    np.testing.assert_allclose(circling, standing, rtol=1e-6, atol=1e-9)
+
+
+def test_grid_units_per_degree_longitude_ignores_a_projection_cut():
+    """At the Lambert grid's cut (lon_0 + 180) a degree is as long as one degree away."""
+    pytest.importorskip("pyproj")
+    lon = np.array([67.15, 68.145, 68.15, 68.155, 69.15])
+    lengths = _grid_units_per_degree_longitude(
+        _LAMBERT_UTAH, lon=lon, lat=np.full(lon.size, 45.0)
+    )
+    np.testing.assert_allclose(lengths, lengths[0], rtol=1e-6)
+
+
+def test_unwrap_around_circular_mean_keeps_a_cloud_away_from_any_seam_bit_for_bit():
+    """Longitudes already within 180 degrees of their step's mean come back unchanged."""
+    p = _drifting_cloud(5, 0.0)
+    out = _unwrap_around_circular_mean(p["lon"], by=p["age"])
+    assert out.to_numpy().tobytes() == p["lon"].to_numpy(dtype=float).tobytes()
+
+
+def test_unwrap_around_circular_mean_joins_a_cloud_across_180_degrees():
+    """A cloud with longitudes near +180 and -180 comes back on one side, as one cloud."""
+    p = _cloud_at(179.9)
+    late = p["age"] < -1
+    out = _unwrap_around_circular_mean(p["lon"], by=p["age"])[late]
+    assert out.max() - out.min() < 5
+    np.testing.assert_allclose(out.mean(), 179.9, atol=0.1)
 
 
 def _smoothing_variance_km2(foot, unsmoothed, x_km, y_km) -> tuple[float, float]:
