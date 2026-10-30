@@ -251,6 +251,52 @@ def test_interpolation_times_match_r_stilt_schedule():
     assert len(times) == 311
 
 
+def test_interpolation_times_are_built_as_r_builds_them():
+    """R's seq(0, 10, by = 0.1) is 0 + (0:100) * 0.1, which is not i / 10 (#288)."""
+    times = _interpolation_times(1)
+
+    assert times[29] == 29 * 0.1  # 2.9000000000000004, as in R
+    assert times[29] != 2.9
+    assert times[100] == 10.0 and times[-1] == 100.0
+
+
+def test_calc_footprint_interpolates_a_full_particle_table():
+    """
+    Columns beyond the footprint's own do not stop the early-time interpolation (#288).
+
+    One particle moves 0.05 degrees a minute east on a 0.01-degree grid, so
+    its output steps land in every fifth cell. Interpolated to 0.1-minute
+    steps it crosses each cell between them. STILT-R's simulation_step passes
+    calc_footprint only time, indx, long, lati and foot, so the inserted rows
+    are kept there; with zagl or any other column they used to be dropped.
+    """
+    age = -np.arange(1.0, 121.0)
+    particles = pd.DataFrame(
+        {
+            "particle": 1.0,
+            "age": age,
+            "lon": -112.5 + 0.05 * np.abs(age),
+            "lat": 40.505,
+            "zagl": 5.0,
+            "mlht": 500.0,
+            "foot": 1e-3,
+        }
+    )
+    receptor = PointReceptor(
+        time="2023-07-01 12:00", longitude=-112.5, latitude=40.505, altitude=5.0
+    )
+    grid = Grid(xmin=-113.0, xmax=-106.0, ymin=40.0, ymax=41.0, xres=0.01, yres=0.01)
+
+    foot = calc_footprint(particles, receptor, grid, smooth_factor=0.0)
+    row = foot.sum("time").sel(lat=40.505, method="nearest")
+
+    # Every cell the particle crosses in its first ten minutes has influence,
+    # not only the cells of its whole-minute steps.
+    crossed = row.sel(lon=slice(-112.45, -112.0)).to_numpy()
+    assert (crossed > 0).all()
+    assert float(foot.sum()) == pytest.approx(float(particles["foot"].sum()))
+
+
 def test_interpolate_early_timesteps_preserves_window_foot_sums():
     particles = pd.DataFrame(
         {
