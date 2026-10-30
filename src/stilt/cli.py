@@ -26,19 +26,22 @@ holds no ARL file, which ``stilt check`` lists.
 
 An error the command did not expect ends it too, after its traceback: with
 3 when the error is a connection or an I/O error (a bucket that cannot be
-reached, a full or stale disk), which a retry may get past, and with 4 for
-any other (a bug in PYSTILT or the project, which a retry will repeat).
+reached or is busy, a stale disk), which a retry may get past, and with 4 for
+any other (a bug in PYSTILT or the project, a bucket in the wrong region, a
+403 or a 404, which a retry will repeat).
 ``_error_exit_code`` sorts them.
 """
 
 from __future__ import annotations
 
+import errno
 import json
 import logging
 import re
+import socket
 import traceback
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -91,12 +94,14 @@ _PATH_ERRORS = (
     NotADirectoryError,
 )
 
-#: HTTP statuses of a service that is busy or briefly down. A 403 or a 404
-#: is not here: the credentials or the path are wrong, and they stay wrong.
+#: HTTP statuses of a service that is busy or briefly down. Any other 3xx, 4xx
+#: or 5xx is an answer that a retry repeats: a bucket in another region, a bad
+#: request, a 403 or a 404.
 _BUSY_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
 
-#: Codes of botocore's ``ClientError`` for a service that asks the caller to slow down.
-_THROTTLED = frozenset(
+#: Codes of botocore's ``ClientError`` for a service that asks the caller to slow
+#: down or try again, whatever the status that carries them.
+_BUSY_CODES = frozenset(
     {
         "Throttling",
         "ThrottlingException",
@@ -106,20 +111,88 @@ _THROTTLED = frozenset(
         "RequestTimeout",
         "TooManyRequestsException",
         "ProvisionedThroughputExceededException",
+        "ServiceUnavailable",
+        "InternalError",
+        "OperationAborted",
     }
+)
+
+#: Errnos of an ``OSError`` that no type, status or cause explains, which are
+#: input/output trouble that goes away: an I/O error, a stale NFS handle, a busy
+#: or interrupted call, a connection that failed. Any other errno (EINVAL,
+#: ENOSPC, EROFS, none at all) is a refusal or a full disk that a retry meets again.
+_TRANSIENT_ERRNOS = frozenset(
+    getattr(errno, name)
+    for name in (
+        "EIO",
+        "EREMOTEIO",
+        "ESTALE",
+        "EBUSY",
+        "EAGAIN",
+        "EINTR",
+        "ETIMEDOUT",
+        "ECONNRESET",
+        "ECONNREFUSED",
+        "ECONNABORTED",
+        "ENETDOWN",
+        "ENETUNREACH",
+        "EHOSTDOWN",
+        "EHOSTUNREACH",
+    )
+    if hasattr(errno, name)
 )
 
 
 def _http_status(error: BaseException) -> int | None:
-    """Return the HTTP status an error from a cloud library carries, or None."""
+    """
+    Return the HTTP status an error from a cloud or HTTP library carries, or None.
+
+    Read from botocore's ``ClientError.response`` (a dict), from the
+    ``status_code`` or ``status`` of the response a ``requests`` error holds,
+    and from the error's own ``status``, ``status_code`` or ``code`` (aiohttp,
+    gcsfs, ``urllib.error.HTTPError``).
+    """
     response = getattr(error, "response", None)
     if isinstance(response, dict):  # botocore's ClientError
         status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
         return status if isinstance(status, int) else None
-    for attribute in ("status", "status_code", "code"):  # aiohttp, requests, gcsfs
-        status = getattr(error, attribute, None)
-        if isinstance(status, int):
-            return status
+    holders = (response, error) if response is not None else (error,)
+    for holder in holders:
+        for attribute in ("status", "status_code", "code"):
+            status = getattr(holder, attribute, None)
+            if isinstance(status, int) and 100 <= status <= 599:
+                return status
+    return None
+
+
+def _causes(error: BaseException) -> Iterator[BaseException]:
+    """Yield an error and what it was raised from or while handling, outermost first."""
+    seen: set[int] = set()
+    current: BaseException | None = error
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        yield current
+        if current.__cause__ is not None:
+            current = current.__cause__
+        else:
+            current = None if current.__suppress_context__ else current.__context__
+
+
+def _says(error: BaseException) -> int | None:
+    """Return 3 or 4 when this one error says so by its status, code or type; else None."""
+    response = getattr(error, "response", None)
+    code = response.get("Error", {}).get("Code") if isinstance(response, dict) else None
+    status = _http_status(error)
+    if code in _BUSY_CODES or status in _BUSY_STATUSES:
+        return EXIT_INTERRUPTED
+    if status is not None and status >= 300:
+        return EXIT_BUG
+    if isinstance(error, ConnectionError | TimeoutError | socket.gaierror):
+        return EXIT_INTERRUPTED
+    if not _NETWORK_ERRORS.isdisjoint(c.__name__ for c in type(error).__mro__):
+        return EXIT_INTERRUPTED
+    if isinstance(error, _PATH_ERRORS):
+        return EXIT_BUG
     return None
 
 
@@ -131,15 +204,20 @@ def _error_exit_code(error: Exception) -> int:
     connection or I/O error that a retry may get past, 4
     (:data:`EXIT_BUG`, "do not") when it is any other.
 
-    A connection or I/O error is an ``OSError`` (which includes
-    ``ConnectionError``, ``TimeoutError`` and what fsspec raises for a
-    store that fails) except one about a path (a file that is not there or
-    may not be used); an error of the cloud libraries that is not an
-    ``OSError`` and is named in :data:`_NETWORK_ERRORS`; or an error with
-    the HTTP status of a busy or briefly unavailable service (429 and
-    5xx), including the throttling codes of botocore's ``ClientError``.
-    Those libraries are optional, so the error's class names are read, not
-    the classes imported.
+    The error and its ``__cause__`` or ``__context__`` chain are read,
+    outermost first, and the first that says decides. An error says 3 by a
+    busy service's HTTP status (408, 429, 500, 502, 503, 504) or botocore
+    code (:data:`_BUSY_CODES`), by being a ``ConnectionError``,
+    ``TimeoutError`` or name-resolution error, or by a class named in
+    :data:`_NETWORK_ERRORS`: the cloud libraries are optional, so the
+    ``__mro__``'s class names are read, not the classes imported. It says 4
+    by any other 3xx, 4xx or 5xx status (a bucket in another region, a bad
+    request, a 403, a 404), or by being about a path (a file that is not
+    there or may not be used). s3fs turns a ``ClientError`` into a plain
+    ``OSError`` and keeps it in ``__cause__``, which is why the chain is
+    read. If nothing in the chain says, an ``OSError`` is 3 when its errno
+    is input/output trouble that goes away (:data:`_TRANSIENT_ERRNOS`, such
+    as s3fs's ``EIO`` for a code it does not know), and anything else is 4.
 
     Parameters
     ----------
@@ -151,17 +229,15 @@ def _error_exit_code(error: Exception) -> int:
     int
         3 or 4.
     """
-    if isinstance(error, OSError):
-        return EXIT_BUG if isinstance(error, _PATH_ERRORS) else EXIT_INTERRUPTED
-    if not _NETWORK_ERRORS.isdisjoint(c.__name__ for c in type(error).__mro__):
-        return EXIT_INTERRUPTED
-    response = getattr(error, "response", None)
-    if (
-        isinstance(response, dict)
-        and response.get("Error", {}).get("Code") in _THROTTLED
-    ):
-        return EXIT_INTERRUPTED
-    return EXIT_INTERRUPTED if _http_status(error) in _BUSY_STATUSES else EXIT_BUG
+    chain = list(_causes(error))
+    for each in chain:
+        verdict = _says(each)
+        if verdict is not None:
+            return verdict
+    transient = any(
+        isinstance(each, OSError) and each.errno in _TRANSIENT_ERRNOS for each in chain
+    )
+    return EXIT_INTERRUPTED if transient else EXIT_BUG
 
 
 class _Group(TyperGroup):
@@ -176,7 +252,8 @@ class _Group(TyperGroup):
     worker caught (Ctrl-C while waiting for a Slurm job, say) with 3, as one
     a worker caught does. Typer's and Click's own exceptions (an exit,
     a wrong command line) pass, matched by module so that it holds whether
-    Typer vendors Click or not.
+    Typer vendors Click or not. So does a ``BrokenPipeError``, which is
+    stdout closed by ``head``: Click ends quietly, with 1, as it did before.
     """
 
     def invoke(self, *args: Any, **kwargs: Any) -> Any:
@@ -186,6 +263,8 @@ class _Group(TyperGroup):
         except KeyboardInterrupt:
             typer.echo("Interrupted.", err=True)
             raise typer.Exit(code=EXIT_INTERRUPTED) from None
+        except BrokenPipeError:
+            raise  # stdout was closed (`stilt status | head`): Click ends quietly, with 1
         except Exception as error:
             if type(error).__module__.partition(".")[0] in ("typer", "click"):
                 raise  # an exit, or a wrong command line: Click's own, and 2
