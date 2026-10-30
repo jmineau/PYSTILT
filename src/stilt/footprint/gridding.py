@@ -1,8 +1,9 @@
 """
 Calculating a footprint from particles, as STILT-R's ``calc_footprint`` does.
 
-Footprints match STILT-R at ``rtol=1e-7`` per cell. Run the ``fidelity``
-tests before merging any change to this module.
+Footprints match STILT-R at ``rtol=1e-7`` per cell, except the smoothing on a
+projected grid (``_compute_kernel_bandwidths``). Run the ``fidelity`` tests
+before merging any change to this module.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.particles import FOOTPRINT_COLUMNS, check_particles
 from stilt.receptors import Receptor
-from stilt.spatial import Grid, _grid_cell_starts
+from stilt.spatial import Grid, _grid_cell_starts, is_longlat
 from stilt.transforms import apply_transforms
 
 from .io import _footprint_array
@@ -229,16 +230,25 @@ def _project_particles_to_crs(
 
 
 def _compute_kernel_bandwidths(
-    p: pd.DataFrame, *, smooth_factor: float, is_longlat: bool
+    p: pd.DataFrame, *, smooth_factor: float, crs: str = "+proj=longlat"
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """
-    Return ``(kernel_df, w)``, the Gaussian kernel width for each ``rtime``.
+    Return ``(kernel_df, w)``, the Gaussian kernel width for each ``rtime``, in *crs* units.
 
-    The width grows with the spread of the particles and the time since
-    release, as in STILT-R. On a longitude/latitude grid it is divided by
-    ``cos(lat)`` so it covers the same distance at high latitudes::
+    *p* holds the particles' longitudes and latitudes in degrees, before any
+    projection. The width grows with the spread of the particles and the
+    time since release, as in STILT-R, and is divided by ``cos(lat)`` so it
+    covers the same distance at high latitudes::
 
         w = smooth_factor * 0.06 * varsum**0.25 * (|rtime| / 1440)**0.5 / cos(lat)
+
+    This is in degrees of longitude. On a projected grid it is converted to
+    the grid's units by the length of one degree of longitude at the
+    particles' mean position (``_grid_units_per_degree_longitude``), so the
+    kernel is as wide from east to west, on the ground, as on a
+    longitude/latitude grid. STILT-R applies the formula to the projected
+    coordinates instead, which on a grid in meters gives a kernel a few
+    meters wide.
     """
     kernel_df = (
         p.groupby("rtime")
@@ -246,6 +256,7 @@ def _compute_kernel_bandwidths(
             long_var=("lon", "var"),
             lati_var=("lat", "var"),
             lat_mean=("lat", "mean"),
+            lon_mean=("lon", "mean"),
         )
         .reset_index()
         .dropna()
@@ -264,11 +275,39 @@ def _compute_kernel_bandwidths(
     kernel_df["varsum"] = kernel_df["long_var"] + kernel_df["lati_var"]
     di = kernel_df["varsum"].to_numpy() ** 0.25
     ti = (np.abs(kernel_df["rtime"].to_numpy()) / 1440) ** 0.5
-    grid_conv = (
-        np.cos(kernel_df["lat_mean"].to_numpy() * np.pi / 180) if is_longlat else 1.0
-    )
+    grid_conv = np.cos(kernel_df["lat_mean"].to_numpy() * np.pi / 180)
     w = smooth_factor * 0.06 * di * ti / grid_conv
+    if not is_longlat(crs):
+        w = w * _grid_units_per_degree_longitude(
+            crs,
+            lon=kernel_df["lon_mean"].to_numpy(),
+            lat=kernel_df["lat_mean"].to_numpy(),
+        )
     return kernel_df, w
+
+
+def _grid_units_per_degree_longitude(
+    crs: str, *, lon: np.ndarray, lat: np.ndarray
+) -> np.ndarray:
+    """
+    Return the length of one degree of longitude at each ``(lon, lat)``, in *crs* units.
+
+    It is measured with the projection itself: the distance between the
+    points a hundredth of a degree east and west, divided by the
+    difference in degrees. So it includes the projection's scale at that
+    point and its units (meters, feet, kilometers), and does not depend on
+    how the projection's axes are turned.
+    """
+    from pyproj import Transformer
+
+    tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
+    step = 0.01
+    x_west, y_west = tr.transform(lon - step, lat)
+    x_east, y_east = tr.transform(lon + step, lat)
+    return np.hypot(
+        np.asarray(x_east) - np.asarray(x_west),
+        np.asarray(y_east) - np.asarray(y_west),
+    ) / (2 * step)
 
 
 def _padded_axes(
@@ -490,6 +529,11 @@ def calc_footprint(
     the number of particles and binned by hour, unless *time_integrate* is
     set.
 
+    On a projected grid the kernel's width is worked out in degrees, as on
+    a longitude/latitude grid, and converted to the grid's units, so the
+    footprint is smoothed as much. STILT-R applies its formula to the
+    projected coordinates and barely smooths a footprint there.
+
     Parameters
     ----------
     particles : pandas.DataFrame
@@ -566,7 +610,6 @@ def calc_footprint(
     crs = grid.crs
     xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
-    is_longlat = grid.is_longlat
     smooth_factor = config.smooth_factor
     time_integrate = config.time_integrate
 
@@ -580,7 +623,7 @@ def calc_footprint(
     time_sign = int(np.sign(p["age"].median()))
 
     wrapped_longitude = False
-    if is_longlat:
+    if grid.is_longlat:
         p, xmin, xmax, wrapped_longitude = _wrap_antimeridian_longitudes(
             p, xmin=xmin, xmax=xmax
         )
@@ -592,7 +635,11 @@ def calc_footprint(
     min_abs_time = p["age"].abs().groupby(p["particle"], sort=False).transform("min")
     p["rtime"] = p["age"] - time_sign * min_abs_time
 
-    if not is_longlat:
+    # The kernel width comes from the spread in degrees, before projecting,
+    # and is returned in the grid's units.
+    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=smooth_factor, crs=crs)
+
+    if not grid.is_longlat:
         p, xmin, xmax, ymin, ymax = _project_particles_to_crs(
             p,
             crs=crs,
@@ -609,9 +656,6 @@ def calc_footprint(
     n_lat = len(glati)
     rs = (xres, yres)
 
-    kernel_df, w = _compute_kernel_bandwidths(
-        p, smooth_factor=smooth_factor, is_longlat=is_longlat
-    )
     max_kernel = (
         _make_gauss_kernel(rs, float(np.max(w))) if len(w) > 0 else np.array([[1.0]])
     )
