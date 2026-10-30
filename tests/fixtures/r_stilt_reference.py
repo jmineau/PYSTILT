@@ -457,12 +457,16 @@ FORWARD = ReferenceScenario(
 
 #: UTM Zone 12N projected footprint — trajectory is identical to POINT (same
 #: receptor/met), only the grid CRS changes.  Tests that particle projection and
-#: kernel scaling work correctly in a projected coordinate system.
+#: gridding work correctly in a projected coordinate system. Unsmoothed: on a
+#: projected grid PYSTILT's kernel width differs from STILT-R's on purpose, and
+#: test_projected_smoothing_intentionally_differs_from_r pins the gap.
 PROJECTED_CRS = ReferenceScenario(
     name="projected_crs",
     description=(
-        "Point receptor, UTM Zone 12N grid (xres=yres=2000 m) — projected CRS footprint"
+        "Point receptor, UTM Zone 12N grid (xres=yres=2000 m), unsmoothed — "
+        "projected CRS footprint"
     ),
+    smooth_factor=0.0,
     xres=2000.0,
     yres=2000.0,
     projection="+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs",
