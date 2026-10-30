@@ -107,7 +107,12 @@ These footprint settings sit next to ``grid`` at the top level:
 
 ``smooth_factor``
    Scales the Gaussian smoothing applied to each particle's influence. The
-   default, ``1.0``, is standard STILT. Smaller values smooth less.
+   default, ``1.0``, is standard STILT. Smaller values smooth less. The
+   kernel widens as the particles spread and age. Its width is worked out
+   in degrees. On a projected ``grid`` (a ``crs`` such as ``EPSG:32612``) it
+   is converted to the grid's units, so a footprint is smoothed about as
+   much on 1 km UTM cells as on 0.01° cells. STILT-R smooths a footprint on a
+   projected grid much less (:ref:`stilt-r-parity`).
 
 ``time_integrate``
    ``true`` sums the footprint over time into a single map, which makes
@@ -116,6 +121,15 @@ These footprint settings sit next to ``grid`` at the top level:
 ``transforms``
    Steps that weight the particles before the footprint is made, mainly for
    column measurements. See :doc:`transforms`.
+
+A ``grid`` can be projected: give it a ``crs`` such as ``EPSG:32612`` and
+``xres`` and ``yres`` in the projection's units (meters for UTM). The bounds
+stay in degrees. The two steps that depend on the cell size work in the
+grid's units. One is the smoothing. The other is the early-time
+interpolation, which adds particle positions between output steps in the
+first 100 minutes when the particles move more than a cell per step. On
+100 m UTM cells it runs as it does on 0.001° cells. STILT-R decides it in
+degrees and never runs it on a grid in meters (:ref:`stilt-r-parity`).
 
 ``config.yaml`` also takes the lower-level HYSPLIT and STILT settings, such
 as turbulence, time step, and output variables, by the names STILT-R uses.

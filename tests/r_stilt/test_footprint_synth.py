@@ -264,8 +264,10 @@ def _py_footprint_stages(
     if is_longlat:
         p, xmin, xmax, _ = _wrap_antimeridian_longitudes(p, xmin=xmin, xmax=xmax)
 
+    # As calc_footprint does: on a projected grid the steps are measured in
+    # the grid's units, which STILT-R does not do.
     p_after_interp = _interpolate_early_timesteps(
-        p, xres=xres, yres=yres, time_sign=time_sign
+        p, xres=xres, yres=yres, time_sign=time_sign, crs=projection
     )
     p_with_rtime = p_after_interp.copy()
     min_abs_time = (
@@ -275,6 +277,11 @@ def _py_footprint_stages(
         .transform("min")
     )
     p_with_rtime["rtime"] = p_with_rtime["age"] - time_sign * min_abs_time
+    # As calc_footprint does: the kernel width from the spread in degrees,
+    # before projecting, in the grid's units.
+    kernel_df, w = _compute_kernel_bandwidths(
+        p_with_rtime, smooth_factor=smooth_factor, crs=projection
+    )
 
     if not is_longlat:
         p_with_rtime, xmin, xmax, ymin, ymax = _project_particles_to_crs(
@@ -288,9 +295,6 @@ def _py_footprint_stages(
 
     glong = _grid_cell_starts(xmin, xmax, xres)
     glati = _grid_cell_starts(ymin, ymax, yres)
-    kernel_df, w = _compute_kernel_bandwidths(
-        p_with_rtime, smooth_factor=smooth_factor, is_longlat=is_longlat
-    )
     max_kernel = (
         _make_gauss_kernel((xres, yres), float(np.max(w)))
         if len(w) > 0
@@ -344,8 +348,15 @@ def _assert_stages_close(
     *,
     source_particles: pd.DataFrame,
     label: str,
+    kernel: bool = True,
 ) -> None:
-    """Compare Python and R calc_footprint debug tables."""
+    """
+    Compare Python and R calc_footprint debug tables.
+
+    ``kernel=False`` leaves out the kernel width table, which differs from
+    STILT-R's on a projected grid on purpose
+    (``test_calc_footprint_utm_kernel_width_intentionally_differs_from_r``).
+    """
     particle_cols = [
         "time",
         "indx",
@@ -399,15 +410,16 @@ def _assert_stages_close(
         err_msg=f"[{label}] y grid starts differ",
     )
 
-    py_kernel = py["kernel"].sort_values("rtime").reset_index(drop=True)
-    r_kernel = r["kernel"].sort_values("rtime").reset_index(drop=True)
-    np.testing.assert_allclose(
-        py_kernel[["rtime", "varsum", "lati", "w"]].to_numpy(dtype=float),
-        r_kernel[["rtime", "varsum", "lati", "w"]].to_numpy(dtype=float),
-        rtol=1e-10,
-        atol=1e-8,
-        err_msg=f"[{label}] kernel bandwidth table differs",
-    )
+    if kernel:
+        py_kernel = py["kernel"].sort_values("rtime").reset_index(drop=True)
+        r_kernel = r["kernel"].sort_values("rtime").reset_index(drop=True)
+        np.testing.assert_allclose(
+            py_kernel[["rtime", "varsum", "lati", "w"]].to_numpy(dtype=float),
+            r_kernel[["rtime", "varsum", "lati", "w"]].to_numpy(dtype=float),
+            rtol=1e-10,
+            atol=1e-8,
+            err_msg=f"[{label}] kernel bandwidth table differs",
+        )
 
     py_raster = (
         py["raster"]
@@ -655,19 +667,20 @@ def test_irregular_grid_extent_matches_r_cell_centers(rscript, r_stilt_dir, tmp_
     _assert_footprint_close(py_ds, r_ds, label="irregular_grid_extent")
 
 
-def test_utm_projection_matches_r(rscript, r_stilt_dir, tmp_path):
-    """
-    Non-longlat grid: lon/lat particles are projected to UTM before rasterization.
+_UTM_GRID = Grid(
+    xmin=-112.3,
+    xmax=-111.7,
+    ymin=40.2,
+    ymax=40.8,
+    xres=1_000.0,
+    yres=1_000.0,
+    crs="+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs",
+)
 
-    This catches projection-bound conversion, projected grid coordinates, kernel
-    bandwidth scaling without the longlat cosine correction, and projected
-    NetCDF dimensions.
-    """
-    try:
-        from pyproj import Transformer
-    except ImportError:
-        pytest.skip("pyproj is required for the Python UTM projection path")
 
+def _skip_without_utm(rscript: str) -> None:
+    """Skip unless pyproj and R's proj4 can both project to UTM."""
+    pytest.importorskip("pyproj", reason="pyproj is needed for a projected grid")
     r_proj4 = subprocess.run(
         [
             rscript,
@@ -680,42 +693,109 @@ def test_utm_projection_matches_r(rscript, r_stilt_dir, tmp_path):
     if r_proj4.returncode != 0:
         pytest.skip("R proj4 package is required for STILT-R non-longlat comparison")
 
-    projection = "+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs"
-    Transformer.from_crs("EPSG:4326", projection, always_xy=True)
-    grid = Grid(
-        xmin=-112.3,
-        xmax=-111.7,
-        ymin=40.2,
-        ymax=40.8,
-        xres=1_000.0,
-        yres=1_000.0,
-        crs=projection,
+
+def _day_old_particles(n: int = 200, seed: int = 290) -> pd.DataFrame:
+    """
+    Particles at (-112, 40.5) in their first two minutes and 0.03 degrees apart a day later.
+
+    Two rows each in the first 100 minutes, so the R helper adds no anchor
+    rows and both sides have the same ``rtime`` steps.
+    """
+    rng = np.random.default_rng(seed)
+    return pd.DataFrame(
+        {
+            "time": [-1.0] * n + [-2.0] * n + [-1441.0] * n,
+            "indx": [float(i + 1) for i in range(n)] * 3,
+            "long": np.concatenate(
+                [np.full(2 * n, -112.0), rng.normal(-112.0, 0.03, n)]
+            ).tolist(),
+            "lati": np.concatenate(
+                [np.full(2 * n, 40.5), rng.normal(40.5, 0.03, n)]
+            ).tolist(),
+            "zagl": [5.0] * (3 * n),
+            "foot": [0.0] * (2 * n) + [1e-3] * n,
+        }
     )
+
+
+def test_utm_projection_matches_r(rscript, r_stilt_dir, tmp_path):
+    """
+    Non-longlat grid: lon/lat particles are projected to UTM before rasterization.
+
+    This catches projection-bound conversion, projected grid coordinates, and
+    projected NetCDF dimensions. It compares unsmoothed footprints: the
+    smoothing on a projected grid differs from STILT-R's on purpose
+    (``test_utm_smoothing_intentionally_differs_from_r``). The particles
+    move about 400 m in their hour, under a cell, so neither interpolates:
+    deciding that differs too
+    (``test_utm_early_interpolation_intentionally_differs_from_r``).
+    """
+    _skip_without_utm(rscript)
+    grid = _UTM_GRID
     rng = np.random.default_rng(21)
     n = 80
+    long0 = rng.normal(-112.0, 0.01, n)
+    lati0 = rng.normal(40.5, 0.01, n)
     p = pd.DataFrame(
         {
             "time": [0.0] * n + [-60.0] * n,
             "indx": [float(i + 1) for i in range(n)] * 2,
             "long": np.concatenate(
-                [rng.normal(-112.0, 0.01, n), rng.normal(-112.02, 0.03, n)]
+                [long0, long0 + rng.normal(-0.004, 0.002, n)]
             ).tolist(),
             "lati": np.concatenate(
-                [rng.normal(40.5, 0.01, n), rng.normal(40.49, 0.03, n)]
+                [lati0, lati0 + rng.normal(-0.003, 0.002, n)]
             ).tolist(),
             "zagl": [5.0] * (2 * n),
             "foot": [0.0] * n + [1e-3] * n,
         }
     )
 
-    py_ds = _py_footprint(tmp_path / "py", p, grid=grid)
-    r_ds = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, p, grid=grid)
+    py_ds = _py_footprint(tmp_path / "py", p, grid=grid, smooth_factor=0.0)
+    r_ds = _r_footprint(
+        tmp_path / "r", rscript, r_stilt_dir, p, grid=grid, smooth_factor=0.0
+    )
 
     assert "x" in py_ds.coords
     assert "y" in py_ds.coords
     py_compare = py_ds.rename({"x": "lon", "y": "lat"})
     r_compare = r_ds.rename({"x": "lon", "y": "lat"})
     _assert_footprint_close(py_compare, r_compare, label="utm_projection")
+
+
+def test_utm_smoothing_intentionally_differs_from_r(rscript, r_stilt_dir, tmp_path):
+    """
+    On a UTM grid PYSTILT smooths a footprint; STILT-R barely does.
+
+    STILT-R applies its kernel width formula to the projected coordinates,
+    so a day after release its kernel is tens of meters wide, below one
+    cell of 1 km, and its footprint equals its unsmoothed one. PYSTILT works
+    the width out in degrees and converts it to meters, about 2 km here.
+    Both keep the same total. Guarding the difference keeps someone from
+    "restoring parity" by computing the width in meters again.
+    """
+    _skip_without_utm(rscript)
+    p = _day_old_particles()
+
+    def as_lonlat(ds: xr.Dataset) -> xr.Dataset:
+        return ds.rename({"x": "lon", "y": "lat"})
+
+    r_ds = as_lonlat(
+        _r_footprint(tmp_path / "r", rscript, r_stilt_dir, p, grid=_UTM_GRID)
+    )
+    r_unsmoothed = as_lonlat(
+        _r_footprint(
+            tmp_path / "r0", rscript, r_stilt_dir, p, grid=_UTM_GRID, smooth_factor=0.0
+        )
+    )
+    py_ds = as_lonlat(_py_footprint(tmp_path / "py", p, grid=_UTM_GRID))
+
+    _assert_footprint_close(r_ds, r_unsmoothed, label="stilt_r_utm_unsmoothed")
+    r_foot = r_ds.foot.fillna(0).values
+    py_foot = py_ds.foot.fillna(0).values
+    assert np.count_nonzero(py_foot) > 2 * np.count_nonzero(r_foot)
+    assert py_foot.max() < 0.75 * r_foot.max()
+    np.testing.assert_allclose(py_foot.sum(), r_foot.sum(), rtol=1e-6)
 
 
 def test_time_integrate(rscript, r_stilt_dir, tmp_path):
@@ -1005,39 +1085,21 @@ def test_calc_footprint_utm_intermediate_tables_match_r(rscript, r_stilt_dir, tm
 
     This extends the final UTM footprint comparison by checking that both tools
     project particle coordinates and grid limits the same way before computing
-    grid starts, kernel bandwidths, and raster bins.
+    grid starts and raster bins. It runs unsmoothed, so the padding the raster
+    bins count from is the same in both: the kernel width on a projected grid
+    differs from STILT-R's on purpose
+    (``test_calc_footprint_utm_kernel_width_intentionally_differs_from_r``).
+    Each particle drifts a few hundred meters in its first hour, under a
+    cell, so neither interpolates: deciding that differs too
+    (``test_utm_early_interpolation_intentionally_differs_from_r``).
     """
-    try:
-        from pyproj import Transformer
-    except ImportError:
-        pytest.skip("pyproj is required for the Python UTM projection path")
-
-    r_proj4 = subprocess.run(
-        [
-            rscript,
-            "-e",
-            "if (!requireNamespace('proj4', quietly = TRUE)) quit(status = 1)",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    if r_proj4.returncode != 0:
-        pytest.skip("R proj4 package is required for STILT-R non-longlat comparison")
-
-    projection = "+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs"
-    Transformer.from_crs("EPSG:4326", projection, always_xy=True)
-    grid = Grid(
-        xmin=-112.3,
-        xmax=-111.7,
-        ymin=40.2,
-        ymax=40.8,
-        xres=1_000.0,
-        yres=1_000.0,
-        crs=projection,
-    )
+    _skip_without_utm(rscript)
+    grid = _UTM_GRID
 
     rng = np.random.default_rng(32)
     n = 40
+    long0 = rng.normal(-112.0, 0.015, n)
+    lati0 = rng.normal(40.5, 0.015, n)
     rows = []
     for t, foot in [(0.0, 0.0), (-60.0, 1e-3), (-180.0, 2e-3)]:
         rows.append(
@@ -1045,8 +1107,12 @@ def test_calc_footprint_utm_intermediate_tables_match_r(rscript, r_stilt_dir, tm
                 {
                     "time": [t] * n,
                     "indx": [float(j + 1) for j in range(n)],
-                    "long": rng.normal(-112.0 + abs(t) * 0.00005, 0.015, n).tolist(),
-                    "lati": rng.normal(40.5 - abs(t) * 0.00002, 0.015, n).tolist(),
+                    "long": (
+                        long0 + abs(t) * 0.00005 + rng.normal(0, 0.002, n)
+                    ).tolist(),
+                    "lati": (
+                        lati0 - abs(t) * 0.00002 + rng.normal(0, 0.002, n)
+                    ).tolist(),
                     "zagl": [5.0 + abs(t) * 0.01] * n,
                     "foot": [foot] * n,
                     "mlht": [1000.0] * n,
@@ -1059,10 +1125,138 @@ def test_calc_footprint_utm_intermediate_tables_match_r(rscript, r_stilt_dir, tm
         )
     p = pd.concat(rows, ignore_index=True)
 
-    py = _py_footprint_stages(p, grid=grid)
-    r = _r_footprint_stages(tmp_path, rscript, r_stilt_dir, p, grid=grid)
+    py = _py_footprint_stages(p, grid=grid, smooth_factor=0.0)
+    r = _r_footprint_stages(
+        tmp_path, rscript, r_stilt_dir, p, grid=grid, smooth_factor=0.0
+    )
 
-    _assert_stages_close(py, r, source_particles=p, label="utm")
+    _assert_stages_close(py, r, source_particles=p, label="utm", kernel=False)
+
+
+def _northward_r_particles(n: int = 50, seed: int = 307) -> pd.DataFrame:
+    """
+    Particles leaving (-112, 40.5) north at about 7 m/s, one row a minute for 100 minutes.
+
+    Each step is about 0.005 degrees of latitude, 555 m: more than a cell of
+    0.001 degree or of 100 m. Only the columns STILT-R's ``simulation_step``
+    passes to ``calc_footprint``: with another column, such as ``zagl``,
+    ``na.omit`` drops every row the interpolation adds.
+    """
+    rng = np.random.default_rng(seed)
+    times = -np.arange(1.0, 101.0)
+    frames = []
+    for i in range(n):
+        speed = 0.005 * (1 + 0.1 * rng.normal())
+        frames.append(
+            pd.DataFrame(
+                {
+                    "time": times,
+                    "indx": float(i + 1),
+                    "long": -112.0 + 0.0005 * rng.normal(),
+                    "lati": 40.5 + speed * np.abs(times),
+                    "foot": 1e-3,
+                }
+            )
+        )
+    return pd.concat(frames, ignore_index=True)
+
+
+def test_utm_early_interpolation_intentionally_differs_from_r(
+    rscript, r_stilt_dir, tmp_path
+):
+    """
+    On 100 m UTM cells PYSTILT interpolates 555 m steps; STILT-R does not.
+
+    STILT-R measures the steps in degrees and compares them with ``xres`` and
+    ``yres`` in meters, so on a grid in meters it never interpolates. PYSTILT
+    measures them on the projected grid (#307), so it interpolates exactly
+    as STILT-R does on 0.001 degree cells, about the same size. Guarding the
+    difference keeps someone from "restoring parity" by comparing degrees
+    with meters again.
+    """
+    _skip_without_utm(rscript)
+    p = _northward_r_particles()
+    bounds = {"xmin": -112.05, "xmax": -111.95, "ymin": 40.45, "ymax": 41.05}
+    utm = Grid(**bounds, xres=100.0, yres=100.0, crs=_UTM_GRID.crs)
+    longlat = Grid(**bounds, xres=0.001, yres=0.001)
+    cols = ["time", "indx", "long", "lati", "foot"]
+
+    def interpolated(stages: dict[str, pd.DataFrame]) -> pd.DataFrame:
+        table = stages["p_after_interp"][cols].astype(float)
+        return table.sort_values(["indx", "time"], ascending=[True, False]).reset_index(
+            drop=True
+        )
+
+    r_utm = interpolated(
+        _r_footprint_stages(tmp_path / "r_utm", rscript, r_stilt_dir, p, grid=utm)
+    )
+    r_longlat = interpolated(
+        _r_footprint_stages(
+            tmp_path / "r_longlat", rscript, r_stilt_dir, p, grid=longlat
+        )
+    )
+    py_utm = interpolated(_py_footprint_stages(p, grid=utm))
+
+    assert len(r_utm) == len(p)  # STILT-R: not interpolated
+    assert len(r_longlat) > 2 * len(p)
+    np.testing.assert_allclose(
+        py_utm.to_numpy(),
+        r_longlat.to_numpy(),
+        rtol=1e-12,
+        atol=1e-15,
+        err_msg="PYSTILT on UTM no longer interpolates as STILT-R does on 0.001 degree",
+    )
+
+
+def test_calc_footprint_utm_kernel_width_intentionally_differs_from_r(
+    rscript, r_stilt_dir, tmp_path
+):
+    """
+    On a UTM grid PYSTILT's kernel is the longitude/latitude one in meters; STILT-R's is not.
+
+    STILT-R computes ``0.06 * varsum**0.25 * sqrt(|rtime| / 1440)`` from the
+    projected coordinates, in square roots of meters. PYSTILT computes the
+    longitude/latitude grid's width in degrees and multiplies it by the
+    length of a degree of longitude, measured with the projection. Both are
+    checked here, and the gap pinned: a day after release PYSTILT's kernel
+    is more than 30 times wider.
+    """
+    _skip_without_utm(rscript)
+    from stilt.footprint.gridding import _grid_units_per_degree_longitude
+
+    p = _day_old_particles()
+    py = _py_footprint_stages(p, grid=_UTM_GRID)
+    r = _r_footprint_stages(tmp_path, rscript, r_stilt_dir, p, grid=_UTM_GRID)
+    py_lonlat = _py_footprint_stages(p)
+
+    py_kernel = py["kernel"].sort_values("rtime").reset_index(drop=True)
+    r_kernel = r["kernel"].sort_values("rtime").reset_index(drop=True)
+    ll_kernel = py_lonlat["kernel"].sort_values("rtime").reset_index(drop=True)
+    np.testing.assert_array_equal(py_kernel["rtime"], r_kernel["rtime"])
+
+    # STILT-R: its formula on the projected coordinates, in sqrt(meters).
+    x, y = py["p_with_rtime"]["long"], py["p_with_rtime"]["lati"]
+    rtime = py["p_with_rtime"]["rtime"]
+    varsum_m = (x.groupby(rtime).var() + y.groupby(rtime).var()).sort_index()
+    r_expected = (
+        0.06
+        * varsum_m.to_numpy() ** 0.25
+        * np.sqrt(np.abs(varsum_m.index.to_numpy()) / 1440)
+    )
+    np.testing.assert_allclose(r_kernel["w"], r_expected, rtol=1e-10, atol=1e-12)
+
+    # PYSTILT: the longitude/latitude width, converted to meters.
+    per_degree = _grid_units_per_degree_longitude(
+        _UTM_GRID.crs,
+        lon=np.full(len(ll_kernel), -112.0),
+        lat=ll_kernel["lati"].to_numpy(),
+    )
+    np.testing.assert_allclose(py_kernel["w"], ll_kernel["w"] * per_degree, rtol=1e-3)
+
+    # The steps whose particles have spread (the first two minutes have not).
+    spread = r_kernel["w"] > 0
+    assert spread.any()
+    assert (py_kernel["w"][spread] > 30 * r_kernel["w"][spread]).all()
 
 
 def test_mass_conservation_smooth_zero(rscript, r_stilt_dir, tmp_path):

@@ -1,8 +1,10 @@
 """
 Calculating a footprint from particles, as STILT-R's ``calc_footprint`` does.
 
-Footprints match STILT-R at ``rtol=1e-7`` per cell. Run the ``fidelity``
-tests before merging any change to this module.
+Footprints match STILT-R at ``rtol=1e-7`` per cell, except on a projected
+grid, where the smoothing (``_compute_kernel_bandwidths``) and the test for
+the early-time interpolation (``_interpolate_early_timesteps``) differ on
+purpose. Run the ``fidelity`` tests before merging any change to this module.
 """
 
 from __future__ import annotations
@@ -19,7 +21,7 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.particles import FOOTPRINT_COLUMNS, check_particles
 from stilt.receptors import Receptor
-from stilt.spatial import Grid, _grid_cell_starts
+from stilt.spatial import Grid, _grid_cell_starts, is_longlat
 from stilt.transforms import apply_transforms
 
 from .io import _footprint_array
@@ -88,16 +90,29 @@ def _wrap_antimeridian_longitudes(
 
 
 def _interpolate_early_timesteps(
-    p: pd.DataFrame, *, xres: float, yres: float, time_sign: int
+    p: pd.DataFrame,
+    *,
+    xres: float,
+    yres: float,
+    time_sign: int,
+    crs: str = "+proj=longlat",
 ) -> pd.DataFrame:
     """
     Add interpolated positions in the first 100 minutes when particles jump grid cells.
 
     Near the receptor, particles can move more than a grid cell per output
-    step. When the median step does, positions and ``foot`` are linearly
-    interpolated onto finer times (every 0.1 min to 10 min, 0.2 min to 20
-    min, and 0.5 min to 100 min). ``foot`` is then rescaled so each of those
-    three windows keeps its total, as STILT-R does.
+    step. When the median step does, along either axis of the grid,
+    positions and ``foot`` are linearly interpolated onto finer times (every
+    0.1 min to 10 min, 0.2 min to 20 min, and 0.5 min to 100 min). ``foot``
+    is then rescaled so each of those three windows keeps its total, as
+    STILT-R does.
+
+    *p* holds longitudes and latitudes in degrees. On a projected *crs* the
+    steps are measured on the grid, from the particles' positions projected
+    to it, so they compare with *xres* and *yres* in its units. STILT-R
+    compares the steps in degrees with the cell size in the grid's units,
+    which on a grid in meters never interpolates. The interpolation itself
+    is done in degrees on any grid.
     """
     early = cast(pd.DataFrame, p[np.abs(p["age"]) < 100])
     if early.empty:
@@ -106,6 +121,15 @@ def _interpolate_early_timesteps(
     # Match R: per-particle median(abs(diff(lon/lat))), then median across particles.
     # should_interpolate = median(dx) > xres OR median(dy) > yres
     sorted_early = early.sort_values(by=["particle", "age"])
+    if not is_longlat(crs):
+        # The steps along the grid's axes, in its units.
+        from pyproj import Transformer
+
+        tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
+        x, y = tr.transform(
+            sorted_early["lon"].to_numpy(), sorted_early["lat"].to_numpy()
+        )
+        sorted_early = sorted_early.assign(lon=x, lat=y)
     diffs = cast(
         pd.DataFrame,
         sorted_early.groupby("particle", sort=False)[["lon", "lat"]].diff().abs(),
@@ -229,16 +253,25 @@ def _project_particles_to_crs(
 
 
 def _compute_kernel_bandwidths(
-    p: pd.DataFrame, *, smooth_factor: float, is_longlat: bool
+    p: pd.DataFrame, *, smooth_factor: float, crs: str = "+proj=longlat"
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """
-    Return ``(kernel_df, w)``, the Gaussian kernel width for each ``rtime``.
+    Return ``(kernel_df, w)``, the Gaussian kernel width for each ``rtime``, in *crs* units.
 
-    The width grows with the spread of the particles and the time since
-    release, as in STILT-R. On a longitude/latitude grid it is divided by
-    ``cos(lat)`` so it covers the same distance at high latitudes::
+    *p* holds the particles' longitudes and latitudes in degrees, before any
+    projection. The width grows with the spread of the particles and the
+    time since release, as in STILT-R, and is divided by ``cos(lat)`` so it
+    covers the same distance at high latitudes::
 
         w = smooth_factor * 0.06 * varsum**0.25 * (|rtime| / 1440)**0.5 / cos(lat)
+
+    This is in degrees of longitude. On a projected grid it is converted to
+    the grid's units by the length of one degree of longitude at the
+    particles' mean position (``_grid_units_per_degree_longitude``), so the
+    kernel is as wide from east to west, on the ground, as on a
+    longitude/latitude grid. STILT-R applies the formula to the projected
+    coordinates instead, which on a grid in meters gives a kernel a few
+    meters wide.
     """
     kernel_df = (
         p.groupby("rtime")
@@ -246,6 +279,7 @@ def _compute_kernel_bandwidths(
             long_var=("lon", "var"),
             lati_var=("lat", "var"),
             lat_mean=("lat", "mean"),
+            lon_mean=("lon", "mean"),
         )
         .reset_index()
         .dropna()
@@ -264,11 +298,39 @@ def _compute_kernel_bandwidths(
     kernel_df["varsum"] = kernel_df["long_var"] + kernel_df["lati_var"]
     di = kernel_df["varsum"].to_numpy() ** 0.25
     ti = (np.abs(kernel_df["rtime"].to_numpy()) / 1440) ** 0.5
-    grid_conv = (
-        np.cos(kernel_df["lat_mean"].to_numpy() * np.pi / 180) if is_longlat else 1.0
-    )
+    grid_conv = np.cos(kernel_df["lat_mean"].to_numpy() * np.pi / 180)
     w = smooth_factor * 0.06 * di * ti / grid_conv
+    if not is_longlat(crs):
+        w = w * _grid_units_per_degree_longitude(
+            crs,
+            lon=kernel_df["lon_mean"].to_numpy(),
+            lat=kernel_df["lat_mean"].to_numpy(),
+        )
     return kernel_df, w
+
+
+def _grid_units_per_degree_longitude(
+    crs: str, *, lon: np.ndarray, lat: np.ndarray
+) -> np.ndarray:
+    """
+    Return the length of one degree of longitude at each ``(lon, lat)``, in *crs* units.
+
+    It is measured with the projection itself: the distance between the
+    points a hundredth of a degree east and west, divided by the
+    difference in degrees. So it includes the projection's scale at that
+    point and its units (meters, feet, kilometers), and does not depend on
+    how the projection's axes are turned.
+    """
+    from pyproj import Transformer
+
+    tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
+    step = 0.01
+    x_west, y_west = tr.transform(lon - step, lat)
+    x_east, y_east = tr.transform(lon + step, lat)
+    return np.hypot(
+        np.asarray(x_east) - np.asarray(x_west),
+        np.asarray(y_east) - np.asarray(y_west),
+    ) / (2 * step)
 
 
 def _padded_axes(
@@ -490,6 +552,15 @@ def calc_footprint(
     the number of particles and binned by hour, unless *time_integrate* is
     set.
 
+    On a projected grid the kernel's width is worked out in degrees, as on
+    a longitude/latitude grid, and converted to the grid's units, so the
+    footprint is smoothed as much. STILT-R applies its formula to the
+    projected coordinates and barely smooths a footprint there. The step
+    that decides the early-time interpolation is measured on the projected
+    grid, in its units, so a grid of 100 m cells is interpolated as a 0.001°
+    grid is. STILT-R measures it in degrees and never interpolates on a grid
+    in meters.
+
     Parameters
     ----------
     particles : pandas.DataFrame
@@ -566,7 +637,6 @@ def calc_footprint(
     crs = grid.crs
     xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
-    is_longlat = grid.is_longlat
     smooth_factor = config.smooth_factor
     time_integrate = config.time_integrate
 
@@ -580,19 +650,25 @@ def calc_footprint(
     time_sign = int(np.sign(p["age"].median()))
 
     wrapped_longitude = False
-    if is_longlat:
+    if grid.is_longlat:
         p, xmin, xmax, wrapped_longitude = _wrap_antimeridian_longitudes(
             p, xmin=xmin, xmax=xmax
         )
 
-    p = _interpolate_early_timesteps(p, xres=xres, yres=yres, time_sign=time_sign)
+    p = _interpolate_early_timesteps(
+        p, xres=xres, yres=yres, time_sign=time_sign, crs=crs
+    )
 
     # rtime = time elapsed since each particle's first output step.
     # Used below to compute kernel bandwidth (particles spread more with time).
     min_abs_time = p["age"].abs().groupby(p["particle"], sort=False).transform("min")
     p["rtime"] = p["age"] - time_sign * min_abs_time
 
-    if not is_longlat:
+    # The kernel width comes from the spread in degrees, before projecting,
+    # and is returned in the grid's units.
+    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=smooth_factor, crs=crs)
+
+    if not grid.is_longlat:
         p, xmin, xmax, ymin, ymax = _project_particles_to_crs(
             p,
             crs=crs,
@@ -609,9 +685,6 @@ def calc_footprint(
     n_lat = len(glati)
     rs = (xres, yres)
 
-    kernel_df, w = _compute_kernel_bandwidths(
-        p, smooth_factor=smooth_factor, is_longlat=is_longlat
-    )
     max_kernel = (
         _make_gauss_kernel(rs, float(np.max(w))) if len(w) > 0 else np.array([[1.0]])
     )

@@ -351,6 +351,131 @@ def test_interpolate_early_timesteps_matches_r_na_omit_with_extra_columns():
     pd.testing.assert_frame_equal(interpolated, expected, check_dtype=False)
 
 
+def _northward_particles(n: int = 100, seed: int = 1) -> pd.DataFrame:
+    """
+    Particles leaving (-112, 40.5) north at about 7 m/s for 100 minutes (#307).
+
+    Each 1-minute step is about 0.005 degrees of latitude, 555 m, and almost
+    nothing east to west.
+    """
+    rng = np.random.default_rng(seed)
+    ages = np.arange(-1.0, -101.0, -1.0)
+    frames = []
+    for k in range(n):
+        speed = 0.005 * (1 + 0.1 * rng.normal())
+        frames.append(
+            pd.DataFrame(
+                {
+                    "particle": k + 1,
+                    "age": ages,
+                    "lon": -112.0 + 0.0005 * rng.normal(),
+                    "lat": 40.5 + speed * np.abs(ages),
+                    "foot": 1e-3,
+                }
+            )
+        )
+    return pd.concat(frames, ignore_index=True)
+
+
+def _interpolates(p: pd.DataFrame, **grid) -> bool:
+    """Whether _interpolate_early_timesteps adds rows to *p* on this grid."""
+    return len(_interpolate_early_timesteps(p, time_sign=-1, **grid)) > len(p)
+
+
+def test_projected_grid_interpolates_steps_longer_than_a_cell():
+    """
+    On 100 m UTM cells, 555 m steps are interpolated, as on 0.001 degree cells (#307).
+
+    The step used to be measured in degrees and compared with ``xres`` in
+    meters, so a grid in meters never interpolated.
+    """
+    pytest.importorskip("pyproj")
+    p = _northward_particles()
+    longlat = _interpolate_early_timesteps(p, xres=0.001, yres=0.001, time_sign=-1)
+    utm = _interpolate_early_timesteps(
+        p, xres=100.0, yres=100.0, time_sign=-1, crs=_UTM12
+    )
+
+    assert len(longlat) > len(p)
+    pd.testing.assert_frame_equal(utm, longlat)
+
+
+def test_projected_grid_does_not_interpolate_steps_shorter_than_a_cell():
+    """On 1 km UTM cells the same 555 m steps are left as they are."""
+    pytest.importorskip("pyproj")
+    p = _northward_particles()
+    assert not _interpolates(p, xres=1000.0, yres=1000.0, crs=_UTM12)
+    assert not _interpolates(p, xres=0.01, yres=0.01)
+
+
+def test_projected_step_is_measured_in_the_grid_units():
+    """A UTM grid in kilometers decides as the same grid in meters."""
+    pytest.importorskip("pyproj")
+    p = _northward_particles()
+    km = _UTM12.replace("+units=m", "+units=km")
+    assert _interpolates(p, xres=0.1, yres=0.1, crs=km)
+    assert not _interpolates(p, xres=1.0, yres=1.0, crs=km)
+
+
+def test_projected_step_is_compared_with_the_cell_along_each_axis():
+    """
+    A north step is compared with ``yres``, an east step with ``xres``.
+
+    The particles move 555 m north and a few meters east per step, so cells
+    500 m tall interpolate and cells 500 m wide but 1 km tall do not.
+    """
+    pytest.importorskip("pyproj")
+    p = _northward_particles()
+    assert _interpolates(p, xres=1000.0, yres=500.0, crs=_UTM12)
+    assert not _interpolates(p, xres=500.0, yres=1000.0, crs=_UTM12)
+
+
+def test_projected_step_follows_a_turned_grid():
+    """
+    On a grid turned by 45 degrees, a 555 m north step is 393 m along each axis.
+
+    So 450 m cells interpolate on the unturned oblique Mercator grid and not
+    on the turned one: the step is measured along the grid's own axes.
+    """
+    pytest.importorskip("pyproj")
+    p = _northward_particles()
+    omerc = "+proj=omerc +lat_0=40.5 +lonc=-112 +gamma=0 +k_0=1 +datum=WGS84 +units=m"
+    assert _interpolates(p, xres=450.0, yres=450.0, crs=f"{omerc} +alpha=0.0001")
+    assert not _interpolates(p, xres=450.0, yres=450.0, crs=f"{omerc} +alpha=45")
+    assert _interpolates(p, xres=350.0, yres=350.0, crs=f"{omerc} +alpha=45")
+
+
+def test_projected_footprint_fills_the_cells_between_steps_like_the_longlat_one(
+    point_receptor,
+):
+    """
+    On 100 m UTM cells the footprint covers about as many cells as on 0.001 degree cells.
+
+    Without the interpolation the UTM footprint was the particles' 1-minute
+    positions, a few cells apart: a fifth fewer cells than the lon/lat one
+    (#307). The 0.001 degree cells are 85 m by 111 m here, so the two grids
+    do not have the same cells; both keep the same total.
+    """
+    pytest.importorskip("pyproj")
+    p = _northward_particles().assign(zagl=5.0)
+    bounds = {"xmin": -112.05, "xmax": -111.95, "ymin": 40.45, "ymax": 41.05}
+    feet = {
+        name: calc_footprint(
+            p, point_receptor, grid, time_integrate=True, smooth_factor=0.0
+        ).to_numpy()
+        for name, grid in {
+            "longlat": Grid(**bounds, xres=0.001, yres=0.001),
+            "utm": Grid(**bounds, xres=100.0, yres=100.0, crs=_UTM12),
+        }.items()
+    }
+    cells = {name: np.count_nonzero(np.nan_to_num(a)) for name, a in feet.items()}
+
+    assert cells["utm"] > 0.9 * cells["longlat"]
+    np.testing.assert_allclose(
+        np.nansum(feet["utm"]), np.nansum(feet["longlat"]), rtol=1e-3
+    )
+
+
 # ---------------------------------------------------------------------------
 # Mathematical invariants — no R required
 #
@@ -697,7 +822,7 @@ def test_compute_kernel_bandwidths_single_particle_returns_zero_sigma():
             "foot": [1e-3, 1e-3],
         }
     )
-    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0, is_longlat=True)
+    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0)
     np.testing.assert_array_equal(w, np.zeros_like(w))
     assert len(kernel_df) == len(w)
 
@@ -714,8 +839,162 @@ def test_compute_kernel_bandwidths_two_coincident_particles_returns_zero_sigma()
             "foot": [1e-3] * 4,
         }
     )
-    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0, is_longlat=True)
+    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0)
     np.testing.assert_array_equal(w, np.zeros_like(w))
+
+
+_UTM12 = "+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs"
+
+
+def _spread_particles(n: int = 300, seed: int = 7) -> pd.DataFrame:
+    """
+    Particles at (-112, 40.5) at release and 0.03 degrees apart a day later.
+
+    A day after release the kernel is about 2 km wide, two cells of 1 km.
+    """
+    rng = np.random.default_rng(seed)
+    return pd.DataFrame(
+        {
+            "particle": np.tile(np.arange(1, n + 1), 2),
+            "age": np.repeat([-1.0, -1441.0], n),
+            "lon": np.concatenate([np.full(n, -112.0), rng.normal(-112.0, 0.03, n)]),
+            "lat": np.concatenate([np.full(n, 40.5), rng.normal(40.5, 0.03, n)]),
+            "zagl": np.full(2 * n, 5.0),
+            "foot": np.repeat([0.0, 1e-3], n),
+        }
+    )
+
+
+def _with_rtime(p: pd.DataFrame) -> pd.DataFrame:
+    """Add ``rtime`` as calc_footprint does for a backward run."""
+    p = p.copy()
+    p["rtime"] = p["age"] + p["age"].abs().groupby(p["particle"]).transform("min")
+    return p
+
+
+def test_projected_kernel_is_as_wide_east_to_west_as_the_longlat_kernel():
+    """
+    On a projected grid the kernel width is the longitude/latitude grid's, converted to meters.
+
+    The longitude/latitude width is in degrees of longitude, so in meters it
+    is that times the length of a degree of longitude along the parallel (the
+    geodesic on WGS84). The UTM width may differ from it only by UTM's scale
+    factor, within 0.1 % in a zone. STILT-R's formula on the projected
+    coordinates gives a kernel tens of meters wide here.
+    """
+    pyproj = pytest.importorskip("pyproj")
+    p = _with_rtime(_spread_particles())
+    kernel_ll, w_ll = _compute_kernel_bandwidths(p, smooth_factor=1.0)
+    _, w_utm = _compute_kernel_bandwidths(p, smooth_factor=1.0, crs=_UTM12)
+
+    lon = kernel_ll["lon_mean"].to_numpy()
+    lat = kernel_ll["lat_mean"].to_numpy()
+    _, _, meters_per_degree = pyproj.Geod(ellps="WGS84").inv(
+        lon - 0.5, lat, lon + 0.5, lat
+    )
+    assert w_utm.max() > 1000  # wider than a cell of 1 km
+    np.testing.assert_allclose(w_utm, w_ll * meters_per_degree, rtol=1e-3)
+
+
+def test_projected_kernel_width_follows_the_grid_units():
+    """The same particles get a kernel 1000 times smaller in kilometers than in meters."""
+    pytest.importorskip("pyproj")
+    p = _with_rtime(_spread_particles())
+    _, w_m = _compute_kernel_bandwidths(p, smooth_factor=1.0, crs=_UTM12)
+    _, w_km = _compute_kernel_bandwidths(
+        p, smooth_factor=1.0, crs=_UTM12.replace("+units=m", "+units=km")
+    )
+    np.testing.assert_allclose(w_km * 1000, w_m, rtol=1e-9)
+
+
+def test_projected_kernel_width_does_not_depend_on_how_the_axes_are_turned():
+    """An oblique Mercator grid turned by 45 degrees gets the kernel of the unturned one."""
+    pytest.importorskip("pyproj")
+    p = _with_rtime(_spread_particles())
+    omerc = "+proj=omerc +lat_0=40.5 +lonc=-112 +gamma=0 +k_0=1 +datum=WGS84 +units=m"
+    _, w_north = _compute_kernel_bandwidths(
+        p, smooth_factor=1.0, crs=f"{omerc} +alpha=0.0001"
+    )
+    _, w_turned = _compute_kernel_bandwidths(
+        p, smooth_factor=1.0, crs=f"{omerc} +alpha=45"
+    )
+    np.testing.assert_allclose(w_turned, w_north, rtol=1e-6)
+
+
+def _smoothing_variance_km2(foot, unsmoothed, x_km, y_km) -> tuple[float, float]:
+    """Return the variance smoothing adds to a footprint along x and y, in km**2."""
+
+    def variances(f):
+        a = f.isel(time=0).to_numpy()
+        xx, yy = np.meshgrid(x_km, y_km)
+        mx, my = (a * xx).sum() / a.sum(), (a * yy).sum() / a.sum()
+        return (
+            (a * (xx - mx) ** 2).sum() / a.sum(),
+            (a * (yy - my) ** 2).sum() / a.sum(),
+        )
+
+    (vx, vy), (vx0, vy0) = variances(foot), variances(unsmoothed)
+    return vx - vx0, vy - vy0
+
+
+def test_projected_footprint_is_smoothed_like_the_longlat_footprint(point_receptor):
+    """
+    Smoothing spreads a 1 km UTM footprint east to west as much as a 0.01 degree one.
+
+    The variance the kernel adds is its width squared, about (1.3 km)**2
+    here. On the longitude/latitude grid the kernel is one width in degrees
+    on both axes, so it is ``1 / cos(lat)`` (1.31) times wider north to
+    south; the UTM kernel is round. With STILT-R's width on the projected
+    coordinates the UTM footprint was hardly smoothed at all.
+    """
+    pyproj = pytest.importorskip("pyproj")
+    p = _spread_particles()
+    bounds = {"xmin": -112.5, "xmax": -111.5, "ymin": 40.0, "ymax": 41.0}
+    geod = pyproj.Geod(ellps="WGS84")
+    km_per_lon = geod.inv(-112.5, 40.5, -111.5, 40.5)[2] / 1000
+    km_per_lat = geod.inv(-112.0, 40.0, -112.0, 41.0)[2] / 1000
+
+    added = {}
+    for name, grid in {
+        "lonlat": Grid(**bounds, xres=0.01, yres=0.01),
+        "utm": Grid(**bounds, xres=1000, yres=1000, crs=_UTM12),
+    }.items():
+        foot = calc_footprint(p, point_receptor, grid, time_integrate=True)
+        unsmoothed = calc_footprint(
+            p, point_receptor, grid, time_integrate=True, smooth_factor=0
+        )
+        if name == "lonlat":
+            x_km, y_km = foot.lon.values * km_per_lon, foot.lat.values * km_per_lat
+        else:
+            x_km, y_km = foot.x.values / 1000, foot.y.values / 1000
+        added[name] = _smoothing_variance_km2(foot, unsmoothed, x_km, y_km)
+
+    (ll_x, ll_y), (utm_x, utm_y) = added["lonlat"], added["utm"]
+    assert utm_x > 1.0  # a kernel over 1 km wide
+    np.testing.assert_allclose(utm_x, ll_x, rtol=0.1)
+    np.testing.assert_allclose(utm_y, utm_x, rtol=0.1)
+    np.testing.assert_allclose(ll_y, ll_x / np.cos(np.radians(40.5)) ** 2, rtol=0.1)
+
+
+def test_projected_footprint_on_cells_that_are_not_square_keeps_its_total(
+    point_receptor,
+):
+    """With 1000 m by 500 m cells, smoothing spreads the footprint and loses none of it."""
+    pytest.importorskip("pyproj")
+    p = _spread_particles()
+    grid = Grid(
+        xmin=-112.5, xmax=-111.5, ymin=40.0, ymax=41.0, xres=1000, yres=500, crs=_UTM12
+    )
+    smoothed = calc_footprint(p, point_receptor, grid, time_integrate=True)
+    unsmoothed = calc_footprint(
+        p, point_receptor, grid, time_integrate=True, smooth_factor=0
+    )
+    assert np.count_nonzero(smoothed.to_numpy()) > 2 * np.count_nonzero(
+        unsmoothed.to_numpy()
+    )
+    np.testing.assert_allclose(
+        float(smoothed.sum()), float(unsmoothed.sum()), rtol=1e-12
+    )
 
 
 def test_calc_footprint_returns_a_named_dataarray_with_its_receptor(point_receptor):
