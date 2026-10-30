@@ -218,6 +218,7 @@ def test_cli_help_lists_current_commands():
     assert result.exit_code == 0
     expected = {
         "check",
+        "fetch",
         "init",
         "run",
         "status",

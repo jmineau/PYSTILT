@@ -185,6 +185,15 @@ class TransportModel(Protocol):
         met itself), and ``message`` columns, one row for each problem. It
         runs and downloads nothing. A model without it has no met files to
         check.
+    fetch_met : callable, optional
+        ``fetch_met(met, windows)``, for a model that reads files, which
+        ``stilt fetch`` calls to get the files its runs need before any
+        starts. *met* is the model's met config and *windows* the time each
+        run covers (:func:`stilt.meteorology.run_window`). It gets the files
+        a run of those windows would ask for, downloading what the met
+        downloads, and returns a DataFrame with ``file`` and ``message``
+        columns: a row for each file, then a row for each window whose files
+        could not be had. A model without it has no met files to get.
     """
 
     name: str

@@ -10,7 +10,7 @@ import functools
 import inspect
 import logging
 import os
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from functools import cached_property
 from itertools import pairwise
 from pathlib import Path
@@ -742,6 +742,55 @@ class Met:
             subsetted.append(cache_path)
         return subsetted
 
+    def fetch(self, windows: Iterable[tuple[Any, Any]]) -> pd.DataFrame:
+        """
+        Get the met files that cover every one of *windows*, downloading any a download lacks.
+
+        Each window is asked for as :meth:`files_for` is when a run needs it,
+        so the files are the ones those runs would use. Windows that overlap
+        are asked for together, one request to the archive for a stretch of
+        runs; when that fails, each of its windows is asked for on its own,
+        so a failure names only the windows it belongs to. A met without
+        ``download`` is only checked: its files are looked for, never made.
+
+        Parameters
+        ----------
+        windows : iterable of tuple of datetime-like
+            The times to cover, each as :func:`run_window` returns it.
+
+        Returns
+        -------
+        pandas.DataFrame
+            ``file`` and ``message`` columns: a row for each file, with
+            ``message`` empty, then a row for each window whose files could
+            not be had, with ``file`` empty and the reason in ``message``.
+        """
+        files: dict[Path, None] = {}
+        problems: dict[str, None] = {}
+
+        def get(window: tuple[Any, Any]) -> str | None:
+            """Get the files for *window*, or return why they could not be had."""
+            try:
+                files.update(dict.fromkeys(self.files_for(window)))
+            except (MeteorologyError, ValueError, OSError) as error:
+                if isinstance(error, MeteorologyError):
+                    return str(error)
+                first, last = (_time(t) for t in window)
+                return f"{first:%Y-%m-%d %H:%M} to {last:%Y-%m-%d %H:%M}: {error}"
+            return None
+
+        for whole, parts in _overlapping(windows):
+            reason = get(whole)
+            if reason is not None and len(parts) == 1:
+                problems[reason] = None
+            elif reason is not None:
+                for part in parts:
+                    if (reason := get(part)) is not None:
+                        problems[reason] = None
+        table = [(str(path), None) for path in files]
+        table += [(None, reason) for reason in problems]
+        return pd.DataFrame(table, columns=["file", "message"]).astype("string")
+
 
 #: Met settings that were removed, and what to do instead.
 _REMOVED = {
@@ -755,6 +804,35 @@ _REMOVED = {
         "hours with no file."
     ),
 }
+
+
+def _overlapping(
+    windows: Iterable[tuple[Any, Any]],
+) -> list[
+    tuple[tuple[pd.Timestamp, pd.Timestamp], list[tuple[pd.Timestamp, pd.Timestamp]]]
+]:
+    """
+    Group *windows* that overlap, in time order.
+
+    Returns, for each group, the one window that spans it and the distinct
+    windows in it. Windows that only touch stay apart.
+    """
+    ordered = sorted(
+        {
+            (min(a, b), max(a, b))
+            for a, b in ((_time(first), _time(last)) for first, last in windows)
+        }
+    )
+    groups: list[list[tuple[pd.Timestamp, pd.Timestamp]]] = []
+    end: pd.Timestamp | None = None
+    for window in ordered:
+        if end is not None and window[0] < end:
+            groups[-1].append(window)
+            end = max(end, window[1])
+        else:
+            groups.append([window])
+            end = window[1]
+    return [((parts[0][0], max(b for _, b in parts)), parts) for parts in groups]
 
 
 def _inspect(path: Path) -> tuple[tuple[pd.Timestamp, ...], tuple[str, ...]]:

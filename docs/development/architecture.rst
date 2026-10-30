@@ -74,6 +74,9 @@ Module map
                         found from its inputs before any run (Project.check,
                         stilt check); a transport model's check_met finds the
                         met's part
+     fetch.py           fetch_project: gets the met files the unfinished
+                        simulations need (Project.fetch, stilt fetch); a
+                        transport model's fetch_met does the model's part
      output.py          Output: the output directory, a folder per kind and
                         settings hash; finding a variant's folder, which
                         receptors have results (present, complete), reading
