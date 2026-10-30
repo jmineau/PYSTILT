@@ -68,29 +68,9 @@ def _interpolation_times(time_sign: int) -> np.ndarray:
     return times * time_sign
 
 
-def _wrap_longitudes(lon: Any, *, west: float = 0.0) -> Any:
-    """Return *lon* (a number, array, or Series) shifted by whole turns into ``[west, west + 360)``."""
+def _wrap_longitudes(lon: Any, *, west: Any = 0.0) -> Any:
+    """Return *lon* shifted by whole turns into ``[west, west + 360)``; both are numbers, arrays, or Series."""
     return (((lon - west) % 360) + 360) % 360 + west
-
-
-def _unwrap_around_circular_mean(lon: pd.Series, *, by: pd.Series) -> pd.Series:
-    """
-    Return *lon* shifted by whole turns to within 180 degrees of its group's circular mean.
-
-    The groups are the values of *by* (for a footprint, ``rtime``: one step
-    of the particle cloud). The circular mean is the direction of the mean
-    unit vector, so it has no seam: a cloud at 179.9 degrees, or on the far
-    side of the globe from the receptor, keeps its true spread. A longitude
-    already within 180 degrees of its mean is returned unchanged, bit for
-    bit.
-    """
-    rad = np.radians(lon.to_numpy(dtype=float))
-    keys = by.to_numpy()
-    sin_mean = pd.Series(np.sin(rad)).groupby(keys).transform("mean").to_numpy()
-    cos_mean = pd.Series(np.cos(rad)).groupby(keys).transform("mean").to_numpy()
-    center = np.degrees(np.arctan2(sin_mean, cos_mean))
-    turns = np.round((center - lon.to_numpy(dtype=float)) / 360.0)
-    return pd.Series(lon.to_numpy(dtype=float) + 360.0 * turns, index=lon.index)
 
 
 def _wrap_antimeridian_longitudes(
@@ -275,15 +255,15 @@ def _compute_kernel_bandwidths(
     coordinates instead, which on a grid in meters gives a kernel a few
     meters wide.
 
-    On a projected grid each step's longitudes are first taken within 180
-    degrees of that step's circular mean (``_unwrap_around_circular_mean``),
-    so a cloud has the spread and mean position it has on the ground
-    wherever it is, across 180 degrees included. A longitude/latitude grid
-    that crosses 180 degrees has its longitudes shifted before this, by
-    ``_wrap_antimeridian_longitudes``.
+    On a projected grid each ``rtime``'s longitudes are first shifted by
+    whole turns to within 180 degrees of that step's circular mean
+    (``_unwrap_around_cloud``), so a cloud has the spread and mean position
+    it has on the ground wherever it is, across 180 degrees included. A
+    longitude/latitude grid that crosses 180 degrees has its longitudes
+    shifted before this, by ``_wrap_antimeridian_longitudes``.
     """
     if not is_longlat(crs):
-        p = p.assign(lon=_unwrap_around_circular_mean(p["lon"], by=p["rtime"]))
+        p = p.assign(lon=_unwrap_around_cloud(p))
     kernel_df = (
         p.groupby("rtime")
         .agg(
@@ -312,12 +292,41 @@ def _compute_kernel_bandwidths(
     grid_conv = np.cos(kernel_df["lat_mean"].to_numpy() * np.pi / 180)
     w = smooth_factor * 0.06 * di * ti / grid_conv
     if not is_longlat(crs):
+        # The mean of unwrapped longitudes can pass 180; only those go back.
+        lon_mean = kernel_df["lon_mean"].to_numpy()
+        outside = (lon_mean < -180.0) | (lon_mean >= 180.0)
+        lon_mean = np.where(outside, _wrap_longitudes(lon_mean, west=-180.0), lon_mean)
         w = w * _grid_units_per_degree_longitude(
-            crs,
-            lon=kernel_df["lon_mean"].to_numpy(),
-            lat=kernel_df["lat_mean"].to_numpy(),
+            crs, lon=lon_mean, lat=kernel_df["lat_mean"].to_numpy()
         )
     return kernel_df, w
+
+
+def _unwrap_around_cloud(p: pd.DataFrame) -> pd.Series:
+    """
+    Return the longitudes of *p*, each ``rtime``'s within 180 degrees of that step's circular mean.
+
+    The circular mean is the direction of the mean of the unit vectors, so
+    it is the cloud's center wherever the cloud is, and the window it opens
+    has its seam on the far side of the globe from the cloud. The center is
+    expressed in the frame the longitudes are written in (-180 to 180, or
+    0 to 360 on a grid that crosses 180 degrees), so a longitude is shifted,
+    by whole turns (``_wrap_longitudes``), only when it lies more than 180
+    degrees from the center. The others are returned as they are, to the
+    last bit.
+    """
+    lon = p["lon"]
+    rad = np.radians(lon.to_numpy(dtype=float))
+    steps = p["rtime"]
+    mean_sin = pd.Series(np.sin(rad), index=p.index).groupby(steps).transform("mean")
+    mean_cos = pd.Series(np.cos(rad), index=p.index).groupby(steps).transform("mean")
+    circular = np.degrees(np.arctan2(mean_sin, mean_cos))
+    # The same center, a whole number of turns away, nearest the plain mean.
+    plain = lon.groupby(steps).transform("mean")
+    center = plain + ((circular - plain + 180.0) % 360.0 - 180.0)
+    west = center - 180.0
+    outside = (lon < west) | (lon >= west + 360.0)
+    return lon.where(~outside, _wrap_longitudes(lon, west=west))
 
 
 def _grid_units_per_degree_longitude(
@@ -326,14 +335,15 @@ def _grid_units_per_degree_longitude(
     """
     Return the length of one degree of longitude at each ``(lon, lat)``, in *crs* units.
 
-    It is measured with the projection itself: the distance from the point
-    to the point a hundredth of a degree east, and to the one a hundredth
-    west, divided by the difference in degrees. So it includes the
-    projection's scale at that point and its units (meters, feet,
-    kilometers), and does not depend on how the projection's axes are
-    turned. The smaller of the two is kept: a projection cut next to the
-    point (a Lambert conformal or Mercator grid is cut at ``lon_0 + 180``)
-    puts one of them across the cut, never both.
+    It is measured with the projection itself: the distance between the
+    points a hundredth of a degree east and west, divided by the
+    difference in degrees. So it includes the projection's scale at that
+    point and its units (meters, feet, kilometers), and does not depend on
+    how the projection's axes are turned. Next to a projection's cut (a
+    Lambert conformal or Mercator grid is cut at ``lon_0 + 180``) one of
+    the two points is across it, so the distances from the point to each
+    side differ by more than a factor of two; there the shorter one is
+    used.
     """
     from pyproj import Transformer
 
@@ -342,9 +352,11 @@ def _grid_units_per_degree_longitude(
     x, y = (np.asarray(v) for v in tr.transform(lon, lat))
     x_west, y_west = (np.asarray(v) for v in tr.transform(lon - step, lat))
     x_east, y_east = (np.asarray(v) for v in tr.transform(lon + step, lat))
-    west = np.hypot(x - x_west, y - y_west)
-    east = np.hypot(x_east - x, y_east - y)
-    return np.minimum(west, east) / step
+    across = np.hypot(x_east - x_west, y_east - y_west) / (2 * step)
+    west = np.hypot(x - x_west, y - y_west) / step
+    east = np.hypot(x_east - x, y_east - y) / step
+    cut = np.maximum(west, east) > 2 * np.minimum(west, east)
+    return np.where(cut, np.minimum(west, east), across)
 
 
 def _padded_axes(
