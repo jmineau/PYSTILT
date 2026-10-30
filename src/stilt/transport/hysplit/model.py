@@ -151,12 +151,12 @@ class HysplitModel:
         """
         Run HYSPLIT for one receptor in *workdir* and return its particles.
 
-        It finds the met files that cover *window* and the hour after it,
-        which HYSPLIT interpolates, cropped when the met is. Its output is
-        ``stilt.log`` in *workdir*, returned as the run's log. Without
-        *workdir* it runs in a temporary directory. The release heights and
-        the near-field correction are added by the caller, as for any model
-        (:func:`stilt.transport.run_model`).
+        It finds the met files that cover *window*, up to the met step at
+        or after its end, which HYSPLIT interpolates, cropped when the met
+        is. Its output is ``stilt.log`` in *workdir*, returned as the run's
+        log. Without *workdir* it runs in a temporary directory. The release
+        heights and the near-field correction are added by the caller, as
+        for any model (:func:`stilt.transport.run_model`).
 
         Raises
         ------

@@ -943,8 +943,8 @@ def _window_end_files(met, end):
         # the issue's run: 20:31 for 3 hours ends between 23:00 and the next file's 00:00
         ("2021-01-14 23:31", ["20210114_18-23_hrrr", "20210115_00-05_hrrr"]),
         ("2021-01-14 23:59", ["20210114_18-23_hrrr", "20210115_00-05_hrrr"]),
-        # on the file's last hour, as a backward run released then
-        ("2021-01-14 23:00", ["20210114_18-23_hrrr", "20210115_00-05_hrrr"]),
+        # on the file's last hour: HYSPLIT reads nothing past it (#283)
+        ("2021-01-14 23:00", ["20210114_18-23_hrrr"]),
         ("2021-01-14 22:59", ["20210114_18-23_hrrr"]),
         ("2021-01-15 00:00", ["20210114_18-23_hrrr", "20210115_00-05_hrrr"]),
         ("2021-01-15 00:01", ["20210114_18-23_hrrr", "20210115_00-05_hrrr"]),
@@ -996,6 +996,182 @@ def test_a_forward_run_reads_the_hour_after_its_end_in_daily_files(
     met = _make_met(tmp_path, "%Y%m%d", "1D")
 
     assert _window_end_files(met, end) == files
+
+
+# ---------------------------------------------------------------------------
+# Met steps longer than an hour (#283)
+#
+# HYSPLIT needs the met step at or before a run's start and the one at or
+# after its end. For daily files of 3-hourly steps (NAM12, GDAS 0.5 deg), the
+# step after a 22:00 end is the next day's 00:00, and a 21:00 end needs
+# nothing past 21:00.
+# ---------------------------------------------------------------------------
+
+
+def _stepped_files(
+    tmp_path: Path, names: list[str], file_format: str, tres: str, step: str
+) -> list[Path]:
+    """Write one ARL file per name in *names*, each holding the steps of *step* in its *tres*."""
+    files = []
+    for name in names:
+        first = pd.Timestamp(dt.datetime.strptime(name, file_format))
+        end = first + pd.to_timedelta(tres)
+        times = pd.date_range(first, end, freq=step, inclusive="left")
+        files.append(write_arl_file(tmp_path / name, times=times))
+    return files
+
+
+#: Daily files of 3-hourly steps, as NAM12's: 00:00 to 21:00 each day.
+_NAM = {"names": ["20150101", "20150102"], "file_format": "%Y%m%d", "tres": "1D"}
+
+
+@pytest.mark.parametrize(
+    ("step", "end", "files"),
+    [
+        # the issue's two backward runs: after the last step, and on it
+        ("3h", "2015-01-01 22:00", ["20150101", "20150102"]),
+        ("3h", "2015-01-01 21:00", ["20150101"]),
+        ("3h", "2015-01-01 21:01", ["20150101", "20150102"]),
+        ("3h", "2015-01-01 20:59", ["20150101"]),
+        ("3h", "2015-01-02 00:00", ["20150101", "20150102"]),
+        # daily files of 6-hourly steps, as GFS 0.25 deg: 00:00 to 18:00
+        ("6h", "2015-01-01 18:00", ["20150101"]),
+        ("6h", "2015-01-01 19:00", ["20150101", "20150102"]),
+    ],
+)
+@pytest.mark.parametrize("n_hours", [-3, 3])
+def test_files_for_reads_the_next_file_only_past_the_last_met_step(
+    tmp_path, step, end, files, n_hours
+):
+    """A backward run released at *end* and a forward run ending then get the same files."""
+    _stepped_files(tmp_path, _NAM["names"], _NAM["file_format"], _NAM["tres"], step)
+    met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
+    r_time = (
+        pd.Timestamp(end) if n_hours < 0 else pd.Timestamp(end) - pd.Timedelta(hours=3)
+    )
+    window = run_window(r_time, n_hours)
+
+    found = met.files_for(window)
+
+    assert [p.name for p in found] == files
+    met.check(found, window)
+
+
+@pytest.mark.parametrize("n_hours", [-3, 3])
+def test_check_passes_a_run_that_ends_on_the_last_met_step(tmp_path, n_hours):
+    """A run released at 21:00 (or ending then) runs on that day's file alone, as HYSPLIT runs it (#283)."""
+    files = _stepped_files(
+        tmp_path, ["20150101"], _NAM["file_format"], _NAM["tres"], "3h"
+    )
+    r_time = dt.datetime(2015, 1, 1, 21) if n_hours < 0 else dt.datetime(2015, 1, 1, 18)
+
+    _make_met(tmp_path, _NAM["file_format"], _NAM["tres"]).check(
+        files, run_window(r_time, n_hours)
+    )
+
+
+@pytest.mark.parametrize("n_hours", [-3, 3])
+def test_check_fails_a_run_past_the_last_met_step_without_the_next_file(
+    tmp_path, n_hours
+):
+    """A run released at 22:00 needs the next day's 00:00 step."""
+    files = _stepped_files(
+        tmp_path, ["20150101"], _NAM["file_format"], _NAM["tres"], "3h"
+    )
+    r_time = dt.datetime(2015, 1, 1, 22) if n_hours < 0 else dt.datetime(2015, 1, 1, 19)
+    met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
+
+    with pytest.raises(
+        MeteorologyError,
+        match="hold 2015-01-01 00:00 to 2015-01-01 21:00. The run needs "
+        "2015-01-01 19:00 to 2015-01-01 22:00",
+    ):
+        met.check(files, run_window(r_time, n_hours))
+
+
+@pytest.mark.parametrize("n_hours", [-3, 3])
+def test_missing_hours_lists_the_next_file_a_run_past_the_last_step_needs(
+    tmp_path, n_hours
+):
+    """`stilt check` asks for the next day's file a 22:00 end needs, and none for 21:00."""
+    _stepped_files(tmp_path, ["20150101"], _NAM["file_format"], _NAM["tres"], "3h")
+    met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
+
+    def missing(end):
+        r_time = pd.Timestamp(end)
+        if n_hours > 0:
+            r_time -= pd.Timedelta(hours=n_hours)
+        return met.missing_hours(run_window(r_time, n_hours))
+
+    assert missing("2015-01-01 22:00") == [pd.Timestamp("2015-01-02")]
+    assert missing("2015-01-01 21:00") == []
+
+
+#: 6-hour files of hourly steps, as NOAA's HRRR archive.
+_HRRR = {
+    "names": ["20210115_00", "20210115_06"],
+    "file_format": "%Y%m%d_%H",
+    "tres": "6h",
+}
+
+
+@pytest.mark.parametrize(
+    ("end", "files"),
+    [
+        # on the file's last hour: HYSPLIT reads nothing past 05:00
+        ("2021-01-15 05:00", ["20210115_00"]),
+        ("2021-01-15 05:30", ["20210115_00", "20210115_06"]),
+        ("2021-01-15 04:59", ["20210115_00"]),
+        ("2021-01-15 06:00", ["20210115_00", "20210115_06"]),
+    ],
+)
+@pytest.mark.parametrize("n_hours", [-3, 3])
+def test_files_for_hourly_steps_drop_the_file_after_the_last_hour(
+    tmp_path, end, files, n_hours
+):
+    """With hourly steps only a run that ends exactly on a file's last hour changes: it no longer needs the next file."""
+    _stepped_files(tmp_path, _HRRR["names"], _HRRR["file_format"], _HRRR["tres"], "h")
+    met = _make_met(tmp_path, _HRRR["file_format"], _HRRR["tres"])
+    r_time = (
+        pd.Timestamp(end) if n_hours < 0 else pd.Timestamp(end) - pd.Timedelta(hours=3)
+    )
+    window = run_window(r_time, n_hours)
+
+    found = met.files_for(window)
+
+    assert [p.name for p in found] == files
+    met.check(found, window)
+
+
+def test_the_met_step_is_read_from_the_first_file(tmp_path):
+    _stepped_files(tmp_path, _NAM["names"], _NAM["file_format"], _NAM["tres"], "3h")
+    (tmp_path / "README").write_text("not an ARL file")
+
+    assert _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])._step == pd.Timedelta(
+        hours=3
+    )
+
+
+@pytest.mark.parametrize(
+    "first",
+    [
+        pytest.param(
+            lambda d: write_arl_file(d / "20150101", times=["2015-01-01"]),
+            id="one-period",
+        ),
+        pytest.param(lambda d: (d / "20150101").touch(), id="empty"),
+        pytest.param(lambda d: None, id="no-file"),
+    ],
+)
+def test_the_met_step_is_an_hour_when_no_file_gives_one(tmp_path, first):
+    """A met whose first file has no spacing to read keeps the hourly rule: a 22:00 end needs no next day."""
+    first(tmp_path)
+    met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
+
+    assert met._step == pd.Timedelta(hours=1)
+    assert met.missing_hours(run_window(dt.datetime(2015, 1, 1, 22), -3)) == (
+        [] if (tmp_path / "20150101").exists() else [pd.Timestamp("2015-01-01")]
+    )
 
 
 def test_a_forward_run_missing_the_file_after_its_end_names_that_hour(tmp_path):
@@ -1149,7 +1325,7 @@ def _six_hour_files(tmp_path: Path, held: dict[str, str], **kwargs) -> list[Path
     return files
 
 
-#: 8 h back from 10:00, so the run needs 02:00 to 11:00 (the hour after).
+#: 8 h back from 10:00, so the run needs the met steps from 02:00 to 10:00.
 _WINDOW = run_window(dt.datetime(2023, 1, 1, 10), -8)
 
 
@@ -1231,12 +1407,12 @@ def test_check_fails_files_that_end_before_the_run_does(tmp_path):
     with pytest.raises(
         MeteorologyError,
         match="hold 2023-01-01 00:00 to 2023-01-01 09:00. The run needs "
-        "2023-01-01 02:00 to 2023-01-01 11:00",
+        "2023-01-01 02:00 to 2023-01-01 10:00",
     ):
         met.check(files, _WINDOW)
 
 
-def test_check_needs_the_hour_after_a_forward_run_ends(tmp_path):
+def test_check_needs_the_step_after_a_forward_run_ends(tmp_path):
     """A forward run from 20:31 for 3 hours ends at 23:31, between two files (#275)."""
     window = run_window(dt.datetime(2021, 1, 14, 20, 31), 3)
     held = {"20210114_18": "2021-01-14 23:00", "20210115_00": "2021-01-15 05:00"}
@@ -1247,7 +1423,7 @@ def test_check_needs_the_hour_after_a_forward_run_ends(tmp_path):
     with pytest.raises(
         MeteorologyError,
         match="hold 2021-01-14 18:00 to 2021-01-14 23:00. The run needs "
-        "2021-01-14 20:31 to 2021-01-15 00:00",
+        "2021-01-14 20:31 to 2021-01-14 23:31",
     ):
         met.check(files[:1], window)
 

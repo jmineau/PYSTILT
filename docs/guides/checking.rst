@@ -65,8 +65,9 @@ command line is wrong or the project's files are invalid.
        names the hours of the files, each as long as ``file_tres``.
      - Add the files, or check ``file_format`` and ``file_tres`` against the
        file names. A backward run needs files from ``n_hours`` before the
-       receptor time to just after it, a forward run from the receptor
-       time to just after ``n_hours`` later (:doc:`meteorology`).
+       receptor time to the met step at or after it, a forward run from the
+       receptor time to the met step at or after ``n_hours`` later
+       (:doc:`meteorology`).
    * - ``met_crop``
      - With ``subgrid_enable`` on, a receptor lies outside
        ``subgrid_bounds``. HYSPLIT cannot start particles outside the
@@ -102,7 +103,8 @@ command line is wrong or the project's files are invalid.
        from the receptors' in a digit.
 
 ``stilt check`` looks for files, not inside them, except to count the time
-periods of the first file a run needs. A run that passes can still
+periods of the first file a run needs and to read the spacing of the met
+steps from the first file in the met's directory. A run that passes can still
 fail as ``MET_COVERAGE``: a file that is damaged or cut short is found when
 the run opens it, and a receptor outside the domain of the files, when HYSPLIT
 starts it (the reasons are below).
