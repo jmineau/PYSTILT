@@ -539,6 +539,13 @@ def _client_error(status, code="Error"):
     return error
 
 
+def _with_status(attribute, status):
+    """Return an error that carries an HTTP status as aiohttp, requests or gcsfs set it."""
+    error = RuntimeError("the service answered")
+    setattr(error, attribute, status)
+    return error
+
+
 @pytest.mark.parametrize(
     ("error", "code"),
     [
@@ -564,9 +571,16 @@ def _client_error(status, code="Error"):
         (_client_error(500, "InternalError"), 3),
         (_client_error(400, "ThrottlingException"), 3),
         (_client_error(429), 3),
+        # The status of a busy service, wherever the library keeps it.
+        (_with_status("status", 503), 3),
+        (_with_status("status_code", 429), 3),
+        (_with_status("code", 502), 3),
+        (_with_status("status", 404), 4),
+        (_with_status("code", "not a status"), 4),
         # Not transient: the path or the credentials are wrong, or it is a bug.
         (_client_error(403, "AccessDenied"), 4),
         (_client_error(404, "NoSuchKey"), 4),
+        (_client_error(None, "NoSuchKey"), 4),
         (FileNotFoundError("no such file"), 4),
         (PermissionError("denied"), 4),
         (IsADirectoryError("a directory"), 4),
