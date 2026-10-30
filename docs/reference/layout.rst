@@ -202,7 +202,8 @@ A footprint file holds only the cells that are not zero:
      - The cell's row in the grid, 0 at ``ymin``.
    * - ``x``
      - int16
-     - The cell's column in the grid, 0 at ``xmin``.
+     - The cell's column in the grid, 0 at ``xmin``. So a stored footprint's
+       grid has at most 32,767 columns and rows; a wider one is refused.
    * - ``foot``
      - float32
      - The footprint value, in ppm per (µmol m⁻² s⁻¹).

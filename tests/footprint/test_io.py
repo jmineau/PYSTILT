@@ -261,3 +261,28 @@ def test_threads_count_the_machine_where_affinity_is_unknown(monkeypatch):
     monkeypatch.delattr(os, "sched_getaffinity", raising=False)
     monkeypatch.setattr(os, "cpu_count", lambda: 2)
     assert io._threads(None) == 2
+
+
+def test_write_footprint_refuses_a_grid_wider_than_int16(tmp_path):
+    """A stored footprint keeps x and y as int16, so a wider grid is refused (#295)."""
+    from stilt.footprint import calc_footprint, write_footprint
+
+    receptor = PointReceptor(
+        time="2023-07-01 12:00", longitude=-110.5, latitude=40.0005, altitude=5
+    )
+    particles = pd.DataFrame(
+        {
+            "particle": [1.0],
+            "age": [-1.0],
+            "lon": [-110.25],
+            "lat": [40.0005],
+            "zagl": 5.0,
+            "foot": [1.0],
+        }
+    )
+    grid = Grid(xmin=-114, xmax=-110, ymin=40.0, ymax=40.002, xres=0.0001, yres=0.001)
+    foot = calc_footprint(particles, receptor, grid, smooth_factor=0)
+
+    with pytest.raises(ValueError, match="at most 32767"):
+        write_footprint(tmp_path / "f.parquet", foot)
+    assert not (tmp_path / "f.parquet").exists()

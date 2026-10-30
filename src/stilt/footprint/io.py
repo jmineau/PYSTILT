@@ -494,8 +494,9 @@ def write_footprint(
     Raises
     ------
     ValueError
-        If the footprint is not on the grid, or a time layer is not a whole
-        number of hours from the receptor time.
+        If the footprint is not on the grid, the grid has more cells along
+        an axis than ``x`` and ``y`` can hold (32,767), or a time layer is
+        not a whole number of hours from the receptor time.
     """
     settings = foot.stilt.config if config is None else config
     if settings.grid is None:
@@ -503,6 +504,13 @@ def write_footprint(
     receptor = foot.stilt.receptor
     y_dim, x_dim = horizontal_dims(foot)
     x_axis, y_axis = settings.grid.axes
+    most = int(np.iinfo(np.int16).max)
+    if max(len(x_axis), len(y_axis)) > most:
+        raise ValueError(
+            f"The footprint grid has {len(x_axis)} by {len(y_axis)} cells, and a "
+            f"stored footprint holds at most {most} along each axis. Use a "
+            "coarser or smaller grid."
+        )
     xi = _cell_indices(np.asarray(foot[x_dim].values, dtype=float), x_axis, x_dim)
     yi = _cell_indices(np.asarray(foot[y_dim].values, dtype=float), y_axis, y_dim)
 
