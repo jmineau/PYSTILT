@@ -151,12 +151,11 @@ class HysplitModel:
         """
         Run HYSPLIT for one receptor in *workdir* and return its particles.
 
-        HYSPLIT finds the met files that cover *window* (and, for a backward
-        run, the hour after the release, which it interpolates), cropped
-        when the met is. Its output is ``stilt.log`` in *workdir*, returned
-        as the run's log. Without *workdir* it runs in a temporary
-        directory. The release heights and the near-field correction are
-        added by the caller, as for any model
+        It finds the met files that cover *window* and the hour after it,
+        which HYSPLIT interpolates, cropped when the met is. Its output is
+        ``stilt.log`` in *workdir*, returned as the run's log. Without
+        *workdir* it runs in a temporary directory. The release heights and
+        the near-field correction are added by the caller, as for any model
         (:func:`stilt.transport.run_model`).
 
         Raises
@@ -183,10 +182,9 @@ class HysplitModel:
             with tempfile.TemporaryDirectory(prefix="stilt-") as tmp:
                 return self.run(receptor, config, met, window, Path(tmp), timeout)
         files = Met("met", met)
-        hour_after = config.n_hours < 0
-        source = files.files_for(window, hour_after=hour_after)
+        source = files.files_for(window)
         readable = files.readable(source)
-        files.check(readable, window, hour_after=hour_after)
+        files.check(readable, window)
         write_inputs(workdir, receptor, config, readable)
         try:
             run_hycs_std(workdir, timeout)

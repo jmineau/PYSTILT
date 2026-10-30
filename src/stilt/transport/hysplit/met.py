@@ -236,22 +236,24 @@ def _time(value: Any) -> pd.Timestamp:
 
 
 def _cover(
-    window: tuple[Any, Any], hour_after: bool, file_tres: str | None = None
+    window: tuple[Any, Any], file_tres: str | None = None
 ) -> tuple[pd.Timestamp, pd.Timestamp]:
     """
     Return the first and last time files must cover for *window*.
 
-    With *hour_after*, the hour after the window's end is added, unless the
-    end is on a file boundary. HYSPLIT needs it for a backward run, because
-    it interpolates the release time between two hours: for a release in
-    the last hour of a file that hour is in the next file, which STILT-R
-    also reads. *file_tres* is the period of one file; without it
+    The hour after the window's end is added, unless the end is on a file
+    boundary. HYSPLIT steps through a run with the two met times around
+    each step, so it needs the met time at or after the window's end, in
+    either direction: the release time of a backward run, the end of the
+    trajectories of a forward one. When the end falls in the last hour of
+    a file, that met time is in the next file, which STILT-R also reads
+    for a backward run. *file_tres* is the period of one file; without it
     (downloads, whose archive files are 6 hours or longer) the next hour is
-    always added, which never adds a file a release on a file boundary does
-    not need.
+    always added, which never adds a file a window ending on a file
+    boundary does not need.
     """
     earlier, later = (_time(t) for t in window)
-    if hour_after and (file_tres is None or later != later.floor(file_tres)):
+    if file_tres is None or later != later.floor(file_tres):
         later = _time(later.floor("h") + pd.Timedelta(hours=1))
     return earlier, later
 
@@ -404,9 +406,9 @@ class Met:
     # File resolution
     # ------------------------------------------------------------------
 
-    def _download(self, window: tuple[Any, Any], hour_after: bool) -> list[Path]:
+    def _download(self, window: tuple[Any, Any]) -> list[Path]:
         """Return the files that cover *window* from the ARL archive, downloading any not yet in ``directory``."""
-        t_start, t_end = _cover(window, hour_after)
+        t_start, t_end = _cover(window)
 
         bbox = self._bbox() if self.config.subgrid_enable else None
         levels = self._level_indices() if self.config.subgrid_enable else None
@@ -435,21 +437,19 @@ class Met:
             )
         return files
 
-    def files_for(
-        self, window: tuple[Any, Any], *, hour_after: bool = False
-    ) -> list[Path]:
+    def files_for(self, window: tuple[Any, Any]) -> list[Path]:
         """
         Return the met files that cover *window*, ``(start, end)`` in time order.
 
-        Downloads them first when ``download`` is set.
+        They also cover the hour after the window's end, unless the end is
+        on a file boundary: HYSPLIT needs the met time after the end of a
+        run in either direction. Downloads them first when ``download`` is
+        set.
 
         Parameters
         ----------
         window : tuple of datetime-like
             The time to cover (:func:`run_window`).
-        hour_after : bool, default False
-            Also cover the hour after the window's end, unless the end is on
-            a file boundary. HYSPLIT needs it for a backward run.
 
         Returns
         -------
@@ -462,12 +462,12 @@ class Met:
             would stop the particles where the met runs out.
         """
         if self.config.download is not None:
-            return self._download(window, hour_after)
+            return self._download(window)
 
         # Local files
         file_format = self.config.file_format
         assert file_format is not None  # MetConfig requires it without download
-        met_times, earlier, later = self._file_times(window, hour_after)
+        met_times, earlier, later = self._file_times(window)
         patterns = list(dict.fromkeys(t.strftime(file_format) for t in met_times))
 
         files: list[Path] = []
@@ -494,17 +494,15 @@ class Met:
         return self._dedupe_matched_files(files)
 
     def _file_times(
-        self, window: tuple[Any, Any], hour_after: bool
+        self, window: tuple[Any, Any]
     ) -> tuple[pd.DatetimeIndex, pd.Timestamp, pd.Timestamp]:
         """Return the times of the local files that cover *window*, and the first and last time they must cover."""
         tres = self._file_freq
         assert tres is not None  # MetConfig requires file_tres without download
-        earlier, later = _cover(window, hour_after, tres)
+        earlier, later = _cover(window, tres)
         return pd.date_range(earlier.floor(tres), later, freq=tres), earlier, later
 
-    def missing_hours(
-        self, window: tuple[Any, Any], *, hour_after: bool = False
-    ) -> list[pd.Timestamp]:
+    def missing_hours(self, window: tuple[Any, Any]) -> list[pd.Timestamp]:
         """
         Return the times of the local files that cover *window* and are not found.
 
@@ -516,15 +514,12 @@ class Met:
         ----------
         window : tuple of datetime-like
             The time to cover (:func:`run_window`).
-        hour_after : bool, default False
-            Also cover the hour after the window's end, as :meth:`files_for`
-            does.
         """
         if self.config.download is not None:
             return []
         file_format = self.config.file_format
         assert file_format is not None  # MetConfig requires it without download
-        met_times, _, _ = self._file_times(window, hour_after)
+        met_times, _, _ = self._file_times(window)
         return [t for t in met_times if not self._matching(t.strftime(file_format))]
 
     def check_receptors(self, receptors: pd.DataFrame, n_hours: int) -> pd.DataFrame:
@@ -585,7 +580,7 @@ class Met:
         messages: dict[Any, str | None] = {}
         for time in first["time"].drop_duplicates():
             window = run_window(time, n_hours)
-            hours = self.missing_hours(window, hour_after=n_hours < 0)
+            hours = self.missing_hours(window)
             messages[time] = (
                 "no met file for " + ", ".join(f"{t:%Y-%m-%d %H:%M}" for t in hours)
                 if hours
@@ -618,9 +613,7 @@ class Met:
             for row in outside.drop_duplicates("receptor").itertuples()
         ]
 
-    def check(
-        self, files: list[Path], window: tuple[Any, Any], *, hour_after: bool = False
-    ) -> None:
+    def check(self, files: list[Path], window: tuple[Any, Any]) -> None:
         """
         Raise unless *files* are whole and hold every time step *window* needs.
 
@@ -639,9 +632,8 @@ class Met:
         files : list of Path
             The files the transport model will read (:meth:`readable`).
         window : tuple of datetime-like
-            The time the run covers (:func:`run_window`).
-        hour_after : bool, default False
-            Also need the hour after the window, as :meth:`files_for` does.
+            The time the run covers (:func:`run_window`). The files must
+            also hold the hour after its end, as :meth:`files_for` finds.
 
         Raises
         ------
@@ -659,7 +651,7 @@ class Met:
                 )
             held.update(times)
 
-        earlier, later = _cover(window, hour_after, self._file_freq)
+        earlier, later = _cover(window, self._file_freq)
         needs = f"The run needs {earlier:%Y-%m-%d %H:%M} to {later:%Y-%m-%d %H:%M}."
         steps = sorted(held)
         if not steps or steps[0] > earlier or steps[-1] < later:
