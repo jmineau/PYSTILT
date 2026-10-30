@@ -16,7 +16,7 @@ from stilt.footprint.gridding import (
     _interpolation_times,
     _make_gauss_kernel,
     _project_particles_to_crs,
-    _unwrap_around_circular_mean,
+    _unwrap_around_cloud,
     _wrap_antimeridian_longitudes,
 )
 from stilt.receptors import PointReceptor
@@ -955,18 +955,18 @@ def test_grid_units_per_degree_longitude_ignores_a_projection_cut():
     np.testing.assert_allclose(lengths, lengths[0], rtol=1e-6)
 
 
-def test_unwrap_around_circular_mean_keeps_a_cloud_away_from_any_seam_bit_for_bit():
+def test_unwrap_around_cloud_keeps_a_cloud_away_from_any_seam_bit_for_bit():
     """Longitudes already within 180 degrees of their step's mean come back unchanged."""
-    p = _drifting_cloud(5, 0.0)
-    out = _unwrap_around_circular_mean(p["lon"], by=p["age"])
+    p = _with_rtime(_drifting_cloud(5, 0.0))
+    out = _unwrap_around_cloud(p)
     assert out.to_numpy().tobytes() == p["lon"].to_numpy(dtype=float).tobytes()
 
 
-def test_unwrap_around_circular_mean_joins_a_cloud_across_180_degrees():
+def test_unwrap_around_cloud_joins_a_cloud_across_180_degrees():
     """A cloud with longitudes near +180 and -180 comes back on one side, as one cloud."""
-    p = _cloud_at(179.9)
+    p = _with_rtime(_cloud_at(179.9))
     late = p["age"] < -1
-    out = _unwrap_around_circular_mean(p["lon"], by=p["age"])[late]
+    out = _unwrap_around_cloud(p)[late]
     assert out.max() - out.min() < 5
     np.testing.assert_allclose(out.mean(), 179.9, atol=0.1)
 
