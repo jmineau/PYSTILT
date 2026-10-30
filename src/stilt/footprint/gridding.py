@@ -73,6 +73,26 @@ def _wrap_longitudes(lon: Any, *, west: float = 0.0) -> Any:
     return (((lon - west) % 360) + 360) % 360 + west
 
 
+def _unwrap_around_circular_mean(lon: pd.Series, *, by: pd.Series) -> pd.Series:
+    """
+    Return *lon* shifted by whole turns to within 180 degrees of its group's circular mean.
+
+    The groups are the values of *by* (for a footprint, ``rtime``: one step
+    of the particle cloud). The circular mean is the direction of the mean
+    unit vector, so it has no seam: a cloud at 179.9 degrees, or on the far
+    side of the globe from the receptor, keeps its true spread. A longitude
+    already within 180 degrees of its mean is returned unchanged, bit for
+    bit.
+    """
+    rad = np.radians(lon.to_numpy(dtype=float))
+    keys = by.to_numpy()
+    sin_mean = pd.Series(np.sin(rad)).groupby(keys).transform("mean").to_numpy()
+    cos_mean = pd.Series(np.cos(rad)).groupby(keys).transform("mean").to_numpy()
+    center = np.degrees(np.arctan2(sin_mean, cos_mean))
+    turns = np.round((center - lon.to_numpy(dtype=float)) / 360.0)
+    return pd.Series(lon.to_numpy(dtype=float) + 360.0 * turns, index=lon.index)
+
+
 def _wrap_antimeridian_longitudes(
     p: pd.DataFrame, *, xmin: float, xmax: float
 ) -> tuple[pd.DataFrame, float, float, bool]:
@@ -255,18 +275,15 @@ def _compute_kernel_bandwidths(
     coordinates instead, which on a grid in meters gives a kernel a few
     meters wide.
 
-    On a projected grid the longitudes are first shifted by whole turns to
-    within 180 degrees of the release longitude (the particles' position at
-    their first step), so a cloud across 180 degrees has the spread and mean
-    position it has on the ground. A longitude/latitude grid that crosses
-    180 degrees has its longitudes shifted before this, by
+    On a projected grid each step's longitudes are first taken within 180
+    degrees of that step's circular mean (``_unwrap_around_circular_mean``),
+    so a cloud has the spread and mean position it has on the ground
+    wherever it is, across 180 degrees included. A longitude/latitude grid
+    that crosses 180 degrees has its longitudes shifted before this, by
     ``_wrap_antimeridian_longitudes``.
     """
     if not is_longlat(crs):
-        release_lon = float(
-            p["lon"].to_numpy()[np.argmin(np.abs(p["rtime"].to_numpy()))]
-        )
-        p = p.assign(lon=_wrap_longitudes(p["lon"], west=release_lon - 180))
+        p = p.assign(lon=_unwrap_around_circular_mean(p["lon"], by=p["rtime"]))
     kernel_df = (
         p.groupby("rtime")
         .agg(
@@ -309,22 +326,25 @@ def _grid_units_per_degree_longitude(
     """
     Return the length of one degree of longitude at each ``(lon, lat)``, in *crs* units.
 
-    It is measured with the projection itself: the distance between the
-    points a hundredth of a degree east and west, divided by the
-    difference in degrees. So it includes the projection's scale at that
-    point and its units (meters, feet, kilometers), and does not depend on
-    how the projection's axes are turned.
+    It is measured with the projection itself: the distance from the point
+    to the point a hundredth of a degree east, and to the one a hundredth
+    west, divided by the difference in degrees. So it includes the
+    projection's scale at that point and its units (meters, feet,
+    kilometers), and does not depend on how the projection's axes are
+    turned. The smaller of the two is kept: a projection cut next to the
+    point (a Lambert conformal or Mercator grid is cut at ``lon_0 + 180``)
+    puts one of them across the cut, never both.
     """
     from pyproj import Transformer
 
     tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
     step = 0.01
-    x_west, y_west = tr.transform(lon - step, lat)
-    x_east, y_east = tr.transform(lon + step, lat)
-    return np.hypot(
-        np.asarray(x_east) - np.asarray(x_west),
-        np.asarray(y_east) - np.asarray(y_west),
-    ) / (2 * step)
+    x, y = (np.asarray(v) for v in tr.transform(lon, lat))
+    x_west, y_west = (np.asarray(v) for v in tr.transform(lon - step, lat))
+    x_east, y_east = (np.asarray(v) for v in tr.transform(lon + step, lat))
+    west = np.hypot(x - x_west, y - y_west)
+    east = np.hypot(x_east - x, y_east - y)
+    return np.minimum(west, east) / step
 
 
 def _padded_axes(
