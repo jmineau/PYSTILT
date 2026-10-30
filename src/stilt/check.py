@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
+from stilt.particles.table import needs_height_to_match
 from stilt.transforms.averaging_kernel import AveragingKernel
 from stilt.transforms.pressure_weighting import PressureWeighting
 from stilt.transport import get_model
@@ -165,56 +166,47 @@ def _zsfc_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
     varsiwant = getattr(variant.transport, "varsiwant", None)
     if varsiwant is None or "zsfc" in varsiwant:
         return
-    above_sea_level = rows[rows["altitude_ref"] == "msl"].drop_duplicates("receptor")
-    if above_sea_level.empty:
+    above_sea_level = rows[rows["altitude_ref"] == "msl"]
+    n_msl = above_sea_level["receptor"].nunique()
+    if n_msl == 0:
         return
-    n_multipoint = int((above_sea_level["kind"] == "multipoint").sum())
     near_field = variant.transport.hnf_plume
     weighting = variant.footprint is not None and any(
         isinstance(t, PressureWeighting) for t in variant.footprint.transforms
     )
-    if not (near_field or n_multipoint or weighting):
+    n_by_height = sum(
+        needs_height_to_match(g["longitude"], g["latitude"], g["altitude"])
+        for _, g in above_sea_level[above_sea_level["kind"] == "multipoint"].groupby(
+            "receptor"
+        )
+    )
+    if not (near_field or n_by_height or weighting):
         return
-    key = (
-        "zsfc",
-        tuple(varsiwant),
-        len(above_sea_level),
-        n_multipoint,
-        near_field,
-        weighting,
-    )
-    yield (
-        key,
-        lambda: [
-            (
-                "zsfc",
-                None,
-                _zsfc_message(
-                    varsiwant, len(above_sea_level), n_multipoint, near_field, weighting
-                ),
-            )
-        ],
-    )
+    key = ("zsfc", tuple(varsiwant), n_msl, n_by_height, near_field, weighting)
+    message = _zsfc_message(varsiwant, n_msl, n_by_height, near_field, weighting)
+    yield key, lambda: [("zsfc", None, message)]
 
 
 def _zsfc_message(
     varsiwant: list[str],
     n_msl: int,
-    n_multipoint: int,
+    n_by_height: int,
     near_field: bool,
     weighting: bool,
 ) -> str:
     """Say what needs ``zsfc`` and the line that adds it to ``varsiwant``."""
     reasons = []
     if near_field:
-        reasons.append("the near-field correction (hnf_plume) is skipped")
-    if n_multipoint:
+        reasons.append("the near-field correction (hnf_plume) is skipped for them")
+    if n_by_height:
         reasons.append(
-            "a multipoint receptor's release heights are matched by position, "
-            "not height, which fails when its points are close together"
+            f"{n_by_height} of them {'is a multipoint receptor' if n_by_height == 1 else 'are multipoint receptors'} "
+            "whose points are less than 1 km apart and at different altitudes, "
+            "so the release heights of the particles are matched by position "
+            "and can come out wrong"
         )
     if weighting:
-        reasons.append("the pressure_weighting transform fails every footprint")
+        reasons.append("the pressure_weighting transform fails their footprints")
     receptors = f"{n_msl} receptor is" if n_msl == 1 else f"{n_msl} receptors are"
     fix = ", ".join([*varsiwant, "zsfc"])
     return (

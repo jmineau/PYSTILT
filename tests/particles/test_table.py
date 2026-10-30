@@ -18,6 +18,7 @@ from stilt.particles import (
     read_particles,
     write_particles,
 )
+from stilt.particles.table import add_release_heights, needs_height_to_match
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
@@ -944,3 +945,48 @@ def test_hnf_correction_invariants():
         raw_foot,
         err_msg="foot_no_hnf_dilution must equal the original foot values",
     )
+
+
+@pytest.mark.parametrize(
+    ("longitudes", "latitudes", "altitudes", "expected"),
+    [
+        ([-111.85, -111.848], [40.77, 40.77], [1800.0, 2400.0], True),
+        ([-111.85, -111.848], [40.77, 40.77], [2000.0, 2000.0], False),
+        ([-111.85, -111.848, -111.846], [40.77] * 3, [1800.0, 1800.0, 2400.0], False),
+        ([-111.85, -111.80], [40.77, 40.77], [1800.0, 2400.0], False),
+        ([-111.85], [40.77], [1800.0], False),
+    ],
+)
+def test_needs_height_to_match_is_true_for_close_points_at_different_altitudes(
+    longitudes, latitudes, altitudes, expected
+):
+    assert needs_height_to_match(longitudes, latitudes, altitudes) is expected
+
+
+@pytest.mark.filterwarnings("ignore:MultiPointReceptor release points")
+@pytest.mark.parametrize(
+    ("longitudes", "altitudes"),
+    [
+        ([-111.85, -111.848], [2000.0, 2000.0]),  # one altitude
+        ([-111.85, -111.80], [1800.0, 2400.0]),  # 4 km apart
+    ],
+)
+def test_msl_multipoint_release_heights_do_not_read_zsfc_when_it_is_not_needed(
+    longitudes, altitudes
+):
+    receptor = MultiPointReceptor(
+        time="2023-01-01 12:00:00",
+        longitudes=longitudes,
+        latitudes=[40.77, 40.77],
+        altitudes=altitudes,
+        altitude_ref="msl",
+    )
+    assert not needs_height_to_match(longitudes, [40.77, 40.77], altitudes)
+    particles = _particles_release_rows(
+        [1, 2], [lon + 0.003 for lon in longitudes], [40.77] * 2, zagl=[300.0, 900.0]
+    )
+    without = add_release_heights(particles, receptor)["release_height"]
+    with_zsfc = add_release_heights(particles.assign(zsfc=1500.0), receptor)[
+        "release_height"
+    ]
+    assert without.tolist() == with_zsfc.tolist()
