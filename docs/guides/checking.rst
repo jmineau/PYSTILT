@@ -268,6 +268,15 @@ The reasons
      - HYSPLIT reached ``maxpar`` before every location of a multipoint
        receptor got its particles, so the last ones would have fewer or
        none. Leave ``maxpar`` unset, or raise it (:doc:`receptors`).
+   * - ``EXIT_STATUS``
+     - ``hycs_std`` was killed by a signal, or exited with a non-zero
+       status, and its log holds no other known message. The message names
+       the signal or the status, and the log ends with the last lines of
+       HYSPLIT's ``MESSAGE`` file. A ``SIGKILL`` that nothing in PYSTILT
+       sent is often the kernel's out-of-memory killer: ask for more
+       memory per task, or run fewer receptors at once. The particles
+       HYSPLIT had written are not kept, and running again runs the
+       simulation again.
    * - ``TIMEOUT``
      - The run took longer than ``timeout`` under ``execution:``. Raise it,
        or look for a slow node or a met file read over a slow filesystem.

@@ -861,8 +861,8 @@ def test_run_receptors_pool_rebuilds_the_project_in_each_worker(
     assert [c["skip_existing"] for c in calls] == [False, False]
 
 
-def test_run_receptors_pool_terminates_when_a_worker_is_stopped(
-    tmp_path, receptor, other_receptor, monkeypatch, fake_pool
+def test_run_receptors_pool_terminates_and_says_how_far_it_got(
+    tmp_path, receptor, other_receptor, monkeypatch, fake_pool, caplog
 ):
     model = _model(tmp_path, [receptor, other_receptor])
     ids = list(model.receptors["receptor"])
@@ -872,13 +872,47 @@ def test_run_receptors_pool_terminates_when_a_worker_is_stopped(
         worker, "run_receptor", _fake_run_receptor(calls, {ids[0]: "interrupted"})
     )
 
-    run_receptors(
-        model, ids, compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=2)
-    )
+    with caplog.at_level("INFO", logger="stilt.execution.worker"):
+        run_receptors(
+            model,
+            ids,
+            compute_root=tmp_path / "scratch",
+            execution=ExecutionConfig(cpus=2),
+        )
 
     [pool] = fake_pool.instances
     assert pool.terminated and not pool.closed
     assert [c["receptor"] for c in calls] == [ids[1], ids[0]]
+    assert "stopped after 1 of 2 receptors; the rest did not run" in caplog.text
+
+
+def test_a_pool_worker_exits_on_sigterm_and_ignores_ctrl_c(
+    tmp_path, receptor, monkeypatch, fake_pool
+):
+    """A worker that survived SIGTERM would keep Pool.terminate() waiting for ever (#309)."""
+    import signal
+
+    model = _model(tmp_path, [receptor])
+    handlers: dict[int, object] = {}
+    monkeypatch.setattr(
+        worker.signal,
+        "signal",
+        lambda signum, handler: handlers.update({signum: handler}),
+    )
+
+    worker._init_pool_worker(
+        str(model.directory),
+        str(model.output.directory),
+        str(tmp_path / "scratch"),
+        ExecutionConfig(cpus=2),
+        True,
+    )
+
+    assert handlers[signal.SIGINT] is signal.SIG_IGN
+    handler = handlers[signal.SIGTERM]
+    assert callable(handler)
+    with pytest.raises(SystemExit):
+        handler(signal.SIGTERM, None)
 
 
 def test_run_receptors_pool_keyboard_interrupt_terminates(

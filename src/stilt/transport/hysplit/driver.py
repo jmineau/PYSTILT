@@ -49,6 +49,10 @@ ZICONTROL_FILE = "ZICONTROL"
 LOG_FILE = "stilt.log"
 #: HYSPLIT's own file of warnings, such as the met running out.
 WARNING_FILE = "WARNING"
+#: HYSPLIT's own file of progress and error messages.
+MESSAGE_FILE = "MESSAGE"
+#: How many lines of ``MESSAGE`` a run that ended badly adds to its log.
+MESSAGE_TAIL_LINES = 20
 
 #: The settings ``CONTROL`` takes; :class:`ControlFile` writes them.
 CONTROL_SETTINGS = ("n_hours", "emisshrs", "w_option", "z_top")
@@ -455,15 +459,20 @@ def run_hycs_std(workdir: Path, timeout: int | None = None) -> None:
 
     *workdir* holds the inputs :func:`write_inputs` wrote. With *timeout*
     seconds the run is stopped when it takes longer; without it, it may run
-    as long as HYSPLIT does.
+    as long as HYSPLIT does. If this process is interrupted while it waits
+    (``KeyboardInterrupt`` or ``SystemExit``), the run is stopped too.
 
     Raises
     ------
     SimulationError
         With ``reason`` ``TIMEOUT`` when the run exceeded *timeout*
-        seconds, or the :class:`FailureReason` of a known failure message in
+        seconds, the :class:`FailureReason` of a known failure message in
         the log or HYSPLIT's ``WARNING`` file, such as ``no more
-        meteorology`` (``MET_COVERAGE``). Particles that all left the met's
+        meteorology`` (``MET_COVERAGE``), or ``EXIT_STATUS`` when
+        ``hycs_std`` ended with a non-zero exit status or was killed by a
+        signal, such as the kernel's out-of-memory killer, and the log has
+        no known message. Its log then ends with the last lines of
+        HYSPLIT's ``MESSAGE`` file. Particles that all left the met's
         domain are not a failure.
     """
     log_path = workdir / LOG_FILE
@@ -485,6 +494,11 @@ def run_hycs_std(workdir: Path, timeout: int | None = None) -> None:
                 f"HYSPLIT ran longer than the {timeout} s timeout.",
                 reason=FailureReason.TIMEOUT,
             ) from e
+        except BaseException:
+            # Ctrl-C, or a worker told to stop: HYSPLIT runs in a session of
+            # its own, so no signal reached it and it would run on, unseen.
+            _terminate(proc)
+            raise
     messages = log_path.read_text(encoding="utf-8", errors="replace")
     warnings = workdir / WARNING_FILE
     if warnings.exists():
@@ -493,6 +507,34 @@ def run_hycs_std(workdir: Path, timeout: int | None = None) -> None:
     if found is not None:
         reason, line = found
         raise SimulationError(f"HYSPLIT: {line}", reason=reason)
+    if proc.returncode != 0:
+        raise _exit_status_error(workdir, proc.returncode)
+
+
+def _exit_status_error(workdir: Path, status: int) -> SimulationError:
+    """
+    Return the error for a ``hycs_std`` that ended with *status* but no known message.
+
+    *status* is ``subprocess``'s: negative for the signal that killed the
+    process. The tail of HYSPLIT's ``MESSAGE`` file is added to the log,
+    where it says how far the run got.
+    """
+    if status < 0:
+        try:
+            name = signal.Signals(-status).name
+        except ValueError:  # a real-time signal has no name
+            name = f"signal {-status}"
+        how = f"was killed by {name}"
+    else:
+        how = f"exited with status {status}"
+    message = f"HYSPLIT {how} before it finished."
+    path = workdir / MESSAGE_FILE
+    if path.exists():
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        tail = "\n".join(lines[-MESSAGE_TAIL_LINES:])
+        with (workdir / LOG_FILE).open("a", encoding="utf-8") as log:
+            log.write(f"\nPYSTILT: HYSPLIT {how}. The end of {MESSAGE_FILE}:\n{tail}\n")
+    return SimulationError(message, reason=FailureReason.EXIT_STATUS)
 
 
 def _terminate(proc: subprocess.Popen[Any]) -> None:
