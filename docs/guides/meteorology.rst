@@ -53,15 +53,21 @@ file covers:
 
 For each simulation, PYSTILT works out which files cover the hours the run
 spans (``n_hours`` from the receptor time) and looks for those. HYSPLIT
-interpolates between the met times on either side of each step, so the
-files must also hold the hour after the run's last time, unless that time
-is on a file boundary. A backward run released at 23:30 needs the next
-day's first file, and so does a forward run that ends at 23:30. A 24-hour
-backward run with 6-hour HRRR files needs 5 or 6 files, depending on the
-receptor hour. Every one is needed. If one is missing, the simulation fails
-before HYSPLIT runs, as ``MET_COVERAGE``, naming the hours with no file.
-``stilt check`` makes this search for every receptor before any run starts
-(:doc:`checking`).
+interpolates between the met steps on either side of each of its times, so
+the files must also hold the met step at or after the run's last time: the
+release of a backward run, the end of a forward one. When that time is past
+the last step of its file, the next file is needed too. With 6-hour HRRR
+files of hourly steps, a backward run released at 23:30 needs the next
+day's first file, and so does a forward run that ends at 23:30; one
+released at 23:00 does not. With daily NAM12 files of 3-hourly steps
+(00:00 to 21:00), a run released at 22:00 needs the next day's file, and
+one released at 21:00 does not. The spacing of the steps is read from the
+first file in ``directory``; when that file holds one time period, it is
+taken as an hour. A 24-hour backward run with 6-hour HRRR files needs 5 or
+6 files, depending on the receptor hour. Every one is needed. If one is
+missing, the simulation fails before HYSPLIT runs, as ``MET_COVERAGE``,
+naming the hours with no file. ``stilt check`` makes this search for every
+receptor before any run starts (:doc:`checking`).
 
 A file that holds one time period fails the run before HYSPLIT runs, as
 ``MET_COVERAGE``, naming the file. ``stilt check`` finds one in the first
