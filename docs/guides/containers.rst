@@ -122,14 +122,16 @@ what it was raised from, not from its being an ``OSError``: s3fs turns many
 permanent answers of a bucket into a plain ``OSError``. It is 3 when it is a
 refused, reset or timed-out connection or a name-resolution failure, an error of
 the cloud libraries that is not an ``OSError`` (such as botocore's
-``EndpointConnectionError`` and ``ReadTimeoutError``), or has the status of a
-busy or briefly unavailable service (408, 429, 500, 502, 503, 504, and the
-throttling codes such as ``SlowDown``). An ``OSError`` that nothing explains is
+``EndpointConnectionError`` and ``ReadTimeoutError``), an FTP 4xx reply ("421
+too many users"), or has the status of a busy or briefly unavailable service
+(408, 429, 500, 502, 503, 504, and the throttling codes such as ``SlowDown``).
+When an error hides its cause, as fsspec's HTTP filesystem does by raising
+``FileNotFoundError`` for every failure, the cause decides. An ``OSError`` that nothing explains is
 3 when its errno is input/output trouble that goes away (``EIO``, a stale
 NFS handle, a busy or interrupted call) and 4 otherwise, a full disk
 (``ENOSPC``) included. It is 4 when the status is any other 3xx, 4xx or 5xx (a
-bucket in another region, a bad request, a 403, a 404), a file that is not there
-or may not be used, or anything else. Every ``stilt`` command ends this way on
+bucket in another region, a bad request, a 403, a 404), an FTP 5xx reply, a file
+that is not there or may not be used, or anything else. Every ``stilt`` command ends this way on
 an error it did not expect, not only ``stilt run``, except that a closed
 standard output (``stilt status | head``) ends quietly with 1, as it always
 has. A simulation that fails inside a run, whatever the cause, is a failure

@@ -1,6 +1,7 @@
 """Tests for stilt.cli - Typer command-line interface."""
 
 import errno
+import ftplib
 import io
 import os
 import socket
@@ -675,6 +676,44 @@ def _http_error_of_requests(status):
     ],
 )
 def test_error_exit_code_reads_the_chain_and_the_status(error, code):
+    assert _error_exit_code(error) == code
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        # FTP: a 4xx reply is transient by the standard, a 5xx is not.
+        (ftplib.error_temp("421 There are too many connected users"), 3),
+        (ftplib.error_temp("425 Can't open data connection"), 3),
+        (ftplib.error_perm("550 No such file"), 4),
+        (ftplib.error_perm("530 Login incorrect"), 4),
+        (ftplib.error_reply("unexpected reply"), 4),
+        (ftplib.error_proto("no FTP reply"), 4),
+        # fsspec's HTTP filesystem raises FileNotFoundError for every failure,
+        # from the error that happened: that one decides.
+        (_raised_from(FileNotFoundError("http://x/f"), _with_status("status", 503)), 3),
+        (_raised_from(FileNotFoundError("http://x/f"), _with_status("status", 429)), 3),
+        (_raised_from(FileNotFoundError("http://x/f"), _with_status("status", 404)), 4),
+        (
+            _raised_from(FileNotFoundError("http://x/f"), ConnectionRefusedError()),
+            3,
+        ),
+        (_raised_from(FileNotFoundError("http://x/f"), TimeoutError()), 3),
+        (_raised_from(FileNotFoundError("http://x/f"), KeyError("k")), 4),
+        (
+            _raised_from(
+                FileNotFoundError("http://x/f"),
+                _error_named(
+                    "ClientOSError", type("ClientConnectionError", (Exception,), {})
+                ),
+            ),
+            3,
+        ),
+        (_raised_from(PermissionError("denied"), _with_status("status", 503)), 3),
+        (FileNotFoundError("no cause"), 4),
+    ],
+)
+def test_error_exit_code_ftp_replies_and_wrapped_http_errors(error, code):
     assert _error_exit_code(error) == code
 
 

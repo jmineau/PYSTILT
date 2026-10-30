@@ -81,6 +81,9 @@ _NETWORK_ERRORS = frozenset(
         "ClientPayloadError",
         # urllib3
         "ProtocolError",
+        # ftplib: a 4xx reply ("421 too many users"), transient by the FTP
+        # standard; error_perm (5xx), error_reply and error_proto are not
+        "error_temp",
     }
 )
 
@@ -191,8 +194,6 @@ def _says(error: BaseException) -> int | None:
         return EXIT_INTERRUPTED
     if not _NETWORK_ERRORS.isdisjoint(c.__name__ for c in type(error).__mro__):
         return EXIT_INTERRUPTED
-    if isinstance(error, _PATH_ERRORS):
-        return EXIT_BUG
     return None
 
 
@@ -209,15 +210,19 @@ def _error_exit_code(error: Exception) -> int:
     busy service's HTTP status (408, 429, 500, 502, 503, 504) or botocore
     code (:data:`_BUSY_CODES`), by being a ``ConnectionError``,
     ``TimeoutError`` or name-resolution error, or by a class named in
-    :data:`_NETWORK_ERRORS`: the cloud libraries are optional, so the
-    ``__mro__``'s class names are read, not the classes imported. It says 4
-    by any other 3xx, 4xx or 5xx status (a bucket in another region, a bad
-    request, a 403, a 404), or by being about a path (a file that is not
-    there or may not be used). s3fs turns a ``ClientError`` into a plain
-    ``OSError`` and keeps it in ``__cause__``, which is why the chain is
-    read. If nothing in the chain says, an ``OSError`` is 3 when its errno
+    :data:`_NETWORK_ERRORS` (which includes ftplib's ``error_temp``, a 4xx
+    reply): the cloud libraries are optional, so the ``__mro__``'s class
+    names are read, not the classes imported. It says 4 by any other 3xx, 4xx
+    or 5xx status (a bucket in another region, a bad request, a 403, a 404).
+    s3fs turns a ``ClientError`` into a plain ``OSError`` and keeps it in
+    ``__cause__``, and fsspec's HTTP filesystem raises ``FileNotFoundError``
+    for every failure, so the chain is read before a path error (a file that
+    is not there or may not be used) is taken at its word. If nothing in the
+    chain says, an ``OSError`` that is not about a path is 3 when its errno
     is input/output trouble that goes away (:data:`_TRANSIENT_ERRNOS`, such
-    as s3fs's ``EIO`` for a code it does not know), and anything else is 4.
+    as s3fs's ``EIO`` for a code it does not know), and anything else,
+    ftplib's ``error_perm``, ``error_reply`` and ``error_proto`` included,
+    is 4.
 
     Parameters
     ----------
@@ -235,7 +240,10 @@ def _error_exit_code(error: Exception) -> int:
         if verdict is not None:
             return verdict
     transient = any(
-        isinstance(each, OSError) and each.errno in _TRANSIENT_ERRNOS for each in chain
+        isinstance(each, OSError)
+        and not isinstance(each, _PATH_ERRORS)
+        and each.errno in _TRANSIENT_ERRNOS
+        for each in chain
     )
     return EXIT_INTERRUPTED if transient else EXIT_BUG
 
