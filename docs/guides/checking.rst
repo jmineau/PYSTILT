@@ -184,8 +184,10 @@ the same files.
 ``stilt run`` says how its own simulations ended in its exit code: 0 when
 all are complete, 1 when some failed, and 3 when some were interrupted. It
 exits with 2 when its command line is wrong, or when a met directory does
-not exist or holds no ARL file: nothing ran. A script or a scheduler can
-rerun on 3, and stop to look on 1.
+not exist or holds no ARL file: nothing ran. An error it did not expect
+exits with 3 when it is a connection or I/O error, and with 4 for any other
+(:ref:`exit-codes`). A script or a scheduler can rerun on 3, and stop to
+look on 1 and 4.
 
 Why a simulation failed
 -----------------------

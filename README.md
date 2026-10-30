@@ -92,7 +92,9 @@ stilt status ./my_project        # what has finished, and the settings folders
 ```
 
 `stilt run` exits with 0 when every simulation it ran is complete, 1 when some failed, and 3
-when it was stopped before they finished. `stilt check` exits with 0 when it finds nothing and 1
+when it was stopped before they finished. An error it did not expect exits with 3 when it is a
+connection or I/O error (a bucket that cannot be reached), which a retry may get past, and with 4
+for any other, which a retry would repeat. `stilt check` exits with 0 when it finds nothing and 1
 when it lists anything. Every command exits with 2 when its command line is wrong; `stilt run`,
 `stilt submit` and `stilt status` also when a met directory does not exist or holds no met files.
 

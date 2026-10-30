@@ -1,5 +1,8 @@
 """Tests for stilt.cli - Typer command-line interface."""
 
+import os
+import subprocess
+import sys
 from dataclasses import replace
 
 import pandas as pd
@@ -8,7 +11,7 @@ import yaml
 from typer.testing import CliRunner
 
 import stilt.__main__
-from stilt.cli import _resolve_project, app
+from stilt.cli import _error_exit_code, _resolve_project, app
 from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.project import Project
@@ -514,6 +517,227 @@ def test_run_exit_code_says_how_the_run_ended(tmp_path, calls, states, code):
     result = runner.invoke(app, ["run", str(tmp_path)])
 
     assert result.exit_code == code, result.output
+
+
+# ---------------------------------------------------------------------------
+# An error the command did not expect: 3 to retry, 4 not to (#310)
+# ---------------------------------------------------------------------------
+
+
+def _error_named(name, *bases):
+    """Return an exception of a class called *name*, as a cloud library would raise it."""
+    return type(name, bases or (Exception,), {})("it failed")
+
+
+def _client_error(status, code="Error"):
+    """Return what botocore raises for a response with this status and error code."""
+    error = _error_named("ClientError")
+    error.response = {
+        "ResponseMetadata": {"HTTPStatusCode": status},
+        "Error": {"Code": code},
+    }
+    return error
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        # Connection and I/O errors: run it again.
+        (ConnectionRefusedError("refused"), 3),
+        (TimeoutError("slow"), 3),
+        (OSError(5, "Input/output error"), 3),
+        (OSError(116, "Stale file handle"), 3),
+        # Cloud libraries' errors that are not OSError, matched by class name.
+        (_error_named("EndpointConnectionError"), 3),
+        (_error_named("ConnectTimeoutError"), 3),
+        (_error_named("ReadTimeoutError"), 3),
+        # aiohttp's ServerDisconnectedError is a ClientConnectionError.
+        (
+            _error_named(
+                "ServerDisconnectedError",
+                type("ClientConnectionError", (Exception,), {}),
+            ),
+            3,
+        ),
+        (_error_named("ClientConnectionError"), 3),
+        (_client_error(503, "SlowDown"), 3),
+        (_client_error(500, "InternalError"), 3),
+        (_client_error(400, "ThrottlingException"), 3),
+        (_client_error(429), 3),
+        # Not transient: the path or the credentials are wrong, or it is a bug.
+        (_client_error(403, "AccessDenied"), 4),
+        (_client_error(404, "NoSuchKey"), 4),
+        (FileNotFoundError("no such file"), 4),
+        (PermissionError("denied"), 4),
+        (IsADirectoryError("a directory"), 4),
+        (RuntimeError("a bug"), 4),
+        (KeyError("k"), 4),
+        (ValueError("bad"), 4),
+        (_error_named("SSLError"), 4),
+    ],
+)
+def test_error_exit_code_sorts_retry_from_bug(error, code):
+    assert _error_exit_code(error) == code
+
+
+def test_a_cloud_error_is_sorted_with_the_libraries_not_imported():
+    """A botocore error is 3 and a denied one 4, as for the stand-ins above."""
+    botocore = pytest.importorskip("botocore.exceptions")
+    refused = botocore.EndpointConnectionError(endpoint_url="http://127.0.0.1:9")
+    denied = botocore.ClientError(
+        {
+            "Error": {"Code": "AccessDenied"},
+            "ResponseMetadata": {"HTTPStatusCode": 403},
+        },
+        "ListObjectsV2",
+    )
+    assert _error_exit_code(refused) == 3
+    assert _error_exit_code(botocore.ReadTimeoutError(endpoint_url="u")) == 3
+    assert _error_exit_code(denied) == 4
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        (_error_named("EndpointConnectionError"), 3),
+        (ConnectionResetError("reset"), 3),
+        (OSError(5, "I/O error"), 3),
+        (RuntimeError("a bug"), 4),
+        (KeyError("k"), 4),
+        (FileNotFoundError("no such file"), 4),
+    ],
+)
+def test_run_exits_3_for_a_connection_error_and_4_for_any_other(
+    tmp_path, monkeypatch, error, code
+):
+    """An error that escapes the run is never 1, the code of "some simulations failed"."""
+    _write_minimal_config(tmp_path)
+
+    def run(self, **kwargs):
+        raise error
+
+    monkeypatch.setattr("stilt.cli.Project.run", run)
+    result = runner.invoke(app, ["run", str(tmp_path)])
+
+    assert result.exit_code == code, result.output
+    assert str(error) in result.output
+    assert f"stilt exits with {code}" in result.output
+    assert "Traceback (most recent call last)" in result.output
+
+
+def test_run_says_where_an_unexpected_error_happened(tmp_path, monkeypatch):
+    """The traceback is kept, so a bug can be found."""
+    _write_minimal_config(tmp_path)
+
+    def run(self, **kwargs):
+        raise RuntimeError("a bug somewhere")
+
+    monkeypatch.setattr("stilt.cli.Project.run", run)
+    result = runner.invoke(app, ["run", str(tmp_path)])
+
+    assert result.exit_code == 4
+    assert "in run" in result.output
+    assert "RuntimeError: a bug somewhere" in result.output
+
+
+def test_run_exits_3_when_ctrl_c_arrives_outside_the_workers(tmp_path, monkeypatch):
+    """Ctrl-C while waiting for a Slurm job was "Aborted!" with exit 1."""
+    _write_minimal_config(tmp_path)
+
+    def run(self, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("stilt.cli.Project.run", run)
+    result = runner.invoke(app, ["run", str(tmp_path)])
+
+    assert result.exit_code == 3, result.output
+
+
+def test_a_failed_simulation_is_still_1_and_a_wrong_command_line_2(tmp_path, calls):
+    _write_minimal_config(tmp_path)
+    calls.states = ["complete", "failed"]
+    assert runner.invoke(app, ["run", str(tmp_path)]).exit_code == 1
+    assert runner.invoke(app, ["run", str(tmp_path), "--task", "3/3"]).exit_code == 2
+    assert runner.invoke(app, ["run", str(tmp_path / "no_project")]).exit_code == 2
+    receptors = tmp_path / "missing.txt"
+    assert (
+        runner.invoke(app, ["run", str(tmp_path), "--receptors", str(receptors)])
+    ).exit_code == 2
+
+
+def test_a_value_error_of_the_run_is_still_2(tmp_path, monkeypatch):
+    """The run's own refusals (a receptor that is not in the project) are the command line's."""
+    _write_minimal_config(tmp_path)
+
+    def run(self, **kwargs):
+        raise ValueError("no such receptor")
+
+    monkeypatch.setattr("stilt.cli.Project.run", run)
+    result = runner.invoke(app, ["run", str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert "Error: no such receptor" in result.output
+
+
+@pytest.mark.parametrize(
+    ("command", "method"),
+    [("submit", "submit"), ("status", "status"), ("check", "check")],
+)
+def test_the_other_commands_exit_4_on_an_unexpected_error(
+    tmp_path, monkeypatch, command, method
+):
+    """Python's own 1 for `status` and `submit` was not a code anyone defined; `check`'s 1 is "found problems"."""
+    _write_minimal_config(tmp_path)
+
+    def broken(self, *args, **kwargs):
+        raise RuntimeError("a bug somewhere")
+
+    monkeypatch.setattr(f"stilt.cli.Project.{method}", broken)
+    result = runner.invoke(app, [command, str(tmp_path)])
+
+    assert result.exit_code == 4, result.output
+
+
+def test_status_exits_3_on_a_connection_error(tmp_path, monkeypatch):
+    _write_minimal_config(tmp_path)
+
+    def broken(self, *args, **kwargs):
+        raise ConnectionError("refused")
+
+    monkeypatch.setattr("stilt.cli.Project.status", broken)
+
+    assert runner.invoke(app, ["status", str(tmp_path)]).exit_code == 3
+
+
+def test_an_unreachable_object_store_exits_3_not_1(tmp_path):
+    """The reproduction of #310: `stilt run` with an output bucket nothing answers."""
+    pytest.importorskip("s3fs")
+    _write_minimal_config(tmp_path)
+    env = {
+        **os.environ,
+        "AWS_ENDPOINT_URL": "http://127.0.0.1:9",
+        "AWS_ACCESS_KEY_ID": "x",
+        "AWS_SECRET_ACCESS_KEY": "x",
+        "AWS_DEFAULT_REGION": "us-east-1",
+    }
+    done = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "stilt",
+            "run",
+            str(tmp_path),
+            "--output",
+            "s3://stilt/output",
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=300,
+    )
+
+    assert done.returncode == 3, done.stderr
+    assert "stilt exits with 3" in done.stderr
 
 
 @pytest.mark.parametrize("args", [["run", "--bogus-flag"], ["nosuchcmd"]])

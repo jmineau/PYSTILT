@@ -23,6 +23,12 @@ exits with 2 when its command line is wrong: an unknown option, a bad value,
 or a directory that is not a project. ``stilt run``, ``stilt submit``, and
 ``stilt status`` also exit with 2 when a met directory does not exist or
 holds no ARL file, which ``stilt check`` lists.
+
+An error the command did not expect ends it too, after its traceback: with
+3 when the error is a connection or an I/O error (a bucket that cannot be
+reached, a full or stale disk), which a retry may get past, and with 4 for
+any other (a bug in PYSTILT or the project, which a retry will repeat).
+``_error_exit_code`` sorts them.
 """
 
 from __future__ import annotations
@@ -30,6 +36,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import traceback
 from collections import Counter
 from collections.abc import Iterable
 from pathlib import Path
@@ -39,15 +46,163 @@ import pandas as pd
 import typer
 import yaml
 from pydantic import ValidationError
+from typer.core import TyperGroup
 
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
 from stilt.project import STATES, Project
 
+#: Exit codes. 2 is also Click's own for an unknown option or command, so a
+#: driver never takes a typo for a run to retry. 3 says "run it again": the
+#: run was stopped, or hit a connection or I/O error; what finished is on
+#: disk. 4 says "do not": an unexpected error that a retry would repeat. 1 is
+#: the code of a run whose simulations failed, and no other.
+EXIT_COMPLETE, EXIT_FAILED, EXIT_USAGE, EXIT_INTERRUPTED, EXIT_BUG = 0, 1, 2, 3, 4
+
+#: Errors from the cloud libraries that do not inherit from ``OSError`` and
+#: mean the network failed or the service is briefly unavailable. Matched by
+#: class name along an exception's ``__mro__``, because botocore, aiohttp and
+#: urllib3 are optional and not imported here.
+_NETWORK_ERRORS = frozenset(
+    {
+        # botocore (also the errors s3fs and aiobotocore raise)
+        "EndpointConnectionError",
+        "ProxyConnectionError",
+        "ConnectTimeoutError",
+        "ReadTimeoutError",
+        "ConnectionClosedError",
+        "IncompleteReadError",
+        # aiohttp (s3fs, gcsfs, and fsspec's HTTP filesystem)
+        "ClientConnectionError",
+        "ServerConnectionError",
+        "ClientPayloadError",
+        # urllib3
+        "ProtocolError",
+    }
+)
+
+#: ``OSError`` subclasses that name a path, not the network: the file is not
+#: there, or may not be used, and a retry meets the same answer.
+_PATH_ERRORS = (
+    FileNotFoundError,
+    FileExistsError,
+    PermissionError,
+    IsADirectoryError,
+    NotADirectoryError,
+)
+
+#: HTTP statuses of a service that is busy or briefly down. A 403 or a 404
+#: is not here: the credentials or the path are wrong, and they stay wrong.
+_BUSY_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
+
+#: Codes of botocore's ``ClientError`` for a service that asks the caller to slow down.
+_THROTTLED = frozenset(
+    {
+        "Throttling",
+        "ThrottlingException",
+        "RequestLimitExceeded",
+        "RequestThrottled",
+        "SlowDown",
+        "RequestTimeout",
+        "TooManyRequestsException",
+        "ProvisionedThroughputExceededException",
+    }
+)
+
+
+def _http_status(error: BaseException) -> int | None:
+    """Return the HTTP status an error from a cloud library carries, or None."""
+    response = getattr(error, "response", None)
+    if isinstance(response, dict):  # botocore's ClientError
+        status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        return status if isinstance(status, int) else None
+    for attribute in ("status", "status_code", "code"):  # aiohttp, requests, gcsfs
+        status = getattr(error, attribute, None)
+        if isinstance(status, int):
+            return status
+    return None
+
+
+def _error_exit_code(error: Exception) -> int:
+    """
+    Return the exit code for an error the command did not expect.
+
+    3 (:data:`EXIT_INTERRUPTED`, "run it again") when the error is a
+    connection or I/O error that a retry may get past, 4
+    (:data:`EXIT_BUG`, "do not") when it is any other.
+
+    A connection or I/O error is an ``OSError`` (which includes
+    ``ConnectionError``, ``TimeoutError`` and what fsspec raises for a
+    store that fails) except one about a path (a file that is not there or
+    may not be used); an error of the cloud libraries that is not an
+    ``OSError`` and is named in :data:`_NETWORK_ERRORS`; or an error with
+    the HTTP status of a busy or briefly unavailable service (429 and
+    5xx), including the throttling codes of botocore's ``ClientError``.
+    Those libraries are optional, so the error's class names are read, not
+    the classes imported.
+
+    Parameters
+    ----------
+    error : Exception
+        The error that ended the command.
+
+    Returns
+    -------
+    int
+        3 or 4.
+    """
+    if isinstance(error, OSError):
+        return EXIT_BUG if isinstance(error, _PATH_ERRORS) else EXIT_INTERRUPTED
+    if not _NETWORK_ERRORS.isdisjoint(c.__name__ for c in type(error).__mro__):
+        return EXIT_INTERRUPTED
+    response = getattr(error, "response", None)
+    if (
+        isinstance(response, dict)
+        and response.get("Error", {}).get("Code") in _THROTTLED
+    ):
+        return EXIT_INTERRUPTED
+    return EXIT_INTERRUPTED if _http_status(error) in _BUSY_STATUSES else EXIT_BUG
+
+
+class _Group(TyperGroup):
+    """
+    The ``stilt`` command group, which ends a command that raised in an exit code.
+
+    Python's own exit code for an uncaught error is 1, which is also the
+    code of a run whose simulations failed. A driver that decides on a
+    retry from the code cannot tell the two apart. So an error the command
+    did not handle prints its traceback and ends with
+    ``_error_exit_code``'s 3 or 4, and a ``KeyboardInterrupt`` that no
+    worker caught (Ctrl-C while waiting for a Slurm job, say) with 3, as one
+    a worker caught does. Typer's and Click's own exceptions (an exit,
+    a wrong command line) pass, matched by module so that it holds whether
+    Typer vendors Click or not.
+    """
+
+    def invoke(self, *args: Any, **kwargs: Any) -> Any:
+        """Run the command, and turn an error it did not handle into an exit code."""
+        try:
+            return super().invoke(*args, **kwargs)
+        except KeyboardInterrupt:
+            typer.echo("Interrupted.", err=True)
+            raise typer.Exit(code=EXIT_INTERRUPTED) from None
+        except Exception as error:
+            if type(error).__module__.partition(".")[0] in ("typer", "click"):
+                raise  # an exit, or a wrong command line: Click's own, and 2
+            code = _error_exit_code(error)
+            traceback.print_exception(error)
+            what = "a connection or I/O error, which a retry may get past"
+            if code == EXIT_BUG:
+                what = "an unexpected error, which a retry would repeat"
+            typer.echo(f"stilt exits with {code}: {what}.", err=True)
+            raise typer.Exit(code=code) from None
+
+
 app = typer.Typer(
     name="stilt",
     help="Run STILT simulations and check on a project.",
     no_args_is_help=True,
+    cls=_Group,
 )
 
 logger = logging.getLogger(__name__)
@@ -73,11 +228,6 @@ _COMPUTE_ROOT = typer.Option(
     "--compute-root",
     help="Directory the transport model runs under, a new workdir for each run. Defaults to PYSTILT_COMPUTE_ROOT, then $TMPDIR/pystilt/<project>.",
 )
-
-
-#: Exit codes. 2 is also Click's own for an unknown option or command, so a
-#: driver never takes a typo for a run to retry.
-EXIT_COMPLETE, EXIT_FAILED, EXIT_USAGE, EXIT_INTERRUPTED = 0, 1, 2, 3
 
 
 def _fail(message: str) -> NoReturn:
@@ -369,9 +519,15 @@ def run(
 
     --receptors limits the run to the receptors listed in a file. --task
     I/N runs one share of them here, for each task of a job array or a
-    Kubernetes indexed Job. Exits with 0 when every simulation that ran is
-    complete, 1 when some failed, 3 when some did not finish, and 2 when
-    the command line is wrong or a met cannot be read (nothing ran).
+    Kubernetes indexed Job.
+
+    Exits with 0 when every simulation that ran is complete, 1 when some
+    failed, 3 when some did not finish (the run was stopped), and 2 when
+    the command line is wrong or a met cannot be read (nothing ran). An
+    error the run did not expect prints its traceback and exits with 3 when
+    it is a connection or I/O error, such as an output bucket that cannot
+    be reached, which a retry may get past, and with 4 when it is any
+    other, which a retry would repeat.
     """
     receptor_ids, rows = (
         (None, None) if receptors is None else _read_receptors(receptors)

@@ -84,6 +84,8 @@ match. ``--cpus 4`` runs four receptors at once in each pod. ``exec`` makes
 ``stilt`` the process that receives Kubernetes' stop signal, so a stopped
 pod stops its runs cleanly and exits with code 3.
 
+.. _exit-codes:
+
 Exit codes
 ----------
 
@@ -106,9 +108,27 @@ Exit codes
        or holds no ARL file (``stilt check`` lists it). Nothing ran. Do not
        retry.
    * - 3
-     - Some simulations did not finish, because the run was stopped (Ctrl-C,
-       or a stop signal from Kubernetes or Slurm). A retry continues where
-       it stopped.
+     - Retry it. Some simulations did not finish, because the run was
+       stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), or an
+       error it did not expect was a connection or I/O error, such as an
+       output bucket that could not be reached. A retry continues where it
+       stopped.
+   * - 4
+     - A bug: any other error the command did not expect. Its traceback is
+       printed. Do not retry; a retry meets the same error.
+
+A connection or I/O error is an ``OSError`` (a refused connection, a
+timeout, a stale or full disk), an error of the cloud libraries that is not
+(such as botocore's ``EndpointConnectionError`` and ``ReadTimeoutError``),
+or an error with the status of a busy or briefly unavailable service (429
+and 5xx, and the throttling codes). A file that is not there, a denied
+permission, and a 403 or 404 from a bucket are not: they are 4, because the
+path or the credentials stay wrong. Every ``stilt`` command ends this way
+on an error it did not expect, not only ``stilt run``. A simulation that
+fails inside a run, whatever the cause, is a failure record and exit 1.
+
+For a Kubernetes indexed Job, a ``podFailurePolicy`` that retries on 3 and
+fails the task on 1 and 4 follows from this table.
 
 When the Job is done, ``stilt status /project`` counts the finished and
 failed simulations of the whole project. ``stilt status /project --json``
