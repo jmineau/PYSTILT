@@ -235,27 +235,17 @@ def _time(value: Any) -> pd.Timestamp:
     return time
 
 
-def _cover(
-    window: tuple[Any, Any], file_tres: str | None = None
-) -> tuple[pd.Timestamp, pd.Timestamp]:
+def _download_cover(window: tuple[Any, Any]) -> tuple[pd.Timestamp, pd.Timestamp]:
     """
-    Return the first and last time files must cover for *window*.
+    Return the first and last time downloaded files must cover for *window*.
 
-    The hour after the window's end is added, unless the end is on a file
-    boundary. HYSPLIT steps through a run with the two met times around
-    each step, so it needs the met time at or after the window's end, in
-    either direction: the release time of a backward run, the end of the
-    trajectories of a forward one. When the end falls in the last hour of
-    a file, that met time is in the next file, which STILT-R also reads
-    for a backward run. *file_tres* is the period of one file; without it
-    (downloads, whose archive files are 6 hours or longer) the next hour is
-    always added, which never adds a file a window ending on a file
-    boundary does not need.
+    The hour after the window's end is added, so that an archive of hourly
+    met gives the file holding the met step after a run's end. An archive's
+    files are 6 hours or longer, so this never adds a file a window ending
+    on a file boundary does not need.
     """
     earlier, later = (_time(t) for t in window)
-    if file_tres is None or later != later.floor(file_tres):
-        later = _time(later.floor("h") + pd.Timedelta(hours=1))
-    return earlier, later
+    return earlier, _time(later.floor("h") + pd.Timedelta(hours=1))
 
 
 class Met:
@@ -286,6 +276,10 @@ class Met:
         self._archive: Archive | None = None
         self._matches: dict[str, list[Path]] = {}
         self._sorted_tails: dict[int, tuple[list[str], list[Path]]] = {}
+        # The spacing of the met steps once read from one of its files, and
+        # why it was taken as one hour when no file could give it.
+        self._step: pd.Timedelta | None = None
+        self._step_problem: str | None = None
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -408,7 +402,7 @@ class Met:
 
     def _download(self, window: tuple[Any, Any]) -> list[Path]:
         """Return the files that cover *window* from the ARL archive, downloading any not yet in ``directory``."""
-        t_start, t_end = _cover(window)
+        t_start, t_end = _download_cover(window)
 
         bbox = self._bbox() if self.config.subgrid_enable else None
         levels = self._level_indices() if self.config.subgrid_enable else None
@@ -441,10 +435,16 @@ class Met:
         """
         Return the met files that cover *window*, ``(start, end)`` in time order.
 
-        They also cover the hour after the window's end, unless the end is
-        on a file boundary: HYSPLIT needs the met time after the end of a
-        run in either direction. Downloads them first when ``download`` is
-        set.
+        HYSPLIT steps through a run with the two met steps around each of
+        its times, so in either direction it needs the met step at or after
+        the window's end: the release of a backward run, the end of a
+        forward one. When the end is past the last met step of its file,
+        the next file is added. The spacing of the met steps is read once,
+        from the index records of the file that holds the window's end, as
+        ``file_format`` finds it; other products in ``directory`` do not
+        change it. When that file cannot be read or holds one time period,
+        the spacing is taken as one hour and :meth:`check` says so.
+        Downloads the files first when ``download`` is set.
 
         Parameters
         ----------
@@ -496,11 +496,49 @@ class Met:
     def _file_times(
         self, window: tuple[Any, Any]
     ) -> tuple[pd.DatetimeIndex, pd.Timestamp, pd.Timestamp]:
-        """Return the times of the local files that cover *window*, and the first and last time they must cover."""
+        """
+        Return the times of the local files that cover *window*, and its start and end.
+
+        These are the files the window's times fall in, and the next file
+        when the window's end is past the last met step of its file. With
+        3-hourly steps in daily files, a backward run released at 22:00
+        needs the next day's 00:00 step, and one released at 21:00 needs
+        nothing past 21:00.
+        """
         tres = self._file_freq
         assert tres is not None  # MetConfig requires file_tres without download
-        earlier, later = _cover(window, tres)
-        return pd.date_range(earlier.floor(tres), later, freq=tres), earlier, later
+        earlier, later = (_time(t) for t in window)
+        last_file = later.floor(tres)
+        next_file = _time(last_file + to_offset(tres))
+        # An end on a file boundary needs nothing after it, whatever the step.
+        if later != last_file and later > next_file - self._step_at(last_file):
+            last_file = next_file  # past the last step of its file
+        times = pd.date_range(earlier.floor(tres), last_file, freq=tres)
+        return times, earlier, later
+
+    def _step_at(self, time: pd.Timestamp) -> pd.Timedelta:
+        """
+        Return the spacing of the met steps, read from this met's file for *time*.
+
+        The file is one ``file_format`` finds for *time*, so other products
+        in :attr:`directory` do not change it. Only its index records are
+        read, and the spacing is kept for the met once a file gives it. One
+        hour, the step of most met, when no file for *time* can be read or
+        it holds one time period; :meth:`check` then says why.
+        """
+        if self._step is None:
+            file_format = self.config.file_format
+            assert file_format is not None  # MetConfig requires it without download
+            pattern = time.strftime(file_format)
+            problem = f"no met file named {pattern}..."
+            for path in self._matching(pattern):
+                step, problem = _read_step(path)
+                if step is not None:
+                    self._step, self._step_problem = step, None
+                    return step
+            self._step_problem = problem
+            return pd.Timedelta(hours=1)
+        return self._step
 
     def missing_hours(self, window: tuple[Any, Any]) -> list[pd.Timestamp]:
         """
@@ -534,9 +572,10 @@ class Met:
         has no files to look for before a run, so only its crop is checked.
         This looks for files, not inside them, except that it opens the first
         file the receptors need to count its time periods, which HYSPLIT
-        needs to be at least two. :meth:`check` opens each file at a run, and
-        a run that passes this one can still fail as ``MET_COVERAGE`` when a
-        file is damaged or cut short.
+        needs to be at least two, and reads the spacing of the met steps from
+        the file of a run's end, as :meth:`files_for` does. :meth:`check`
+        opens each file at a run, and a run that passes this one can still
+        fail as ``MET_COVERAGE`` when a file is damaged or cut short.
 
         Parameters
         ----------
@@ -640,17 +679,17 @@ class Met:
         (:meth:`arlmet.File.check`), and together their time steps must
         reach from the first time the run needs to the last, with no gap
         wider than their spacing. That also finds a file cut after a whole
-        time step, which looks whole to arlmet. Files that cover the run but
-        include one with a single time period are refused last, since HYSPLIT
-        cannot read it.
+        time step, which looks whole to arlmet. HYSPLIT needs the met step at
+        or before the window's start and the one at or after its end, and
+        nothing outside them. Files that cover the run but include one with a
+        single time period are refused last, since HYSPLIT cannot read it.
 
         Parameters
         ----------
         files : list of Path
             The files the transport model will read (:meth:`readable`).
         window : tuple of datetime-like
-            The time the run covers (:func:`run_window`). The files must
-            also hold the hour after its end, as :meth:`files_for` finds.
+            The time the run covers (:func:`run_window`).
 
         Raises
         ------
@@ -671,8 +710,13 @@ class Met:
                 single.append(path)
             held.update(times)
 
-        earlier, later = _cover(window, self._file_freq)
+        earlier, later = (_time(t) for t in window)
         needs = f"The run needs {earlier:%Y-%m-%d %H:%M} to {later:%Y-%m-%d %H:%M}."
+        if self._step_problem is not None:
+            needs += (
+                " The files were chosen with met steps taken as one hour, as "
+                f"their spacing could not be read: {self._step_problem}."
+            )
         steps = sorted(held)
         if not steps or steps[0] > earlier or steps[-1] < later:
             holds = (
@@ -876,6 +920,24 @@ def _first_source(directory: Path) -> str:
         f"No ARL file under {directory}. A met's weather product, which a "
         "run records, is read from the header of the first file there."
     )
+
+
+def _read_step(path: Path) -> tuple[pd.Timedelta | None, str]:
+    """
+    Return the smallest spacing of the time periods in the ARL file at *path*, or ``None`` and why not.
+
+    Only the file's index records are read.
+    """
+    from arlmet import File
+
+    try:
+        with File(path) as met:
+            times = met.times
+    except (EOFError, OSError, ValueError) as error:  # ARLFormatError is a ValueError
+        return None, f"{path} could not be read as an ARL file ({error})"
+    if len(times) < 2:
+        return None, f"{path} holds {'one time period' if times else 'no time period'}"
+    return min(b - a for a, b in pairwise(times)), ""
 
 
 __all__ = ["Met", "MetConfig"]

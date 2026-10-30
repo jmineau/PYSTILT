@@ -1250,7 +1250,8 @@ class Project:
         Notes
         -----
         The check looks for files, not inside them (except to count the time
-        periods of the first file a run needs), and the crop box is the
+        periods of the first file a run needs, and to read the spacing of the
+        met steps from the file of a run's end), and the crop box is the
         only domain it knows. A run that passes it can still fail as
         ``MET_COVERAGE``: a met file that is damaged or cut short is found
         when the run opens it, and a receptor outside the domain of the
