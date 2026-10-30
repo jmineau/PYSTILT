@@ -31,6 +31,7 @@ from stilt._paths import absolute, location, write_parquet
 from stilt.check import check_project
 from stilt.config import STARTER_CONFIG, ProjectConfig, Variant
 from stilt.execution.config import ExecutionConfig
+from stilt.fetch import fetch_project
 from stilt.footprint import Geometry, Jacobian
 from stilt.footprint.aggregation import _jacobian
 from stilt.footprint.io import _threads, open_footprints
@@ -1265,6 +1266,58 @@ class Project:
         ... ]  # doctest: +SKIP
         """
         return check_project(self)
+
+    def fetch(self, sel: Any = None) -> pd.DataFrame:
+        """
+        Get the met files the unfinished simulations need, and return them.
+
+        For each met, gets the files that cover the time of every
+        simulation in *sel* whose transport model has yet to run, as a run
+        would ask for them (the hour after a run's end too). With
+        ``download``, it downloads what is missing and crops it as it
+        goes, so the runs that follow find every file and download nothing.
+        A met without ``download`` is only checked: its missing files are
+        reported, as ``check`` does. Several fetches, or a fetch beside runs,
+        can share a met directory: arlmet writes each file under a
+        temporary name and renames it into place when whole.
+
+        Parameters
+        ----------
+        sel : optional
+            The simulations to fetch for, as for :meth:`status`. Defaults to
+            all of them.
+
+        Returns
+        -------
+        pandas.DataFrame
+            ``met`` (its name under ``mets:``), ``file``, and ``message``
+            columns: a row for each file, with ``message`` empty, then a row
+            for each window whose files could not be had, with ``file``
+            empty. No row has a ``message`` when every file is there. Empty
+            when no simulation is left to run. ``stilt fetch`` prints it.
+
+        Raises
+        ------
+        ValueError
+            If ``config.yaml`` or ``receptors.csv`` is invalid.
+        FileNotFoundError
+            If the directory of a met without ``download`` holds no ARL
+            file, which names the output folder of its runs.
+        ImportError
+            If a met downloads and the ``download`` extra is not installed.
+
+        Examples
+        --------
+        >>> files = project.fetch()  # doctest: +SKIP
+        >>> files.message.isna().all()  # True when every file is there  # doctest: +SKIP
+        >>> project.run()  # downloads nothing  # doctest: +SKIP
+        """
+        frame = self._selected(sel)
+        present = self._present(frame)
+        has = np.array(
+            [r in present[(v, k)][0] for r, v, k in _rows(frame)], dtype=bool
+        )
+        return fetch_project(self, frame.loc[~has])
 
     def run(
         self,

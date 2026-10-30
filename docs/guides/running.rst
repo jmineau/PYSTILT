@@ -112,6 +112,14 @@ Commands
    is run or downloaded. It exits with 0 when it finds nothing and 1 when
    it lists anything (:doc:`checking`).
 
+``stilt fetch <project>``
+   Get the met files the unfinished simulations need, then exit. A met with
+   ``download`` downloads what is missing, cropped to its subgrid, so the
+   runs that follow download nothing; a met without it is only checked for
+   missing files. ``--output DIR`` is as for ``stilt run``. It exits with 0
+   when every file is there, 1 when some could not be had, and 3 when it
+   was stopped (Ctrl-C or SIGTERM) (:ref:`fetch-once`).
+
 ``stilt run <project>``
    Run every unfinished simulation and wait until they are done, here or
    as a Slurm job array. Its options:

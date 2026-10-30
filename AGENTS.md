@@ -68,6 +68,7 @@ src/stilt/
   cli.py          Typer CLI, a thin adapter over Project and execution
   project.py      Project: inputs, the simulations table, run/submit, bulk reads
   check.py        check_project: what would stop a project's runs, from its inputs
+  fetch.py        fetch_project: gets the met files the unfinished simulations need
   migration.py    read_stilt_r, import_stilt_r: STILT-R and X-STILT by-id output, read with rdata
   output.py       Output: the output directory; `completed`, the completion rule
   simulation.py   Simulation: a frozen (receptor, variant, output) value

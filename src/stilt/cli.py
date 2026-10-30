@@ -7,6 +7,7 @@ prints a short summary. Examples::
     stilt init                        # start a project in the current directory
     stilt init ./my_project           # start a project in ./my_project
     stilt check                       # list what would stop a run, before any run
+    stilt fetch                       # get the met files the runs need, once
     stilt run                         # run, and wait until done
     stilt run ./my_project --no-skip  # run every simulation again
     stilt run --backend slurm         # run as a Slurm job array, and wait
@@ -18,7 +19,9 @@ prints a short summary. Examples::
 ``stilt run`` exits with 0 when every simulation it ran is complete, 1 when
 some failed, and 3 when some did not finish because the run was
 interrupted (Ctrl-C, or SIGTERM from a scheduler). ``stilt check`` exits
-with 0 when it finds nothing and 1 when it lists anything. Every command
+with 0 when it finds nothing and 1 when it lists anything. ``stilt fetch``
+exits with 0 when every met file the runs need is there, 1 when some could
+not be had, and 3 when it was stopped (Ctrl-C or SIGTERM). Every command
 exits with 2 when its command line is wrong: an unknown option, a bad value,
 or a directory that is not a project. ``stilt run``, ``stilt submit``, and
 ``stilt status`` also exit with 2 when a met directory does not exist or
@@ -27,11 +30,14 @@ holds no ARL file, which ``stilt check`` lists.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import re
+import signal
+import threading
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -346,6 +352,80 @@ def _start(
     return opened, options
 
 
+@contextlib.contextmanager
+def _stop_once() -> Iterator[None]:
+    """
+    Turn the first SIGINT or SIGTERM into ``KeyboardInterrupt`` inside the block, and ignore any after it.
+
+    A pod or a Slurm job is stopped with SIGTERM, which ends Python at once
+    and skips the ``finally`` blocks that remove a download's partial file
+    (as for ``stilt run``, :func:`stilt.execution.worker._sigterm_as_interrupt`
+    makes it raise instead). A second signal while that cleanup runs would
+    raise again and could skip it, so after the first the rest stay ignored,
+    through the exit. Handlers can be set only from the main thread;
+    elsewhere this does nothing.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    stopped = False
+
+    def stop(signum: int, frame: object) -> None:
+        nonlocal stopped
+        stopped = True
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            signal.signal(sig, signal.SIG_IGN)
+        raise KeyboardInterrupt
+
+    previous = {
+        sig: signal.signal(sig, stop) for sig in (signal.SIGINT, signal.SIGTERM)
+    }
+    try:
+        yield
+    finally:
+        if not stopped:
+            for sig, handler in previous.items():
+                signal.signal(sig, handler)
+
+
+@app.command()
+def fetch(
+    project: str | None = _PROJECT_ARG,
+    output: str | None = _OUTPUT,
+) -> None:
+    """
+    Get the met files a project's unfinished simulations need, then exit.
+
+    For each met, gets the files that cover the time of every simulation
+    that has yet to run, as a run would ask for them. A met with download
+    set downloads what is missing, cropped to its subgrid, so the runs that
+    follow find every file and download nothing: run this once where the
+    files are shared, before many workers start. A met without download is
+    only checked for missing files, as stilt check does. Exits with 0 when
+    every file is there, 1 when some could not be had, 2 when the command
+    line is wrong or a met cannot be read, and 3 when stopped by Ctrl-C or
+    SIGTERM, after removing the file it was downloading.
+    """
+    opened = _open(project, output=output)
+    # arlmet logs each file it downloads, which is the progress to show.
+    logging.basicConfig(level=logging.WARNING, format="%(message)s")
+    logging.getLogger("arlmet.archives").setLevel(logging.INFO)
+    typer.echo(f"Project: {opened.directory}  receptors={len(opened.receptors)}")
+    try:
+        with _stop_once():
+            files = opened.fetch()
+    except (ImportError, ValueError) as error:
+        _fail(str(error))
+    except KeyboardInterrupt:
+        typer.echo(
+            "Interrupted. The partial download was removed; fetch again to go on."
+        )
+        raise typer.Exit(code=EXIT_INTERRUPTED) from None
+    problems = _print_fetch(files)
+    raise typer.Exit(code=EXIT_FAILED if problems else EXIT_COMPLETE)
+
+
 @app.command()
 def run(
     project: str | None = _PROJECT_ARG,
@@ -578,6 +658,30 @@ def _print_check(project: Project, problems: pd.DataFrame) -> None:
     listed = ", ".join(f"{name} {n}" for name, n in counts.items())
     noun = "problem" if len(problems) == 1 else "problems"
     typer.echo(f"\nFound {len(problems)} {noun}: {listed}")
+
+
+def _print_fetch(files: pd.DataFrame) -> int:
+    """
+    Print how many met files each met has, then the times whose files could not be had.
+
+    Returns the number of those times. The first :data:`_CHECK_ROWS` of them
+    are shown, with a count of the rest.
+    """
+    if files.empty:
+        typer.echo("No unfinished simulation needs met files.")
+        return 0
+    have = files[files["file"].notna()]
+    failed = files[files["message"].notna()]
+    for name, rows in have.groupby("met", sort=False):
+        noun = "file" if len(rows) == 1 else "files"
+        typer.echo(f"Met {name}: {len(rows)} {noun} ready")
+    for name, rows in failed.groupby("met", sort=False):
+        typer.echo(f"\nMet {name}: could not get the files for these times:")
+        for message in rows["message"].head(_CHECK_ROWS):
+            typer.echo(f"  {message}")
+        if len(rows) > _CHECK_ROWS:
+            typer.echo(f"  ... {len(rows) - _CHECK_ROWS} more")
+    return len(failed)
 
 
 def _print_folders(project: Project) -> None:

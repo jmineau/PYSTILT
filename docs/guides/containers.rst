@@ -34,6 +34,52 @@ What every container needs
   ``PYSTILT_COMPUTE_ROOT`` to a folder on fast local disk, such as an
   ``emptyDir``.
 
+.. _fetch-once:
+
+Fetching the meteorology once
+-----------------------------
+
+With ``download`` set, a run downloads the met files its hours need into the
+met ``directory``. Pods on one shared volume find the files the first pod
+fetched. Pods with their own disks do not: 50 pods whose receptors fall on
+the same days download, and crop, the same files 50 times.
+
+``stilt fetch`` gets the files once, before the Job starts:
+
+.. code-block:: bash
+
+   stilt fetch /project
+
+For each met it gets the files that cover the time of every simulation that
+has yet to run, cropped to the met's subgrid. They are the files ``stilt
+run`` would ask for, so a run that follows finds them all and downloads
+nothing. Run it on one pod, with the met ``directory`` on the volume the
+Job's pods then mount. Simulations that are finished need no met and are
+left out; ``--output`` is as for ``stilt run``, so it reads the same
+results.
+
+A met without ``download`` is only checked: ``stilt fetch`` reports the
+files it lacks, as ``stilt check`` does, and does not make them.
+
+It exits with 0 when every file is there, 1 when some could not be had
+(the file is not in the archive, or the connection failed; it prints the
+times of the runs that need them), 2 when the command line is wrong or a met
+directory cannot be read, and 3 when it was stopped (Ctrl-C, or SIGTERM,
+which Kubernetes and Slurm send). A stop removes the file it was downloading,
+and a second stop signal while it does is ignored. Run it again to try the
+missing files, or to finish after a stop: the ones it got are kept. A process
+killed with SIGKILL, which cannot be caught, leaves its hidden
+``.<name>.<random>.partial`` file in the met directory; delete it.
+
+Fetches can overlap. Several ``stilt fetch`` processes, or a fetch beside
+runs, can share one met directory: each file is written under a temporary
+name and renamed into place when it is whole, so no one reads half a file.
+Two that start the same file both download it, and the second to finish
+replaces the first with the same contents.
+
+In Python, ``project.fetch()`` does the same and returns the files, one row
+each, with the times it could not get files for.
+
 A Kubernetes indexed Job
 ------------------------
 
