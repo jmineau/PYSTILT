@@ -98,10 +98,12 @@ What does not match
   degrees from the particles' longitudes and latitudes, as on a
   longitude/latitude grid, then multiplies it by the length of one degree
   of longitude at the particles' mean position, measured in the grid's
-  projection and units. The kernel is then as wide from east to west, on the
-  ground, as on a longitude/latitude grid. On the projected grid it is
-  round. On a longitude/latitude grid it is ``1 / cos(lat)`` times wider
-  from north to south, because it has one width in degrees on both axes.
+  projection and units. The longitudes are first taken within 180° of the
+  release longitude, so a cloud on both sides of 180° is measured as one.
+  The kernel is then as wide from east to west, on the ground, as on a
+  longitude/latitude grid. On the projected grid it is round. On a
+  longitude/latitude grid it is ``1 / cos(lat)`` times wider from north to
+  south, because it has one width in degrees on both axes.
   The fidelity suite's UTM scenario compares unsmoothed footprints, and
   ``test_projected_smoothing_intentionally_differs_from_r`` guards the
   difference. Longitude/latitude grids are not affected.
