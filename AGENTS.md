@@ -171,9 +171,10 @@ Docstring examples (`>>>` lines under `src/`) run as tests too
 pytest loads a local `.env` for such variables. Test folders follow the
 package. `tests/observations/` is self-contained (its own `conftest.py` and
 `data/`, never `tests/conftest.py`'s fixtures). Committed test data stays
-small: slices of public granules (made by
-`tests/observations/data/products/make_samples.py`) or synthetic files with a
-format's quirks; never met files or data that is not ours to redistribute.
+small: slices of public products (TROPOMI, TCCON) keep the granule's own name
+and are cut by `tests/observations/data/products/make_samples.py`. Retrievals
+that are not public (GGG, EM27) or that we cannot get (OCO-2 Lite) stay
+synthetic files with the real format's quirks. Never commit met files.
 
 ### Code conventions
 
