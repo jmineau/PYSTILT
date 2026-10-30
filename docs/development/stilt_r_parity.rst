@@ -62,7 +62,8 @@ The scenarios cover:
 - 6 h and 24 h backward runs, and a 6 h forward run
 - the hyper-near-field (HNF) plume correction on (12 scenarios) and off
 - ``smooth_factor`` of 0, 0.5, 1, and 2
-- 0.01° and 0.05° longitude/latitude grids and a UTM grid
+- 0.01° and 0.05° longitude/latitude grids and a UTM grid, all with square
+  cells
 - a 2° box, a receptor in the domain's corner, a receptor at the edge of
   the met grid, and a small 0.1° domain that particles leave early
 - receptor heights above ground, above sea level (``kmsl=1``), and at 0.5 m
@@ -88,6 +89,19 @@ What does not match
   fill value of ``-1``. PYSTILT writes CF-1.8 NetCDF with dimensions
   ``(time, lat, lon)``. Read PYSTILT files as ordinary CF NetCDF. Tools that
   expect STILT-R's layout will not read them.
+- **Smoothing on cells that are not square.** When ``xres`` and ``yres``
+  differ, a smoothing kernel wider than one cell has a different number of
+  cells along longitude and along latitude. STILT-R's ``permute.f90`` reads
+  the kernel as if the two numbers were equal. With ``xres`` larger than
+  ``yres``, its footprint total comes out 5 to 13 % high on 24 h runs. With
+  ``yres`` larger than ``xres``, it reads memory past the end of the kernel.
+  The footprint then loses mass (15 % in one case), holds values near
+  ``1e300``, or R crashes
+  (`uataq/stilt#116 <https://github.com/uataq/stilt/issues/116>`_).
+  PYSTILT adds each kernel along the axis each cell count belongs to, so
+  smoothing keeps the footprint total. Its footprint equals STILT-R's with
+  ``permute.f90`` reading the kernel that way, to within ``1e-16`` of the
+  peak. On square cells the two agree.
 - **Forward runs with the HNF correction.** STILT-R accumulates the plume
   from the far end of a forward trajectory back toward the release point,
   so its plume is widest at release. PYSTILT accumulates outward from the
