@@ -562,7 +562,7 @@ def _with_status(attribute, status):
         (ConnectionRefusedError("refused"), 3),
         (TimeoutError("slow"), 3),
         (OSError(5, "Input/output error"), 3),
-        (OSError(116, "Stale file handle"), 3),
+        (OSError(errno.ESTALE, "Stale file handle"), 3),
         # Cloud libraries' errors that are not OSError, matched by class name.
         (_error_named("EndpointConnectionError"), 3),
         (_error_named("ConnectTimeoutError"), 3),
