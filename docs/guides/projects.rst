@@ -122,6 +122,15 @@ These footprint settings sit next to ``grid`` at the top level:
    Steps that weight the particles before the footprint is made, mainly for
    column measurements. See :doc:`transforms`.
 
+A ``grid`` can be projected: give it a ``crs`` such as ``EPSG:32612`` and
+``xres`` and ``yres`` in the projection's units (meters for UTM). The bounds
+stay in degrees. The two steps that depend on the cell size work in the
+grid's units. One is the smoothing. The other is the early-time
+interpolation, which adds particle positions between output steps in the
+first 100 minutes when the particles move more than a cell per step. On
+100 m UTM cells it runs as it does on 0.001° cells. STILT-R decides it in
+degrees and never runs it on a grid in meters (:ref:`stilt-r-parity`).
+
 ``config.yaml`` also takes the lower-level HYSPLIT and STILT settings, such
 as turbulence, time step, and output variables, by the names STILT-R uses.
 Most projects never change them; :doc:`../reference/configuration`

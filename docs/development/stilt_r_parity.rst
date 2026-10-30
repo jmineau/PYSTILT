@@ -105,6 +105,20 @@ What does not match
   The fidelity suite's UTM scenario compares unsmoothed footprints, and
   ``test_projected_smoothing_intentionally_differs_from_r`` guards the
   difference. Longitude/latitude grids are not affected.
+- **The early-time interpolation on a projected grid.** In the first 100
+  minutes, when the particles' median step is longer than a cell along
+  either axis, both add positions between the output steps. STILT-R
+  measures the step in degrees and compares it with ``xres`` and ``yres``
+  in the grid's units, so on a grid in meters it never interpolates. On a
+  24 h run on 100 m UTM cells, unsmoothed, STILT-R's rule gives a
+  footprint with 12,341 nonzero cells, against 15,139 for the same run on
+  a 0.001° grid, which does interpolate. PYSTILT measures the step on the
+  projected grid, in its units and along its axes, and its footprint has
+  14,563. It then
+  interpolates as STILT-R does on longitude/latitude cells of the same
+  size. The positions added are interpolated in degrees on any grid.
+  ``test_utm_early_interpolation_intentionally_differs_from_r`` guards the
+  difference. Longitude/latitude grids are not affected.
 - **Forward runs with the HNF correction.** STILT-R accumulates the plume
   from the far end of a forward trajectory back toward the release point,
   so its plume is widest at release. PYSTILT accumulates outward from the

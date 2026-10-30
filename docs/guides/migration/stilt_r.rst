@@ -6,9 +6,10 @@ cell by cell. A few cases differ on purpose. Three are in the near-field
 correction (``hnf_plume``): forward runs, where PYSTILT fixes how the plume
 grows, a ``veght`` above 1, which PYSTILT reads as meters above ground, as
 HYSPLIT does, and a receptor above sea level, whose plume PYSTILT grows from
-the ground. The fourth is the smoothing on a projected grid, which PYSTILT
-makes as wide as on a longitude/latitude grid and STILT-R makes a few meters
-wide (see :ref:`stilt-r-parity`).
+the ground. Two are on a projected grid: the smoothing, which PYSTILT makes
+as wide as on a longitude/latitude grid and STILT-R makes a few meters wide,
+and the early-time interpolation, which STILT-R never runs on a grid in
+meters (see :ref:`stilt-r-parity`).
 
 What changes is where the settings live. Instead of editing variables in
 ``run_stilt.r``, you write them in ``config.yaml`` or pass them to

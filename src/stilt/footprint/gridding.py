@@ -1,9 +1,10 @@
 """
 Calculating a footprint from particles, as STILT-R's ``calc_footprint`` does.
 
-Footprints match STILT-R at ``rtol=1e-7`` per cell, except the smoothing on a
-projected grid (``_compute_kernel_bandwidths``). Run the ``fidelity`` tests
-before merging any change to this module.
+Footprints match STILT-R at ``rtol=1e-7`` per cell, except on a projected
+grid, where the smoothing (``_compute_kernel_bandwidths``) and the test for
+the early-time interpolation (``_interpolate_early_timesteps``) differ on
+purpose. Run the ``fidelity`` tests before merging any change to this module.
 """
 
 from __future__ import annotations
@@ -89,16 +90,29 @@ def _wrap_antimeridian_longitudes(
 
 
 def _interpolate_early_timesteps(
-    p: pd.DataFrame, *, xres: float, yres: float, time_sign: int
+    p: pd.DataFrame,
+    *,
+    xres: float,
+    yres: float,
+    time_sign: int,
+    crs: str = "+proj=longlat",
 ) -> pd.DataFrame:
     """
     Add interpolated positions in the first 100 minutes when particles jump grid cells.
 
     Near the receptor, particles can move more than a grid cell per output
-    step. When the median step does, positions and ``foot`` are linearly
-    interpolated onto finer times (every 0.1 min to 10 min, 0.2 min to 20
-    min, and 0.5 min to 100 min). ``foot`` is then rescaled so each of those
-    three windows keeps its total, as STILT-R does.
+    step. When the median step does, along either axis of the grid,
+    positions and ``foot`` are linearly interpolated onto finer times (every
+    0.1 min to 10 min, 0.2 min to 20 min, and 0.5 min to 100 min). ``foot``
+    is then rescaled so each of those three windows keeps its total, as
+    STILT-R does.
+
+    *p* holds longitudes and latitudes in degrees. On a projected *crs* the
+    steps are measured on the grid, from the particles' positions projected
+    to it, so they compare with *xres* and *yres* in its units. STILT-R
+    compares the steps in degrees with the cell size in the grid's units,
+    which on a grid in meters never interpolates. The interpolation itself
+    is done in degrees on any grid.
     """
     early = cast(pd.DataFrame, p[np.abs(p["age"]) < 100])
     if early.empty:
@@ -107,6 +121,15 @@ def _interpolate_early_timesteps(
     # Match R: per-particle median(abs(diff(lon/lat))), then median across particles.
     # should_interpolate = median(dx) > xres OR median(dy) > yres
     sorted_early = early.sort_values(by=["particle", "age"])
+    if not is_longlat(crs):
+        # The steps along the grid's axes, in its units.
+        from pyproj import Transformer
+
+        tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
+        x, y = tr.transform(
+            sorted_early["lon"].to_numpy(), sorted_early["lat"].to_numpy()
+        )
+        sorted_early = sorted_early.assign(lon=x, lat=y)
     diffs = cast(
         pd.DataFrame,
         sorted_early.groupby("particle", sort=False)[["lon", "lat"]].diff().abs(),
@@ -532,7 +555,11 @@ def calc_footprint(
     On a projected grid the kernel's width is worked out in degrees, as on
     a longitude/latitude grid, and converted to the grid's units, so the
     footprint is smoothed as much. STILT-R applies its formula to the
-    projected coordinates and barely smooths a footprint there.
+    projected coordinates and barely smooths a footprint there. The step
+    that decides the early-time interpolation is measured on the projected
+    grid, in its units, so a grid of 100 m cells is interpolated as a 0.001°
+    grid is. STILT-R measures it in degrees and never interpolates on a grid
+    in meters.
 
     Parameters
     ----------
@@ -628,7 +655,9 @@ def calc_footprint(
             p, xmin=xmin, xmax=xmax
         )
 
-    p = _interpolate_early_timesteps(p, xres=xres, yres=yres, time_sign=time_sign)
+    p = _interpolate_early_timesteps(
+        p, xres=xres, yres=yres, time_sign=time_sign, crs=crs
+    )
 
     # rtime = time elapsed since each particle's first output step.
     # Used below to compute kernel bandwidth (particles spread more with time).

@@ -351,6 +351,131 @@ def test_interpolate_early_timesteps_matches_r_na_omit_with_extra_columns():
     pd.testing.assert_frame_equal(interpolated, expected, check_dtype=False)
 
 
+def _northward_particles(n: int = 100, seed: int = 1) -> pd.DataFrame:
+    """
+    Particles leaving (-112, 40.5) north at about 7 m/s for 100 minutes (#307).
+
+    Each 1-minute step is about 0.005 degrees of latitude, 555 m, and almost
+    nothing east to west.
+    """
+    rng = np.random.default_rng(seed)
+    ages = np.arange(-1.0, -101.0, -1.0)
+    frames = []
+    for k in range(n):
+        speed = 0.005 * (1 + 0.1 * rng.normal())
+        frames.append(
+            pd.DataFrame(
+                {
+                    "particle": k + 1,
+                    "age": ages,
+                    "lon": -112.0 + 0.0005 * rng.normal(),
+                    "lat": 40.5 + speed * np.abs(ages),
+                    "foot": 1e-3,
+                }
+            )
+        )
+    return pd.concat(frames, ignore_index=True)
+
+
+def _interpolates(p: pd.DataFrame, **grid) -> bool:
+    """Whether _interpolate_early_timesteps adds rows to *p* on this grid."""
+    return len(_interpolate_early_timesteps(p, time_sign=-1, **grid)) > len(p)
+
+
+def test_projected_grid_interpolates_steps_longer_than_a_cell():
+    """
+    On 100 m UTM cells, 555 m steps are interpolated, as on 0.001 degree cells (#307).
+
+    The step used to be measured in degrees and compared with ``xres`` in
+    meters, so a grid in meters never interpolated.
+    """
+    pytest.importorskip("pyproj")
+    p = _northward_particles()
+    longlat = _interpolate_early_timesteps(p, xres=0.001, yres=0.001, time_sign=-1)
+    utm = _interpolate_early_timesteps(
+        p, xres=100.0, yres=100.0, time_sign=-1, crs=_UTM12
+    )
+
+    assert len(longlat) > len(p)
+    pd.testing.assert_frame_equal(utm, longlat)
+
+
+def test_projected_grid_does_not_interpolate_steps_shorter_than_a_cell():
+    """On 1 km UTM cells the same 555 m steps are left as they are."""
+    pytest.importorskip("pyproj")
+    p = _northward_particles()
+    assert not _interpolates(p, xres=1000.0, yres=1000.0, crs=_UTM12)
+    assert not _interpolates(p, xres=0.01, yres=0.01)
+
+
+def test_projected_step_is_measured_in_the_grid_units():
+    """A UTM grid in kilometers decides as the same grid in meters."""
+    pytest.importorskip("pyproj")
+    p = _northward_particles()
+    km = _UTM12.replace("+units=m", "+units=km")
+    assert _interpolates(p, xres=0.1, yres=0.1, crs=km)
+    assert not _interpolates(p, xres=1.0, yres=1.0, crs=km)
+
+
+def test_projected_step_is_compared_with_the_cell_along_each_axis():
+    """
+    A north step is compared with ``yres``, an east step with ``xres``.
+
+    The particles move 555 m north and a few meters east per step, so cells
+    500 m tall interpolate and cells 500 m wide but 1 km tall do not.
+    """
+    pytest.importorskip("pyproj")
+    p = _northward_particles()
+    assert _interpolates(p, xres=1000.0, yres=500.0, crs=_UTM12)
+    assert not _interpolates(p, xres=500.0, yres=1000.0, crs=_UTM12)
+
+
+def test_projected_step_follows_a_turned_grid():
+    """
+    On a grid turned by 45 degrees, a 555 m north step is 393 m along each axis.
+
+    So 450 m cells interpolate on the unturned oblique Mercator grid and not
+    on the turned one: the step is measured along the grid's own axes.
+    """
+    pytest.importorskip("pyproj")
+    p = _northward_particles()
+    omerc = "+proj=omerc +lat_0=40.5 +lonc=-112 +gamma=0 +k_0=1 +datum=WGS84 +units=m"
+    assert _interpolates(p, xres=450.0, yres=450.0, crs=f"{omerc} +alpha=0.0001")
+    assert not _interpolates(p, xres=450.0, yres=450.0, crs=f"{omerc} +alpha=45")
+    assert _interpolates(p, xres=350.0, yres=350.0, crs=f"{omerc} +alpha=45")
+
+
+def test_projected_footprint_fills_the_cells_between_steps_like_the_longlat_one(
+    point_receptor,
+):
+    """
+    On 100 m UTM cells the footprint covers about as many cells as on 0.001 degree cells.
+
+    Without the interpolation the UTM footprint was the particles' 1-minute
+    positions, a few cells apart: a fifth fewer cells than the lon/lat one
+    (#307). The 0.001 degree cells are 85 m by 111 m here, so the two grids
+    do not have the same cells; both keep the same total.
+    """
+    pytest.importorskip("pyproj")
+    p = _northward_particles().assign(zagl=5.0)
+    bounds = {"xmin": -112.05, "xmax": -111.95, "ymin": 40.45, "ymax": 41.05}
+    feet = {
+        name: calc_footprint(
+            p, point_receptor, grid, time_integrate=True, smooth_factor=0.0
+        ).to_numpy()
+        for name, grid in {
+            "longlat": Grid(**bounds, xres=0.001, yres=0.001),
+            "utm": Grid(**bounds, xres=100.0, yres=100.0, crs=_UTM12),
+        }.items()
+    }
+    cells = {name: np.count_nonzero(np.nan_to_num(a)) for name, a in feet.items()}
+
+    assert cells["utm"] > 0.9 * cells["longlat"]
+    np.testing.assert_allclose(
+        np.nansum(feet["utm"]), np.nansum(feet["longlat"]), rtol=1e-3
+    )
+
+
 # ---------------------------------------------------------------------------
 # Mathematical invariants — no R required
 #
