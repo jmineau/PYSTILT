@@ -98,8 +98,9 @@ What does not match
   degrees from the particles' longitudes and latitudes, as on a
   longitude/latitude grid, then multiplies it by the length of one degree
   of longitude at the particles' mean position, measured in the grid's
-  projection and units. The longitudes are first taken within 180° of the
-  release longitude, so a cloud on both sides of 180° is measured as one.
+  projection and units. Each step's longitudes are first taken within 180°
+  of that step's circular mean, so a cloud is measured as one wherever it
+  is, on both sides of 180° included.
   The kernel is then as wide from east to west, on the ground, as on a
   longitude/latitude grid. On the projected grid it is round. On a
   longitude/latitude grid it is ``1 / cos(lat)`` times wider from north to
