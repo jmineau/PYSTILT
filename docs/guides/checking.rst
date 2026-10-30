@@ -22,7 +22,8 @@ Before a run
 
 The first failures a new project meets are in its inputs: a met folder
 with a typo, met files that miss some receptor's hours, a receptor off the
-grid. ``stilt check`` finds them before HYSPLIT starts. It reads the
+grid, a ``varsiwant`` without the terrain height that receptors above sea
+level need. ``stilt check`` finds them before HYSPLIT starts. It reads the
 project's files and, for each met, the header of one file and the time
 periods of another, and runs and downloads nothing:
 
@@ -100,6 +101,20 @@ command line is wrong or the project's files are invalid.
        The run does not need it.
      - Nothing, if the table is shared. Otherwise look for ids that differ
        from the receptors' in a digit.
+   * - ``zsfc``
+     - A variant's ``varsiwant`` lacks ``zsfc``, and the project has a
+       receptor with ``altitude_ref="msl"`` and something that reads it.
+       The message names what: the near-field correction (``hnf_plume``),
+       which is skipped without it; the release heights of a multipoint
+       receptor, which are then matched by position and not by height; and
+       the ``pressure_weighting`` transform, which fails every footprint.
+       Not about one receptor, so ``receptor`` is empty, and the message
+       counts the receptors above sea level. A receptor above ground never
+       needs ``zsfc``.
+     - Add ``zsfc`` to ``varsiwant`` in ``config.yaml``; the message has
+       the line. ``varsiwant`` is part of the settings folder's name, so the
+       particles are made again in a new folder: add it before the runs, not
+       after.
 
 ``stilt check`` looks for files, not inside them, except to count the time
 periods of the first file a run needs. A run that passes can still

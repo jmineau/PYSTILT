@@ -290,6 +290,22 @@ def test_check_lists_what_would_stop_a_run_and_exits_1(tmp_path, calls):
     assert calls == []  # nothing ran
 
 
+def test_check_tells_a_receptor_above_sea_level_to_add_zsfc_and_exits_1(tmp_path):
+    _write_checkable_config(tmp_path)
+    (tmp_path / "receptors.csv").write_text(
+        "time,longitude,latitude,altitude,altitude_ref\n"
+        "2023-01-01 12:00:00,-111.85,40.77,1500.0,msl\n"
+    )
+
+    result = runner.invoke(app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 1, result.output
+    row = next(line for line in result.output.splitlines() if line.startswith("zsfc"))
+    assert "zsfc is not in varsiwant" in row
+    assert "varsiwant: [time, indx, long, lati, zagl, foot, mlht" in row
+    assert "Found 1 problem: zsfc 1" in result.output
+
+
 def test_check_shows_the_first_rows_of_each_check_and_counts_the_rest(tmp_path):
     _write_checkable_config(tmp_path, n_receptors=12, files=False)
 
