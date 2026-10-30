@@ -64,8 +64,12 @@ files it lacks, as ``stilt check`` does, and does not make them.
 It exits with 0 when every file is there, 1 when some could not be had
 (the file is not in the archive, or the connection failed; it prints the
 times of the runs that need them), 2 when the command line is wrong or a met
-directory cannot be read, and 3 when it was stopped. Run it again to try the
-missing files: the ones it got are kept.
+directory cannot be read, and 3 when it was stopped (Ctrl-C, or SIGTERM,
+which Kubernetes and Slurm send). A stop removes the file it was downloading,
+and a second stop signal while it does is ignored. Run it again to try the
+missing files, or to finish after a stop: the ones it got are kept. A process
+killed with SIGKILL, which cannot be caught, leaves its hidden
+``.<name>.<random>.partial`` file in the met directory; delete it.
 
 Fetches can overlap. Several ``stilt fetch`` processes, or a fetch beside
 runs, can share one met directory: each file is written under a temporary
