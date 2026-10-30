@@ -1,8 +1,11 @@
 """
 Calculating a footprint from particles, as STILT-R's ``calc_footprint`` does.
 
-Footprints match STILT-R at ``rtol=1e-7`` per cell. Run the ``fidelity``
-tests before merging any change to this module.
+Footprints match STILT-R at ``rtol=1e-7`` per cell, except the smoothing on a
+projected grid (``_compute_kernel_bandwidths``) and the smoothing of a cloud
+across 180 degrees on a grid that goes all the way around
+(``_unwrap_around_cloud``, ``_fold_padding_around_the_globe``). Run the
+``fidelity`` tests before merging any change to this module.
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.particles import FOOTPRINT_COLUMNS, check_particles
 from stilt.receptors import Receptor
-from stilt.spatial import Grid, _grid_cell_starts
+from stilt.spatial import Grid, _grid_cell_starts, is_longlat
 from stilt.transforms import apply_transforms
 
 from .io import _footprint_array
@@ -67,22 +70,33 @@ def _interpolation_times(time_sign: int) -> np.ndarray:
     return times * time_sign
 
 
+def _wrap_longitudes(lon: Any, *, west: Any = 0.0) -> Any:
+    """Return *lon* shifted by whole turns into ``[west, west + 360)``; both are numbers, arrays, or Series."""
+    return (((lon - west) % 360) + 360) % 360 + west
+
+
+def _covers_the_globe(xmin: float, xmax: float) -> bool:
+    """Return whether longitudes *xmin* to *xmax* span a whole number of turns (STILT-R's ``xdist == 0``)."""
+    return ((180 - xmin) - (-180 - xmax)) % 360 == 0
+
+
 def _wrap_antimeridian_longitudes(
     p: pd.DataFrame, *, xmin: float, xmax: float
 ) -> tuple[pd.DataFrame, float, float, bool]:
     """
     Shift longitudes to 0 to 360 when the grid crosses the antimeridian.
 
-    Only for longitude/latitude grids. Returns ``(p, xmin, xmax, wrapped)``.
+    Only for longitude/latitude grids. A grid that covers the globe is
+    anchored to -180 to 180 and the longitudes are left as they are. Returns
+    ``(p, xmin, xmax, wrapped)``.
     """
-    xdist = ((180 - xmin) - (-180 - xmax)) % 360
-    if xdist == 0:
+    if _covers_the_globe(xmin, xmax):
         return p, -180.0, 180.0, False
     if (xmax < xmin) or (xmax > 180):
         p = p.copy()
-        p["lon"] = ((p["lon"] % 360) + 360) % 360
-        xmin = ((xmin % 360) + 360) % 360
-        xmax = ((xmax % 360) + 360) % 360
+        p["lon"] = _wrap_longitudes(p["lon"])
+        xmin = _wrap_longitudes(xmin)
+        xmax = _wrap_longitudes(xmax)
         return p, xmin, xmax, True
     return p, xmin, xmax, False
 
@@ -229,23 +243,51 @@ def _project_particles_to_crs(
 
 
 def _compute_kernel_bandwidths(
-    p: pd.DataFrame, *, smooth_factor: float, is_longlat: bool
+    p: pd.DataFrame, *, smooth_factor: float, crs: str = "+proj=longlat"
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """
-    Return ``(kernel_df, w)``, the Gaussian kernel width for each ``rtime``.
+    Return ``(kernel_df, w)``, the Gaussian kernel width for each ``rtime``, in *crs* units.
 
-    The width grows with the spread of the particles and the time since
-    release, as in STILT-R. On a longitude/latitude grid it is divided by
-    ``cos(lat)`` so it covers the same distance at high latitudes::
+    *p* holds the particles' longitudes and latitudes in degrees, before any
+    projection. The width grows with the spread of the particles and the
+    time since release, as in STILT-R, and is divided by ``cos(lat)`` so it
+    covers the same distance at high latitudes::
 
         w = smooth_factor * 0.06 * varsum**0.25 * (|rtime| / 1440)**0.5 / cos(lat)
+
+    This is in degrees of longitude. On a projected grid it is converted to
+    the grid's units by the length of one degree of longitude at the
+    particles' mean position (``_grid_units_per_degree_longitude``), so the
+    kernel is as wide from east to west, on the ground, as on a
+    longitude/latitude grid. STILT-R applies the formula to the projected
+    coordinates instead, which on a grid in meters gives a kernel a few
+    meters wide.
+
+    On a longitude/latitude grid, each ``rtime``'s longitudes are first
+    shifted by whole turns to within 180 degrees of that step's circular
+    mean (``_unwrap_around_cloud``), so a cloud across 180 degrees has the
+    spread it has on the ground, wherever on the globe it is. STILT-R
+    measures the spread of the longitudes as written, so on a global grid
+    (where it does not shift them) a cloud across 180 degrees gets a kernel
+    many times too wide.
+
+    On a projected grid the longitudes are shifted to within 180 degrees of
+    the release longitude (the particles' position at their first step).
     """
+    if is_longlat(crs):
+        p = p.assign(lon=_unwrap_around_cloud(p))
+    else:
+        release_lon = float(
+            p["lon"].to_numpy()[np.argmin(np.abs(p["rtime"].to_numpy()))]
+        )
+        p = p.assign(lon=_wrap_longitudes(p["lon"], west=release_lon - 180))
     kernel_df = (
         p.groupby("rtime")
         .agg(
             long_var=("lon", "var"),
             lati_var=("lat", "var"),
             lat_mean=("lat", "mean"),
+            lon_mean=("lon", "mean"),
         )
         .reset_index()
         .dropna()
@@ -264,11 +306,66 @@ def _compute_kernel_bandwidths(
     kernel_df["varsum"] = kernel_df["long_var"] + kernel_df["lati_var"]
     di = kernel_df["varsum"].to_numpy() ** 0.25
     ti = (np.abs(kernel_df["rtime"].to_numpy()) / 1440) ** 0.5
-    grid_conv = (
-        np.cos(kernel_df["lat_mean"].to_numpy() * np.pi / 180) if is_longlat else 1.0
-    )
+    grid_conv = np.cos(kernel_df["lat_mean"].to_numpy() * np.pi / 180)
     w = smooth_factor * 0.06 * di * ti / grid_conv
+    if not is_longlat(crs):
+        w = w * _grid_units_per_degree_longitude(
+            crs,
+            lon=kernel_df["lon_mean"].to_numpy(),
+            lat=kernel_df["lat_mean"].to_numpy(),
+        )
     return kernel_df, w
+
+
+def _unwrap_around_cloud(p: pd.DataFrame) -> pd.Series:
+    """
+    Return the longitudes of *p*, each ``rtime``'s within 180 degrees of that step's circular mean.
+
+    The circular mean is the direction of the mean of the unit vectors, so
+    it is the cloud's center wherever the cloud is, and the window it opens
+    has its seam on the far side of the globe from the cloud. The center is
+    expressed in the frame the longitudes are written in (-180 to 180, or
+    0 to 360 on a grid that crosses 180 degrees), so a longitude is shifted,
+    by whole turns (``_wrap_longitudes``), only when it lies more than 180
+    degrees from the center. The others are returned as they are, to the
+    last bit.
+    """
+    lon = p["lon"]
+    rad = np.radians(lon.to_numpy(dtype=float))
+    steps = p["rtime"]
+    mean_sin = pd.Series(np.sin(rad), index=p.index).groupby(steps).transform("mean")
+    mean_cos = pd.Series(np.cos(rad), index=p.index).groupby(steps).transform("mean")
+    circular = np.degrees(np.arctan2(mean_sin, mean_cos))
+    # The same center, a whole number of turns away, nearest the plain mean.
+    plain = lon.groupby(steps).transform("mean")
+    center = plain + ((circular - plain + 180.0) % 360.0 - 180.0)
+    west = center - 180.0
+    outside = (lon < west) | (lon >= west + 360.0)
+    return lon.where(~outside, _wrap_longitudes(lon, west=west))
+
+
+def _grid_units_per_degree_longitude(
+    crs: str, *, lon: np.ndarray, lat: np.ndarray
+) -> np.ndarray:
+    """
+    Return the length of one degree of longitude at each ``(lon, lat)``, in *crs* units.
+
+    It is measured with the projection itself: the distance between the
+    points a hundredth of a degree east and west, divided by the
+    difference in degrees. So it includes the projection's scale at that
+    point and its units (meters, feet, kilometers), and does not depend on
+    how the projection's axes are turned.
+    """
+    from pyproj import Transformer
+
+    tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
+    step = 0.01
+    x_west, y_west = tr.transform(lon - step, lat)
+    x_east, y_east = tr.transform(lon + step, lat)
+    return np.hypot(
+        np.asarray(x_east) - np.asarray(x_west),
+        np.asarray(y_east) - np.asarray(y_west),
+    ) / (2 * step)
 
 
 def _padded_axes(
@@ -409,6 +506,28 @@ def _stamp_kernel(
         ).reshape(r1 - r0, width)
 
 
+def _fold_padding_around_the_globe(
+    foot_arr: np.ndarray, *, pad: int, n_lon: int
+) -> np.ndarray:
+    """
+    Add the padding of a padded array to the cells it lies beside, around the globe.
+
+    *foot_arr* has *pad* cells of padding on each side of its first axis and
+    *n_lon* cells between them. On a grid that goes all the way around, the
+    cells past the east edge are the first cells again, and the cells past
+    the west edge are the last, so the smoothing that spilled into the
+    padding is returned to them instead of being dropped.
+    """
+    folded = np.zeros((n_lon, *foot_arr.shape[1:]), dtype=foot_arr.dtype)
+    start = 0
+    while start < foot_arr.shape[0]:
+        cell = (start - pad) % n_lon
+        stop = min(start + n_lon - cell, foot_arr.shape[0])
+        folded[cell : cell + stop - start] += foot_arr[start:stop]
+        start = stop
+    return folded
+
+
 def _accumulate_smoothed_footprint(
     p: pd.DataFrame,
     *,
@@ -490,6 +609,20 @@ def calc_footprint(
     the number of particles and binned by hour, unless *time_integrate* is
     set.
 
+    A grid that goes all the way around the earth (``xmin=-180``,
+    ``xmax=180``, with cells that fit 360 degrees) is treated as a circle:
+    a particle cloud across 180 degrees is measured as one cloud, and
+    smoothing that spills past the east edge returns at the west edge, and
+    the other way. STILT-R measures the cloud's longitudes as written, from
+    -180 to 180, and drops what is smoothed past the edge, so on such a grid
+    it smooths a cloud near 180 degrees with a far too wide kernel and loses
+    part of the footprint.
+
+    On a projected grid the kernel's width is worked out in degrees, as on
+    a longitude/latitude grid, and converted to the grid's units, so the
+    footprint is smoothed as much. STILT-R applies its formula to the
+    projected coordinates and barely smooths a footprint there.
+
     Parameters
     ----------
     particles : pandas.DataFrame
@@ -566,7 +699,6 @@ def calc_footprint(
     crs = grid.crs
     xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
-    is_longlat = grid.is_longlat
     smooth_factor = config.smooth_factor
     time_integrate = config.time_integrate
 
@@ -580,7 +712,7 @@ def calc_footprint(
     time_sign = int(np.sign(p["age"].median()))
 
     wrapped_longitude = False
-    if is_longlat:
+    if grid.is_longlat:
         p, xmin, xmax, wrapped_longitude = _wrap_antimeridian_longitudes(
             p, xmin=xmin, xmax=xmax
         )
@@ -592,7 +724,11 @@ def calc_footprint(
     min_abs_time = p["age"].abs().groupby(p["particle"], sort=False).transform("min")
     p["rtime"] = p["age"] - time_sign * min_abs_time
 
-    if not is_longlat:
+    # The kernel width comes from the spread in degrees, before projecting,
+    # and is returned in the grid's units.
+    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=smooth_factor, crs=crs)
+
+    if not grid.is_longlat:
         p, xmin, xmax, ymin, ymax = _project_particles_to_crs(
             p,
             crs=crs,
@@ -608,10 +744,13 @@ def calc_footprint(
     n_lon = len(glong)
     n_lat = len(glati)
     rs = (xres, yres)
-
-    kernel_df, w = _compute_kernel_bandwidths(
-        p, smooth_factor=smooth_factor, is_longlat=is_longlat
+    # Cells that go all the way around: the east edge meets the west edge.
+    around_the_globe = (
+        grid.is_longlat
+        and _covers_the_globe(grid.xmin, grid.xmax)
+        and bool(np.isclose(n_lon * xres, 360.0))
     )
+
     max_kernel = (
         _make_gauss_kernel(rs, float(np.max(w))) if len(w) > 0 else np.array([[1.0]])
     )
@@ -655,8 +794,15 @@ def calc_footprint(
         rs=rs,
     )
 
-    # Trim the padding and normalize by the particle count.
-    foot_arr = foot_arr[xbuf : xbuf + n_lon, ybuf : ybuf + n_lat, :] / n_particles
+    # Trim the padding and normalize by the particle count. A grid whose cells
+    # close the circle is periodic: what was smoothed past an edge is added to
+    # the cells at the other edge.
+    foot_arr = foot_arr[:, ybuf : ybuf + n_lat, :]
+    if around_the_globe:
+        foot_arr = _fold_padding_around_the_globe(foot_arr, pad=xbuf, n_lon=n_lon)
+    else:
+        foot_arr = foot_arr[xbuf : xbuf + n_lon]
+    foot_arr = foot_arr / n_particles
 
     values = foot_arr.transpose(2, 1, 0)  # (time, y, x)
     # Rounded as Grid.axes rounds them, so a footprint read back from its

@@ -2,10 +2,15 @@ Coming From STILT-R
 ===================
 
 PYSTILT does the same science as STILT-R, and its footprints match STILT-R's
-cell by cell. Two cases differ on purpose, both in the near-field
+cell by cell. A few cases differ on purpose. Three are in the near-field
 correction (``hnf_plume``): forward runs, where PYSTILT fixes how the plume
-grows, and a ``veght`` above 1, which PYSTILT reads as meters above ground,
-as HYSPLIT does (see :ref:`stilt-r-parity`).
+grows, a ``veght`` above 1, which PYSTILT reads as meters above ground, as
+HYSPLIT does, and a receptor above sea level, whose plume PYSTILT grows from
+the ground. The fourth is the smoothing on a projected grid, which PYSTILT
+makes as wide as on a longitude/latitude grid and STILT-R makes a few meters
+wide. The fifth is a particle cloud near 180° on a grid that goes all the
+way around the earth, which PYSTILT smooths as one cloud and STILT-R smooths
+far too widely (see :ref:`stilt-r-parity`).
 
 What changes is where the settings live. Instead of editing variables in
 ``run_stilt.r``, you write them in ``config.yaml`` or pass them to
