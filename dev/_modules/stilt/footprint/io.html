@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=4ae6b310"></script>
+    <script src="../../../_static/documentation_options.js?v=49d4ef66"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev22+gacc3e438d" />
+  <meta name="docsearch:version" content="0.1.0a27.dev23+gc8af49b04" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -951,8 +951,9 @@
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If the footprint is not on the grid, or a time layer is not a whole</span>
-<span class="sd">        number of hours from the receptor time.</span>
+<span class="sd">        If the footprint is not on the grid, the grid has more cells along</span>
+<span class="sd">        an axis than ``x`` and ``y`` can hold (32,767), or a time layer is</span>
+<span class="sd">        not a whole number of hours from the receptor time.</span>
 <span class="sd">    """</span>
     <span class="n">settings</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">config</span> <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">config</span>
     <span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -960,6 +961,13 @@
     <span class="n">receptor</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">receptor</span>
     <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span> <span class="o">=</span> <span class="n">horizontal_dims</span><span class="p">(</span><span class="n">foot</span><span class="p">)</span>
     <span class="n">x_axis</span><span class="p">,</span> <span class="n">y_axis</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">axes</span>
+    <span class="n">most</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_axis</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_axis</span><span class="p">))</span> <span class="o">&gt;</span> <span class="n">most</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The footprint grid has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">x_axis</span><span class="p">)</span><span class="si">}</span><span class="s2"> by </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">y_axis</span><span class="p">)</span><span class="si">}</span><span class="s2"> cells, and a "</span>
+            <span class="sa">f</span><span class="s2">"stored footprint holds at most </span><span class="si">{</span><span class="n">most</span><span class="si">}</span><span class="s2"> along each axis. Use a "</span>
+            <span class="s2">"coarser or smaller grid."</span>
+        <span class="p">)</span>
     <span class="n">xi</span> <span class="o">=</span> <span class="n">_cell_indices</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">foot</span><span class="p">[</span><span class="n">x_dim</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">x_axis</span><span class="p">,</span> <span class="n">x_dim</span><span class="p">)</span>
     <span class="n">yi</span> <span class="o">=</span> <span class="n">_cell_indices</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">foot</span><span class="p">[</span><span class="n">y_dim</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">y_axis</span><span class="p">,</span> <span class="n">y_dim</span><span class="p">)</span>
 
