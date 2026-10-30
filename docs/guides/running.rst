@@ -72,8 +72,18 @@ A Python script that calls ``project.run()`` with ``cpus`` above 1 needs its
 code under ``if __name__ == "__main__":``. Python 3.14, macOS, and Windows
 start each worker by importing the script again, so anything at the top of the
 script runs again in every worker. ``Project.init`` there stops with a
-``FileExistsError`` because ``config.yaml`` exists. ``stilt run --cpus 4``
-needs no guard.
+``FileExistsError`` because ``config.yaml`` exists. Put the run under the guard:
+
+.. code-block:: python
+
+   import stilt
+
+   if __name__ == "__main__":
+       project = stilt.Project("./my_project")
+       project.run()
+
+Without the guard, PYSTILT stops with "A worker process could not start" and
+shows this fix. ``stilt run --cpus 4`` and a ``cpus`` of 1 need no guard.
 
 Save now, run later
 -------------------

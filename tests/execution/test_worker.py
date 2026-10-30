@@ -822,6 +822,7 @@ def fake_pool(monkeypatch):
     """Patch the pool and keep the worker's module-level pool state isolated."""
     _FakePool.instances = []
     monkeypatch.setattr(worker.multiprocessing, "Pool", _FakePool)
+    monkeypatch.setattr(worker, "_check_workers_can_start", lambda cpus: None)
     # The initializer installs a SIGTERM handler; keep it out of the test process.
     monkeypatch.setattr(worker.signal, "signal", lambda *a, **k: None)
     monkeypatch.setattr(worker, "_POOL_PROJECT", None)

@@ -582,6 +582,43 @@ def _pool_run(item: tuple[int, str]) -> tuple[int, list[str] | None]:
         return idx, None
 
 
+def _check_workers_can_start(cpus: int) -> None:
+    """
+    Start one worker that does nothing, and stop with a clear message when it cannot.
+
+    Python 3.14 on Linux, and macOS and Windows, start a worker by running
+    the calling script again, as ``__mp_main__``. A script that runs the
+    project at the top level, without ``if __name__ == "__main__":``, fails
+    in every worker, and a pool starts a new worker for each one that
+    died, for ever. Starting one worker first turns that into an error that
+    shows the fix. ``fork`` runs no script again, so it skips the check.
+    """
+    method = multiprocessing.get_start_method()
+    if method == "fork":
+        return
+    probe = multiprocessing.Process(target=int, daemon=True)  # int() does nothing
+    failure: Exception | None = None
+    try:
+        probe.start()
+        probe.join()
+    except Exception as error:
+        # forkserver: its server process died importing the script, and
+        # start() raises a different error in each Python version.
+        failure = error
+    if failure is None and probe.exitcode == 0:
+        return
+    raise RuntimeError(
+        f"A worker process could not start (cpus={cpus}). With the {method!r} "
+        "start method, each worker starts by running your script again, and "
+        "that failed; the traceback above shows where. A script that runs a "
+        "project needs its code under a guard:\n\n"
+        '    if __name__ == "__main__":\n'
+        "        project = stilt.Project(...)\n"
+        "        project.run()\n\n"
+        "`stilt run --cpus N` and a `cpus` of 1 need no guard."
+    ) from failure
+
+
 def run_receptors(
     project: Project,
     receptor_ids: list[str],
@@ -653,6 +690,7 @@ def run_receptors(
                 _log_progress(receptor_id, problems, i, total)
         return
 
+    _check_workers_can_start(execution.cpus)
     pool = multiprocessing.Pool(
         execution.cpus,
         initializer=_init_pool_worker,
