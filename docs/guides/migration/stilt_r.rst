@@ -8,7 +8,9 @@ grows, a ``veght`` above 1, which PYSTILT reads as meters above ground, as
 HYSPLIT does, and a receptor above sea level, whose plume PYSTILT grows from
 the ground. The fourth is the smoothing on a projected grid, which PYSTILT
 makes as wide as on a longitude/latitude grid and STILT-R makes a few meters
-wide (see :ref:`stilt-r-parity`).
+wide. The fifth is a particle cloud near 180° on a grid that goes all the
+way around the earth, which PYSTILT smooths as one cloud and STILT-R smooths
+far too widely (see :ref:`stilt-r-parity`).
 
 What changes is where the settings live. Instead of editing variables in
 ``run_stilt.r``, you write them in ``config.yaml`` or pass them to

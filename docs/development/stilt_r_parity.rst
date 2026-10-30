@@ -107,6 +107,27 @@ What does not match
   The fidelity suite's UTM scenario compares unsmoothed footprints, and
   ``test_projected_smoothing_intentionally_differs_from_r`` guards the
   difference. Longitude/latitude grids are not affected.
+- **Smoothing a cloud near 180° on a global grid.** On a grid that goes
+  all the way around (``xmin=-180``, ``xmax=180``), STILT-R leaves the
+  particles' longitudes as HYSPLIT writes them, from -180 to 180. A cloud
+  on both sides of 180° then has a variance of thousands of square degrees
+  and gets a kernel many times too wide, and what the kernel spreads past
+  ±180° is lost. For a cloud of 300 particles (standard deviation 0.3°, a
+  day after release) on a 0.25° grid, a cloud at 175° covers 36 cells and
+  keeps its whole footprint in both programs; at 179.9° STILT-R covers 1,242
+  cells and loses 42 % of the footprint, and PYSTILT covers 34 cells and
+  keeps all of it. PYSTILT takes the longitudes within 180° of the release
+  longitude before it measures the spread, so the cloud is measured as one,
+  and adds the smoothing that passes one edge of such a grid to the cells at
+  the other edge. The footprint of a cloud near 180° is then the footprint
+  of the same cloud anywhere else, shifted. The longitudes are taken within
+  180° of the release on every longitude/latitude grid, which also fixes a
+  cloud around 0° on a wide grid that crosses 180°, where STILT-R's shift
+  to 0° to 360° cuts the cloud in two. A grid whose cells do not fit 360°
+  (0.7° cells leave 0.2°) has an edge, and smoothing is cut there as
+  before. Other footprints are not affected.
+  ``test_global_grid_across_180_intentionally_differs_from_r`` guards the
+  difference.
 - **Forward runs with the HNF correction.** STILT-R accumulates the plume
   from the far end of a forward trajectory back toward the release point,
   so its plume is widest at release. PYSTILT accumulates outward from the

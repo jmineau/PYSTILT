@@ -1379,3 +1379,48 @@ def test_global_grid_matches_r(rscript, r_stilt_dir, tmp_path):
     r_ds = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, p, grid=grid)
 
     _assert_footprint_close(py_ds, r_ds, label="global_grid")
+
+
+def test_global_grid_across_180_intentionally_differs_from_r(
+    rscript, r_stilt_dir, tmp_path
+):
+    """
+    On a global grid a cloud across 180° is smoothed differently from STILT-R, on purpose.
+
+    STILT-R takes the variance of the longitudes as written (-180 to 180), so a
+    cloud at 179.9° gets a kernel many times too wide, and what it spreads past
+    the grid's edges is lost. PYSTILT measures the cloud as one and wraps the
+    smoothing across the seam (#311). The same cloud at 175° does not meet the
+    seam, and both agree there. Guarding the difference keeps someone from
+    "restoring parity" by measuring the longitudes as written again.
+    """
+    grid = Grid(xmin=-180.0, xmax=180.0, ymin=48.0, ymax=52.0, xres=0.05, yres=0.05)
+    rng = np.random.default_rng(7)
+    n = 150
+    dlon, dlat = rng.normal(0.0, 0.3, n), rng.normal(0.0, 0.3, n)
+
+    def cloud(lon0: float) -> pd.DataFrame:
+        """Each particle: two release rows (no influence), then a day later its spread position."""
+        late = lon0 + dlon
+        lon = ((np.r_[np.full(2 * n, lon0), late] + 180.0) % 360.0) - 180.0
+        p = _particles(
+            n=3 * n,
+            times=[-1.0] * n + [-2.0] * n + [-1441.0] * n,
+            long=lon.tolist(),
+            lati=(50.0 + np.r_[np.zeros(2 * n), dlat]).tolist(),
+            foot=[0.0] * (2 * n) + [1e-3] * n,
+        )
+        p["indx"] = np.tile(np.arange(1.0, n + 1), 3)
+        return p
+
+    kw = {"grid": grid, "time_integrate": True}
+    py_beside = _py_footprint(tmp_path / "py175", cloud(175.0), **kw)
+    r_beside = _r_footprint(tmp_path / "r175", rscript, r_stilt_dir, cloud(175.0), **kw)
+    _assert_footprint_close(py_beside, r_beside, label="global_175")
+
+    py = _py_footprint(tmp_path / "py", cloud(179.9), **kw)
+    r = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, cloud(179.9), **kw)
+    py_foot, r_foot = py.foot.fillna(0).to_numpy(), r.foot.fillna(0).to_numpy()
+    np.testing.assert_allclose(py_foot.sum(), 1e-3, rtol=1e-9)
+    assert r_foot.sum() < 0.9 * py_foot.sum(), "STILT-R no longer loses the footprint."
+    assert np.count_nonzero(r_foot) > 3 * np.count_nonzero(py_foot)
