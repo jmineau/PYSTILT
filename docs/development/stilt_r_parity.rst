@@ -97,10 +97,11 @@ What does not match
   ``yres`` larger than ``xres``, it reads memory past the end of the kernel.
   The footprint then loses mass (15 % in one case), holds values near
   ``1e300``, or R crashes
-  (`uataq/stilt#116 <https://github.com/uataq/stilt/issues/116>`_).
+  (`uataq/stilt#116 <https://github.com/uataq/stilt/issues/116>`_; the fix is
+  `uataq/stilt#148 <https://github.com/uataq/stilt/pull/148>`_).
   PYSTILT adds each kernel along the axis each cell count belongs to, so
   smoothing keeps the footprint total. Its footprint equals STILT-R's with
-  ``permute.f90`` reading the kernel that way, to within ``1e-16`` of the
+  ``permute.f90`` reading the kernel that way, to within ``2e-15`` of the
   peak. On square cells the two agree.
 - **Smoothing on a projected grid.** The kernel width,
   ``0.06 * (var(x) + var(y))**0.25 * sqrt(|rtime| / 1440)``, is made for
