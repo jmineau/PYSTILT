@@ -295,8 +295,10 @@ now point at a folder that does not exist yet. The next run fills it, for
 every receptor, and the old folder stays as it was.
 
 ``stilt status`` lists every settings folder in the output directory, how
-many result files it holds, which variants use it, and how a folder no
-variant uses differs from the variant of its name. Here ``numpar`` went
+many result files it holds, which variants use it, and how a folder this
+project does not use differs from the variant of its name. The folders this
+project uses come first; the others, which may be another project's
+results in a shared output directory, are listed after them. Here ``numpar`` went
 from 1000 to 2000, and ``hrrr-smooth`` differs from ``hrrr`` only in its
 footprint, so the two share particles:
 
@@ -307,10 +309,12 @@ footprint, so the two share particles:
      hrrr: total=4380  complete=4380  failed=0  interrupted=0  pending=0
      hrrr-smooth: total=4380  complete=4380  failed=0  interrupted=0  pending=0
    Output: /data/output
-     particles   settings=hrrr-5d01e7         4,380 files  hrrr, hrrr-smooth
-     particles   settings=hrrr-a3f9c2         4,380 files  (no variant)  numpar: 1000 (config: 2000)
-     footprints  settings=hrrr-93278c         4,380 files  hrrr
-     footprints  settings=hrrr-smooth-1b7e40  4,380 files  hrrr-smooth
+     Used by this project:
+       particles   settings=hrrr-5d01e7         4,380 files  hrrr, hrrr-smooth
+       footprints  settings=hrrr-93278c         4,380 files  hrrr
+       footprints  settings=hrrr-smooth-1b7e40  4,380 files  hrrr-smooth
+     Not used by this project (changed settings, a dropped variant, or another project sharing this output; PYSTILT never deletes one):
+       particles   settings=hrrr-a3f9c2         4,380 files  numpar: 1000 (config: 2000)
 
 The counts at the top are simulations; a folder's count is files, and one
 particles folder can serve several variants. In Python the same table is

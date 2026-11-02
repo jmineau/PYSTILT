@@ -620,10 +620,10 @@ class Project:
 
         A settings folder holds the results of one set of settings, named
         after the variant that first made them and a short hash of the
-        settings (``settings=hrrr-b2399e``). A folder no variant uses comes
-        from changed settings, a dropped variant, or another project sharing
-        the output directory; PYSTILT never deletes one. ``stilt status``
-        prints this table.
+        settings (``settings=hrrr-b2399e``). A folder that no variant of this
+        project uses comes from changed settings, a dropped variant, or
+        another project sharing the output directory; PYSTILT never deletes
+        one. ``stilt status`` prints this table.
 
         Returns
         -------

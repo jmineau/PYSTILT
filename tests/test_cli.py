@@ -782,7 +782,10 @@ def test_status_lists_output_folders_no_variant_uses(tmp_path):
     result = runner.invoke(app, ["status", str(tmp_path)])
 
     assert result.exit_code == 0, result.output
-    assert "(no variant)" in result.output
+    assert "Not used by this project" in result.output
+    assert result.output.index("Used by this project") < result.output.index(
+        "Not used by this project"
+    )
     assert "settings=old-" in result.output
     assert "never deletes" in result.output
 
@@ -914,7 +917,8 @@ def test_status_lists_folders_and_what_differs(tmp_path):
 
     assert result.exit_code == 0, result.output
     assert f"Output: {tmp_path / 'out'}" in result.output
-    assert "1 file  (no variant)" in result.output
+    assert "Not used by this project" in result.output
+    assert "1 file  numpar: 500 (config: 1000)" in result.output
     assert "numpar: 500 (config: 1000)" in result.output
     assert "PYSTILT never deletes one" in result.output
     table = old.folders()
