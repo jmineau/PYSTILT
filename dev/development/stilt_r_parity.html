@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=1330499c"></script>
+    <script src="../_static/documentation_options.js?v=003afee1"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev25+g6b9e29301" />
+  <meta name="docsearch:version" content="0.1.0a27.dev26+g1050b6fe7" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -550,7 +550,8 @@ within these tolerances:</p>
 <li><p>6 h and 24 h backward runs, and a 6 h forward run</p></li>
 <li><p>the hyper-near-field (HNF) plume correction on (12 scenarios) and off</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> of 0, 0.5, 1, and 2</p></li>
-<li><p>0.01° and 0.05° longitude/latitude grids and a UTM grid</p></li>
+<li><p>0.01° and 0.05° longitude/latitude grids and a UTM grid, all with square
+cells</p></li>
 <li><p>a 2° box, a receptor in the domain’s corner, a receptor at the edge of
 the met grid, and a small 0.1° domain that particles leave early</p></li>
 <li><p>receptor heights above ground, above sea level (<code class="docutils literal notranslate"><span class="pre">kmsl=1</span></code>), and at 0.5 m</p></li>
@@ -575,6 +576,19 @@ no meteorology or HYSPLIT, so they run anywhere R is installed:</p>
 fill value of <code class="docutils literal notranslate"><span class="pre">-1</span></code>. PYSTILT writes CF-1.8 NetCDF with dimensions
 <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>. Read PYSTILT files as ordinary CF NetCDF. Tools that
 expect STILT-R’s layout will not read them.</p></li>
+<li><p><strong>Smoothing on cells that are not square.</strong> When <code class="docutils literal notranslate"><span class="pre">xres</span></code> and <code class="docutils literal notranslate"><span class="pre">yres</span></code>
+differ, a smoothing kernel wider than one cell has a different number of
+cells along longitude and along latitude. STILT-R’s <code class="docutils literal notranslate"><span class="pre">permute.f90</span></code> reads
+the kernel as if the two numbers were equal. With <code class="docutils literal notranslate"><span class="pre">xres</span></code> larger than
+<code class="docutils literal notranslate"><span class="pre">yres</span></code>, its footprint total comes out 5 to 13 % high on 24 h runs. With
+<code class="docutils literal notranslate"><span class="pre">yres</span></code> larger than <code class="docutils literal notranslate"><span class="pre">xres</span></code>, it reads memory past the end of the kernel.
+The footprint then loses mass (15 % in one case), holds values near
+<code class="docutils literal notranslate"><span class="pre">1e300</span></code>, or R crashes
+(<a class="reference external" href="https://github.com/uataq/stilt/issues/116">uataq/stilt#116</a>).
+PYSTILT adds each kernel along the axis each cell count belongs to, so
+smoothing keeps the footprint total. Its footprint equals STILT-R’s with
+<code class="docutils literal notranslate"><span class="pre">permute.f90</span></code> reading the kernel that way, to within <code class="docutils literal notranslate"><span class="pre">1e-16</span></code> of the
+peak. On square cells the two agree.</p></li>
 <li><p><strong>Forward runs with the HNF correction.</strong> STILT-R accumulates the plume
 from the far end of a forward trajectory back toward the release point,
 so its plume is widest at release. PYSTILT accumulates outward from the
