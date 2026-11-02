@@ -295,7 +295,7 @@ So a setting added in a later version, with a default, still matches folders
 written before it existed; a default whose meaning changed does not, which
 is right, because the particles would differ.
 
-``stilt status`` lists the folders no variant of the current config uses.
+``stilt status`` lists the folders that no variant of the project uses.
 PYSTILT never deletes a folder, because another project may share the
 directory; deletion is by hand.
 

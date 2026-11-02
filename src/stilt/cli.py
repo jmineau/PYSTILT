@@ -457,8 +457,8 @@ def status(
 
     The counts are per variant when there are several. Each settings folder
     holds the results of one set of settings; the list says how many result
-    files it holds, which variants use it, and, for a folder no variant
-    uses, how its settings differ from the variant of its name. Exits with
+    files it holds, which variants use it, and, for a folder this project
+    does not use, how its settings differ from the variant of its name. Exits with
     2 when the command line is wrong or a met cannot be read.
     """
     opened = _open(project, output=output)
@@ -581,7 +581,13 @@ def _print_check(project: Project, problems: pd.DataFrame) -> None:
 
 
 def _print_folders(project: Project) -> None:
-    """Print the output directory's settings folders, which variants use each, and how the others differ."""
+    """
+    Print the output directory's settings folders, this project's first.
+
+    The folders no variant of this project uses (changed settings, a
+    dropped variant, or another project sharing the output directory) follow
+    under their own heading, with how their settings differ.
+    """
     table = project.folders()
     typer.echo(f"Output: {project.output.directory}")
     if table.empty:
@@ -591,18 +597,34 @@ def _print_folders(project: Project) -> None:
     name_width = max(len(f) for f in table["folder"]) + len("settings=")
     counts = [f"{n:,} file" + ("" if n == 1 else "s") for n in table["files"]]
     count_width = max(len(c) for c in counts)
-    for row, count in zip(table.to_dict("records"), counts, strict=True):
-        used = row["variant"] or "(no variant)"
-        line = (
-            f"  {row['kind']:<{kind_width}}  {'settings=' + row['folder']:<{name_width}}"
-            f"  {count:>{count_width}}  {used}"
-        )
-        typer.echo(f"{line}  {row['differs']}" if row["differs"] else line)
-    if (table["variant"] == "").any():
-        typer.echo(
-            "  A folder no variant uses is from changed settings, a dropped "
-            "variant, or another project. PYSTILT never deletes one."
-        )
+
+    def lines(rows: pd.DataFrame, indent: str) -> None:
+        for row in rows.to_dict("records"):
+            count = counts[row["_i"]]
+            line = (
+                f"{indent}{row['kind']:<{kind_width}}  "
+                f"{'settings=' + row['folder']:<{name_width}}  {count:>{count_width}}"
+            )
+            line = f"{line}  {row['variant']}" if row["variant"] else line
+            typer.echo(f"{line}  {row['differs']}" if row["differs"] else line)
+
+    table = table.assign(_i=range(len(table)))
+    used = table[table["variant"] != ""]
+    others = table[table["variant"] == ""]
+    if others.empty:
+        lines(used, "  ")
+        return
+    typer.echo(
+        "  Used by this project:"
+        if not used.empty
+        else "  Used by this project: none yet"
+    )
+    lines(used, "    ")
+    typer.echo(
+        "  Not used by this project (changed settings, a dropped variant, or "
+        "another project sharing this output; PYSTILT never deletes one):"
+    )
+    lines(others, "    ")
 
 
 def _print_run_start(
