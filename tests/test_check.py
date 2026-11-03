@@ -400,6 +400,54 @@ def test_a_receptor_on_the_edge_of_the_grid_is_inside_it(tmp_path):
     assert _project(tmp_path, [edge]).check().empty
 
 
+def _grid_box(xmin, xmax, ymin=40.0, ymax=41.0):
+    return {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax}
+
+
+@pytest.mark.parametrize(
+    ("xmin", "xmax", "longitudes", "flagged"),
+    [
+        # A grid across the dateline or past 180 holds the longitudes in it.
+        (-125, -100, [-111.9, -90, -130], [-90, -130]),
+        (170, -170, [175, -175, 0], [0]),
+        (170, 190, [175, -175, 0], [0]),
+        (-190, -170, [-175, 175, 0], [0]),
+        # A receptor on an edge is inside, however the edge is written.
+        (170, -170, [170, -170], []),
+        (170, 190, [170, -170], []),
+        (-190, -170, [-170, 170], []),
+        # Just past an edge is outside.
+        (170, -170, [169.99, -169.99], [169.99, -169.99]),
+        # A grid around the earth holds every longitude.
+        (-180, 180, [-180, 0, 180, 90], []),
+        (0, 360, [-180, 0, 180, 179, -1], []),
+    ],
+)
+def test_the_grid_counts_longitudes_modulo_360(
+    tmp_path, xmin, xmax, longitudes, flagged
+):
+    """A receptor is in the grid when its longitude, east of the grid's west edge, is within its width."""
+    grid = {**_grid_box(xmin, xmax), "xres": 0.5, "yres": 0.5}
+    receptors = [_receptor(12, longitude=lon, latitude=40.5) for lon in longitudes]
+    project = _project(tmp_path, receptors, grid=grid)
+
+    table = _found(project.check(), "grid")
+
+    ids = {r.id: lon for r, lon in zip(receptors, longitudes, strict=True)}
+    assert [ids[r] for r in table["receptor"]] == flagged
+
+
+def test_a_receptor_outside_a_grid_across_the_dateline_in_latitude_is_listed(tmp_path):
+    grid = {**_grid_box(170, -170), "xres": 0.5, "yres": 0.5}
+    north = _receptor(12, longitude=175, latitude=42.0)
+    project = _project(tmp_path, [north], grid=grid)
+
+    table = project.check()
+
+    assert list(table["receptor"]) == [north.id]
+    assert "170 to -170 longitude, 40 to 41 latitude" in table["message"].iloc[0]
+
+
 def test_a_column_or_multipoint_receptor_with_a_point_outside_is_listed_once(tmp_path):
     column = ColumnReceptor(
         time=NOON, longitude=-110.0, latitude=40.5, bottom=0.0, top=3000.0
