@@ -1,11 +1,14 @@
 """Tests for the worker-side execution functions in ``stilt.execution.worker``."""
 
 import datetime as dt
+import errno
 from typing import ClassVar
 
 import pandas as pd
 import pytest
+from typer.testing import CliRunner
 
+from stilt.cli import _exit_code, app
 from stilt.config import ProjectConfig, Variant
 from stilt.exceptions import MeteorologyError, SimulationError
 from stilt.execution import worker
@@ -627,6 +630,283 @@ def test_a_success_clears_the_failure_it_replaces(tmp_path, receptor, monkeypatc
 
     assert sim.is_complete and sim.failure is None
     assert project.output.failure("particles", sim.variant, sim.receptor.id) is None
+
+
+# A connection or I/O error that a retry may get past is not a failure of the
+# simulation: no record is written, so it stays unfinished and `stilt run`
+# exits with 3 (stilt._exit_codes.error_exit_code sorts the errors).
+
+
+def _client_error(status, code):
+    """Return what botocore raises for a response with this status and error code."""
+    error = type("ClientError", (Exception,), {})("the service answered")
+    error.response = {
+        "ResponseMetadata": {"HTTPStatusCode": status},
+        "Error": {"Code": code},
+    }
+    return error
+
+
+def _raised_from(outer, inner):
+    """Return *outer* with *inner* as its ``__cause__``, as ``raise outer from inner`` does."""
+    outer.__cause__ = inner
+    return outer
+
+
+def _s3fs_error(error_errno, status, code):
+    """Return what s3fs raises for a ClientError: an OSError that keeps it as its cause."""
+    return _raised_from(
+        OSError(error_errno, "the store answered"), _client_error(status, code)
+    )
+
+
+def _states(project):
+    return dict(zip(project.status().receptor, project.status().state, strict=True))
+
+
+def _fails_with(error):
+    def fail(*args, **kwargs):
+        raise error
+
+    return fail
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        ConnectionError("the bucket stopped answering"),
+        TimeoutError("read timed out"),
+        OSError(errno.EIO, "Input/output error"),
+        # s3fs turns a busy answer into an OSError and keeps the ClientError.
+        _s3fs_error(errno.EBUSY, 503, "SlowDown"),
+    ],
+)
+def test_a_connection_error_in_a_simulation_leaves_no_failure_record(
+    tmp_path, receptor, monkeypatch, error
+):
+    project = _model(tmp_path, [receptor])
+    sim = project.simulation(str(receptor.id), "hrrr")
+    monkeypatch.setattr(worker, "run_particles", _fails_with(error))
+
+    problems = _run_receptor(project, receptor)
+
+    assert len(problems) == 1
+    assert problems[0].startswith("hrrr did not finish during particles")
+    assert "a retry may finish it" in problems[0]
+    assert sim.failure is None
+    assert project.output.failure("particles", sim.variant, sim.receptor.id) is None
+    assert _states(project) == {sim.receptor.id: "pending"}
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        PermissionError("denied"),  # AccessDenied
+        FileNotFoundError("no such key"),  # NoSuchKey, NoSuchBucket
+        OSError(errno.ENOSPC, "No space left on device"),
+        OSError(errno.EINVAL, "s3fs's PermanentRedirect"),
+        RuntimeError("a bug"),
+        ValueError("bad grid"),
+        # An answer the service gave, through a library that wraps it in a path error.
+        _raised_from(FileNotFoundError("gone"), _client_error(404, "NoSuchKey")),
+        _s3fs_error(errno.EINVAL, 400, "InvalidBucketName"),
+    ],
+)
+def test_an_error_that_a_retry_would_repeat_is_still_a_recorded_failure(
+    tmp_path, receptor, monkeypatch, error
+):
+    project = _model(tmp_path, [receptor])
+    sim = project.simulation(str(receptor.id), "hrrr")
+    monkeypatch.setattr(worker, "run_particles", _fails_with(error))
+
+    problems = _run_receptor(project, receptor)
+
+    assert problems[0].startswith("hrrr failed during particles")
+    assert sim.failure is not None and sim.failure["step"] == "particles"
+    assert _states(project) == {sim.receptor.id: "failed"}
+
+
+def test_a_simulation_error_is_a_failure_whatever_caused_it(
+    tmp_path, receptor, monkeypatch
+):
+    project = _model(tmp_path, [receptor])
+    sim = project.simulation(str(receptor.id), "hrrr")
+
+    def fail(sim, **kwargs):
+        raise SimulationError("HYSPLIT failed.", reason="FORTRAN_RUNTIME_ERROR") from (
+            ConnectionResetError("reset")
+        )
+
+    monkeypatch.setattr(worker, "run_particles", fail)
+    _run_receptor(project, receptor)
+
+    assert sim.failure is not None and sim.failure["reason"] == "FORTRAN_RUNTIME_ERROR"
+    assert _states(project) == {sim.receptor.id: "failed"}
+
+
+def test_a_connection_error_while_the_particles_are_written_is_interrupted(
+    tmp_path, receptor, monkeypatch
+):
+    """The run had started and its log says so; there is no particle file and no record."""
+    project = _model(tmp_path, [receptor])
+    sim = project.simulation(str(receptor.id), "hrrr")
+
+    class _Model:
+        name = "hysplit"
+
+        def run(self, receptor, params, met, window, workdir=None, timeout=None):
+            return ModelRun(particles=_particles(receptor), met_files=[])
+
+    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr(
+        Output, "write_particles", _fails_with(ConnectionError("bucket down"))
+    )
+    problems = _run_receptor(project, receptor)
+
+    assert "did not finish during particles" in problems[0]
+    assert not sim.has_particles and sim.failure is None
+    assert _states(project) == {sim.receptor.id: "interrupted"}
+
+
+def test_a_connection_error_in_a_footprint_leaves_the_particles_and_no_record(
+    tmp_path, receptor, monkeypatch
+):
+    project = _model(tmp_path, [receptor], grid=GRID)
+    sim = project.simulation(str(receptor.id), "hrrr")
+    _fake_run_particles(monkeypatch, [])
+    monkeypatch.setattr(
+        worker, "make_footprint", _fails_with(OSError(errno.ESTALE, "stale"))
+    )
+
+    problems = _run_receptor(project, receptor)
+
+    assert problems[0].startswith("hrrr did not finish during footprint")
+    assert sim.has_particles and not sim.has_footprint and sim.failure is None
+    assert _states(project) == {sim.receptor.id: "pending"}
+
+    # The next run keeps the particles and makes the footprint.
+    ran: list[str] = []
+    _fake_run_particles(monkeypatch, ran)
+    _fake_make_footprint(monkeypatch, [])
+    assert _run_receptor(project, receptor) == []
+    assert ran == [] and sim.is_complete
+
+
+def test_a_rerun_after_a_connection_error_finishes_the_simulation(
+    tmp_path, receptor, monkeypatch
+):
+    project = _model(tmp_path, [receptor])
+    sim = project.simulation(str(receptor.id), "hrrr")
+    monkeypatch.setattr(worker, "run_particles", _fails_with(ConnectionError("down")))
+    _run_receptor(project, receptor)
+    assert not sim.is_complete
+
+    _fake_run_particles(monkeypatch, [])
+    assert _run_receptor(project, receptor) == []
+
+    assert sim.is_complete and sim.failure is None
+    assert _states(project) == {sim.receptor.id: "complete"}
+
+
+def test_a_connection_error_removes_the_failure_record_of_an_earlier_attempt(
+    tmp_path, receptor, monkeypatch
+):
+    """The earlier attempt failed for a reason that is mended; this one did not finish, so it is not "failed"."""
+    project = _model(tmp_path, [receptor])
+    sim = project.simulation(str(receptor.id), "hrrr")
+    monkeypatch.setattr(
+        worker, "run_particles", _fails_with(MeteorologyError("No met file."))
+    )
+    _run_receptor(project, receptor)
+    assert sim.failure is not None
+
+    monkeypatch.setattr(worker, "run_particles", _fails_with(ConnectionError("down")))
+    _run_receptor(project, receptor)
+
+    assert sim.failure is None
+    assert _states(project) == {sim.receptor.id: "pending"}
+
+
+def test_an_earlier_record_that_cannot_be_removed_does_not_stop_the_run(
+    tmp_path, receptor, other_receptor, monkeypatch
+):
+    """With the output unreachable the old record stays, and the run goes on to the next receptor."""
+    project = _model(tmp_path, [receptor, other_receptor])
+    monkeypatch.setattr(worker, "run_particles", _fails_with(ConnectionError("down")))
+    monkeypatch.setattr(
+        Output, "clear_failure", _fails_with(ConnectionError("down too"))
+    )
+
+    for each in (receptor, other_receptor):
+        problems = _run_receptor(project, each)
+        assert "did not finish" in problems[0]
+
+
+def test_a_mixed_run_is_3_until_the_connection_error_is_mended_and_then_1(
+    tmp_path, receptor, other_receptor, monkeypatch
+):
+    """The retry runs only what did not finish; the real failure stays, and ends the run with 1."""
+    project = _model(tmp_path, [receptor, other_receptor])
+    transient, real = str(receptor.id), str(other_receptor.id)
+
+    def first(sim, **kwargs):
+        if sim.receptor.id == transient:
+            raise ConnectionError("down")
+        raise MeteorologyError("No met file.")
+
+    monkeypatch.setattr(worker, "run_particles", first)
+    run_receptors(
+        project,
+        [transient, real],
+        compute_root=tmp_path / "compute",
+        execution=ExecutionConfig(cpus=1),
+    )
+    assert _states(project) == {transient: "pending", real: "failed"}
+    assert _exit_code(project.status()) == 3
+
+    def second(sim, **kwargs):
+        if sim.receptor.id == real:
+            raise MeteorologyError("No met file.")
+        return _write_particles(sim)
+
+    monkeypatch.setattr(worker, "run_particles", second)
+    run_receptors(
+        project,
+        [transient, real],
+        compute_root=tmp_path / "compute",
+        execution=ExecutionConfig(cpus=1),
+    )
+    assert _states(project) == {transient: "complete", real: "failed"}
+    assert _exit_code(project.status()) == 1
+
+
+def test_stilt_run_exits_3_after_a_connection_error_in_a_simulation_and_0_on_the_rerun(
+    tmp_path, receptor, monkeypatch
+):
+    project = _model(tmp_path, [receptor])
+    (tmp_path / "met").mkdir(exist_ok=True)
+    runner = CliRunner()
+    monkeypatch.setattr(worker, "run_particles", _fails_with(ConnectionError("down")))
+
+    down = runner.invoke(app, ["run", str(project.directory)])
+    assert down.exit_code == 3, down.output
+    assert "pending=1" in down.output and "failed=0" in down.output
+
+    _fake_run_particles(monkeypatch, [])
+    up = runner.invoke(app, ["run", str(project.directory)])
+    assert up.exit_code == 0, up.output
+
+
+def test_stilt_run_still_exits_1_for_a_simulation_that_failed(
+    tmp_path, receptor, monkeypatch
+):
+    project = _model(tmp_path, [receptor])
+    (tmp_path / "met").mkdir(exist_ok=True)
+    monkeypatch.setattr(
+        worker, "run_particles", _fails_with(MeteorologyError("No met file."))
+    )
+    result = CliRunner().invoke(app, ["run", str(project.directory)])
+    assert result.exit_code == 1, result.output
 
 
 def test_a_failed_run_keeps_its_log_and_working_directory(

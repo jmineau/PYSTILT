@@ -159,10 +159,10 @@ Exit codes
        retry.
    * - 3
      - Retry it. Some simulations did not finish, because the run was
-       stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), or an
-       error it did not expect was a connection or I/O error, such as an
-       output bucket that could not be reached. A retry continues where it
-       stopped.
+       stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), or a
+       connection or I/O error, such as an output bucket that could not be
+       reached, stopped an unfinished simulation or ended the run. A retry
+       continues where it stopped.
    * - 4
      - A bug: any other error the command did not expect. Its traceback is
        printed. Do not retry; a retry meets the same error.
@@ -184,9 +184,23 @@ bucket in another region, a bad request, a 403, a 404), an FTP 5xx reply, a file
 that is not there or may not be used, or anything else. Every ``stilt`` command ends this way on
 an error it did not expect, not only ``stilt run``, except that a closed
 standard output (``stilt status | head``) ends quietly with 1, as it always
-has. A simulation that fails inside a run, whatever the cause, is a failure
-record and exit 1. ``stilt fetch`` follows the same table, except that
+has. ``stilt fetch`` follows the same table, except that
 1 is a file the archive does not have (a 404, whatever library reports it).
+
+The same rule applies to an error inside one simulation, such as a worker
+that cannot write its particles or footprint to the output bucket. An error
+that is 3 by the rule above is not a failure of the simulation: no failure
+record is written (an earlier attempt's is removed), the simulation stays
+unfinished (``pending``, or ``interrupted`` once its particles run had started),
+the other simulations go on, and the run ends with 3 so that a retry picks it
+up. Any other error inside a simulation, a ``SimulationError`` such as a
+failed HYSPLIT run or missing met files included, a bucket answer that a retry
+repeats (access denied, no such key), or a full disk, is a failure record and
+exit 1. When both happen in one run it exits 3, and the retry, which runs only
+what did not finish, ends with 1 if the failure remains. A bucket that stays
+down keeps every try at 3, so a driver sets how many times it retries. If the
+output cannot be reached to remove an earlier failure record, that record stays
+until a run writes the result.
 
 For a Kubernetes indexed Job, a ``podFailurePolicy`` that retries on 3 and
 fails the task on 1 and 4 follows from this table.

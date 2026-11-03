@@ -195,12 +195,14 @@ the output directory, so it is the same whoever asks and whenever.
      - Fix the cause and run again. Only the unfinished simulations run.
    * - ``interrupted``
      - The transport model's run started and was stopped before it
-       finished: a time limit, preemption, Ctrl-C, or a killed process.
+       finished: a time limit, preemption, Ctrl-C, a killed process, or a
+       connection or I/O error while its particles were written.
      - Run again. A Slurm task that gets its two-minute warning requeues
        itself; the rest are picked up by the next ``stilt run``.
    * - ``pending``
      - The transport model has not run yet, or the particles exist and the
-       footprint is not made yet.
+       footprint is not made yet, or a connection or I/O error stopped its
+       footprint (no failure is recorded for one that a retry may get past).
      - Run the project.
 
 A footprint that is not made yet is ``pending`` whether its step never
@@ -209,7 +211,8 @@ footprint variant added later, on particles that already exist, leaves
 the same files.
 
 ``stilt run`` says how its own simulations ended in its exit code: 0 when
-all are complete, 1 when some failed, and 3 when some were interrupted. It
+all are complete, 1 when some failed, and 3 when some did not finish (they
+were interrupted, or a connection or I/O error stopped them). It
 exits with 2 when its command line is wrong, or when a met directory does
 not exist or holds no ARL file: nothing ran. An error it did not expect
 exits with 3 when it is a connection or I/O error, and with 4 for any other

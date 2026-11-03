@@ -6,7 +6,9 @@ one receptor. Variants with the same transport settings share one set of
 particles, so it groups them: the transport model runs once per group where the
 particles are missing (:func:`run_particles`), then each variant's
 footprint is made from the particles in memory (:func:`make_footprint`).
-A failure is recorded with the simulation and the worker goes on.
+A failure is recorded with the simulation and the worker goes on, except
+a connection or I/O error that a retry may get past, which is not recorded as a
+failure: the simulation stays unfinished and the next run does it again.
 :func:`run_receptors` runs a list of receptors in this process or a
 process pool. A :class:`~stilt.Simulation` itself runs nothing; these
 functions write through its output directory.
@@ -30,6 +32,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import pandas as pd
 import xarray as xr
 
+from stilt._exit_codes import EXIT_INTERRUPTED, error_exit_code
 from stilt.exceptions import EmptyFootprint, SimulationError
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import calc_footprint
@@ -103,7 +106,17 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> str:
     for an error without one. An expected failure (a
     :class:`~stilt.exceptions.SimulationError`) logs one line; any other
     error logs, and records, its traceback.
+
+    A connection or I/O error that a retry may get past
+    (:func:`stilt._exit_codes.error_exit_code` says 3: a bucket that stopped answering
+    while the result was written) is not a failure of the simulation, so
+    nothing is recorded (:func:`_unfinished`). A ``SimulationError`` always is one.
     """
+    if (
+        not isinstance(error, SimulationError)
+        and error_exit_code(error) == EXIT_INTERRUPTED
+    ):
+        return _unfinished(sim, step, error)
     expected = isinstance(error, SimulationError)
     reason = getattr(error, "reason", None) or type(error).__name__
     if expected:
@@ -127,6 +140,37 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> str:
     except Exception:
         logger.exception("simulation %s: could not record the failure", sim)
     return f"{sim.variant.name} failed during {step} ({reason}): {error}"
+
+
+def _unfinished(sim: Simulation, step: Step, error: Exception) -> str:
+    """
+    Leave *sim* unfinished after a connection or I/O error at *step*, and return one line saying so.
+
+    No failure record is written, so the simulation is ``pending``, or
+    ``interrupted`` once its particles run started, and ``stilt run`` exits
+    with 3. A failure record from an earlier attempt is removed, so it does
+    not stand for this one; when the output cannot be reached to do that,
+    the old record stays until a run writes the result.
+    """
+    name = type(error).__name__
+    logger.warning(
+        "simulation %s did not finish during %s, a retry may finish it: %s: %s",
+        sim,
+        step,
+        name,
+        error,
+    )
+    logger.debug("simulation %s: the error", sim, exc_info=error)
+    try:
+        _succeeded(sim, step)
+    except Exception as cleanup:
+        logger.warning(
+            "simulation %s: could not remove its earlier failure record: %s: %s",
+            sim,
+            type(cleanup).__name__,
+            cleanup,
+        )
+    return f"{sim.variant.name} did not finish during {step} ({name}), a retry may finish it: {error}"
 
 
 def _succeeded(sim: Simulation, step: Step) -> None:
