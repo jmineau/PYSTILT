@@ -264,17 +264,13 @@ def _download_cover(
 
     HYSPLIT needs the met step at or after the window's end, so the end is
     taken up to the next time step of the archive (*step*, from
-    ``Archive.step``): a run that ends after the last step of a file gets
-    the next file, such as the next day's with 3-hourly steps in daily
-    files. The hour after the window's end is also covered, so that an
-    archive of hourly met gives the file holding the step after a run's end;
-    the later of the two is the end. A window ending on a step that is the
-    last of its file needs nothing from the next file.
+    ``Archive.step``), as the rule for local files has it. A run that ends
+    after the last step of a file gets the next file, such as the next
+    day's with 3-hourly steps in daily files, and one that ends on a step
+    gets that step's file and no more.
     """
     earlier, later = (_time(t) for t in window)
-    hour_after = later.floor("h") + pd.Timedelta(hours=1)
-    next_step = later.ceil(f"{int(step.total_seconds())}s")
-    return earlier, _time(max(hour_after, next_step))
+    return earlier, _time(later.ceil(f"{int(step.total_seconds())}s"))
 
 
 class Met:

@@ -221,9 +221,10 @@ A download follows the same rule as local files: it gets the files up to the
 met step at or after the run's end, using the time between steps of the
 archive (arlmet's ``Archive.step``). With ``download: nam12`` or
 ``download: gdas0p5``, daily files of 3-hourly steps, a run that ends at 22:00
-gets the next day's file too, and one that ends at 21:00 does not. For
-``hrrr``, whose steps are hourly, nothing changes: a run that ends after
-17:00 gets the 18-23 file.
+gets the next day's file too, and one that ends at 21:00 does not. With
+``hrrr``, whose steps are hourly and whose files hold 6 hours, a run that ends
+at 05:30 gets the 06-11 file, and one that ends at 05:00, the last step of the
+00-05 file, does not.
 
 ERA5
 ----
