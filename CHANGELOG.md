@@ -7,6 +7,37 @@ file alone: the entries are written at release (`just changelog` drafts them).
 
 ## [Unreleased]
 
+## [0.1.0a27] - 2026-11-03
+
+### Added
+
+- `stilt fetch PROJECT` (and `Project.fetch()`) gets once every met file that the project's unfinished simulations would ask for, then exits. With `download` set it downloads and crops them, so the workers that start afterward download nothing. It asks `Met.files_for` for the files, as a run does, so it fetches what a run reads. It exits 0 when every file is there, 1 when the archive does not have some, and 3 when it was stopped (Ctrl-C or SIGTERM, which also removes the partial download) or the archive was busy or unreachable. (#299)
+- `stilt check` reports a missing `zsfc` in `varsiwant`, with the line that adds it, when a receptor is given in meters above sea level and a run reads `zsfc` (the near-field correction, multipoint release heights, `pressure_weighting`). (#276)
+
+### Changed
+
+- **Breaking:** `stilt` commands end with exit 3 on an error that a retry may get past (a connection or I/O error, a busy service, an interrupted run) and exit 4 on any other unexpected error, where both used to end with Python's own 1. Exit 1 now means that some simulations failed (for `stilt check` and `stilt fetch`, that they found a problem). 2 is a bad command line, as before. Every command ends this way, not only `stilt run`. (#310)
+- **Breaking:** a connection or I/O error while a simulation writes its particles or footprint, such as an output bucket that stops answering, no longer records a failure. The simulation stays unfinished, the run goes on with the others and ends with exit 3, and the next run does it again. A `SimulationError`, an error a retry would repeat (access denied, no such key) and a full disk are still recorded failures and exit 1. (#330)
+- **Breaking:** `enhancement` (on a footprint and on particles) and `Project.jacobian` read a flux's time labels as the start of each step: the step that starts at or before each hour applies to it, the flux is zero before the first label, and the last step continues after the last label. A flux with a repeated time label is refused. (#292)
+- **Footprints on a projected grid change.** The smoothing kernel there is now round and has the east-west width that a longitude/latitude grid of the same cells gets, where it used to be a few meters wide (the particle density, effectively unsmoothed). The early-time interpolation now compares the median step with the cell size in the grid's units, so it runs on a projected grid when it would on a longitude/latitude grid; it never did before. Longitude/latitude footprints do not change. A footprint stored on a projected grid does not reproduce with this version. (#290, #307)
+- A particle cloud across 180 degrees, or half a world from its release, is measured as one cloud for the smoothing kernel, on a projected grid and on a longitude/latitude grid. On a grid that goes all the way around the earth, smoothing that passes one edge is added at the other. (#311)
+
+### Fixed
+
+- A simulation whose `hycs_std` was killed by a signal or exited with a non-zero status fails with the reason `EXIT_STATUS`. A killed run used to leave a partial `PARTICLE_STILT.DAT` that was stored as a complete run (or, with `outdt: 0`, was reported as `MET_COVERAGE`). (#318)
+- Met files are chosen by the next met step, not the next hour: the run gets the files up to the met step at or after its end, so a 3-hourly or 6-hourly met (NAM12, GDAS) is no longer refused for a run that ends after a file's last step, and an hourly run that ends on a file's last hour no longer needs the next file. (#283, #285)
+- `stilt run --cpus N` stops on SIGTERM and Ctrl-C and ends the running HYSPLIT processes. (#314)
+- With `cpus` above 1 on `spawn` or `forkserver`, a script without the `if __name__ == "__main__":` guard stops with a message that shows the fix, where it hung or died with `ConnectionResetError`. (#274)
+- `stilt status` groups its folders into this project's and the others.
+- `stilt` says in one line when a met directory does not exist, and exits 2.
+- `varsiwant` accepts `zcfx`, the convective flux name `hycs_std` reads, and refuses `zfx1`, which stops it. (#324)
+- Met files that hold one time period are refused, as HYSPLIT cannot read them. (#294)
+- Early particle steps are interpolated as STILT-R does, whatever other columns the particles table has. (#296)
+- The near-field plume of a receptor above sea level starts at the ground. (#297)
+- A footprint whose grid has more than 32,767 cells along an axis is refused rather than stored wrongly. (#298)
+- The typer, pydantic, universal-pathlib and xarray floors are raised, and one receptor reads without partition columns. (#293)
+- The sparse frame is built without the `SparseArray(sparse_index=)` form that pandas 3.1 deprecates, and `pressure_altitudes` calls arlmet's `hypsometric_z_agl`.
+
 ## [0.1.0a26] - 2026-10-27
 
 ### Added
