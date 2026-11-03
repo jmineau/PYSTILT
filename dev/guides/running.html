@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=42fe9ec2"></script>
+    <script src="../_static/documentation_options.js?v=6e07d8ae"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev38+g07f05c060" />
+  <meta name="docsearch:version" content="0.1.0a27.dev39+gf221d6643" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -585,6 +585,12 @@ start each worker by importing the script again, so anything at the top of the
 script runs again in every worker. <code class="docutils literal notranslate"><span class="pre">Project.init</span></code> there stops with a
 <code class="docutils literal notranslate"><span class="pre">FileExistsError</span></code> because <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> exists. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--cpus</span> <span class="pre">4</span></code>
 needs no guard.</p>
+<p>Ctrl-C, or <code class="docutils literal notranslate"><span class="pre">SIGTERM</span></code> from <code class="docutils literal notranslate"><span class="pre">kill</span></code>, <code class="docutils literal notranslate"><span class="pre">timeout</span></code>, Slurm, or Kubernetes, stops
+a run on any number of <code class="docutils literal notranslate"><span class="pre">cpus</span></code> the same way. The HYSPLIT runs are ended, the
+workers exit, and <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code> prints how many receptors had finished and
+exits with 3, within a few seconds. Receptors that finished stay finished.
+<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> counts a receptor that was cut off as <code class="docutils literal notranslate"><span class="pre">interrupted</span></code>, and
+running again runs it from the start.</p>
 </section>
 <section id="save-now-run-later">
 <h2>Save now, run later<a class="headerlink" href="#save-now-run-later" title="Link to this heading">#</a></h2>
@@ -620,7 +626,8 @@ it lists anything (<a class="reference internal" href="checking.html"><span clas
 as a Slurm job array. Its options:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">--backend</span></code> and <code class="docutils literal notranslate"><span class="pre">--n-workers</span></code> override <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> for this run.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--cpus</span> <span class="pre">N</span></code> runs <code class="docutils literal notranslate"><span class="pre">N</span></code> receptors at once.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--cpus</span> <span class="pre">N</span></code> runs <code class="docutils literal notranslate"><span class="pre">N</span></code> receptors at once. Ctrl-C or <code class="docutils literal notranslate"><span class="pre">SIGTERM</span></code> stops
+them all and exits with 3.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--no-skip</span></code> reruns every simulation, finished or not.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--receptors</span> <span class="pre">FILE</span></code> runs only the receptors listed in <code class="docutils literal notranslate"><span class="pre">FILE</span></code>, one
 id per line.</p></li>

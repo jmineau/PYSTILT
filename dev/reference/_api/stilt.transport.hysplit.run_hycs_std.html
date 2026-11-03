@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=42fe9ec2"></script>
+    <script src="../../_static/documentation_options.js?v=6e07d8ae"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev38+g07f05c060" />
+  <meta name="docsearch:version" content="0.1.0a27.dev39+gf221d6643" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -881,7 +881,8 @@
 <dd><p>Run the <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> in <em>workdir</em>, writing its output to <code class="docutils literal notranslate"><span class="pre">stilt.log</span></code>.</p>
 <p><em>workdir</em> holds the inputs <a class="reference internal" href="stilt.transport.hysplit.write_inputs.html#stilt.transport.hysplit.write_inputs" title="stilt.transport.hysplit.write_inputs"><code class="xref py py-func docutils literal notranslate"><span class="pre">write_inputs()</span></code></a> wrote. With <em>timeout</em>
 seconds the run is stopped when it takes longer; without it, it may run
-as long as HYSPLIT does.</p>
+as long as HYSPLIT does. If this process is interrupted while it waits
+(<code class="docutils literal notranslate"><span class="pre">KeyboardInterrupt</span></code> or <code class="docutils literal notranslate"><span class="pre">SystemExit</span></code>), the run is stopped too.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="stilt.exceptions.SimulationError.html#stilt.exceptions.SimulationError" title="stilt.exceptions.SimulationError"><strong>SimulationError</strong></a> – With <code class="docutils literal notranslate"><span class="pre">reason</span></code> <code class="docutils literal notranslate"><span class="pre">TIMEOUT</span></code> when the run exceeded <em>timeout</em>

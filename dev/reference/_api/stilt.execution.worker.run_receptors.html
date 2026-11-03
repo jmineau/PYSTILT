@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=42fe9ec2"></script>
+    <script src="../../_static/documentation_options.js?v=6e07d8ae"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev38+g07f05c060" />
+  <meta name="docsearch:version" content="0.1.0a27.dev39+gf221d6643" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -882,9 +882,11 @@
 <p>The variants of a batched transport model run first, one model call
 for all the receptors that need their particles. Then each receptor
 runs its other variants. Pool workers open the project again from its
-directory, with the same output directory. A SIGTERM, such as Slurm preemption or the end of the job’s
-time limit, stops the batch. What finished is in the output directory, with a failure record
-for each simulation that failed.</p>
+directory, with the same output directory. Ctrl-C, or a SIGTERM such as Slurm preemption or a stopped
+pod, stops the batch: the transport model runs in progress are ended, the workers exit, and this logs
+how many receptors had finished and returns. What finished is in the output directory, with a failure
+record for each simulation that failed; a run that was cut off leaves only its log line, so it is
+<code class="docutils literal notranslate"><span class="pre">interrupted</span></code> in <a class="reference internal" href="stilt.Project.status.html#stilt.Project.status" title="stilt.Project.status"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.status()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
