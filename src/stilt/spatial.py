@@ -19,6 +19,7 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     import xarray as xr
+    from numpy.typing import ArrayLike
 
 # ---------------------------------------------------------------------------
 # Bounds and grids
@@ -143,6 +144,58 @@ class Bounds(BaseModel):
     xmax: float = Field(..., description="Eastern edge, in degrees longitude.")
     ymin: float = Field(..., description="Southern edge, in degrees latitude.")
     ymax: float = Field(..., description="Northern edge, in degrees latitude.")
+
+    def contains(self, longitude: ArrayLike, latitude: ArrayLike) -> np.ndarray:
+        """
+        Return whether each point is in the box, counting longitudes modulo 360.
+
+        A longitude is in the box when, counted east from ``xmin``, it is
+        within the box's width, so a box may cross the dateline (``xmin=170``,
+        ``xmax=-170``) or reach past 180 (``xmax=190``), and ``-175`` and
+        ``185`` are the same meridian. A box 360 degrees wide or more holds
+        every longitude. Points on an edge are inside; the longitude edges
+        allow ``1e-9`` degree for rounding, since a sum such as
+        ``184.7 + 175.3`` need not give exactly 360. A point with a
+        missing coordinate is not in the box.
+
+        Parameters
+        ----------
+        longitude, latitude : array_like of float
+            Degrees. Scalars or arrays, broadcast against each other.
+
+        Returns
+        -------
+        numpy.ndarray of bool
+            One value per point (a 0-d array for scalars).
+
+        Examples
+        --------
+        >>> import stilt
+        >>> utah = stilt.Bounds(xmin=-114, xmax=-109, ymin=37, ymax=42)
+        >>> bool(utah.contains(-111.9, 40.8))
+        True
+        >>> bool(utah.contains(-111.9, 45.0))
+        False
+
+        A box may cross the dateline, and ``-175`` and ``185`` are one meridian:
+
+        >>> pacific = stilt.Bounds(xmin=170, xmax=-170, ymin=-10, ymax=10)
+        >>> pacific.contains([175, -175, 185, 0], 0).tolist()
+        [True, True, True, False]
+        """
+        lon = np.asarray(longitude, dtype=float)
+        lat = np.asarray(latitude, dtype=float)
+        in_latitude = (lat >= self.ymin) & (lat <= self.ymax)
+        if self.xmax - self.xmin >= 360.0:
+            in_longitude = ~np.isnan(lon)
+        else:
+            tolerance = 1e-9
+            width = (self.xmax - self.xmin) % 360.0
+            from_west = (lon - self.xmin) % 360.0
+            in_longitude = (from_west <= width + tolerance) | (
+                from_west >= 360.0 - tolerance
+            )
+        return np.asarray(in_longitude & in_latitude)
 
 
 class Grid(Bounds):

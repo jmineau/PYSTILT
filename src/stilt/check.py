@@ -101,10 +101,7 @@ def _grid_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
 
 def _outside(rows: pd.DataFrame, grid: Grid) -> list[_Finding]:
     """List the receptors with a release point outside *grid*, which is bounded in longitude and latitude."""
-    lon, lat = rows["longitude"], rows["latitude"]
-    outside = rows[
-        (lon < grid.xmin) | (lon > grid.xmax) | (lat < grid.ymin) | (lat > grid.ymax)
-    ]
+    outside = rows[~grid.contains(rows["longitude"], rows["latitude"])]
     box = (
         f"{grid.xmin:g} to {grid.xmax:g} longitude, "
         f"{grid.ymin:g} to {grid.ymax:g} latitude"

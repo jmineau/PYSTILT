@@ -72,8 +72,9 @@ command line is wrong or the project's files are invalid.
    * - ``met_crop``
      - With ``subgrid_enable`` on, a receptor lies outside
        ``subgrid_bounds``. HYSPLIT cannot start particles outside the
-       cropped files. Longitudes count modulo 360, so a box may cross the
-       dateline (``xmin: 170``, ``xmax: -170``) or reach past 180 (``xmax: 190``),
+       cropped files. Longitudes count modulo 360
+       (:meth:`~stilt.Bounds.contains`), so a box may cross the dateline
+       (``xmin: 170``, ``xmax: -170``) or reach past 180 (``xmax: 190``),
        and a receptor at ``-175`` is inside both.
      - Widen ``subgrid_bounds``. It must hold the whole run, not only the
        footprint grid.
@@ -87,7 +88,9 @@ command line is wrong or the project's files are invalid.
    * - ``grid``
      - A release point of a receptor lies outside the variant's footprint
        grid. Only the particles that travel into the grid add to its
-       footprint, and a footprint with none is empty.
+       footprint, and a footprint with none is empty. Longitudes count
+       modulo 360 as for ``met_crop``, so a grid across the dateline holds a
+       receptor on either side of it.
      - Widen the grid. A receptor meant to lie outside it, such as one far
        downwind, is still listed, and the exit code is 1.
    * - ``kernel_table``
