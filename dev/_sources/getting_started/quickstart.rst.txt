@@ -59,14 +59,15 @@ Step 1: Describe your measurement
 ---------------------------------
 
 A receptor is where and when you measured. This one is a sensor 10 m above
-the ground on the University of Utah campus, at 08:00 UTC on 15 January 2021:
+the ground on the University of Utah campus, at noon local time (19:00 UTC) on
+14 January 2021:
 
 .. ipython:: python
 
    import stilt
 
    receptor = stilt.PointReceptor(
-       time="2021-01-15 08:00",   # UTC
+       time="2021-01-14 19:00",   # UTC
        longitude=-111.848,
        latitude=40.766,
        altitude=10,               # meters above ground level
@@ -98,7 +99,7 @@ follows them back in time through the meteorology:
    particles = stilt.run_trajectories(
        receptor,
        met,
-       n_hours=-24,     # follow the air 24 hours back in time
+       n_hours=-12,     # follow the air 12 hours back in time
        numpar=200,      # number of particles to release
        krand=2,         # the random numbers a seed can fix
        seed=42,         # same seed, same particles
@@ -106,7 +107,8 @@ follows them back in time through the meteorology:
 
 ``n_hours``
    How far back in time to follow the air. Negative means backward, which is
-   what you want for measurements. 24 to 72 hours is typical.
+   what you want for measurements. 24 to 72 hours is typical. This page uses 12
+   because its met files start 13 hours before the measurement.
 
 ``numpar``
    How many particles to release. More particles give a smoother footprint
@@ -132,9 +134,8 @@ time step:
    particles.stilt.plot.map();
 
 The particles start at the receptor and spread out. The met files here cover
-only a small region around Salt Lake, and the particles leave it before the 24
-hours are up. A particle that leaves the met stops there. This is how many hours
-they went (``age`` is in minutes):
+only a small region around Salt Lake, and a particle that leaves the met stops
+there. This is how many hours they went (``age`` is in minutes):
 
 .. ipython:: python
 
@@ -162,8 +163,9 @@ areas upwind of your site. Here the cells are 0.01°, about 1 km:
    foot.stilt.plot.map();
 
 The footprint starts at the receptor and stretches in the direction the air
-came from, here to the north-northwest. The map shows the footprint summed over
-time, on a log scale. Cells with more color influenced the measurement more.
+came from, here to the north-northwest and then curving west. The map shows the
+footprint summed over time, on a log scale. Cells with more color influenced the
+measurement more.
 
 The footprint is an :class:`xarray.DataArray` with dimensions
 ``(time, lat, lon)``, in units of ppm per (µmol m⁻² s⁻¹). It has one map for
@@ -194,7 +196,7 @@ settings are the ones above:
        receptors=[receptor],
        mets={"hrrr": met},          # "hrrr" is a name you choose
        variants={"hrrr": {}},       # one variant: these settings, met hrrr
-       n_hours=-24,
+       n_hours=-12,
        numpar=200,
        krand=2,
        seed=42,
@@ -253,11 +255,11 @@ folder.
      config.yaml                 # your settings
      receptors.csv               # your receptors
      output/
-       particles/settings=hrrr-a3f9c2/_settings.yaml     # the settings, written out in full
-       particles/settings=hrrr-a3f9c2/date=2021-01-15/202101150800_-111.848_40.766_10.parquet
-       footprints/settings=hrrr-93278c/_settings.yaml
-       footprints/settings=hrrr-93278c/date=2021-01-15/202101150800_-111.848_40.766_10.parquet
-       logs/settings=hrrr-a3f9c2/date=2021-01-15/202101150800_-111.848_40.766_10.log
+       particles/settings=hrrr-c05088/_settings.yaml     # the settings, written out in full
+       particles/settings=hrrr-c05088/date=2021-01-14/202101141900_-111.848_40.766_10.parquet
+       footprints/settings=hrrr-5b2b7e/_settings.yaml
+       footprints/settings=hrrr-5b2b7e/date=2021-01-14/202101141900_-111.848_40.766_10.parquet
+       logs/settings=hrrr-c05088/date=2021-01-14/202101141900_-111.848_40.766_10.log
 
 Each folder under ``particles``, ``footprints``, and ``logs`` is a
 :term:`settings folder <settings folder>`: the variant's name, ``hrrr``,
@@ -313,7 +315,7 @@ above:
      xres: 0.01
      yres: 0.01
 
-   n_hours: -24
+   n_hours: -12
    numpar: 200
    krand: 2
    seed: 42
@@ -324,7 +326,7 @@ line, so the file reads:
 .. code-block:: text
 
    time,longitude,latitude,altitude
-   2021-01-15 08:00:00,-111.848,40.766,10
+   2021-01-14 19:00:00,-111.848,40.766,10
 
 Then check the project, run it, and look at the result:
 

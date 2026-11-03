@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d5109595"></script>
+    <script src="../_static/documentation_options.js?v=b80fe03f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev58+g66c2b8463" />
+  <meta name="docsearch:version" content="0.1.0a27.dev60+gb47e1bca4" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -527,11 +527,12 @@ Downloaded files are reused on later runs. See
 <section id="step-1-describe-your-measurement">
 <h2>Step 1: Describe your measurement<a class="headerlink" href="#step-1-describe-your-measurement" title="Link to this heading">#</a></h2>
 <p>A receptor is where and when you measured. This one is a sensor 10 m above
-the ground on the University of Utah campus, at 08:00 UTC on 15 January 2021:</p>
+the ground on the University of Utah campus, at noon local time (19:00 UTC) on
+14 January 2021:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
 <span class="gp">In [2]: </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
-<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">"2021-01-15 08:00"</span><span class="p">,</span>   <span class="c1"># UTC</span>
+<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">"2021-01-14 19:00"</span><span class="p">,</span>   <span class="c1"># UTC</span>
 <span class="gp">   ...: </span>    <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">altitude</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>               <span class="c1"># meters above ground level</span>
@@ -547,7 +548,7 @@ follows them back in time through the meteorology:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [3]: </span><span class="n">particles</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">run_trajectories</span><span class="p">(</span>
 <span class="gp">   ...: </span>    <span class="n">receptor</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">met</span><span class="p">,</span>
-<span class="gp">   ...: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>     <span class="c1"># follow the air 24 hours back in time</span>
+<span class="gp">   ...: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">12</span><span class="p">,</span>     <span class="c1"># follow the air 12 hours back in time</span>
 <span class="gp">   ...: </span>    <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>      <span class="c1"># number of particles to release</span>
 <span class="gp">   ...: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>         <span class="c1"># the random numbers a seed can fix</span>
 <span class="gp">   ...: </span>    <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>         <span class="c1"># same seed, same particles</span>
@@ -557,7 +558,8 @@ follows them back in time through the meteorology:</p>
 </div>
 <dl class="simple">
 <dt><code class="docutils literal notranslate"><span class="pre">n_hours</span></code></dt><dd><p>How far back in time to follow the air. Negative means backward, which is
-what you want for measurements. 24 to 72 hours is typical.</p>
+what you want for measurements. 24 to 72 hours is typical. This page uses 12
+because its met files start 13 hours before the measurement.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">numpar</span></code></dt><dd><p>How many particles to release. More particles give a smoother footprint
 but take longer. 200 is fine for a first try. Research runs often use
@@ -575,12 +577,12 @@ The particles are a <a class="reference external" href="https://pandas.pydata.or
 time step:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [4]: </span><span class="n">particles</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 <span class="gh">Out[4]: </span>
-<span class="go">   age  particle       lon  ...   sigw     tlgr  foot_no_hnf_dilution</span>
-<span class="go">0 -1.0       1.0 -111.8474  ...  0.038  43.3137              0.021248</span>
-<span class="go">1 -1.0       2.0 -111.8473  ...  0.038  43.3137              0.021248</span>
-<span class="go">2 -1.0       3.0 -111.8474  ...  0.038  43.3137              0.021248</span>
-<span class="go">3 -1.0       4.0 -111.8474  ...  0.038  43.3137              0.021248</span>
-<span class="go">4 -1.0       5.0 -111.8474  ...  0.038  43.3137              0.021248</span>
+<span class="go">   age  particle       lon  ...   sigw    tlgr  foot_no_hnf_dilution</span>
+<span class="go">0 -1.0       1.0 -111.8497  ...  0.912  1.9972              0.003236</span>
+<span class="go">1 -1.0       2.0 -111.8501  ...  0.912  1.9972              0.003236</span>
+<span class="go">2 -1.0       3.0 -111.8497  ...  0.912  1.9972              0.003236</span>
+<span class="go">3 -1.0       4.0 -111.8494  ...  0.912  1.9972              0.003236</span>
+<span class="go">4 -1.0       5.0 -111.8490  ...  0.912  1.9972              0.003236</span>
 
 <span class="go">[5 rows x 13 columns]</span>
 
@@ -590,9 +592,8 @@ time step:</p>
 <a class="reference internal image-reference" href="../_images/quickstart_particles.png"><img alt="../_images/quickstart_particles.png" src="../_images/quickstart_particles.png" style="width: 6in;" />
 </a>
 <p>The particles start at the receptor and spread out. The met files here cover
-only a small region around Salt Lake, and the particles leave it before the 24
-hours are up. A particle that leaves the met stops there. This is how many hours
-they went (<code class="docutils literal notranslate"><span class="pre">age</span></code> is in minutes):</p>
+only a small region around Salt Lake, and a particle that leaves the met stops
+there. This is how many hours they went (<code class="docutils literal notranslate"><span class="pre">age</span></code> is in minutes):</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">particles</span><span class="p">[</span><span class="s1">'age'</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> hours"</span><span class="p">)</span>
 <span class="go">12.0 hours</span>
 </pre></div>
@@ -619,8 +620,9 @@ areas upwind of your site. Here the cells are 0.01°, about 1 km:</p>
 <a class="reference internal image-reference" href="../_images/quickstart_footprint.png"><img alt="../_images/quickstart_footprint.png" src="../_images/quickstart_footprint.png" style="width: 6in;" />
 </a>
 <p>The footprint starts at the receptor and stretches in the direction the air
-came from, here to the north-northwest. The map shows the footprint summed over
-time, on a log scale. Cells with more color influenced the measurement more.</p>
+came from, here to the north-northwest and then curving west. The map shows the
+footprint summed over time, on a log scale. Cells with more color influenced the
+measurement more.</p>
 <p>The footprint is an <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> with dimensions
 <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>, in units of ppm per (µmol m⁻² s⁻¹). It has one map for
 each hour the particles were still inside the met files. Sum it over time with
@@ -646,7 +648,7 @@ settings are the ones above:</p>
 <span class="gp">   ....: </span>    <span class="n">receptors</span><span class="o">=</span><span class="p">[</span><span class="n">receptor</span><span class="p">],</span>
 <span class="gp">   ....: </span>    <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="n">met</span><span class="p">},</span>          <span class="c1"># "hrrr" is a name you choose</span>
 <span class="gp">   ....: </span>    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{}},</span>       <span class="c1"># one variant: these settings, met hrrr</span>
-<span class="gp">   ....: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>
+<span class="gp">   ....: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">12</span><span class="p">,</span>
 <span class="gp">   ....: </span>    <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
 <span class="gp">   ....: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
 <span class="gp">   ....: </span>    <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
@@ -684,11 +686,11 @@ the variant name:</p>
 <span class="gp">In [16]: </span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 <span class="gh">Out[16]: </span>
 <span class="go">   age  particle  ...  foot_no_hnf_dilution                time</span>
-<span class="go">0 -1.0       1.0  ...              0.021248 2021-01-15 07:59:00</span>
-<span class="go">1 -1.0       2.0  ...              0.021248 2021-01-15 07:59:00</span>
-<span class="go">2 -1.0       3.0  ...              0.021248 2021-01-15 07:59:00</span>
-<span class="go">3 -1.0       4.0  ...              0.021248 2021-01-15 07:59:00</span>
-<span class="go">4 -1.0       5.0  ...              0.021248 2021-01-15 07:59:00</span>
+<span class="go">0 -1.0       1.0  ...              0.003236 2021-01-14 18:59:00</span>
+<span class="go">1 -1.0       2.0  ...              0.003236 2021-01-14 18:59:00</span>
+<span class="go">2 -1.0       3.0  ...              0.003236 2021-01-14 18:59:00</span>
+<span class="go">3 -1.0       4.0  ...              0.003236 2021-01-14 18:59:00</span>
+<span class="go">4 -1.0       5.0  ...              0.003236 2021-01-14 18:59:00</span>
 
 <span class="go">[5 rows x 14 columns]</span>
 
@@ -711,11 +713,11 @@ folder.</p>
   config.yaml                 # your settings
   receptors.csv               # your receptors
   output/
-    particles/settings=hrrr-a3f9c2/_settings.yaml     # the settings, written out in full
-    particles/settings=hrrr-a3f9c2/date=2021-01-15/202101150800_-111.848_40.766_10.parquet
-    footprints/settings=hrrr-93278c/_settings.yaml
-    footprints/settings=hrrr-93278c/date=2021-01-15/202101150800_-111.848_40.766_10.parquet
-    logs/settings=hrrr-a3f9c2/date=2021-01-15/202101150800_-111.848_40.766_10.log
+    particles/settings=hrrr-c05088/_settings.yaml     # the settings, written out in full
+    particles/settings=hrrr-c05088/date=2021-01-14/202101141900_-111.848_40.766_10.parquet
+    footprints/settings=hrrr-5b2b7e/_settings.yaml
+    footprints/settings=hrrr-5b2b7e/date=2021-01-14/202101141900_-111.848_40.766_10.parquet
+    logs/settings=hrrr-c05088/date=2021-01-14/202101141900_-111.848_40.766_10.log
 </pre></div>
 </div>
 <p>Each folder under <code class="docutils literal notranslate"><span class="pre">particles</span></code>, <code class="docutils literal notranslate"><span class="pre">footprints</span></code>, and <code class="docutils literal notranslate"><span class="pre">logs</span></code> is a
@@ -762,7 +764,7 @@ above:</p>
 <span class="w">  </span><span class="nt">xres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
 <span class="w">  </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
 
-<span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-24</span>
+<span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-12</span>
 <span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
 <span class="nt">krand</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
 <span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42</span>
@@ -771,7 +773,7 @@ above:</p>
 <p>Add your receptor to <code class="docutils literal notranslate"><span class="pre">my_first_project/receptors.csv</span></code> below the header
 line, so the file reads:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>time,longitude,latitude,altitude
-2021-01-15 08:00:00,-111.848,40.766,10
+2021-01-14 19:00:00,-111.848,40.766,10
 </pre></div>
 </div>
 <p>Then check the project, run it, and look at the result:</p>
