@@ -164,7 +164,8 @@ areas upwind of your site. Here the cells are 0.01°, about 1 km:
 
 The footprint starts at the receptor and stretches in the direction the air
 came from, here to the north-northwest and then curving west. The map shows the
-footprint summed over time, on a log scale. Cells with more color influenced the measurement more.
+footprint summed over time, on a log scale. Cells with more color influenced the
+measurement more.
 
 The footprint is an :class:`xarray.DataArray` with dimensions
 ``(time, lat, lon)``, in units of ppm per (µmol m⁻² s⁻¹). It has one map for
@@ -254,11 +255,11 @@ folder.
      config.yaml                 # your settings
      receptors.csv               # your receptors
      output/
-       particles/settings=hrrr-a3f9c2/_settings.yaml     # the settings, written out in full
-       particles/settings=hrrr-a3f9c2/date=2021-01-14/202101141900_-111.848_40.766_10.parquet
-       footprints/settings=hrrr-93278c/_settings.yaml
-       footprints/settings=hrrr-93278c/date=2021-01-14/202101141900_-111.848_40.766_10.parquet
-       logs/settings=hrrr-a3f9c2/date=2021-01-14/202101141900_-111.848_40.766_10.log
+       particles/settings=hrrr-c05088/_settings.yaml     # the settings, written out in full
+       particles/settings=hrrr-c05088/date=2021-01-14/202101141900_-111.848_40.766_10.parquet
+       footprints/settings=hrrr-5b2b7e/_settings.yaml
+       footprints/settings=hrrr-5b2b7e/date=2021-01-14/202101141900_-111.848_40.766_10.parquet
+       logs/settings=hrrr-c05088/date=2021-01-14/202101141900_-111.848_40.766_10.log
 
 Each folder under ``particles``, ``footprints``, and ``logs`` is a
 :term:`settings folder <settings folder>`: the variant's name, ``hrrr``,
