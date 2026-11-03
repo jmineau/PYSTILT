@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=de123a8f"></script>
+    <script src="../../_static/documentation_options.js?v=fae434bb"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev41+gf1a30e7c9" />
+  <meta name="docsearch:version" content="0.1.0a27.dev45+gb0a6c3c2d" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -519,7 +519,9 @@ grows, a <code class="docutils literal notranslate"><span class="pre">veght</spa
 HYSPLIT does, and a receptor above sea level, whose plume PYSTILT grows from
 the ground. The fourth is the smoothing on a projected grid, which PYSTILT
 makes as wide as on a longitude/latitude grid and STILT-R makes a few meters
-wide (see <a class="reference internal" href="../../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a>).</p>
+wide. The fifth is a particle cloud near 180° on a grid that goes all the
+way around the earth, which PYSTILT smooths as one cloud and STILT-R smooths
+far too widely (see <a class="reference internal" href="../../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a>).</p>
 <p>What changes is where the settings live. Instead of editing variables in
 <code class="docutils literal notranslate"><span class="pre">run_stilt.r</span></code>, you write them in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> or pass them to
 <a class="reference internal" href="../../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.init()</span></code></a>. Receptors go in <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p>

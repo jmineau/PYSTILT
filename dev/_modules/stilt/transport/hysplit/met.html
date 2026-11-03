@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=de123a8f"></script>
+    <script src="../../../../_static/documentation_options.js?v=fae434bb"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev41+gf1a30e7c9" />
+  <meta name="docsearch:version" content="0.1.0a27.dev45+gb0a6c3c2d" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -699,27 +699,17 @@
     <span class="k">return</span> <span class="n">time</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_cover</span><span class="p">(</span>
-    <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">file_tres</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_download_cover</span><span class="p">(</span><span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the first and last time files must cover for *window*.</span>
+<span class="sd">    Return the first and last time downloaded files must cover for *window*.</span>
 
-<span class="sd">    The hour after the window's end is added, unless the end is on a file</span>
-<span class="sd">    boundary. HYSPLIT steps through a run with the two met times around</span>
-<span class="sd">    each step, so it needs the met time at or after the window's end, in</span>
-<span class="sd">    either direction: the release time of a backward run, the end of the</span>
-<span class="sd">    trajectories of a forward one. When the end falls in the last hour of</span>
-<span class="sd">    a file, that met time is in the next file, which STILT-R also reads</span>
-<span class="sd">    for a backward run. *file_tres* is the period of one file; without it</span>
-<span class="sd">    (downloads, whose archive files are 6 hours or longer) the next hour is</span>
-<span class="sd">    always added, which never adds a file a window ending on a file</span>
-<span class="sd">    boundary does not need.</span>
+<span class="sd">    The hour after the window's end is added, so that an archive of hourly</span>
+<span class="sd">    met gives the file holding the met step after a run's end. An archive's</span>
+<span class="sd">    files are 6 hours or longer, so this never adds a file a window ending</span>
+<span class="sd">    on a file boundary does not need.</span>
 <span class="sd">    """</span>
     <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="p">(</span><span class="n">_time</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">window</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">file_tres</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">later</span> <span class="o">!=</span> <span class="n">later</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">file_tres</span><span class="p">):</span>
-        <span class="n">later</span> <span class="o">=</span> <span class="n">_time</span><span class="p">(</span><span class="n">later</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="s2">"h"</span><span class="p">)</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span>
+    <span class="k">return</span> <span class="n">earlier</span><span class="p">,</span> <span class="n">_time</span><span class="p">(</span><span class="n">later</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="s2">"h"</span><span class="p">)</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
 
 
 <div class="viewcode-block" id="Met">
@@ -752,6 +742,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_archive</span><span class="p">:</span> <span class="n">Archive</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_matches</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_sorted_tails</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># The spacing of the met steps once read from one of its files, and</span>
+        <span class="c1"># why it was taken as one hour when no file could give it.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_step</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_step_problem</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
     <span class="c1"># Internal helpers</span>
@@ -874,7 +868,7 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_download</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Return the files that cover *window* from the ARL archive, downloading any not yet in ``directory``."""</span>
-        <span class="n">t_start</span><span class="p">,</span> <span class="n">t_end</span> <span class="o">=</span> <span class="n">_cover</span><span class="p">(</span><span class="n">window</span><span class="p">)</span>
+        <span class="n">t_start</span><span class="p">,</span> <span class="n">t_end</span> <span class="o">=</span> <span class="n">_download_cover</span><span class="p">(</span><span class="n">window</span><span class="p">)</span>
 
         <span class="n">bbox</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bbox</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">subgrid_enable</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="n">levels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_level_indices</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">subgrid_enable</span> <span class="k">else</span> <span class="kc">None</span>
@@ -909,10 +903,16 @@
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the met files that cover *window*, ``(start, end)`` in time order.</span>
 
-<span class="sd">        They also cover the hour after the window's end, unless the end is</span>
-<span class="sd">        on a file boundary: HYSPLIT needs the met time after the end of a</span>
-<span class="sd">        run in either direction. Downloads them first when ``download`` is</span>
-<span class="sd">        set.</span>
+<span class="sd">        HYSPLIT steps through a run with the two met steps around each of</span>
+<span class="sd">        its times, so in either direction it needs the met step at or after</span>
+<span class="sd">        the window's end: the release of a backward run, the end of a</span>
+<span class="sd">        forward one. When the end is past the last met step of its file,</span>
+<span class="sd">        the next file is added. The spacing of the met steps is read once,</span>
+<span class="sd">        from the index records of the file that holds the window's end, as</span>
+<span class="sd">        ``file_format`` finds it; other products in ``directory`` do not</span>
+<span class="sd">        change it. When that file cannot be read or holds one time period,</span>
+<span class="sd">        the spacing is taken as one hour and :meth:`check` says so.</span>
+<span class="sd">        Downloads the files first when ``download`` is set.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -965,11 +965,49 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_file_times</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""Return the times of the local files that cover *window*, and the first and last time they must cover."""</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the times of the local files that cover *window*, and its start and end.</span>
+
+<span class="sd">        These are the files the window's times fall in, and the next file</span>
+<span class="sd">        when the window's end is past the last met step of its file. With</span>
+<span class="sd">        3-hourly steps in daily files, a backward run released at 22:00</span>
+<span class="sd">        needs the next day's 00:00 step, and one released at 21:00 needs</span>
+<span class="sd">        nothing past 21:00.</span>
+<span class="sd">        """</span>
         <span class="n">tres</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_freq</span>
         <span class="k">assert</span> <span class="n">tres</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># MetConfig requires file_tres without download</span>
-        <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="n">_cover</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">tres</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">earlier</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">tres</span><span class="p">),</span> <span class="n">later</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="n">tres</span><span class="p">),</span> <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span>
+        <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="p">(</span><span class="n">_time</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">window</span><span class="p">)</span>
+        <span class="n">last_file</span> <span class="o">=</span> <span class="n">later</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">tres</span><span class="p">)</span>
+        <span class="n">next_file</span> <span class="o">=</span> <span class="n">_time</span><span class="p">(</span><span class="n">last_file</span> <span class="o">+</span> <span class="n">to_offset</span><span class="p">(</span><span class="n">tres</span><span class="p">))</span>
+        <span class="c1"># An end on a file boundary needs nothing after it, whatever the step.</span>
+        <span class="k">if</span> <span class="n">later</span> <span class="o">!=</span> <span class="n">last_file</span> <span class="ow">and</span> <span class="n">later</span> <span class="o">&gt;</span> <span class="n">next_file</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step_at</span><span class="p">(</span><span class="n">last_file</span><span class="p">):</span>
+            <span class="n">last_file</span> <span class="o">=</span> <span class="n">next_file</span>  <span class="c1"># past the last step of its file</span>
+        <span class="n">times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">earlier</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">tres</span><span class="p">),</span> <span class="n">last_file</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="n">tres</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">times</span><span class="p">,</span> <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_step_at</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the spacing of the met steps, read from this met's file for *time*.</span>
+
+<span class="sd">        The file is one ``file_format`` finds for *time*, so other products</span>
+<span class="sd">        in :attr:`directory` do not change it. Only its index records are</span>
+<span class="sd">        read, and the spacing is kept for the met once a file gives it. One</span>
+<span class="sd">        hour, the step of most met, when no file for *time* can be read or</span>
+<span class="sd">        it holds one time period; :meth:`check` then says why.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">file_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">file_format</span>
+            <span class="k">assert</span> <span class="n">file_format</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># MetConfig requires it without download</span>
+            <span class="n">pattern</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">file_format</span><span class="p">)</span>
+            <span class="n">problem</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"no met file named </span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">..."</span>
+            <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_matching</span><span class="p">(</span><span class="n">pattern</span><span class="p">):</span>
+                <span class="n">step</span><span class="p">,</span> <span class="n">problem</span> <span class="o">=</span> <span class="n">_read_step</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">step</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_step</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step_problem</span> <span class="o">=</span> <span class="n">step</span><span class="p">,</span> <span class="kc">None</span>
+                    <span class="k">return</span> <span class="n">step</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_step_problem</span> <span class="o">=</span> <span class="n">problem</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step</span>
 
 <div class="viewcode-block" id="Met.missing_hours">
 <a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.Met.missing_hours.html#stilt.transport.hysplit.Met.missing_hours">[docs]</a>
@@ -1008,9 +1046,10 @@
 <span class="sd">        has no files to look for before a run, so only its crop is checked.</span>
 <span class="sd">        This looks for files, not inside them, except that it opens the first</span>
 <span class="sd">        file the receptors need to count its time periods, which HYSPLIT</span>
-<span class="sd">        needs to be at least two. :meth:`check` opens each file at a run, and</span>
-<span class="sd">        a run that passes this one can still fail as ``MET_COVERAGE`` when a</span>
-<span class="sd">        file is damaged or cut short.</span>
+<span class="sd">        needs to be at least two, and reads the spacing of the met steps from</span>
+<span class="sd">        the file of a run's end, as :meth:`files_for` does. :meth:`check`</span>
+<span class="sd">        opens each file at a run, and a run that passes this one can still</span>
+<span class="sd">        fail as ``MET_COVERAGE`` when a file is damaged or cut short.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1117,17 +1156,17 @@
 <span class="sd">        (:meth:`arlmet.File.check`), and together their time steps must</span>
 <span class="sd">        reach from the first time the run needs to the last, with no gap</span>
 <span class="sd">        wider than their spacing. That also finds a file cut after a whole</span>
-<span class="sd">        time step, which looks whole to arlmet. Files that cover the run but</span>
-<span class="sd">        include one with a single time period are refused last, since HYSPLIT</span>
-<span class="sd">        cannot read it.</span>
+<span class="sd">        time step, which looks whole to arlmet. HYSPLIT needs the met step at</span>
+<span class="sd">        or before the window's start and the one at or after its end, and</span>
+<span class="sd">        nothing outside them. Files that cover the run but include one with a</span>
+<span class="sd">        single time period are refused last, since HYSPLIT cannot read it.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        files : list of Path</span>
 <span class="sd">            The files the transport model will read (:meth:`readable`).</span>
 <span class="sd">        window : tuple of datetime-like</span>
-<span class="sd">            The time the run covers (:func:`run_window`). The files must</span>
-<span class="sd">            also hold the hour after its end, as :meth:`files_for` finds.</span>
+<span class="sd">            The time the run covers (:func:`run_window`).</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
@@ -1148,8 +1187,13 @@
                 <span class="n">single</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
             <span class="n">held</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">times</span><span class="p">)</span>
 
-        <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="n">_cover</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_freq</span><span class="p">)</span>
+        <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="p">(</span><span class="n">_time</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">window</span><span class="p">)</span>
         <span class="n">needs</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"The run needs </span><span class="si">{</span><span class="n">earlier</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">later</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2">."</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step_problem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">needs</span> <span class="o">+=</span> <span class="p">(</span>
+                <span class="s2">" The files were chosen with met steps taken as one hour, as "</span>
+                <span class="sa">f</span><span class="s2">"their spacing could not be read: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_step_problem</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
         <span class="n">steps</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">held</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">steps</span> <span class="ow">or</span> <span class="n">steps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">earlier</span> <span class="ow">or</span> <span class="n">steps</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">later</span><span class="p">:</span>
             <span class="n">holds</span> <span class="o">=</span> <span class="p">(</span>
@@ -1358,6 +1402,24 @@
         <span class="sa">f</span><span class="s2">"No ARL file under </span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2">. A met's weather product, which a "</span>
         <span class="s2">"run records, is read from the header of the first file there."</span>
     <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_read_step</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the smallest spacing of the time periods in the ARL file at *path*, or ``None`` and why not.</span>
+
+<span class="sd">    Only the file's index records are read.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">arlmet</span><span class="w"> </span><span class="kn">import</span> <span class="n">File</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">File</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">met</span><span class="p">:</span>
+            <span class="n">times</span> <span class="o">=</span> <span class="n">met</span><span class="o">.</span><span class="n">times</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">EOFError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># ARLFormatError is a ValueError</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> could not be read as an ARL file (</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">)"</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> holds </span><span class="si">{</span><span class="s1">'one time period'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">times</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">'no time period'</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="n">b</span> <span class="o">-</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">pairwise</span><span class="p">(</span><span class="n">times</span><span class="p">)),</span> <span class="s2">""</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Met"</span><span class="p">,</span> <span class="s2">"MetConfig"</span><span class="p">]</span>

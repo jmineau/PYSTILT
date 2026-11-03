@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=de123a8f"></script>
+    <script src="../../../_static/documentation_options.js?v=fae434bb"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev41+gf1a30e7c9" />
+  <meta name="docsearch:version" content="0.1.0a27.dev45+gb0a6c3c2d" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -451,8 +451,10 @@
 <span class="sd">Calculating a footprint from particles, as STILT-R's ``calc_footprint`` does.</span>
 
 <span class="sd">Footprints match STILT-R at ``rtol=1e-7`` per cell, except the smoothing on a</span>
-<span class="sd">projected grid (``_compute_kernel_bandwidths``). Run the ``fidelity`` tests</span>
-<span class="sd">before merging any change to this module.</span>
+<span class="sd">projected grid (``_compute_kernel_bandwidths``) and the smoothing of a cloud</span>
+<span class="sd">across 180 degrees on a grid that goes all the way around</span>
+<span class="sd">(``_unwrap_around_cloud``, ``_fold_padding_around_the_globe``). Run the</span>
+<span class="sd">``fidelity`` tests before merging any change to this module.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -522,16 +524,22 @@
     <span class="k">return</span> <span class="p">(((</span><span class="n">lon</span> <span class="o">-</span> <span class="n">west</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span><span class="p">)</span> <span class="o">+</span> <span class="mi">360</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span> <span class="o">+</span> <span class="n">west</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_covers_the_globe</span><span class="p">(</span><span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return whether longitudes *xmin* to *xmax* span a whole number of turns (STILT-R's ``xdist == 0``)."""</span>
+    <span class="k">return</span> <span class="p">((</span><span class="mi">180</span> <span class="o">-</span> <span class="n">xmin</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="o">-</span><span class="mi">180</span> <span class="o">-</span> <span class="n">xmax</span><span class="p">))</span> <span class="o">%</span> <span class="mi">360</span> <span class="o">==</span> <span class="mi">0</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_wrap_antimeridian_longitudes</span><span class="p">(</span>
     <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Shift longitudes to 0 to 360 when the grid crosses the antimeridian.</span>
 
-<span class="sd">    Only for longitude/latitude grids. Returns ``(p, xmin, xmax, wrapped)``.</span>
+<span class="sd">    Only for longitude/latitude grids. A grid that covers the globe is</span>
+<span class="sd">    anchored to -180 to 180 and the longitudes are left as they are. Returns</span>
+<span class="sd">    ``(p, xmin, xmax, wrapped)``.</span>
 <span class="sd">    """</span>
-    <span class="n">xdist</span> <span class="o">=</span> <span class="p">((</span><span class="mi">180</span> <span class="o">-</span> <span class="n">xmin</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="o">-</span><span class="mi">180</span> <span class="o">-</span> <span class="n">xmax</span><span class="p">))</span> <span class="o">%</span> <span class="mi">360</span>
-    <span class="k">if</span> <span class="n">xdist</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">_covers_the_globe</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="o">-</span><span class="mf">180.0</span><span class="p">,</span> <span class="mf">180.0</span><span class="p">,</span> <span class="kc">False</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">xmax</span> <span class="o">&lt;</span> <span class="n">xmin</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">xmax</span> <span class="o">&gt;</span> <span class="mi">180</span><span class="p">):</span>
         <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -704,15 +712,15 @@
 <span class="sd">    coordinates instead, which on a grid in meters gives a kernel a few</span>
 <span class="sd">    meters wide.</span>
 
-<span class="sd">    On a projected grid each ``rtime``'s longitudes are first shifted by</span>
-<span class="sd">    whole turns to within 180 degrees of that step's circular mean</span>
+<span class="sd">    On any grid, each ``rtime``'s longitudes are first shifted by whole</span>
+<span class="sd">    turns to within 180 degrees of that step's circular mean</span>
 <span class="sd">    (``_unwrap_around_cloud``), so a cloud has the spread and mean position</span>
-<span class="sd">    it has on the ground wherever it is, across 180 degrees included. A</span>
-<span class="sd">    longitude/latitude grid that crosses 180 degrees has its longitudes</span>
-<span class="sd">    shifted before this, by ``_wrap_antimeridian_longitudes``.</span>
+<span class="sd">    it has on the ground wherever on the globe it is, across 180 degrees</span>
+<span class="sd">    included, and wherever it was released. STILT-R measures the spread of</span>
+<span class="sd">    the longitudes as written, so on a global grid (where it does not shift</span>
+<span class="sd">    them) a cloud across 180 degrees gets a kernel many times too wide.</span>
 <span class="sd">    """</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_longlat</span><span class="p">(</span><span class="n">crs</span><span class="p">):</span>
-        <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">_unwrap_around_cloud</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">_unwrap_around_cloud</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
     <span class="n">kernel_df</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">p</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"rtime"</span><span class="p">)</span>
         <span class="o">.</span><span class="n">agg</span><span class="p">(</span>
@@ -961,6 +969,28 @@
         <span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">r1</span> <span class="o">-</span> <span class="n">r0</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_fold_padding_around_the_globe</span><span class="p">(</span>
+    <span class="n">foot_arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">pad</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_lon</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Add the padding of a padded array to the cells it lies beside, around the globe.</span>
+
+<span class="sd">    *foot_arr* has *pad* cells of padding on each side of its first axis and</span>
+<span class="sd">    *n_lon* cells between them. On a grid that goes all the way around, the</span>
+<span class="sd">    cells past the east edge are the first cells again, and the cells past</span>
+<span class="sd">    the west edge are the last, so the smoothing that spilled into the</span>
+<span class="sd">    padding is returned to them instead of being dropped.</span>
+<span class="sd">    """</span>
+    <span class="n">folded</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_lon</span><span class="p">,</span> <span class="o">*</span><span class="n">foot_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">foot_arr</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">start</span> <span class="o">&lt;</span> <span class="n">foot_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">cell</span> <span class="o">=</span> <span class="p">(</span><span class="n">start</span> <span class="o">-</span> <span class="n">pad</span><span class="p">)</span> <span class="o">%</span> <span class="n">n_lon</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">n_lon</span> <span class="o">-</span> <span class="n">cell</span><span class="p">,</span> <span class="n">foot_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">folded</span><span class="p">[</span><span class="n">cell</span> <span class="p">:</span> <span class="n">cell</span> <span class="o">+</span> <span class="n">stop</span> <span class="o">-</span> <span class="n">start</span><span class="p">]</span> <span class="o">+=</span> <span class="n">foot_arr</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">stop</span>
+    <span class="k">return</span> <span class="n">folded</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_accumulate_smoothed_footprint</span><span class="p">(</span>
     <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
@@ -1043,6 +1073,15 @@
 <span class="sd">    that widens with the particles' spread and age. The sum is divided by</span>
 <span class="sd">    the number of particles and binned by hour, unless *time_integrate* is</span>
 <span class="sd">    set.</span>
+
+<span class="sd">    A grid that goes all the way around the earth (``xmin=-180``,</span>
+<span class="sd">    ``xmax=180``, with cells that fit 360 degrees) is treated as a circle:</span>
+<span class="sd">    a particle cloud across 180 degrees is measured as one cloud, and</span>
+<span class="sd">    smoothing that spills past the east edge returns at the west edge, and</span>
+<span class="sd">    the other way. STILT-R measures the cloud's longitudes as written, from</span>
+<span class="sd">    -180 to 180, and drops what is smoothed past the edge, so on such a grid</span>
+<span class="sd">    it smooths a cloud near 180 degrees with a far too wide kernel and loses</span>
+<span class="sd">    part of the footprint.</span>
 
 <span class="sd">    On a projected grid the kernel's width is worked out in degrees, as on</span>
 <span class="sd">    a longitude/latitude grid, and converted to the grid's units, so the</span>
@@ -1170,6 +1209,12 @@
     <span class="n">n_lon</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">glong</span><span class="p">)</span>
     <span class="n">n_lat</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">glati</span><span class="p">)</span>
     <span class="n">rs</span> <span class="o">=</span> <span class="p">(</span><span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">)</span>
+    <span class="c1"># Cells that go all the way around: the east edge meets the west edge.</span>
+    <span class="n">around_the_globe</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span>
+        <span class="ow">and</span> <span class="n">_covers_the_globe</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmax</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">n_lon</span> <span class="o">*</span> <span class="n">xres</span><span class="p">,</span> <span class="mf">360.0</span><span class="p">))</span>
+    <span class="p">)</span>
 
     <span class="n">max_kernel</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">_make_gauss_kernel</span><span class="p">(</span><span class="n">rs</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">w</span><span class="p">)))</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])</span>
@@ -1214,8 +1259,15 @@
         <span class="n">rs</span><span class="o">=</span><span class="n">rs</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="c1"># Trim the padding and normalize by the particle count.</span>
-    <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">foot_arr</span><span class="p">[</span><span class="n">xbuf</span> <span class="p">:</span> <span class="n">xbuf</span> <span class="o">+</span> <span class="n">n_lon</span><span class="p">,</span> <span class="n">ybuf</span> <span class="p">:</span> <span class="n">ybuf</span> <span class="o">+</span> <span class="n">n_lat</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/</span> <span class="n">n_particles</span>
+    <span class="c1"># Trim the padding and normalize by the particle count. A grid whose cells</span>
+    <span class="c1"># close the circle is periodic: what was smoothed past an edge is added to</span>
+    <span class="c1"># the cells at the other edge.</span>
+    <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">foot_arr</span><span class="p">[:,</span> <span class="n">ybuf</span> <span class="p">:</span> <span class="n">ybuf</span> <span class="o">+</span> <span class="n">n_lat</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="k">if</span> <span class="n">around_the_globe</span><span class="p">:</span>
+        <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">_fold_padding_around_the_globe</span><span class="p">(</span><span class="n">foot_arr</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="n">xbuf</span><span class="p">,</span> <span class="n">n_lon</span><span class="o">=</span><span class="n">n_lon</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">foot_arr</span><span class="p">[</span><span class="n">xbuf</span> <span class="p">:</span> <span class="n">xbuf</span> <span class="o">+</span> <span class="n">n_lon</span><span class="p">]</span>
+    <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">foot_arr</span> <span class="o">/</span> <span class="n">n_particles</span>
 
     <span class="n">values</span> <span class="o">=</span> <span class="n">foot_arr</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># (time, y, x)</span>
     <span class="c1"># Rounded as Grid.axes rounds them, so a footprint read back from its</span>

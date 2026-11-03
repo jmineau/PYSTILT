@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=de123a8f"></script>
+    <script src="../../_static/documentation_options.js?v=fae434bb"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev41+gf1a30e7c9" />
+  <meta name="docsearch:version" content="0.1.0a27.dev45+gb0a6c3c2d" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -890,9 +890,10 @@ cannot start a particle outside the files. A met with <code class="docutils lite
 has no files to look for before a run, so only its crop is checked.
 This looks for files, not inside them, except that it opens the first
 file the receptors need to count its time periods, which HYSPLIT
-needs to be at least two. <a class="reference internal" href="stilt.transport.hysplit.Met.check.html#stilt.transport.hysplit.Met.check" title="stilt.transport.hysplit.Met.check"><code class="xref py py-meth docutils literal notranslate"><span class="pre">check()</span></code></a> opens each file at a run, and
-a run that passes this one can still fail as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code> when a
-file is damaged or cut short.</p>
+needs to be at least two, and reads the spacing of the met steps from
+the file of a run’s end, as <a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html#stilt.transport.hysplit.Met.files_for" title="stilt.transport.hysplit.Met.files_for"><code class="xref py py-meth docutils literal notranslate"><span class="pre">files_for()</span></code></a> does. <a class="reference internal" href="stilt.transport.hysplit.Met.check.html#stilt.transport.hysplit.Met.check" title="stilt.transport.hysplit.Met.check"><code class="xref py py-meth docutils literal notranslate"><span class="pre">check()</span></code></a>
+opens each file at a run, and a run that passes this one can still
+fail as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code> when a file is damaged or cut short.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

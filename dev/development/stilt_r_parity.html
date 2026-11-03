@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=de123a8f"></script>
+    <script src="../_static/documentation_options.js?v=fae434bb"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev41+gf1a30e7c9" />
+  <meta name="docsearch:version" content="0.1.0a27.dev45+gb0a6c3c2d" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -609,6 +609,29 @@ south, because it has one width in degrees on both axes.
 The fidelity suite’s UTM scenario compares unsmoothed footprints, and
 <code class="docutils literal notranslate"><span class="pre">test_projected_smoothing_intentionally_differs_from_r</span></code> guards the
 difference. Longitude/latitude grids are not affected.</p></li>
+<li><p><strong>Smoothing a cloud near 180° on a global grid.</strong> On a grid that goes
+all the way around (<code class="docutils literal notranslate"><span class="pre">xmin=-180</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax=180</span></code>), STILT-R leaves the
+particles’ longitudes as HYSPLIT writes them, from -180 to 180. A cloud
+on both sides of 180° then has a variance of thousands of square degrees
+and gets a kernel many times too wide, and what the kernel spreads past
+±180° is lost. For a cloud of 300 particles (standard deviation 0.3°, a
+day after release) on a 0.25° grid, a cloud at 175° covers 36 cells and
+keeps its whole footprint in both programs; at 179.9° STILT-R covers 1,242
+cells and loses 42 % of the footprint, and PYSTILT covers 34 cells and
+keeps all of it. PYSTILT takes the longitudes of each time step within
+180° of that step’s mean longitude (the circular mean, so the seam is on
+the far side of the globe from the cloud) before it measures the spread.
+The cloud is measured as one wherever it is, and a real spread of 10° stays
+10°. PYSTILT also adds the smoothing that passes one edge of such a grid
+to the cells at the other edge, so the footprint of a cloud near 180° is
+the footprint of the same cloud anywhere else, shifted. The longitudes
+are unwrapped this way on every longitude/latitude grid, which also fixes
+a cloud around 0° on a wide grid that crosses 180°, where STILT-R’s shift to 0° to 360° cuts the
+cloud in two. A grid whose cells do not fit 360° (0.7° cells leave 0.2°)
+has an edge, and smoothing is cut there as before. A cloud that is not
+cut by the seam is measured as before, bit for bit.
+<code class="docutils literal notranslate"><span class="pre">test_global_grid_across_180_intentionally_differs_from_r</span></code> guards the
+difference.</p></li>
 <li><p><strong>Forward runs with the HNF correction.</strong> STILT-R accumulates the plume
 from the far end of a forward trajectory back toward the release point,
 so its plume is widest at release. PYSTILT accumulates outward from the
