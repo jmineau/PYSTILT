@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=2fc1f017"></script>
+    <script src="../../../_static/documentation_options.js?v=d5109595"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev57+g29e5c289e" />
+  <meta name="docsearch:version" content="0.1.0a27.dev58+g66c2b8463" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -455,7 +455,9 @@
 <span class="sd">particles, so it groups them: the transport model runs once per group where the</span>
 <span class="sd">particles are missing (:func:`run_particles`), then each variant's</span>
 <span class="sd">footprint is made from the particles in memory (:func:`make_footprint`).</span>
-<span class="sd">A failure is recorded with the simulation and the worker goes on.</span>
+<span class="sd">A failure is recorded with the simulation and the worker goes on, except</span>
+<span class="sd">a connection or I/O error that a retry may get past, which is not recorded as a</span>
+<span class="sd">failure: the simulation stays unfinished and the next run does it again.</span>
 <span class="sd">:func:`run_receptors` runs a list of receptors in this process or a</span>
 <span class="sd">process pool. A :class:`~stilt.Simulation` itself runs nothing; these</span>
 <span class="sd">functions write through its output directory.</span>
@@ -479,6 +481,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt._exit_codes</span><span class="w"> </span><span class="kn">import</span> <span class="n">EXIT_INTERRUPTED</span><span class="p">,</span> <span class="n">error_exit_code</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyFootprint</span><span class="p">,</span> <span class="n">SimulationError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint</span><span class="w"> </span><span class="kn">import</span> <span class="n">calc_footprint</span>
@@ -552,7 +555,17 @@
 <span class="sd">    for an error without one. An expected failure (a</span>
 <span class="sd">    :class:`~stilt.exceptions.SimulationError`) logs one line; any other</span>
 <span class="sd">    error logs, and records, its traceback.</span>
+
+<span class="sd">    A connection or I/O error that a retry may get past</span>
+<span class="sd">    (:func:`stilt._exit_codes.error_exit_code` says 3: a bucket that stopped answering</span>
+<span class="sd">    while the result was written) is not a failure of the simulation, so</span>
+<span class="sd">    nothing is recorded (:func:`_unfinished`). A ``SimulationError`` always is one.</span>
 <span class="sd">    """</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="n">error_exit_code</span><span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="o">==</span> <span class="n">EXIT_INTERRUPTED</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="n">_unfinished</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
     <span class="n">expected</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">)</span>
     <span class="n">reason</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">"reason"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
     <span class="k">if</span> <span class="n">expected</span><span class="p">:</span>
@@ -576,6 +589,37 @@
     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"simulation </span><span class="si">%s</span><span class="s2">: could not record the failure"</span><span class="p">,</span> <span class="n">sim</span><span class="p">)</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> failed during </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_unfinished</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Leave *sim* unfinished after a connection or I/O error at *step*, and return one line saying so.</span>
+
+<span class="sd">    No failure record is written, so the simulation is ``pending``, or</span>
+<span class="sd">    ``interrupted`` once its particles run started, and ``stilt run`` exits</span>
+<span class="sd">    with 3. A failure record from an earlier attempt is removed, so it does</span>
+<span class="sd">    not stand for this one; when the output cannot be reached to do that,</span>
+<span class="sd">    the old record stays until a run writes the result.</span>
+<span class="sd">    """</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+        <span class="s2">"simulation </span><span class="si">%s</span><span class="s2"> did not finish during </span><span class="si">%s</span><span class="s2">, a retry may finish it: </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
+        <span class="n">sim</span><span class="p">,</span>
+        <span class="n">step</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">,</span>
+        <span class="n">error</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"simulation </span><span class="si">%s</span><span class="s2">: the error"</span><span class="p">,</span> <span class="n">sim</span><span class="p">,</span> <span class="n">exc_info</span><span class="o">=</span><span class="n">error</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">_succeeded</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">cleanup</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="s2">"simulation </span><span class="si">%s</span><span class="s2">: could not remove its earlier failure record: </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
+            <span class="n">sim</span><span class="p">,</span>
+            <span class="nb">type</span><span class="p">(</span><span class="n">cleanup</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="n">cleanup</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> did not finish during </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">), a retry may finish it: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_succeeded</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>

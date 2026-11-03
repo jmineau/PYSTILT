@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=2fc1f017"></script>
+    <script src="../_static/documentation_options.js?v=d5109595"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev57+g29e5c289e" />
+  <meta name="docsearch:version" content="0.1.0a27.dev58+g66c2b8463" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -661,10 +661,10 @@ retry.</p></td>
 </tr>
 <tr class="row-odd"><td><p>3</p></td>
 <td><p>Retry it. Some simulations did not finish, because the run was
-stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), or an
-error it did not expect was a connection or I/O error, such as an
-output bucket that could not be reached. A retry continues where it
-stopped.</p></td>
+stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), or a
+connection or I/O error, such as an output bucket that could not be
+reached, stopped an unfinished simulation or ended the run. A retry
+continues where it stopped.</p></td>
 </tr>
 <tr class="row-even"><td><p>4</p></td>
 <td><p>A bug: any other error the command did not expect. Its traceback is
@@ -690,9 +690,22 @@ bucket in another region, a bad request, a 403, a 404), an FTP 5xx reply, a file
 that is not there or may not be used, or anything else. Every <code class="docutils literal notranslate"><span class="pre">stilt</span></code> command ends this way on
 an error it did not expect, not only <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>, except that a closed
 standard output (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span> <span class="pre">|</span> <span class="pre">head</span></code>) ends quietly with 1, as it always
-has. A simulation that fails inside a run, whatever the cause, is a failure
-record and exit 1. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span></code> follows the same table, except that
+has. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span></code> follows the same table, except that
 1 is a file the archive does not have (a 404, whatever library reports it).</p>
+<p>The same rule applies to an error inside one simulation, such as a worker
+that cannot write its particles or footprint to the output bucket. An error
+that is 3 by the rule above is not a failure of the simulation: no failure
+record is written (an earlier attempt’s is removed), the simulation stays
+unfinished (<code class="docutils literal notranslate"><span class="pre">pending</span></code>, or <code class="docutils literal notranslate"><span class="pre">interrupted</span></code> once its particles run had started),
+the other simulations go on, and the run ends with 3 so that a retry picks it
+up. Any other error inside a simulation, a <code class="docutils literal notranslate"><span class="pre">SimulationError</span></code> such as a
+failed HYSPLIT run or missing met files included, a bucket answer that a retry
+repeats (access denied, no such key), or a full disk, is a failure record and
+exit 1. When both happen in one run it exits 3, and the retry, which runs only
+what did not finish, ends with 1 if the failure remains. A bucket that stays
+down keeps every try at 3, so a driver sets how many times it retries. If the
+output cannot be reached to remove an earlier failure record, that record stays
+until a run writes the result.</p>
 <p>For a Kubernetes indexed Job, a <code class="docutils literal notranslate"><span class="pre">podFailurePolicy</span></code> that retries on 3 and
 fails the task on 1 and 4 follows from this table.</p>
 <p>When the Job is done, <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span> <span class="pre">/project</span></code> counts the finished and
