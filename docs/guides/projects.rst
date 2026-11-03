@@ -112,7 +112,12 @@ These footprint settings sit next to ``grid`` at the top level:
    in degrees. On a projected ``grid`` (a ``crs`` such as ``EPSG:32612``) it
    is converted to the grid's units, so a footprint is smoothed about as
    much on 1 km UTM cells as on 0.01° cells. STILT-R smooths a footprint on a
-   projected grid much less (:ref:`stilt-r-parity`).
+   projected grid much less (:ref:`stilt-r-parity`). A particle cloud on
+   both sides of 180° is measured as one cloud. A grid that goes all the way
+   around the earth (``xmin: -180``, ``xmax: 180``, with cells that fit
+   360°) is a circle: smoothing that passes the east edge returns at the
+   west edge. STILT-R smooths such a cloud far too widely and loses part
+   of the footprint (:ref:`stilt-r-parity`).
 
 ``time_integrate``
    ``true`` sums the footprint over time into a single map, which makes

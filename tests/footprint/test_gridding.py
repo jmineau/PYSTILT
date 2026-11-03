@@ -12,6 +12,7 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calc_footprint
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
+    _fold_padding_around_the_globe,
     _grid_units_per_degree_longitude,
     _interpolate_early_timesteps,
     _interpolation_times,
@@ -1056,6 +1057,322 @@ def test_projected_kernel_is_zero_when_no_step_has_a_width():
     p = _with_rtime(p.assign(lon=centered, lat=p["lat"] - p["lat"].mean() + 2.0))
     _, w = _compute_kernel_bandwidths(p, smooth_factor=1.0, crs=_UTM48)
     np.testing.assert_array_equal(w, np.zeros(len(w)))
+
+
+def test_longlat_kernel_of_a_cloud_across_180_degrees_is_the_cloud_at_0_degrees():
+    """
+    A cloud on both sides of 180 degrees gets the kernel of the same cloud at 0 degrees.
+
+    On a global grid nothing shifts the longitudes, which HYSPLIT writes in
+    -180 to 180, so the cloud's values near -180 and +180 gave a variance of
+    thousands of square degrees and a kernel more than ten times too wide.
+    """
+    across = _with_rtime(_cloud_at(179.9))
+    assert across["lon"].min() < -179 and across["lon"].max() > 179
+    _, w_across = _compute_kernel_bandwidths(across, smooth_factor=1.0)
+    _, w_zero = _compute_kernel_bandwidths(
+        _with_rtime(_cloud_at(0.0)), smooth_factor=1.0
+    )
+    assert 0.03 < w_zero.max() < 0.3  # degrees of longitude
+    np.testing.assert_allclose(w_across, w_zero, rtol=1e-6)
+
+
+def test_longlat_kernel_of_a_cloud_across_0_degrees_on_a_grid_in_0_to_360():
+    """
+    A cloud across 0 degrees on a wide grid that crosses 180 gets its own kernel.
+
+    A grid from -100 to 200 degrees has longitudes shifted to 0 to 360,
+    which cuts a cloud around 0 in two.
+    """
+    cloud = _with_rtime(_cloud_at(0.0))
+    shifted = cloud.assign(lon=cloud["lon"] % 360)
+    assert shifted["lon"].min() < 1 and shifted["lon"].max() > 359
+    _, w = _compute_kernel_bandwidths(shifted, smooth_factor=1.0)
+    _, w_ref = _compute_kernel_bandwidths(cloud, smooth_factor=1.0)
+    np.testing.assert_allclose(w, w_ref, rtol=1e-6)
+
+
+def test_longlat_kernel_leaves_a_cloud_that_is_not_cut_alone_to_the_last_bit():
+    """Longitudes of a cloud that does not meet the seam are not changed, to the last bit."""
+    p = _with_rtime(_spread_particles())
+    reference = p.groupby("rtime")["lon"].var().to_numpy()
+    kernel_df, _ = _compute_kernel_bandwidths(p, smooth_factor=1.0)
+    np.testing.assert_array_equal(kernel_df["long_var"].to_numpy(), reference)
+
+
+def _cloud_from(
+    release_lon: float, cloud_lon: float, *, spread: float = 0.3, lat0: float = 45.0
+) -> pd.DataFrame:
+    """
+    Particles released at *release_lon* that are *spread* degrees apart ten days later at *cloud_lon*.
+
+    Longitudes are written in [-180, 180), as HYSPLIT writes them.
+    """
+    n = 300
+    rng = np.random.default_rng(7)
+    dlon, dlat = rng.normal(0.0, spread, n), rng.normal(0.0, spread, n)
+    lon = np.r_[np.full(n, release_lon), cloud_lon + dlon]
+    p = pd.DataFrame(
+        {
+            "particle": np.tile(np.arange(1, n + 1), 2),
+            "age": np.repeat([-1.0, -14401.0], n),
+            "lon": ((lon + 180.0) % 360.0) - 180.0,
+            "lat": np.r_[np.full(n, 40.77), lat0 + dlat],
+            "zagl": 5.0,
+            "foot": np.repeat([0.0, 1e-3], n),
+        }
+    )
+    return p
+
+
+@pytest.mark.parametrize("cloud_lon", [60.0, 68.15, 68.3, 75.0, 179.9, -111.85])
+@pytest.mark.parametrize("spread", [0.3, 10.0])
+def test_longlat_kernel_does_not_depend_on_where_the_release_was(cloud_lon, spread):
+    """
+    A cloud has the same kernel wherever its release was, even when it is on the far side of the globe.
+
+    Release at -111.85 degrees has its antipode at 68.15 degrees. A window
+    around the release put its seam there and cut a cloud that had drifted
+    that far (a kernel 21 times too wide). The window is around the cloud,
+    so the seam is on the far side of the globe from the cloud.
+    """
+    here = _with_rtime(_cloud_from(-111.85, cloud_lon, spread=spread))
+    there = _with_rtime(_cloud_from(cloud_lon, cloud_lon, spread=spread))
+    k_here, w_here = _compute_kernel_bandwidths(here, smooth_factor=1.0)
+    k_there, w_there = _compute_kernel_bandwidths(there, smooth_factor=1.0)
+    np.testing.assert_allclose(w_here, w_there, rtol=1e-9)
+    np.testing.assert_allclose(k_here["varsum"], k_there["varsum"], rtol=1e-9)
+
+
+def test_longlat_kernel_keeps_a_real_spread_of_10_degrees_across_180_degrees():
+    """A cloud the winds spread by 10 degrees is measured as 10 degrees, not folded and not cut."""
+    across = _with_rtime(_cloud_from(179.9, 179.9, spread=10.0))
+    assert across["lon"].min() < -170 and across["lon"].max() > 170
+    k_across, w_across = _compute_kernel_bandwidths(across, smooth_factor=1.0)
+    k_zero, w_zero = _compute_kernel_bandwidths(
+        _with_rtime(_cloud_from(0.0, 0.0, spread=10.0)), smooth_factor=1.0
+    )
+    late = k_across["rtime"] < -1
+    assert 80 < k_across.loc[late, "long_var"].iloc[0] < 125  # 10 degrees squared
+    np.testing.assert_allclose(w_across, w_zero, rtol=1e-9)
+
+
+def test_longlat_kernel_of_particles_that_circled_the_globe_is_the_kernel_of_their_positions():
+    """
+    A particle that went round the earth for days is where it is, not 720 degrees away.
+
+    Longitudes written unwrapped (here up to three turns either way) give
+    the kernel of the same positions written in -180 to 180.
+    """
+    p = _with_rtime(_cloud_from(-111.85, 179.9))
+    turns = np.random.default_rng(3).integers(-3, 4, len(p))
+    circled = p.assign(lon=p["lon"] + 360.0 * turns)
+    assert circled["lon"].abs().max() > 540
+    k_wrapped, w_wrapped = _compute_kernel_bandwidths(p, smooth_factor=1.0)
+    k_circled, w_circled = _compute_kernel_bandwidths(circled, smooth_factor=1.0)
+    np.testing.assert_allclose(w_circled, w_wrapped, rtol=1e-9)
+
+
+@pytest.mark.parametrize(
+    "grid_bounds",
+    [(40.0, 100.0), (-30.0, 30.0), (-180.0, 180.0)],
+    ids=["asia", "around_0", "global"],
+)
+@pytest.mark.parametrize("cloud_lon", [68.15, 68.3, 0.2])
+def test_footprint_does_not_depend_on_where_the_release_was(
+    point_receptor, grid_bounds, cloud_lon
+):
+    """
+    Whether the cloud is on the grid or not, its footprint does not depend on its release longitude.
+
+    On a regional grid nowhere near 180 degrees, the cloud at the antipode of
+    the release (68.15 degrees for a release at -111.85) had dozens of times
+    the nonzero cells it has at 60 degrees.
+    """
+    west, east = grid_bounds
+    if not west - 5 < cloud_lon < east + 5:
+        pytest.skip("a cloud this far from the grid leaves no footprint")
+    xres = 0.25 if east - west > 100 else 0.1
+    grid = Grid(xmin=west, xmax=east, ymin=20.0, ymax=70.0, xres=xres, yres=xres)
+    feet = []
+    for release_lon in (-111.85, 10.0):
+        receptor = point_receptor.model_copy(update={"longitude": release_lon})
+        particles = _cloud_from(release_lon, cloud_lon)
+        feet.append(
+            calc_footprint(particles, receptor, grid, time_integrate=True)
+            .isel(time=0)
+            .to_numpy()
+        )
+    np.testing.assert_allclose(feet[0], feet[1], atol=1e-14, rtol=0)
+    assert 100 < np.count_nonzero(feet[0]) < 2000
+
+
+@pytest.mark.parametrize("cloud_lon", [60.0, 68.15, 68.3, 75.0, 179.9, -111.85])
+@pytest.mark.parametrize("spread", [0.3, 10.0])
+def test_projected_kernel_does_not_depend_on_where_the_release_was(cloud_lon, spread):
+    """
+    On a projected grid too, a cloud has the same kernel wherever its release was.
+
+    Release at -111.85 degrees has its antipode at 68.15 degrees. A window
+    around the release put its seam there and cut a cloud that had drifted
+    that far (a kernel about 20 times too wide). The window is around the
+    cloud, so the seam is on the far side of the globe from the cloud.
+    """
+    pytest.importorskip("pyproj")
+    crs = _lambert_at(cloud_lon, 45.0)
+    here = _with_rtime(_cloud_from(-111.85, cloud_lon, spread=spread))
+    there = _with_rtime(_cloud_from(cloud_lon, cloud_lon, spread=spread))
+    k_here, w_here = _compute_kernel_bandwidths(here, smooth_factor=1.0, crs=crs)
+    k_there, w_there = _compute_kernel_bandwidths(there, smooth_factor=1.0, crs=crs)
+    np.testing.assert_allclose(w_here, w_there, rtol=1e-9)
+    np.testing.assert_allclose(k_here["varsum"], k_there["varsum"], rtol=1e-9)
+
+
+@pytest.mark.parametrize("cloud_lon", [60.0, 68.15, 68.3])
+def test_projected_footprint_does_not_depend_on_where_the_release_was(
+    point_receptor, cloud_lon
+):
+    """
+    On a 5 km Lambert grid the cloud at the antipode of the release is the cloud at 60 degrees.
+
+    With the window around the release, the cloud at 68.15 degrees (release
+    at -111.85) had a kernel about 20 times too wide and 40 times the
+    nonzero cells.
+    """
+    pytest.importorskip("pyproj")
+    grid = Grid(
+        xmin=cloud_lon - 8,
+        xmax=cloud_lon + 8,
+        ymin=40.0,
+        ymax=50.0,
+        xres=5000,
+        yres=5000,
+        crs=_lambert_at(cloud_lon, 45.0),
+    )
+    feet = []
+    for release_lon in (-111.85, cloud_lon):
+        receptor = point_receptor.model_copy(update={"longitude": release_lon})
+        particles = _cloud_from(release_lon, cloud_lon)
+        feet.append(
+            calc_footprint(particles, receptor, grid, time_integrate=True)
+            .isel(time=0)
+            .to_numpy()
+        )
+    np.testing.assert_allclose(feet[0], feet[1], atol=1e-14, rtol=0)
+    assert 500 < np.count_nonzero(feet[0]) < 3000
+
+
+_GLOBAL = {"xmin": -180.0, "xmax": 180.0, "ymin": 48.0, "ymax": 52.0}
+
+
+def _global_footprint(lon0: float, receptor: PointReceptor, **grid_kw) -> np.ndarray:
+    """The time-integrated footprint of ``_cloud_at(lon0)`` on a global 0.05 degree grid."""
+    grid = Grid(**{**_GLOBAL, "xres": 0.05, "yres": 0.05, **grid_kw})
+    receptor = receptor.model_copy(
+        update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
+    )
+    foot = calc_footprint(_cloud_at(lon0), receptor, grid, time_integrate=True)
+    return foot.isel(time=0).to_numpy()
+
+
+@pytest.mark.parametrize("lon0", [179.9, -179.95, 175.0, 180.0])
+def test_global_footprint_of_a_cloud_near_180_degrees_is_the_cloud_at_0_degrees(
+    point_receptor, lon0
+):
+    """
+    On a global grid a cloud near 180 degrees keeps its total and its shape.
+
+    The footprint of the cloud, shifted by 180 degrees, is the footprint of
+    the cloud at ``lon0 - 180`` rolled by half the cells. Before, a cloud
+    across 180 degrees was smoothed over tens of times as many cells, and
+    what spilled past the grid's edges was lost (42 % of the footprint at
+    179.9 degrees).
+    """
+    near = _global_footprint(lon0, point_receptor)
+    away = _global_footprint(lon0 - 180.0, point_receptor)
+    np.testing.assert_allclose(near.sum(), 1e-3, rtol=1e-9)
+    np.testing.assert_allclose(near, np.roll(away, 3600, axis=1), atol=1e-14, rtol=0)
+
+
+def test_global_footprint_wraps_smoothing_across_the_seam(point_receptor):
+    """Smoothing that spills past the east edge of a global grid returns at the west edge."""
+    near = _global_footprint(179.9, point_receptor)
+    assert near[:, :20].sum() > 0 and near[:, -20:].sum() > 0
+    unsmoothed = calc_footprint(
+        _cloud_at(179.9),
+        point_receptor.model_copy(update={"longitude": 179.9, "latitude": 50.0}),
+        Grid(**_GLOBAL, xres=0.05, yres=0.05),
+        time_integrate=True,
+        smooth_factor=0,
+    )
+    # The mass past the seam is in the cells smoothing added, not lost.
+    np.testing.assert_allclose(near.sum(), float(unsmoothed.sum()), rtol=1e-9)
+
+
+@pytest.mark.parametrize("bounds", [(0.0, 360.0), (-90.0, 270.0)])
+def test_global_footprint_is_the_same_on_a_grid_written_in_0_to_360(
+    point_receptor, bounds
+):
+    """A grid from 0 to 360, or any 360 degrees, is anchored to -180 to 180, as STILT-R does."""
+    reference = _global_footprint(179.9, point_receptor)
+    other = _global_footprint(179.9, point_receptor, xmin=bounds[0], xmax=bounds[1])
+    np.testing.assert_array_equal(other, reference)
+
+
+def test_global_grid_with_cells_that_do_not_fit_360_degrees_is_not_wrapped(
+    point_receptor,
+):
+    """Cells of 0.7 degrees leave a gap of 0.2 degrees, so the east edge does not meet the west."""
+    foot = _global_footprint(179.9, point_receptor, xres=0.7, yres=0.5)
+    assert foot.shape[1] == 514
+    assert 0 < foot.sum() <= 1e-3 + 1e-12
+
+
+def test_footprint_of_a_cloud_across_180_degrees_on_a_grid_that_crosses_it(
+    point_receptor,
+):
+    """A regional grid from 177.9 to -178.1 degrees gives the footprint of the cloud at 0 degrees."""
+    feet = []
+    for lon0, west, east in ((179.9, 177.9, -178.1), (-0.1, -2.1, 1.9)):
+        grid = Grid(xmin=west, xmax=east, ymin=48.0, ymax=52.0, xres=0.05, yres=0.05)
+        receptor = point_receptor.model_copy(
+            update={
+                "longitude": float(((lon0 + 180.0) % 360.0) - 180.0),
+                "latitude": 50.0,
+            }
+        )
+        feet.append(
+            calc_footprint(_cloud_at(lon0), receptor, grid, time_integrate=True)
+        )
+    across, at_zero = feet
+    # The grid across 180 degrees is stored west to east from -180 degrees:
+    # the 1.9 degrees east of 180 first (38 cells), then the 2.1 degrees west.
+    np.testing.assert_allclose(
+        np.roll(across.isel(time=0).to_numpy(), 42, axis=1),
+        at_zero.isel(time=0).to_numpy(),
+        atol=1e-14,
+        rtol=0,
+    )
+
+
+def test_fold_padding_around_the_globe_adds_each_side_to_the_other():
+    """Padding past the east edge goes to the first cells, and past the west edge to the last."""
+    n_lon, pad = 6, 2
+    arr = np.arange(1.0, n_lon + 2 * pad + 1).reshape(-1, 1, 1)  # 1..10
+    folded = _fold_padding_around_the_globe(arr, pad=pad, n_lon=n_lon)[:, 0, 0]
+    # cells 3..8 are the grid; 1, 2 lie west of it (cells 5 and 6 again),
+    # 9, 10 lie east of it (cells 3 and 4 again).
+    np.testing.assert_array_equal(folded, [3 + 9, 4 + 10, 5, 6, 7 + 1, 8 + 2])
+    assert folded.sum() == arr.sum()
+
+
+def test_fold_padding_around_the_globe_when_the_padding_is_wider_than_the_grid():
+    """A kernel wider than the grid wraps more than once, and no mass is lost."""
+    n_lon, pad = 3, 5
+    arr = np.ones((n_lon + 2 * pad, 2, 1))
+    folded = _fold_padding_around_the_globe(arr, pad=pad, n_lon=n_lon)
+    assert folded.sum() == arr.sum()
+    assert folded.shape == (n_lon, 2, 1)
 
 
 def _smoothing_variance_km2(foot, unsmoothed, x_km, y_km) -> tuple[float, float]:
