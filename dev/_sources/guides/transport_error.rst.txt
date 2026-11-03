@@ -116,7 +116,10 @@ The enhancement a footprint predicts for a surface flux field is the
 footprint times the flux, summed over the grid. ``flux`` is an
 :class:`xarray.DataArray` on ``lat`` and ``lon``, with an optional ``time``
 dimension. It is sampled at the footprint's cell centers, and footprint
-cells outside the flux field add nothing. A flux with finer cells than the
+cells outside the flux field add nothing. The ``time`` labels are the
+starts of the flux's steps: each footprint hour takes the last step that
+starts at or before it (:ref:`flux-step-labels` says what to do with
+labels at the middle of a step). A flux with finer cells than the
 footprint's must be put on the footprint grid first
 (:doc:`../tutorials/flux_inversion` says how).
 

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=528c0bf8"></script>
+    <script src="../../_static/documentation_options.js?v=93cfef5f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev28+ga1813b60f" />
+  <meta name="docsearch:version" content="0.1.0a27.dev30+gc3c0832e7" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -877,7 +877,7 @@
 <h1>stilt.sampling.sample_field<a class="headerlink" href="#stilt-sampling-sample-field" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="stilt.sampling.sample_field">
-<span class="sig-prename descclassname"><span class="pre">stilt.sampling.</span></span><span class="sig-name descname"><span class="pre">sample_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fill_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">nan</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/sampling.html#sample_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.sampling.sample_field" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">stilt.sampling.</span></span><span class="sig-name descname"><span class="pre">sample_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fill_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">nan</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_starts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/sampling.html#sample_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.sampling.sample_field" title="Link to this definition">#</a></dt>
 <dd><p>Return the field’s value in the cell nearest each point.</p>
 <p>A point outside the field horizontally, or in a missing cell, gives
 <code class="docutils literal notranslate"><span class="pre">fill_value</span></code>. Longitudes are wrapped to the field’s convention (-180
@@ -895,11 +895,19 @@ field.</p></li>
 vertical dimension. Required when the field has one. Matched to the
 nearest level, so a point above the top level takes the top level.</p></li>
 <li><p><strong>times</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://numpy.org/doc/stable/reference/typing.html#numpy.typing.ArrayLike" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArrayLike</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – Time of each point. Required when the field has a <code class="docutils literal notranslate"><span class="pre">time</span></code>
-dimension. Matched to the nearest time, so times outside the
-field’s span take the first or last step.</p></li>
+dimension. By default matched to the nearest time, so times
+outside the field’s span take the first or last step. See
+<code class="docutils literal notranslate"><span class="pre">step_starts</span></code>.</p></li>
 <li><p><strong>fill_value</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – Value for points outside the field and for missing cells. Use 0 for
 a surface flux, where no data means no emission. <code class="docutils literal notranslate"><span class="pre">NaN</span></code> suits a
 mole fraction, which is unknown there.</p></li>
+<li><p><strong>step_starts</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – Whether the field’s <code class="docutils literal notranslate"><span class="pre">time</span></code> labels are the starts of steps, as a
+flux inventory’s are. A point then takes the last step that starts
+at or before its time, the rule of <code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> and
+<code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code>. A point before the first label takes
+<code class="docutils literal notranslate"><span class="pre">fill_value</span></code> and a point after the last takes the last step, since
+the labels do not say where it ends. The labels must strictly increase: a repeated label is an
+error.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>

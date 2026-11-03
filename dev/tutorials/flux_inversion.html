@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=528c0bf8"></script>
+    <script src="../_static/documentation_options.js?v=93cfef5f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev28+ga1813b60f" />
+  <meta name="docsearch:version" content="0.1.0a27.dev30+gc3c0832e7" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -548,7 +548,16 @@ inside it.</p>
 multiplication. The inventory is an <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> in
 µmol m⁻² s⁻¹ with <code class="docutils literal notranslate"><span class="pre">lat</span></code> and <code class="docutils literal notranslate"><span class="pre">lon</span></code> dimensions. Each footprint cell takes
 the flux of the inventory cell it falls in. If the inventory has a <code class="docutils literal notranslate"><span class="pre">time</span></code>
-dimension, each footprint hour uses the nearest inventory time.</p>
+dimension, its labels are the starts of its steps, the convention of a
+CF-compliant inventory’s time bounds, and each footprint hour takes the
+last step that starts at or before the hour’s start. This is the rule
+<code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> and <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> use, so an enhancement
+and a Jacobian built on the same inventory agree. A monthly inventory
+labeled on the 1st gives every hour of July 20 July’s flux; a 3-hourly
+inventory labeled 09:00 gives the hours from 09:00 to 11:00 its 09:00 step.
+A footprint hour before the first label gets zero flux. An hour after the
+last label takes the last step, since the labels do not say where it ends;
+add a step of zeros after the last to end it.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
 <span class="n">inventory</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataarray</span><span class="p">(</span><span class="s2">"inventory.nc"</span><span class="p">)</span>
@@ -561,6 +570,20 @@ dimension, each footprint hour uses the nearest inventory time.</p>
 <span class="n">modeled</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"time"</span><span class="p">)</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
 </pre></div>
 </div>
+<section id="labels-at-the-middle-of-a-step">
+<span id="flux-step-labels"></span><h3>Labels at the middle of a step<a class="headerlink" href="#labels-at-the-middle-of-a-step" title="Link to this heading">#</a></h3>
+<p>An inventory labeled at the middle of its steps (a monthly mean dated the
+15th, or a 3-hourly mean dated 10:30) would be read half a step late.
+Shift its labels back by half a step first:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">half_step</span> <span class="o">=</span> <span class="p">(</span><span class="n">inventory</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">inventory</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>   <span class="c1"># for equal steps</span>
+<span class="n">inventory</span> <span class="o">=</span> <span class="n">inventory</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">inventory</span><span class="o">.</span><span class="n">time</span> <span class="o">-</span> <span class="n">half_step</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For steps of unequal length, such as calendar months, build the starts
+yourself, for example <code class="docutils literal notranslate"><span class="pre">inventory.assign_coords(time=month_starts)</span></code>. The
+labels must strictly increase; a repeated label,
+such as the overlap of two concatenated files, is an error.</p>
+</section>
 <section id="inventory-and-footprint-grids">
 <h3>Inventory and footprint grids<a class="headerlink" href="#inventory-and-footprint-grids" title="Link to this heading">#</a></h3>
 <p>Each footprint cell takes the flux of the inventory cell nearest its
@@ -663,6 +686,7 @@ the observations.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#starting-point">Starting point</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-few-point-sources">A few point sources</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-gridded-inventory">A gridded inventory</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#labels-at-the-middle-of-a-step">Labels at the middle of a step</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#inventory-and-footprint-grids">Inventory and footprint grids</a></li>
 </ul>
 </li>

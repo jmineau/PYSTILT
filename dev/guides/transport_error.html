@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=528c0bf8"></script>
+    <script src="../_static/documentation_options.js?v=93cfef5f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev28+ga1813b60f" />
+  <meta name="docsearch:version" content="0.1.0a27.dev30+gc3c0832e7" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -614,7 +614,10 @@ is far below <code class="docutils literal notranslate"><span class="pre">noise<
 footprint times the flux, summed over the grid. <code class="docutils literal notranslate"><span class="pre">flux</span></code> is an
 <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> on <code class="docutils literal notranslate"><span class="pre">lat</span></code> and <code class="docutils literal notranslate"><span class="pre">lon</span></code>, with an optional <code class="docutils literal notranslate"><span class="pre">time</span></code>
 dimension. It is sampled at the footprint’s cell centers, and footprint
-cells outside the flux field add nothing. A flux with finer cells than the
+cells outside the flux field add nothing. The <code class="docutils literal notranslate"><span class="pre">time</span></code> labels are the
+starts of the flux’s steps: each footprint hour takes the last step that
+starts at or before it (<a class="reference internal" href="../tutorials/flux_inversion.html#flux-step-labels"><span class="std std-ref">Labels at the middle of a step</span></a> says what to do with
+labels at the middle of a step). A flux with finer cells than the
 footprint’s must be put on the footprint grid first
 (<a class="reference internal" href="../tutorials/flux_inversion.html"><span class="doc">Tutorial: From Footprints To Concentrations</span></a> says how).</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">flux</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataarray</span><span class="p">(</span><span class="s2">"ch4_flux.nc"</span><span class="p">)</span>          <span class="c1"># µmol m⁻² s⁻¹ on lat/lon</span>
