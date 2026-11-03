@@ -555,6 +555,79 @@ def test_files_for_error_reports_missing_patterns(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# The crop box: longitudes count modulo 360 (#326)
+# ---------------------------------------------------------------------------
+
+
+def _outside_crop(tmp_path, west, east, longitudes, latitude=40.0):
+    """Return the longitudes that ``met_crop`` flags for a box from *west* to *east* and latitudes 30 to 50."""
+    config = MetConfig(
+        directory=tmp_path,
+        download="hrrr",
+        subgrid_enable=True,
+        subgrid_bounds=Bounds(xmin=west, xmax=east, ymin=30, ymax=50),
+    )
+    receptors = pd.DataFrame(
+        {
+            "receptor": [f"r{i}" for i in range(len(longitudes))],
+            "time": pd.Timestamp("2023-01-01 12:00"),
+            "longitude": longitudes,
+            "latitude": latitude,
+        }
+    )
+    found = Met("hrrr", config).check_receptors(receptors, -3)
+    assert set(found["check"]) <= {"met_crop"}
+    return [longitudes[int(r[1:])] for r in found["receptor"]]
+
+
+@pytest.mark.parametrize(
+    ("west", "east", "longitudes", "flagged"),
+    [
+        # The four rows of the issue's table.
+        (-125, -100, [-111.9, -90, -130], [-90, -130]),
+        (170, -170, [175, -175, 0], [0]),
+        (170, 190, [175, -175, 185, 0], [0]),
+        (-190, -170, [-175, 175, 185], []),
+        # A receptor on an edge is inside, written either way.
+        (-125, -100, [-125, -100], []),
+        (170, -170, [170, -170, 190, -190], []),
+        (170, 190, [170, 190, -170, -190], []),
+        (-190, -170, [-190, -170, 170, 190], []),
+        # Just past an edge is outside.
+        (170, -170, [169.99, -169.99], [169.99, -169.99]),
+        (-125, -100, [-125.01, -99.99], [-125.01, -99.99]),
+        # A box a turn wide or more holds every longitude, whatever its edges.
+        (-180, 180, [-180, 0, 180, 90, -179.9], []),
+        (0, 360, [-180, 0, 180, 359, -1], []),
+        (-200, 200, [-180, 0, 180, 195, -195], []),
+        (-10, 400, [-180, 0, 180, 195, -195], []),
+        # A box that reaches past 360 wraps.
+        (350, 370, [355, -355, 5, -5, 0, 10, 11, 349, -11], [11, 349, -11]),
+        # A box with no width holds its meridian only.
+        (-111, -111, [-111, 249, -110.9], [-110.9]),
+        # West of east by more than half a turn: the box is the long way round.
+        (-170, 170, [175, -175, 0, 170, -170], [175, -175]),
+    ],
+)
+def test_crop_box_longitudes_count_modulo_360(
+    tmp_path, west, east, longitudes, flagged
+):
+    """A receptor is in the box when its longitude, east of the box's west edge, is within the box's width."""
+    assert _outside_crop(tmp_path, west, east, longitudes) == flagged
+
+
+def test_a_receptor_outside_the_crop_in_latitude_is_flagged_across_the_dateline(
+    tmp_path,
+):
+    assert _outside_crop(tmp_path, 170, -170, [175, -175], latitude=60) == [175, -175]
+
+
+def test_crop_edges_written_in_another_turn_are_not_flagged_by_rounding(tmp_path):
+    """The west edge plus 360 is the west edge, and the east edge plus 360 the east edge, however the sums round."""
+    assert _outside_crop(tmp_path, -175.3, -170.1, [184.7, -175.3, 189.9]) == []
+
+
+# ---------------------------------------------------------------------------
 # Lock files are excluded
 # ---------------------------------------------------------------------------
 

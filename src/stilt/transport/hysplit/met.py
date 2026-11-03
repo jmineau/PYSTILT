@@ -215,6 +215,26 @@ class MetConfig(BaseModel):
         return dict(self.model_extra) if self.model_extra else {}
 
 
+def _in_longitude_range(lon: pd.Series, west: float, east: float) -> pd.Series:
+    """
+    Whether each longitude in *lon* is in the range from *west* east to *east*, counting modulo 360.
+
+    A longitude is in the range when it lies within the range's width east of
+    *west*, so a range may cross the dateline (``170`` to ``-170``) or reach
+    past 180 (``170`` to ``190``), and ``-175`` and ``185`` are the same
+    meridian. A range 360 degrees wide or more holds every longitude. This is
+    the rule arlmet counts the columns of a crop by, so the check and the crop
+    agree. Both ends of the range allow ``1e-9`` degree for rounding, since a
+    sum such as ``184.7 + 175.3`` need not give exactly 360.
+    """
+    tolerance = 1e-9
+    if east - west >= 360.0:
+        return pd.Series(True, index=lon.index)
+    width = (east - west) % 360.0
+    from_west = (lon - west) % 360.0
+    return (from_west <= width + tolerance) | (from_west >= 360.0 - tolerance)
+
+
 def _is_stray(name: str) -> bool:
     """
     Whether the file *name* beside a met file is not one.
@@ -656,7 +676,9 @@ class Met:
             return []
         west, south, east, north = crop["bbox"]
         lon, lat = receptors["longitude"], receptors["latitude"]
-        outside = receptors[(lon < west) | (lon > east) | (lat < south) | (lat > north)]
+        outside = receptors[
+            ~_in_longitude_range(lon, west, east) | (lat < south) | (lat > north)
+        ]
         box = f"{west:g} to {east:g} longitude, {south:g} to {north:g} latitude"
         return [
             (
