@@ -20,6 +20,7 @@ import pandas as pd
 from pandas.tseries.frequencies import to_offset
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
+from stilt._exit_codes import EXIT_INTERRUPTED, error_exit_code
 from stilt._paths import absolute, atomic_path
 from stilt.exceptions import MeteorologyError
 from stilt.identity import settings_hash
@@ -796,6 +797,10 @@ class Met:
         runs; when that fails, each of its windows is asked for on its own,
         so a failure names only the windows it belongs to. A met without
         ``download`` is only checked: its files are looked for, never made.
+        Only a file that is not there is a failure to report. Any other
+        error stops the fetch and is raised, whether a retry may get past it
+        (a busy archive, a connection that failed) or not (a denied request,
+        a full disk), so that ``stilt fetch`` can exit with 3 or 4.
 
         Parameters
         ----------
@@ -816,9 +821,13 @@ class Met:
             """Get the files for *window*, or return why they could not be had."""
             try:
                 files.update(dict.fromkeys(self.files_for(window)))
-            except (MeteorologyError, ValueError, OSError) as error:
-                if isinstance(error, MeteorologyError):
-                    return str(error)
+            except MeteorologyError as error:
+                return str(error)
+            except (ValueError, FileNotFoundError) as error:
+                # fsspec's HTTP filesystem raises FileNotFoundError for a busy
+                # server too: the cause says, and a retry may get past it.
+                if error_exit_code(error) == EXIT_INTERRUPTED:
+                    raise
                 first, last = (_time(t) for t in window)
                 return f"{first:%Y-%m-%d %H:%M} to {last:%Y-%m-%d %H:%M}: {error}"
             return None

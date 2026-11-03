@@ -32,7 +32,8 @@ class FakeHRRR(HRRRArchive):
     ``_download`` and ``_fetch_and_crop`` write a few bytes and note the
     file, so a test can say what was downloaded, in how many requests, and
     that a second ask downloads nothing. A file whose URL holds a string in
-    ``missing`` is not on the server.
+    ``missing`` is not on the server. When ``error`` is set, every download
+    raises it.
     """
 
     def __init__(self) -> None:
@@ -40,12 +41,15 @@ class FakeHRRR(HRRRArchive):
         self.downloaded: list[str] = []
         self.requests: list[tuple[pd.Timestamp, pd.Timestamp]] = []
         self.missing: set[str] = set()
+        self.error: Exception | None = None
 
     def fetch(self, start, end, **kwargs):
         self.requests.append((pd.Timestamp(start), pd.Timestamp(end)))
         return super().fetch(start, end, **kwargs)
 
     def _download(self, url, dest, opts, **kwargs):
+        if self.error is not None:
+            raise self.error
         if any(text in url for text in self.missing):
             raise FileNotFoundError(f"{url} is not in the archive")
         self.downloaded.append(dest.name)
@@ -390,6 +394,75 @@ def test_stilt_fetch_exits_with_1_when_a_file_could_not_be_had(tmp_path, archive
     assert "Met hrrr: 5 files ready" in result.output
     assert "could not get the files for these times" in result.output
     assert "2024-07-08 19:00 to 2024-07-09 01:00" in result.output
+
+
+def _s3_answer(status, code):
+    """Return what s3fs raises for S3's answer with this status and error code."""
+    translate = pytest.importorskip("s3fs.errors").translate_boto_error
+    botocore = pytest.importorskip("botocore.exceptions")
+    answer = {"ResponseMetadata": {"HTTPStatusCode": status}, "Error": {"Code": code}}
+    return translate(botocore.ClientError(answer, "GetObject"))
+
+
+def _botocore(name):
+    """Return botocore's error of this name, as a failed connection raises it."""
+    return getattr(pytest.importorskip("botocore.exceptions"), name)(endpoint_url="u")
+
+
+def _http_failed(status):
+    """Return what fsspec's HTTP filesystem raises for any failure: ``FileNotFoundError``, from the error."""
+    answered = RuntimeError("the server answered")
+    answered.status = status
+    error = FileNotFoundError("http://archive/file")
+    error.__cause__ = answered
+    return error
+
+
+@pytest.mark.parametrize(
+    ("make_error", "code"),
+    [
+        # The archive does not have the file: a retry would not help.
+        pytest.param(lambda: _s3_answer(404, "NoSuchKey"), 1, id="NoSuchKey 404"),
+        pytest.param(lambda: _http_failed(404), 1, id="http 404"),
+        pytest.param(lambda: FileNotFoundError("gone"), 1, id="file not found"),
+        # The archive is busy or the connection failed: run it again.
+        pytest.param(lambda: _s3_answer(503, "SlowDown"), 3, id="SlowDown 503"),
+        pytest.param(
+            lambda: _s3_answer(500, "InternalError"), 3, id="InternalError 500"
+        ),
+        pytest.param(lambda: _http_failed(503), 3, id="http 503"),
+        pytest.param(lambda: _http_failed(429), 3, id="http 429"),
+        pytest.param(lambda: ConnectionResetError("reset"), 3, id="reset"),
+        pytest.param(lambda: _botocore("ReadTimeoutError"), 3, id="read timeout"),
+        pytest.param(lambda: _botocore("ConnectTimeoutError"), 3, id="connect timeout"),
+        pytest.param(lambda: _botocore("EndpointConnectionError"), 3, id="refused"),
+        # Anything else is not "the file is missing": the command group sorts it.
+        pytest.param(lambda: PermissionError("denied"), 4, id="denied"),
+        pytest.param(lambda: _s3_answer(403, "AccessDenied"), 4, id="AccessDenied 403"),
+    ],
+)
+def test_stilt_fetch_exits_with_1_only_for_a_file_the_archive_lacks(
+    tmp_path, archive, make_error, code
+):
+    project = _project(tmp_path, RECEPTORS[:1])
+    archive.error = make_error()
+
+    result = runner.invoke(app, ["fetch", str(project.directory)])
+
+    assert result.exit_code == code, result.output
+    if code == 1:
+        assert "could not get the files for these times" in result.output
+
+
+def test_a_busy_archive_stops_a_fetch_at_the_first_window(tmp_path, archive):
+    """A throttled archive is asked once, not once for each window."""
+    project = _project(tmp_path, RECEPTORS, n_hours=-6)
+    archive.error = _s3_answer(503, "SlowDown")
+
+    result = runner.invoke(app, ["fetch", str(project.directory)])
+
+    assert result.exit_code == 3
+    assert len(archive.requests) == 1
 
 
 def test_stilt_fetch_of_a_finished_project_says_so(tmp_path, archive):

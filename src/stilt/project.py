@@ -1311,6 +1311,10 @@ class Project:
             file, which names the output folder of its runs.
         ImportError
             If a met downloads and the ``download`` extra is not installed.
+        OSError
+            If a download fails for any reason but a missing file, such as
+            a busy archive or a full disk, and so does a connection error
+            of the download library. ``stilt fetch`` exits with 3 or 4.
 
         Examples
         --------

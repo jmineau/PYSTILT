@@ -62,10 +62,12 @@ A met without ``download`` is only checked: ``stilt fetch`` reports the
 files it lacks, as ``stilt check`` does, and does not make them.
 
 It exits with 0 when every file is there, 1 when some could not be had
-(the file is not in the archive, or the connection failed; it prints the
-times of the runs that need them), 2 when the command line is wrong or a met
-directory cannot be read, and 3 when it was stopped (Ctrl-C, or SIGTERM,
-which Kubernetes and Slurm send). A stop removes the file it was downloading,
+(the archive does not have the file; it prints the times of the runs that
+need them), 2 when the command line is wrong or a met directory cannot be
+read, and 3 when it was stopped (Ctrl-C, or SIGTERM, which Kubernetes and
+Slurm send) or the archive was busy or the connection failed (a throttled
+bucket, a timeout, a refused connection), which a retry may get past. Any other
+unexpected error is 4 (:ref:`exit-codes`). A stop removes the file it was downloading,
 and a second stop signal while it does is ignored. Run it again to try the
 missing files, or to finish after a stop: the ones it got are kept. A process
 killed with SIGKILL, which cannot be caught, leaves its hidden
@@ -183,7 +185,8 @@ that is not there or may not be used, or anything else. Every ``stilt`` command 
 an error it did not expect, not only ``stilt run``, except that a closed
 standard output (``stilt status | head``) ends quietly with 1, as it always
 has. A simulation that fails inside a run, whatever the cause, is a failure
-record and exit 1.
+record and exit 1. ``stilt fetch`` follows the same table, except that
+1 is a file the archive does not have (a 404, whatever library reports it).
 
 For a Kubernetes indexed Job, a ``podFailurePolicy`` that retries on 3 and
 fails the task on 1 and 4 follows from this table.

@@ -17,7 +17,8 @@ import yaml
 from typer.testing import CliRunner
 
 import stilt.__main__
-from stilt.cli import _error_exit_code, _resolve_project, app
+from stilt._exit_codes import error_exit_code
+from stilt.cli import _resolve_project, app
 from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.project import Project
@@ -633,7 +634,7 @@ def _with_status(attribute, status):
     ],
 )
 def test_error_exit_code_sorts_retry_from_bug(error, code):
-    assert _error_exit_code(error) == code
+    assert error_exit_code(error) == code
 
 
 def _as_s3fs_raises(error_errno, status, code):
@@ -708,7 +709,7 @@ def _http_error_of_requests(status):
     ],
 )
 def test_error_exit_code_reads_the_chain_and_the_status(error, code):
-    assert _error_exit_code(error) == code
+    assert error_exit_code(error) == code
 
 
 @pytest.mark.parametrize(
@@ -746,7 +747,7 @@ def test_error_exit_code_reads_the_chain_and_the_status(error, code):
     ],
 )
 def test_error_exit_code_ftp_replies_and_wrapped_http_errors(error, code):
-    assert _error_exit_code(error) == code
+    assert error_exit_code(error) == code
 
 
 def test_an_error_raised_while_handling_a_connection_error_is_read_with_it():
@@ -756,14 +757,14 @@ def test_an_error_raised_while_handling_a_connection_error_is_read_with_it():
         except ConnectionRefusedError:
             raise RuntimeError("the handler failed") from None
     except RuntimeError as suppressed:
-        assert _error_exit_code(suppressed) == 4
+        assert error_exit_code(suppressed) == 4
     try:
         try:
             raise ConnectionRefusedError("refused")
         except ConnectionRefusedError:
             raise RuntimeError("the handler failed")  # noqa: B904
     except RuntimeError as handling:
-        assert _error_exit_code(handling) == 3
+        assert error_exit_code(handling) == 3
 
 
 def test_s3fs_own_translation_is_sorted_by_status():
@@ -782,7 +783,7 @@ def test_s3fs_own_translation_is_sorted_by_status():
         ("SomethingNew", 418, 4),
     ]:
         error = translate(_client_error(status, name))
-        assert _error_exit_code(error) == code, (name, status)
+        assert error_exit_code(error) == code, (name, status)
 
 
 def test_a_cloud_error_is_sorted_with_the_libraries_not_imported():
@@ -796,9 +797,9 @@ def test_a_cloud_error_is_sorted_with_the_libraries_not_imported():
         },
         "ListObjectsV2",
     )
-    assert _error_exit_code(refused) == 3
-    assert _error_exit_code(botocore.ReadTimeoutError(endpoint_url="u")) == 3
-    assert _error_exit_code(denied) == 4
+    assert error_exit_code(refused) == 3
+    assert error_exit_code(botocore.ReadTimeoutError(endpoint_url="u")) == 3
+    assert error_exit_code(denied) == 4
 
 
 @pytest.mark.parametrize(
