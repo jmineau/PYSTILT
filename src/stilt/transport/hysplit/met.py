@@ -256,17 +256,25 @@ def _time(value: Any) -> pd.Timestamp:
     return time
 
 
-def _download_cover(window: tuple[Any, Any]) -> tuple[pd.Timestamp, pd.Timestamp]:
+def _download_cover(
+    window: tuple[Any, Any], step: pd.Timedelta
+) -> tuple[pd.Timestamp, pd.Timestamp]:
     """
     Return the first and last time downloaded files must cover for *window*.
 
-    The hour after the window's end is added, so that an archive of hourly
-    met gives the file holding the met step after a run's end. An archive's
-    files are 6 hours or longer, so this never adds a file a window ending
-    on a file boundary does not need.
+    HYSPLIT needs the met step at or after the window's end, so the end is
+    taken up to the next time step of the archive (*step*, from
+    ``Archive.step``): a run that ends after the last step of a file gets
+    the next file, such as the next day's with 3-hourly steps in daily
+    files. The hour after the window's end is also covered, so that an
+    archive of hourly met gives the file holding the step after a run's end;
+    the later of the two is the end. A window ending on a step that is the
+    last of its file needs nothing from the next file.
     """
     earlier, later = (_time(t) for t in window)
-    return earlier, _time(later.floor("h") + pd.Timedelta(hours=1))
+    hour_after = later.floor("h") + pd.Timedelta(hours=1)
+    next_step = later.ceil(f"{int(step.total_seconds())}s")
+    return earlier, _time(max(hour_after, next_step))
 
 
 class Met:
@@ -423,12 +431,12 @@ class Met:
 
     def _download(self, window: tuple[Any, Any]) -> list[Path]:
         """Return the files that cover *window* from the ARL archive, downloading any not yet in ``directory``."""
-        t_start, t_end = _download_cover(window)
+        archive = self._get_archive()
+        t_start, t_end = _download_cover(window, archive.step)
 
         bbox = self._bbox() if self.config.subgrid_enable else None
         levels = self._level_indices() if self.config.subgrid_enable else None
 
-        archive = self._get_archive()
         try:
             files = archive.fetch(
                 t_start,
