@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=003c9154"></script>
+    <script src="../_static/documentation_options.js?v=42fe9ec2"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev33+g465ec34b6" />
+  <meta name="docsearch:version" content="0.1.0a27.dev38+g07f05c060" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -589,6 +589,26 @@ PYSTILT adds each kernel along the axis each cell count belongs to, so
 smoothing keeps the footprint total. Its footprint equals STILT-R’s with
 <code class="docutils literal notranslate"><span class="pre">permute.f90</span></code> reading the kernel that way, to within <code class="docutils literal notranslate"><span class="pre">1e-16</span></code> of the
 peak. On square cells the two agree.</p></li>
+<li><p><strong>Smoothing on a projected grid.</strong> The kernel width,
+<code class="docutils literal notranslate"><span class="pre">0.06</span> <span class="pre">*</span> <span class="pre">(var(x)</span> <span class="pre">+</span> <span class="pre">var(y))**0.25</span> <span class="pre">*</span> <span class="pre">sqrt(|rtime|</span> <span class="pre">/</span> <span class="pre">1440)</span></code>, is made for
+coordinates in degrees. STILT-R applies it to the projected coordinates,
+so on a grid in meters the kernel is a few meters wide and the footprint
+is hardly smoothed. On a 24 h run on 1 km UTM cells, STILT-R’s footprint
+has a third of the nonzero cells of the same run on a 0.01° grid (9,771
+and 28,706), and PYSTILT’s has 26,385. PYSTILT works the width out in
+degrees from the particles’ longitudes and latitudes, as on a
+longitude/latitude grid, then multiplies it by the length of one degree
+of longitude at the particles’ mean position, measured in the grid’s
+projection and units. Each step’s longitudes are first taken within 180°
+of that step’s circular mean, so a cloud is measured as one wherever it
+is, on both sides of 180° included.
+The kernel is then as wide from east to west, on the ground, as on a
+longitude/latitude grid. On the projected grid it is round. On a
+longitude/latitude grid it is <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">/</span> <span class="pre">cos(lat)</span></code> times wider from north to
+south, because it has one width in degrees on both axes.
+The fidelity suite’s UTM scenario compares unsmoothed footprints, and
+<code class="docutils literal notranslate"><span class="pre">test_projected_smoothing_intentionally_differs_from_r</span></code> guards the
+difference. Longitude/latitude grids are not affected.</p></li>
 <li><p><strong>Forward runs with the HNF correction.</strong> STILT-R accumulates the plume
 from the far end of a forward trajectory back toward the release point,
 so its plume is widest at release. PYSTILT accumulates outward from the

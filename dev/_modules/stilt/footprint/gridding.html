@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=003c9154"></script>
+    <script src="../../../_static/documentation_options.js?v=42fe9ec2"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev33+g465ec34b6" />
+  <meta name="docsearch:version" content="0.1.0a27.dev38+g07f05c060" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -450,8 +450,9 @@
 <span></span><span class="sd">"""</span>
 <span class="sd">Calculating a footprint from particles, as STILT-R's ``calc_footprint`` does.</span>
 
-<span class="sd">Footprints match STILT-R at ``rtol=1e-7`` per cell. Run the ``fidelity``</span>
-<span class="sd">tests before merging any change to this module.</span>
+<span class="sd">Footprints match STILT-R at ``rtol=1e-7`` per cell, except the smoothing on a</span>
+<span class="sd">projected grid (``_compute_kernel_bandwidths``). Run the ``fidelity`` tests</span>
+<span class="sd">before merging any change to this module.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -468,7 +469,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FootprintConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">FOOTPRINT_COLUMNS</span><span class="p">,</span> <span class="n">check_particles</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_grid_cell_starts</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_grid_cell_starts</span><span class="p">,</span> <span class="n">is_longlat</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_transforms</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">_footprint_array</span>
@@ -516,6 +517,11 @@
     <span class="k">return</span> <span class="n">times</span> <span class="o">*</span> <span class="n">time_sign</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_wrap_longitudes</span><span class="p">(</span><span class="n">lon</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">west</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return *lon* shifted by whole turns into ``[west, west + 360)``; both are numbers, arrays, or Series."""</span>
+    <span class="k">return</span> <span class="p">(((</span><span class="n">lon</span> <span class="o">-</span> <span class="n">west</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span><span class="p">)</span> <span class="o">+</span> <span class="mi">360</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span> <span class="o">+</span> <span class="n">west</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_wrap_antimeridian_longitudes</span><span class="p">(</span>
     <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
@@ -529,9 +535,9 @@
         <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="o">-</span><span class="mf">180.0</span><span class="p">,</span> <span class="mf">180.0</span><span class="p">,</span> <span class="kc">False</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">xmax</span> <span class="o">&lt;</span> <span class="n">xmin</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">xmax</span> <span class="o">&gt;</span> <span class="mi">180</span><span class="p">):</span>
         <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span> <span class="o">%</span> <span class="mi">360</span><span class="p">)</span> <span class="o">+</span> <span class="mi">360</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span>
-        <span class="n">xmin</span> <span class="o">=</span> <span class="p">((</span><span class="n">xmin</span> <span class="o">%</span> <span class="mi">360</span><span class="p">)</span> <span class="o">+</span> <span class="mi">360</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span>
-        <span class="n">xmax</span> <span class="o">=</span> <span class="p">((</span><span class="n">xmax</span> <span class="o">%</span> <span class="mi">360</span><span class="p">)</span> <span class="o">+</span> <span class="mi">360</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span>
+        <span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_wrap_longitudes</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">])</span>
+        <span class="n">xmin</span> <span class="o">=</span> <span class="n">_wrap_longitudes</span><span class="p">(</span><span class="n">xmin</span><span class="p">)</span>
+        <span class="n">xmax</span> <span class="o">=</span> <span class="n">_wrap_longitudes</span><span class="p">(</span><span class="n">xmax</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="kc">True</span>
     <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="kc">False</span>
 
@@ -678,23 +684,42 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_compute_kernel_bandwidths</span><span class="p">(</span>
-    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">is_longlat</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"+proj=longlat"</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return ``(kernel_df, w)``, the Gaussian kernel width for each ``rtime``.</span>
+<span class="sd">    Return ``(kernel_df, w)``, the Gaussian kernel width for each ``rtime``, in *crs* units.</span>
 
-<span class="sd">    The width grows with the spread of the particles and the time since</span>
-<span class="sd">    release, as in STILT-R. On a longitude/latitude grid it is divided by</span>
-<span class="sd">    ``cos(lat)`` so it covers the same distance at high latitudes::</span>
+<span class="sd">    *p* holds the particles' longitudes and latitudes in degrees, before any</span>
+<span class="sd">    projection. The width grows with the spread of the particles and the</span>
+<span class="sd">    time since release, as in STILT-R, and is divided by ``cos(lat)`` so it</span>
+<span class="sd">    covers the same distance at high latitudes::</span>
 
 <span class="sd">        w = smooth_factor * 0.06 * varsum**0.25 * (|rtime| / 1440)**0.5 / cos(lat)</span>
+
+<span class="sd">    This is in degrees of longitude. On a projected grid it is converted to</span>
+<span class="sd">    the grid's units by the length of one degree of longitude at the</span>
+<span class="sd">    particles' mean position (``_grid_units_per_degree_longitude``), so the</span>
+<span class="sd">    kernel is as wide from east to west, on the ground, as on a</span>
+<span class="sd">    longitude/latitude grid. STILT-R applies the formula to the projected</span>
+<span class="sd">    coordinates instead, which on a grid in meters gives a kernel a few</span>
+<span class="sd">    meters wide.</span>
+
+<span class="sd">    On a projected grid each ``rtime``'s longitudes are first shifted by</span>
+<span class="sd">    whole turns to within 180 degrees of that step's circular mean</span>
+<span class="sd">    (``_unwrap_around_cloud``), so a cloud has the spread and mean position</span>
+<span class="sd">    it has on the ground wherever it is, across 180 degrees included. A</span>
+<span class="sd">    longitude/latitude grid that crosses 180 degrees has its longitudes</span>
+<span class="sd">    shifted before this, by ``_wrap_antimeridian_longitudes``.</span>
 <span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_longlat</span><span class="p">(</span><span class="n">crs</span><span class="p">):</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">_unwrap_around_cloud</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
     <span class="n">kernel_df</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">p</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"rtime"</span><span class="p">)</span>
         <span class="o">.</span><span class="n">agg</span><span class="p">(</span>
             <span class="n">long_var</span><span class="o">=</span><span class="p">(</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"var"</span><span class="p">),</span>
             <span class="n">lati_var</span><span class="o">=</span><span class="p">(</span><span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"var"</span><span class="p">),</span>
             <span class="n">lat_mean</span><span class="o">=</span><span class="p">(</span><span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">),</span>
+            <span class="n">lon_mean</span><span class="o">=</span><span class="p">(</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">),</span>
         <span class="p">)</span>
         <span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
         <span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
@@ -713,11 +738,89 @@
     <span class="n">kernel_df</span><span class="p">[</span><span class="s2">"varsum"</span><span class="p">]</span> <span class="o">=</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">"long_var"</span><span class="p">]</span> <span class="o">+</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">"lati_var"</span><span class="p">]</span>
     <span class="n">di</span> <span class="o">=</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">"varsum"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">**</span> <span class="mf">0.25</span>
     <span class="n">ti</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">"rtime"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span> <span class="o">/</span> <span class="mi">1440</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
-    <span class="n">grid_conv</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">"lat_mean"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="k">if</span> <span class="n">is_longlat</span> <span class="k">else</span> <span class="mf">1.0</span>
-    <span class="p">)</span>
+    <span class="n">grid_conv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">"lat_mean"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span>
     <span class="n">w</span> <span class="o">=</span> <span class="n">smooth_factor</span> <span class="o">*</span> <span class="mf">0.06</span> <span class="o">*</span> <span class="n">di</span> <span class="o">*</span> <span class="n">ti</span> <span class="o">/</span> <span class="n">grid_conv</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_longlat</span><span class="p">(</span><span class="n">crs</span><span class="p">):</span>
+        <span class="c1"># The mean of unwrapped longitudes can pass 180; only those go back.</span>
+        <span class="n">lon_mean</span> <span class="o">=</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">"lon_mean"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">outside</span> <span class="o">=</span> <span class="p">(</span><span class="n">lon_mean</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">180.0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">lon_mean</span> <span class="o">&gt;=</span> <span class="mf">180.0</span><span class="p">)</span>
+        <span class="n">lon_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">outside</span><span class="p">,</span> <span class="n">_wrap_longitudes</span><span class="p">(</span><span class="n">lon_mean</span><span class="p">,</span> <span class="n">west</span><span class="o">=-</span><span class="mf">180.0</span><span class="p">),</span> <span class="n">lon_mean</span><span class="p">)</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">w</span> <span class="o">*</span> <span class="n">_grid_units_per_degree_longitude</span><span class="p">(</span>
+            <span class="n">crs</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="n">lon_mean</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">"lat_mean"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="c1"># A step whose cloud is centered where the projection has no value</span>
+        <span class="c1"># (UTM near the equator 81 to 99 degrees from its meridian, a</span>
+        <span class="c1"># geostationary grid off the disk) has no width. Its particles cannot</span>
+        <span class="c1"># reach the grid, so the step is dropped, as STILT-R's na.omit drops a</span>
+        <span class="c1"># step whose particles project to infinity.</span>
+        <span class="c1"># If no step has a width, the particles are not smoothed, as when no</span>
+        <span class="c1"># step has a spread (above).</span>
+        <span class="n">finite</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">finite</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">finite</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="n">kernel_df</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">kernel_df</span><span class="p">[</span><span class="n">finite</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">w</span><span class="p">[</span><span class="n">finite</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">kernel_df</span><span class="p">,</span> <span class="n">w</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_unwrap_around_cloud</span><span class="p">(</span><span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the longitudes of *p*, each ``rtime``'s within 180 degrees of that step's circular mean.</span>
+
+<span class="sd">    The circular mean is the direction of the mean of the unit vectors, so</span>
+<span class="sd">    it is the cloud's center wherever the cloud is, and the window it opens</span>
+<span class="sd">    has its seam on the far side of the globe from the cloud. The center is</span>
+<span class="sd">    expressed in the frame the longitudes are written in (-180 to 180, or</span>
+<span class="sd">    0 to 360 on a grid that crosses 180 degrees), so a longitude is shifted,</span>
+<span class="sd">    by whole turns (``_wrap_longitudes``), only when it lies more than 180</span>
+<span class="sd">    degrees from the center. The others are returned as they are, to the</span>
+<span class="sd">    last bit.</span>
+<span class="sd">    """</span>
+    <span class="n">lon</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span>
+    <span class="n">rad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lon</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+    <span class="n">steps</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"rtime"</span><span class="p">]</span>
+    <span class="n">mean_sin</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">rad</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">"mean"</span><span class="p">)</span>
+    <span class="n">mean_cos</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">rad</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">"mean"</span><span class="p">)</span>
+    <span class="n">circular</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">mean_sin</span><span class="p">,</span> <span class="n">mean_cos</span><span class="p">))</span>
+    <span class="c1"># The same center, a whole number of turns away, nearest the plain mean.</span>
+    <span class="n">plain</span> <span class="o">=</span> <span class="n">lon</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">"mean"</span><span class="p">)</span>
+    <span class="n">center</span> <span class="o">=</span> <span class="n">plain</span> <span class="o">+</span> <span class="p">((</span><span class="n">circular</span> <span class="o">-</span> <span class="n">plain</span> <span class="o">+</span> <span class="mf">180.0</span><span class="p">)</span> <span class="o">%</span> <span class="mf">360.0</span> <span class="o">-</span> <span class="mf">180.0</span><span class="p">)</span>
+    <span class="n">west</span> <span class="o">=</span> <span class="n">center</span> <span class="o">-</span> <span class="mf">180.0</span>
+    <span class="n">outside</span> <span class="o">=</span> <span class="p">(</span><span class="n">lon</span> <span class="o">&lt;</span> <span class="n">west</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">lon</span> <span class="o">&gt;=</span> <span class="n">west</span> <span class="o">+</span> <span class="mf">360.0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">lon</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="o">~</span><span class="n">outside</span><span class="p">,</span> <span class="n">_wrap_longitudes</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">west</span><span class="o">=</span><span class="n">west</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_grid_units_per_degree_longitude</span><span class="p">(</span>
+    <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">lon</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the length of one degree of longitude at each ``(lon, lat)``, in *crs* units.</span>
+
+<span class="sd">    It is measured with the projection itself: the distance between the</span>
+<span class="sd">    points a hundredth of a degree east and west, divided by the</span>
+<span class="sd">    difference in degrees. So it includes the projection's scale at that</span>
+<span class="sd">    point and its units (meters, feet, kilometers), and does not depend on</span>
+<span class="sd">    how the projection's axes are turned. It is NaN where the projection</span>
+<span class="sd">    has no value. Next to a projection's cut (a</span>
+<span class="sd">    Lambert conformal or Mercator grid is cut at ``lon_0 + 180``) one of</span>
+<span class="sd">    the two points is across it, so the distances from the point to each</span>
+<span class="sd">    side differ by more than a factor of two; there the shorter one is</span>
+<span class="sd">    used.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
+
+    <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="mf">0.01</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">))</span>
+    <span class="n">x_west</span><span class="p">,</span> <span class="n">y_west</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">lon</span> <span class="o">-</span> <span class="n">step</span><span class="p">,</span> <span class="n">lat</span><span class="p">))</span>
+    <span class="n">x_east</span><span class="p">,</span> <span class="n">y_east</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">lon</span> <span class="o">+</span> <span class="n">step</span><span class="p">,</span> <span class="n">lat</span><span class="p">))</span>
+    <span class="c1"># Where the projection has no value it gives inf, and the length is NaN.</span>
+    <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">invalid</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">):</span>
+        <span class="n">across</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x_east</span> <span class="o">-</span> <span class="n">x_west</span><span class="p">,</span> <span class="n">y_east</span> <span class="o">-</span> <span class="n">y_west</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">step</span><span class="p">)</span>
+        <span class="n">west</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x_west</span><span class="p">,</span> <span class="n">y</span> <span class="o">-</span> <span class="n">y_west</span><span class="p">)</span> <span class="o">/</span> <span class="n">step</span>
+        <span class="n">east</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x_east</span> <span class="o">-</span> <span class="n">x</span><span class="p">,</span> <span class="n">y_east</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span> <span class="o">/</span> <span class="n">step</span>
+        <span class="n">cut</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">west</span><span class="p">,</span> <span class="n">east</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">west</span><span class="p">,</span> <span class="n">east</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">cut</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">west</span><span class="p">,</span> <span class="n">east</span><span class="p">),</span> <span class="n">across</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_padded_axes</span><span class="p">(</span>
@@ -941,6 +1044,11 @@
 <span class="sd">    the number of particles and binned by hour, unless *time_integrate* is</span>
 <span class="sd">    set.</span>
 
+<span class="sd">    On a projected grid the kernel's width is worked out in degrees, as on</span>
+<span class="sd">    a longitude/latitude grid, and converted to the grid's units, so the</span>
+<span class="sd">    footprint is smoothed as much. STILT-R applies its formula to the</span>
+<span class="sd">    projected coordinates and barely smooths a footprint there.</span>
+
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    particles : pandas.DataFrame</span>
@@ -1017,7 +1125,6 @@
     <span class="n">crs</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">crs</span>
     <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">xres</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span>
     <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">yres</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span>
-    <span class="n">is_longlat</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span>
     <span class="n">smooth_factor</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">smooth_factor</span>
     <span class="n">time_integrate</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">time_integrate</span>
 
@@ -1031,7 +1138,7 @@
     <span class="n">time_sign</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">()))</span>
 
     <span class="n">wrapped_longitude</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="k">if</span> <span class="n">is_longlat</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
         <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">wrapped_longitude</span> <span class="o">=</span> <span class="n">_wrap_antimeridian_longitudes</span><span class="p">(</span>
             <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="n">xmax</span>
         <span class="p">)</span>
@@ -1043,7 +1150,11 @@
     <span class="n">min_abs_time</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">],</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">"min"</span><span class="p">)</span>
     <span class="n">p</span><span class="p">[</span><span class="s2">"rtime"</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span> <span class="o">-</span> <span class="n">time_sign</span> <span class="o">*</span> <span class="n">min_abs_time</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_longlat</span><span class="p">:</span>
+    <span class="c1"># The kernel width comes from the spread in degrees, before projecting,</span>
+    <span class="c1"># and is returned in the grid's units.</span>
+    <span class="n">kernel_df</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">_compute_kernel_bandwidths</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="n">smooth_factor</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="n">crs</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
         <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">_project_particles_to_crs</span><span class="p">(</span>
             <span class="n">p</span><span class="p">,</span>
             <span class="n">crs</span><span class="o">=</span><span class="n">crs</span><span class="p">,</span>
@@ -1060,9 +1171,6 @@
     <span class="n">n_lat</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">glati</span><span class="p">)</span>
     <span class="n">rs</span> <span class="o">=</span> <span class="p">(</span><span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">)</span>
 
-    <span class="n">kernel_df</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">_compute_kernel_bandwidths</span><span class="p">(</span>
-        <span class="n">p</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="n">smooth_factor</span><span class="p">,</span> <span class="n">is_longlat</span><span class="o">=</span><span class="n">is_longlat</span>
-    <span class="p">)</span>
     <span class="n">max_kernel</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">_make_gauss_kernel</span><span class="p">(</span><span class="n">rs</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">w</span><span class="p">)))</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])</span>
     <span class="p">)</span>

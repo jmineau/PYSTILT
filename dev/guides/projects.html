@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=003c9154"></script>
+    <script src="../_static/documentation_options.js?v=42fe9ec2"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev33+g465ec34b6" />
+  <meta name="docsearch:version" content="0.1.0a27.dev38+g07f05c060" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -625,7 +625,12 @@ footprint and take longer. The default is 200; the config
 <p>These footprint settings sit next to <code class="docutils literal notranslate"><span class="pre">grid</span></code> at the top level:</p>
 <dl class="simple">
 <dt><code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code></dt><dd><p>Scales the Gaussian smoothing applied to each particle’s influence. The
-default, <code class="docutils literal notranslate"><span class="pre">1.0</span></code>, is standard STILT. Smaller values smooth less.</p>
+default, <code class="docutils literal notranslate"><span class="pre">1.0</span></code>, is standard STILT. Smaller values smooth less. The
+kernel widens as the particles spread and age. Its width is worked out
+in degrees. On a projected <code class="docutils literal notranslate"><span class="pre">grid</span></code> (a <code class="docutils literal notranslate"><span class="pre">crs</span></code> such as <code class="docutils literal notranslate"><span class="pre">EPSG:32612</span></code>) it
+is converted to the grid’s units, so a footprint is smoothed about as
+much on 1 km UTM cells as on 0.01° cells. STILT-R smooths a footprint on a
+projected grid much less (<a class="reference internal" href="../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a>).</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">time_integrate</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">true</span></code> sums the footprint over time into a single map, which makes
 smaller files. The default, <code class="docutils literal notranslate"><span class="pre">false</span></code>, keeps one layer per hour.</p>
