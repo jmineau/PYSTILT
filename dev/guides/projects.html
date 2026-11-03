@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=8a529f41"></script>
+    <script src="../_static/documentation_options.js?v=2fc1f017"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev55+g3e086e9f1" />
+  <meta name="docsearch:version" content="0.1.0a27.dev57+g29e5c289e" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -644,6 +644,14 @@ smaller files. The default, <code class="docutils literal notranslate"><span cla
 column measurements. See <a class="reference internal" href="transforms.html"><span class="doc">Particle Weighting (Transforms)</span></a>.</p>
 </dd>
 </dl>
+<p>A <code class="docutils literal notranslate"><span class="pre">grid</span></code> can be projected: give it a <code class="docutils literal notranslate"><span class="pre">crs</span></code> such as <code class="docutils literal notranslate"><span class="pre">EPSG:32612</span></code> and
+<code class="docutils literal notranslate"><span class="pre">xres</span></code> and <code class="docutils literal notranslate"><span class="pre">yres</span></code> in the projection’s units (meters for UTM). The bounds
+stay in degrees. The two steps that depend on the cell size work in the
+grid’s units. One is the smoothing. The other is the early-time
+interpolation, which adds particle positions between output steps in the
+first 100 minutes when the particles move more than a cell per step. On
+100 m UTM cells it runs as it does on 0.001° cells. STILT-R decides it in
+degrees and never runs it on a grid in meters (<a class="reference internal" href="../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a>).</p>
 <p><code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> also takes the lower-level HYSPLIT and STILT settings, such
 as turbulence, time step, and output variables, by the names STILT-R uses.
 Most projects never change them; <a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a>

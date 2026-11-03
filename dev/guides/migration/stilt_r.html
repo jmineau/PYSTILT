@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=8a529f41"></script>
+    <script src="../../_static/documentation_options.js?v=2fc1f017"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev55+g3e086e9f1" />
+  <meta name="docsearch:version" content="0.1.0a27.dev57+g29e5c289e" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -517,9 +517,10 @@ cell by cell. A few cases differ on purpose. Three are in the near-field
 correction (<code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>): forward runs, where PYSTILT fixes how the plume
 grows, a <code class="docutils literal notranslate"><span class="pre">veght</span></code> above 1, which PYSTILT reads as meters above ground, as
 HYSPLIT does, and a receptor above sea level, whose plume PYSTILT grows from
-the ground. The fourth is the smoothing on a projected grid, which PYSTILT
-makes as wide as on a longitude/latitude grid and STILT-R makes a few meters
-wide. The fifth is a particle cloud near 180° on a grid that goes all the
+the ground. Two are on a projected grid: the smoothing, which PYSTILT makes
+as wide as on a longitude/latitude grid and STILT-R makes a few meters wide,
+and the early-time interpolation, which STILT-R never runs on a grid in
+meters. The last is a particle cloud near 180° on a grid that goes all the
 way around the earth, which PYSTILT smooths as one cloud and STILT-R smooths
 far too widely (see <a class="reference internal" href="../../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a>).</p>
 <p>What changes is where the settings live. Instead of editing variables in

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=8a529f41"></script>
+    <script src="../../../_static/documentation_options.js?v=2fc1f017"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev55+g3e086e9f1" />
+  <meta name="docsearch:version" content="0.1.0a27.dev57+g29e5c289e" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -450,11 +450,13 @@
 <span></span><span class="sd">"""</span>
 <span class="sd">Calculating a footprint from particles, as STILT-R's ``calc_footprint`` does.</span>
 
-<span class="sd">Footprints match STILT-R at ``rtol=1e-7`` per cell, except the smoothing on a</span>
-<span class="sd">projected grid (``_compute_kernel_bandwidths``) and the smoothing of a cloud</span>
-<span class="sd">across 180 degrees on a grid that goes all the way around</span>
-<span class="sd">(``_unwrap_around_cloud``, ``_fold_padding_around_the_globe``). Run the</span>
-<span class="sd">``fidelity`` tests before merging any change to this module.</span>
+<span class="sd">Footprints match STILT-R at ``rtol=1e-7`` per cell, except on a projected</span>
+<span class="sd">grid, where the smoothing (``_compute_kernel_bandwidths``) and the test for</span>
+<span class="sd">the early-time interpolation (``_interpolate_early_timesteps``) differ on</span>
+<span class="sd">purpose, and in the smoothing of a cloud across 180 degrees on a grid that</span>
+<span class="sd">goes all the way around (``_unwrap_around_cloud``,</span>
+<span class="sd">``_fold_padding_around_the_globe``). Run the ``fidelity`` tests before</span>
+<span class="sd">merging any change to this module.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -551,16 +553,29 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_interpolate_early_timesteps</span><span class="p">(</span>
-    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">time_sign</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">time_sign</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"+proj=longlat"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Add interpolated positions in the first 100 minutes when particles jump grid cells.</span>
 
 <span class="sd">    Near the receptor, particles can move more than a grid cell per output</span>
-<span class="sd">    step. When the median step does, positions and ``foot`` are linearly</span>
-<span class="sd">    interpolated onto finer times (every 0.1 min to 10 min, 0.2 min to 20</span>
-<span class="sd">    min, and 0.5 min to 100 min). ``foot`` is then rescaled so each of those</span>
-<span class="sd">    three windows keeps its total, as STILT-R does.</span>
+<span class="sd">    step. When the median step does, along either axis of the grid,</span>
+<span class="sd">    positions and ``foot`` are linearly interpolated onto finer times (every</span>
+<span class="sd">    0.1 min to 10 min, 0.2 min to 20 min, and 0.5 min to 100 min). ``foot``</span>
+<span class="sd">    is then rescaled so each of those three windows keeps its total, as</span>
+<span class="sd">    STILT-R does.</span>
+
+<span class="sd">    *p* holds longitudes and latitudes in degrees. On a projected *crs* the</span>
+<span class="sd">    steps are measured on the grid, from the particles' positions projected</span>
+<span class="sd">    to it, so they compare with *xres* and *yres* in its units. STILT-R</span>
+<span class="sd">    compares the steps in degrees with the cell size in the grid's units,</span>
+<span class="sd">    which on a grid in meters never interpolates. The interpolation itself</span>
+<span class="sd">    is done in degrees on any grid.</span>
 <span class="sd">    """</span>
     <span class="n">early</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">p</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">])</span>
     <span class="k">if</span> <span class="n">early</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
@@ -569,6 +584,15 @@
     <span class="c1"># Match R: per-particle median(abs(diff(lon/lat))), then median across particles.</span>
     <span class="c1"># should_interpolate = median(dx) &gt; xres OR median(dy) &gt; yres</span>
     <span class="n">sorted_early</span> <span class="o">=</span> <span class="n">early</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">])</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_longlat</span><span class="p">(</span><span class="n">crs</span><span class="p">):</span>
+        <span class="c1"># The steps along the grid's axes, in its units.</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
+
+        <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span>
+            <span class="n">sorted_early</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">sorted_early</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">sorted_early</span> <span class="o">=</span> <span class="n">sorted_early</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
     <span class="n">diffs</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
         <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">sorted_early</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"particle"</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)[[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">]]</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span><span class="o">.</span><span class="n">abs</span><span class="p">(),</span>
@@ -1086,7 +1110,11 @@
 <span class="sd">    On a projected grid the kernel's width is worked out in degrees, as on</span>
 <span class="sd">    a longitude/latitude grid, and converted to the grid's units, so the</span>
 <span class="sd">    footprint is smoothed as much. STILT-R applies its formula to the</span>
-<span class="sd">    projected coordinates and barely smooths a footprint there.</span>
+<span class="sd">    projected coordinates and barely smooths a footprint there. The step</span>
+<span class="sd">    that decides the early-time interpolation is measured on the projected</span>
+<span class="sd">    grid, in its units, so a grid of 100 m cells is interpolated as a 0.001°</span>
+<span class="sd">    grid is. STILT-R measures it in degrees and never interpolates on a grid</span>
+<span class="sd">    in meters.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1182,7 +1210,9 @@
             <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="n">xmax</span>
         <span class="p">)</span>
 
-    <span class="n">p</span> <span class="o">=</span> <span class="n">_interpolate_early_timesteps</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">xres</span><span class="o">=</span><span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="o">=</span><span class="n">yres</span><span class="p">,</span> <span class="n">time_sign</span><span class="o">=</span><span class="n">time_sign</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">_interpolate_early_timesteps</span><span class="p">(</span>
+        <span class="n">p</span><span class="p">,</span> <span class="n">xres</span><span class="o">=</span><span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="o">=</span><span class="n">yres</span><span class="p">,</span> <span class="n">time_sign</span><span class="o">=</span><span class="n">time_sign</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="n">crs</span>
+    <span class="p">)</span>
 
     <span class="c1"># rtime = time elapsed since each particle's first output step.</span>
     <span class="c1"># Used below to compute kernel bandwidth (particles spread more with time).</span>
