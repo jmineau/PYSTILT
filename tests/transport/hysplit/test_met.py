@@ -1341,7 +1341,7 @@ def test_a_forward_run_missing_the_file_after_its_end_names_that_hour(tmp_path):
     assert met.missing_hours(window) == [pd.Timestamp("2021-01-15 00:00")]
 
 
-def test_a_forward_download_asks_for_the_hour_after_its_end(tmp_path):
+def test_a_forward_download_asks_for_the_met_step_after_its_end(tmp_path):
     mock_archive = MagicMock(step=pd.Timedelta(hours=1))
     mock_archive.fetch.return_value = [tmp_path / "file1"]
     (tmp_path / "file1").touch()
@@ -1401,16 +1401,27 @@ def test_a_3_hourly_download_gets_the_next_days_file_past_the_last_step(
 
 
 @pytest.mark.parametrize(
-    ("release", "n_files"),
-    [("2024-07-18 17:30", 2), ("2024-07-18 15:00", 1)],
+    ("download", "release", "n_files", "last"),
+    [
+        # 6-hour files, hourly steps: the next file only past the last hour of a file
+        ("hrrr", "2024-07-18 17:30", 2, "20240718_18-23_hrrr"),
+        ("hrrr", "2024-07-18 15:00", 1, "20240718_12-17_hrrr"),
+        ("hrrr", "2024-07-18 05:30", 2, "20240718_06-11_hrrr"),
+        ("hrrr", "2024-07-18 05:00", 1, "20240718_00-05_hrrr"),  # the last step
+        ("hrrr", "2024-07-18 06:00", 2, "20240718_06-11_hrrr"),
+        # daily files, hourly steps
+        ("nams", "2015-01-01 23:30", 2, "20150102_hysplit.t00z.namsa"),
+        ("nams", "2015-01-01 23:00", 1, "20150101_hysplit.t00z.namsa"),
+    ],
 )
-def test_an_hourly_download_still_asks_the_hour_after_the_end(
-    tmp_path, release, n_files
+def test_an_hourly_download_gets_the_next_file_only_past_the_last_step_of_a_file(
+    tmp_path, download, release, n_files, last
 ):
-    """HRRR (1 h step, 6 h files) is as before: past 17:00 the 18-23 file comes too."""
-    files = _archive_files(tmp_path, "hrrr", release, -1)
+    """A run that ends on the last step of a file does not fetch the next file, as for local met."""
+    files = _archive_files(tmp_path, download, release, -1)
 
     assert len(files) == n_files
+    assert files[-1] == last
 
 
 def test_met_config_construction(tmp_path):

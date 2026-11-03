@@ -9,7 +9,8 @@ file alone: the entries are written at release (`just changelog` drafts them).
 
 ### Fixed
 
-- A met with `download: nam12` or `download: gdas0p5` (daily files of 3-hourly steps) gets the next day's file for a run that ends after 21:00, as local files already did, where the run failed as `MET_COVERAGE` before HYSPLIT started although NOAA has the file. The end of the download is the next time step of the archive (`Archive.step`), not a fixed hour. A run ending at 21:00 or earlier fetches what it did before, and so does an hourly archive such as `hrrr`. `stilt fetch` gets the same files. The floor of arlmet is now 0.1.0b6, which adds `Archive.step`. (#306)
+- A met with `download: nam12` or `download: gdas0p5` (daily files of 3-hourly steps) gets the next day's file for a run that ends after 21:00, as local files already did, where the run failed as `MET_COVERAGE` before HYSPLIT started although NOAA has the file. The end of the download is the next time step of the archive (`Archive.step`), not a fixed hour. A run ending at 21:00 or earlier fetches what it did before. `stilt fetch` gets the same files. The floor of arlmet is now 0.1.0b6, which adds `Archive.step`. (#306)
+- A met with `download: hrrr` no longer gets the next file for a run that ends on the last hour of a file. A run that ended at 05:00 fetched the 06-11 file, which a run with local files does not need; the download now stops at the met step at or after the run's end, as local files do. A run ending at 05:30 or 06:00 still gets it. The same holds for the other archives of hourly steps (`hrrr.v1`, `nams`). (#336)
 
 ## [0.1.0a27] - 2026-11-03
 

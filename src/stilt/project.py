@@ -1279,7 +1279,7 @@ class Project:
 
         For each met, gets the files that cover the time of every
         simulation in *sel* whose transport model has yet to run, as a run
-        would ask for them (the hour after a run's end too). With
+        would ask for them (the met step at or after a run's end too). With
         ``download``, it downloads what is missing and crops it as it
         goes, so the runs that follow find every file and download nothing.
         A met without ``download`` is only checked: its missing files are
