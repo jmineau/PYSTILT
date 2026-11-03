@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=6cb3dd9c"></script>
+    <script src="../_static/documentation_options.js?v=01057b72"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev61+g817b5a998" />
+  <meta name="docsearch:version" content="0.1.0a28.dev1+gcfcb587bd" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -574,7 +574,9 @@ receptor time to the met step at or after <code class="docutils literal notransl
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">met_crop</span></code></p></td>
 <td><p>With <code class="docutils literal notranslate"><span class="pre">subgrid_enable</span></code> on, a receptor lies outside
 <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code>. HYSPLIT cannot start particles outside the
-cropped files.</p></td>
+cropped files. Longitudes count modulo 360, so a box may cross the
+dateline (<code class="docutils literal notranslate"><span class="pre">xmin:</span> <span class="pre">170</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax:</span> <span class="pre">-170</span></code>) or reach past 180 (<code class="docutils literal notranslate"><span class="pre">xmax:</span> <span class="pre">190</span></code>),
+and a receptor at <code class="docutils literal notranslate"><span class="pre">-175</span></code> is inside both.</p></td>
 <td><p>Widen <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code>. It must hold the whole run, not only the
 footprint grid.</p></td>
 </tr>

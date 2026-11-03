@@ -72,7 +72,9 @@ command line is wrong or the project's files are invalid.
    * - ``met_crop``
      - With ``subgrid_enable`` on, a receptor lies outside
        ``subgrid_bounds``. HYSPLIT cannot start particles outside the
-       cropped files.
+       cropped files. Longitudes count modulo 360, so a box may cross the
+       dateline (``xmin: 170``, ``xmax: -170``) or reach past 180 (``xmax: 190``),
+       and a receptor at ``-175`` is inside both.
      - Widen ``subgrid_bounds``. It must hold the whole run, not only the
        footprint grid.
    * - ``met_periods``
