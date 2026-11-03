@@ -217,6 +217,14 @@ archive on AWS. The others are ``"ftp"`` and ``"http"``.
 
 Files already in ``directory`` are not downloaded again.
 
+A download follows the same rule as local files: it gets the files up to the
+met step at or after the run's end, using the time between steps of the
+archive (arlmet's ``Archive.step``). With ``download: nam12`` or
+``download: gdas0p5``, daily files of 3-hourly steps, a run that ends at 22:00
+gets the next day's file too, and one that ends at 21:00 does not. For
+``hrrr``, whose steps are hourly, nothing changes: a run that ends after
+17:00 gets the 18-23 file.
+
 ERA5
 ----
 

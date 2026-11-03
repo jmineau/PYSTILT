@@ -116,7 +116,7 @@ def _make_download_met(tmp_path: Path, download: str = "hrrr", **kwargs) -> Met:
 
 def test_met_download_calls_fetch(tmp_path):
     """With download, files_for delegates to the arlmet archive's fetch()."""
-    mock_archive = MagicMock()
+    mock_archive = MagicMock(step=pd.Timedelta(hours=1))
     mock_archive.fetch.return_value = [tmp_path / "file1", tmp_path / "file2"]
     for f in mock_archive.fetch.return_value:
         f.touch()
@@ -136,7 +136,7 @@ def test_met_download_calls_fetch(tmp_path):
 
 
 def test_met_download_from_is_passed_to_fetch(tmp_path):
-    mock_archive = MagicMock()
+    mock_archive = MagicMock(step=pd.Timedelta(hours=1))
     mock_archive.fetch.return_value = [tmp_path / "file1"]
     (tmp_path / "file1").touch()
 
@@ -149,7 +149,7 @@ def test_met_download_from_is_passed_to_fetch(tmp_path):
 
 def test_met_download_with_subgrid_passes_bbox(tmp_path):
     """``download`` + ``subgrid_enable`` passes bbox to arlmet fetch."""
-    mock_archive = MagicMock()
+    mock_archive = MagicMock(step=pd.Timedelta(hours=1))
     mock_archive.fetch.return_value = [tmp_path / "file1"]
     (tmp_path / "file1").touch()
 
@@ -174,7 +174,7 @@ def test_met_download_with_subgrid_passes_bbox(tmp_path):
 
 def test_met_download_passes_subgrid_levels(tmp_path):
     """``download`` + ``subgrid_levels=N`` asks arlmet to keep the lowest N levels."""
-    mock_archive = MagicMock()
+    mock_archive = MagicMock(step=pd.Timedelta(hours=1))
     mock_archive.fetch.return_value = [tmp_path / "file1"]
     (tmp_path / "file1").touch()
 
@@ -192,7 +192,7 @@ def test_met_download_passes_subgrid_levels(tmp_path):
 
 
 def test_met_download_with_no_files_raises(tmp_path):
-    mock_archive = MagicMock()
+    mock_archive = MagicMock(step=pd.Timedelta(hours=1))
     mock_archive.fetch.return_value = []
 
     met = _make_download_met(tmp_path)
@@ -886,7 +886,7 @@ def test_downloaded_met_gets_the_next_file_in_the_last_hour_of_a_file(tmp_path):
     this rule, and so does the local path (see the test below); the
     download asks the archive for files through 18:00.
     """
-    mock_archive = MagicMock()
+    mock_archive = MagicMock(step=pd.Timedelta(hours=1))
     mock_archive.fetch.return_value = [tmp_path / "file1"]
     (tmp_path / "file1").touch()
     met = _make_download_met(tmp_path)
@@ -1269,7 +1269,7 @@ def test_a_forward_run_missing_the_file_after_its_end_names_that_hour(tmp_path):
 
 
 def test_a_forward_download_asks_for_the_hour_after_its_end(tmp_path):
-    mock_archive = MagicMock()
+    mock_archive = MagicMock(step=pd.Timedelta(hours=1))
     mock_archive.fetch.return_value = [tmp_path / "file1"]
     (tmp_path / "file1").touch()
     met = _make_download_met(tmp_path)
@@ -1280,6 +1280,64 @@ def test_a_forward_download_asks_for_the_hour_after_its_end(tmp_path):
     start, end = mock_archive.fetch.call_args.args[:2]
     assert start == pd.Timestamp("2021-01-14 20:31")
     assert end == pd.Timestamp("2021-01-15 00:00")
+
+
+def _archive_files(tmp_path, download, release, hours):
+    """The files of the real *download* archive that a run's download asks for (no network)."""
+    from arlmet.archives import get_archive
+
+    archive = get_archive(download)
+    asked: list[tuple[pd.Timestamp, pd.Timestamp]] = []
+
+    def fetch(start, end, **kwargs):
+        asked.append((start, end))
+        return [
+            tmp_path / path.split("/")[-1]
+            for path in archive.paths_for_range(start, end)
+        ]
+
+    archive.fetch = fetch  # type: ignore[method-assign]
+    met = _make_download_met(tmp_path, download)
+    met._archive = archive
+    return [path.name for path in _run_files(met, release, hours)]
+
+
+@pytest.mark.parametrize(
+    ("download", "day_file"),
+    [("nam12", "{}_nam12"), ("gdas0p5", "{}_gdas0p5")],
+)
+@pytest.mark.parametrize(
+    ("release", "next_day"),
+    [
+        ("2015-01-01 22:00", True),  # needs the 00:00 step of January 2
+        ("2015-01-01 21:30", True),  # between the last step and the next
+        ("2015-01-01 21:00", False),  # exactly the last step of the file
+        ("2015-01-01 20:00", False),
+    ],
+)
+def test_a_3_hourly_download_gets_the_next_days_file_past_the_last_step(
+    tmp_path, download, day_file, release, next_day
+):
+    """A backward run released after 21:00 needs the next 00:00 step, in the next day's file (#306)."""
+    files = _archive_files(tmp_path, download, release, -3)
+
+    expected = [day_file.format("20150101")]
+    if next_day:
+        expected.append(day_file.format("20150102"))
+    assert files == expected
+
+
+@pytest.mark.parametrize(
+    ("release", "n_files"),
+    [("2024-07-18 17:30", 2), ("2024-07-18 15:00", 1)],
+)
+def test_an_hourly_download_still_asks_the_hour_after_the_end(
+    tmp_path, release, n_files
+):
+    """HRRR (1 h step, 6 h files) is as before: past 17:00 the 18-23 file comes too."""
+    files = _archive_files(tmp_path, "hrrr", release, -1)
+
+    assert len(files) == n_files
 
 
 def test_met_config_construction(tmp_path):
