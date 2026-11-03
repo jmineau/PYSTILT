@@ -32,6 +32,7 @@ Methods
 
    ~HysplitModel.check_met
    ~HysplitModel.data_files
+   ~HysplitModel.fetch_met
    ~HysplitModel.run
    ~HysplitModel.version
 

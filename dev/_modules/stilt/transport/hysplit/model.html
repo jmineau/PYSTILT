@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=83744715"></script>
+    <script src="../../../../_static/documentation_options.js?v=8a529f41"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev51+gcba632d58" />
+  <meta name="docsearch:version" content="0.1.0a27.dev55+g3e086e9f1" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -457,6 +457,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">importlib.resources</span><span class="w"> </span><span class="kn">import</span> <span class="n">files</span> <span class="k">as</span> <span class="n">pkg_files</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
@@ -600,6 +601,34 @@
 <span class="sd">            itself), and ``message`` columns, one row for each problem.</span>
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="n">Met</span><span class="p">(</span><span class="s2">"met"</span><span class="p">,</span> <span class="n">met</span><span class="p">)</span><span class="o">.</span><span class="n">check_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="HysplitModel.fetch_met">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.HysplitModel.fetch_met.html#stilt.transport.hysplit.HysplitModel.fetch_met">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_met</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">met</span><span class="p">:</span> <span class="n">MetConfig</span><span class="p">,</span> <span class="n">windows</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get the met files that cover *windows*, downloading the ones a download lacks.</span>
+
+<span class="sd">        The files :meth:`run` would ask for, one request to the archive for</span>
+<span class="sd">        windows that overlap (:meth:`Met.fetch`). A met without ``download``</span>
+<span class="sd">        is only checked for missing files.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        met : MetConfig</span>
+<span class="sd">            The met, with an absolute directory in a project.</span>
+<span class="sd">        windows : iterable of tuple of datetime</span>
+<span class="sd">            The time each run covers (:func:`stilt.meteorology.run_window`).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pandas.DataFrame</span>
+<span class="sd">            ``file`` and ``message`` columns: a row for each file, then a</span>
+<span class="sd">            row for each window whose files could not be had.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">Met</span><span class="p">(</span><span class="s2">"met"</span><span class="p">,</span> <span class="n">met</span><span class="p">)</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">windows</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="HysplitModel.run">

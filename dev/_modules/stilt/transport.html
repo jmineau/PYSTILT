@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=83744715"></script>
+    <script src="../../_static/documentation_options.js?v=8a529f41"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev51+gcba632d58" />
+  <meta name="docsearch:version" content="0.1.0a27.dev55+g3e086e9f1" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -651,6 +651,15 @@
 <span class="sd">        met itself), and ``message`` columns, one row for each problem. It</span>
 <span class="sd">        runs and downloads nothing. A model without it has no met files to</span>
 <span class="sd">        check.</span>
+<span class="sd">    fetch_met : callable, optional</span>
+<span class="sd">        ``fetch_met(met, windows)``, for a model that reads files, which</span>
+<span class="sd">        ``stilt fetch`` calls to get the files its runs need before any</span>
+<span class="sd">        starts. *met* is the model's met config and *windows* the time each</span>
+<span class="sd">        run covers (:func:`stilt.meteorology.run_window`). It gets the files</span>
+<span class="sd">        a run of those windows would ask for, downloading what the met</span>
+<span class="sd">        downloads, and returns a DataFrame with ``file`` and ``message``</span>
+<span class="sd">        columns: a row for each file, then a row for each window whose files</span>
+<span class="sd">        could not be had. A model without it has no met files to get.</span>
 <span class="sd">    """</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
