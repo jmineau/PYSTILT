@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=6e07d8ae"></script>
+    <script src="../../../../_static/documentation_options.js?v=de123a8f"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev39+gf221d6643" />
+  <meta name="docsearch:version" content="0.1.0a27.dev41+gf1a30e7c9" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -464,7 +464,8 @@
 <span class="sd">    Why a HYSPLIT run failed.</span>
 
 <span class="sd">    The driver reads it from HYSPLIT's log and ``WARNING`` file when the</span>
-<span class="sd">    run ends, or knows it (a timeout, no particle output), and raises a</span>
+<span class="sd">    run ends, or knows it (a timeout, no particle output, its exit</span>
+<span class="sd">    status), and raises a</span>
 <span class="sd">    :class:`~stilt.exceptions.SimulationError` with it as ``reason``. The</span>
 <span class="sd">    worker records it with the simulation.</span>
 <span class="sd">    """</span>
@@ -474,7 +475,8 @@
     <span class="n">NO_PARTICLE_DATA</span> <span class="o">=</span> <span class="s2">"NO_PARTICLE_DATA"</span>
     <span class="n">FORTRAN_RUNTIME_ERROR</span> <span class="o">=</span> <span class="s2">"FORTRAN_RUNTIME_ERROR"</span>
     <span class="n">TIMEOUT</span> <span class="o">=</span> <span class="s2">"TIMEOUT"</span>
-    <span class="n">PARTICLE_LIMIT</span> <span class="o">=</span> <span class="s2">"PARTICLE_LIMIT"</span></div>
+    <span class="n">PARTICLE_LIMIT</span> <span class="o">=</span> <span class="s2">"PARTICLE_LIMIT"</span>
+    <span class="n">EXIT_STATUS</span> <span class="o">=</span> <span class="s2">"EXIT_STATUS"</span></div>
 
 
 

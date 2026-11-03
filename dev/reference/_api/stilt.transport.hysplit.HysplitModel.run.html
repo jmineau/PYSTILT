@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=6e07d8ae"></script>
+    <script src="../../_static/documentation_options.js?v=de123a8f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev39+gf221d6643" />
+  <meta name="docsearch:version" content="0.1.0a27.dev41+gf1a30e7c9" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -894,7 +894,9 @@ the near-field correction are added by the caller, as for any model
 <li><p><a class="reference internal" href="stilt.exceptions.SimulationError.html#stilt.exceptions.SimulationError" title="stilt.exceptions.SimulationError"><strong>SimulationError</strong></a> – With HYSPLIT’s log in <code class="docutils literal notranslate"><span class="pre">log</span></code>, and <code class="docutils literal notranslate"><span class="pre">reason</span></code> <code class="docutils literal notranslate"><span class="pre">TIMEOUT</span></code> when
     the run exceeded <em>timeout</em> seconds; the <a class="reference internal" href="stilt.transport.hysplit.FailureReason.html#stilt.transport.hysplit.FailureReason" title="stilt.transport.hysplit.FailureReason"><code class="xref py py-class docutils literal notranslate"><span class="pre">FailureReason</span></code></a>
     of a known failure message in the log or <code class="docutils literal notranslate"><span class="pre">WARNING</span></code> file, such
-    as the met running out (<code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>); <code class="docutils literal notranslate"><span class="pre">PARTICLE_LIMIT</span></code>
+    as the met running out (<code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>); <code class="docutils literal notranslate"><span class="pre">EXIT_STATUS</span></code> when
+    <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> was killed by a signal or exited with a non-zero
+    status, whatever it had written; <code class="docutils literal notranslate"><span class="pre">PARTICLE_LIMIT</span></code>
     when <code class="docutils literal notranslate"><span class="pre">maxpar</span></code> stopped a release from several locations before
     the last ones got their particles; or <code class="docutils literal notranslate"><span class="pre">NO_PARTICLE_DATA</span></code> when
     HYSPLIT wrote no particle file. A run whose particles stopped

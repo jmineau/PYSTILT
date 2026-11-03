@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=6e07d8ae"></script>
+    <script src="../../../../_static/documentation_options.js?v=de123a8f"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev39+gf221d6643" />
+  <meta name="docsearch:version" content="0.1.0a27.dev41+gf1a30e7c9" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -501,6 +501,10 @@
 <span class="n">LOG_FILE</span> <span class="o">=</span> <span class="s2">"stilt.log"</span>
 <span class="c1">#: HYSPLIT's own file of warnings, such as the met running out.</span>
 <span class="n">WARNING_FILE</span> <span class="o">=</span> <span class="s2">"WARNING"</span>
+<span class="c1">#: HYSPLIT's own file of progress and error messages.</span>
+<span class="n">MESSAGE_FILE</span> <span class="o">=</span> <span class="s2">"MESSAGE"</span>
+<span class="c1">#: How many lines of ``MESSAGE`` a run that ended badly adds to its log.</span>
+<span class="n">MESSAGE_TAIL_LINES</span> <span class="o">=</span> <span class="mi">20</span>
 
 <span class="c1">#: The settings ``CONTROL`` takes; :class:`ControlFile` writes them.</span>
 <span class="n">CONTROL_SETTINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"n_hours"</span><span class="p">,</span> <span class="s2">"emisshrs"</span><span class="p">,</span> <span class="s2">"w_option"</span><span class="p">,</span> <span class="s2">"z_top"</span><span class="p">)</span>
@@ -922,9 +926,13 @@
 <span class="sd">    ------</span>
 <span class="sd">    SimulationError</span>
 <span class="sd">        With ``reason`` ``TIMEOUT`` when the run exceeded *timeout*</span>
-<span class="sd">        seconds, or the :class:`FailureReason` of a known failure message in</span>
+<span class="sd">        seconds, the :class:`FailureReason` of a known failure message in</span>
 <span class="sd">        the log or HYSPLIT's ``WARNING`` file, such as ``no more</span>
-<span class="sd">        meteorology`` (``MET_COVERAGE``). Particles that all left the met's</span>
+<span class="sd">        meteorology`` (``MET_COVERAGE``), or ``EXIT_STATUS`` when</span>
+<span class="sd">        ``hycs_std`` ended with a non-zero exit status or was killed by a</span>
+<span class="sd">        signal, such as the kernel's out-of-memory killer, and the log has</span>
+<span class="sd">        no known message. Its log then ends with the last lines of</span>
+<span class="sd">        HYSPLIT's ``MESSAGE`` file. Particles that all left the met's</span>
 <span class="sd">        domain are not a failure.</span>
 <span class="sd">    """</span>
     <span class="n">log_path</span> <span class="o">=</span> <span class="n">workdir</span> <span class="o">/</span> <span class="n">LOG_FILE</span>
@@ -958,8 +966,36 @@
     <span class="n">found</span> <span class="o">=</span> <span class="n">failure_in</span><span class="p">(</span><span class="n">messages</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">reason</span><span class="p">,</span> <span class="n">line</span> <span class="o">=</span> <span class="n">found</span>
-        <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"HYSPLIT: </span><span class="si">{</span><span class="n">line</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">)</span></div>
+        <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"HYSPLIT: </span><span class="si">{</span><span class="n">line</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">proc</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">_exit_status_error</span><span class="p">(</span><span class="n">workdir</span><span class="p">,</span> <span class="n">proc</span><span class="o">.</span><span class="n">returncode</span><span class="p">)</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_exit_status_error</span><span class="p">(</span><span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">status</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SimulationError</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the error for a ``hycs_std`` that ended with *status* but no known message.</span>
+
+<span class="sd">    *status* is ``subprocess``'s: negative for the signal that killed the</span>
+<span class="sd">    process. The tail of HYSPLIT's ``MESSAGE`` file is added to the log,</span>
+<span class="sd">    where it says how far the run got.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">status</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">Signals</span><span class="p">(</span><span class="o">-</span><span class="n">status</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>  <span class="c1"># a real-time signal has no name</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"signal </span><span class="si">{</span><span class="o">-</span><span class="n">status</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">how</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"was killed by </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">how</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"exited with status </span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2">"</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"HYSPLIT </span><span class="si">{</span><span class="n">how</span><span class="si">}</span><span class="s2"> before it finished."</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">workdir</span> <span class="o">/</span> <span class="n">MESSAGE_FILE</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+        <span class="n">tail</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="o">-</span><span class="n">MESSAGE_TAIL_LINES</span><span class="p">:])</span>
+        <span class="k">with</span> <span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">LOG_FILE</span><span class="p">)</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">log</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">PYSTILT: HYSPLIT </span><span class="si">{</span><span class="n">how</span><span class="si">}</span><span class="s2">. The end of </span><span class="si">{</span><span class="n">MESSAGE_FILE</span><span class="si">}</span><span class="s2">:</span><span class="se">\n</span><span class="si">{</span><span class="n">tail</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">SimulationError</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="n">FailureReason</span><span class="o">.</span><span class="n">EXIT_STATUS</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">:</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
