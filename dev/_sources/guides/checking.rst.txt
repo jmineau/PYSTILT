@@ -22,7 +22,8 @@ Before a run
 
 The first failures a new project meets are in its inputs: a met folder
 with a typo, met files that miss some receptor's hours, a receptor off the
-grid. ``stilt check`` finds them before HYSPLIT starts. It reads the
+grid, a ``varsiwant`` without the terrain height that receptors above sea
+level need. ``stilt check`` finds them before HYSPLIT starts. It reads the
 project's files and, for each met, the header of one file and the time
 periods of another, and runs and downloads nothing:
 
@@ -100,6 +101,30 @@ command line is wrong or the project's files are invalid.
        The run does not need it.
      - Nothing, if the table is shared. Otherwise look for ids that differ
        from the receptors' in a digit.
+   * - ``zsfc``
+     - A variant's ``varsiwant`` lacks ``zsfc``, and the project has a
+       receptor with ``altitude_ref="msl"`` that a run reads it for. The
+       message counts those receptors and names what reads it:
+
+       - the near-field correction (``hnf_plume``, on by default), which
+         starts the plume at the ground and is skipped without ``zsfc``;
+       - the release heights of a multipoint receptor, such as a slant
+         column. The particles are matched to their points by height
+         (``zagl + zsfc``) when every point has its own altitude and the
+         model writes no release-time rows, and by position otherwise.
+         Position fails only for points less than 1 km apart, so only a
+         multipoint receptor with different altitudes and such points is
+         counted. A HYSPLIT build that writes release-time rows
+         (``exe_dir``) needs no height, and the check cannot see the build;
+       - the ``pressure_weighting`` transform, which fails the footprints
+         of the receptors above sea level.
+
+       It is not about one receptor, so ``receptor`` is empty. A receptor
+       above ground never needs ``zsfc``.
+     - Add ``zsfc`` to ``varsiwant`` in ``config.yaml``; the message has
+       the line. ``varsiwant`` is part of the settings folder's name, so the
+       particles are made again in a new folder: add it before the runs, not
+       after.
 
 ``stilt check`` looks for files, not inside them, except to count the time
 periods of the first file a run needs. A run that passes can still

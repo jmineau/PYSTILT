@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=93cfef5f"></script>
+    <script src="../../_static/documentation_options.js?v=003c9154"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev30+gc3c0832e7" />
+  <meta name="docsearch:version" content="0.1.0a27.dev33+g465ec34b6" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -895,7 +895,12 @@ when the crop is on (<code class="docutils literal notranslate"><span class="pre
 <li><p>each receptor is inside the footprint grid (<code class="docutils literal notranslate"><span class="pre">grid</span></code>);</p></li>
 <li><p>each <code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> table exists (<code class="docutils literal notranslate"><span class="pre">kernel_table</span></code>), has a
 kernel for every receptor (<code class="docutils literal notranslate"><span class="pre">kernel_missing</span></code>), and holds none for
-a receptor the project lacks (<code class="docutils literal notranslate"><span class="pre">kernel_unused</span></code>).</p></li>
+a receptor the project lacks (<code class="docutils literal notranslate"><span class="pre">kernel_unused</span></code>);</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> holds <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> when a receptor is above sea level
+(<code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code>) and a run reads it: the near-field
+correction, the release heights of a multipoint receptor whose
+points are less than 1 km apart and at different altitudes, or the
+<code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code> transform (<code class="docutils literal notranslate"><span class="pre">zsfc</span></code>).</p></li>
 </ul>
 <p>A met with <code class="docutils literal notranslate"><span class="pre">download</span></code> has no files to look for: they are fetched
 when a run needs them, so only its crop is checked.</p>

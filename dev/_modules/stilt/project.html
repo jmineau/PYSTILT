@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=93cfef5f"></script>
+    <script src="../../_static/documentation_options.js?v=003c9154"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27.dev30+gc3c0832e7" />
+  <meta name="docsearch:version" content="0.1.0a27.dev33+g465ec34b6" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -1734,7 +1734,12 @@
 <span class="sd">        - each receptor is inside the footprint grid (``grid``);</span>
 <span class="sd">        - each ``averaging_kernel`` table exists (``kernel_table``), has a</span>
 <span class="sd">          kernel for every receptor (``kernel_missing``), and holds none for</span>
-<span class="sd">          a receptor the project lacks (``kernel_unused``).</span>
+<span class="sd">          a receptor the project lacks (``kernel_unused``);</span>
+<span class="sd">        - ``varsiwant`` holds ``zsfc`` when a receptor is above sea level</span>
+<span class="sd">          (``altitude_ref="msl"``) and a run reads it: the near-field</span>
+<span class="sd">          correction, the release heights of a multipoint receptor whose</span>
+<span class="sd">          points are less than 1 km apart and at different altitudes, or the</span>
+<span class="sd">          ``pressure_weighting`` transform (``zsfc``).</span>
 
 <span class="sd">        A met with ``download`` has no files to look for: they are fetched</span>
 <span class="sd">        when a run needs them, so only its crop is checked.</span>
