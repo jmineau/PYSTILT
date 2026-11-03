@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=01057b72"></script>
+    <script src="../../../../_static/documentation_options.js?v=70fde4ad"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev1+gcfcb587bd" />
+  <meta name="docsearch:version" content="0.1.0a28.dev2+g66ccd4c34" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -720,17 +720,25 @@
     <span class="k">return</span> <span class="n">time</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_download_cover</span><span class="p">(</span><span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_download_cover</span><span class="p">(</span>
+    <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">step</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the first and last time downloaded files must cover for *window*.</span>
 
-<span class="sd">    The hour after the window's end is added, so that an archive of hourly</span>
-<span class="sd">    met gives the file holding the met step after a run's end. An archive's</span>
-<span class="sd">    files are 6 hours or longer, so this never adds a file a window ending</span>
-<span class="sd">    on a file boundary does not need.</span>
+<span class="sd">    HYSPLIT needs the met step at or after the window's end, so the end is</span>
+<span class="sd">    taken up to the next time step of the archive (*step*, from</span>
+<span class="sd">    ``Archive.step``): a run that ends after the last step of a file gets</span>
+<span class="sd">    the next file, such as the next day's with 3-hourly steps in daily</span>
+<span class="sd">    files. The hour after the window's end is also covered, so that an</span>
+<span class="sd">    archive of hourly met gives the file holding the step after a run's end;</span>
+<span class="sd">    the later of the two is the end. A window ending on a step that is the</span>
+<span class="sd">    last of its file needs nothing from the next file.</span>
 <span class="sd">    """</span>
     <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="p">(</span><span class="n">_time</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">window</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">earlier</span><span class="p">,</span> <span class="n">_time</span><span class="p">(</span><span class="n">later</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="s2">"h"</span><span class="p">)</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">hour_after</span> <span class="o">=</span> <span class="n">later</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="s2">"h"</span><span class="p">)</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">next_step</span> <span class="o">=</span> <span class="n">later</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">())</span><span class="si">}</span><span class="s2">s"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">earlier</span><span class="p">,</span> <span class="n">_time</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">hour_after</span><span class="p">,</span> <span class="n">next_step</span><span class="p">))</span>
 
 
 <div class="viewcode-block" id="Met">
@@ -889,12 +897,12 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_download</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Return the files that cover *window* from the ARL archive, downloading any not yet in ``directory``."""</span>
-        <span class="n">t_start</span><span class="p">,</span> <span class="n">t_end</span> <span class="o">=</span> <span class="n">_download_cover</span><span class="p">(</span><span class="n">window</span><span class="p">)</span>
+        <span class="n">archive</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_archive</span><span class="p">()</span>
+        <span class="n">t_start</span><span class="p">,</span> <span class="n">t_end</span> <span class="o">=</span> <span class="n">_download_cover</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">archive</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
 
         <span class="n">bbox</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bbox</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">subgrid_enable</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="n">levels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_level_indices</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">subgrid_enable</span> <span class="k">else</span> <span class="kc">None</span>
 
-        <span class="n">archive</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_archive</span><span class="p">()</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">files</span> <span class="o">=</span> <span class="n">archive</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span>
                 <span class="n">t_start</span><span class="p">,</span>
