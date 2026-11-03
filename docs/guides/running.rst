@@ -180,7 +180,10 @@ When a simulation fails
 A failed simulation doesn't stop the others. The worker records why it
 failed and goes on, and the next ``stilt run`` tries it again.
 ``stilt status`` counts the failures by reason, and :doc:`checking` says
-what each reason means and where to look.
+what each reason means and where to look. A connection or I/O error while
+a result is written, such as an output bucket that stops answering, is not a
+failure: nothing is recorded, the simulation stays unfinished, and the run
+ends with 3 so that the next ``stilt run`` picks it up (:ref:`exit-codes`).
 
 .. toctree::
    :maxdepth: 1
