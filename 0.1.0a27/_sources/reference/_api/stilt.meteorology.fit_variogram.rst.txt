@@ -1,0 +1,6 @@
+﻿stilt.meteorology.fit\_variogram
+================================
+
+.. currentmodule:: stilt.meteorology
+
+.. autofunction:: fit_variogram

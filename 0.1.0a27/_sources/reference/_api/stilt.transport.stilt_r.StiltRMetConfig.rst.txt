@@ -1,0 +1,30 @@
+﻿stilt.transport.stilt\_r.StiltRMetConfig
+========================================
+
+.. currentmodule:: stilt.transport.stilt_r
+
+
+
+
+.. class-signature:: stilt.transport.stilt_r.StiltRMetConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.transport.stilt_r.StiltRMetConfig
+
+
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~StiltRMetConfig.settings
+
+
+

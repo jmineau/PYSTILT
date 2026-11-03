@@ -107,7 +107,17 @@ These footprint settings sit next to ``grid`` at the top level:
 
 ``smooth_factor``
    Scales the Gaussian smoothing applied to each particle's influence. The
-   default, ``1.0``, is standard STILT. Smaller values smooth less.
+   default, ``1.0``, is standard STILT. Smaller values smooth less. The
+   kernel widens as the particles spread and age. Its width is worked out
+   in degrees. On a projected ``grid`` (a ``crs`` such as ``EPSG:32612``) it
+   is converted to the grid's units, so a footprint is smoothed about as
+   much on 1 km UTM cells as on 0.01° cells. STILT-R smooths a footprint on a
+   projected grid much less (:ref:`stilt-r-parity`). A particle cloud on
+   both sides of 180° is measured as one cloud. A grid that goes all the way
+   around the earth (``xmin: -180``, ``xmax: 180``, with cells that fit
+   360°) is a circle: smoothing that passes the east edge returns at the
+   west edge. STILT-R smooths such a cloud far too widely and loses part
+   of the footprint (:ref:`stilt-r-parity`).
 
 ``time_integrate``
    ``true`` sums the footprint over time into a single map, which makes
@@ -116,6 +126,15 @@ These footprint settings sit next to ``grid`` at the top level:
 ``transforms``
    Steps that weight the particles before the footprint is made, mainly for
    column measurements. See :doc:`transforms`.
+
+A ``grid`` can be projected: give it a ``crs`` such as ``EPSG:32612`` and
+``xres`` and ``yres`` in the projection's units (meters for UTM). The bounds
+stay in degrees. The two steps that depend on the cell size work in the
+grid's units. One is the smoothing. The other is the early-time
+interpolation, which adds particle positions between output steps in the
+first 100 minutes when the particles move more than a cell per step. On
+100 m UTM cells it runs as it does on 0.001° cells. STILT-R decides it in
+degrees and never runs it on a grid in meters (:ref:`stilt-r-parity`).
 
 ``config.yaml`` also takes the lower-level HYSPLIT and STILT settings, such
 as turbulence, time step, and output variables, by the names STILT-R uses.
@@ -295,8 +314,10 @@ now point at a folder that does not exist yet. The next run fills it, for
 every receptor, and the old folder stays as it was.
 
 ``stilt status`` lists every settings folder in the output directory, how
-many result files it holds, which variants use it, and how a folder no
-variant uses differs from the variant of its name. Here ``numpar`` went
+many result files it holds, which variants use it, and how a folder this
+project does not use differs from the variant of its name. The folders this
+project uses come first; the others, which may be another project's
+results in a shared output directory, are listed after them. Here ``numpar`` went
 from 1000 to 2000, and ``hrrr-smooth`` differs from ``hrrr`` only in its
 footprint, so the two share particles:
 
@@ -307,10 +328,12 @@ footprint, so the two share particles:
      hrrr: total=4380  complete=4380  failed=0  interrupted=0  pending=0
      hrrr-smooth: total=4380  complete=4380  failed=0  interrupted=0  pending=0
    Output: /data/output
-     particles   settings=hrrr-5d01e7         4,380 files  hrrr, hrrr-smooth
-     particles   settings=hrrr-a3f9c2         4,380 files  (no variant)  numpar: 1000 (config: 2000)
-     footprints  settings=hrrr-93278c         4,380 files  hrrr
-     footprints  settings=hrrr-smooth-1b7e40  4,380 files  hrrr-smooth
+     Used by this project:
+       particles   settings=hrrr-5d01e7         4,380 files  hrrr, hrrr-smooth
+       footprints  settings=hrrr-93278c         4,380 files  hrrr
+       footprints  settings=hrrr-smooth-1b7e40  4,380 files  hrrr-smooth
+     Not used by this project (changed settings, a dropped variant, or another project sharing this output; PYSTILT never deletes one):
+       particles   settings=hrrr-a3f9c2         4,380 files  numpar: 1000 (config: 2000)
 
 The counts at the top are simulations; a folder's count is files, and one
 particles folder can serve several variants. In Python the same table is

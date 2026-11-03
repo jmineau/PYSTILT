@@ -1,0 +1,6 @@
+stilt.output.Output.failure
+===========================
+
+.. currentmodule:: stilt.output
+
+.. automethod:: Output.failure

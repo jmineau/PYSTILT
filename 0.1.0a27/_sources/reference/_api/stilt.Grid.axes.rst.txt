@@ -1,0 +1,6 @@
+stilt.Grid.axes
+===============
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Grid.axes

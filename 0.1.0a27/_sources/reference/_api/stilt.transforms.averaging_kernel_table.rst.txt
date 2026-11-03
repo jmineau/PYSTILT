@@ -1,0 +1,6 @@
+﻿stilt.transforms.averaging\_kernel\_table
+=========================================
+
+.. currentmodule:: stilt.transforms
+
+.. autofunction:: averaging_kernel_table

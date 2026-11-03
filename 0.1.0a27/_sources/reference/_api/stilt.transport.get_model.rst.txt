@@ -1,0 +1,6 @@
+﻿stilt.transport.get\_model
+==========================
+
+.. currentmodule:: stilt.transport
+
+.. autofunction:: get_model

@@ -1,0 +1,6 @@
+stilt.Zones.index
+=================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Zones.index

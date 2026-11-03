@@ -40,6 +40,7 @@ Methods
    ~Project.add_receptors
    ~Project.add_table
    ~Project.check
+   ~Project.fetch
    ~Project.folders
    ~Project.footprints
    ~Project.incomplete

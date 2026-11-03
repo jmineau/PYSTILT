@@ -46,15 +46,34 @@ file covers:
    are skipped.
 
 ``file_tres``
-   How much time each file covers, such as ``1h``, ``3h``, or ``6h``.
+   How much time each file covers, such as ``6h`` or ``24h``. A file must
+   hold at least two time periods, because HYSPLIT stops on a file with one
+   ("Only one time period of meteo data"). Files of ``1h`` hold one period
+   of an hourly product, so they cannot be used.
 
 For each simulation, PYSTILT works out which files cover the hours the run
-spans (``n_hours`` from the receptor time) and looks for those. A 24-hour
-backward run with 6-hour HRRR files needs 5 or 6 files, depending on the
-receptor hour. Every one is needed. If one is missing, the simulation fails
-before HYSPLIT runs, as ``MET_COVERAGE``, naming the hours with no file.
-``stilt check`` makes this search for every receptor before any run starts
-(:doc:`checking`).
+spans (``n_hours`` from the receptor time) and looks for those. HYSPLIT
+interpolates between the met steps on either side of each of its times, so
+the files must also hold the met step at or after the run's last time: the
+release of a backward run, the end of a forward one. When that time is past
+the last step of its file, the next file is needed too. With 6-hour HRRR
+files of hourly steps, a backward run released at 23:30 needs the next
+day's first file, and so does a forward run that ends at 23:30; one
+released at 23:00 does not. With daily NAM12 files of 3-hourly steps
+(00:00 to 21:00), a run released at 22:00 needs the next day's file, and
+one released at 21:00 does not. The spacing of the steps is read from the
+met's own file that holds the run's end (found by ``file_format``), so
+other products in ``directory`` do not change it. When that file holds one
+time period or cannot be read, the spacing is taken as an hour, and a run
+the files then do not cover fails naming that file. A 24-hour backward run with 6-hour HRRR files needs 5 or
+6 files, depending on the receptor hour. Every one is needed. If one is
+missing, the simulation fails before HYSPLIT runs, as ``MET_COVERAGE``,
+naming the hours with no file. ``stilt check`` makes this search for every
+receptor before any run starts (:doc:`checking`).
+
+A file that holds one time period fails the run before HYSPLIT runs, as
+``MET_COVERAGE``, naming the file. ``stilt check`` finds one in the first
+file a run needs (:doc:`checking`).
 
 A file that is there but damaged fails the run before HYSPLIT runs too,
 as ``MET_COVERAGE``: one cut short, holding an hour written partway, or
@@ -102,7 +121,7 @@ You can list several mets:
      gfs:
        directory: /data/met/gfs
        file_format: "gfs_%Y%m%d_%H"
-       file_tres: 3h
+       file_tres: 6h
 
 
 Download from NOAA

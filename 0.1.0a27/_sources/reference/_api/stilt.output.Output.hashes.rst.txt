@@ -1,0 +1,6 @@
+stilt.output.Output.hashes
+==========================
+
+.. currentmodule:: stilt.output
+
+.. automethod:: Output.hashes

@@ -1,0 +1,27 @@
+﻿stilt.particles.TransportError
+==============================
+
+.. currentmodule:: stilt.particles
+
+
+
+
+.. class-signature:: stilt.particles.TransportError
+
+
+.. class-parameters:: stilt.particles.TransportError
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~TransportError.sd
+
+
+
+
+

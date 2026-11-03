@@ -1,0 +1,6 @@
+stilt.Zones.from\_labels
+========================
+
+.. currentmodule:: stilt
+
+.. automethod:: Zones.from_labels

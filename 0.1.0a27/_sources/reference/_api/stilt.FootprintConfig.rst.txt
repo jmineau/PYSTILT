@@ -1,0 +1,22 @@
+﻿stilt.FootprintConfig
+=====================
+
+.. currentmodule:: stilt
+
+
+
+
+.. class-signature:: stilt.FootprintConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.FootprintConfig
+
+
+
+
+
+
+

@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.footprint.gridding &#8212; PYSTILT 0.1.0a26</title>
+    <title>stilt.footprint.gridding &#8212; PYSTILT 0.1.0a27</title>
   
   
   
@@ -25,22 +25,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=7c6ca21c"></script>
+    <script src="../../../_static/documentation_options.js?v=d8142605"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,9 +49,9 @@
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/footprint/gridding';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a26';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -58,8 +59,9 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26" />
+  <meta name="docsearch:version" content="0.1.0a27" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -130,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a26</p>
+    <p class="title logo__title">PYSTILT 0.1.0a27</p>
   
 </a></div>
     
@@ -445,12 +447,17 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.footprint.gridding</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Calculating a footprint from particles, as STILT-R&#39;s ``calc_footprint`` does.</span>
+<span></span><span class="sd">"""</span>
+<span class="sd">Calculating a footprint from particles, as STILT-R's ``calc_footprint`` does.</span>
 
-<span class="sd">Footprints match STILT-R at ``rtol=1e-7`` per cell. Run the ``fidelity``</span>
-<span class="sd">tests before merging any change to this module.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Footprints match STILT-R at ``rtol=1e-7`` per cell, except on a projected</span>
+<span class="sd">grid, where the smoothing (``_compute_kernel_bandwidths``) and the test for</span>
+<span class="sd">the early-time interpolation (``_interpolate_early_timesteps``) differ on</span>
+<span class="sd">purpose, and in the smoothing of a cloud across 180 degrees on a grid that</span>
+<span class="sd">goes all the way around (``_unwrap_around_cloud``,</span>
+<span class="sd">``_fold_padding_around_the_globe``). Run the ``fidelity`` tests before</span>
+<span class="sd">merging any change to this module.</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -466,14 +473,14 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FootprintConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">FOOTPRINT_COLUMNS</span><span class="p">,</span> <span class="n">check_particles</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_grid_cell_starts</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_grid_cell_starts</span><span class="p">,</span> <span class="n">is_longlat</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_transforms</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">_footprint_array</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_make_gauss_kernel</span><span class="p">(</span><span class="n">rs</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;2D Gaussian smoothing kernel on a physical-unit grid, normalized to sum=1.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""2D Gaussian smoothing kernel on a physical-unit grid, normalized to sum=1."""</span>
     <span class="k">if</span> <span class="n">sigma</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])</span>
     <span class="n">d</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">sigma</span>
@@ -481,72 +488,120 @@
     <span class="n">ny</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="n">rs</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
     <span class="n">x</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nx</span><span class="p">)</span> <span class="o">-</span> <span class="n">nx</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">rs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">ny</span><span class="p">)</span> <span class="o">-</span> <span class="n">ny</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">rs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-    <span class="n">xx</span><span class="p">,</span> <span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">&quot;ij&quot;</span><span class="p">)</span>
+    <span class="n">xx</span><span class="p">,</span> <span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">"ij"</span><span class="p">)</span>
     <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">xx</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">yy</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
     <span class="n">w</span> <span class="o">=</span> <span class="n">m</span> <span class="o">/</span> <span class="n">m</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">w</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
 
 
+<span class="c1">#: The particle columns a footprint is made from. STILT-R's ``simulation_step``</span>
+<span class="c1">#: passes ``calc_footprint`` only these (``footprint_varsiwant``), so the rows the</span>
+<span class="c1">#: early-time interpolation inserts have no missing values and are kept.</span>
+<span class="n">_FOOTPRINT_INPUTS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"foot"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_r_seq</span><span class="p">(</span><span class="n">start</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">stop</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">by</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return R's ``seq(start, stop, by = by)``: ``start + (0:n) * by``, capped at ``stop``."""</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">stop</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span> <span class="o">/</span> <span class="n">by</span> <span class="o">+</span> <span class="mf">1e-10</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">by</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_interpolation_times</span><span class="p">(</span><span class="n">time_sign</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return STILT-R&#39;s interpolation times for the first 100 minutes, in minutes.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return STILT-R's interpolation times for the first 100 minutes, in minutes.</span>
+
+<span class="sd">    They are built as R builds them, so they match STILT-R's to the last bit:</span>
+<span class="sd">    R's ``seq(0, 10, by = 0.1)`` holds ``2.9000000000000004``, not ``2.9``.</span>
+<span class="sd">    A position interpolated at a time one bit off can fall in the next grid</span>
+<span class="sd">    cell, which moves that step's ``foot`` with it.</span>
+<span class="sd">    """</span>
     <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
-        <span class="p">[</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">101</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span><span class="p">,</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">102</span><span class="p">,</span> <span class="mi">201</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span><span class="p">,</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">205</span><span class="p">,</span> <span class="mi">1001</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span><span class="p">,</span>
-        <span class="p">]</span>
+        <span class="p">[</span><span class="n">_r_seq</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">_r_seq</span><span class="p">(</span><span class="mf">10.2</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">),</span> <span class="n">_r_seq</span><span class="p">(</span><span class="mf">20.5</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)]</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">times</span> <span class="o">*</span> <span class="n">time_sign</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_wrap_longitudes</span><span class="p">(</span><span class="n">lon</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">west</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return *lon* shifted by whole turns into ``[west, west + 360)``; both are numbers, arrays, or Series."""</span>
+    <span class="k">return</span> <span class="p">(((</span><span class="n">lon</span> <span class="o">-</span> <span class="n">west</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span><span class="p">)</span> <span class="o">+</span> <span class="mi">360</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span> <span class="o">+</span> <span class="n">west</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_covers_the_globe</span><span class="p">(</span><span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return whether longitudes *xmin* to *xmax* span a whole number of turns (STILT-R's ``xdist == 0``)."""</span>
+    <span class="k">return</span> <span class="p">((</span><span class="mi">180</span> <span class="o">-</span> <span class="n">xmin</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="o">-</span><span class="mi">180</span> <span class="o">-</span> <span class="n">xmax</span><span class="p">))</span> <span class="o">%</span> <span class="mi">360</span> <span class="o">==</span> <span class="mi">0</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_wrap_antimeridian_longitudes</span><span class="p">(</span>
     <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Shift longitudes to 0 to 360 when the grid crosses the antimeridian.</span>
 
-<span class="sd">    Only for longitude/latitude grids. Returns ``(p, xmin, xmax, wrapped)``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">xdist</span> <span class="o">=</span> <span class="p">((</span><span class="mi">180</span> <span class="o">-</span> <span class="n">xmin</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="o">-</span><span class="mi">180</span> <span class="o">-</span> <span class="n">xmax</span><span class="p">))</span> <span class="o">%</span> <span class="mi">360</span>
-    <span class="k">if</span> <span class="n">xdist</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+<span class="sd">    Only for longitude/latitude grids. A grid that covers the globe is</span>
+<span class="sd">    anchored to -180 to 180 and the longitudes are left as they are. Returns</span>
+<span class="sd">    ``(p, xmin, xmax, wrapped)``.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">_covers_the_globe</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="o">-</span><span class="mf">180.0</span><span class="p">,</span> <span class="mf">180.0</span><span class="p">,</span> <span class="kc">False</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">xmax</span> <span class="o">&lt;</span> <span class="n">xmin</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">xmax</span> <span class="o">&gt;</span> <span class="mi">180</span><span class="p">):</span>
         <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">p</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span> <span class="o">%</span> <span class="mi">360</span><span class="p">)</span> <span class="o">+</span> <span class="mi">360</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span>
-        <span class="n">xmin</span> <span class="o">=</span> <span class="p">((</span><span class="n">xmin</span> <span class="o">%</span> <span class="mi">360</span><span class="p">)</span> <span class="o">+</span> <span class="mi">360</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span>
-        <span class="n">xmax</span> <span class="o">=</span> <span class="p">((</span><span class="n">xmax</span> <span class="o">%</span> <span class="mi">360</span><span class="p">)</span> <span class="o">+</span> <span class="mi">360</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span>
+        <span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_wrap_longitudes</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">])</span>
+        <span class="n">xmin</span> <span class="o">=</span> <span class="n">_wrap_longitudes</span><span class="p">(</span><span class="n">xmin</span><span class="p">)</span>
+        <span class="n">xmax</span> <span class="o">=</span> <span class="n">_wrap_longitudes</span><span class="p">(</span><span class="n">xmax</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="kc">True</span>
     <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="kc">False</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_interpolate_early_timesteps</span><span class="p">(</span>
-    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">time_sign</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">time_sign</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"+proj=longlat"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Add interpolated positions in the first 100 minutes when particles jump grid cells.</span>
 
 <span class="sd">    Near the receptor, particles can move more than a grid cell per output</span>
-<span class="sd">    step. When the median step does, positions and ``foot`` are linearly</span>
-<span class="sd">    interpolated onto finer times (every 0.1 min to 10 min, 0.2 min to 20</span>
-<span class="sd">    min, and 0.5 min to 100 min). ``foot`` is then rescaled so each of those</span>
-<span class="sd">    three windows keeps its total, as STILT-R does.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">early</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">p</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">])</span>
+<span class="sd">    step. When the median step does, along either axis of the grid,</span>
+<span class="sd">    positions and ``foot`` are linearly interpolated onto finer times (every</span>
+<span class="sd">    0.1 min to 10 min, 0.2 min to 20 min, and 0.5 min to 100 min). ``foot``</span>
+<span class="sd">    is then rescaled so each of those three windows keeps its total, as</span>
+<span class="sd">    STILT-R does.</span>
+
+<span class="sd">    *p* holds longitudes and latitudes in degrees. On a projected *crs* the</span>
+<span class="sd">    steps are measured on the grid, from the particles' positions projected</span>
+<span class="sd">    to it, so they compare with *xres* and *yres* in its units. STILT-R</span>
+<span class="sd">    compares the steps in degrees with the cell size in the grid's units,</span>
+<span class="sd">    which on a grid in meters never interpolates. The interpolation itself</span>
+<span class="sd">    is done in degrees on any grid.</span>
+<span class="sd">    """</span>
+    <span class="n">early</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">p</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">])</span>
     <span class="k">if</span> <span class="n">early</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">p</span>
 
     <span class="c1"># Match R: per-particle median(abs(diff(lon/lat))), then median across particles.</span>
     <span class="c1"># should_interpolate = median(dx) &gt; xres OR median(dy) &gt; yres</span>
-    <span class="n">sorted_early</span> <span class="o">=</span> <span class="n">early</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">])</span>
+    <span class="n">sorted_early</span> <span class="o">=</span> <span class="n">early</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">])</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_longlat</span><span class="p">(</span><span class="n">crs</span><span class="p">):</span>
+        <span class="c1"># The steps along the grid's axes, in its units.</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
+
+        <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span>
+            <span class="n">sorted_early</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">sorted_early</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">sorted_early</span> <span class="o">=</span> <span class="n">sorted_early</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
     <span class="n">diffs</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
         <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
-        <span class="n">sorted_early</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)[[</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span><span class="o">.</span><span class="n">abs</span><span class="p">(),</span>
+        <span class="n">sorted_early</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"particle"</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)[[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">]]</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span><span class="o">.</span><span class="n">abs</span><span class="p">(),</span>
     <span class="p">)</span>
     <span class="n">per_particle_med</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
-        <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">diffs</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">sorted_early</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">diffs</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">sorted_early</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">])</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
     <span class="p">)</span>
-    <span class="n">dx_values</span> <span class="o">=</span> <span class="n">per_particle_med</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-    <span class="n">dy_values</span> <span class="o">=</span> <span class="n">per_particle_med</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">dx_values</span> <span class="o">=</span> <span class="n">per_particle_med</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">dy_values</span> <span class="o">=</span> <span class="n">per_particle_med</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
     <span class="n">dx_med</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">dx_values</span><span class="p">))</span> <span class="k">if</span> <span class="n">dx_values</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
     <span class="n">dy_med</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">dy_values</span><span class="p">))</span> <span class="k">if</span> <span class="n">dy_values</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
 
@@ -556,61 +611,61 @@
     <span class="n">t_new</span> <span class="o">=</span> <span class="n">_interpolation_times</span><span class="p">(</span><span class="n">time_sign</span><span class="p">)</span>
 
     <span class="c1"># Store pre-interpolation foot sums per window for rescaling later.</span>
-    <span class="n">atime</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">])</span>
+    <span class="n">atime</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">])</span>
     <span class="n">foot_sums</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">,</span> <span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
-        <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">atime</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">20</span><span class="p">),</span> <span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
-        <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">atime</span> <span class="o">&gt;</span> <span class="mi">20</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">100</span><span class="p">),</span> <span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">,</span> <span class="s2">"foot"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">atime</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">20</span><span class="p">),</span> <span class="s2">"foot"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">atime</span> <span class="o">&gt;</span> <span class="mi">20</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">100</span><span class="p">),</span> <span class="s2">"foot"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
     <span class="p">]</span>
 
     <span class="n">p</span> <span class="o">=</span> <span class="n">_interpolate_particle_tracks</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">t_new</span><span class="o">=</span><span class="n">t_new</span><span class="p">)</span>
-    <span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="c1"># Rescale foot so total influence per window matches original.</span>
-    <span class="n">atime</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">])</span>
+    <span class="n">atime</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">])</span>
     <span class="n">masks</span> <span class="o">=</span> <span class="p">[</span>
         <span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">,</span>
         <span class="p">(</span><span class="n">atime</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">20</span><span class="p">),</span>
         <span class="p">(</span><span class="n">atime</span> <span class="o">&gt;</span> <span class="mi">20</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">atime</span> <span class="o">&lt;=</span> <span class="mi">100</span><span class="p">),</span>
     <span class="p">]</span>
     <span class="k">for</span> <span class="n">mask</span><span class="p">,</span> <span class="n">total</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">masks</span><span class="p">,</span> <span class="n">foot_sums</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="n">s</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="s2">"foot"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="s2">&quot;foot&quot;</span><span class="p">]</span> <span class="o">*=</span> <span class="n">total</span> <span class="o">/</span> <span class="n">s</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="s2">"foot"</span><span class="p">]</span> <span class="o">*=</span> <span class="n">total</span> <span class="o">/</span> <span class="n">s</span>
 
     <span class="k">return</span> <span class="n">p</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_interpolate_particle_tracks</span><span class="p">(</span><span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">t_new</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Interpolate lon/lat/foot for each particle on a dense time grid.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Interpolate lon/lat/foot for each particle on a dense time grid."""</span>
     <span class="n">frames</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">original_columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="n">source_time</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"particle"</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">source_time</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
         <span class="n">target_time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">source_time</span><span class="p">,</span> <span class="n">t_new</span><span class="p">]))</span>
         <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">source_time</span><span class="p">)</span>
         <span class="n">sorted_time</span> <span class="o">=</span> <span class="n">source_time</span><span class="p">[</span><span class="n">order</span><span class="p">]</span>
         <span class="n">unique_time</span><span class="p">,</span> <span class="n">unique_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">sorted_time</span><span class="p">,</span> <span class="n">return_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-        <span class="c1"># Mirror STILT-R&#39;s full_join(expand.grid(...), by = c(&quot;particle&quot;, &quot;time&quot;)):</span>
+        <span class="c1"># Mirror STILT-R's full_join(expand.grid(...), by = c("particle", "time")):</span>
         <span class="c1"># original rows keep every column, while inserted rows only receive the</span>
         <span class="c1"># interpolated lon/lat/foot values below.  A later dropna() therefore</span>
-        <span class="c1"># matches R&#39;s na.omit() across all columns.</span>
+        <span class="c1"># matches R's na.omit() across all columns.</span>
         <span class="n">expanded</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
             <span class="p">{</span>
-                <span class="s2">&quot;particle&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">target_time</span><span class="p">),</span> <span class="n">number</span><span class="p">),</span>
-                <span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="n">target_time</span><span class="p">,</span>
+                <span class="s2">"particle"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">target_time</span><span class="p">),</span> <span class="n">number</span><span class="p">),</span>
+                <span class="s2">"age"</span><span class="p">:</span> <span class="n">target_time</span><span class="p">,</span>
             <span class="p">}</span>
         <span class="p">)</span>
         <span class="n">join_group</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">join_group</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">join_group</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">join_group</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span> <span class="o">=</span> <span class="n">join_group</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="n">expanded</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span>
-            <span class="n">join_group</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span>
+            <span class="n">join_group</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s2">"left"</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span>
         <span class="p">)</span>
-        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;foot&quot;</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"foot"</span><span class="p">]:</span>
             <span class="n">values</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[</span><span class="n">order</span><span class="p">][</span><span class="n">unique_idx</span><span class="p">]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_time</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
-                <span class="c1"># left/right=nan matches R&#39;s na_interp: no extrapolation</span>
+                <span class="c1"># left/right=nan matches R's na_interp: no extrapolation</span>
                 <span class="c1"># beyond the observed [min_time, max_time] range.</span>
                 <span class="n">frame</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span>
                     <span class="n">target_time</span><span class="p">,</span> <span class="n">unique_time</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span>
@@ -625,7 +680,7 @@
     <span class="k">return</span> <span class="p">(</span>
         <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
-        <span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">],</span> <span class="n">ascending</span><span class="o">=</span><span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;stable&quot;</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">],</span> <span class="n">ascending</span><span class="o">=</span><span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"stable"</span><span class="p">)</span>
         <span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="p">)</span>
 
@@ -639,17 +694,17 @@
     <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Project particle positions and the grid bounds to the grid&#39;s CRS.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Project particle positions and the grid bounds to the grid's CRS.</span>
 
 <span class="sd">    Grid bounds are given in degrees and projected along with the</span>
 <span class="sd">    particles.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
 
-    <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">,</span> <span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-    <span class="n">p</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">p</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
     <span class="n">corners_x</span><span class="p">,</span> <span class="n">corners_y</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">],</span> <span class="p">[</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">])</span>
     <span class="k">return</span> <span class="p">(</span>
         <span class="n">p</span><span class="p">,</span>
@@ -661,46 +716,143 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_compute_kernel_bandwidths</span><span class="p">(</span>
-    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">is_longlat</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"+proj=longlat"</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return ``(kernel_df, w)``, the Gaussian kernel width for each ``rtime``.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return ``(kernel_df, w)``, the Gaussian kernel width for each ``rtime``, in *crs* units.</span>
 
-<span class="sd">    The width grows with the spread of the particles and the time since</span>
-<span class="sd">    release, as in STILT-R. On a longitude/latitude grid it is divided by</span>
-<span class="sd">    ``cos(lat)`` so it covers the same distance at high latitudes::</span>
+<span class="sd">    *p* holds the particles' longitudes and latitudes in degrees, before any</span>
+<span class="sd">    projection. The width grows with the spread of the particles and the</span>
+<span class="sd">    time since release, as in STILT-R, and is divided by ``cos(lat)`` so it</span>
+<span class="sd">    covers the same distance at high latitudes::</span>
 
 <span class="sd">        w = smooth_factor * 0.06 * varsum**0.25 * (|rtime| / 1440)**0.5 / cos(lat)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="sd">    This is in degrees of longitude. On a projected grid it is converted to</span>
+<span class="sd">    the grid's units by the length of one degree of longitude at the</span>
+<span class="sd">    particles' mean position (``_grid_units_per_degree_longitude``), so the</span>
+<span class="sd">    kernel is as wide from east to west, on the ground, as on a</span>
+<span class="sd">    longitude/latitude grid. STILT-R applies the formula to the projected</span>
+<span class="sd">    coordinates instead, which on a grid in meters gives a kernel a few</span>
+<span class="sd">    meters wide.</span>
+
+<span class="sd">    On any grid, each ``rtime``'s longitudes are first shifted by whole</span>
+<span class="sd">    turns to within 180 degrees of that step's circular mean</span>
+<span class="sd">    (``_unwrap_around_cloud``), so a cloud has the spread and mean position</span>
+<span class="sd">    it has on the ground wherever on the globe it is, across 180 degrees</span>
+<span class="sd">    included, and wherever it was released. STILT-R measures the spread of</span>
+<span class="sd">    the longitudes as written, so on a global grid (where it does not shift</span>
+<span class="sd">    them) a cloud across 180 degrees gets a kernel many times too wide.</span>
+<span class="sd">    """</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">_unwrap_around_cloud</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
     <span class="n">kernel_df</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">p</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;rtime&quot;</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"rtime"</span><span class="p">)</span>
         <span class="o">.</span><span class="n">agg</span><span class="p">(</span>
-            <span class="n">long_var</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">),</span>
-            <span class="n">lati_var</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">),</span>
-            <span class="n">lat_mean</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;mean&quot;</span><span class="p">),</span>
+            <span class="n">long_var</span><span class="o">=</span><span class="p">(</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"var"</span><span class="p">),</span>
+            <span class="n">lati_var</span><span class="o">=</span><span class="p">(</span><span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"var"</span><span class="p">),</span>
+            <span class="n">lat_mean</span><span class="o">=</span><span class="p">(</span><span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">),</span>
+            <span class="n">lon_mean</span><span class="o">=</span><span class="p">(</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">),</span>
         <span class="p">)</span>
         <span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
         <span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">kernel_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
         <span class="c1"># Single-particle / no-variance case: zero-width kernel per rtime.</span>
-        <span class="n">rtime_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;rtime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">unique</span><span class="p">()))</span>
+        <span class="n">rtime_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"rtime"</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">unique</span><span class="p">()))</span>
         <span class="n">kernel_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
             <span class="p">{</span>
-                <span class="s2">&quot;rtime&quot;</span><span class="p">:</span> <span class="n">rtime_vals</span><span class="p">,</span>
-                <span class="s2">&quot;lat_mean&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">())]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">rtime_vals</span><span class="p">),</span>
+                <span class="s2">"rtime"</span><span class="p">:</span> <span class="n">rtime_vals</span><span class="p">,</span>
+                <span class="s2">"lat_mean"</span><span class="p">:</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">())]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">rtime_vals</span><span class="p">),</span>
             <span class="p">}</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">kernel_df</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">kernel_df</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
 
-    <span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;varsum&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;long_var&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;lati_var&quot;</span><span class="p">]</span>
-    <span class="n">di</span> <span class="o">=</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;varsum&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">**</span> <span class="mf">0.25</span>
-    <span class="n">ti</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;rtime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span> <span class="o">/</span> <span class="mi">1440</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
-    <span class="n">grid_conv</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;lat_mean&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="k">if</span> <span class="n">is_longlat</span> <span class="k">else</span> <span class="mf">1.0</span>
-    <span class="p">)</span>
+    <span class="n">kernel_df</span><span class="p">[</span><span class="s2">"varsum"</span><span class="p">]</span> <span class="o">=</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">"long_var"</span><span class="p">]</span> <span class="o">+</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">"lati_var"</span><span class="p">]</span>
+    <span class="n">di</span> <span class="o">=</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">"varsum"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">**</span> <span class="mf">0.25</span>
+    <span class="n">ti</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">"rtime"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span> <span class="o">/</span> <span class="mi">1440</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
+    <span class="n">grid_conv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">"lat_mean"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span>
     <span class="n">w</span> <span class="o">=</span> <span class="n">smooth_factor</span> <span class="o">*</span> <span class="mf">0.06</span> <span class="o">*</span> <span class="n">di</span> <span class="o">*</span> <span class="n">ti</span> <span class="o">/</span> <span class="n">grid_conv</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_longlat</span><span class="p">(</span><span class="n">crs</span><span class="p">):</span>
+        <span class="c1"># The mean of unwrapped longitudes can pass 180; only those go back.</span>
+        <span class="n">lon_mean</span> <span class="o">=</span> <span class="n">kernel_df</span><span class="p">[</span><span class="s2">"lon_mean"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">outside</span> <span class="o">=</span> <span class="p">(</span><span class="n">lon_mean</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">180.0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">lon_mean</span> <span class="o">&gt;=</span> <span class="mf">180.0</span><span class="p">)</span>
+        <span class="n">lon_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">outside</span><span class="p">,</span> <span class="n">_wrap_longitudes</span><span class="p">(</span><span class="n">lon_mean</span><span class="p">,</span> <span class="n">west</span><span class="o">=-</span><span class="mf">180.0</span><span class="p">),</span> <span class="n">lon_mean</span><span class="p">)</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">w</span> <span class="o">*</span> <span class="n">_grid_units_per_degree_longitude</span><span class="p">(</span>
+            <span class="n">crs</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="n">lon_mean</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">"lat_mean"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="c1"># A step whose cloud is centered where the projection has no value</span>
+        <span class="c1"># (UTM near the equator 81 to 99 degrees from its meridian, a</span>
+        <span class="c1"># geostationary grid off the disk) has no width. Its particles cannot</span>
+        <span class="c1"># reach the grid, so the step is dropped, as STILT-R's na.omit drops a</span>
+        <span class="c1"># step whose particles project to infinity.</span>
+        <span class="c1"># If no step has a width, the particles are not smoothed, as when no</span>
+        <span class="c1"># step has a spread (above).</span>
+        <span class="n">finite</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">finite</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">finite</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="n">kernel_df</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">kernel_df</span><span class="p">[</span><span class="n">finite</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">w</span><span class="p">[</span><span class="n">finite</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">kernel_df</span><span class="p">,</span> <span class="n">w</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_unwrap_around_cloud</span><span class="p">(</span><span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the longitudes of *p*, each ``rtime``'s within 180 degrees of that step's circular mean.</span>
+
+<span class="sd">    The circular mean is the direction of the mean of the unit vectors, so</span>
+<span class="sd">    it is the cloud's center wherever the cloud is, and the window it opens</span>
+<span class="sd">    has its seam on the far side of the globe from the cloud. The center is</span>
+<span class="sd">    expressed in the frame the longitudes are written in (-180 to 180, or</span>
+<span class="sd">    0 to 360 on a grid that crosses 180 degrees), so a longitude is shifted,</span>
+<span class="sd">    by whole turns (``_wrap_longitudes``), only when it lies more than 180</span>
+<span class="sd">    degrees from the center. The others are returned as they are, to the</span>
+<span class="sd">    last bit.</span>
+<span class="sd">    """</span>
+    <span class="n">lon</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span>
+    <span class="n">rad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lon</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+    <span class="n">steps</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"rtime"</span><span class="p">]</span>
+    <span class="n">mean_sin</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">rad</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">"mean"</span><span class="p">)</span>
+    <span class="n">mean_cos</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">rad</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">"mean"</span><span class="p">)</span>
+    <span class="n">circular</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">mean_sin</span><span class="p">,</span> <span class="n">mean_cos</span><span class="p">))</span>
+    <span class="c1"># The same center, a whole number of turns away, nearest the plain mean.</span>
+    <span class="n">plain</span> <span class="o">=</span> <span class="n">lon</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">"mean"</span><span class="p">)</span>
+    <span class="n">center</span> <span class="o">=</span> <span class="n">plain</span> <span class="o">+</span> <span class="p">((</span><span class="n">circular</span> <span class="o">-</span> <span class="n">plain</span> <span class="o">+</span> <span class="mf">180.0</span><span class="p">)</span> <span class="o">%</span> <span class="mf">360.0</span> <span class="o">-</span> <span class="mf">180.0</span><span class="p">)</span>
+    <span class="n">west</span> <span class="o">=</span> <span class="n">center</span> <span class="o">-</span> <span class="mf">180.0</span>
+    <span class="n">outside</span> <span class="o">=</span> <span class="p">(</span><span class="n">lon</span> <span class="o">&lt;</span> <span class="n">west</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">lon</span> <span class="o">&gt;=</span> <span class="n">west</span> <span class="o">+</span> <span class="mf">360.0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">lon</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="o">~</span><span class="n">outside</span><span class="p">,</span> <span class="n">_wrap_longitudes</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">west</span><span class="o">=</span><span class="n">west</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_grid_units_per_degree_longitude</span><span class="p">(</span>
+    <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">lon</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the length of one degree of longitude at each ``(lon, lat)``, in *crs* units.</span>
+
+<span class="sd">    It is measured with the projection itself: the distance between the</span>
+<span class="sd">    points a hundredth of a degree east and west, divided by the</span>
+<span class="sd">    difference in degrees. So it includes the projection's scale at that</span>
+<span class="sd">    point and its units (meters, feet, kilometers), and does not depend on</span>
+<span class="sd">    how the projection's axes are turned. It is NaN where the projection</span>
+<span class="sd">    has no value. Next to a projection's cut (a</span>
+<span class="sd">    Lambert conformal or Mercator grid is cut at ``lon_0 + 180``) one of</span>
+<span class="sd">    the two points is across it, so the distances from the point to each</span>
+<span class="sd">    side differ by more than a factor of two; there the shorter one is</span>
+<span class="sd">    used.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
+
+    <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="mf">0.01</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">))</span>
+    <span class="n">x_west</span><span class="p">,</span> <span class="n">y_west</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">lon</span> <span class="o">-</span> <span class="n">step</span><span class="p">,</span> <span class="n">lat</span><span class="p">))</span>
+    <span class="n">x_east</span><span class="p">,</span> <span class="n">y_east</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">lon</span> <span class="o">+</span> <span class="n">step</span><span class="p">,</span> <span class="n">lat</span><span class="p">))</span>
+    <span class="c1"># Where the projection has no value it gives inf, and the length is NaN.</span>
+    <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">invalid</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">):</span>
+        <span class="n">across</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x_east</span> <span class="o">-</span> <span class="n">x_west</span><span class="p">,</span> <span class="n">y_east</span> <span class="o">-</span> <span class="n">y_west</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">step</span><span class="p">)</span>
+        <span class="n">west</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x_west</span><span class="p">,</span> <span class="n">y</span> <span class="o">-</span> <span class="n">y_west</span><span class="p">)</span> <span class="o">/</span> <span class="n">step</span>
+        <span class="n">east</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x_east</span> <span class="o">-</span> <span class="n">x</span><span class="p">,</span> <span class="n">y_east</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span> <span class="o">/</span> <span class="n">step</span>
+        <span class="n">cut</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">west</span><span class="p">,</span> <span class="n">east</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">west</span><span class="p">,</span> <span class="n">east</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">cut</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">west</span><span class="p">,</span> <span class="n">east</span><span class="p">),</span> <span class="n">across</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_padded_axes</span><span class="p">(</span>
@@ -714,12 +866,12 @@
     <span class="n">xbuf</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">ybuf</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the lower cell edges of the output grid padded by *xbuf* and *ybuf* cells per side.</span>
 
 <span class="sd">    The padding, the size of the largest kernel, lets particles just outside</span>
 <span class="sd">    the grid be smoothed into it.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">glong_buf</span> <span class="o">=</span> <span class="n">xmin</span> <span class="o">-</span> <span class="n">xbuf</span> <span class="o">*</span> <span class="n">xres</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_lon</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">xbuf</span><span class="p">)</span> <span class="o">*</span> <span class="n">xres</span>
     <span class="n">glati_buf</span> <span class="o">=</span> <span class="n">ymin</span> <span class="o">-</span> <span class="n">ybuf</span> <span class="o">*</span> <span class="n">yres</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_lat</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">ybuf</span><span class="p">)</span> <span class="o">*</span> <span class="n">yres</span>
     <span class="k">return</span> <span class="n">glong_buf</span><span class="p">,</span> <span class="n">glati_buf</span>
@@ -740,54 +892,54 @@
     <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">time_integrate</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Sum ``foot`` by padded grid cell and time step for particles on the padded grid.</span>
 
 <span class="sd">    Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,</span>
 <span class="sd">    foot, layer``, and ``layers`` holds the sorted hour indices, or ``[0]``</span>
 <span class="sd">    when ``time_integrate`` is set. Both are empty when no particle is on</span>
 <span class="sd">    the padded grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">filtered</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
         <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">p</span><span class="p">[</span>
-            <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="o">&amp;</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">xmin</span> <span class="o">-</span> <span class="n">xbufh</span> <span class="o">*</span> <span class="n">xres</span><span class="p">)</span>
-            <span class="o">&amp;</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">xmax</span> <span class="o">+</span> <span class="n">xbufh</span> <span class="o">*</span> <span class="n">xres</span><span class="p">)</span>
-            <span class="o">&amp;</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">ymin</span> <span class="o">-</span> <span class="n">ybufh</span> <span class="o">*</span> <span class="n">yres</span><span class="p">)</span>
-            <span class="o">&amp;</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">ymax</span> <span class="o">+</span> <span class="n">ybufh</span> <span class="o">*</span> <span class="n">yres</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">xmin</span> <span class="o">-</span> <span class="n">xbufh</span> <span class="o">*</span> <span class="n">xres</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">xmax</span> <span class="o">+</span> <span class="n">xbufh</span> <span class="o">*</span> <span class="n">xres</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">ymin</span> <span class="o">-</span> <span class="n">ybufh</span> <span class="o">*</span> <span class="n">yres</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">ymax</span> <span class="o">+</span> <span class="n">ybufh</span> <span class="o">*</span> <span class="n">yres</span><span class="p">)</span>
         <span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
     <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">filtered</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">filtered</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
 
-    <span class="n">filtered</span><span class="p">[</span><span class="s2">&quot;loi&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">filtered</span><span class="p">[</span><span class="s2">"loi"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span>
             <span class="n">glong_buf</span><span class="p">,</span>
-            <span class="n">filtered</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
-            <span class="n">side</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">,</span>
+            <span class="n">filtered</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+            <span class="n">side</span><span class="o">=</span><span class="s2">"right"</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="o">-</span> <span class="mi">1</span>
     <span class="p">)</span>
-    <span class="n">filtered</span><span class="p">[</span><span class="s2">&quot;lai&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">filtered</span><span class="p">[</span><span class="s2">"lai"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span>
             <span class="n">glati_buf</span><span class="p">,</span>
-            <span class="n">filtered</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
-            <span class="n">side</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">,</span>
+            <span class="n">filtered</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+            <span class="n">side</span><span class="o">=</span><span class="s2">"right"</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="o">-</span> <span class="mi">1</span>
     <span class="p">)</span>
     <span class="c1"># Sum foot for particles in the same cell at the same time step.</span>
     <span class="n">p</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
         <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
-        <span class="n">filtered</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">&quot;loi&quot;</span><span class="p">,</span> <span class="s2">&quot;lai&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="s2">&quot;rtime&quot;</span><span class="p">],</span> <span class="n">as_index</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+        <span class="n">filtered</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"loi"</span><span class="p">,</span> <span class="s2">"lai"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">,</span> <span class="s2">"rtime"</span><span class="p">],</span> <span class="n">as_index</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="s2">"foot"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
     <span class="p">)</span>
 
     <span class="c1"># time_integrate=True collapses all steps into a single layer; otherwise</span>
     <span class="c1"># bin into hourly layers for time-resolved output.</span>
-    <span class="n">p</span><span class="p">[</span><span class="s2">&quot;layer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">time_integrate</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">60</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-    <span class="n">layers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;layer&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+    <span class="n">p</span><span class="p">[</span><span class="s2">"layer"</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">time_integrate</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span> <span class="o">/</span> <span class="mi">60</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">layers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"layer"</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">layers</span>
 
 
@@ -803,18 +955,18 @@
     <span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">kernel</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Add ``values[j] * kernel``, centered on cell ``(rows[j], cols[j])``, to *out* in place.</span>
 
-<span class="sd">    This is STILT-R&#39;s ``permute.f90``: the kernel is added at each occupied</span>
+<span class="sd">    This is STILT-R's ``permute.f90``: the kernel is added at each occupied</span>
 <span class="sd">    cell, so the cost is cells x kernel cells. Kernel mass that falls outside</span>
 <span class="sd">    *out* is dropped, as a convolution with zeros beyond the edge drops it.</span>
 <span class="sd">    Cells are stamped in chunks of at most ``_MAX_STAMP_PAIRS`` (cell, kernel</span>
 <span class="sd">    cell) pairs, so memory stays bounded however wide the kernel is.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">n_rows</span><span class="p">,</span> <span class="n">n_cols</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">shape</span>
     <span class="n">hx</span><span class="p">,</span> <span class="n">hy</span> <span class="o">=</span> <span class="n">kernel</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">kernel</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span>
-    <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="n">hx</span><span class="p">,</span> <span class="n">hx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="n">hy</span><span class="p">,</span> <span class="n">hy</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">&quot;ij&quot;</span><span class="p">)</span>
+    <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="n">hx</span><span class="p">,</span> <span class="n">hx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="n">hy</span><span class="p">,</span> <span class="n">hy</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">"ij"</span><span class="p">)</span>
     <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">weights</span> <span class="o">=</span> <span class="n">dx</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">dy</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">kernel</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
     <span class="n">chunk</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">_MAX_STAMP_PAIRS</span> <span class="o">//</span> <span class="n">weights</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="n">chunk</span><span class="p">):</span>
@@ -841,6 +993,28 @@
         <span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">r1</span> <span class="o">-</span> <span class="n">r0</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_fold_padding_around_the_globe</span><span class="p">(</span>
+    <span class="n">foot_arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">pad</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_lon</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Add the padding of a padded array to the cells it lies beside, around the globe.</span>
+
+<span class="sd">    *foot_arr* has *pad* cells of padding on each side of its first axis and</span>
+<span class="sd">    *n_lon* cells between them. On a grid that goes all the way around, the</span>
+<span class="sd">    cells past the east edge are the first cells again, and the cells past</span>
+<span class="sd">    the west edge are the last, so the smoothing that spilled into the</span>
+<span class="sd">    padding is returned to them instead of being dropped.</span>
+<span class="sd">    """</span>
+    <span class="n">folded</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_lon</span><span class="p">,</span> <span class="o">*</span><span class="n">foot_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">foot_arr</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">start</span> <span class="o">&lt;</span> <span class="n">foot_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">cell</span> <span class="o">=</span> <span class="p">(</span><span class="n">start</span> <span class="o">-</span> <span class="n">pad</span><span class="p">)</span> <span class="o">%</span> <span class="n">n_lon</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">n_lon</span> <span class="o">-</span> <span class="n">cell</span><span class="p">,</span> <span class="n">foot_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">folded</span><span class="p">[</span><span class="n">cell</span> <span class="p">:</span> <span class="n">cell</span> <span class="o">+</span> <span class="n">stop</span> <span class="o">-</span> <span class="n">start</span><span class="p">]</span> <span class="o">+=</span> <span class="n">foot_arr</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">stop</span>
+    <span class="k">return</span> <span class="n">folded</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_accumulate_smoothed_footprint</span><span class="p">(</span>
     <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
@@ -851,20 +1025,20 @@
     <span class="n">w</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">rs</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Grid each time step&#39;s ``foot`` on the padded grid and smooth it with a Gaussian kernel.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Grid each time step's ``foot`` on the padded grid and smooth it with a Gaussian kernel.</span>
 
 <span class="sd">    Returns an array of shape ``(n_lon_buf, n_lat_buf, n_layers)``. Each</span>
-<span class="sd">    step&#39;s particles are summed by cell, then the step&#39;s kernel is added at</span>
-<span class="sd">    each occupied cell (``_stamp_kernel``), as STILT-R&#39;s ``permute.f90``</span>
+<span class="sd">    step's particles are summed by cell, then the step's kernel is added at</span>
+<span class="sd">    each occupied cell (``_stamp_kernel``), as STILT-R's ``permute.f90``</span>
 <span class="sd">    does. This equals a convolution of the gridded step with the kernel, but</span>
 <span class="sd">    costs cells x kernel cells instead of grid cells x kernel cells.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_lon_buf</span><span class="p">,</span> <span class="n">n_lat_buf</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">kernel_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
 
     <span class="n">layer_index</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">layer</span><span class="p">):</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">layer</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">layers</span><span class="p">)}</span>
-    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">&quot;layer&quot;</span><span class="p">,</span> <span class="s2">&quot;rtime&quot;</span><span class="p">],</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"layer"</span><span class="p">,</span> <span class="s2">"rtime"</span><span class="p">],</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="n">layer</span><span class="p">,</span> <span class="n">rtime_val</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">key</span><span class="p">)</span>
         <span class="n">i</span> <span class="o">=</span> <span class="n">layer_index</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">layer</span><span class="p">)]</span>
 
@@ -875,9 +1049,9 @@
             <span class="n">kernel_cache</span><span class="p">[</span><span class="n">step_w</span><span class="p">]</span> <span class="o">=</span> <span class="n">_make_gauss_kernel</span><span class="p">(</span><span class="n">rs</span><span class="p">,</span> <span class="n">step_w</span><span class="p">)</span>
         <span class="n">k</span> <span class="o">=</span> <span class="n">kernel_cache</span><span class="p">[</span><span class="n">step_w</span><span class="p">]</span>
 
-        <span class="n">loi_arr</span> <span class="o">=</span> <span class="n">step</span><span class="p">[</span><span class="s2">&quot;loi&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-        <span class="n">lai_arr</span> <span class="o">=</span> <span class="n">step</span><span class="p">[</span><span class="s2">&quot;lai&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-        <span class="n">foot_vals</span> <span class="o">=</span> <span class="n">step</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">loi_arr</span> <span class="o">=</span> <span class="n">step</span><span class="p">[</span><span class="s2">"loi"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">lai_arr</span> <span class="o">=</span> <span class="n">step</span><span class="p">[</span><span class="s2">"lai"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">foot_vals</span> <span class="o">=</span> <span class="n">step</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
         <span class="n">valid</span> <span class="o">=</span> <span class="p">(</span>
             <span class="p">(</span><span class="n">loi_arr</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
             <span class="o">&amp;</span> <span class="p">(</span><span class="n">loi_arr</span> <span class="o">&lt;</span> <span class="n">n_lon_buf</span><span class="p">)</span>
@@ -908,21 +1082,39 @@
     <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
     <span class="n">time_integrate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
-    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
     <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Calculate a footprint from particles, as STILT-R&#39;s ``calc_footprint`` does.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Calculate a footprint from particles, as STILT-R's ``calc_footprint`` does.</span>
 
 <span class="sd">    The particle *transforms* are applied first, in order, so the footprint</span>
 <span class="sd">    records exactly the transforms it was made with. Near the receptor,</span>
 <span class="sd">    particle tracks are interpolated to finer times when particles cross</span>
-<span class="sd">    more than a grid cell per step. Each particle&#39;s ``foot`` is added to the</span>
+<span class="sd">    more than a grid cell per step. Each particle's ``foot`` is added to the</span>
 <span class="sd">    cell it is in, and each time step is smoothed with a Gaussian kernel</span>
-<span class="sd">    that widens with the particles&#39; spread and age. The sum is divided by</span>
+<span class="sd">    that widens with the particles' spread and age. The sum is divided by</span>
 <span class="sd">    the number of particles and binned by hour, unless *time_integrate* is</span>
 <span class="sd">    set.</span>
+
+<span class="sd">    A grid that goes all the way around the earth (``xmin=-180``,</span>
+<span class="sd">    ``xmax=180``, with cells that fit 360 degrees) is treated as a circle:</span>
+<span class="sd">    a particle cloud across 180 degrees is measured as one cloud, and</span>
+<span class="sd">    smoothing that spills past the east edge returns at the west edge, and</span>
+<span class="sd">    the other way. STILT-R measures the cloud's longitudes as written, from</span>
+<span class="sd">    -180 to 180, and drops what is smoothed past the edge, so on such a grid</span>
+<span class="sd">    it smooths a cloud near 180 degrees with a far too wide kernel and loses</span>
+<span class="sd">    part of the footprint.</span>
+
+<span class="sd">    On a projected grid the kernel's width is worked out in degrees, as on</span>
+<span class="sd">    a longitude/latitude grid, and converted to the grid's units, so the</span>
+<span class="sd">    footprint is smoothed as much. STILT-R applies its formula to the</span>
+<span class="sd">    projected coordinates and barely smooths a footprint there. The step</span>
+<span class="sd">    that decides the early-time interpolation is measured on the projected</span>
+<span class="sd">    grid, in its units, so a grid of 100 m cells is interpolated as a 0.001°</span>
+<span class="sd">    grid is. STILT-R measures it in degrees and never interpolates on a grid</span>
+<span class="sd">    in meters.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -943,11 +1135,11 @@
 <span class="sd">    transforms : sequence, optional</span>
 <span class="sd">        Particle transforms applied before the footprint is calculated, as</span>
 <span class="sd">        objects or as the mappings ``config.yaml`` takes</span>
-<span class="sd">        (``{&quot;kind&quot;: &quot;pressure_weighting&quot;}``).</span>
+<span class="sd">        (``{"kind": "pressure_weighting"}``).</span>
 <span class="sd">    name : str, optional</span>
 <span class="sd">        Name of the footprint, usually the variant name.</span>
 <span class="sd">    directory : str or Path, optional</span>
-<span class="sd">        Where a relative file name in a transform&#39;s settings starts, such as</span>
+<span class="sd">        Where a relative file name in a transform's settings starts, such as</span>
 <span class="sd">        an averaging-kernel table: the project directory.</span>
 <span class="sd">    geometry_hash : str, optional</span>
 <span class="sd">        Hash of the geometry the grid was derived for</span>
@@ -971,24 +1163,26 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; grid = stilt.Grid(</span>
+<span class="sd">    &gt;&gt;&gt; grid = stilt.Grid(  # doctest: +SKIP</span>
 <span class="sd">    ...     xmin=-113, xmax=-110.5, ymin=40, ymax=42, xres=0.01, yres=0.01</span>
 <span class="sd">    ... )</span>
-<span class="sd">    &gt;&gt;&gt; foot = stilt.calc_footprint(particles, receptor, grid, smooth_factor=0.5)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    &gt;&gt;&gt; foot = stilt.calc_footprint(</span>
+<span class="sd">    ...     particles, receptor, grid, smooth_factor=0.5</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;A footprint needs a grid. Give one, or derive it from a geometry &quot;</span>
-            <span class="s2">&quot;with stilt.Mesh.from_spec(geometry).to_grid().&quot;</span>
+            <span class="s2">"A footprint needs a grid. Give one, or derive it from a geometry "</span>
+            <span class="s2">"with stilt.Mesh.from_spec(geometry).to_grid()."</span>
         <span class="p">)</span>
     <span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
     <span class="c1"># Checks the settings, and builds the transforms given as mappings.</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span>
         <span class="p">{</span>
-            <span class="s2">&quot;grid&quot;</span><span class="p">:</span> <span class="n">grid</span><span class="p">,</span>
-            <span class="s2">&quot;smooth_factor&quot;</span><span class="p">:</span> <span class="n">smooth_factor</span><span class="p">,</span>
-            <span class="s2">&quot;time_integrate&quot;</span><span class="p">:</span> <span class="n">time_integrate</span><span class="p">,</span>
-            <span class="s2">&quot;transforms&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">transforms</span><span class="p">),</span>
+            <span class="s2">"grid"</span><span class="p">:</span> <span class="n">grid</span><span class="p">,</span>
+            <span class="s2">"smooth_factor"</span><span class="p">:</span> <span class="n">smooth_factor</span><span class="p">,</span>
+            <span class="s2">"time_integrate"</span><span class="p">:</span> <span class="n">time_integrate</span><span class="p">,</span>
+            <span class="s2">"transforms"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">transforms</span><span class="p">),</span>
         <span class="p">}</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">particles</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
@@ -998,32 +1192,38 @@
     <span class="n">crs</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">crs</span>
     <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">xres</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span>
     <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">yres</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span>
-    <span class="n">is_longlat</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span>
     <span class="n">smooth_factor</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">smooth_factor</span>
     <span class="n">time_integrate</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">time_integrate</span>
 
     <span class="k">if</span> <span class="n">particles</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">EmptyFootprint</span><span class="p">()</span>
 
-    <span class="n">p</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">n_particles</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
+    <span class="c1"># Only the columns the footprint is made from, as STILT-R passes them.</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="nb">list</span><span class="p">(</span><span class="n">_FOOTPRINT_INPUTS</span><span class="p">)]</span>
+    <span class="n">n_particles</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
     <span class="c1"># time_sign: -1 for backward runs, +1 for forward.</span>
-    <span class="n">time_sign</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">()))</span>
+    <span class="n">time_sign</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">()))</span>
 
     <span class="n">wrapped_longitude</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="k">if</span> <span class="n">is_longlat</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
         <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">wrapped_longitude</span> <span class="o">=</span> <span class="n">_wrap_antimeridian_longitudes</span><span class="p">(</span>
             <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="n">xmax</span>
         <span class="p">)</span>
 
-    <span class="n">p</span> <span class="o">=</span> <span class="n">_interpolate_early_timesteps</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">xres</span><span class="o">=</span><span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="o">=</span><span class="n">yres</span><span class="p">,</span> <span class="n">time_sign</span><span class="o">=</span><span class="n">time_sign</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">_interpolate_early_timesteps</span><span class="p">(</span>
+        <span class="n">p</span><span class="p">,</span> <span class="n">xres</span><span class="o">=</span><span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="o">=</span><span class="n">yres</span><span class="p">,</span> <span class="n">time_sign</span><span class="o">=</span><span class="n">time_sign</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="n">crs</span>
+    <span class="p">)</span>
 
-    <span class="c1"># rtime = time elapsed since each particle&#39;s first output step.</span>
+    <span class="c1"># rtime = time elapsed since each particle's first output step.</span>
     <span class="c1"># Used below to compute kernel bandwidth (particles spread more with time).</span>
-    <span class="n">min_abs_time</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">],</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>
-    <span class="n">p</span><span class="p">[</span><span class="s2">&quot;rtime&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">time_sign</span> <span class="o">*</span> <span class="n">min_abs_time</span>
+    <span class="n">min_abs_time</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">],</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">"min"</span><span class="p">)</span>
+    <span class="n">p</span><span class="p">[</span><span class="s2">"rtime"</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span> <span class="o">-</span> <span class="n">time_sign</span> <span class="o">*</span> <span class="n">min_abs_time</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_longlat</span><span class="p">:</span>
+    <span class="c1"># The kernel width comes from the spread in degrees, before projecting,</span>
+    <span class="c1"># and is returned in the grid's units.</span>
+    <span class="n">kernel_df</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">_compute_kernel_bandwidths</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="n">smooth_factor</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="n">crs</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
         <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">_project_particles_to_crs</span><span class="p">(</span>
             <span class="n">p</span><span class="p">,</span>
             <span class="n">crs</span><span class="o">=</span><span class="n">crs</span><span class="p">,</span>
@@ -1039,10 +1239,13 @@
     <span class="n">n_lon</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">glong</span><span class="p">)</span>
     <span class="n">n_lat</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">glati</span><span class="p">)</span>
     <span class="n">rs</span> <span class="o">=</span> <span class="p">(</span><span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">)</span>
-
-    <span class="n">kernel_df</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">_compute_kernel_bandwidths</span><span class="p">(</span>
-        <span class="n">p</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="n">smooth_factor</span><span class="p">,</span> <span class="n">is_longlat</span><span class="o">=</span><span class="n">is_longlat</span>
+    <span class="c1"># Cells that go all the way around: the east edge meets the west edge.</span>
+    <span class="n">around_the_globe</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span>
+        <span class="ow">and</span> <span class="n">_covers_the_globe</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmax</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">n_lon</span> <span class="o">*</span> <span class="n">xres</span><span class="p">,</span> <span class="mf">360.0</span><span class="p">))</span>
     <span class="p">)</span>
+
     <span class="n">max_kernel</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">_make_gauss_kernel</span><span class="p">(</span><span class="n">rs</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">w</span><span class="p">)))</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])</span>
     <span class="p">)</span>
@@ -1081,13 +1284,20 @@
         <span class="n">layers</span><span class="o">=</span><span class="n">layers</span><span class="p">,</span>
         <span class="n">n_lon_buf</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">glong_buf</span><span class="p">),</span>
         <span class="n">n_lat_buf</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">glati_buf</span><span class="p">),</span>
-        <span class="n">rtimes</span><span class="o">=</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">&quot;rtime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+        <span class="n">rtimes</span><span class="o">=</span><span class="n">kernel_df</span><span class="p">[</span><span class="s2">"rtime"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
         <span class="n">w</span><span class="o">=</span><span class="n">w</span><span class="p">,</span>
         <span class="n">rs</span><span class="o">=</span><span class="n">rs</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="c1"># Trim the padding and normalize by the particle count.</span>
-    <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">foot_arr</span><span class="p">[</span><span class="n">xbuf</span> <span class="p">:</span> <span class="n">xbuf</span> <span class="o">+</span> <span class="n">n_lon</span><span class="p">,</span> <span class="n">ybuf</span> <span class="p">:</span> <span class="n">ybuf</span> <span class="o">+</span> <span class="n">n_lat</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/</span> <span class="n">n_particles</span>
+    <span class="c1"># Trim the padding and normalize by the particle count. A grid whose cells</span>
+    <span class="c1"># close the circle is periodic: what was smoothed past an edge is added to</span>
+    <span class="c1"># the cells at the other edge.</span>
+    <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">foot_arr</span><span class="p">[:,</span> <span class="n">ybuf</span> <span class="p">:</span> <span class="n">ybuf</span> <span class="o">+</span> <span class="n">n_lat</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="k">if</span> <span class="n">around_the_globe</span><span class="p">:</span>
+        <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">_fold_padding_around_the_globe</span><span class="p">(</span><span class="n">foot_arr</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="n">xbuf</span><span class="p">,</span> <span class="n">n_lon</span><span class="o">=</span><span class="n">n_lon</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">foot_arr</span><span class="p">[</span><span class="n">xbuf</span> <span class="p">:</span> <span class="n">xbuf</span> <span class="o">+</span> <span class="n">n_lon</span><span class="p">]</span>
+    <span class="n">foot_arr</span> <span class="o">=</span> <span class="n">foot_arr</span> <span class="o">/</span> <span class="n">n_particles</span>
 
     <span class="n">values</span> <span class="o">=</span> <span class="n">foot_arr</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># (time, y, x)</span>
     <span class="c1"># Rounded as Grid.axes rounds them, so a footprint read back from its</span>
@@ -1132,8 +1342,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1159,14 +1369,14 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

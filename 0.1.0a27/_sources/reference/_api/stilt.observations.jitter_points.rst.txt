@@ -1,0 +1,6 @@
+﻿stilt.observations.jitter\_points
+=================================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: jitter_points

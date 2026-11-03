@@ -62,7 +62,8 @@ The scenarios cover:
 - 6 h and 24 h backward runs, and a 6 h forward run
 - the hyper-near-field (HNF) plume correction on (12 scenarios) and off
 - ``smooth_factor`` of 0, 0.5, 1, and 2
-- 0.01° and 0.05° longitude/latitude grids and a UTM grid
+- 0.01° and 0.05° longitude/latitude grids and a UTM grid, all with square
+  cells
 - a 2° box, a receptor in the domain's corner, a receptor at the edge of
   the met grid, and a small 0.1° domain that particles leave early
 - receptor heights above ground, above sea level (``kmsl=1``), and at 0.5 m
@@ -88,6 +89,77 @@ What does not match
   fill value of ``-1``. PYSTILT writes CF-1.8 NetCDF with dimensions
   ``(time, lat, lon)``. Read PYSTILT files as ordinary CF NetCDF. Tools that
   expect STILT-R's layout will not read them.
+- **Smoothing on cells that are not square.** When ``xres`` and ``yres``
+  differ, a smoothing kernel wider than one cell has a different number of
+  cells along longitude and along latitude. STILT-R's ``permute.f90`` reads
+  the kernel as if the two numbers were equal. With ``xres`` larger than
+  ``yres``, its footprint total comes out 5 to 13 % high on 24 h runs. With
+  ``yres`` larger than ``xres``, it reads memory past the end of the kernel.
+  The footprint then loses mass (15 % in one case), holds values near
+  ``1e300``, or R crashes
+  (`uataq/stilt#116 <https://github.com/uataq/stilt/issues/116>`_; the fix is
+  `uataq/stilt#148 <https://github.com/uataq/stilt/pull/148>`_).
+  PYSTILT adds each kernel along the axis each cell count belongs to, so
+  smoothing keeps the footprint total. Its footprint equals STILT-R's with
+  ``permute.f90`` reading the kernel that way, to within ``2e-15`` of the
+  peak. On square cells the two agree.
+- **Smoothing on a projected grid.** The kernel width,
+  ``0.06 * (var(x) + var(y))**0.25 * sqrt(|rtime| / 1440)``, is made for
+  coordinates in degrees. STILT-R applies it to the projected coordinates,
+  so on a grid in meters the kernel is a few meters wide and the footprint
+  is hardly smoothed. On a 24 h run on 1 km UTM cells, STILT-R's footprint
+  has a third of the nonzero cells of the same run on a 0.01° grid (9,771
+  and 28,706), and PYSTILT's has 26,385. PYSTILT works the width out in
+  degrees from the particles' longitudes and latitudes, as on a
+  longitude/latitude grid, then multiplies it by the length of one degree
+  of longitude at the particles' mean position, measured in the grid's
+  projection and units. Each step's longitudes are first taken within 180°
+  of that step's circular mean, so a cloud is measured as one wherever it
+  is, on both sides of 180° included.
+  The kernel is then as wide from east to west, on the ground, as on a
+  longitude/latitude grid. On the projected grid it is round. On a
+  longitude/latitude grid it is ``1 / cos(lat)`` times wider from north to
+  south, because it has one width in degrees on both axes.
+  The fidelity suite's UTM scenario compares unsmoothed footprints, and
+  ``test_projected_smoothing_intentionally_differs_from_r`` guards the
+  difference. Longitude/latitude grids are not affected.
+- **The early-time interpolation on a projected grid.** In the first 100
+  minutes, when the particles' median step is longer than a cell along
+  either axis, both add positions between the output steps. STILT-R
+  measures the step in degrees and compares it with ``xres`` and ``yres``
+  in the grid's units, so on a grid in meters it never interpolates. On a
+  24 h run on 100 m UTM cells, unsmoothed, STILT-R's rule gives a
+  footprint with 12,341 nonzero cells, against 15,139 for the same run on
+  a 0.001° grid, which does interpolate. PYSTILT measures the step on the
+  projected grid, in its units and along its axes, and its footprint has
+  14,563. It then
+  interpolates as STILT-R does on longitude/latitude cells of the same
+  size. The positions added are interpolated in degrees on any grid.
+  ``test_utm_early_interpolation_intentionally_differs_from_r`` guards the
+  difference. Longitude/latitude grids are not affected.
+- **Smoothing a cloud near 180° on a global grid.** On a grid that goes
+  all the way around (``xmin=-180``, ``xmax=180``), STILT-R leaves the
+  particles' longitudes as HYSPLIT writes them, from -180 to 180. A cloud
+  on both sides of 180° then has a variance of thousands of square degrees
+  and gets a kernel many times too wide, and what the kernel spreads past
+  ±180° is lost. For a cloud of 300 particles (standard deviation 0.3°, a
+  day after release) on a 0.25° grid, a cloud at 175° covers 36 cells and
+  keeps its whole footprint in both programs; at 179.9° STILT-R covers 1,242
+  cells and loses 42 % of the footprint, and PYSTILT covers 34 cells and
+  keeps all of it. PYSTILT takes the longitudes of each time step within
+  180° of that step's mean longitude (the circular mean, so the seam is on
+  the far side of the globe from the cloud) before it measures the spread.
+  The cloud is measured as one wherever it is, and a real spread of 10° stays
+  10°. PYSTILT also adds the smoothing that passes one edge of such a grid
+  to the cells at the other edge, so the footprint of a cloud near 180° is
+  the footprint of the same cloud anywhere else, shifted. The longitudes
+  are unwrapped this way on every longitude/latitude grid, which also fixes
+  a cloud around 0° on a wide grid that crosses 180°, where STILT-R's shift to 0° to 360° cuts the
+  cloud in two. A grid whose cells do not fit 360° (0.7° cells leave 0.2°)
+  has an edge, and smoothing is cut there as before. A cloud that is not
+  cut by the seam is measured as before, bit for bit.
+  ``test_global_grid_across_180_intentionally_differs_from_r`` guards the
+  difference.
 - **Forward runs with the HNF correction.** STILT-R accumulates the plume
   from the far end of a forward trajectory back toward the release point,
   so its plume is widest at release. PYSTILT accumulates outward from the
@@ -100,6 +172,13 @@ What does not match
   the footprint after the first hour
   (`uataq/stilt#142 <https://github.com/uataq/stilt/issues/142>`_). No
   fidelity scenario sets ``veght`` above 1.
+- **The HNF correction of a receptor above sea level.** PYSTILT grows the
+  plume from the release height above ground, so it needs ``zsfc`` in
+  ``varsiwant`` for an MSL receptor. STILT-R grows it from the
+  receptor height as given, which with ``kmsl=1`` is above sea level, so
+  over high terrain its correction does nothing. The ``msl_altitude``
+  scenario compares the uncorrected ``foot_no_hnf_dilution``, and
+  ``test_msl_hnf_foot_intentionally_differs_from_r`` guards the difference.
 - **Untested inputs.** Runs longer than 24 h backward, latitudes above 80°,
   and grids finer than 0.001° have not been compared.
 - **Other STILT-R commits.** Nothing detects upstream changes to

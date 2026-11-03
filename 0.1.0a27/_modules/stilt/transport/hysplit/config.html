@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>stilt.transport.hysplit.config &#8212; PYSTILT 0.1.0a27</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../../../../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/transport/hysplit/config';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a27" />
+  
+    
+    <script src="../../../../_static/searchtools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <script src="../../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../../transport.html" class="nav-link">stilt.transport</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.transport.hysplit.config</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for stilt.transport.hysplit.config</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""</span>
+<span class="sd">HYSPLIT's config: every setting that shapes the particles HYSPLIT makes.</span>
+
+<span class="sd">:class:`HysplitConfig` holds them. Most are HYSPLIT's own, under HYSPLIT's</span>
+<span class="sd">names; a few are used by PYSTILT itself. Which input file each goes to is</span>
+<span class="sd">the HYSPLIT driver's business (:mod:`stilt.transport.hysplit.driver`).</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Self</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">field_validator</span><span class="p">,</span> <span class="n">model_validator</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">HNF_PLUME_COLUMNS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport</span><span class="w"> </span><span class="kn">import</span> <span class="n">TransportConfig</span>
+
+<span class="c1">#: Most hourly ZICONTROL factors HYSPLIT can hold (``ZIPRESC(150)`` in</span>
+<span class="c1">#: hymodelc.F); it reads more without a bounds check.</span>
+<span class="n">MAX_ZISCALE_HOURS</span> <span class="o">=</span> <span class="mi">150</span>
+
+<span class="c1">#: The wind-error settings, in the order of the lines of HYSPLIT's WINDERR file.</span>
+<span class="n">WIND_ERROR_SETTINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"siguverr"</span><span class="p">,</span> <span class="s2">"tluverr"</span><span class="p">,</span> <span class="s2">"zcoruverr"</span><span class="p">,</span> <span class="s2">"horcoruverr"</span><span class="p">)</span>
+
+<span class="c1">#: The mixed-layer error settings, in the order of the lines of HYSPLIT's ZIERR file.</span>
+<span class="n">ZI_ERROR_SETTINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"sigzierr"</span><span class="p">,</span> <span class="s2">"tlzierr"</span><span class="p">,</span> <span class="s2">"horcorzierr"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="HysplitConfig">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.HysplitConfig.html#stilt.transport.hysplit.HysplitConfig">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">HysplitConfig</span><span class="p">(</span><span class="n">TransportConfig</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    HYSPLIT's config: every setting that shapes the particles it makes.</span>
+
+<span class="sd">    In ``config.yaml`` they are flat, top-level keys when HYSPLIT is the</span>
+<span class="sd">    project's model, as it is by default, and a variant may override any of</span>
+<span class="sd">    them. Most are HYSPLIT ``SETUP.CFG`` entries with</span>
+<span class="sd">    HYSPLIT's own names; see the HYSPLIT user guide for the full meaning of</span>
+<span class="sd">    each. The wind-error group (``siguverr``, ``tluverr``, ``zcoruverr``,</span>
+<span class="sd">    ``horcoruverr``) perturbs the particles' winds, and the mixed-layer group</span>
+<span class="sd">    (``sigzierr``, ``tlzierr``, ``horcorzierr``) perturbs each particle's</span>
+<span class="sd">    footprint by a random mixed-layer height error. Each group is set in full</span>
+<span class="sd">    or not at all.</span>
+<span class="sd">    """</span>
+
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">arbitrary_types_allowed</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1">#: Fields left out of a run's recorded settings. What they point at is</span>
+    <span class="c1">#: recorded instead: the build's version and the checksums of data files</span>
+    <span class="c1">#: that differ from the bundled ones.</span>
+    <span class="n">UNRECORDED</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"exe_dir"</span><span class="p">,</span> <span class="s2">"data_dir"</span><span class="p">})</span>
+
+    <span class="n">numpar</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">200</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Number of particles released per simulation. More particles give a "</span>
+            <span class="s2">"less noisy footprint and take longer to run."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">exe_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Directory holding a custom ``hycs_std`` build to run in place of "</span>
+            <span class="s2">"the one bundled with PYSTILT, with a ``version`` file beside it. "</span>
+            <span class="s2">"The version is recorded with each run, so runs of different "</span>
+            <span class="s2">"builds are kept apart. A build that writes release-time (t = 0) rows to "</span>
+            <span class="s2">"``PARTICLE_STILT.DAT`` gives exact release heights for multipoint "</span>
+            <span class="s2">"and slant receptors."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Directory of HYSPLIT data tables (``ASCDATA.CFG``, ``LANDUSE.ASC``, "</span>
+            <span class="s2">"``ROUGLEN.ASC``, ``TERRAIN.ASC``) to use in place of the bundled "</span>
+            <span class="s2">"ones. A table it does not hold comes from the bundled set. The "</span>
+            <span class="s2">"tables change the particles, so each table that differs from the "</span>
+            <span class="s2">"bundled one is recorded with the run by its checksum."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">varsiwant</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span>
+        <span class="n">Literal</span><span class="p">[</span>
+            <span class="s2">"time"</span><span class="p">,</span>
+            <span class="s2">"indx"</span><span class="p">,</span>
+            <span class="s2">"long"</span><span class="p">,</span>
+            <span class="s2">"lati"</span><span class="p">,</span>
+            <span class="s2">"zagl"</span><span class="p">,</span>
+            <span class="s2">"sigw"</span><span class="p">,</span>
+            <span class="s2">"tlgr"</span><span class="p">,</span>
+            <span class="s2">"zsfc"</span><span class="p">,</span>
+            <span class="s2">"icdx"</span><span class="p">,</span>
+            <span class="s2">"temp"</span><span class="p">,</span>
+            <span class="s2">"samt"</span><span class="p">,</span>
+            <span class="s2">"foot"</span><span class="p">,</span>
+            <span class="s2">"shtf"</span><span class="p">,</span>
+            <span class="s2">"tcld"</span><span class="p">,</span>
+            <span class="s2">"dmas"</span><span class="p">,</span>
+            <span class="s2">"dens"</span><span class="p">,</span>
+            <span class="s2">"rhfr"</span><span class="p">,</span>
+            <span class="s2">"sphu"</span><span class="p">,</span>
+            <span class="s2">"lcld"</span><span class="p">,</span>
+            <span class="s2">"zloc"</span><span class="p">,</span>
+            <span class="s2">"dswf"</span><span class="p">,</span>
+            <span class="s2">"wout"</span><span class="p">,</span>
+            <span class="s2">"mlht"</span><span class="p">,</span>
+            <span class="s2">"rain"</span><span class="p">,</span>
+            <span class="s2">"crai"</span><span class="p">,</span>
+            <span class="s2">"pres"</span><span class="p">,</span>
+            <span class="s2">"whtf"</span><span class="p">,</span>
+            <span class="s2">"temz"</span><span class="p">,</span>
+            <span class="s2">"zcfx"</span><span class="p">,</span>
+        <span class="p">]</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">"time"</span><span class="p">,</span>
+            <span class="s2">"indx"</span><span class="p">,</span>
+            <span class="s2">"long"</span><span class="p">,</span>
+            <span class="s2">"lati"</span><span class="p">,</span>
+            <span class="s2">"zagl"</span><span class="p">,</span>
+            <span class="s2">"foot"</span><span class="p">,</span>
+            <span class="s2">"mlht"</span><span class="p">,</span>
+            <span class="s2">"pres"</span><span class="p">,</span>
+            <span class="s2">"dens"</span><span class="p">,</span>
+            <span class="s2">"samt"</span><span class="p">,</span>
+            <span class="s2">"sigw"</span><span class="p">,</span>
+            <span class="s2">"tlgr"</span><span class="p">,</span>
+        <span class="p">],</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Particle variables ``hycs_std`` writes to the trajectory output, "</span>
+            <span class="s2">"by the lowercase four-letter names HYSPLIT reads. Each is a "</span>
+            <span class="s2">"column of the particles under the same name, except ``indx``, "</span>
+            <span class="s2">"``time``, ``long``, and ``lati``. ``zcfx`` is the vertical "</span>
+            <span class="s2">"displacement by convective flux along the trajectory, in m. "</span>
+            <span class="s2">"The default is the set footprints need, plus ``pres`` for "</span>
+            <span class="s2">"pressure weighting."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">capemin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Convection option. -1 turns convection off, -2 uses the Grell "</span>
+            <span class="s2">"scheme, and a positive value mixes vertically when CAPE exceeds "</span>
+            <span class="s2">"it, in J/kg."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">cmass</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Compute grid concentrations (0) or grid mass (1)."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">conage</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">48</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Particle age at which particles and puffs convert, in hours."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">cpack</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Packing of the binary concentration grid."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">delt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Integration time step, in minutes. 0 lets HYSPLIT choose; a "</span>
+            <span class="s2">"negative value sets the minimum step."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">dxf</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Horizontal x-grid offset factor for ensemble runs."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">dyf</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Horizontal y-grid offset factor for ensemble runs."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">dzf</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.01</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Vertical offset factor for ensemble runs (0.01 is about 250 m)."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">efile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="s2">""</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Name of a time-varying emissions file. Blank uses none."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">emisshrs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.01</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Duration of the particle release, in hours."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">frhmax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">3.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Maximum horizontal puff-rounding parameter."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">frhs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Horizontal puff-rounding fraction for merging."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">frme</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Mass-rounding fraction for enhanced merging."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">frmr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Mass-removal fraction for enhanced merging."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">frts</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Temporal puff-rounding fraction."</span><span class="p">)</span>
+    <span class="n">frvs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Vertical puff-rounding fraction."</span><span class="p">)</span>
+    <span class="n">hscale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">10800.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Horizontal Lagrangian timescale, in seconds."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">ichem</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">8</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"HYSPLIT chemistry and output mode. 8 is the STILT emulation mode."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">idsp</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">2</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Particle dispersion scheme: 1 for HYSPLIT, 2 for STILT."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">initd</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Initial distribution as particles, puffs, or a mix. 0 is 3D particles."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">k10m</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Use the 10 m winds and 2 m temperature as the lowest meteorology "</span>
+            <span class="s2">"level (1) or skip them (0)."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">kagl</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Write trajectory heights above ground (1) or above sea level (0)."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">kbls</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Derive boundary-layer stability from surface fluxes (1) or from "</span>
+            <span class="s2">"wind and temperature profiles (2)."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">kblt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">5</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Boundary-layer turbulence scheme: 1 Beljaars, 2 Kantha-Clayson, "</span>
+            <span class="s2">"3 TKE, 4 measured variances, 5 Hanna."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">kdef</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Horizontal turbulence from vertical mixing (0) or wind deformation (1)."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">khinp</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Age, in hours, given to particles read from ``pinpf``. 0 keeps their own age."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">khmax</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">9999</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Maximum particle or trajectory age, in hours."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">kmix0</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">150</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Minimum mixed-layer depth, in meters."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">kmixd</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">3</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Mixed-layer depth source: 0 from the meteorology, 1 from the "</span>
+            <span class="s2">"temperature profile, 2 from the TKE profile, 3 from a modified "</span>
+            <span class="s2">"Richardson number."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">kpuff</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Horizontal puff growth: linear (0) or empirical (1)."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">krand</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">13</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">4</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"How HYSPLIT draws the random numbers for turbulence. 0 picks 2 "</span>
+            <span class="s2">"when ``numpar`` is 5000 or less and 1 otherwise. 1 uses a "</span>
+            <span class="s2">"precomputed table. 2 draws them during the run and is the only "</span>
+            <span class="s2">"mode that uses ``seed``. 3 uses no random numbers (a diagnostic "</span>
+            <span class="s2">"mode). 4 draws them during the run from a clock-based seed, so "</span>
+            <span class="s2">"every run differs; there are about 5000 possible seeds. 10 to 13 "</span>
+            <span class="s2">"are modes 0 to 3 with a random initial seed. HYSPLIT does not "</span>
+            <span class="s2">"check this value and other values silently break the turbulence, "</span>
+            <span class="s2">"so PYSTILT rejects them."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Random seed for a reproducible run. Different seeds give "</span>
+            <span class="s2">"different runs. Requires ``krand: 2``. The bundled ``hycs_std`` "</span>
+            <span class="s2">"ignores the seed under ``krand`` 4 and 10 to 13, and under 1 uses "</span>
+            <span class="s2">"it only for the initial turbulent velocity. PYSTILT writes it to "</span>
+            <span class="s2">"``SETUP.CFG`` as ``-(abs(seed) + 1)``, because HYSPLIT reseeds its "</span>
+            <span class="s2">"generator only from a negative value and gives every ``SEED`` of "</span>
+            <span class="s2">"0 or more the same stream. Realization ``k`` of a variant runs "</span>
+            <span class="s2">"with ``seed + k``, so realization 0 shares the unperturbed run's "</span>
+            <span class="s2">"seed, as STILT-R's error run does."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">krnd</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Enhanced-merging interval, in hours."</span><span class="p">)</span>
+    <span class="n">kspl</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Standard puff-splitting interval, in hours."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">kwet</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Precipitation from the meteorology (1) or from an external ARL file (2)."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">kzmix</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Vertical mixing adjustment: 0 none, 1 a single PBL-average value, "</span>
+            <span class="s2">"2 scale by ``tvmix``."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">maxdim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Maximum number of pollutant species carried on one particle."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">maxpar</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Maximum number of particles in a simulation. Unset gives every "</span>
+            <span class="s2">"release location its full share: ``numpar`` for one location, "</span>
+            <span class="s2">"``n * (numpar // n + 1)`` for n. A set value that stops a "</span>
+            <span class="s2">"multipoint release before its last location fails the run."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">mgmin</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">10</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Minimum meteorological subgrid size, in grid points."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">mhrs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">9999</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Trajectory restart duration limit, in hours."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">nbptyp</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Number of particle-size bins per pollutant type."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">ncycl</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Cycle time of the particle dump file, in hours."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">ndump</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Interval between particle dumps, in hours. 0 writes none."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">ninit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Particle initialization from ``pinpf``: 0 none, 1 once at the "</span>
+            <span class="s2">"start, 2 add every hour, 3 replace every hour."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">nstr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Trajectory restart interval, in hours."</span><span class="p">)</span>
+    <span class="n">nturb</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Turbulence on (0) or off (1)."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">nver</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Trajectory vertical split number."</span><span class="p">)</span>
+    <span class="n">outdt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Interval between particle outputs in ``PARTICLE_STILT.DAT``, in "</span>
+            <span class="s2">"minutes. 0 writes every time step and a negative value writes none. "</span>
+            <span class="s2">"Only at 0 does PYSTILT check where the particles of a run that "</span>
+            <span class="s2">"stopped early ended, to tell met that ran out from particles that "</span>
+            <span class="s2">"left the met's domain."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">p10f</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Dust threshold velocity sensitivity factor."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">pinbc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="s2">""</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Particle input file for time-varying boundary conditions."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">pinpf</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="s2">""</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Particle input file for initialization or boundary-condition runs."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">poutf</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="s2">""</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Particle output file name."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">qcycle</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Emission cycling period, in hours. 0 turns cycling off."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">rhb</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">80</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Relative humidity that defines a cloud base, in percent."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">rht</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">60</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Relative humidity that defines a cloud top, in percent."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">splitf</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Factor for the automatic horizontal splitting size. A negative "</span>
+            <span class="s2">"value turns the automatic sizing off."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">tkerd</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.18</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Ratio w'²/(u'²+v'²) of TKE components when unstable."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">tkern</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.18</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Ratio w'²/(u'²+v'²) of TKE components when stable."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">tlfrac</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Fraction of the vertical Lagrangian timescale used as the time "</span>
+            <span class="s2">"step of the STILT dispersion scheme."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">tout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Trajectory output interval, in minutes."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">tratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.75</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Advection stability ratio (fraction of a grid cell per time step)."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">tvmix</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Vertical mixing scale factor, used by the ``kzmix`` scaling modes."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">vscale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">200.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Vertical Lagrangian timescale, in seconds."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">vscaleu</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">200.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Vertical Lagrangian timescale in an unstable boundary layer, in seconds."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">vscales</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Vertical Lagrangian timescale in a stable boundary layer, in "</span>
+            <span class="s2">"seconds. -1 uses the Hanna timescale, which varies with the "</span>
+            <span class="s2">"turbulence, and then ``vscaleu`` is not used."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">w_option</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Vertical motion method: 0 the meteorology's vertical velocity, "</span>
+            <span class="s2">"1 isobaric, 2 isentropic, 3 constant density, 4 constant sigma."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">wbbh</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Height at which the fixed vertical velocity switches from rise to "</span>
+            <span class="s2">"fall, in meters. Used by vertical motion option 9."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">wbwf</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Fixed fall velocity, in m/s. Used by vertical motion options 9 and 10."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">wbwr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Fixed rise velocity, in m/s. Used by vertical motion option 9."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">wvert</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Interpolate WRF fields vertically with the WRF scheme instead of HYSPLIT's."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">z_top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">25000.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Top of HYSPLIT's computational domain, in meters above ground."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">ziscale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Factor applied to the mixed-layer height, written to HYSPLIT's "</span>
+            <span class="s2">"``ZICONTROL`` file. 1.0 leaves it unscaled. A single value applies "</span>
+            <span class="s2">"to every hour of the run. A list gives one factor per hour from "</span>
+            <span class="s2">"the release (at most 150), and later hours are unscaled. HYSPLIT "</span>
+            <span class="s2">"applies ``kmix0`` after the factor, so the mixed layer never drops "</span>
+            <span class="s2">"below ``kmix0``. A negative value uses the meteorology's own PBL "</span>
+            <span class="s2">"height where the met files carry one."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">siguverr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Standard deviation of the horizontal wind error, in m/s."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">tluverr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Correlation timescale of the horizontal wind error, in minutes."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">zcoruverr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Vertical correlation length of the horizontal wind error, in meters."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">horcoruverr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Horizontal correlation length of the horizontal wind error, in km."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">sigzierr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Standard deviation of the mixed-layer height error, in percent."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">tlzierr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Correlation timescale of the mixed-layer height error, in minutes."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">horcorzierr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Horizontal correlation length of the mixed-layer height error, in km."</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"varsiwant"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_refuse_zfx1</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse ``zfx1``, which ``hycs_std`` stops on, and name ``zcfx``, which it reads."""</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"zfx1"</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">value</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"'zfx1' is not a varsiwant name: hycs_std stops with 'Weird "</span>
+                <span class="s2">"variable'. HYSPLIT reads 'zcfx' for the vertical displacement "</span>
+                <span class="s2">"by convective flux."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"ziscale"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_flatten_ziscale</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Read STILT-R's one-element nested list, ``[[0.8, 0.9]]``, as ``[0.8, 0.9]``.</span>
+
+<span class="sd">        Both mean the same factors, so they must hash the same.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">"Per-simulation ziscale lists are not supported. Pass one shared "</span>
+                    <span class="s2">"list of hourly factors for all simulations."</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_error_params</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Require each error group to be set in full or not at all."""</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">fields</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"XY"</span><span class="p">,</span> <span class="n">WIND_ERROR_SETTINGS</span><span class="p">),</span> <span class="p">(</span><span class="s2">"ZI"</span><span class="p">,</span> <span class="n">ZI_ERROR_SETTINGS</span><span class="p">)):</span>
+            <span class="n">unset</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">unset</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">unset</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Inconsistent </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> error parameters: all must be set or all None"</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_ziscale</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Reject ziscale values that are empty, zero, or longer than 150 hours."""</span>
+        <span class="n">hourly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hourly_ziscale</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">hourly</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"ziscale cannot be empty; use 1.0 for no scaling."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">v</span> <span class="o">==</span> <span class="mf">0.0</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">hourly</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"ziscale of 0 would collapse the mixed layer to kmix0. STILT-R "</span>
+                <span class="s2">"uses 0 to mean unset; use 1.0 for no scaling."</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">v</span> <span class="o">!=</span> <span class="mf">1.0</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">hourly</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">hourly</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">MAX_ZISCALE_HOURS</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"ziscale gives </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">hourly</span><span class="p">)</span><span class="si">}</span><span class="s2"> hourly factors, but HYSPLIT holds at "</span>
+                <span class="sa">f</span><span class="s2">"most </span><span class="si">{</span><span class="n">MAX_ZISCALE_HOURS</span><span class="si">}</span><span class="s2">. A scalar ziscale is repeated for "</span>
+                <span class="s2">"every hour, so it needs abs(n_hours) &lt;= "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">MAX_ZISCALE_HOURS</span><span class="si">}</span><span class="s2">; for longer runs give a list of up to "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">MAX_ZISCALE_HOURS</span><span class="si">}</span><span class="s2"> factors, after which the mixed layer "</span>
+                <span class="s2">"is unscaled."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_seed</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Require ``krand=2`` when a seed is set."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">krand</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"seed=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="si">}</span><span class="s2"> requires krand=2 (got krand=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">krand</span><span class="si">}</span><span class="s2">): the "</span>
+                <span class="s2">"bundled hycs_std discards the namelist seed under krand=4 and "</span>
+                <span class="s2">"10-13 and uses it only for the initial turbulent velocity under "</span>
+                <span class="s2">"krand=1. Set krand=2, or drop the seed."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_hnf_plume</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Require the variables the near-field plume model reads when ``hnf_plume`` is on."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hnf_plume</span><span class="p">:</span>
+            <span class="n">missing</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">HNF_PLUME_COLUMNS</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">varsiwant</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"hnf_plume=True requires varsiwant to include: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+<div class="viewcode-block" id="HysplitConfig.maxpar_for">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.HysplitConfig.maxpar_for.html#stilt.transport.hysplit.HysplitConfig.maxpar_for">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">maxpar_for</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">locations</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the ``MAXPAR`` HYSPLIT gets for a release from *locations* horizontal locations.</span>
+
+<span class="sd">        HYSPLIT gives each location ``numpar // locations`` particles, which</span>
+<span class="sd">        its rounding often raises by one, and stops releasing when it reaches</span>
+<span class="sd">        ``MAXPAR``. A set ``maxpar`` is used as given. Unset, one location</span>
+<span class="sd">        gets ``numpar`` (HYSPLIT may ask for one more and keeps ``numpar``),</span>
+<span class="sd">        and several get ``locations * (numpar // locations + 1)``, so the</span>
+<span class="sd">        last locations are not left short.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; HysplitConfig(numpar=1000).maxpar_for(40)</span>
+<span class="sd">        1040</span>
+<span class="sd">        &gt;&gt;&gt; HysplitConfig(numpar=1000).maxpar_for(1)</span>
+<span class="sd">        1000</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxpar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxpar</span>
+        <span class="k">if</span> <span class="n">locations</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">numpar</span>
+        <span class="k">return</span> <span class="n">locations</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numpar</span> <span class="o">//</span> <span class="n">locations</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="HysplitConfig.hourly_ziscale">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.HysplitConfig.hourly_ziscale.html#stilt.transport.hysplit.HysplitConfig.hourly_ziscale">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hourly_ziscale</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return ``ziscale`` as one factor per hour: a single value repeated over the run, or the list as given."""</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ziscale</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ziscale</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_hours</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ziscale</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="HysplitConfig.realizations">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.HysplitConfig.realizations.html#stilt.transport.hysplit.HysplitConfig.realizations">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">realizations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Self</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return *n* realizations of this config, realization ``k`` with ``seed + k``.</span>
+
+<span class="sd">        Realization 0 uses the configured seed, as STILT-R's single error run</span>
+<span class="sd">        does.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If *n* is more than one and the runs would repeat one another:</span>
+<span class="sd">            only ``krand=4`` (HYSPLIT seeds each run from the clock) and</span>
+<span class="sd">            ``krand=2`` with a seed give each realization its own draws.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">krand</span> <span class="o">==</span> <span class="mi">4</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">krand</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"realizations=</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> requires krand=4 or krand=2 with a seed (got "</span>
+                <span class="sa">f</span><span class="s2">"krand=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">krand</span><span class="si">}</span><span class="s2">, seed=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="si">}</span><span class="s2">): under krand=4 HYSPLIT "</span>
+                <span class="s2">"seeds each run from the clock; under krand=2 PYSTILT gives each "</span>
+                <span class="s2">"realization its own seed. Any other mode would repeat the same "</span>
+                <span class="s2">"perturbation."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">realizations</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"MAX_ZISCALE_HOURS"</span><span class="p">,</span>
+    <span class="s2">"WIND_ERROR_SETTINGS"</span><span class="p">,</span>
+    <span class="s2">"ZI_ERROR_SETTINGS"</span><span class="p">,</span>
+    <span class="s2">"HysplitConfig"</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

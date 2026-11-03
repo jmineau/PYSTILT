@@ -1,0 +1,19 @@
+﻿stilt.particles.Background
+==========================
+
+.. currentmodule:: stilt.particles
+
+
+
+
+.. class-signature:: stilt.particles.Background
+
+
+.. class-parameters:: stilt.particles.Background
+
+
+
+
+
+
+

@@ -1,0 +1,6 @@
+stilt.Simulation.has\_particles
+===============================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Simulation.has_particles

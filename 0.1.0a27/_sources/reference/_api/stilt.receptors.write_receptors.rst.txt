@@ -1,0 +1,6 @@
+﻿stilt.receptors.write\_receptors
+================================
+
+.. currentmodule:: stilt.receptors
+
+.. autofunction:: write_receptors

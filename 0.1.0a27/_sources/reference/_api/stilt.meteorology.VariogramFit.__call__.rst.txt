@@ -1,0 +1,6 @@
+stilt.meteorology.VariogramFit.\_\_call\_\_
+===========================================
+
+.. currentmodule:: stilt.meteorology
+
+.. automethod:: VariogramFit.__call__

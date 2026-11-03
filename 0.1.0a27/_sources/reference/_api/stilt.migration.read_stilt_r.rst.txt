@@ -1,0 +1,6 @@
+﻿stilt.migration.read\_stilt\_r
+==============================
+
+.. currentmodule:: stilt.migration
+
+.. autofunction:: read_stilt_r

@@ -1,0 +1,6 @@
+stilt.output.Output.write\_log
+==============================
+
+.. currentmodule:: stilt.output
+
+.. automethod:: Output.write_log

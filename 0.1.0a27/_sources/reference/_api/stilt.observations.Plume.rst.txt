@@ -1,0 +1,19 @@
+﻿stilt.observations.Plume
+========================
+
+.. currentmodule:: stilt.observations
+
+
+
+
+.. class-signature:: stilt.observations.Plume
+
+
+.. class-parameters:: stilt.observations.Plume
+
+
+
+
+
+
+

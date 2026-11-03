@@ -20,8 +20,27 @@ Starting point
 --------------
 
 A project made with ``stilt init`` or :meth:`stilt.Project.init`, with HRRR
-meteorology and a footprint grid over the valley. A Level 2 file becomes
-a table with one row per sounding, and PYSTILT works on that table.
+meteorology for the overpass day and the day before it, and a footprint grid
+that covers every sounding you will run. Two settings matter for this
+tutorial:
+
+.. code-block:: yaml
+
+   grid: {xmin: -114.0, xmax: -110.0, ymin: 39.0, ymax: 42.0, xres: 0.01, yres: 0.01}
+   varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr, zsfc]
+
+The grid must hold the soundings' longitudes and latitudes below, or
+``stilt check`` reports each receptor outside it. The ``varsiwant`` line is
+the starter ``config.yaml``'s with ``zsfc`` added. The receptors in Step 3 are
+heights above sea level, so PYSTILT needs the terrain height to find each
+particle's release height and to weight it by pressure (Step 4). Without
+``zsfc`` the particles are made, and then every footprint fails.
+
+A Level 2 file becomes a table with one row per sounding, and PYSTILT works
+on that table. The TROPOMI file in Step 1 is a free download from the
+`Copernicus Data Space Ecosystem <https://dataspace.copernicus.eu>`_
+(Sentinel-5P, level 2, ``L2__CH4___``, the offline ``OFFL`` stream), which
+needs a free account.
 
 Step 1: Read the soundings
 --------------------------

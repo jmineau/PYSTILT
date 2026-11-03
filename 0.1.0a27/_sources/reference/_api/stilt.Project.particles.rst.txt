@@ -1,0 +1,6 @@
+stilt.Project.particles
+=======================
+
+.. currentmodule:: stilt
+
+.. automethod:: Project.particles

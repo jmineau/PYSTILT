@@ -1,0 +1,6 @@
+stilt.Mesh.from\_file
+=====================
+
+.. currentmodule:: stilt
+
+.. automethod:: Mesh.from_file

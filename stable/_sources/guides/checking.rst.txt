@@ -22,9 +22,10 @@ Before a run
 
 The first failures a new project meets are in its inputs: a met folder
 with a typo, met files that miss some receptor's hours, a receptor off the
-grid. ``stilt check`` finds them before HYSPLIT starts. It reads the
-project's files and one met file's header for each met, and runs and
-downloads nothing:
+grid, a ``varsiwant`` without the terrain height that receptors above sea
+level need. ``stilt check`` finds them before HYSPLIT starts. It reads the
+project's files and, for each met, the header of one file and the time
+periods of another, and runs and downloads nothing:
 
 .. code-block:: text
 
@@ -65,13 +66,22 @@ command line is wrong or the project's files are invalid.
        names the hours of the files, each as long as ``file_tres``.
      - Add the files, or check ``file_format`` and ``file_tres`` against the
        file names. A backward run needs files from ``n_hours`` before the
-       receptor time to just after it (:doc:`meteorology`).
+       receptor time to the met step at or after it, a forward run from the
+       receptor time to the met step at or after ``n_hours`` later
+       (:doc:`meteorology`).
    * - ``met_crop``
      - With ``subgrid_enable`` on, a receptor lies outside
        ``subgrid_bounds``. HYSPLIT cannot start particles outside the
        cropped files.
      - Widen ``subgrid_bounds``. It must hold the whole run, not only the
        footprint grid.
+   * - ``met_periods``
+     - The first file the receptors need holds one time period. HYSPLIT
+       stops on such a file ("Only one time period of meteo data"), so every
+       run of the met would fail as ``MET_COVERAGE``.
+     - Use files that each hold at least two time periods, such as 6-hour
+       files of hourly data, and set ``file_tres`` to match
+       (:doc:`meteorology`).
    * - ``grid``
      - A release point of a receptor lies outside the variant's footprint
        grid. Only the particles that travel into the grid add to its
@@ -92,8 +102,34 @@ command line is wrong or the project's files are invalid.
        The run does not need it.
      - Nothing, if the table is shared. Otherwise look for ids that differ
        from the receptors' in a digit.
+   * - ``zsfc``
+     - A variant's ``varsiwant`` lacks ``zsfc``, and the project has a
+       receptor with ``altitude_ref="msl"`` that a run reads it for. The
+       message counts those receptors and names what reads it:
 
-``stilt check`` looks for files, not inside them. A run that passes can still
+       - the near-field correction (``hnf_plume``, on by default), which
+         starts the plume at the ground and is skipped without ``zsfc``;
+       - the release heights of a multipoint receptor, such as a slant
+         column. The particles are matched to their points by height
+         (``zagl + zsfc``) when every point has its own altitude and the
+         model writes no release-time rows, and by position otherwise.
+         Position fails only for points less than 1 km apart, so only a
+         multipoint receptor with different altitudes and such points is
+         counted. A HYSPLIT build that writes release-time rows
+         (``exe_dir``) needs no height, and the check cannot see the build;
+       - the ``pressure_weighting`` transform, which fails the footprints
+         of the receptors above sea level.
+
+       It is not about one receptor, so ``receptor`` is empty. A receptor
+       above ground never needs ``zsfc``.
+     - Add ``zsfc`` to ``varsiwant`` in ``config.yaml``; the message has
+       the line. ``varsiwant`` is part of the settings folder's name, so the
+       particles are made again in a new folder: add it before the runs, not
+       after.
+
+``stilt check`` looks for files, not inside them, except to count the time
+periods of the first file a run needs and to read the spacing of the met
+steps from the file of a run's end. A run that passes can still
 fail as ``MET_COVERAGE``: a file that is damaged or cut short is found when
 the run opens it, and a receptor outside the domain of the files, when HYSPLIT
 starts it (the reasons are below).
@@ -159,12 +195,14 @@ the output directory, so it is the same whoever asks and whenever.
      - Fix the cause and run again. Only the unfinished simulations run.
    * - ``interrupted``
      - The transport model's run started and was stopped before it
-       finished: a time limit, preemption, Ctrl-C, or a killed process.
+       finished: a time limit, preemption, Ctrl-C, a killed process, or a
+       connection or I/O error while its particles were written.
      - Run again. A Slurm task that gets its two-minute warning requeues
        itself; the rest are picked up by the next ``stilt run``.
    * - ``pending``
      - The transport model has not run yet, or the particles exist and the
-       footprint is not made yet.
+       footprint is not made yet, or a connection or I/O error stopped its
+       footprint (no failure is recorded for one that a retry may get past).
      - Run the project.
 
 A footprint that is not made yet is ``pending`` whether its step never
@@ -173,9 +211,13 @@ footprint variant added later, on particles that already exist, leaves
 the same files.
 
 ``stilt run`` says how its own simulations ended in its exit code: 0 when
-all are complete, 1 when some failed, and 3 when some were interrupted. It
-exits with 2 when its command line is wrong. A script or a scheduler can
-rerun on 3, and stop to look on 1.
+all are complete, 1 when some failed, and 3 when some did not finish (they
+were interrupted, or a connection or I/O error stopped them). It
+exits with 2 when its command line is wrong, or when a met directory does
+not exist or holds no ARL file: nothing ran. An error it did not expect
+exits with 3 when it is a connection or I/O error, and with 4 for any other
+(:ref:`exit-codes`). A script or a scheduler can rerun on 3, and stop to
+look on 1 and 4.
 
 Why a simulation failed
 -----------------------
@@ -217,13 +259,17 @@ The reasons
        - ``No met file ... for <hours>``: a file the run needs is missing.
          Check the met's ``directory`` and ``file_format`` against the
          files on disk. A backward run needs files from ``n_hours`` before
-         the receptor time to just after it (:doc:`meteorology`).
+         the receptor time to just after it, a forward run from the
+         receptor time to just after ``n_hours`` later (:doc:`meteorology`).
          ``stilt check`` finds these before a run.
        - ``The met file ... is damaged`` or ``The met files hold no time
          step between ...``: a file is there but cut short, written
          partway, or has records lost to null bytes, so it lacks hours the
          run needs. Download or crop it again. PYSTILT checks each file
          before HYSPLIT runs (:meth:`arlmet.File.check`).
+       - ``The met file ... holds one time period``: HYSPLIT cannot read a
+         file with one time period. Use files that each hold at least two
+         (``stilt check`` finds this before a run).
        - ``no more meteorology``: the particles reached a time that no met
          file holds. HYSPLIT says so in the ``WARNING`` file of the kept
          workdir.
@@ -254,6 +300,15 @@ The reasons
      - HYSPLIT reached ``maxpar`` before every location of a multipoint
        receptor got its particles, so the last ones would have fewer or
        none. Leave ``maxpar`` unset, or raise it (:doc:`receptors`).
+   * - ``EXIT_STATUS``
+     - ``hycs_std`` was killed by a signal, or exited with a non-zero
+       status, and its log holds no other known message. The message names
+       the signal or the status, and the log ends with the last lines of
+       HYSPLIT's ``MESSAGE`` file. A ``SIGKILL`` that nothing in PYSTILT
+       sent is often the kernel's out-of-memory killer: ask for more
+       memory per task, or run fewer receptors at once. The particles
+       HYSPLIT had written are not kept, and running again runs the
+       simulation again.
    * - ``TIMEOUT``
      - The run took longer than ``timeout`` under ``execution:``. Raise it,
        or look for a slow node or a met file read over a slow filesystem.

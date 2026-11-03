@@ -1,0 +1,6 @@
+﻿stilt.transforms.dump\_transform
+================================
+
+.. currentmodule:: stilt.transforms
+
+.. autofunction:: dump_transform

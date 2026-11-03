@@ -1,0 +1,6 @@
+stilt.output.Output.logged
+==========================
+
+.. currentmodule:: stilt.output
+
+.. automethod:: Output.logged

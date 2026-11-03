@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>STILT-R Parity &#8212; PYSTILT 0.1.0a26</title>
+    <title>STILT-R Parity &#8212; PYSTILT 0.1.0a27</title>
   
   
   
@@ -26,22 +26,23 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=7c6ca21c"></script>
+    <script src="../_static/documentation_options.js?v=d8142605"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -49,9 +50,9 @@
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'development/stilt_r_parity';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a26';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,8 +62,9 @@
     <link rel="next" title="Roadmap" href="roadmap.html" />
     <link rel="prev" title="Architecture" href="architecture.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a26" />
+  <meta name="docsearch:version" content="0.1.0a27" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -133,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a26</p>
+    <p class="title logo__title">PYSTILT 0.1.0a27</p>
   
 </a></div>
     
@@ -548,7 +550,8 @@ within these tolerances:</p>
 <li><p>6 h and 24 h backward runs, and a 6 h forward run</p></li>
 <li><p>the hyper-near-field (HNF) plume correction on (12 scenarios) and off</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> of 0, 0.5, 1, and 2</p></li>
-<li><p>0.01° and 0.05° longitude/latitude grids and a UTM grid</p></li>
+<li><p>0.01° and 0.05° longitude/latitude grids and a UTM grid, all with square
+cells</p></li>
 <li><p>a 2° box, a receptor in the domain’s corner, a receptor at the edge of
 the met grid, and a small 0.1° domain that particles leave early</p></li>
 <li><p>receptor heights above ground, above sea level (<code class="docutils literal notranslate"><span class="pre">kmsl=1</span></code>), and at 0.5 m</p></li>
@@ -573,6 +576,77 @@ no meteorology or HYSPLIT, so they run anywhere R is installed:</p>
 fill value of <code class="docutils literal notranslate"><span class="pre">-1</span></code>. PYSTILT writes CF-1.8 NetCDF with dimensions
 <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>. Read PYSTILT files as ordinary CF NetCDF. Tools that
 expect STILT-R’s layout will not read them.</p></li>
+<li><p><strong>Smoothing on cells that are not square.</strong> When <code class="docutils literal notranslate"><span class="pre">xres</span></code> and <code class="docutils literal notranslate"><span class="pre">yres</span></code>
+differ, a smoothing kernel wider than one cell has a different number of
+cells along longitude and along latitude. STILT-R’s <code class="docutils literal notranslate"><span class="pre">permute.f90</span></code> reads
+the kernel as if the two numbers were equal. With <code class="docutils literal notranslate"><span class="pre">xres</span></code> larger than
+<code class="docutils literal notranslate"><span class="pre">yres</span></code>, its footprint total comes out 5 to 13 % high on 24 h runs. With
+<code class="docutils literal notranslate"><span class="pre">yres</span></code> larger than <code class="docutils literal notranslate"><span class="pre">xres</span></code>, it reads memory past the end of the kernel.
+The footprint then loses mass (15 % in one case), holds values near
+<code class="docutils literal notranslate"><span class="pre">1e300</span></code>, or R crashes
+(<a class="reference external" href="https://github.com/uataq/stilt/issues/116">uataq/stilt#116</a>; the fix is
+<a class="reference external" href="https://github.com/uataq/stilt/pull/148">uataq/stilt#148</a>).
+PYSTILT adds each kernel along the axis each cell count belongs to, so
+smoothing keeps the footprint total. Its footprint equals STILT-R’s with
+<code class="docutils literal notranslate"><span class="pre">permute.f90</span></code> reading the kernel that way, to within <code class="docutils literal notranslate"><span class="pre">2e-15</span></code> of the
+peak. On square cells the two agree.</p></li>
+<li><p><strong>Smoothing on a projected grid.</strong> The kernel width,
+<code class="docutils literal notranslate"><span class="pre">0.06</span> <span class="pre">*</span> <span class="pre">(var(x)</span> <span class="pre">+</span> <span class="pre">var(y))**0.25</span> <span class="pre">*</span> <span class="pre">sqrt(|rtime|</span> <span class="pre">/</span> <span class="pre">1440)</span></code>, is made for
+coordinates in degrees. STILT-R applies it to the projected coordinates,
+so on a grid in meters the kernel is a few meters wide and the footprint
+is hardly smoothed. On a 24 h run on 1 km UTM cells, STILT-R’s footprint
+has a third of the nonzero cells of the same run on a 0.01° grid (9,771
+and 28,706), and PYSTILT’s has 26,385. PYSTILT works the width out in
+degrees from the particles’ longitudes and latitudes, as on a
+longitude/latitude grid, then multiplies it by the length of one degree
+of longitude at the particles’ mean position, measured in the grid’s
+projection and units. Each step’s longitudes are first taken within 180°
+of that step’s circular mean, so a cloud is measured as one wherever it
+is, on both sides of 180° included.
+The kernel is then as wide from east to west, on the ground, as on a
+longitude/latitude grid. On the projected grid it is round. On a
+longitude/latitude grid it is <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">/</span> <span class="pre">cos(lat)</span></code> times wider from north to
+south, because it has one width in degrees on both axes.
+The fidelity suite’s UTM scenario compares unsmoothed footprints, and
+<code class="docutils literal notranslate"><span class="pre">test_projected_smoothing_intentionally_differs_from_r</span></code> guards the
+difference. Longitude/latitude grids are not affected.</p></li>
+<li><p><strong>The early-time interpolation on a projected grid.</strong> In the first 100
+minutes, when the particles’ median step is longer than a cell along
+either axis, both add positions between the output steps. STILT-R
+measures the step in degrees and compares it with <code class="docutils literal notranslate"><span class="pre">xres</span></code> and <code class="docutils literal notranslate"><span class="pre">yres</span></code>
+in the grid’s units, so on a grid in meters it never interpolates. On a
+24 h run on 100 m UTM cells, unsmoothed, STILT-R’s rule gives a
+footprint with 12,341 nonzero cells, against 15,139 for the same run on
+a 0.001° grid, which does interpolate. PYSTILT measures the step on the
+projected grid, in its units and along its axes, and its footprint has
+14,563. It then
+interpolates as STILT-R does on longitude/latitude cells of the same
+size. The positions added are interpolated in degrees on any grid.
+<code class="docutils literal notranslate"><span class="pre">test_utm_early_interpolation_intentionally_differs_from_r</span></code> guards the
+difference. Longitude/latitude grids are not affected.</p></li>
+<li><p><strong>Smoothing a cloud near 180° on a global grid.</strong> On a grid that goes
+all the way around (<code class="docutils literal notranslate"><span class="pre">xmin=-180</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax=180</span></code>), STILT-R leaves the
+particles’ longitudes as HYSPLIT writes them, from -180 to 180. A cloud
+on both sides of 180° then has a variance of thousands of square degrees
+and gets a kernel many times too wide, and what the kernel spreads past
+±180° is lost. For a cloud of 300 particles (standard deviation 0.3°, a
+day after release) on a 0.25° grid, a cloud at 175° covers 36 cells and
+keeps its whole footprint in both programs; at 179.9° STILT-R covers 1,242
+cells and loses 42 % of the footprint, and PYSTILT covers 34 cells and
+keeps all of it. PYSTILT takes the longitudes of each time step within
+180° of that step’s mean longitude (the circular mean, so the seam is on
+the far side of the globe from the cloud) before it measures the spread.
+The cloud is measured as one wherever it is, and a real spread of 10° stays
+10°. PYSTILT also adds the smoothing that passes one edge of such a grid
+to the cells at the other edge, so the footprint of a cloud near 180° is
+the footprint of the same cloud anywhere else, shifted. The longitudes
+are unwrapped this way on every longitude/latitude grid, which also fixes
+a cloud around 0° on a wide grid that crosses 180°, where STILT-R’s shift to 0° to 360° cuts the
+cloud in two. A grid whose cells do not fit 360° (0.7° cells leave 0.2°)
+has an edge, and smoothing is cut there as before. A cloud that is not
+cut by the seam is measured as before, bit for bit.
+<code class="docutils literal notranslate"><span class="pre">test_global_grid_across_180_intentionally_differs_from_r</span></code> guards the
+difference.</p></li>
 <li><p><strong>Forward runs with the HNF correction.</strong> STILT-R accumulates the plume
 from the far end of a forward trajectory back toward the release point,
 so its plume is widest at release. PYSTILT accumulates outward from the
@@ -585,6 +659,13 @@ STILT-R multiplies it by the mixed-layer height, which removes most of
 the footprint after the first hour
 (<a class="reference external" href="https://github.com/uataq/stilt/issues/142">uataq/stilt#142</a>). No
 fidelity scenario sets <code class="docutils literal notranslate"><span class="pre">veght</span></code> above 1.</p></li>
+<li><p><strong>The HNF correction of a receptor above sea level.</strong> PYSTILT grows the
+plume from the release height above ground, so it needs <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> in
+<code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> for an MSL receptor. STILT-R grows it from the
+receptor height as given, which with <code class="docutils literal notranslate"><span class="pre">kmsl=1</span></code> is above sea level, so
+over high terrain its correction does nothing. The <code class="docutils literal notranslate"><span class="pre">msl_altitude</span></code>
+scenario compares the uncorrected <code class="docutils literal notranslate"><span class="pre">foot_no_hnf_dilution</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">test_msl_hnf_foot_intentionally_differs_from_r</span></code> guards the difference.</p></li>
 <li><p><strong>Untested inputs.</strong> Runs longer than 24 h backward, latitudes above 80°,
 and grids finer than 0.001° have not been compared.</p></li>
 <li><p><strong>Other STILT-R commits.</strong> Nothing detects upstream changes to
@@ -753,8 +834,8 @@ upstream.</p>
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -780,14 +861,14 @@ upstream.</p>
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
   </p>
 </div>
       
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

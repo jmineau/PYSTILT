@@ -1,0 +1,6 @@
+stilt.transport.hysplit.HysplitModel.data\_files
+================================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+.. automethod:: HysplitModel.data_files

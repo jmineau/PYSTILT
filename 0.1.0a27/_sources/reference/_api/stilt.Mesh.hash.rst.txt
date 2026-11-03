@@ -1,0 +1,6 @@
+stilt.Mesh.hash
+===============
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Mesh.hash
