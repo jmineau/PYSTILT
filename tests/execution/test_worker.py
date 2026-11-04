@@ -1221,6 +1221,42 @@ def test_run_receptors_pool_keyboard_interrupt_terminates(
     assert [c["receptor"] for c in calls] == [ids[0]]
 
 
+def test_run_receptors_pool_worker_error_terminates_and_is_not_masked(
+    tmp_path, receptor, other_receptor, monkeypatch, fake_pool
+):
+    """
+    A worker's own error must reach the caller, not `Pool.join()`'s "Pool is still running" (#320).
+
+    An error that escapes a receptor's own handling (anything outside
+    ``run_receptor``'s particles and footprint ``try`` blocks) is re-raised by
+    ``imap_unordered``. Before the fix, nothing terminated the pool first, so
+    the ``finally``'s ``pool.join()`` raised ``ValueError("Pool is still
+    running")`` and hid the real error.
+    """
+    model = _model(tmp_path, [receptor, other_receptor])
+    ids = list(model.receptors["receptor"])
+
+    def imap_then_fail(self, func, iterable):
+        items = list(iterable)
+        yield func(items[0])
+        raise ConnectionError("output bucket unreachable")
+
+    monkeypatch.setattr(fake_pool, "imap_unordered", imap_then_fail)
+    monkeypatch.setattr(worker, "run_receptor", _fake_run_receptor([]))
+
+    with pytest.raises(ConnectionError, match="output bucket unreachable"):
+        run_receptors(
+            model,
+            ids,
+            compute_root=tmp_path / "scratch",
+            execution=ExecutionConfig(cpus=2),
+        )
+
+    [pool] = fake_pool.instances
+    assert pool.terminated and not pool.closed
+    assert pool.joined
+
+
 #: A transport model in its own package, which pool workers import by path.
 _TOY_PACKAGE = """
 import pandas as pd
