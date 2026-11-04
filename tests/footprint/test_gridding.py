@@ -9,7 +9,7 @@ import pytest
 import xarray as xr
 
 from stilt.exceptions import EmptyFootprint
-from stilt.footprint import calc_footprint
+from stilt.footprint import calc_footprint, gridding
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
     _fold_padding_around_the_globe,
@@ -17,6 +17,7 @@ from stilt.footprint.gridding import (
     _interpolate_early_timesteps,
     _interpolation_times,
     _make_gauss_kernel,
+    _onto_padded_axis,
     _project_particles_to_crs,
     _unwrap_around_cloud,
     _wrap_antimeridian_longitudes,
@@ -1478,6 +1479,106 @@ def test_footprint_of_a_cloud_across_180_degrees_on_a_grid_that_crosses_it(
         atol=1e-14,
         rtol=0,
     )
+
+
+def _edge_cloud(lon0: float, sd_lon: float = 0.03) -> pd.DataFrame:
+    """
+    400 particles at (lon0, 50) at release and ten days later ``sd_lon`` by 0.3 degrees apart.
+
+    Longitudes are written in [-180, 180), as HYSPLIT writes them.
+    """
+    n = 400
+    rng = np.random.default_rng(3)
+    lon = np.concatenate([np.full(n, lon0), lon0 + rng.normal(0.0, sd_lon, n)])
+    return pd.DataFrame(
+        {
+            "particle": np.tile(np.arange(1, n + 1), 2),
+            "age": np.repeat([-1.0, -14401.0], n),
+            "lon": ((lon + 180.0) % 360.0) - 180.0,
+            "lat": np.concatenate([np.full(n, 50.0), rng.normal(50.0, 0.3, n)]),
+            "zagl": np.full(2 * n, 5.0),
+            "foot": np.repeat([0.0, 1e-3], n),
+        }
+    )
+
+
+def _edge_footprint(
+    receptor: PointReceptor, lon0: float, xmin: float, xmax: float, sd_lon: float
+) -> np.ndarray:
+    """The time-integrated footprint of ``_edge_cloud`` on 0.1 degree cells."""
+    grid = Grid(xmin=xmin, xmax=xmax, ymin=45.0, ymax=55.0, xres=0.1, yres=0.1)
+    receptor = receptor.model_copy(
+        update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
+    )
+    foot = calc_footprint(
+        _edge_cloud(lon0, sd_lon), receptor, grid, time_integrate=True
+    )
+    return foot.isel(time=0).to_numpy()
+
+
+@pytest.mark.parametrize(
+    ("lon0", "xmin", "xmax", "sd_lon"),
+    [
+        (179.85, -180.0, -170.0, 0.03),  # just across the west edge, all east of 180
+        (-179.85, 170.0, 180.0, 0.03),  # just across the east edge, all west of 180
+        (-179.6, -180.0, -170.0, 0.3),  # on both sides of 180
+        (179.85, -179.9, -170.0, 0.03),  # an edge short of 180, its padding past it
+    ],
+)
+def test_footprint_beside_a_grid_edge_near_180_degrees_is_the_footprint_away_from_it(
+    point_receptor, lon0, xmin, xmax, sd_lon
+):
+    """
+    Particles across 180 degrees from a grid's edge are smoothed onto it, as at any other edge.
+
+    The grid and the cloud turned by 180 degrees, away from 180, give the
+    same footprint. Before, a grid that ends at or near 180 degrees dropped
+    the particles on the other side: a cloud only there gave
+    ``EmptyFootprint``.
+    """
+    near = _edge_footprint(point_receptor, lon0, xmin, xmax, sd_lon)
+    turn = 180.0 if xmin < 0 else -180.0
+    away = _edge_footprint(
+        point_receptor, lon0 + turn, xmin + turn, xmax + turn, sd_lon
+    )
+    assert near.sum() > 1e-5
+    np.testing.assert_allclose(near, away, atol=1e-14, rtol=0)
+
+
+@pytest.mark.parametrize(
+    ("lon0", "bounds"),
+    [
+        (-112.0, (-113.0, -111.0)),  # a regional grid
+        (-179.5, (-179.0, -170.0)),  # near 180, its padding short of it
+        (179.9, (177.9, -178.1)),  # across 180, written 0 to 360
+        (179.9, (-180.0, 180.0)),  # all the way around
+    ],
+)
+def test_footprint_whose_padding_does_not_pass_180_degrees_is_unchanged(
+    point_receptor, monkeypatch, lon0, bounds
+):
+    """Where the padded grid does not pass 180 degrees, no longitude moves, and the footprint is the same to the last bit."""
+    grid = Grid(
+        xmin=bounds[0], xmax=bounds[1], ymin=48.0, ymax=52.0, xres=0.05, yres=0.05
+    )
+    receptor = point_receptor.model_copy(
+        update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
+    )
+    p = _cloud_at(lon0)
+    new = calc_footprint(p, receptor, grid, time_integrate=True).to_numpy()
+    monkeypatch.setattr(gridding, "_onto_padded_axis", lambda lon, **_: lon)
+    old = calc_footprint(p, receptor, grid, time_integrate=True).to_numpy()
+    assert new.sum() > 0
+    np.testing.assert_array_equal(new, old)
+
+
+def test_onto_padded_axis_moves_only_longitudes_off_the_axis():
+    """A longitude moves a whole turn only when it is off the axis and the turn puts it on."""
+    lon = pd.Series([179.95, -179.95, 179.0, -175.0, 0.0, 180.0])
+    out = _onto_padded_axis(lon, west=-180.2, east=-169.8)
+    np.testing.assert_allclose(out, [-180.05, -179.95, 179.0, -175.0, 0.0, -180.0])
+    # Longitudes already on the axis are the same objects' values, bit for bit.
+    assert out.iloc[1] == lon.iloc[1] and out.iloc[3] == lon.iloc[3]
 
 
 def test_fold_padding_around_the_globe_adds_each_side_to_the_other():

@@ -324,6 +324,7 @@ def _py_footprint_stages(
         xres=xres,
         yres=yres,
         time_integrate=time_integrate,
+        longlat=is_longlat,
     )
 
     kernel_out = kernel_df.copy()
@@ -1515,3 +1516,53 @@ def test_global_grid_across_180_intentionally_differs_from_r(
     np.testing.assert_allclose(py_foot.sum(), 1e-3, rtol=1e-9)
     assert r_foot.sum() < 0.9 * py_foot.sum(), "STILT-R no longer loses the footprint."
     assert np.count_nonzero(r_foot) > 3 * np.count_nonzero(py_foot)
+
+
+def test_grid_edge_at_180_intentionally_differs_from_r(rscript, r_stilt_dir, tmp_path):
+    """
+    Particles just across 180° from a grid's edge are smoothed onto it, unlike STILT-R, on purpose.
+
+    On a grid from -180° to -170° STILT-R leaves the longitudes as written, so
+    a cloud at 179.85° is 360° from the grid and is dropped: no footprint.
+    PYSTILT pads the grid across 180° as it pads any edge, and gives the
+    footprint of the same cloud and grid turned by 180°, where both agree
+    (#321). Guarding the difference keeps someone from "restoring parity" by
+    dropping the particles again.
+    """
+    rng = np.random.default_rng(3)
+    n = 400
+    dlon, dlat = rng.normal(0.0, 0.03, n), rng.normal(0.0, 0.3, n)
+
+    def cloud(lon0: float) -> pd.DataFrame:
+        """Each particle: two release rows (no influence), then its position ten days later."""
+        late = lon0 + dlon
+        lon = ((np.r_[np.full(2 * n, lon0), late] + 180.0) % 360.0) - 180.0
+        p = _particles(
+            n=3 * n,
+            times=[-1.0] * n + [-2.0] * n + [-14401.0] * n,
+            long=lon.tolist(),
+            lati=(50.0 + np.r_[np.zeros(2 * n), dlat]).tolist(),
+            foot=[0.0] * (2 * n) + [1e-3] * n,
+        )
+        p["indx"] = np.tile(np.arange(1.0, n + 1), 3)
+        return p
+
+    def grid(xmin: float) -> Grid:
+        return Grid(
+            xmin=xmin, xmax=xmin + 10.0, ymin=45.0, ymax=55.0, xres=0.1, yres=0.1
+        )
+
+    away = {"grid": grid(0.0), "time_integrate": True}
+    py_away = _py_footprint(tmp_path / "py_away", cloud(-0.15), **away)
+    r_away = _r_footprint(
+        tmp_path / "r_away", rscript, r_stilt_dir, cloud(-0.15), **away
+    )
+    _assert_footprint_close(py_away, r_away, label="edge_away_from_180")
+
+    edge = {"grid": grid(-180.0), "time_integrate": True}
+    py = _py_footprint(tmp_path / "py", cloud(179.85), **edge)
+    r = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, cloud(179.85), **edge)
+    assert np.all(r.foot.fillna(0).to_numpy() == 0), "STILT-R now keeps the particles."
+    # Both are read back from their files, so compared at the files' precision.
+    np.testing.assert_allclose(py.foot.to_numpy(), py_away.foot.to_numpy(), rtol=1e-6)
+    assert float(py.foot.sum()) > 1e-5

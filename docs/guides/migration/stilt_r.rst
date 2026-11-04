@@ -9,9 +9,11 @@ HYSPLIT does, and a receptor above sea level, whose plume PYSTILT grows from
 the ground. Two are on a projected grid: the smoothing, which PYSTILT makes
 as wide as on a longitude/latitude grid and STILT-R makes a few meters wide,
 and the early-time interpolation, which STILT-R never runs on a grid in
-meters. The last is a particle cloud near 180° on a grid that goes all the
+meters. Two are near 180°: a particle cloud on a grid that goes all the
 way around the earth, which PYSTILT smooths as one cloud and STILT-R smooths
-far too widely (see :ref:`stilt-r-parity`).
+far too widely, and particles just across 180° from the edge of a regional
+grid, which PYSTILT smooths onto the grid and STILT-R drops (see
+:ref:`stilt-r-parity`).
 
 What changes is where the settings live. Instead of editing variables in
 ``run_stilt.r``, you write them in ``config.yaml`` or pass them to
