@@ -5,6 +5,7 @@ import math
 import numpy as np
 import pandas as pd
 import pytest
+from arlmet.vertical import R_D, G
 from shapely.geometry import Point, Polygon
 
 from stilt.observations import (
@@ -268,7 +269,7 @@ def test_pressure_altitudes_start_at_the_surface_and_sort_upward():
 
 def test_pressure_altitudes_constant_profile_uses_the_scale_height():
     levels = np.array([950.0, 800.0, 600.0, 400.0])
-    scale_height = 287.05 * 260.0 / 9.80665
+    scale_height = R_D * 260.0 / G
     z = pressure_altitudes(
         levels,
         surface_pressure=1000.0,
@@ -285,7 +286,7 @@ def test_pressure_altitudes_profile_integrates_layer_means():
     z = pressure_altitudes(
         levels, surface_pressure=1000.0, surface_altitude=0.0, temperature=temps
     )
-    k = 287.05 / 9.80665
+    k = R_D / G
     dz1 = k * 280.0 * np.log(1000.0 / 800.0)  # surface layer takes T of level 1
     dz2 = k * 270.0 * np.log(800.0 / 600.0)
     np.testing.assert_allclose(z, [dz1, dz1 + dz2])
