@@ -214,11 +214,18 @@ _MET_VARIABLES: dict[str, tuple[str, ...]] = {
 #: Gas constant of dry air, J kg⁻¹ K⁻¹, the value HYSPLIT uses.
 _R_DRY = 287.04
 
+#: The top of the domain of a HYSPLIT run that does not set one, in meters
+#: (``HysplitConfig.z_top``, which a test keeps this equal to: this module does
+#: not import HYSPLIT's package).
+_DEFAULT_Z_TOP = 25000.0
+
 
 def sample_met(
     particles: pd.DataFrame,
     files: Iterable[str | os.PathLike[str]],
     columns: Iterable[str] = ("mlht", "dens", "pres", "zsfc"),
+    *,
+    z_top: float | None = _DEFAULT_Z_TOP,
 ) -> pd.DataFrame:
     """
     Return the particles with met columns sampled from ARL files at each particle's position.
@@ -226,9 +233,9 @@ def sample_met(
     A transport model that writes only positions can get the columns
     HYSPLIT writes from the met this way. Each row is sampled at its
     ``lon``, ``lat``, ``zagl``, and ``time``: bilinear across the met's
-    grid and linear in height between its levels
-    (:func:`arlmet.sample_points`), then linear in time between the two
-    met times around the particle's, as HYSPLIT does. Each column comes
+    grid and linear in height between the internal levels of a HYSPLIT run
+    with the top *z_top* (:func:`arlmet.sample_points`), then linear in time
+    between the two met times around the particle's, as HYSPLIT does. Each column comes
     from these ARL variables:
 
     - ``mlht`` is ``PBLH``, the met model's boundary-layer height, in m
@@ -238,12 +245,10 @@ def sample_met(
     - ``pres`` is ``PRES``, the pressure, in hPa.
     - ``zsfc`` is ``SHGT``, the terrain height, in m above sea level.
 
-    The values are the met's, not HYSPLIT's. HYSPLIT's ``mlht`` is the
-    met's ``PBLH`` only with ``kmixd: 0``, and then it is at least
-    ``kmix0``; the default, ``kmixd: 3``, finds the mixed layer from the
-    profile. HYSPLIT also finds the heights of the met's levels its own
-    way, so its ``pres`` and ``dens`` differ from these;
-    :doc:`/guides/meteorology` says by how much.
+    ``pres`` and ``dens`` follow what HYSPLIT reads, to the differences
+    :doc:`/guides/meteorology` gives. ``mlht`` is the met's: HYSPLIT's is the
+    met's ``PBLH`` only with ``kmixd: 0``, and then it is at least ``kmix0``;
+    the default, ``kmixd: 3``, finds the mixed layer from the profile.
 
     Parameters
     ----------
@@ -257,19 +262,29 @@ def sample_met(
         :func:`stilt.particles.particles_metadata`).
     columns : iterable of str, default ("mlht", "dens", "pres", "zsfc")
         The columns to add.
+    z_top : float or None, default 25000
+        The top of the run's domain in meters (``z_top`` of
+        :class:`stilt.transport.hysplit.HysplitConfig`), since HYSPLIT's
+        internal levels depend on it. A stored run records it:
+        ``particles_metadata(path).settings["z_top"]``. ``None`` reads the
+        met's own levels, for a transport model that is not HYSPLIT; a row
+        below their lowest or above their top is then NaN. Terrain-following
+        (flag 3) files are read on their own levels, not on the internal levels
+        HYSPLIT puts them on, and take only the default or ``None``.
 
     Returns
     -------
     pandas.DataFrame
         A copy of *particles* with the columns added. A row off the met's
-        grid, below its lowest level, or above its top is NaN.
+        grid is NaN.
 
     Raises
     ------
     ValueError
         If a column is not one of the four or is in *particles* already
-        (drop it first), *particles* has no ``time`` column, or a row is
-        outside the files' times.
+        (drop it first), *particles* has no ``time`` column, a row is outside
+        the files' times, or *z_top* is not positive or, on a terrain-following
+        file, is not the default or ``None``.
     KeyError
         If the files lack a variable a column needs.
 
@@ -278,7 +293,10 @@ def sample_met(
     >>> meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP
     >>> hysplit = sim.particles  # doctest: +SKIP
     >>> sampled = stilt.sampling.sample_met(  # doctest: +SKIP
-    ...     hysplit.drop(columns="pres"), meta.met_files, columns=["pres"]
+    ...     hysplit.drop(columns="pres"),
+    ...     meta.met_files,
+    ...     columns=["pres"],
+    ...     z_top=meta.settings["z_top"],
     ... )
     >>> (sampled["pres"] - hysplit["pres"]).describe()  # doctest: +SKIP
     """
@@ -314,7 +332,15 @@ def sample_met(
             np.concatenate([position, position[later]]), columns=["lon", "lat", "z"]
         )
         points["time"] = np.concatenate([before, after[later]])
-        sampled = arlmet.sample_points(handles, points, variables, z_kind="agl")
+        # arlmet ignores its own default on a terrain-following file, where a
+        # value it is passed raises (jmineau/arl-met#153), so the default is not
+        # passed.
+        if z_top == _DEFAULT_Z_TOP:
+            sampled = arlmet.sample_points(handles, points, variables, z_kind="agl")
+        else:
+            sampled = arlmet.sample_points(
+                handles, points, variables, z_kind="agl", model_top=z_top
+            )
     finally:
         for handle in handles:
             handle.close()

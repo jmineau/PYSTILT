@@ -343,7 +343,8 @@ Met at particle positions
 :func:`stilt.sampling.sample_met` reads met files at each particle's
 position and time, and adds ``mlht``, ``dens``, ``pres``, or ``zsfc`` to the
 particle table. A transport model that writes only positions can get these
-columns this way. Give it the files the run read:
+columns this way. Give it the files the run read and the top of its domain,
+both of which a stored run records:
 
 .. code-block:: python
 
@@ -351,26 +352,37 @@ columns this way. Give it the files the run read:
    from stilt.sampling import sample_met
 
    particles = sim.particles.drop(columns=["mlht", "dens"])
-   met_files = stilt.particles.particles_metadata(sim.particles_path).met_files
-   sampled = sample_met(particles, met_files, columns=["mlht", "dens"])
+   meta = stilt.particles.particles_metadata(sim.particles_path)
+   sampled = sample_met(
+       particles, meta.met_files, columns=["mlht", "dens"], z_top=meta.settings["z_top"]
+   )
 
 ``mlht`` is the met's ``PBLH``, ``pres`` its ``PRES``, ``zsfc`` its
 ``SHGT``, and ``dens`` is computed from ``PRES``, ``TEMP``, and ``SPHU``.
-Values are interpolated across the grid and between levels by arlmet, and
-in time between the two met times around each particle's. A particle
-below the met's lowest level (8 to 9 m above ground for HRRR) gets NaN.
+arlmet reads them across the grid and between the internal levels HYSPLIT
+uses, which depend on ``z_top``, and PYSTILT then interpolates in time between
+the two met times around each particle's. ``z_top`` defaults to 25000, the
+default of a run. ``z_top=None`` reads the met's own levels instead, for a
+transport model that is not HYSPLIT; a particle below the lowest of them (8 to
+9 m above ground for HRRR) then gets NaN. Terrain-following (flag 3) files are
+read on their own levels, not on the internal levels HYSPLIT puts them on, so
+their values are further from HYSPLIT's, by an amount not measured, and they
+take only the default ``z_top`` or ``None``.
 
-These are the met's values, not HYSPLIT's. On two 6-hour HRRR runs from
-Salt Lake City (``tests/integration/test_sample_met.py``):
+On two 6-hour HRRR runs from Salt Lake City
+(``tests/integration/test_sample_met.py``), these values against HYSPLIT's own
+columns:
 
 - ``zsfc`` matches to a few meters.
 - ``mlht`` matches HYSPLIT's with ``kmixd: 0``, floored at ``kmix0``,
   to a median of 16 to 30 m. The default, ``kmixd: 3``, finds a
   different mixed layer from the profile.
-- ``pres`` matches HYSPLIT's to a median of 0.04 to 0.05 hPa, and to
-  0.3 to 0.36 hPa at the 95th percentile, from the ground to 2 km. The
-  worst case is 1.5 to 2.1 hPa. ``dens`` follows ``pres``, within
-  0.17 to 0.57 %.
+- ``pres`` matches HYSPLIT's to a median of 0.02 hPa, and to 0.23 to
+  0.30 hPa at the 95th percentile. The worst case is 1.4 to 4.6 hPa.
+  ``dens`` is higher than HYSPLIT's by 0.17 to 0.57 %.
+- On one of those runs with a 10 km top, ``z_top=10000`` gives a median
+  ``pres`` difference of 0.024 hPa, where the default gives 0.032. The 95th
+  percentile is about 0.29 hPa with either.
 
 Where HYSPLIT reads the files
 -----------------------------

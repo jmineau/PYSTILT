@@ -19,20 +19,13 @@ known differences pass:
     at the grid point nearest the particle, averaged over the start and end
     of its step. ``sample_met`` interpolates it bilinearly (median
     difference 16 m in winter, 30 m in summer).
-``pres`` and ``dens``
-    HYSPLIT finds each met level's height from the ``PRES`` field and the
-    virtual temperature, from the ground up. arlmet 0.1.0b3 finds a sigma
-    file's level heights from the header's sigma values times ``PRSS``,
-    which for HRRR are up to about 50 hPa off ``PRES`` aloft
-    (jmineau/arl-met#66). Near the
-    ground the two agree to 0.3 hPa; higher up the sampled pressure is too
-    high, by about 1 hPa at 100 to 500 m, 6 to 8 hPa at 1 to 2 km, and
-    over 20 hPa above 2 km in the summer run. The
-    sampled density is also 0.1 to 0.6 % higher near the ground, more in
-    moister air, which is not traced.
-Below the lowest level
-    arlmet gives NaN below the met's lowest level (8 to 9 m above ground
-    for HRRR), where HYSPLIT interpolates from the surface values.
+``pres``
+    arlmet reads HYSPLIT's own internal levels, for the run's top. What is left
+    is mostly where HYSPLIT took the value, as for ``zsfc`` (median difference
+    0.02 hPa, 95 % within 0.3 hPa).
+``dens``
+    The sampled density is 0.17 to 0.57 % higher, more in moister air, which is
+    not traced.
 """
 
 from __future__ import annotations
@@ -57,7 +50,9 @@ COLUMNS = ["mlht", "dens", "pres", "zsfc"]
 KMIX0 = 150
 
 
-def _run(met_dir: Path, workdir: Path, time: dt.datetime) -> tuple[pd.DataFrame, list]:
+def _run(
+    met_dir: Path, workdir: Path, time: dt.datetime, z_top: float = 25000.0
+) -> tuple[pd.DataFrame, list]:
     """Run HYSPLIT from the WBB tower for 6 hours and return its particles and met files."""
     receptor = PointReceptor(
         time=time, longitude=-111.8479, latitude=40.7660, altitude=5.0
@@ -68,6 +63,7 @@ def _run(met_dir: Path, workdir: Path, time: dt.datetime) -> tuple[pd.DataFrame,
         hnf_plume=False,
         kmixd=0,  # the met's PBLH, so HYSPLIT's mlht can be compared
         kmix0=KMIX0,
+        z_top=z_top,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot", *COLUMNS],
     )
     run = run_model("hysplit", receptor, config, reference_met(met_dir), workdir, 900)
@@ -118,15 +114,32 @@ def test_sampled_met_matches_hysplit_columns(met_dir, tmp_path, time):
                 f"bias {d.mean():+.3g} hPa, sd {d.std():.3g}"
             )
 
-    # Only rows below the lowest HRRR level (8 to 9 m above ground) are NaN.
-    nan_rows = sampled[COLUMNS].isna().any(axis=1)
-    assert (zagl[nan_rows] < 20.0).all()
+    assert not sampled[COLUMNS].isna().any(axis=None)
     assert abs(spread.loc["zsfc", "bias"]) < 1.0
     assert spread.loc["zsfc", "p95_abs"] < 6.0
     assert abs(spread.loc["mlht", "bias"]) < 30.0
     assert spread.loc["mlht", "median_abs"] < 50.0
-    near_ground = zagl < 100.0
-    assert abs((sampled["pres"] - hysplit["pres"])[near_ground].mean()) < 0.5
-    assert abs(spread.loc["pres", "bias"]) < 6.0
-    assert spread.loc["pres", "p95_abs"] < 20.0
+    assert abs(spread.loc["pres", "bias"]) < 0.1
+    assert spread.loc["pres", "p95_abs"] < 1.0
     assert abs(spread.loc["dens", "rel_bias"]) < 0.015
+
+
+@integration
+def test_a_run_with_another_top_is_sampled_with_that_top(met_dir, tmp_path):
+    """HYSPLIT's internal levels depend on its top, so the run's top reads what it read."""
+    z_top = 10000.0
+    hysplit, met_files = _run(met_dir, tmp_path / "run", REFERENCE_TIME, z_top)
+    particles = hysplit.drop(columns=["pres", "dens"])
+
+    same = sample_met(particles, met_files, ["pres", "dens"], z_top=z_top)
+    default = sample_met(particles, met_files, ["pres", "dens"])
+    own_levels = sample_met(particles, met_files, ["pres", "dens"], z_top=None)
+
+    for name, sampled in (("z_top", same), ("default", default), ("None", own_levels)):
+        s = _spread(hysplit["pres"], sampled["pres"])
+        print(f"\npres minus HYSPLIT with a 10 km top, {name}: {s}")
+    spread = _spread(hysplit["pres"], same["pres"])
+    assert spread["nan"] == 0
+    assert (
+        spread["median_abs"] < _spread(hysplit["pres"], default["pres"])["median_abs"]
+    )
