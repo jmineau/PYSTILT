@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=b0c8280e"></script>
+    <script src="../../_static/documentation_options.js?v=daebd099"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev5+ge882e3a61" />
+  <meta name="docsearch:version" content="0.1.0a28.dev6+gc7441d5fd" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -893,6 +893,9 @@ pod, stops the batch: the transport model runs in progress are ended, the worker
 how many receptors had finished and returns. What finished is in the output directory, with a failure
 record for each simulation that failed; a run that was cut off leaves only its log line, so it is
 <code class="docutils literal notranslate"><span class="pre">interrupted</span></code> in <a class="reference internal" href="stilt.Project.status.html#stilt.Project.status" title="stilt.Project.status"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.status()</span></code></a>.</p>
+<p>An error that escapes a receptor’s own handling (<a class="reference internal" href="stilt.execution.worker.run_receptor.html#stilt.execution.worker.run_receptor" title="stilt.execution.worker.run_receptor"><code class="xref py py-func docutils literal notranslate"><span class="pre">run_receptor()</span></code></a> records a failure
+for one and goes on; this is anything outside that, such as a shared resource that stops
+answering) stops the batch too: the pool is terminated and the error raised to the caller.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
