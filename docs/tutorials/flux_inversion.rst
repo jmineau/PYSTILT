@@ -106,8 +106,14 @@ add a step of zeros after the last to end it.
 
 .. _flux-step-labels:
 
-Labels at the middle of a step
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Labels not at the start of a step
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``foot.stilt.enhancement``, ``particles.stilt.enhancement`` and
+``project.jacobian`` all read a flux's ``time`` labels as the starts of its
+steps. They do not look at the flux's CF time bounds, even when it has
+them: when it has none, this is the only reading available, so PYSTILT
+reads every flux this way, with or without bounds.
 
 An inventory labeled at the middle of its steps (a monthly mean dated the
 15th, or a 3-hourly mean dated 10:30) would be read half a step late.
@@ -118,10 +124,20 @@ Shift its labels back by half a step first:
    half_step = (inventory.time[1] - inventory.time[0]) / 2   # for equal steps
    inventory = inventory.assign_coords(time=inventory.time - half_step)
 
+An inventory labeled at the end of its steps (an hourly accumulation
+stamped when it ends, as ERA5's accumulated fields are) would be read a
+full step late. Shift its labels back by a full step instead:
+
+.. code-block:: python
+
+   full_step = inventory.time[1] - inventory.time[0]   # for equal steps
+   inventory = inventory.assign_coords(time=inventory.time - full_step)
+
 For steps of unequal length, such as calendar months, build the starts
-yourself, for example ``inventory.assign_coords(time=month_starts)``. The
-labels must strictly increase; a repeated label,
-such as the overlap of two concatenated files, is an error.
+yourself, for example ``inventory.assign_coords(time=month_starts)``,
+whichever shift your inventory needs. The labels must strictly increase; a
+repeated label, such as the overlap of two concatenated files, is an
+error.
 
 Inventory and footprint grids
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
