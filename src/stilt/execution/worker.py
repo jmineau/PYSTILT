@@ -690,6 +690,10 @@ def run_receptors(
     record for each simulation that failed; a run that was cut off leaves only its log line, so it is
     ``interrupted`` in :meth:`stilt.Project.status`.
 
+    An error that escapes a receptor's own handling (:func:`run_receptor` records a failure
+    for one and goes on; this is anything outside that, such as a shared resource that stops
+    answering) stops the batch too: the pool is terminated and the error raised to the caller.
+
     Parameters
     ----------
     project : Project
@@ -776,6 +780,13 @@ def run_receptors(
             pool.terminate()
         except SystemExit:
             # A requeued Slurm task exits here; its workers must not outlive it.
+            pool.terminate()
+            raise
+        except BaseException:
+            # A worker's own error, re-raised here by imap_unordered, or
+            # anything else unexpected: terminate the still-running pool so
+            # the error reaches the caller, instead of `finally`'s
+            # pool.join() raising "Pool is still running" and hiding it (#320).
             pool.terminate()
             raise
         finally:
