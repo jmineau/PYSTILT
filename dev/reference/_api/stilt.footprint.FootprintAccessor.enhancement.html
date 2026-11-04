@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1110bb58"></script>
+    <script src="../../_static/documentation_options.js?v=fe5cfe4b"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev10+gbfcb74abd" />
+  <meta name="docsearch:version" content="0.1.0a28.dev11+g58d094548" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -910,10 +910,17 @@ or before the hour’s start. A monthly flux labeled on the 1st
 gives every hour of July 20 July’s flux. An hour before the first
 label gets zero flux, and an hour after the last label takes the
 last step, since the labels do not say where it ends (add a step
-of zeros to end it). A flux labeled at the middle of its steps
-must be relabeled first: shift its labels back by half a step,
-<code class="docutils literal notranslate"><span class="pre">flux.assign_coords(time=flux.time</span> <span class="pre">-</span> <span class="pre">half_step)</span></code>. The labels
-must strictly increase.</p>
+of zeros to end it). This is the only reading PYSTILT does: it
+does not look at the flux’s CF time bounds, if it has any, so a
+flux not labeled at the start of its steps must be relabeled
+first. A flux labeled at the middle of its steps: shift its
+labels back by half a step,
+<code class="docutils literal notranslate"><span class="pre">flux.assign_coords(time=flux.time</span> <span class="pre">-</span> <span class="pre">half_step)</span></code>. One labeled
+at the end of its steps, as an accumulation stamped when it
+ends (ERA5’s hourly accumulated fields, for example), is read a
+full step late: shift its labels back by a full step instead.
+See <a class="reference internal" href="../../tutorials/flux_inversion.html#flux-step-labels"><span class="std std-ref">Labels not at the start of a step</span></a> for both shifts worked out. The
+labels must strictly increase.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Enhancement for each footprint time step. <code class="docutils literal notranslate"><span class="pre">.sum()</span></code> gives the

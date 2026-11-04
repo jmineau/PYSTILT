@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1110bb58"></script>
+    <script src="../../_static/documentation_options.js?v=fe5cfe4b"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev10+gbfcb74abd" />
+  <meta name="docsearch:version" content="0.1.0a28.dev11+g58d094548" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -906,7 +906,14 @@ one realization of an ensemble).</p></li>
 <li><p><strong>target</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Grid</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">Mesh</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">Zones</span></code></span>) – Where the fluxes are: a grid, mesh, or set of zones.</p></li>
 <li><p><strong>time_bins</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.IntervalIndex.html#pandas.IntervalIndex" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntervalIndex</span></code></a></span>) – Flux time bins, such as a flux inventory’s steps. They must be
 closed on the left (<code class="docutils literal notranslate"><span class="pre">closed=&quot;left&quot;</span></code>): each bin holds the
-footprint hours that start in it.</p></li>
+footprint hours that start in it. Building the bins from an
+inventory’s own time labels (its left edges) reads each label
+as the start of its step, the same reading
+<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> gives a flux’s <code class="docutils literal notranslate"><span class="pre">time</span></code> dimension; it
+does not look at the inventory’s CF time bounds, if it has any.
+A flux not labeled at the start of its steps must be relabeled
+first, or its bins built from the relabeled starts (see
+<a class="reference internal" href="../../tutorials/flux_inversion.html#flux-step-labels"><span class="std std-ref">Labels not at the start of a step</span></a>).</p></li>
 <li><p><strong>workers</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – Threads that read and sum batches. Defaults to the CPUs this
 process may use (in a Slurm job, the job’s), at most 8: more
 threads add memory and stop adding speed.</p></li>
