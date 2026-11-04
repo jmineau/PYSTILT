@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=4354c88d"></script>
+    <script src="../_static/documentation_options.js?v=1110bb58"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev9+gcd11a96db" />
+  <meta name="docsearch:version" content="0.1.0a28.dev10+gbfcb74abd" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -847,11 +847,10 @@ Salt Lake City (<code class="docutils literal notranslate"><span class="pre">tes
 <li><p><code class="docutils literal notranslate"><span class="pre">mlht</span></code> matches HYSPLIT’s with <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">0</span></code>, floored at <code class="docutils literal notranslate"><span class="pre">kmix0</span></code>,
 to a median of 16 to 30 m. The default, <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code>, finds a
 different mixed layer from the profile.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pres</span></code> matches to 0.3 hPa in the lowest 100 m, then reads high: about
-1 hPa at 100 to 500 m, 6 to 8 hPa at 1 to 2 km, and over 20 hPa above
-2 km. HYSPLIT finds the heights of HRRR’s levels from its <code class="docutils literal notranslate"><span class="pre">PRES</span></code>
-field; arlmet finds them from the file’s nominal sigma levels.
-<code class="docutils literal notranslate"><span class="pre">dens</span></code> follows <code class="docutils literal notranslate"><span class="pre">pres</span></code>, and is 0.1 to 0.6 % higher near the ground.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pres</span></code> matches HYSPLIT’s to a median of 0.04 to 0.05 hPa, and to
+0.3 to 0.36 hPa at the 95th percentile, from the ground to 2 km. The
+worst case is 1.5 to 2.1 hPa. <code class="docutils literal notranslate"><span class="pre">dens</span></code> follows <code class="docutils literal notranslate"><span class="pre">pres</span></code>, within
+0.17 to 0.57 %.</p></li>
 </ul>
 </section>
 <section id="where-hysplit-reads-the-files">
