@@ -209,10 +209,17 @@ class FootprintAccessor:
             gives every hour of July 20 July's flux. An hour before the first
             label gets zero flux, and an hour after the last label takes the
             last step, since the labels do not say where it ends (add a step
-            of zeros to end it). A flux labeled at the middle of its steps
-            must be relabeled first: shift its labels back by half a step,
-            ``flux.assign_coords(time=flux.time - half_step)``. The labels
-            must strictly increase.
+            of zeros to end it). This is the only reading PYSTILT does: it
+            does not look at the flux's CF time bounds, if it has any, so a
+            flux not labeled at the start of its steps must be relabeled
+            first. A flux labeled at the middle of its steps: shift its
+            labels back by half a step,
+            ``flux.assign_coords(time=flux.time - half_step)``. One labeled
+            at the end of its steps, as an accumulation stamped when it
+            ends (ERA5's hourly accumulated fields, for example), is read a
+            full step late: shift its labels back by a full step instead.
+            See :ref:`flux-step-labels` for both shifts worked out. The
+            labels must strictly increase.
 
         Returns
         -------

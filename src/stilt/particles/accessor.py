@@ -72,9 +72,11 @@ class ParticlesAccessor:
             reads it: each particle row takes the last flux step that
             starts at or before the row's ``time``. A row before the first
             label gets zero flux, and a row after the last label takes the
-            last step. A flux labeled at the middle of its steps must be
-            relabeled first (see ``foot.stilt.enhancement``). Points outside
-            the flux grid, and missing cells, count as zero flux.
+            last step. This is the only reading PYSTILT does: it does not
+            look at the flux's CF time bounds, if it has any, so a flux not
+            labeled at the start of its steps must be relabeled first (see
+            ``foot.stilt.enhancement`` and :ref:`flux-step-labels`). Points
+            outside the flux grid, and missing cells, count as zero flux.
 
         Returns
         -------
