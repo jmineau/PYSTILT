@@ -6,9 +6,11 @@ grid, where the smoothing (``_compute_kernel_bandwidths``) and the test for
 the early-time interpolation (``_interpolate_early_timesteps``) differ on
 purpose, in the smoothing of a cloud across 180 degrees on a grid that
 goes all the way around (``_unwrap_around_cloud``,
-``_fold_padding_around_the_globe``), and for particles across 180 degrees
-from the edge of a regional grid (``_onto_padded_axis``). Run the
-``fidelity`` tests before merging any change to this module.
+``_fold_padding_around_the_globe``), for particles across 180 degrees
+from the edge of a regional grid (``_onto_padded_axis``), and in the
+early-time interpolation of a particle that crosses 180 degrees
+(``_interpolate_longitudes``). Run the ``fidelity`` tests before merging
+any change to this module.
 """
 
 from __future__ import annotations
@@ -127,6 +129,7 @@ def _interpolate_early_timesteps(
     yres: float,
     time_sign: int,
     crs: str = "+proj=longlat",
+    west: float = -180.0,
 ) -> pd.DataFrame:
     """
     Add interpolated positions in the first 100 minutes when particles jump grid cells.
@@ -144,6 +147,15 @@ def _interpolate_early_timesteps(
     compares the steps in degrees with the cell size in the grid's units,
     which on a grid in meters never interpolates. The interpolation itself
     is done in degrees on any grid.
+
+    Longitudes are interpolated the short way round
+    (``_interpolate_longitudes``): a step from 179.99 to -179.97 passes
+    180, not 0. *p*'s longitudes are written from *west* to *west* + 360
+    (-180 to 180, or 0 to 360 on a grid shifted across 180 degrees), and
+    the positions added are too. On a longitude/latitude grid a step is
+    measured the short way round as well. STILT-R interpolates and measures
+    the longitudes as written, so a step across the seam is taken through
+    the other side of the earth.
     """
     early = cast(pd.DataFrame, p[np.abs(p["age"]) < 100])
     if early.empty:
@@ -165,6 +177,9 @@ def _interpolate_early_timesteps(
         pd.DataFrame,
         sorted_early.groupby("particle", sort=False)[["lon", "lat"]].diff().abs(),
     )
+    if is_longlat(crs):
+        # A step across the seam is the short way round, not nearly 360 degrees.
+        diffs["lon"] = diffs["lon"].where(diffs["lon"] <= 180.0, 360.0 - diffs["lon"])
     per_particle_med = cast(
         pd.DataFrame, diffs.groupby(sorted_early["particle"]).median()
     )
@@ -186,7 +201,7 @@ def _interpolate_early_timesteps(
         p.loc[(atime > 20) & (atime <= 100), "foot"].sum(),
     ]
 
-    p = _interpolate_particle_tracks(p, t_new=t_new)
+    p = _interpolate_particle_tracks(p, t_new=t_new, west=west)
     p["age"] = p["age"].round(1)
 
     # Rescale foot so total influence per window matches original.
@@ -204,8 +219,15 @@ def _interpolate_early_timesteps(
     return p
 
 
-def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.DataFrame:
-    """Interpolate lon/lat/foot for each particle on a dense time grid."""
+def _interpolate_particle_tracks(
+    p: pd.DataFrame, *, t_new: np.ndarray, west: float = -180.0
+) -> pd.DataFrame:
+    """
+    Interpolate lon/lat/foot for each particle on a dense time grid.
+
+    Longitudes go the short way round and stay from *west* to *west* + 360
+    (``_interpolate_longitudes``).
+    """
     frames: list[pd.DataFrame] = []
     original_columns = list(p.columns)
     for number, group in p.groupby("particle", sort=False):
@@ -232,7 +254,11 @@ def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.Da
         )
         for col in ["lon", "lat", "foot"]:
             values = group[col].to_numpy(dtype=float)[order][unique_idx]
-            if len(unique_time) >= 2:
+            if len(unique_time) >= 2 and col == "lon":
+                frame[col] = _interpolate_longitudes(
+                    target_time, unique_time, values, west=west
+                )
+            elif len(unique_time) >= 2:
                 # left/right=nan matches R's na_interp: no extrapolation
                 # beyond the observed [min_time, max_time] range.
                 frame[col] = np.interp(
@@ -251,6 +277,34 @@ def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.Da
         .sort_values(["particle", "age"], ascending=[True, False], kind="stable")
         .reset_index(drop=True)
     )
+
+
+def _interpolate_longitudes(
+    target_time: np.ndarray, time: np.ndarray, lon: np.ndarray, *, west: float
+) -> np.ndarray:
+    """
+    Return one particle's longitudes *lon*, written at *time*, interpolated to *target_time* the short way round.
+
+    *target_time* holds every *time*, and nothing is extrapolated past
+    them (NaN, as R's ``na_interp``). HYSPLIT writes longitudes from -180
+    to 180, so a particle that crosses 180 degrees jumps from 179.99 to
+    -179.97, and a straight line between the two passes through 0. Here
+    each step of more than 180 degrees is taken as the shorter step the
+    other way (``numpy.unwrap``), and an interpolated position that comes
+    out past the range the longitudes are written in, *west* to *west* +
+    360, is moved back by whole turns. The written positions are returned
+    as written. A track with no step over 180 degrees is interpolated as
+    before, to the last bit.
+    """
+    if not (np.abs(np.diff(lon)) > 180.0).any():
+        return np.interp(target_time, time, lon, left=np.nan, right=np.nan)
+    out = np.interp(
+        target_time, time, np.unwrap(lon, period=360.0), left=np.nan, right=np.nan
+    )
+    off = (out < west) | (out > west + 360.0)
+    out = np.where(off, _wrap_longitudes(out, west=west), out)
+    out[np.searchsorted(target_time, time)] = lon
+    return out
 
 
 def _project_particles_to_crs(
@@ -682,7 +736,9 @@ def calc_footprint(
     part of the footprint. On a grid that ends at or near 180 degrees
     (``xmin=-180``, ``xmax=-170``), particles just across 180 degrees
     smooth onto the grid, as particles just past any other edge do.
-    STILT-R drops them.
+    STILT-R drops them. A particle that crosses 180 degrees in its first
+    100 minutes is interpolated the short way round, on any grid; STILT-R
+    interpolates it through 0 degrees.
 
     On a projected grid the kernel's width is worked out in degrees, as on
     a longitude/latitude grid, and converted to the grid's units, so the
@@ -788,7 +844,12 @@ def calc_footprint(
         )
 
     p = _interpolate_early_timesteps(
-        p, xres=xres, yres=yres, time_sign=time_sign, crs=crs
+        p,
+        xres=xres,
+        yres=yres,
+        time_sign=time_sign,
+        crs=crs,
+        west=0.0 if wrapped_longitude else -180.0,
     )
 
     # rtime = time elapsed since each particle's first output step.

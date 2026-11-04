@@ -173,6 +173,19 @@ What does not match
   gets the footprint it got before, bit for bit.
   ``test_grid_edge_at_180_intentionally_differs_from_r`` guards the
   difference.
+- **The early-time interpolation across 180°.** HYSPLIT writes longitudes
+  from -180° to 180°, and STILT-R interpolates them as written, so a step
+  from 179.99° to -179.97° is interpolated through 0°, and the positions
+  added put part of that step's ``foot`` on the far side of the earth. On a
+  global grid that is a misplaced footprint (0.5 % of it for 40 particles
+  crossing 180° at 0.03° a minute on 0.01° cells); on a regional grid at
+  180° the part is lost. On a grid shifted to 0° to 360° the same happens
+  to a particle that crosses 0°, and lands near 180°. PYSTILT interpolates
+  each step the short way round and measures it that way when it decides
+  whether to interpolate. A particle that takes no step across the seam is
+  interpolated as before, bit for bit.
+  ``test_early_interpolation_across_180_intentionally_differs_from_r``
+  guards the difference.
 - **Forward runs with the HNF correction.** STILT-R accumulates the plume
   from the far end of a forward trajectory back toward the release point,
   so its plume is widest at release. PYSTILT accumulates outward from the
