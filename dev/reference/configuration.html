@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=daebd099"></script>
+    <script src="../_static/documentation_options.js?v=4354c88d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev6+gc7441d5fd" />
+  <meta name="docsearch:version" content="0.1.0a28.dev9+gcd11a96db" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -642,7 +642,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.fetch.html">stilt.transport.hysplit.Met.fetch</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.missing_hours.html">stilt.transport.hysplit.Met.missing_hours</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.missing.html">stilt.transport.hysplit.Met.missing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -920,7 +920,7 @@ from, and a variant may override any of them.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">'hysplit'</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mets</span></code></p></td>
-<td><p>Meteorology by name, such as <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>. At least one is required. Each is checked by the met config of the transport model that reads it (<a class="reference internal" href="_api/stilt.transport.hysplit.MetConfig.html#stilt.transport.hysplit.MetConfig" title="stilt.transport.hysplit.MetConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transport.hysplit.MetConfig</span></code></a> for HYSPLIT).</p></td>
+<td><p>Meteorology by name, such as <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>: the folder of its files, or a mapping of its settings. At least one is required. Each is checked by the met config of the transport model that reads it (<a class="reference internal" href="_api/stilt.transport.hysplit.MetConfig.html#stilt.transport.hysplit.MetConfig" title="stilt.transport.hysplit.MetConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transport.hysplit.MetConfig</span></code></a> for HYSPLIT).</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">{}</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">variants</span></code></p></td>
@@ -1374,20 +1374,12 @@ from, and a variant may override any of them.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">download</span></code></p></td>
-<td><p>Name of a NOAA ARL archive to download files from with arlmet, such as <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>, <code class="docutils literal notranslate"><span class="pre">nam12</span></code>, <code class="docutils literal notranslate"><span class="pre">gdas1</span></code>, or <code class="docutils literal notranslate"><span class="pre">gfs0p25</span></code>. When set, <code class="docutils literal notranslate"><span class="pre">file_format</span></code> and <code class="docutils literal notranslate"><span class="pre">file_tres</span></code> are not needed. Options for the archive (such as <code class="docutils literal notranslate"><span class="pre">domain:</span> <span class="pre">ak</span></code>) go in the same entry.</p></td>
+<td><p>Name of a NOAA ARL archive to download files from with arlmet, such as <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>, <code class="docutils literal notranslate"><span class="pre">nam12</span></code>, <code class="docutils literal notranslate"><span class="pre">gdas1</span></code>, or <code class="docutils literal notranslate"><span class="pre">gfs0p25</span></code>. Options for the archive (such as <code class="docutils literal notranslate"><span class="pre">domain:</span> <span class="pre">ak</span></code>) go in the same entry.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">download_from</span></code></p></td>
 <td><p>Server to download from: <code class="docutils literal notranslate"><span class="pre">s3</span></code>, <code class="docutils literal notranslate"><span class="pre">ftp</span></code>, or <code class="docutils literal notranslate"><span class="pre">http</span></code>.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">'s3'</span></code></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">file_format</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">strftime</span></code> pattern for the start of each file name, such as <code class="docutils literal notranslate"><span class="pre">%Y%m%d_%H</span></code>. Files whose names start with it are found anywhere under <code class="docutils literal notranslate"><span class="pre">directory</span></code>, except lock files, backup copies ending in <code class="docutils literal notranslate"><span class="pre">~</span></code>, and names ending in <code class="docutils literal notranslate"><span class="pre">.partial</span></code> or <code class="docutils literal notranslate"><span class="pre">.bad</span></code>. Required when <code class="docutils literal notranslate"><span class="pre">download</span></code> is not set.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">file_tres</span></code></p></td>
-<td><p>Time covered by each file, as a pandas time string such as <code class="docutils literal notranslate"><span class="pre">6h</span></code>. Required when <code class="docutils literal notranslate"><span class="pre">download</span></code> is not set.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">subgrid_enable</span></code></p></td>
 <td><p>Crop the meteorology to <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code> before running.</p></td>

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=daebd099"></script>
+    <script src="../../_static/documentation_options.js?v=4354c88d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev6+gc7441d5fd" />
+  <meta name="docsearch:version" content="0.1.0a28.dev9+gcd11a96db" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -642,7 +642,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.fetch.html">stilt.transport.hysplit.Met.fetch</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing_hours.html">stilt.transport.hysplit.Met.missing_hours</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing.html">stilt.transport.hysplit.Met.missing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -885,10 +885,10 @@
 <dt class="sig sig-object py" id="stilt.transport.hysplit.Met">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.transport.hysplit.</span></span><span class="sig-name descname"><span class="pre">Met</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'MetConfig'</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/transport/hysplit/met.html#Met"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.transport.hysplit.Met" title="Link to this definition">#</a></dt>
 <dd><p>The meteorology files of one met, found locally or downloaded.</p>
-<p>Without <code class="docutils literal notranslate"><span class="pre">download</span></code>, files are found under <code class="docutils literal notranslate"><span class="pre">directory</span></code> from
-<code class="docutils literal notranslate"><span class="pre">file_format</span></code> and <code class="docutils literal notranslate"><span class="pre">file_tres</span></code>. With <code class="docutils literal notranslate"><span class="pre">download</span></code> set to an ARL
-archive name, arlmet downloads the files, cropping them as it goes when
-subgridding is on. Local files are cropped with
+<p>Without <code class="docutils literal notranslate"><span class="pre">download</span></code>, files are found under <code class="docutils literal notranslate"><span class="pre">directory</span></code> by what their
+headers say they hold (<code class="xref py py-class docutils literal notranslate"><span class="pre">Catalog</span></code>).
+With <code class="docutils literal notranslate"><span class="pre">download</span></code> set to an ARL archive name, arlmet downloads the files,
+cropping them as it goes when subgridding is on. Local files are cropped with
 <code class="docutils literal notranslate"><span class="pre">arlmet.extract_subset</span></code> into <a class="reference internal" href="stilt.transport.hysplit.Met.crop_dir.html#stilt.transport.hysplit.Met.crop_dir" title="stilt.transport.hysplit.Met.crop_dir"><code class="xref py py-attr docutils literal notranslate"><span class="pre">crop_dir</span></code></a>, which all simulations
 share.</p>
 </dd></dl>
@@ -927,8 +927,8 @@ share.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html#stilt.transport.hysplit.Met.files_for" title="stilt.transport.hysplit.Met.files_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">files_for</span></code></a>(window)</p></td>
 <td><p>Return the met files that cover <em>window</em>, <code class="docutils literal notranslate"><span class="pre">(start,</span> <span class="pre">end)</span></code> in time order.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="stilt.transport.hysplit.Met.missing_hours.html#stilt.transport.hysplit.Met.missing_hours" title="stilt.transport.hysplit.Met.missing_hours"><code class="xref py py-obj docutils literal notranslate"><span class="pre">missing_hours</span></code></a>(window)</p></td>
-<td><p>Return the times of the local files that cover <em>window</em> and are not found.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.transport.hysplit.Met.missing.html#stilt.transport.hysplit.Met.missing" title="stilt.transport.hysplit.Met.missing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">missing</span></code></a>(window)</p></td>
+<td><p>Return the stretches of <em>window</em> that no local file holds.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html#stilt.transport.hysplit.Met.readable" title="stilt.transport.hysplit.Met.readable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">readable</span></code></a>(files)</p></td>
 <td><p>Return the files a transport model should read in place of <em>files</em>.</p></td>

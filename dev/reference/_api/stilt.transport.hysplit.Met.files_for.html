@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=daebd099"></script>
+    <script src="../../_static/documentation_options.js?v=4354c88d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,12 +59,12 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="stilt.transport.hysplit.Met.missing_hours" href="stilt.transport.hysplit.Met.missing_hours.html" />
+    <link rel="next" title="stilt.transport.hysplit.Met.missing" href="stilt.transport.hysplit.Met.missing.html" />
     <link rel="prev" title="stilt.transport.hysplit.Met.fetch" href="stilt.transport.hysplit.Met.fetch.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev6+gc7441d5fd" />
+  <meta name="docsearch:version" content="0.1.0a28.dev9+gcd11a96db" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -642,7 +642,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.fetch.html">stilt.transport.hysplit.Met.fetch</a></li>
 <li class="toctree-l3 current active"><a aria-current="page" class="current reference internal" href="#">stilt.transport.hysplit.Met.files_for</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing_hours.html">stilt.transport.hysplit.Met.missing_hours</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing.html">stilt.transport.hysplit.Met.missing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -891,13 +891,10 @@
 <p>HYSPLIT steps through a run with the two met steps around each of
 its times, so in either direction it needs the met step at or after
 the window’s end: the release of a backward run, the end of a
-forward one. When the end is past the last met step of its file,
-the next file is added. The spacing of the met steps is read once,
-from the index records of the file that holds the window’s end, as
-<code class="docutils literal notranslate"><span class="pre">file_format</span></code> finds it; other products in <code class="docutils literal notranslate"><span class="pre">directory</span></code> do not
-change it. When that file cannot be read or holds one time period,
-the spacing is taken as one hour and <a class="reference internal" href="stilt.transport.hysplit.Met.check.html#stilt.transport.hysplit.Met.check" title="stilt.transport.hysplit.Met.check"><code class="xref py py-meth docutils literal notranslate"><span class="pre">check()</span></code></a> says so.
-Downloads the files first when <code class="docutils literal notranslate"><span class="pre">download</span></code> is set.</p>
+forward one. The files are the ones whose headers say they hold the
+steps from the one at or before the start to that one
+(<code class="xref py py-meth docutils literal notranslate"><span class="pre">Catalog.cover()</span></code>), whatever they are named. Downloads the files
+first when <code class="docutils literal notranslate"><span class="pre">download</span></code> is set.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>window</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</span>) – The time to cover (<code class="xref py py-func docutils literal notranslate"><span class="pre">run_window()</span></code>).</p>
@@ -906,8 +903,9 @@ Downloads the files first when <code class="docutils literal notranslate"><span 
 <dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span></p>
 </dd>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="stilt.exceptions.MeteorologyError.html#stilt.exceptions.MeteorologyError" title="stilt.exceptions.MeteorologyError"><strong>MeteorologyError</strong></a> – A file the run needs is missing. Every one is needed: HYSPLIT
-    would stop the particles where the met runs out.</p>
+<dd class="field-odd"><p><a class="reference internal" href="stilt.exceptions.MeteorologyError.html#stilt.exceptions.MeteorologyError" title="stilt.exceptions.MeteorologyError"><strong>MeteorologyError</strong></a> – A file the run needs is missing, or files of two products hold
+    the same time. Every file is needed: HYSPLIT would stop the
+    particles where the met runs out.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -934,11 +932,11 @@ Downloads the files first when <code class="docutils literal notranslate"><span 
       </div>
     </a>
     <a class="right-next"
-       href="stilt.transport.hysplit.Met.missing_hours.html"
+       href="stilt.transport.hysplit.Met.missing.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">stilt.transport.hysplit.Met.missing_hours</p>
+        <p class="prev-next-title">stilt.transport.hysplit.Met.missing</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

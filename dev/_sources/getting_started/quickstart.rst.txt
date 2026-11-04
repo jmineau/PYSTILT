@@ -25,16 +25,12 @@ before the measurement to just after it. A simulation with a file missing
 fails, naming the hours.
 
 If you already have ARL files, for example in a group archive, tell PYSTILT
-the folder they are in, a pattern for their names, and how many hours each
-file covers. For files named like ``20210115_06``, each holding six hours:
+the folder they are in. Each file's header says which times it holds, so their
+names do not matter:
 
 .. code-block:: python
 
-   met = {
-       "directory": "/path/to/arl/hrrr",
-       "file_format": "%Y%m%d_%H",   # date codes: %Y year, %m month, %d day, %H hour
-       "file_tres": "6h",            # each file covers 6 hours
-   }
+   met = "/path/to/arl/hrrr"
 
 If you don't have ARL files, PYSTILT can download them from NOAA's archive
 into a folder you choose. This needs ``pip install "pystilt[download]"``.
@@ -299,10 +295,7 @@ above:
 .. code-block:: yaml
 
    mets:
-     hrrr:
-       directory: /path/to/arl/hrrr
-       file_format: "%Y%m%d_%H"
-       file_tres: 6h
+     hrrr: /path/to/arl/hrrr
 
    variants:
      hrrr: {}

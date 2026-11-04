@@ -62,10 +62,12 @@ command line is wrong or the project's files are invalid.
        checked: it makes its directory and fetches files when a run needs
        them.
    * - ``met_files``
-     - A receptor's run needs a met file that is not there. The message
-       names the hours of the files, each as long as ``file_tres``.
-     - Add the files, or check ``file_format`` and ``file_tres`` against the
-       file names. A backward run needs files from ``n_hours`` before the
+     - A receptor's run needs a met file that is not there, or files of two
+       products hold one of its times. The message names the hours no file
+       holds, or the two files.
+     - Add the files, or keep each product in its own folder. A file whose
+       first index record cannot be read holds nothing as far as PYSTILT can
+       tell, so it shows as missing. A backward run needs files from ``n_hours`` before the
        receptor time to the met step at or after it, a forward run from the
        receptor time to the met step at or after ``n_hours`` later
        (:doc:`meteorology`).
@@ -79,12 +81,17 @@ command line is wrong or the project's files are invalid.
      - Widen ``subgrid_bounds``. It must hold the whole run, not only the
        footprint grid.
    * - ``met_periods``
-     - The first file the receptors need holds one time period. HYSPLIT
-       stops on such a file ("Only one time period of meteo data"), so every
-       run of the met would fail as ``MET_COVERAGE``.
+     - A file the receptors need holds one time period. HYSPLIT stops on such
+       a file ("Only one time period of meteo data"), so a run that reads it
+       would fail as ``MET_COVERAGE``. The message names the first and counts
+       the rest.
      - Use files that each hold at least two time periods, such as 6-hour
-       files of hourly data, and set ``file_tres`` to match
-       (:doc:`meteorology`).
+       files of hourly data (:doc:`meteorology`).
+   * - ``met_cut``
+     - A file the receptors need ends partway through a time step, so it is
+       damaged, and a run that reads it would fail as ``MET_COVERAGE``. There
+       is one row for each file.
+     - Get the file again.
    * - ``grid``
      - A release point of a receptor lies outside the variant's footprint
        grid. Only the particles that travel into the grid add to its
@@ -262,8 +269,7 @@ The reasons
      - The meteorology does not cover the run. The message says which:
 
        - ``No met file ... for <hours>``: a file the run needs is missing.
-         Check the met's ``directory`` and ``file_format`` against the
-         files on disk. A backward run needs files from ``n_hours`` before
+         Check the met's ``directory`` against the files on disk. A backward run needs files from ``n_hours`` before
          the receptor time to just after it, a forward run from the
          receptor time to just after ``n_hours`` later (:doc:`meteorology`).
          ``stilt check`` finds these before a run.

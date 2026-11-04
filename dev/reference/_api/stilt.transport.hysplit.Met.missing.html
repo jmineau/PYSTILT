@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.transport.hysplit.Met.missing_hours &#8212; PYSTILT dev</title>
+    <title>stilt.transport.hysplit.Met.missing &#8212; PYSTILT dev</title>
   
   
   
@@ -42,13 +42,13 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=daebd099"></script>
+    <script src="../../_static/documentation_options.js?v=4354c88d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/_api/stilt.transport.hysplit.Met.missing_hours';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/_api/stilt.transport.hysplit.Met.missing';</script>
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev6+gc7441d5fd" />
+  <meta name="docsearch:version" content="0.1.0a28.dev9+gcd11a96db" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -642,7 +642,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.fetch.html">stilt.transport.hysplit.Met.fetch</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
-<li class="toctree-l3 current active"><a aria-current="page" class="current reference internal" href="#">stilt.transport.hysplit.Met.missing_hours</a></li>
+<li class="toctree-l3 current active"><a aria-current="page" class="current reference internal" href="#">stilt.transport.hysplit.Met.missing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -865,7 +865,7 @@
     
     <li class="breadcrumb-item"><a href="stilt.transport.hysplit.Met.html" class="nav-link">stilt.transport.hysplit.Met</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.transport.hysplit.Met.missing_hours</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.transport.hysplit.Met.missing</span></li>
   </ul>
 </nav>
 </div>
@@ -882,21 +882,24 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="stilt-transport-hysplit-met-missing-hours">
-<h1>stilt.transport.hysplit.Met.missing_hours<a class="headerlink" href="#stilt-transport-hysplit-met-missing-hours" title="Link to this heading">#</a></h1>
+  <section id="stilt-transport-hysplit-met-missing">
+<h1>stilt.transport.hysplit.Met.missing<a class="headerlink" href="#stilt-transport-hysplit-met-missing" title="Link to this heading">#</a></h1>
 <dl class="py method">
-<dt class="sig sig-object py" id="stilt.transport.hysplit.Met.missing_hours">
-<span class="sig-prename descclassname"><span class="pre">Met.</span></span><span class="sig-name descname"><span class="pre">missing_hours</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/transport/hysplit/met.html#Met.missing_hours"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.transport.hysplit.Met.missing_hours" title="Link to this definition">#</a></dt>
-<dd><p>Return the times of the local files that cover <em>window</em> and are not found.</p>
-<p>The files <a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html#stilt.transport.hysplit.Met.files_for" title="stilt.transport.hysplit.Met.files_for"><code class="xref py py-meth docutils literal notranslate"><span class="pre">files_for()</span></code></a> fails for, without raising. Empty when
-every file is there, and always empty with <code class="docutils literal notranslate"><span class="pre">download</span></code>, which
+<dt class="sig sig-object py" id="stilt.transport.hysplit.Met.missing">
+<span class="sig-prename descclassname"><span class="pre">Met.</span></span><span class="sig-name descname"><span class="pre">missing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/transport/hysplit/met.html#Met.missing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.transport.hysplit.Met.missing" title="Link to this definition">#</a></dt>
+<dd><p>Return the stretches of <em>window</em> that no local file holds.</p>
+<p>The stretches <a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html#stilt.transport.hysplit.Met.files_for" title="stilt.transport.hysplit.Met.files_for"><code class="xref py py-meth docutils literal notranslate"><span class="pre">files_for()</span></code></a> fails for, without raising. Empty
+when every file is there, and always empty with <code class="docutils literal notranslate"><span class="pre">download</span></code>, which
 fetches the files it lacks.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>window</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</span>) – The time to cover (<code class="xref py py-func docutils literal notranslate"><span class="pre">run_window()</span></code>).</p>
 </dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Timestamp.html#pandas.Timestamp" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Timestamp</span></code></a>]</span></p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Each stretch’s first and last time.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Timestamp.html#pandas.Timestamp" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Timestamp</span></code></a>, <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Timestamp.html#pandas.Timestamp" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Timestamp</span></code></a>]]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -950,14 +953,14 @@ fetches the files it lacks.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.transport.hysplit.Met.missing_hours"><code class="docutils literal notranslate"><span class="pre">Met.missing_hours()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.transport.hysplit.Met.missing"><code class="docutils literal notranslate"><span class="pre">Met.missing()</span></code></a></li>
 </ul>
   </nav></div>
 
   <div class="sidebar-secondary-item">
 
   <div class="tocsection sourcelink">
-    <a href="../../_sources/reference/_api/stilt.transport.hysplit.Met.missing_hours.rst.txt">
+    <a href="../../_sources/reference/_api/stilt.transport.hysplit.Met.missing.rst.txt">
       <i class="fa-solid fa-file-lines"></i> Show Source
     </a>
   </div>

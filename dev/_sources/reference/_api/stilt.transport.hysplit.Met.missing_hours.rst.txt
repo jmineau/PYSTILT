@@ -1,6 +1,0 @@
-stilt.transport.hysplit.Met.missing\_hours
-==========================================
-
-.. currentmodule:: stilt.transport.hysplit
-
-.. automethod:: Met.missing_hours

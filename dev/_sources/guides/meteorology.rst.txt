@@ -21,59 +21,72 @@ them.
 Use files you already have
 --------------------------
 
-Give the folder, the pattern of the file names, and how many hours each
-file covers:
+Give the folder:
+
+.. code-block:: yaml
+
+   mets:
+     hrrr: /data/met/hrrr
+
+That is the whole entry. Subfolders are searched too, and links are followed
+to the files they point at. The files can have any names, because each ARL
+file says in its own header which times it holds: its first index record has
+the first time and the size of a time step, and its second has the spacing.
+PYSTILT reads those and nothing else to choose a file, so NOAA's names, your
+own product, and a folder of links all work the same way. Lock files, backup
+copies that end in ``~``, and names that end in ``.partial`` or ``.bad`` are
+skipped, and so is anything that is not an ARL file, such as a README.
+
+A met with other settings, such as a crop (below), is a mapping with the folder
+as ``directory``:
 
 .. code-block:: yaml
 
    mets:
      hrrr:
        directory: /data/met/hrrr
-       file_format: "%Y%m%d_%H"
-       file_tres: 6h
+       subgrid_enable: true
+       subgrid_bounds: {xmin: -114, xmax: -110, ymin: 39, ymax: 42}
+       subgrid_dir: /scratch/met_subgrid/hrrr_slv
 
-``directory``
-   The folder that holds the files. Subfolders are searched too.
+A string is always a folder: ``hrrr: hrrr`` means a folder named ``hrrr`` in
+the project. To download NOAA's HRRR, write ``download: hrrr`` (below).
 
-``file_format``
-   The file names, with the date written as `strftime codes
-   <https://docs.python.org/3/library/datetime.html#format-codes>`_:
-   ``%Y`` for the year, ``%m`` month, ``%d`` day, and ``%H`` hour. Files
-   named ``20230715_18`` match ``"%Y%m%d_%H"``. Files named
-   ``hysplit.20230715.18z.hrrra`` match ``"hysplit.%Y%m%d.%Hz.hrrra"``. A
-   file matches when its name starts with the pattern. Lock files, backup
-   copies that end in ``~``, and names that end in ``.partial`` or ``.bad``
-   are skipped.
+What the files hold is kept in a catalog, one table per folder, in
+``catalogs/`` inside ``subgrid_dir``, or under your cache directory
+(``$XDG_CACHE_HOME``, else ``~/.cache``) without one. The first read of a large
+archive takes minutes: 16,600 HRRR files on a network filesystem took about two.
+``stilt check`` brings it up to date, so run it before a batch. Otherwise the
+first simulation builds it while the others wait. After that a simulation reads
+the table, and looks in the folder again only when the table has no file for one
+of its hours or a file it chose has changed. New files are found without you
+doing anything.
 
-``file_tres``
-   How much time each file covers, such as ``6h`` or ``24h``. A file must
-   hold at least two time periods, because HYSPLIT stops on a file with one
-   ("Only one time period of meteo data"). Files of ``1h`` hold one period
-   of an hourly product, so they cannot be used.
+Keep each product in its own folder. Files of two products or two grids that
+hold the same time fail the run, naming both, because a run records one
+product and which one it means cannot be told. A file that holds part of what
+another file of the same product holds, such as a short copy, is passed over for
+the longer one.
 
-For each simulation, PYSTILT works out which files cover the hours the run
-spans (``n_hours`` from the receptor time) and looks for those. HYSPLIT
-interpolates between the met steps on either side of each of its times, so
-the files must also hold the met step at or after the run's last time: the
-release of a backward run, the end of a forward one. When that time is past
-the last step of its file, the next file is needed too. With 6-hour HRRR
-files of hourly steps, a backward run released at 23:30 needs the next
-day's first file, and so does a forward run that ends at 23:30; one
-released at 23:00 does not. With daily NAM12 files of 3-hourly steps
-(00:00 to 21:00), a run released at 22:00 needs the next day's file, and
-one released at 21:00 does not. The spacing of the steps is read from the
-met's own file that holds the run's end (found by ``file_format``), so
-other products in ``directory`` do not change it. When that file holds one
-time period or cannot be read, the spacing is taken as an hour, and a run
-the files then do not cover fails naming that file. A 24-hour backward run with 6-hour HRRR files needs 5 or
-6 files, depending on the receptor hour. Every one is needed. If one is
-missing, the simulation fails before HYSPLIT runs, as ``MET_COVERAGE``,
-naming the hours with no file. ``stilt check`` makes this search for every
-receptor before any run starts (:doc:`checking`).
+For each simulation, PYSTILT asks the catalog for the files that hold the hours
+the run spans (``n_hours`` from the receptor time). HYSPLIT interpolates between
+the met steps on either side of each of its times, so the files must also hold
+the met step at or after the run's last time: the release of a backward run, the
+end of a forward one. With 6-hour HRRR files of hourly steps, a backward run
+released at 23:30 needs the next day's first file, and so does a forward run that
+ends at 23:30; one released at 23:00 does not. With daily NAM12 files of 3-hourly
+steps (00:00 to 21:00), a run released at 22:00 needs the next day's file, and
+one released at 21:00 does not. A 24-hour backward run with 6-hour HRRR files
+needs 5 or 6 files, depending on the receptor hour. Every one is needed. If one
+is missing, the simulation fails before HYSPLIT runs, as ``MET_COVERAGE``, naming
+the hours no file holds. A file whose first index record cannot be read holds
+nothing as far as the catalog can tell, so it is reported the same way. ``stilt
+check`` makes this search for every receptor before any run starts
+(:doc:`checking`).
 
 A file that holds one time period fails the run before HYSPLIT runs, as
-``MET_COVERAGE``, naming the file. ``stilt check`` finds one in the first
-file a run needs (:doc:`checking`).
+``MET_COVERAGE``, naming the file. ``stilt check`` finds them in the files a
+run needs (:doc:`checking`).
 
 A file that is there but damaged fails the run before HYSPLIT runs too,
 as ``MET_COVERAGE``: one cut short, holding an hour written partway, or
@@ -103,33 +116,22 @@ In Python, the same settings are a dictionary or a
 
    from stilt.transport.hysplit import MetConfig
 
-   hrrr = MetConfig(
-       directory="/data/met/hrrr",
-       file_format="%Y%m%d_%H",
-       file_tres="6h",
-   )
+   hrrr = MetConfig(directory="/data/met/hrrr")
 
 You can list several mets:
 
 .. code-block:: yaml
 
    mets:
-     hrrr:
-       directory: /data/met/hrrr
-       file_format: "%Y%m%d_%H"
-       file_tres: 6h
-     gfs:
-       directory: /data/met/gfs
-       file_format: "gfs_%Y%m%d_%H"
-       file_tres: 6h
+     hrrr: /data/met/hrrr
+     gfs: /data/met/gfs
 
 
 Download from NOAA
 ------------------
 
 Set ``download`` to the name of one of NOAA's ARL archives and
-``directory`` to where the downloads should go. You don't need
-``file_format`` or ``file_tres``.
+``directory`` to where the downloads should go.
 
 .. code-block:: yaml
 
@@ -236,10 +238,7 @@ convert it to ARL first. Then it is a met like any other:
 .. code-block:: yaml
 
    mets:
-     era5:
-       directory: /data/met/era5
-       file_format: "ERA5_%Y%m%d"
-       file_tres: 24h
+     era5: /data/met/era5
    variants:
      era5:
        met: era5
@@ -298,8 +297,6 @@ projects can share one:
 
    MetConfig(
        directory="/data/met/hrrr",
-       file_format="%Y%m%d_%H",
-       file_tres="6h",
        subgrid_enable=True,
        subgrid_bounds=Bounds(xmin=-114, xmax=-110, ymin=39, ymax=42),
        subgrid_dir="/scratch/met_subgrid/hrrr_slv",
