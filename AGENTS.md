@@ -79,7 +79,7 @@ src/stilt/
   transforms/     pre-footprint particle transforms, one module each
   transport/      TransportModel/TransportConfig protocols, MODELS, get_model, run_model;
                   stilt_r.py, the stilt-r model of imported runs (runs nothing)
-    hysplit/      config, met, driver, CONTROL and SETUP.CFG writers, failures, bin/, data/
+    hysplit/      config, met, catalog, driver, CONTROL and SETUP.CFG writers, failures, bin/, data/
   execution/      ExecutionConfig, runner (plan, local run, Slurm submit), worker
   observations/   the X-STILT port: readers, sounding selection, slant receptors, columns
   meteorology.py, sampling.py, spatial.py, visualization.py, exceptions.py, _paths.py

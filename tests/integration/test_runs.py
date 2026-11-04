@@ -182,15 +182,12 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config, met_dir):
     summer_only.mkdir()
     summer = next(met_dir.glob("20210715_00-05*"))
     (summer_only / summer.name).symlink_to(summer)
-    met = traj_only_config.mets["hrrr"]
 
     bad_config = _with(
         traj_only_config,
         mets={
             "hrrr": {
                 "directory": summer_only,
-                "file_format": met["file_format"],
-                "file_tres": met["file_tres"],
             }
         },
     )
@@ -253,16 +250,12 @@ def _project_on_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir)
     assert data[period + 14 : period + 18] == b"INDX"
     damaged.unlink()
     damaged.write_bytes(data[:period])
-
-    met = traj_only_config.mets["hrrr"]
     config = _with(
         traj_only_config,
         n_hours=-12,
         mets={
             "hrrr": {
                 "directory": cut_met,
-                "file_format": met["file_format"],
-                "file_tres": met["file_tres"],
             }
         },
     )

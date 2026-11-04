@@ -1535,13 +1535,12 @@ def test_relative_paths_start_from_the_project_not_the_working_directory(
     monkeypatch.setenv("MET_ROOT", str(tmp_path / "archive"))
     (tmp_path / "real_output").mkdir()
     (tmp_path / "output_link").symlink_to(tmp_path / "real_output")
-    hrrr = {"file_format": "%Y%m%d_%H", "file_tres": "1h"}
     Project.init(
         tmp_path / "proj",
         receptors=[point_receptor],
         mets={
-            "local": {**hrrr, "directory": "met"},
-            "shared": {**hrrr, "directory": "$MET_ROOT/hrrr"},
+            "local": "met",
+            "shared": {"directory": "$MET_ROOT/hrrr"},
         },
         output=str(tmp_path / "output_link"),
         variants={"local": {}, "shared": {}},

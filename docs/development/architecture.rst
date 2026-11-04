@@ -146,8 +146,10 @@ Module map
                         stilt_r.py, the stilt-r model of imported STILT-R
                         runs, which runs nothing
        hysplit/         HYSPLIT: HysplitConfig (config.py); MetConfig and Met,
-                        ARL file discovery, download, and cropping through
-                        arlmet (met.py); HysplitModel (model.py); the driver
+                        finding, downloading, and cropping ARL files through
+                        arlmet (met.py); Catalog, what a folder's files hold,
+                        read from their headers (catalog.py); HysplitModel
+                        (model.py); the driver
                         (driver.py: write_inputs, read_particle_dat); the
                         CONTROL file (control.py) and SETUP.CFG namelist
                         (namelist.py) writers and readers; failure reasons read from its
@@ -466,10 +468,20 @@ HYSPLIT's warning is not reliable. It writes only its first ``metpos``
 warning per run, so a domain exit can hide met that ran out later. With
 ``krand: 4``, about one run in five that reaches a met file cut short drops
 every particle there with no warning at all and reports ``Complete Hysplit``.
-So ``Met.files_for`` fails before running when a file is missing, naming the
-hours, and ``Met.check`` fails when a file is damaged or the files lack a time
+So ``Met.files_for`` fails before running when no file holds a time the run
+needs, naming the hours, and ``Met.check`` fails when a file is damaged or the files lack a time
 step the run needs (arlmet's ``File.check()`` and ``File.times``, read once
 per file in a process).
+
+A local met's files are found from a table of what their headers say
+(``catalog.py``): the first index record gives the first time and the size of a
+time step, the second the spacing, and the file's size the number of steps. One
+table per folder is kept in ``subgrid_dir/catalogs/`` or the user's cache. A run
+trusts the table until it has a gap or a chosen file's size or modified time has
+changed, and then lists the folder once. ``stilt check`` always brings it up to
+date. The first build takes a lock, so a job array does not read an archive once
+per task. Stray names (``.partial``, ``.bad``, backups) stay out by name, because
+a crop being written can read as whole time steps.
 
 After the run, the driver's ``check_met_stop`` catches a silent stop that the
 check before it missed, whatever its cause. A run that stopped before

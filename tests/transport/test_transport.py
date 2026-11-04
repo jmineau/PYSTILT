@@ -226,7 +226,7 @@ def echo(monkeypatch):
 
 
 def _met(tmp_path) -> dict:
-    return make_met_config(tmp_path, file_tres="6h")
+    return make_met_config(tmp_path)
 
 
 def test_run_trajectories_returns_the_particles_and_removes_its_workdir(

@@ -55,10 +55,9 @@ The workflow side by side
      - ``config.yaml``
    * - ``met_path``
      - ``mets: <name>: directory``
-   * - ``met_file_format``
-     - ``mets: <name>: file_format`` (same strftime codes)
-   * - ``met_file_tres``
-     - ``mets: <name>: file_tres``
+   * - ``met_file_format``, ``met_file_tres``
+     - No setting. Each ARL file's header says which times it holds, so its
+       name and span are read from the file.
    * - ``n_met_min``
      - No setting. Every file a run needs must be there and whole, or the
        run fails (``MET_COVERAGE``). STILT-R runs with the files it finds

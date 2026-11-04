@@ -55,8 +55,6 @@ def test_model_config_flat_construction(tmp_path):
         mets={
             "hrrr": make_met_config(
                 directory=tmp_path / "met",
-                file_format="%Y%m%d_%H",
-                file_tres="1h",
             )
         },
         variants={"hrrr": {}},
@@ -73,18 +71,14 @@ def test_model_config_requires_nonempty_mets():
 
 
 def test_model_config_rejects_met_keys_that_cannot_name_a_variant(tmp_path):
-    mc = make_met_config(
-        directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
-    )
+    mc = make_met_config(directory=tmp_path / "met")
     with pytest.raises(Exception, match="must match"):
         ProjectConfig(mets={"hrrr_v2": mc}, variants={"hrrr_v2": {}})
 
 
 def test_a_config_loads_without_its_hysplit_build(tmp_path):
     """Loading checks the variants but builds none, so exe_dir is not needed yet."""
-    mc = make_met_config(
-        directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
-    )
+    mc = make_met_config(directory=tmp_path / "met")
     elsewhere = tmp_path / "not-mounted"
     cfg = ProjectConfig(mets={"hrrr": mc}, exe_dir=elsewhere, variants={"hrrr": {}})
     with pytest.raises(FileNotFoundError, match="version"):
@@ -100,9 +94,7 @@ def _default_footprint(cfg):
 
 def test_model_config_footprint_fields_are_flat(tmp_path, grid):
     """The footprint settings sit beside the transport ones and form the footprint."""
-    mc = make_met_config(
-        directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
-    )
+    mc = make_met_config(directory=tmp_path / "met")
     cfg = ProjectConfig(
         mets={"hrrr": mc}, grid=grid, smooth_factor=0.5, variants={"hrrr": {}}
     )
@@ -128,8 +120,6 @@ def test_model_config_yaml_roundtrip_basic(tmp_path):
         mets={
             "hrrr": make_met_config(
                 directory=tmp_path / "met",
-                file_format="%Y%m%d_%H",
-                file_tres="1h",
             )
         },
         variants={"hrrr": {}},
@@ -143,8 +133,6 @@ def test_model_config_yaml_roundtrip_basic(tmp_path):
     assert loaded.n_hours == -24
     assert loaded.numpar == 100
     assert "hrrr" in loaded.mets
-    assert loaded.mets["hrrr"]["file_format"] == "%Y%m%d_%H"
-    assert loaded.mets["hrrr"]["file_tres"] == "1h"
 
 
 def test_model_config_yaml_roundtrip_with_execution(tmp_path):
@@ -230,8 +218,6 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
         mets={
             "hrrr": make_met_config(
                 directory=tmp_path / "met",
-                file_format="%Y%m%d_%H",
-                file_tres="1h",
             )
         },
         grid=grid,
@@ -251,8 +237,6 @@ def _met_config(tmp_path):
     return {
         "hrrr": make_met_config(
             directory=tmp_path / "met",
-            file_format="%Y%m%d_%H",
-            file_tres="1h",
         )
     }
 
@@ -310,8 +294,6 @@ def test_model_config_variant_grid_in_yaml(tmp_path):
         mets:
           hrrr:
             directory: {tmp_path / "met"}
-            file_format: "%Y%m%d_%H"
-            file_tres: 1h
         grid:
           xmin: -114.0
           xmax: -111.0
@@ -346,8 +328,6 @@ def test_model_config_inline_grid_in_yaml(tmp_path):
         mets:
           hrrr:
             directory: {tmp_path / "met"}
-            file_format: "%Y%m%d_%H"
-            file_tres: 1h
         grid:
           xmin: -114.0
           xmax: -111.0
@@ -375,8 +355,6 @@ def test_model_config_null_grid_means_trajectory_only(tmp_path):
         mets:
           hrrr:
             directory: {tmp_path / "met"}
-            file_format: "%Y%m%d_%H"
-            file_tres: 1h
         grid:
           xmin: -114.0
           xmax: -111.0
@@ -403,8 +381,6 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
         mets:
           hrrr:
             directory: {tmp_path / "met"}
-            file_format: "%Y%m%d_%H"
-            file_tres: 1h
         grid:
           xmin: -114.0
           xmax: -111.0
@@ -451,8 +427,6 @@ def test_model_config_rejects_unimportable_transform_from_yaml(tmp_path):
         mets:
           hrrr:
             directory: {tmp_path / "met"}
-            file_format: "%Y%m%d_%H"
-            file_tres: 1h
         grid:
           xmin: -114.0
           xmax: -111.0
@@ -480,8 +454,6 @@ def test_model_config_unknown_keys_raise(tmp_path):
         mets:
           hrrr:
             directory: {tmp_path / "met"}
-            file_format: "%Y%m%d_%H"
-            file_tres: 1h
         mystery_param: 99
         variants:
           hrrr: {{}}
@@ -576,8 +548,6 @@ def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
         mets={
             "hrrr": {
                 "directory": tmp_path / "met",
-                "file_format": "%Y%m%d_%H",
-                "file_tres": "6h",
             }
         },
         n_hours=-6,
@@ -923,7 +893,7 @@ def test_each_geometry_is_built_once_and_not_on_load(tmp_path, monkeypatch):
     (tmp_path / "config.yaml").write_text(
         textwrap.dedent(f"""
         mets:
-          hrrr: {{directory: {tmp_path}/met, file_format: '%Y%m%d_%H', file_tres: 1h}}
+          hrrr: {{directory: {tmp_path}/met}}
         geometry: {{kind: windows, coords: [[-111.5, 40.2]], size: 0.05}}
         variants:
           hrrr: {{}}
@@ -1061,3 +1031,27 @@ def test_a_relative_geometry_file_starts_from_the_project_directory(
     assert variant.footprint is not None and variant.geometry_hash is not None
     # The settings keep the path as written, so moving the project changes no hash.
     assert variant.footprint.geometry.path == "cells.geojson"
+
+
+def test_a_met_may_be_only_its_folder(tmp_path):
+    """``hrrr: /path/to/hrrr`` is the whole entry, and stays one line in the file."""
+    write_arl_file(tmp_path / "met" / "20230101_00-05_hrrr")
+    config = ProjectConfig(mets={"hrrr": str(tmp_path / "met")}, variants={"hrrr": {}})
+
+    assert config.met_config("hrrr").directory == tmp_path / "met"
+    written = config.to_yaml()
+    assert yaml.safe_load(written)["mets"] == {"hrrr": str(tmp_path / "met")}
+
+
+def test_a_met_may_be_a_path_in_python(tmp_path):
+    write_arl_file(tmp_path / "met" / "20230101_00-05_hrrr")
+    config = ProjectConfig(mets={"hrrr": tmp_path / "met"}, variants={"hrrr": {}})
+
+    assert config.mets == {"hrrr": str(tmp_path / "met")}
+
+
+def test_a_relative_met_folder_starts_from_the_project(tmp_path):
+    write_arl_file(tmp_path / "met" / "20230101_00-05_hrrr")
+    config = ProjectConfig(mets={"hrrr": "met"}, variants={"hrrr": {}})
+
+    assert config.resolve(tmp_path)["hrrr"].met_config.directory == tmp_path / "met"

@@ -183,15 +183,10 @@ class Project:
     >>> receptor = stilt.PointReceptor(  # doctest: +SKIP
     ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
     ... )
-    >>> met = {
-    ...     "directory": "/data/hrrr",
-    ...     "file_format": "%Y%m%d_%H",
-    ...     "file_tres": "6h",
-    ... }  # doctest: +SKIP
     >>> project = stilt.Project.init(  # doctest: +SKIP
     ...     "./my_project",
     ...     receptors=[receptor],
-    ...     mets={"hrrr": met},
+    ...     mets={"hrrr": "/data/hrrr"},
     ...     variants={"hrrr": {}},
     ...     n_hours=-24,
     ...     grid={
@@ -1221,8 +1216,9 @@ class Project:
         - the met's ``directory`` exists and holds an ARL file (``met_directory``);
         - every met file each receptor's run needs is there, naming the
           hours (``met_files``);
-        - the first met file they need holds at least two time periods, which
-          HYSPLIT needs (``met_periods``);
+        - each met file they need holds at least two time periods, which
+          HYSPLIT needs (``met_periods``), and ends on a whole time step
+          (``met_cut``);
         - each receptor is inside the met's crop box, ``subgrid_bounds``,
           when the crop is on (``met_crop``);
         - each receptor is inside the footprint grid (``grid``);

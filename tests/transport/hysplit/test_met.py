@@ -2,7 +2,6 @@
 
 import datetime as dt
 import logging
-import re
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -26,11 +25,21 @@ def _run_files(met, r_time, n_hours):
     return met.files_for(run_window(r_time, n_hours))
 
 
-def _make_met(tmp_path: Path, file_format: str, tres: str) -> Met:
-    return Met(
-        "hrrr",
-        MetConfig(directory=tmp_path, file_format=file_format, file_tres=tres),
-    )
+def _make_met(tmp_path: Path) -> Met:
+    return Met("hrrr", MetConfig(directory=tmp_path))
+
+
+def _hrrr_files(directory: Path, names: list[str]) -> list[Path]:
+    """Write a file per name, such as ``20240601_06-11_hrrr``, holding the 6 hourly steps it names."""
+    return [
+        write_arl_file(
+            directory / name,
+            times=pd.date_range(
+                dt.datetime.strptime(name[:11], "%Y%m%d_%H"), periods=6, freq="h"
+            ),
+        )
+        for name in names
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -38,23 +47,32 @@ def _make_met(tmp_path: Path, file_format: str, tres: str) -> Met:
 # ---------------------------------------------------------------------------
 
 
-def test_metconfig_local_files_require_file_format(tmp_path):
-    """Local files (no download) require file_format and file_tres."""
-    with pytest.raises(Exception, match="file_format and file_tres are required"):
-        MetConfig(directory=tmp_path)
+def test_a_string_is_the_mets_folder(tmp_path):
+    """``hrrr: /path/to/hrrr`` is the whole entry of a met of local files."""
+    assert MetConfig.model_validate(str(tmp_path)).directory == tmp_path
+    assert MetConfig.model_validate(tmp_path).directory == tmp_path
 
 
-def test_metconfig_local_files_valid(tmp_path):
-    cfg = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
-    assert cfg.file_format == "%Y%m%d_%H"
+def test_a_met_with_only_a_folder_is_valid(tmp_path):
+    cfg = MetConfig(directory=tmp_path)
+    assert cfg.directory == tmp_path
     assert cfg.download is None
 
 
-def test_metconfig_download_needs_no_file_format(tmp_path):
-    """Downloading does not require file_format or file_tres."""
+@pytest.mark.parametrize(
+    "key",
+    [{"file_format": "%Y%m%d_%H"}, {"file_tres": "6h"}],
+    ids=lambda k: next(iter(k)),
+)
+def test_the_old_file_settings_are_refused_with_what_to_do(tmp_path, key):
+    with pytest.raises(ValueError, match=f"{next(iter(key))} is gone: delete it"):
+        MetConfig(directory=tmp_path, **key)
+
+
+def test_metconfig_download_keeps_its_folder(tmp_path):
     cfg = MetConfig(directory=tmp_path, download="hrrr")
     assert cfg.download == "hrrr"
-    assert cfg.file_format is None
+    assert cfg.directory == tmp_path
 
 
 def test_metconfig_unknown_archive_raises(tmp_path):
@@ -90,12 +108,7 @@ def test_metconfig_extra_fields_as_download_options(tmp_path):
 def test_metconfig_rejects_an_unknown_key_without_download(tmp_path):
     """A typo in a plain met entry is an error, as elsewhere in config.yaml (#52)."""
     with pytest.raises(ValueError, match="subgrid_enabel"):
-        MetConfig(
-            directory=tmp_path,
-            file_format="%Y%m%d_%H",
-            file_tres="6h",
-            subgrid_enabel=True,
-        )
+        MetConfig(directory=tmp_path, subgrid_enabel=True)
 
 
 def test_metconfig_rejects_an_option_the_archive_does_not_take(tmp_path):
@@ -214,7 +227,10 @@ def _archive_met(tmp_path: Path, **kwargs) -> Met:
     """A local archive holding one 6 h file, cropped into tmp_path/crops."""
     archive = tmp_path / "archive"
     archive.mkdir(parents=True, exist_ok=True)
-    (archive / "20230101_12").write_text("met")
+    write_arl_file(
+        archive / "20230101_12",
+        times=pd.date_range("2023-01-01 12:00", periods=6, freq="h"),
+    )
     settings = {
         "subgrid_bounds": BOUNDS,
         "subgrid_dir": tmp_path / "crops",
@@ -222,13 +238,7 @@ def _archive_met(tmp_path: Path, **kwargs) -> Met:
     }
     return Met(
         "hrrr",
-        MetConfig(
-            directory=archive,
-            file_format="%Y%m%d_%H",
-            file_tres="6h",
-            subgrid_enable=True,
-            **settings,
-        ),
+        MetConfig(directory=archive, subgrid_enable=True, **settings),
     )
 
 
@@ -355,18 +365,12 @@ def test_a_failed_crop_leaves_nothing_behind(tmp_path):
 def test_cropping_local_files_needs_subgrid_dir(tmp_path):
     """Crops are never written into the met archive by default (#53)."""
     with pytest.raises(ValueError, match="subgrid_dir is required"):
-        MetConfig(
-            directory=tmp_path,
-            file_format="%Y%m%d_%H",
-            file_tres="1h",
-            subgrid_enable=True,
-            subgrid_bounds=BOUNDS,
-        )
+        MetConfig(directory=tmp_path, subgrid_enable=True, subgrid_bounds=BOUNDS)
 
 
 def test_a_met_needs_its_directory():
     with pytest.raises(ValueError, match="directory"):
-        MetConfig(file_format="%Y%m%d_%H", file_tres="1h")
+        MetConfig()
 
 
 def test_metconfig_download_crop_needs_no_subgrid_dir(tmp_path):
@@ -376,29 +380,19 @@ def test_metconfig_download_crop_needs_no_subgrid_dir(tmp_path):
     assert cfg.subgrid_dir is None
 
 
-def _touch_files(tmp_path: Path, names: list[str]) -> list[Path]:
-    files = []
-    for name in names:
-        f = tmp_path / name
-        f.touch()
-        files.append(f)
-    return files
-
-
 # ---------------------------------------------------------------------------
 # The files a run reads
 # ---------------------------------------------------------------------------
 
 
 def test_readable_returns_local_files_where_they_are(tmp_path):
-    """Without cropping, HYSPLIT reads the met files in place: nothing is files."""
+    """Without cropping, HYSPLIT reads the met files in place: nothing is copied."""
     source_dir = tmp_path / "met"
-    source_dir.mkdir(parents=True)
-    before, src = source_dir / "20230101_11", source_dir / "20230101_12"
-    before.write_text("met")
-    src.write_text("met")
+    before, src = _hrrr_files(
+        source_dir, ["20230101_06-11_hrrr", "20230101_12-17_hrrr"]
+    )
 
-    met = _make_met(source_dir, "%Y%m%d_%H", "1h")
+    met = _make_met(source_dir)
 
     assert met.readable([src]) == [src]
     run = _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
@@ -407,17 +401,10 @@ def test_readable_returns_local_files_where_they_are(tmp_path):
 
 
 def test_readable_keeps_the_first_of_two_files_with_one_name(tmp_path, caplog):
-    source_dir = tmp_path / "met"
-    first_dir = source_dir / "a"
-    second_dir = source_dir / "b"
-    first_dir.mkdir(parents=True)
-    second_dir.mkdir(parents=True)
-    first = first_dir / "20230101_12"
-    second = second_dir / "20230101_12"
-    first.write_text("first")
-    second.write_text("second")
+    first = tmp_path / "met" / "a" / "20230101_12"
+    second = tmp_path / "met" / "b" / "20230101_12"
 
-    met = _make_met(source_dir, "%Y%m%d_%H", "1h")
+    met = _make_met(tmp_path / "met")
     with caplog.at_level(logging.WARNING):
         files = met.readable([first, second])
 
@@ -428,49 +415,28 @@ def test_readable_keeps_the_first_of_two_files_with_one_name(tmp_path, caplog):
 
 
 # ---------------------------------------------------------------------------
-# Backward run - standard case
+# Backward and forward runs
 # ---------------------------------------------------------------------------
 
 
-def test_files_for_backward_single_file(tmp_path):
-    """Backward 1-h run starting exactly on a 1-h boundary."""
-    _touch_files(tmp_path, ["20230101_11", "20230101_12", "20230101_13"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    files = _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
-    names = [f.name for f in files]
-    assert "20230101_11" in names
-    assert "20230101_12" in names
-
-
 def test_files_for_backward_24h(tmp_path):
-    """24-h backward run should span from previous day."""
-    names_to_touch = [f"20230101_{h:02d}" for h in range(24)] + [
-        f"20221231_{h:02d}" for h in range(24)
+    """A 24-h backward run spans the previous day, and no file is repeated."""
+    names = [
+        f"{day}_{h:02d}-{h + 5:02d}_hrrr"
+        for day in ("20221231", "20230101")
+        for h in (0, 6, 12, 18)
     ]
-    _touch_files(tmp_path, names_to_touch)
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    files = _run_files(met, dt.datetime(2023, 1, 1, 12), -24)
-    names = [f.name for f in files]
-    assert "20230101_12" in names
-    assert "20221231_12" in names
-
-
-def test_files_for_backward_deduplicates(tmp_path):
-    """Files should not repeat in the returned list."""
-    _touch_files(tmp_path, ["20230101_11", "20230101_12"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    files = _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
-    assert len(files) == len(set(f.name for f in files))
+    _hrrr_files(tmp_path, names)
+    files = _run_files(_make_met(tmp_path), dt.datetime(2023, 1, 1, 12), -24)
+    assert [f.name for f in files] == names[2:7]
 
 
 def test_files_for_forward_run(tmp_path):
-    """Forward run should include files after the receptor time."""
-    _touch_files(tmp_path, ["20230101_12", "20230101_13"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    files = _run_files(met, dt.datetime(2023, 1, 1, 12), 1)
-    names = [f.name for f in files]
-    assert "20230101_12" in names
-    assert "20230101_13" in names
+    """A forward run includes the files after the receptor time."""
+    names = ["20230101_06-11_hrrr", "20230101_12-17_hrrr", "20230101_18-23_hrrr"]
+    _hrrr_files(tmp_path, names)
+    files = _run_files(_make_met(tmp_path), dt.datetime(2023, 1, 1, 12), 7)
+    assert [f.name for f in files] == names[1:]
 
 
 # ---------------------------------------------------------------------------
@@ -479,79 +445,66 @@ def test_files_for_forward_run(tmp_path):
 
 
 def test_files_for_raises_when_no_files(tmp_path):
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    with pytest.raises(MeteorologyError, match="No met file"):
-        _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
+    with pytest.raises(MeteorologyError, match="No met file") as info:
+        _run_files(_make_met(tmp_path), dt.datetime(2023, 1, 1, 12), -1)
+    assert str(tmp_path) in str(info.value)
 
 
 def test_one_missing_file_fails_the_run_naming_its_hours(tmp_path):
     """Every file the run needs must be there, or HYSPLIT stops the particles where the met ends (#169)."""
-    _touch_files(tmp_path, ["20230101_11", "20230101_13"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    with pytest.raises(MeteorologyError, match="for 2023-01-01 12:00 ") as info:
-        _run_files(met, dt.datetime(2023, 1, 1, 13), -2)
+    _hrrr_files(tmp_path, ["20230101_00-05_hrrr", "20230101_12-17_hrrr"])
+    met = _make_met(tmp_path)
+    with pytest.raises(
+        MeteorologyError, match="for 2023-01-01 05:00 to 2023-01-01 12:00"
+    ) as info:
+        _run_files(met, dt.datetime(2023, 1, 1, 13), -12)
     assert info.value.reason == "MET_COVERAGE"
 
 
-def test_missing_hours_are_the_hours_files_for_fails_for(tmp_path):
-    """The same search as files_for, that says which files it did not find rather than raising."""
-    _touch_files(tmp_path, ["20230101_09", "20230101_11"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    window = run_window(dt.datetime(2023, 1, 1, 12), -3)
+def test_missing_is_what_files_for_fails_for(tmp_path):
+    """The same search as files_for, that says what it did not find rather than raising."""
+    _hrrr_files(tmp_path, ["20230101_00-05_hrrr", "20230101_12-17_hrrr"])
+    met = _make_met(tmp_path)
+    window = run_window(dt.datetime(2023, 1, 1, 13), -12)
 
-    missing = met.missing_hours(window)
-
-    assert missing == [
-        pd.Timestamp("2023-01-01 10:00"),
-        pd.Timestamp("2023-01-01 12:00"),
+    assert met.missing(window) == [
+        (pd.Timestamp("2023-01-01 05:00"), pd.Timestamp("2023-01-01 12:00"))
     ]
-    with pytest.raises(MeteorologyError, match="2023-01-01 10:00, 2023-01-01 12:00"):
+    with pytest.raises(MeteorologyError, match="2023-01-01 05:00 to 2023-01-01 12:00"):
         met.files_for(window)
-    _touch_files(tmp_path, ["20230101_10", "20230101_12"])
-    assert _make_met(tmp_path, "%Y%m%d_%H", "1h").missing_hours(window) == []
+    _hrrr_files(tmp_path, ["20230101_06-11_hrrr"])
+    assert _make_met(tmp_path).missing(window) == []
 
 
-def test_missing_hours_are_never_found_for_a_download(tmp_path):
+def test_nothing_is_missing_for_a_download(tmp_path):
     met = Met("hrrr", MetConfig(directory=tmp_path, download="hrrr"))
 
-    assert met.missing_hours(run_window(dt.datetime(2023, 1, 1, 12), -3)) == []
+    assert met.missing(run_window(dt.datetime(2023, 1, 1, 12), -3)) == []
 
 
-def test_checking_receptors_looks_up_each_file_once(tmp_path, monkeypatch):
-    """Receptors an hour apart need mostly the same files, which are looked up once."""
-    _touch_files(tmp_path, [f"20230101_{h:02d}" for h in range(24)])
-    write_arl_file(tmp_path / "header.arl")
-    looked_up = []
-    tails = Met._tails
+def test_checking_receptors_lists_the_folder_once(tmp_path, monkeypatch):
+    """Receptors an hour apart, some missing their files, cost one listing of the folder."""
+    from stilt.transport.hysplit import catalog as catalog_module
+
+    _hrrr_files(tmp_path, ["20230101_06-11_hrrr"])
+    walks = []
+    real_walk = catalog_module.walk
     monkeypatch.setattr(
-        Met, "_tails", lambda self, depth: looked_up.append(depth) or tails(self, depth)
+        catalog_module, "walk", lambda top: walks.append(top) or real_walk(top)
     )
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
     receptors = pd.DataFrame(
         {
-            "receptor": [f"r{h}" for h in range(6, 12)],
-            "time": [pd.Timestamp(f"2023-01-01 {h}:00") for h in range(6, 12)],
+            "receptor": [f"r{h}" for h in range(6, 16)],
+            "time": [pd.Timestamp(f"2023-01-01 {h}:00") for h in range(6, 16)],
             "longitude": -111.85,
             "latitude": 40.77,
         }
     )
 
-    found = met.check_receptors(receptors, -3)
+    found = _make_met(tmp_path).check_receptors(receptors, -3)
 
-    assert found.empty
-    # Six receptors an hour apart, each running three hours back, need the
-    # files of the nine hours from 03:00 to 11:00.
-    assert len(looked_up) == 9
-
-
-def test_files_for_error_reports_missing_patterns(tmp_path):
-    """Error message names the missing file names and the directory."""
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    with pytest.raises(
-        MeteorologyError, match="named 20230101_11, 20230101_12"
-    ) as info:
-        _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
-    assert str(tmp_path) in str(info.value)
+    assert set(found["receptor"]) == {f"r{h}" for h in [6, 7, 8, 12, 13, 14, 15]}
+    assert walks == [tmp_path]
 
 
 # ---------------------------------------------------------------------------
@@ -628,153 +581,68 @@ def test_crop_edges_written_in_another_turn_are_not_flagged_by_rounding(tmp_path
 
 
 # ---------------------------------------------------------------------------
-# Lock files are excluded
+# Which files are met files: anything with a header, anywhere under the folder
 # ---------------------------------------------------------------------------
 
 
-def test_files_for_ignores_lock_files(tmp_path):
-    _touch_files(tmp_path, ["20230101_11", "20230101_12", "20230101_12.lock"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    files = _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
-    assert all(".lock" not in f.name for f in files)
+def test_files_for_finds_files_whatever_they_are_named(tmp_path):
+    """A name says nothing: the header says what a file holds."""
+    times = pd.date_range("2024-06-01 00:00", periods=6, freq="h")
+    write_arl_file(tmp_path / "our_own_product.arl", times=times)
 
+    files = _run_files(_make_met(tmp_path), dt.datetime(2024, 6, 1, 3), -2)
 
-# ---------------------------------------------------------------------------
-# Coarser time resolution (6-hourly)
-# ---------------------------------------------------------------------------
-
-
-def test_files_for_6h_resolution(tmp_path):
-    """6-h met files: 12-h backward from 2023-01-01 12Z."""
-    _touch_files(tmp_path, ["2023010100", "2023010106", "2023010112"])
-    met = _make_met(tmp_path, "%Y%m%d%H", "6h")
-    files = _run_files(met, dt.datetime(2023, 1, 1, 12), -12)
-    names = [f.name for f in files]
-    assert "2023010100" in names
-    assert "2023010106" in names
-    assert "2023010112" in names
-
-
-def test_files_for_match_multi_hour_filename_prefixes(tmp_path):
-    _touch_files(
-        tmp_path,
-        [
-            "20240531_00-05_hrrr",
-            "20240531_06-11_hrrr",
-            "20240531_12-17_hrrr",
-            "20240531_18-23_hrrr",
-            "20240601_00-05_hrrr",
-        ],
-    )
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6 hours")
-
-    files = _run_files(met, dt.datetime(2024, 6, 1, 0), -24)
-
-    assert [f.name for f in files] == [
-        "20240531_00-05_hrrr",
-        "20240531_06-11_hrrr",
-        "20240531_12-17_hrrr",
-        "20240531_18-23_hrrr",
-        "20240601_00-05_hrrr",
-    ]
-
-
-def test_files_for_matches_a_format_with_a_wildcard(tmp_path):
-    """A format with ``*`` is matched as a wildcard, not as the characters of a name."""
-    _touch_files(
-        tmp_path, ["20240601_00-05_hrrr", "20240601_06-11_hrrr", "20240601_06"]
-    )
-    met = _make_met(tmp_path, "%Y%m%d_%H*_hrrr", "6h")
-
-    files = _run_files(met, dt.datetime(2024, 6, 1, 6), -6)
-
-    assert [f.name for f in files] == ["20240601_00-05_hrrr", "20240601_06-11_hrrr"]
-
-
-@pytest.mark.parametrize(
-    "pattern", ["20240601_0", "20240601_06", "2024/20240601_0", "20240602", "nothing"]
-)
-def test_a_pattern_finds_the_files_rglob_finds(tmp_path, pattern):
-    """The sorted index of file names gives what a search of the folder does."""
-    names = ["20240601_00", "20240601_06", "2024/20240601_00", "2024/20240601_06x"]
-    _touch_files(tmp_path, [n for n in names if "/" not in n])
-    (tmp_path / "2024").mkdir()
-    _touch_files(tmp_path, [n for n in names if "/" in n])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
-
-    found = met._matching(pattern)
-
-    assert sorted(found) == sorted(
-        f for f in tmp_path.rglob(pattern + "*") if f.is_file()
-    )
+    assert [f.name for f in files] == ["our_own_product.arl"]
 
 
 def test_files_for_searches_recursively(tmp_path):
-    nested = tmp_path / "2024" / "06"
-    nested.mkdir(parents=True)
-    _touch_files(nested, ["20240601_00-05_hrrr"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6 hours")
+    _hrrr_files(tmp_path / "2024" / "06", ["20240601_00-05_hrrr"])
 
-    files = _run_files(met, dt.datetime(2024, 6, 1, 0), 1)
+    files = _run_files(_make_met(tmp_path), dt.datetime(2024, 6, 1, 0), 1)
 
     assert [f.name for f in files] == ["20240601_00-05_hrrr"]
 
 
-def test_files_for_walks_the_directory_once(tmp_path, monkeypatch):
-    """It walked the whole tree once per file pattern (#191)."""
-    from stilt.transport.hysplit import met as met_module
-
-    _touch_files(tmp_path, [f"20230101_{h:02d}" for h in range(24)])
-    walks = []
-    real_walk = met_module._walk
-    monkeypatch.setattr(
-        met_module, "_walk", lambda top: walks.append(top) or real_walk(top)
+def test_files_are_in_time_order_whatever_their_names_sort_as(tmp_path):
+    """HRRR's two naming schemes meet at 2019-06-12: ``hysplit.*`` sorts after ``2019*``."""
+    old = write_arl_file(
+        tmp_path / "hysplit.20190611.18z.hrrra",
+        times=pd.date_range("2019-06-11 18:00", periods=6, freq="h"),
     )
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
+    new = write_arl_file(
+        tmp_path / "20190612_00-05_hrrr",
+        times=pd.date_range("2019-06-12 00:00", periods=6, freq="h"),
+    )
 
-    files = _run_files(met, dt.datetime(2023, 1, 1, 12), -6)
+    files = _run_files(_make_met(tmp_path), dt.datetime(2019, 6, 12, 2), -6)
 
-    assert len(files) == 7
-    assert walks == [met.directory]
-
-
-def test_files_for_matches_a_format_with_a_folder(tmp_path):
-    nested = tmp_path / "2024"
-    nested.mkdir()
-    _touch_files(nested, ["20240601_00-05_hrrr"])
-    _touch_files(tmp_path, ["20240601_00-05_hrrr_elsewhere"])
-    met = _make_met(tmp_path, "%Y/%Y%m%d_%H", "6 hours")
-
-    files = _run_files(met, dt.datetime(2024, 6, 1, 0), 1)
-
-    assert files == [(nested / "20240601_00-05_hrrr").resolve()]
+    assert files == [old, new]
 
 
-def test_files_for_deduplicates_root_symlink_and_nested_file(tmp_path):
-    nested = tmp_path / "2021" / "06"
-    nested.mkdir(parents=True)
-    target = nested / "20210601_00-05_hrrr"
-    target.touch()
-    (tmp_path / "20210601_00-05_hrrr").symlink_to(target)
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6 hours")
+def test_a_folder_read_once_is_not_read_again(tmp_path, monkeypatch):
+    """A new Met, as each run makes, reads the kept table and opens no file."""
+    import arlmet
 
-    files = _run_files(met, dt.datetime(2021, 6, 1, 0), 1)
+    _hrrr_files(tmp_path, ["20230101_00-05_hrrr"])
+    window = run_window(dt.datetime(2023, 1, 1, 3), -2)
+    _make_met(tmp_path).files_for(window)
+    monkeypatch.setattr(arlmet, "probe", MagicMock(side_effect=AssertionError))
 
-    assert len(files) == 1
-    assert files[0].name == "20210601_00-05_hrrr"
+    assert [p.name for p in _make_met(tmp_path).files_for(window)] == [
+        "20230101_00-05_hrrr"
+    ]
 
 
 def _linked_archive(root: Path) -> Path:
     """
     An archive laid out as the shared HRRR one: files in year/month folders, a link to each at the top.
 
-    Beside them, a link to a missing file and a link to a folder whose name
-    starts like a met file's.
+    Beside them, a link to a missing file and a link to a folder.
     """
     nested = root / "2024" / "06"
-    nested.mkdir(parents=True)
-    for name in ["20240601_00-05_hrrr", "20240601_06-11_hrrr"]:
-        (nested / name).touch()
+    names = ["20240601_00-05_hrrr", "20240601_06-11_hrrr"]
+    _hrrr_files(nested, names)
+    for name in names:
         (root / name).symlink_to(Path("2024") / "06" / name)
     (root / "20240601_12-17_hrrr").symlink_to(Path("2024") / "06" / "gone")
     (root / "20240601_18-folder").symlink_to(Path("2024"), target_is_directory=True)
@@ -784,7 +652,7 @@ def _linked_archive(root: Path) -> Path:
 def test_a_folder_of_links_finds_each_file_once(tmp_path):
     """A file and the link to it are one file, found where the link points."""
     nested = _linked_archive(tmp_path)
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    met = _make_met(tmp_path)
 
     files = met.files_for(("2024-06-01 00:00", "2024-06-01 10:00"))
 
@@ -794,22 +662,34 @@ def test_a_folder_of_links_finds_each_file_once(tmp_path):
     ]
 
 
-@pytest.mark.parametrize("hour", [12, 18])
-def test_a_link_to_a_missing_file_or_a_folder_is_no_met_file(tmp_path, hour):
-    _linked_archive(tmp_path)
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+def test_a_link_out_of_the_folder_finds_the_file_it_points_to(tmp_path):
+    """As in the shared HRRR archive: names of one scheme link to another's files beside the folder."""
+    (real,) = _hrrr_files(tmp_path / "v1", ["20150615_00-05_hrrr"])
+    (tmp_path / "hrrr").mkdir()
+    (tmp_path / "hrrr" / "link").symlink_to(real)
 
-    with pytest.raises(MeteorologyError, match=f"named 20240601_{hour}"):
-        met.files_for((f"2024-06-01 {hour}:00", f"2024-06-01 {hour + 1}:00"))
+    files = _make_met(tmp_path / "hrrr").files_for(
+        ("2015-06-15 01:00", "2015-06-15 02:00")
+    )
+
+    assert files == [real]
+
+
+def test_a_link_to_a_missing_file_or_a_folder_is_no_met_file(tmp_path):
+    _linked_archive(tmp_path)
+    met = _make_met(tmp_path)
+
+    with pytest.raises(MeteorologyError, match="No met file"):
+        met.files_for(("2024-06-01 12:00", "2024-06-01 13:00"))
 
 
 def test_the_walk_lists_links_without_following_them(tmp_path):
     """Links are listed as names, and a link to a folder is not walked into."""
-    from stilt.transport.hysplit.met import _walk
+    from stilt.transport.hysplit.catalog import walk
 
     _linked_archive(tmp_path)
 
-    walked = {Path(folder): sorted(names) for folder, names in _walk(tmp_path)}
+    walked = {Path(folder): sorted(names) for folder, names in walk(tmp_path)}
 
     assert walked == {
         tmp_path: [
@@ -825,37 +705,13 @@ def test_the_walk_lists_links_without_following_them(tmp_path):
 
 def test_the_walk_skips_a_folder_it_cannot_read(tmp_path):
     """As os.walk does: a missing directory lists nothing, and raises nothing."""
-    from stilt.transport.hysplit.met import _walk
+    from stilt.transport.hysplit.catalog import walk
 
-    assert list(_walk(tmp_path / "missing")) == []
-
-
-@pytest.mark.parametrize("pattern", ["20240601_0", "20240601_1", "2024/06/2024", "06/"])
-def test_a_folder_of_links_finds_what_rglob_finds(tmp_path, pattern):
-    _linked_archive(tmp_path)
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
-
-    found = met._matching(pattern)
-
-    assert sorted(found) == sorted(
-        f for f in tmp_path.rglob(pattern + "*") if f.is_file()
-    )
-
-
-def test_files_for_backward_non_boundary_includes_ceil_file(tmp_path):
-    _touch_files(tmp_path, ["20230101_11", "20230101_12", "20230101_13"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-
-    files = _run_files(met, dt.datetime(2023, 1, 1, 12, 30), -1)
-    names = [f.name for f in files]
-
-    assert "20230101_11" in names
-    assert "20230101_12" in names
-    assert "20230101_13" in names
+    assert list(walk(tmp_path / "missing")) == []
 
 
 def _six_hourly_hrrr(tmp_path):
-    _touch_files(
+    _hrrr_files(
         tmp_path,
         [
             "20190122_18-23_hrrr",
@@ -866,7 +722,7 @@ def _six_hourly_hrrr(tmp_path):
             "20190124_00-05_hrrr",
         ],
     )
-    return _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    return _make_met(tmp_path)
 
 
 def test_files_for_backward_mid_file_release_skips_next_file(tmp_path):
@@ -895,51 +751,60 @@ def test_files_for_backward_boundary_release_adds_nothing_later(tmp_path):
     assert files[-1].name == "20190123_18-23_hrrr"
 
 
-def test_files_for_ignores_backup_copies(tmp_path):
-    """Archive backups (name~<timestamp>~) must not be staged beside the real file (#30)."""
-    _touch_files(
-        tmp_path,
-        ["20200107_18-23_hrrr", "20200107_18-23_hrrr~20260403182134~"],
-    )
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
-    files = _run_files(met, dt.datetime(2020, 1, 7, 20), -1)
-    assert [f.name for f in files] == ["20200107_18-23_hrrr"]
-
-
-@pytest.mark.parametrize("ending", [".partial", ".bad"])
-def test_files_for_ignores_a_copy_cut_short_or_set_aside(tmp_path, ending):
-    """A sibling that ends in `.partial` or `.bad` is not the block it sits beside."""
+@pytest.mark.parametrize(
+    "ending", ["~20260403182134~", ".~1~", "~", ".lock", ".partial", ".bad"]
+)
+def test_files_for_ignores_a_copy_set_aside(tmp_path, ending):
+    """A sibling with a name like these is not a met file, though its header would pass (#30)."""
     block = "20240702_00-05_hrrr"
-    _touch_files(tmp_path, [block, block + ending])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    _hrrr_files(tmp_path, [block])
+    times = pd.date_range("2024-07-02 00:00", periods=6, freq="h")
+    write_arl_file(tmp_path / (block + ending), times=times, source="NAM")
 
-    files = _run_files(met, dt.datetime(2024, 7, 2, 3), -2)
+    files = _run_files(_make_met(tmp_path), dt.datetime(2024, 7, 2, 3), -2)
 
     assert [f.name for f in files] == [block]
 
 
-def test_files_for_ignores_a_sibling_set_aside_in_a_subfolder(tmp_path):
+def test_files_for_ignores_a_copy_set_aside_in_a_subfolder(tmp_path):
     """The HRRR archive keeps blocks in year and month folders, with their `.bad` copies."""
     block = "20260220_00-05_hrrr"
-    (tmp_path / "2026" / "02").mkdir(parents=True)
-    _touch_files(tmp_path / "2026" / "02", [block, block + ".bad"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    _hrrr_files(tmp_path / "2026" / "02", [block])
+    write_arl_file(
+        tmp_path / "2026" / "02" / (block + ".bad"),
+        times=pd.date_range("2026-02-20 00:00", periods=6, freq="h"),
+        source="NAM",
+    )
 
-    files = _run_files(met, dt.datetime(2026, 2, 20, 3), -2)
+    files = _run_files(_make_met(tmp_path), dt.datetime(2026, 2, 20, 3), -2)
 
     assert [f.name for f in files] == [block]
+
+
+def test_a_crop_being_written_is_not_a_met_file(tmp_path):
+    """A crop mid-write can read as whole time steps, so its name has to keep it out."""
+    write_arl_file(
+        tmp_path / ".20240702_00-05_hrrr.tmp.abc.partial",
+        times=pd.date_range("2024-07-02 00:00", periods=3, freq="h"),
+    )
+
+    with pytest.raises(MeteorologyError, match="No met file"):
+        _run_files(_make_met(tmp_path), dt.datetime(2024, 7, 2, 1), -1)
 
 
 def test_a_block_with_only_a_copy_set_aside_is_missing(tmp_path):
     """The copy does not stand in for the block: the run, and `stilt check`, find it missing."""
-    _touch_files(tmp_path, ["20240702_00-05_hrrr.partial"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    write_arl_file(
+        tmp_path / "20240702_00-05_hrrr.partial",
+        times=pd.date_range("2024-07-02 00:00", periods=6, freq="h"),
+    )
+    met = _make_met(tmp_path)
     window = run_window(dt.datetime(2024, 7, 2, 3), -2)
 
     with pytest.raises(MeteorologyError, match="No met file") as info:
         met.files_for(window)
     assert info.value.reason == "MET_COVERAGE"
-    assert met.missing_hours(window) == [pd.Timestamp("2024-07-02 00:00")]
+    assert met.missing(window) == [(window[0], window[1])]
 
 
 def test_the_source_is_not_read_from_a_copy_set_aside(tmp_path):
@@ -947,7 +812,7 @@ def test_the_source_is_not_read_from_a_copy_set_aside(tmp_path):
     write_arl_file(tmp_path / "20240702_00-05_hrrr.bad", source="NAM")
     write_arl_file(tmp_path / "20240702_06-11_hrrr", source="HRRR")
 
-    assert _make_met(tmp_path, "%Y%m%d_%H", "6h").config.source() == "HRRR"
+    assert _make_met(tmp_path).config.source() == "HRRR"
 
 
 def test_downloaded_met_gets_the_next_file_in_the_last_hour_of_a_file(tmp_path):
@@ -973,34 +838,17 @@ def test_downloaded_met_gets_the_next_file_in_the_last_hour_of_a_file(tmp_path):
 
 
 def test_local_met_gets_the_next_file_in_the_last_hour_of_a_file(tmp_path):
-    for name in ("20240718_12", "20240718_18"):
-        (tmp_path / name).touch()
-    met = Met(
-        "hrrr",
-        MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="6h"),
-    )
+    _hrrr_files(tmp_path, ["20240718_12-17_hrrr", "20240718_18-23_hrrr"])
+    met = _make_met(tmp_path)
 
     in_last_hour = _run_files(met, "2024-07-18 17:30", -1)
     earlier = _run_files(met, "2024-07-18 16:30", -1)
 
-    assert [p.name for p in in_last_hour] == ["20240718_12", "20240718_18"]
-    assert [p.name for p in earlier] == ["20240718_12"]
-
-
-def test_local_hourly_met_on_the_hour_reads_no_extra_file(tmp_path):
-    """With 1-hour files, a release exactly on the hour needs only its own file, as in STILT-R."""
-    for name in ("20240718_17", "20240718_18", "20240718_19"):
-        (tmp_path / name).touch()
-    met = Met(
-        "hrrr",
-        MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h"),
-    )
-
-    on_the_hour = _run_files(met, "2024-07-18 18:00", -1)
-    past_it = _run_files(met, "2024-07-18 18:30", -1)
-
-    assert [p.name for p in on_the_hour] == ["20240718_17", "20240718_18"]
-    assert [p.name for p in past_it] == ["20240718_17", "20240718_18", "20240718_19"]
+    assert [p.name for p in in_last_hour] == [
+        "20240718_12-17_hrrr",
+        "20240718_18-23_hrrr",
+    ]
+    assert [p.name for p in earlier] == ["20240718_12-17_hrrr"]
 
 
 def _window_end_files(met, end):
@@ -1028,37 +876,20 @@ def test_a_forward_run_reads_the_hour_after_its_end_in_six_hour_files(
     tmp_path, end, files
 ):
     """A forward run needs the met time after its end, as a backward run does after its release (#275)."""
-    _touch_files(
+    _hrrr_files(
         tmp_path,
         ["20210114_12-17_hrrr", "20210114_18-23_hrrr", "20210115_00-05_hrrr"],
     )
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    met = _make_met(tmp_path)
 
     assert _window_end_files(met, end)[-len(files) :] == files
 
 
 @pytest.mark.parametrize(
-    ("end", "last"),
-    [
-        ("2024-07-18 18:00", "20240718_18"),
-        ("2024-07-18 18:01", "20240718_19"),
-        ("2024-07-18 18:59", "20240718_19"),
-        ("2024-07-18 19:00", "20240718_19"),
-    ],
-)
-def test_a_forward_run_reads_the_hour_after_its_end_in_hourly_files(
-    tmp_path, end, last
-):
-    _touch_files(tmp_path, [f"20240718_{h:02d}" for h in range(14, 21)])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-
-    assert _window_end_files(met, end)[-1] == last
-
-
-@pytest.mark.parametrize(
     ("end", "files"),
     [
-        ("2015-01-01 22:00", ["20150101_nam12"]),
+        ("2015-01-01 21:00", ["20150101_nam12"]),
+        ("2015-01-01 22:00", ["20150101_nam12", "20150102_nam12"]),
         ("2015-01-01 23:30", ["20150101_nam12", "20150102_nam12"]),
         ("2015-01-02 00:00", ["20150101_nam12", "20150102_nam12"]),
     ],
@@ -1066,8 +897,12 @@ def test_a_forward_run_reads_the_hour_after_its_end_in_hourly_files(
 def test_a_forward_run_reads_the_hour_after_its_end_in_daily_files(
     tmp_path, end, files
 ):
-    _touch_files(tmp_path, ["20150101_nam12", "20150102_nam12"])
-    met = _make_met(tmp_path, "%Y%m%d", "1D")
+    for name, day in (
+        ("20150101_nam12", "2015-01-01"),
+        ("20150102_nam12", "2015-01-02"),
+    ):
+        write_arl_file(tmp_path / name, times=pd.date_range(day, periods=8, freq="3h"))
+    met = _make_met(tmp_path)
 
     assert _window_end_files(met, end) == files
 
@@ -1119,7 +954,7 @@ def test_files_for_reads_the_next_file_only_past_the_last_met_step(
 ):
     """A backward run released at *end* and a forward run ending then get the same files."""
     _stepped_files(tmp_path, _NAM["names"], _NAM["file_format"], _NAM["tres"], step)
-    met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
+    met = _make_met(tmp_path)
     r_time = (
         pd.Timestamp(end) if n_hours < 0 else pd.Timestamp(end) - pd.Timedelta(hours=3)
     )
@@ -1139,9 +974,7 @@ def test_check_passes_a_run_that_ends_on_the_last_met_step(tmp_path, n_hours):
     )
     r_time = dt.datetime(2015, 1, 1, 21) if n_hours < 0 else dt.datetime(2015, 1, 1, 18)
 
-    _make_met(tmp_path, _NAM["file_format"], _NAM["tres"]).check(
-        files, run_window(r_time, n_hours)
-    )
+    _make_met(tmp_path).check(files, run_window(r_time, n_hours))
 
 
 @pytest.mark.parametrize("n_hours", [-3, 3])
@@ -1153,7 +986,7 @@ def test_check_fails_a_run_past_the_last_met_step_without_the_next_file(
         tmp_path, ["20150101"], _NAM["file_format"], _NAM["tres"], "3h"
     )
     r_time = dt.datetime(2015, 1, 1, 22) if n_hours < 0 else dt.datetime(2015, 1, 1, 19)
-    met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
+    met = _make_met(tmp_path)
 
     with pytest.raises(
         MeteorologyError,
@@ -1164,20 +997,20 @@ def test_check_fails_a_run_past_the_last_met_step_without_the_next_file(
 
 
 @pytest.mark.parametrize("n_hours", [-3, 3])
-def test_missing_hours_lists_the_next_file_a_run_past_the_last_step_needs(
-    tmp_path, n_hours
-):
+def test_missing_lists_the_step_a_run_past_the_last_step_needs(tmp_path, n_hours):
     """`stilt check` asks for the next day's file a 22:00 end needs, and none for 21:00."""
     _stepped_files(tmp_path, ["20150101"], _NAM["file_format"], _NAM["tres"], "3h")
-    met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
+    met = _make_met(tmp_path)
 
     def missing(end):
         r_time = pd.Timestamp(end)
         if n_hours > 0:
             r_time -= pd.Timedelta(hours=n_hours)
-        return met.missing_hours(run_window(r_time, n_hours))
+        return met.missing(run_window(r_time, n_hours))
 
-    assert missing("2015-01-01 22:00") == [pd.Timestamp("2015-01-02")]
+    assert missing("2015-01-01 22:00") == [
+        (pd.Timestamp("2015-01-01 21:00"), pd.Timestamp("2015-01-01 22:00"))
+    ]
     assert missing("2015-01-01 21:00") == []
 
 
@@ -1205,7 +1038,7 @@ def test_files_for_hourly_steps_drop_the_file_after_the_last_hour(
 ):
     """With hourly steps only a run that ends exactly on a file's last hour changes: it no longer needs the next file."""
     _stepped_files(tmp_path, _HRRR["names"], _HRRR["file_format"], _HRRR["tres"], "h")
-    met = _make_met(tmp_path, _HRRR["file_format"], _HRRR["tres"])
+    met = _make_met(tmp_path)
     r_time = (
         pd.Timestamp(end) if n_hours < 0 else pd.Timestamp(end) - pd.Timedelta(hours=3)
     )
@@ -1217,34 +1050,64 @@ def test_files_for_hourly_steps_drop_the_file_after_the_last_hour(
     met.check(found, window)
 
 
-def _mixed_hourly(tmp_path: Path, other: str) -> Met:
-    """Write a 6-hour file of hourly steps beside *other*, a file that sorts first, and return the hourly met."""
-    write_arl_file(
-        tmp_path / "hrrr_20210115_00",
-        times=pd.date_range("2021-01-15 00:00", periods=6, freq="h"),
-    )
-    if other == "3-hourly":
-        times = pd.date_range("2021-01-15 00:00", periods=8, freq="3h")
-        write_arl_file(tmp_path / "gfs_20210115", times=times)
-    elif other == "damaged":
-        (tmp_path / "aaa_20210115").write_bytes(b"not an ARL index record" * 50)
-    return _make_met(tmp_path, "hrrr_%Y%m%d_%H", "6h")
-
-
-@pytest.mark.parametrize("other", ["3-hourly", "damaged", "none"])
-@pytest.mark.parametrize("n_hours", [-3, 3])
-def test_the_met_step_comes_from_the_mets_own_files(tmp_path, other, n_hours):
-    """Another product in the folder, even one that sorts first, does not change the step (#283)."""
-    met = _mixed_hourly(tmp_path, other)
-    r_time = dt.datetime(2021, 1, 15, 3, 30)
-    window = run_window(
-        r_time if n_hours < 0 else r_time - dt.timedelta(hours=3), n_hours
-    )
+def test_a_file_that_is_not_arl_beside_the_met_changes_nothing(tmp_path):
+    (tmp_path / "aaa_20210115").write_bytes(b"not an ARL index record" * 50)
+    _hrrr_files(tmp_path, ["20210115_00-05_hrrr"])
+    met = _make_met(tmp_path)
+    window = run_window(dt.datetime(2021, 1, 15, 3, 30), -3)
 
     files = met.files_for(window)
 
-    assert [p.name for p in files] == ["hrrr_20210115_00"]
+    assert [p.name for p in files] == ["20210115_00-05_hrrr"]
     met.check(files, window)
+
+
+def test_two_products_holding_one_time_are_refused_naming_both(tmp_path):
+    """A run records one source, and which of the two it means cannot be told."""
+    hrrr = write_arl_file(
+        tmp_path / "hrrr_20210115",
+        times=pd.date_range("2021-01-15 00:00", periods=6, freq="h"),
+    )
+    nam = write_arl_file(
+        tmp_path / "nam_20210115",
+        times=pd.date_range("2021-01-15 00:00", periods=8, freq="3h"),
+        source="NAM",
+    )
+    with pytest.raises(MeteorologyError, match="its own folder") as info:
+        _make_met(tmp_path).files_for(run_window(dt.datetime(2021, 1, 15, 3, 30), -3))
+    assert str(hrrr) in str(info.value)
+    assert str(nam) in str(info.value)
+
+
+def test_two_products_at_different_times_share_a_folder(tmp_path):
+    """gdas0p5's source changes over its life, so a change of product alone is no clash."""
+    write_arl_file(
+        tmp_path / "old",
+        times=pd.date_range("2021-01-15 00:00", periods=6, freq="h"),
+        source="GHDA",
+    )
+    write_arl_file(
+        tmp_path / "new",
+        times=pd.date_range("2021-01-15 06:00", periods=6, freq="h"),
+        source="GFSG",
+    )
+
+    files = _make_met(tmp_path).files_for(("2021-01-15 04:00", "2021-01-15 07:00"))
+
+    assert [p.name for p in files] == ["old", "new"]
+
+
+def test_a_short_copy_of_one_product_does_not_hide_the_whole_file(tmp_path):
+    """The file that holds the most is used when one holds only part of what another does."""
+    (whole,) = _hrrr_files(tmp_path, ["20210115_00-05_hrrr"])
+    write_arl_file(
+        tmp_path / "short",
+        times=pd.date_range("2021-01-15 00:00", periods=2, freq="h"),
+    )
+
+    assert _make_met(tmp_path).files_for(("2021-01-15 00:00", "2021-01-15 01:00")) == [
+        whole
+    ]
 
 
 def test_a_3_hourly_met_beside_an_hourly_file_that_sorts_first(tmp_path):
@@ -1256,7 +1119,7 @@ def test_a_3_hourly_met_beside_an_hourly_file_that_sorts_first(tmp_path):
     names = ["20150101_nam12", "20150102_nam12"]
     for name, day in zip(names, ["2015-01-01", "2015-01-02"], strict=True):
         write_arl_file(tmp_path / name, times=pd.date_range(day, periods=8, freq="3h"))
-    met = _make_met(tmp_path, "%Y%m%d", "1D")
+    met = _make_met(tmp_path)
     window = run_window(dt.datetime(2015, 1, 1, 22), -3)
 
     files = met.files_for(window)
@@ -1272,73 +1135,33 @@ def test_the_met_step_skips_a_partial_download(tmp_path):
         tmp_path / "20150101.partial",
         times=pd.date_range("2015-01-01", periods=24, freq="h"),
     )
-    met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
+    met = _make_met(tmp_path)
 
     files = met.files_for(run_window(dt.datetime(2015, 1, 1, 22), -3))
 
     assert [p.name for p in files] == _NAM["names"]
 
 
-_ONE_HOUR = "met steps taken as one hour, as their spacing could not be read: "
-
-
-@pytest.mark.parametrize(
-    ("end_file", "problem", "refused"),
-    [
-        pytest.param(
-            lambda d: write_arl_file(d / "20150101", times=["2015-01-01"]),
-            "20150101 holds one time period",
-            _ONE_HOUR,
-            id="one-period",
-        ),
-        pytest.param(
-            lambda d: (d / "20150101").touch(),
-            "20150101 holds no time period",
-            _ONE_HOUR,
-            id="empty",
-        ),
-        pytest.param(
-            lambda d: (d / "20150101").write_bytes(b"not an ARL index record" * 50),
-            "20150101 could not be read as an ARL file",
-            "20150101 is damaged: ",
-            id="damaged",
-        ),
-    ],
-)
-def test_a_step_that_cannot_be_read_is_an_hour_and_the_check_says_why(
-    tmp_path, end_file, problem, refused
-):
-    """The file search keeps the hourly rule rather than raising, and Met.check names the file (#283)."""
-    end_file(tmp_path)
-    met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
+def test_a_file_that_is_not_arl_is_no_file_for_its_time(tmp_path):
+    """Its header cannot say what it holds, so the run finds nothing for that time."""
+    (tmp_path / "20150101").write_bytes(b"not an ARL index record" * 50)
     window = run_window(dt.datetime(2015, 1, 1, 22), -3)
 
-    files = met.files_for(window)  # does not raise
-
-    assert [p.name for p in files] == ["20150101"]
-    assert problem in str(met._step_problem)
-    with pytest.raises(MeteorologyError, match=re.escape(refused)) as info:
-        met.check(files, window)
-    if refused == _ONE_HOUR:
-        assert str(info.value).endswith(f"{tmp_path / problem}.")
-
-
-def test_a_missing_end_file_keeps_the_hourly_rule(tmp_path):
-    met = _make_met(tmp_path, _NAM["file_format"], _NAM["tres"])
-
-    assert met.missing_hours(run_window(dt.datetime(2015, 1, 1, 22), -3)) == [
-        pd.Timestamp("2015-01-01")
-    ]
+    assert _make_met(tmp_path).missing(window) == [window]
 
 
 def test_a_forward_run_missing_the_file_after_its_end_names_that_hour(tmp_path):
-    _touch_files(tmp_path, ["20210114_18-23_hrrr"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    _hrrr_files(tmp_path, ["20210114_18-23_hrrr"])
+    met = _make_met(tmp_path)
     window = run_window(dt.datetime(2021, 1, 14, 20, 31), 3)
 
-    with pytest.raises(MeteorologyError, match="for 2021-01-15 00:00 "):
+    with pytest.raises(
+        MeteorologyError, match="for 2021-01-14 23:00 to 2021-01-14 23:31"
+    ):
         met.files_for(window)
-    assert met.missing_hours(window) == [pd.Timestamp("2021-01-15 00:00")]
+    assert met.missing(window) == [
+        (pd.Timestamp("2021-01-14 23:00"), pd.Timestamp("2021-01-14 23:31"))
+    ]
 
 
 def test_a_forward_download_asks_for_the_met_step_after_its_end(tmp_path):
@@ -1425,13 +1248,8 @@ def test_an_hourly_download_gets_the_next_file_only_past_the_last_step_of_a_file
 
 
 def test_met_config_construction(tmp_path):
-    mc = MetConfig(
-        directory=tmp_path / "met",
-        file_format="%Y%m%d_%H",
-        file_tres="1h",
-    )
+    mc = MetConfig(directory=tmp_path / "met")
     assert mc.directory == tmp_path / "met"
-    assert mc.file_format == "%Y%m%d_%H"
 
 
 # ---------------------------------------------------------------------------
@@ -1440,9 +1258,7 @@ def test_met_config_construction(tmp_path):
 
 
 def _local(directory: Path, **fields) -> MetConfig:
-    return MetConfig(
-        directory=directory, file_format="%Y%m%d_%H", file_tres="1h", **fields
-    )
+    return MetConfig(directory=directory, **fields)
 
 
 def test_settings_are_the_source_in_the_file_header_and_the_crop(tmp_path):
@@ -1472,9 +1288,7 @@ def test_a_met_with_no_arl_file_cannot_say_its_source(tmp_path):
 
 
 def test_a_met_whose_directory_does_not_exist_says_so(tmp_path):
-    config = MetConfig(
-        directory=tmp_path / "gone", file_format="%Y%m%d_%H", file_tres="1h"
-    )
+    config = MetConfig(directory=tmp_path / "gone")
 
     with pytest.raises(FileNotFoundError) as info:
         config.source()
@@ -1482,14 +1296,13 @@ def test_a_met_whose_directory_does_not_exist_says_so(tmp_path):
 
 
 def test_where_the_files_are_and_how_they_are_named_are_not_recorded(tmp_path):
-    for name in ("a", "b"):
-        write_arl_file(tmp_path / name / "hrrr.20240718.t00z")
-    one = MetConfig(directory=tmp_path / "a", file_format="%Y%m%d_%H", file_tres="6h")
-    other = MetConfig(
-        directory=tmp_path / "b", file_format="hrrr.%Y%m%d.t%Hz", file_tres="1h"
-    )
+    write_arl_file(tmp_path / "a" / "20240718_00-05_hrrr")
+    write_arl_file(tmp_path / "b" / "hrrr.20240718.t00z")
 
-    assert one.settings() == other.settings()
+    assert (
+        MetConfig(directory=tmp_path / "a").settings()
+        == MetConfig(directory=tmp_path / "b").settings()
+    )
 
 
 def test_two_products_named_alike_are_told_apart(tmp_path):
@@ -1559,7 +1372,7 @@ def test_check_passes_files_that_hold_every_hour_the_run_needs(tmp_path):
     files = _six_hour_files(
         tmp_path, {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 11:00"}
     )
-    _make_met(tmp_path, "%Y%m%d_%H", "6h").check(files, _WINDOW)
+    _make_met(tmp_path).check(files, _WINDOW)
 
 
 def test_check_passes_files_of_two_time_periods(tmp_path):
@@ -1570,7 +1383,7 @@ def test_check_passes_files_of_two_time_periods(tmp_path):
         )
         for hour in range(2, 11, 2)
     ]
-    _make_met(tmp_path, "%Y%m%d_%H", "2h").check(files, _WINDOW)
+    _make_met(tmp_path).check(files, _WINDOW)
 
 
 def test_check_refuses_files_that_hold_one_time_period(tmp_path):
@@ -1581,7 +1394,7 @@ def test_check_refuses_files_that_hold_one_time_period(tmp_path):
         )
         for hour in range(2, 12)
     ]
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
+    met = _make_met(tmp_path)
     with pytest.raises(
         MeteorologyError,
         match=f"met file {files[0]} holds one time period.*Only one time period of "
@@ -1596,7 +1409,7 @@ def test_check_refuses_one_file_with_one_time_period_among_longer_ones(tmp_path)
         tmp_path, {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 11:00"}
     )
     short = write_arl_file(tmp_path / "20230101_12", times=["2023-01-01 12:00"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    met = _make_met(tmp_path)
     with pytest.raises(MeteorologyError, match=f"met file {short} holds one time"):
         met.check([*files, short], _WINDOW)
 
@@ -1606,7 +1419,7 @@ def test_a_file_cut_to_one_hour_is_reported_as_the_gap_it_leaves(tmp_path):
     files = _six_hour_files(
         tmp_path, {"20230101_00": "2023-01-01 00:00", "20230101_06": "2023-01-01 11:00"}
     )
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    met = _make_met(tmp_path)
     with pytest.raises(MeteorologyError, match="no time step between 2023-01-01 00:00"):
         met.check(files, _WINDOW)
 
@@ -1616,7 +1429,7 @@ def test_check_fails_a_file_cut_after_a_whole_hour(tmp_path):
     files = _six_hour_files(
         tmp_path, {"20230101_00": "2023-01-01 03:00", "20230101_06": "2023-01-01 11:00"}
     )
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    met = _make_met(tmp_path)
     with pytest.raises(
         MeteorologyError,
         match="no time step between 2023-01-01 03:00 and 2023-01-01 06:00",
@@ -1629,7 +1442,7 @@ def test_check_fails_files_that_end_before_the_run_does(tmp_path):
     files = _six_hour_files(
         tmp_path, {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 09:00"}
     )
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    met = _make_met(tmp_path)
     with pytest.raises(
         MeteorologyError,
         match="hold 2023-01-01 00:00 to 2023-01-01 09:00. The run needs "
@@ -1643,7 +1456,7 @@ def test_check_needs_the_step_after_a_forward_run_ends(tmp_path):
     window = run_window(dt.datetime(2021, 1, 14, 20, 31), 3)
     held = {"20210114_18": "2021-01-14 23:00", "20210115_00": "2021-01-15 05:00"}
     files = _six_hour_files(tmp_path, held)
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    met = _make_met(tmp_path)
 
     met.check(files, window)
     with pytest.raises(
@@ -1665,7 +1478,7 @@ def test_check_names_a_damaged_file(tmp_path):
         times=pd.date_range("2023-01-01 06:00", "2023-01-01 11:00", freq="h"),
         partial=True,
     )
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    met = _make_met(tmp_path)
     with pytest.raises(
         MeteorologyError,
         match=f"met file {damaged} is damaged: 2023-01-01 11:00 has 1 of the 2 data "
@@ -1679,7 +1492,7 @@ def test_check_names_a_file_that_does_not_open(tmp_path):
         tmp_path, {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 11:00"}
     )
     files[1].write_bytes(files[1].read_bytes()[:-10])  # cut inside a record
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    met = _make_met(tmp_path)
     with pytest.raises(MeteorologyError, match="is damaged: .*not a whole number"):
         met.check(files, _WINDOW)
 
@@ -1700,7 +1513,7 @@ def test_check_reads_each_file_once_until_it_changes(tmp_path, monkeypatch):
     files = _six_hour_files(
         tmp_path, {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 11:00"}
     )
-    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    met = _make_met(tmp_path)
     met.check(files, _WINDOW)
     met.check(files, _WINDOW)
     assert opened == ["20230101_00", "20230101_06"]

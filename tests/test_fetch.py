@@ -277,7 +277,7 @@ def test_a_met_without_download_is_only_checked(tmp_path):
     project = Project.init(
         tmp_path / "proj",
         receptors=[receptor],
-        mets={"hrrr": make_met_config(met_dir, file_tres="1h")},
+        mets={"hrrr": make_met_config(met_dir)},
         n_hours=-3,
         variants={"hrrr": {}},
     )
@@ -302,7 +302,7 @@ def test_a_met_without_download_that_is_complete_is_ready(tmp_path):
     project = Project.init(
         tmp_path / "proj",
         receptors=[receptor],
-        mets={"hrrr": make_met_config(met_dir, file_tres="1h")},
+        mets={"hrrr": make_met_config(met_dir)},
         n_hours=-3,
         variants={"hrrr": {}},
     )
@@ -480,7 +480,7 @@ def test_stilt_fetch_exits_with_2_for_a_met_it_cannot_read(tmp_path):
     project = Project.init(
         tmp_path / "proj",
         receptors=[receptor],
-        mets={"hrrr": make_met_config(tmp_path / "met", file_tres="1h")},
+        mets={"hrrr": make_met_config(tmp_path / "met")},
         n_hours=-3,
         variants={"hrrr": {}},
     )

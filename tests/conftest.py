@@ -23,6 +23,13 @@ integration = pytest.mark.integration
 # Met directory
 # ---------------------------------------------------------------------------
 
+
+@pytest.fixture(autouse=True)
+def _met_catalogs_stay_out_of_the_home_folder(tmp_path_factory, monkeypatch):
+    """A met without a ``subgrid_dir`` keeps its catalog in the user's cache: not a real one."""
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path_factory.getbasetemp() / "cache"))
+
+
 _TESTS_DIR = Path(__file__).parent
 _MET_CACHE = _TESTS_DIR / "met_cache"
 

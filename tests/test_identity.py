@@ -19,7 +19,7 @@ GRID = {"xmin": -112, "xmax": -111, "ymin": 40, "ymax": 41, "xres": 0.1, "yres":
 
 
 def _met(tmp_path, **overrides) -> MetConfig:
-    return make_met_config(tmp_path / "met", file_tres="6h", **overrides)
+    return make_met_config(tmp_path / "met", **overrides)
 
 
 def _variant(tmp_path, met: MetConfig | None = None, **transport) -> Variant:
@@ -74,9 +74,7 @@ def test_a_runs_met_is_its_product_and_crop(tmp_path):
 def test_moving_or_renaming_the_met_files_keeps_the_hash(tmp_path):
     base = _variant(tmp_path, numpar=100)
     write_arl_file(tmp_path / "moved" / "hrrr.20240718.t00z")
-    moved = _met(tmp_path).model_copy(
-        update={"directory": tmp_path / "moved", "file_format": "hrrr.%Y%m%d.t%Hz"}
-    )
+    moved = _met(tmp_path).model_copy(update={"directory": tmp_path / "moved"})
     assert _variant(tmp_path, met=moved, numpar=100).particles_hash == (
         base.particles_hash
     )

@@ -23,9 +23,7 @@ README = DOCS.parent / "README.md"
 #: else: one met, one variant, and a grid, so a fragment such as a
 #: ``transforms:`` list validates as part of a whole config.
 _BASE_CONFIG = {
-    "mets": {
-        "hrrr": {"directory": "/met", "file_format": "%Y%m%d_%H", "file_tres": "1h"}
-    },
+    "mets": {"hrrr": "/met"},
     "variants": {"hrrr": {}},
     "grid": {
         "xmin": -114.0,

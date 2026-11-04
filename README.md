@@ -49,7 +49,7 @@ receptor = stilt.PointReceptor(
     latitude=40.766,
     altitude=10,               # meters above ground
 )
-met = {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}
+met = "/data/hrrr"             # a folder of ARL files; their headers say what they hold
 grid = stilt.Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01)
 
 particles = stilt.run_trajectories(receptor, met, n_hours=-24, numpar=100)
