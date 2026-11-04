@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=fe5cfe4b"></script>
+    <script src="../_static/documentation_options.js?v=739953ef"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev11+g58d094548" />
+  <meta name="docsearch:version" content="0.1.0a28.dev12+gbb8e2ced9" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -826,31 +826,43 @@ files on the machine that opens the project.</p>
 <p><a class="reference internal" href="../reference/_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.sample_met()</span></code></a> reads met files at each particle’s
 position and time, and adds <code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">dens</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code>, or <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> to the
 particle table. A transport model that writes only positions can get these
-columns this way. Give it the files the run read:</p>
+columns this way. Give it the files the run read and the top of its domain,
+both of which a stored run records:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample_met</span>
 
 <span class="n">particles</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"mlht"</span><span class="p">,</span> <span class="s2">"dens"</span><span class="p">])</span>
-<span class="n">met_files</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">particles_metadata</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles_path</span><span class="p">)</span><span class="o">.</span><span class="n">met_files</span>
-<span class="n">sampled</span> <span class="o">=</span> <span class="n">sample_met</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">met_files</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"mlht"</span><span class="p">,</span> <span class="s2">"dens"</span><span class="p">])</span>
+<span class="n">meta</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">particles_metadata</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles_path</span><span class="p">)</span>
+<span class="n">sampled</span> <span class="o">=</span> <span class="n">sample_met</span><span class="p">(</span>
+    <span class="n">particles</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">met_files</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"mlht"</span><span class="p">,</span> <span class="s2">"dens"</span><span class="p">],</span> <span class="n">z_top</span><span class="o">=</span><span class="n">meta</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s2">"z_top"</span><span class="p">]</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">mlht</span></code> is the met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code> its <code class="docutils literal notranslate"><span class="pre">PRES</span></code>, <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> its
 <code class="docutils literal notranslate"><span class="pre">SHGT</span></code>, and <code class="docutils literal notranslate"><span class="pre">dens</span></code> is computed from <code class="docutils literal notranslate"><span class="pre">PRES</span></code>, <code class="docutils literal notranslate"><span class="pre">TEMP</span></code>, and <code class="docutils literal notranslate"><span class="pre">SPHU</span></code>.
-Values are interpolated across the grid and between levels by arlmet, and
-in time between the two met times around each particle’s. A particle
-below the met’s lowest level (8 to 9 m above ground for HRRR) gets NaN.</p>
-<p>These are the met’s values, not HYSPLIT’s. On two 6-hour HRRR runs from
-Salt Lake City (<code class="docutils literal notranslate"><span class="pre">tests/integration/test_sample_met.py</span></code>):</p>
+arlmet reads them across the grid and between the internal levels HYSPLIT
+uses, which depend on <code class="docutils literal notranslate"><span class="pre">z_top</span></code>, and PYSTILT then interpolates in time between
+the two met times around each particle’s. <code class="docutils literal notranslate"><span class="pre">z_top</span></code> defaults to 25000, the
+default of a run. <code class="docutils literal notranslate"><span class="pre">z_top=None</span></code> reads the met’s own levels instead, for a
+transport model that is not HYSPLIT; a particle below the lowest of them (8 to
+9 m above ground for HRRR) then gets NaN. Terrain-following (flag 3) files are
+read on their own levels, not on the internal levels HYSPLIT puts them on, so
+their values are further from HYSPLIT’s, by an amount not measured, and they
+take only the default <code class="docutils literal notranslate"><span class="pre">z_top</span></code> or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+<p>On two 6-hour HRRR runs from Salt Lake City
+(<code class="docutils literal notranslate"><span class="pre">tests/integration/test_sample_met.py</span></code>), these values against HYSPLIT’s own
+columns:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">zsfc</span></code> matches to a few meters.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mlht</span></code> matches HYSPLIT’s with <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">0</span></code>, floored at <code class="docutils literal notranslate"><span class="pre">kmix0</span></code>,
 to a median of 16 to 30 m. The default, <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code>, finds a
 different mixed layer from the profile.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pres</span></code> matches HYSPLIT’s to a median of 0.04 to 0.05 hPa, and to
-0.3 to 0.36 hPa at the 95th percentile, from the ground to 2 km. The
-worst case is 1.5 to 2.1 hPa. <code class="docutils literal notranslate"><span class="pre">dens</span></code> follows <code class="docutils literal notranslate"><span class="pre">pres</span></code>, within
-0.17 to 0.57 %.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pres</span></code> matches HYSPLIT’s to a median of 0.02 hPa, and to 0.23 to
+0.30 hPa at the 95th percentile. The worst case is 1.4 to 4.6 hPa.
+<code class="docutils literal notranslate"><span class="pre">dens</span></code> is higher than HYSPLIT’s by 0.17 to 0.57 %.</p></li>
+<li><p>On one of those runs with a 10 km top, <code class="docutils literal notranslate"><span class="pre">z_top=10000</span></code> gives a median
+<code class="docutils literal notranslate"><span class="pre">pres</span></code> difference of 0.024 hPa, where the default gives 0.032. The 95th
+percentile is about 0.29 hPa with either.</p></li>
 </ul>
 </section>
 <section id="where-hysplit-reads-the-files">

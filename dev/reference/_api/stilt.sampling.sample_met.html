@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=fe5cfe4b"></script>
+    <script src="../../_static/documentation_options.js?v=739953ef"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev11+g58d094548" />
+  <meta name="docsearch:version" content="0.1.0a28.dev12+gbb8e2ced9" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -883,14 +883,14 @@
 <h1>stilt.sampling.sample_met<a class="headerlink" href="#stilt-sampling-sample-met" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="stilt.sampling.sample_met">
-<span class="sig-prename descclassname"><span class="pre">stilt.sampling.</span></span><span class="sig-name descname"><span class="pre">sample_met</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('mlht',</span> <span class="pre">'dens',</span> <span class="pre">'pres',</span> <span class="pre">'zsfc')</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/sampling.html#sample_met"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.sampling.sample_met" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">stilt.sampling.</span></span><span class="sig-name descname"><span class="pre">sample_met</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('mlht',</span> <span class="pre">'dens',</span> <span class="pre">'pres',</span> <span class="pre">'zsfc')</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_top</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">25000.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/sampling.html#sample_met"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.sampling.sample_met" title="Link to this definition">#</a></dt>
 <dd><p>Return the particles with met columns sampled from ARL files at each particle’s position.</p>
 <p>A transport model that writes only positions can get the columns
 HYSPLIT writes from the met this way. Each row is sampled at its
 <code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code>, <code class="docutils literal notranslate"><span class="pre">zagl</span></code>, and <code class="docutils literal notranslate"><span class="pre">time</span></code>: bilinear across the met’s
-grid and linear in height between its levels
-(<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.sample_points.html#arlmet.sample_points" title="(in arl-met v0.1.0b7)"><code class="xref py py-func docutils literal notranslate"><span class="pre">arlmet.sample_points()</span></code></a>), then linear in time between the two
-met times around the particle’s, as HYSPLIT does. Each column comes
+grid and linear in height between the internal levels of a HYSPLIT run
+with the top <em>z_top</em> (<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.sample_points.html#arlmet.sample_points" title="(in arl-met v0.1.0b7)"><code class="xref py py-func docutils literal notranslate"><span class="pre">arlmet.sample_points()</span></code></a>), then linear in time
+between the two met times around the particle’s, as HYSPLIT does. Each column comes
 from these ARL variables:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">mlht</span></code> is <code class="docutils literal notranslate"><span class="pre">PBLH</span></code>, the met model’s boundary-layer height, in m
@@ -900,12 +900,10 @@ density of moist air in kg m⁻³, with R = 287.04 J kg⁻¹ K⁻¹.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pres</span></code> is <code class="docutils literal notranslate"><span class="pre">PRES</span></code>, the pressure, in hPa.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">zsfc</span></code> is <code class="docutils literal notranslate"><span class="pre">SHGT</span></code>, the terrain height, in m above sea level.</p></li>
 </ul>
-<p>The values are the met’s, not HYSPLIT’s. HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">mlht</span></code> is the
-met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code> only with <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">0</span></code>, and then it is at least
-<code class="docutils literal notranslate"><span class="pre">kmix0</span></code>; the default, <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code>, finds the mixed layer from the
-profile. HYSPLIT also finds the heights of the met’s levels its own
-way, so its <code class="docutils literal notranslate"><span class="pre">pres</span></code> and <code class="docutils literal notranslate"><span class="pre">dens</span></code> differ from these;
-<a class="reference internal" href="../../guides/meteorology.html"><span class="doc">Meteorology</span></a> says by how much.</p>
+<p><code class="docutils literal notranslate"><span class="pre">pres</span></code> and <code class="docutils literal notranslate"><span class="pre">dens</span></code> follow what HYSPLIT reads, to the differences
+<a class="reference internal" href="../../guides/meteorology.html"><span class="doc">Meteorology</span></a> gives. <code class="docutils literal notranslate"><span class="pre">mlht</span></code> is the met’s: HYSPLIT’s is the
+met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code> only with <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">0</span></code>, and then it is at least <code class="docutils literal notranslate"><span class="pre">kmix0</span></code>;
+the default, <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code>, finds the mixed layer from the profile.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -916,11 +914,19 @@ returned, add it: the receptor time plus <code class="docutils literal notransla
 run read (<code class="docutils literal notranslate"><span class="pre">met_files</span></code> of <a class="reference internal" href="stilt.transport.ModelRun.html#stilt.transport.ModelRun" title="stilt.transport.ModelRun"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transport.ModelRun</span></code></a> or of
 <a class="reference internal" href="stilt.particles.particles_metadata.html#stilt.particles.particles_metadata" title="stilt.particles.particles_metadata"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.particles.particles_metadata()</span></code></a>).</p></li>
 <li><p><strong>columns</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – The columns to add.</p></li>
+<li><p><strong>z_top</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – The top of the run’s domain in meters (<code class="docutils literal notranslate"><span class="pre">z_top</span></code> of
+<a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.html#stilt.transport.hysplit.HysplitConfig" title="stilt.transport.hysplit.HysplitConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transport.hysplit.HysplitConfig</span></code></a>), since HYSPLIT’s
+internal levels depend on it. A stored run records it:
+<code class="docutils literal notranslate"><span class="pre">particles_metadata(path).settings[&quot;z_top&quot;]</span></code>. <code class="docutils literal notranslate"><span class="pre">None</span></code> reads the
+met’s own levels, for a transport model that is not HYSPLIT; a row
+below their lowest or above their top is then NaN. Terrain-following
+(flag 3) files are read on their own levels, not on the internal levels
+HYSPLIT puts them on, and take only the default or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A copy of <em>particles</em> with the columns added. A row off the met’s
-grid, below its lowest level, or above its top is NaN.</p>
+grid is NaN.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span></p>
@@ -928,8 +934,9 @@ grid, below its lowest level, or above its top is NaN.</p>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If a column is not one of the four or is in <em>particles</em> already
-    (drop it first), <em>particles</em> has no <code class="docutils literal notranslate"><span class="pre">time</span></code> column, or a row is
-    outside the files’ times.</p></li>
+    (drop it first), <em>particles</em> has no <code class="docutils literal notranslate"><span class="pre">time</span></code> column, a row is outside
+    the files’ times, or <em>z_top</em> is not positive or, on a terrain-following
+    file, is not the default or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><strong>KeyError</strong></a> – If the files lack a variable a column needs.</p></li>
 </ul>
 </dd>
@@ -938,7 +945,10 @@ grid, below its lowest level, or above its top is NaN.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">meta</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">particles_metadata</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles_path</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">hysplit</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">particles</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">sampled</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">sampling</span><span class="o">.</span><span class="n">sample_met</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">hysplit</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">"pres"</span><span class="p">),</span> <span class="n">meta</span><span class="o">.</span><span class="n">met_files</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"pres"</span><span class="p">]</span>
+<span class="gp">... </span>    <span class="n">hysplit</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">"pres"</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">meta</span><span class="o">.</span><span class="n">met_files</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"pres"</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="n">z_top</span><span class="o">=</span><span class="n">meta</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s2">"z_top"</span><span class="p">],</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">sampled</span><span class="p">[</span><span class="s2">"pres"</span><span class="p">]</span> <span class="o">-</span> <span class="n">hysplit</span><span class="p">[</span><span class="s2">"pres"</span><span class="p">])</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
 </pre></div>

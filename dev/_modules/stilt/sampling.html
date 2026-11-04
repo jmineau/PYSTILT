@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=fe5cfe4b"></script>
+    <script src="../../_static/documentation_options.js?v=739953ef"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev11+g58d094548" />
+  <meta name="docsearch:version" content="0.1.0a28.dev12+gbb8e2ced9" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -672,6 +672,11 @@
 <span class="c1">#: Gas constant of dry air, J kg⁻¹ K⁻¹, the value HYSPLIT uses.</span>
 <span class="n">_R_DRY</span> <span class="o">=</span> <span class="mf">287.04</span>
 
+<span class="c1">#: The top of the domain of a HYSPLIT run that does not set one, in meters</span>
+<span class="c1">#: (``HysplitConfig.z_top``, which a test keeps this equal to: this module does</span>
+<span class="c1">#: not import HYSPLIT's package).</span>
+<span class="n">_DEFAULT_Z_TOP</span> <span class="o">=</span> <span class="mf">25000.0</span>
+
 
 <div class="viewcode-block" id="sample_met">
 <a class="viewcode-back" href="../../reference/_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met">[docs]</a>
@@ -679,6 +684,8 @@
     <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">files</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
     <span class="n">columns</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"mlht"</span><span class="p">,</span> <span class="s2">"dens"</span><span class="p">,</span> <span class="s2">"pres"</span><span class="p">,</span> <span class="s2">"zsfc"</span><span class="p">),</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">z_top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">_DEFAULT_Z_TOP</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the particles with met columns sampled from ARL files at each particle's position.</span>
@@ -686,9 +693,9 @@
 <span class="sd">    A transport model that writes only positions can get the columns</span>
 <span class="sd">    HYSPLIT writes from the met this way. Each row is sampled at its</span>
 <span class="sd">    ``lon``, ``lat``, ``zagl``, and ``time``: bilinear across the met's</span>
-<span class="sd">    grid and linear in height between its levels</span>
-<span class="sd">    (:func:`arlmet.sample_points`), then linear in time between the two</span>
-<span class="sd">    met times around the particle's, as HYSPLIT does. Each column comes</span>
+<span class="sd">    grid and linear in height between the internal levels of a HYSPLIT run</span>
+<span class="sd">    with the top *z_top* (:func:`arlmet.sample_points`), then linear in time</span>
+<span class="sd">    between the two met times around the particle's, as HYSPLIT does. Each column comes</span>
 <span class="sd">    from these ARL variables:</span>
 
 <span class="sd">    - ``mlht`` is ``PBLH``, the met model's boundary-layer height, in m</span>
@@ -698,12 +705,10 @@
 <span class="sd">    - ``pres`` is ``PRES``, the pressure, in hPa.</span>
 <span class="sd">    - ``zsfc`` is ``SHGT``, the terrain height, in m above sea level.</span>
 
-<span class="sd">    The values are the met's, not HYSPLIT's. HYSPLIT's ``mlht`` is the</span>
-<span class="sd">    met's ``PBLH`` only with ``kmixd: 0``, and then it is at least</span>
-<span class="sd">    ``kmix0``; the default, ``kmixd: 3``, finds the mixed layer from the</span>
-<span class="sd">    profile. HYSPLIT also finds the heights of the met's levels its own</span>
-<span class="sd">    way, so its ``pres`` and ``dens`` differ from these;</span>
-<span class="sd">    :doc:`/guides/meteorology` says by how much.</span>
+<span class="sd">    ``pres`` and ``dens`` follow what HYSPLIT reads, to the differences</span>
+<span class="sd">    :doc:`/guides/meteorology` gives. ``mlht`` is the met's: HYSPLIT's is the</span>
+<span class="sd">    met's ``PBLH`` only with ``kmixd: 0``, and then it is at least ``kmix0``;</span>
+<span class="sd">    the default, ``kmixd: 3``, finds the mixed layer from the profile.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -717,19 +722,29 @@
 <span class="sd">        :func:`stilt.particles.particles_metadata`).</span>
 <span class="sd">    columns : iterable of str, default ("mlht", "dens", "pres", "zsfc")</span>
 <span class="sd">        The columns to add.</span>
+<span class="sd">    z_top : float or None, default 25000</span>
+<span class="sd">        The top of the run's domain in meters (``z_top`` of</span>
+<span class="sd">        :class:`stilt.transport.hysplit.HysplitConfig`), since HYSPLIT's</span>
+<span class="sd">        internal levels depend on it. A stored run records it:</span>
+<span class="sd">        ``particles_metadata(path).settings["z_top"]``. ``None`` reads the</span>
+<span class="sd">        met's own levels, for a transport model that is not HYSPLIT; a row</span>
+<span class="sd">        below their lowest or above their top is then NaN. Terrain-following</span>
+<span class="sd">        (flag 3) files are read on their own levels, not on the internal levels</span>
+<span class="sd">        HYSPLIT puts them on, and take only the default or ``None``.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    pandas.DataFrame</span>
 <span class="sd">        A copy of *particles* with the columns added. A row off the met's</span>
-<span class="sd">        grid, below its lowest level, or above its top is NaN.</span>
+<span class="sd">        grid is NaN.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        If a column is not one of the four or is in *particles* already</span>
-<span class="sd">        (drop it first), *particles* has no ``time`` column, or a row is</span>
-<span class="sd">        outside the files' times.</span>
+<span class="sd">        (drop it first), *particles* has no ``time`` column, a row is outside</span>
+<span class="sd">        the files' times, or *z_top* is not positive or, on a terrain-following</span>
+<span class="sd">        file, is not the default or ``None``.</span>
 <span class="sd">    KeyError</span>
 <span class="sd">        If the files lack a variable a column needs.</span>
 
@@ -738,7 +753,10 @@
 <span class="sd">    &gt;&gt;&gt; meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; hysplit = sim.particles  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; sampled = stilt.sampling.sample_met(  # doctest: +SKIP</span>
-<span class="sd">    ...     hysplit.drop(columns="pres"), meta.met_files, columns=["pres"]</span>
+<span class="sd">    ...     hysplit.drop(columns="pres"),</span>
+<span class="sd">    ...     meta.met_files,</span>
+<span class="sd">    ...     columns=["pres"],</span>
+<span class="sd">    ...     z_top=meta.settings["z_top"],</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; (sampled["pres"] - hysplit["pres"]).describe()  # doctest: +SKIP</span>
 <span class="sd">    """</span>
@@ -774,7 +792,15 @@
             <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">position</span><span class="p">,</span> <span class="n">position</span><span class="p">[</span><span class="n">later</span><span class="p">]]),</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"z"</span><span class="p">]</span>
         <span class="p">)</span>
         <span class="n">points</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">before</span><span class="p">,</span> <span class="n">after</span><span class="p">[</span><span class="n">later</span><span class="p">]])</span>
-        <span class="n">sampled</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">sample_points</span><span class="p">(</span><span class="n">handles</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">variables</span><span class="p">,</span> <span class="n">z_kind</span><span class="o">=</span><span class="s2">"agl"</span><span class="p">)</span>
+        <span class="c1"># arlmet ignores its own default on a terrain-following file, where a</span>
+        <span class="c1"># value it is passed raises (jmineau/arl-met#153), so the default is not</span>
+        <span class="c1"># passed.</span>
+        <span class="k">if</span> <span class="n">z_top</span> <span class="o">==</span> <span class="n">_DEFAULT_Z_TOP</span><span class="p">:</span>
+            <span class="n">sampled</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">sample_points</span><span class="p">(</span><span class="n">handles</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">variables</span><span class="p">,</span> <span class="n">z_kind</span><span class="o">=</span><span class="s2">"agl"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sampled</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">sample_points</span><span class="p">(</span>
+                <span class="n">handles</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">variables</span><span class="p">,</span> <span class="n">z_kind</span><span class="o">=</span><span class="s2">"agl"</span><span class="p">,</span> <span class="n">model_top</span><span class="o">=</span><span class="n">z_top</span>
+            <span class="p">)</span>
     <span class="k">finally</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">handle</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">:</span>
             <span class="n">handle</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
