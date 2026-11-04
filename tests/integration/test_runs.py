@@ -264,6 +264,16 @@ def _project_on_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir)
     )
 
 
+def _skip_the_met_checks(monkeypatch, tmp_path) -> None:
+    """Give HYSPLIT the run's files, the one cut short too, as if nothing had looked at them first."""
+    from stilt.transport.hysplit import Met
+
+    blocks = ("20210114_18-23*", "20210115_00-05*", "20210115_06-11*")
+    files = [next((tmp_path / "met").glob(block)).resolve() for block in blocks]
+    monkeypatch.setattr(Met, "files_for", lambda self, window: files)
+    monkeypatch.setattr(Met, "check", lambda self, *args, **kwargs: None)
+
+
 @integration
 def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir):
     """A met file cut after its first hour fails the run before HYSPLIT starts, naming the gap (#169, #189)."""
@@ -275,10 +285,7 @@ def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir
     sim = project.simulation(*_sim_id(wbb_receptor))
     assert not sim.has_particles
     assert sim.failure is not None and sim.failure["reason"] == "MET_COVERAGE"
-    assert (
-        "no time step between 2021-01-14 18:00 and 2021-01-15 00:00"
-        in sim.failure["message"]
-    )
+    assert "for 2021-01-14 18:00 to 2021-01-15 00:00" in sim.failure["message"]
 
 
 @integration
@@ -286,16 +293,14 @@ def test_hysplit_fails_a_run_whose_met_runs_out(
     tmp_path, wbb_receptor, traj_only_config, met_dir, monkeypatch
 ):
     """
-    Without the check before the run, HYSPLIT's own warning fails it (#189).
+    Without the checks before the run, HYSPLIT's own warning fails it (#189).
 
     Whether HYSPLIT warns depends on the turbulence draws, so the seed is
     fixed. Seeds 1 to 9 warn here; seed 10 does not (the test below).
     """
-    from stilt.transport.hysplit import Met
-
-    monkeypatch.setattr(Met, "check", lambda self, *args, **kwargs: None)
     config = _with(traj_only_config, krand=2, seed=7)
     project = _project_on_met_cut_short(tmp_path, wbb_receptor, config, met_dir)
+    _skip_the_met_checks(monkeypatch, tmp_path)
     project.run()
 
     sim = project.simulation(*_sim_id(wbb_receptor))
@@ -317,11 +322,9 @@ def test_a_run_the_met_stopped_without_a_warning_fails_by_where_its_particles_en
     since its particles stopped far inside the met's domain, not at its
     edge as particles that leave it do.
     """
-    from stilt.transport.hysplit import Met
-
-    monkeypatch.setattr(Met, "check", lambda self, *args, **kwargs: None)
     config = _with(traj_only_config, krand=2, seed=10)
     project = _project_on_met_cut_short(tmp_path, wbb_receptor, config, met_dir)
+    _skip_the_met_checks(monkeypatch, tmp_path)
     project.run()
 
     sim = project.simulation(*_sim_id(wbb_receptor))
