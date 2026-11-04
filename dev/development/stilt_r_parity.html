@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=739953ef"></script>
+    <script src="../_static/documentation_options.js?v=e2e72b18"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev12+gbb8e2ced9" />
+  <meta name="docsearch:version" content="0.1.0a28.dev13+gd0bb7909d" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -646,6 +646,19 @@ cloud in two. A grid whose cells do not fit 360° (0.7° cells leave 0.2°)
 has an edge, and smoothing is cut there as before. A cloud that is not
 cut by the seam is measured as before, bit for bit.
 <code class="docutils literal notranslate"><span class="pre">test_global_grid_across_180_intentionally_differs_from_r</span></code> guards the
+difference.</p></li>
+<li><p><strong>Particles across 180° from the edge of a regional grid.</strong> Both programs
+pad the grid by the reach of the largest kernel, so particles just outside
+an edge smooth onto it. On a grid that ends at or near 180° (from -180° to
+-170°, or from 170° to 180°) STILT-R leaves the longitudes as written, so
+a particle at 179.9° is 360° from a grid that starts at -180° and is
+dropped. A cloud only on that side gives no footprint, and a cloud on both
+sides loses what was written on the far side. PYSTILT moves a longitude
+by a whole turn when that puts it on the padded grid, so the footprint is
+that of the same cloud and grid anywhere else. Particles already on the
+padded grid are not moved, so a grid whose padding does not reach 180°
+gets the footprint it got before, bit for bit.
+<code class="docutils literal notranslate"><span class="pre">test_grid_edge_at_180_intentionally_differs_from_r</span></code> guards the
 difference.</p></li>
 <li><p><strong>Forward runs with the HNF correction.</strong> STILT-R accumulates the plume
 from the far end of a forward trajectory back toward the release point,

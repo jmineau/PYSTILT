@@ -114,7 +114,10 @@ These footprint settings sit next to ``grid`` at the top level:
    around the earth (``xmin: -180``, ``xmax: 180``, with cells that fit
    360°) is a circle: smoothing that passes the east edge returns at the
    west edge. STILT-R smooths such a cloud far too widely and loses part
-   of the footprint (:ref:`stilt-r-parity`).
+   of the footprint (:ref:`stilt-r-parity`). On a grid that ends at or
+   near 180° (``xmin: -180``, ``xmax: -170``), particles just across 180°
+   smooth onto the grid, as particles just past any other edge do.
+   STILT-R drops them.
 
 ``time_integrate``
    ``true`` sums the footprint over time into a single map, which makes

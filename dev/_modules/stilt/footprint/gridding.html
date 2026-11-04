@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=739953ef"></script>
+    <script src="../../../_static/documentation_options.js?v=e2e72b18"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev12+gbb8e2ced9" />
+  <meta name="docsearch:version" content="0.1.0a28.dev13+gd0bb7909d" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -453,10 +453,11 @@
 <span class="sd">Footprints match STILT-R at ``rtol=1e-7`` per cell, except on a projected</span>
 <span class="sd">grid, where the smoothing (``_compute_kernel_bandwidths``) and the test for</span>
 <span class="sd">the early-time interpolation (``_interpolate_early_timesteps``) differ on</span>
-<span class="sd">purpose, and in the smoothing of a cloud across 180 degrees on a grid that</span>
+<span class="sd">purpose, in the smoothing of a cloud across 180 degrees on a grid that</span>
 <span class="sd">goes all the way around (``_unwrap_around_cloud``,</span>
-<span class="sd">``_fold_padding_around_the_globe``). Run the ``fidelity`` tests before</span>
-<span class="sd">merging any change to this module.</span>
+<span class="sd">``_fold_padding_around_the_globe``), and for particles across 180 degrees</span>
+<span class="sd">from the edge of a regional grid (``_onto_padded_axis``). Run the</span>
+<span class="sd">``fidelity`` tests before merging any change to this module.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -550,6 +551,22 @@
         <span class="n">xmax</span> <span class="o">=</span> <span class="n">_wrap_longitudes</span><span class="p">(</span><span class="n">xmax</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="kc">True</span>
     <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="kc">False</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_onto_padded_axis</span><span class="p">(</span><span class="n">lon</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">west</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">east</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return *lon*, each longitude off ``[west, east)`` moved by whole turns when that puts it on.</span>
+
+<span class="sd">    On a longitude/latitude grid the padded axis, the grid and the padding</span>
+<span class="sd">    smoothing reaches across, can pass 180 degrees though the grid does</span>
+<span class="sd">    not: a grid from -180 to -170 is padded to west of -180. A particle</span>
+<span class="sd">    written at 179.9 is in that padding, as -180.1. Longitudes already on</span>
+<span class="sd">    the axis are returned as they are, to the last bit, so only a padded</span>
+<span class="sd">    axis that passes 180 degrees gets a different footprint.</span>
+<span class="sd">    """</span>
+    <span class="n">turned</span> <span class="o">=</span> <span class="n">_wrap_longitudes</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">west</span><span class="o">=</span><span class="n">west</span><span class="p">)</span>
+    <span class="n">move</span> <span class="o">=</span> <span class="p">((</span><span class="n">lon</span> <span class="o">&lt;</span> <span class="n">west</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">lon</span> <span class="o">&gt;=</span> <span class="n">east</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">turned</span> <span class="o">&lt;</span> <span class="n">east</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">lon</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="o">~</span><span class="n">move</span><span class="p">,</span> <span class="n">turned</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_interpolate_early_timesteps</span><span class="p">(</span>
@@ -891,6 +908,7 @@
     <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">time_integrate</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">longlat</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Sum ``foot`` by padded grid cell and time step for particles on the padded grid.</span>
@@ -898,8 +916,15 @@
 <span class="sd">    Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,</span>
 <span class="sd">    foot, layer``, and ``layers`` holds the sorted hour indices, or ``[0]``</span>
 <span class="sd">    when ``time_integrate`` is set. Both are empty when no particle is on</span>
-<span class="sd">    the padded grid.</span>
+<span class="sd">    the padded grid. On a *longlat* grid a particle a whole turn from the</span>
+<span class="sd">    padded grid is on it (``_onto_padded_axis``).</span>
 <span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">longlat</span><span class="p">:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span>
+            <span class="n">lon</span><span class="o">=</span><span class="n">_onto_padded_axis</span><span class="p">(</span>
+                <span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">],</span> <span class="n">west</span><span class="o">=</span><span class="n">xmin</span> <span class="o">-</span> <span class="n">xbufh</span> <span class="o">*</span> <span class="n">xres</span><span class="p">,</span> <span class="n">east</span><span class="o">=</span><span class="n">xmax</span> <span class="o">+</span> <span class="n">xbufh</span> <span class="o">*</span> <span class="n">xres</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
     <span class="n">filtered</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
         <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">p</span><span class="p">[</span>
@@ -1105,7 +1130,10 @@
 <span class="sd">    the other way. STILT-R measures the cloud's longitudes as written, from</span>
 <span class="sd">    -180 to 180, and drops what is smoothed past the edge, so on such a grid</span>
 <span class="sd">    it smooths a cloud near 180 degrees with a far too wide kernel and loses</span>
-<span class="sd">    part of the footprint.</span>
+<span class="sd">    part of the footprint. On a grid that ends at or near 180 degrees</span>
+<span class="sd">    (``xmin=-180``, ``xmax=-170``), particles just across 180 degrees</span>
+<span class="sd">    smooth onto the grid, as particles just past any other edge do.</span>
+<span class="sd">    STILT-R drops them.</span>
 
 <span class="sd">    On a projected grid the kernel's width is worked out in degrees, as on</span>
 <span class="sd">    a longitude/latitude grid, and converted to the grid's units, so the</span>
@@ -1274,6 +1302,7 @@
         <span class="n">xres</span><span class="o">=</span><span class="n">xres</span><span class="p">,</span>
         <span class="n">yres</span><span class="o">=</span><span class="n">yres</span><span class="p">,</span>
         <span class="n">time_integrate</span><span class="o">=</span><span class="n">time_integrate</span><span class="p">,</span>
+        <span class="n">longlat</span><span class="o">=</span><span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
