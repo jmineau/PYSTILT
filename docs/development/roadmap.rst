@@ -70,7 +70,7 @@ each a ``stilt run --task`` command line.
    * - Transport models other than HYSPLIT, named by import path (``model: mypkg.MyModel``), including models that run many receptors per call
      - Implemented (the interface; HYSPLIT is the one model)
    * - Met columns (``mlht``, ``dens``, ``pres``, ``zsfc``) sampled at particle positions, for a model that writes only positions (``stilt.sampling.sample_met``)
-     - Implemented (``pres`` and ``dens`` read high above 100 m; see the Meteorology guide)
+     - Implemented (see the Meteorology guide for how closely ``pres`` and ``dens`` match HYSPLIT's)
 
 Column and satellite science (from X-STILT)
 --------------------------------------------

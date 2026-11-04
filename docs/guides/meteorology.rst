@@ -370,11 +370,10 @@ Salt Lake City (``tests/integration/test_sample_met.py``):
 - ``mlht`` matches HYSPLIT's with ``kmixd: 0``, floored at ``kmix0``,
   to a median of 16 to 30 m. The default, ``kmixd: 3``, finds a
   different mixed layer from the profile.
-- ``pres`` matches to 0.3 hPa in the lowest 100 m, then reads high: about
-  1 hPa at 100 to 500 m, 6 to 8 hPa at 1 to 2 km, and over 20 hPa above
-  2 km. HYSPLIT finds the heights of HRRR's levels from its ``PRES``
-  field; arlmet finds them from the file's nominal sigma levels.
-  ``dens`` follows ``pres``, and is 0.1 to 0.6 % higher near the ground.
+- ``pres`` matches HYSPLIT's to a median of 0.04 to 0.05 hPa, and to
+  0.3 to 0.36 hPa at the 95th percentile, from the ground to 2 km. The
+  worst case is 1.5 to 2.1 hPa. ``dens`` follows ``pres``, within
+  0.17 to 0.57 %.
 
 Where HYSPLIT reads the files
 -----------------------------
