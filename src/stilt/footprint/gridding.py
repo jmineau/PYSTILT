@@ -4,10 +4,11 @@ Calculating a footprint from particles, as STILT-R's ``calc_footprint`` does.
 Footprints match STILT-R at ``rtol=1e-7`` per cell, except on a projected
 grid, where the smoothing (``_compute_kernel_bandwidths``) and the test for
 the early-time interpolation (``_interpolate_early_timesteps``) differ on
-purpose, and in the smoothing of a cloud across 180 degrees on a grid that
+purpose, in the smoothing of a cloud across 180 degrees on a grid that
 goes all the way around (``_unwrap_around_cloud``,
-``_fold_padding_around_the_globe``). Run the ``fidelity`` tests before
-merging any change to this module.
+``_fold_padding_around_the_globe``), and for particles across 180 degrees
+from the edge of a regional grid (``_onto_padded_axis``). Run the
+``fidelity`` tests before merging any change to this module.
 """
 
 from __future__ import annotations
@@ -101,6 +102,22 @@ def _wrap_antimeridian_longitudes(
         xmax = _wrap_longitudes(xmax)
         return p, xmin, xmax, True
     return p, xmin, xmax, False
+
+
+def _onto_padded_axis(lon: pd.Series, *, west: float, east: float) -> pd.Series:
+    """
+    Return *lon*, each longitude off ``[west, east)`` moved by whole turns when that puts it on.
+
+    On a longitude/latitude grid the padded axis, the grid and the padding
+    smoothing reaches across, can pass 180 degrees though the grid does
+    not: a grid from -180 to -170 is padded to west of -180. A particle
+    written at 179.9 is in that padding, as -180.1. Longitudes already on
+    the axis are returned as they are, to the last bit, so only a padded
+    axis that passes 180 degrees gets a different footprint.
+    """
+    turned = _wrap_longitudes(lon, west=west)
+    move = ((lon < west) | (lon >= east)) & (turned < east)
+    return lon.where(~move, turned)
 
 
 def _interpolate_early_timesteps(
@@ -442,6 +459,7 @@ def _filter_and_rasterize_particles(
     xres: float,
     yres: float,
     time_integrate: bool,
+    longlat: bool = False,
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """
     Sum ``foot`` by padded grid cell and time step for particles on the padded grid.
@@ -449,8 +467,15 @@ def _filter_and_rasterize_particles(
     Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,
     foot, layer``, and ``layers`` holds the sorted hour indices, or ``[0]``
     when ``time_integrate`` is set. Both are empty when no particle is on
-    the padded grid.
+    the padded grid. On a *longlat* grid a particle a whole turn from the
+    padded grid is on it (``_onto_padded_axis``).
     """
+    if longlat:
+        p = p.assign(
+            lon=_onto_padded_axis(
+                p["lon"], west=xmin - xbufh * xres, east=xmax + xbufh * xres
+            )
+        )
     filtered = cast(
         pd.DataFrame,
         p[
@@ -654,7 +679,10 @@ def calc_footprint(
     the other way. STILT-R measures the cloud's longitudes as written, from
     -180 to 180, and drops what is smoothed past the edge, so on such a grid
     it smooths a cloud near 180 degrees with a far too wide kernel and loses
-    part of the footprint.
+    part of the footprint. On a grid that ends at or near 180 degrees
+    (``xmin=-180``, ``xmax=-170``), particles just across 180 degrees
+    smooth onto the grid, as particles just past any other edge do.
+    STILT-R drops them.
 
     On a projected grid the kernel's width is worked out in degrees, as on
     a longitude/latitude grid, and converted to the grid's units, so the
@@ -823,6 +851,7 @@ def calc_footprint(
         xres=xres,
         yres=yres,
         time_integrate=time_integrate,
+        longlat=grid.is_longlat,
     )
 
     if p.empty:

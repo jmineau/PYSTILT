@@ -160,6 +160,19 @@ What does not match
   cut by the seam is measured as before, bit for bit.
   ``test_global_grid_across_180_intentionally_differs_from_r`` guards the
   difference.
+- **Particles across 180° from the edge of a regional grid.** Both programs
+  pad the grid by the reach of the largest kernel, so particles just outside
+  an edge smooth onto it. On a grid that ends at or near 180° (from -180° to
+  -170°, or from 170° to 180°) STILT-R leaves the longitudes as written, so
+  a particle at 179.9° is 360° from a grid that starts at -180° and is
+  dropped. A cloud only on that side gives no footprint, and a cloud on both
+  sides loses what was written on the far side. PYSTILT moves a longitude
+  by a whole turn when that puts it on the padded grid, so the footprint is
+  that of the same cloud and grid anywhere else. Particles already on the
+  padded grid are not moved, so a grid whose padding does not reach 180°
+  gets the footprint it got before, bit for bit.
+  ``test_grid_edge_at_180_intentionally_differs_from_r`` guards the
+  difference.
 - **Forward runs with the HNF correction.** STILT-R accumulates the plume
   from the far end of a forward trajectory back toward the release point,
   so its plume is widest at release. PYSTILT accumulates outward from the
