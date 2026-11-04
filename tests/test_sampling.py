@@ -1,15 +1,19 @@
 """Tests for stilt.sampling and the enhancement of footprints and particles."""
 
 from pathlib import Path
+from unittest.mock import patch
 
+import arlmet
 import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
 
+from stilt import sampling
 from stilt.footprint.config import FootprintConfig
 from stilt.sampling import sample_field, sample_met
 from stilt.spatial import Grid, horizontal_dims
+from stilt.transport.hysplit import HysplitConfig
 
 from .fixtures.footprints import as_footprint
 
@@ -337,6 +341,7 @@ def test_sample_met_samples_only_the_columns_asked_for(tmp_path):
 
 
 def test_sample_met_is_nan_below_the_lowest_level_and_off_the_grid(tmp_path):
+    """A terrain-following file is read on its own levels, the first at 50 m here."""
     met = _met_file(tmp_path / "met.arl")
     particles = _particles_at([_T0, _T0], [10.0, 100.0])
     particles.loc[1, "lon"] = 60.0  # east of the grid
@@ -346,6 +351,38 @@ def test_sample_met_is_nan_below_the_lowest_level_and_off_the_grid(tmp_path):
     assert np.isnan(sampled["pres"]).all()
     assert sampled["zsfc"].iloc[0] == pytest.approx(1500.0)
     assert np.isnan(sampled["zsfc"].iloc[1])
+
+
+def test_sample_mets_default_top_is_a_runs_default_top():
+    """sampling.py does not import HYSPLIT's package, so a test keeps the two equal."""
+    assert HysplitConfig.model_fields["z_top"].default == sampling._DEFAULT_Z_TOP
+
+
+@pytest.mark.parametrize(
+    ("z_top", "passed"),
+    [
+        pytest.param(sampling._DEFAULT_Z_TOP, {}, id="the-default-is-arlmets"),
+        pytest.param(None, {"model_top": None}, id="the-mets-own-levels"),
+    ],
+)
+def test_a_terrain_following_file_takes_the_default_or_none(tmp_path, z_top, passed):
+    """Arlmet ignores its own default on such a file, where a value it is passed raises."""
+    met = _met_file(tmp_path / "met.arl")
+    particles = _particles_at([_T0], [100.0])
+
+    with patch("arlmet.sample_points", wraps=arlmet.sample_points) as sample_points:
+        sampled = sample_met(particles, [met], columns=["pres"], z_top=z_top)
+
+    keywords = sample_points.call_args.kwargs
+    assert {k: v for k, v in keywords.items() if k == "model_top"} == passed
+    assert np.isfinite(sampled["pres"]).all()
+
+
+def test_another_top_on_a_terrain_following_file_is_refused(tmp_path):
+    met = _met_file(tmp_path / "met.arl")
+
+    with pytest.raises(ValueError, match="model_top is not supported"):
+        sample_met(_particles_at([_T0], [100.0]), [met], z_top=10000.0)
 
 
 @pytest.mark.parametrize(
