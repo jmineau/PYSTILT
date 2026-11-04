@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=79661c05"></script>
+    <script src="../../_static/documentation_options.js?v=fa7f1593"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev3+g1ca401e88" />
+  <meta name="docsearch:version" content="0.1.0a28.dev4+gf7a860e11" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -468,6 +468,7 @@
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
 
 <span class="c1"># ---------------------------------------------------------------------------</span>
 <span class="c1"># Bounds and grids</span>
@@ -596,7 +597,62 @@
     <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Western edge, in degrees longitude."</span><span class="p">)</span>
     <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Eastern edge, in degrees longitude."</span><span class="p">)</span>
     <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Southern edge, in degrees latitude."</span><span class="p">)</span>
-    <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Northern edge, in degrees latitude."</span><span class="p">)</span></div>
+    <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Northern edge, in degrees latitude."</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Bounds.contains">
+<a class="viewcode-back" href="../../reference/_api/stilt.Bounds.contains.html#stilt.Bounds.contains">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">contains</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">longitude</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">latitude</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return whether each point is in the box, counting longitudes modulo 360.</span>
+
+<span class="sd">        A longitude is in the box when, counted east from ``xmin``, it is</span>
+<span class="sd">        within the box's width, so a box may cross the dateline (``xmin=170``,</span>
+<span class="sd">        ``xmax=-170``) or reach past 180 (``xmax=190``), and ``-175`` and</span>
+<span class="sd">        ``185`` are the same meridian. A box 360 degrees wide or more holds</span>
+<span class="sd">        every longitude. Points on an edge are inside; the longitude edges</span>
+<span class="sd">        allow ``1e-9`` degree for rounding, since a sum such as</span>
+<span class="sd">        ``184.7 + 175.3`` need not give exactly 360. A point with a</span>
+<span class="sd">        missing coordinate is not in the box.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        longitude, latitude : array_like of float</span>
+<span class="sd">            Degrees. Scalars or arrays, broadcast against each other.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray of bool</span>
+<span class="sd">            One value per point (a 0-d array for scalars).</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; import stilt</span>
+<span class="sd">        &gt;&gt;&gt; utah = stilt.Bounds(xmin=-114, xmax=-109, ymin=37, ymax=42)</span>
+<span class="sd">        &gt;&gt;&gt; bool(utah.contains(-111.9, 40.8))</span>
+<span class="sd">        True</span>
+<span class="sd">        &gt;&gt;&gt; bool(utah.contains(-111.9, 45.0))</span>
+<span class="sd">        False</span>
+
+<span class="sd">        A box may cross the dateline, and ``-175`` and ``185`` are one meridian:</span>
+
+<span class="sd">        &gt;&gt;&gt; pacific = stilt.Bounds(xmin=170, xmax=-170, ymin=-10, ymax=10)</span>
+<span class="sd">        &gt;&gt;&gt; pacific.contains([175, -175, 185, 0], 0).tolist()</span>
+<span class="sd">        [True, True, True, False]</span>
+<span class="sd">        """</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">longitude</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">latitude</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">in_latitude</span> <span class="o">=</span> <span class="p">(</span><span class="n">lat</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lat</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span> <span class="o">&gt;=</span> <span class="mf">360.0</span><span class="p">:</span>
+            <span class="n">in_longitude</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tolerance</span> <span class="o">=</span> <span class="mf">1e-9</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">)</span> <span class="o">%</span> <span class="mf">360.0</span>
+            <span class="n">from_west</span> <span class="o">=</span> <span class="p">(</span><span class="n">lon</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">)</span> <span class="o">%</span> <span class="mf">360.0</span>
+            <span class="n">in_longitude</span> <span class="o">=</span> <span class="p">(</span><span class="n">from_west</span> <span class="o">&lt;=</span> <span class="n">width</span> <span class="o">+</span> <span class="n">tolerance</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span>
+                <span class="n">from_west</span> <span class="o">&gt;=</span> <span class="mf">360.0</span> <span class="o">-</span> <span class="n">tolerance</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">in_longitude</span> <span class="o">&amp;</span> <span class="n">in_latitude</span><span class="p">)</span></div>
+</div>
 
 
 
