@@ -1,13 +1,13 @@
 """
 Tests that a met finds the files a run needs for every archive in arlmet.
 
-``Met`` chooses files by its own rules: from ``file_format``, ``file_tres`` and
-the spacing read from a file for local files, and from ``Archive.step`` for a
-download. arlmet's ``Archive.paths_for_range`` knows each archive's real file
-layout. The archives differ in the two facts those rules turn on, the *step*
-(1, 3 or 6 hours) and the *file span* (6 hours, a day, a week of the month, a
-month), so these tests run the rules against every archive in
-``arlmet.archives.ARCHIVES`` rather than one made-up layout.
+``Met`` chooses files by its own rules: from what each file's header says it
+holds for local files, and from ``Archive.step`` for a download. arlmet's
+``Archive.paths_for_range`` knows each archive's real file layout. The archives
+differ in the two facts those rules turn on, the *step* (1, 3 or 6 hours) and the
+*file span* (6 hours, a day, a week of the month, a month), so these tests run
+the rules against every archive in ``arlmet.archives.ARCHIVES`` rather than one
+made-up layout.
 
 What a run needs is worked out here from the archive alone: every met step from
 the one at or before the run's start to the one at or after its end (HYSPLIT
@@ -27,31 +27,6 @@ from stilt.exceptions import MeteorologyError
 from stilt.transport.hysplit import Met, MetConfig
 
 from ...fixtures.factories import write_arl_file
-
-#: How to find the files of an archive on disk: the ``file_format`` and
-#: ``file_tres`` a user writes for files named as NOAA names them.
-#: ``test_the_local_formats_name_the_archives_files`` checks each against the
-#: archive's own file names. A monthly file has the ``file_tres`` of a day: its
-#: format names the same file for every day of the month, and files are found
-#: once whatever the number of days.
-LOCAL_FILES = {
-    "hrrr": ("%Y%m%d_%H", "6h"),
-    "hrrr.v1": ("hysplit.%Y%m%d.%Hz.hrrra", "6h"),
-    "nams": ("%Y%m%d_hysplit.t00z.namsa", "1D"),
-    "nam12": ("%Y%m%d_nam12", "1D"),
-    "gdas0p5": ("%Y%m%d_gdas0p5", "1D"),
-    "gfs0p25": ("%Y%m%d_gfs0p25", "1D"),
-    "narr": ("NARR%Y%m", "1D"),
-    "reanalysis": ("RP%Y%m.gbl", "1D"),
-}
-
-#: Archives whose files no ``file_format`` can name, and why.
-NOT_FOUND_LOCALLY = {
-    "gdas1": (
-        "its weekly files are named by the week of the month (w1 to w5) and a "
-        "lowercase month, which no strftime code writes"
-    ),
-}
 
 #: Where the runs end. Each is a boundary of the files of some archive, the
 #: first of its month or its week: the day a leap February ends, a new year, a
@@ -73,7 +48,6 @@ LENGTHS = [pd.Timedelta(hours=3), pd.Timedelta(hours=30)]
 #: The archives, as the registry has them now, so one added to arlmet is
 #: tested without a change here.
 ARCHIVE_NAMES = sorted(ARCHIVES)
-LOCAL_NAMES = [name for name in ARCHIVE_NAMES if name in LOCAL_FILES]
 
 
 # ---------------------------------------------------------------------------
@@ -147,11 +121,7 @@ def _local_met(tmp_path: Path, name: str, center: str) -> Met:
         held.setdefault(_file_of(archive, step), []).append(step)
     for file_name, times in held.items():
         write_arl_file(tmp_path / file_name, times=times)
-    file_format, file_tres = LOCAL_FILES[name]
-    return Met(
-        name,
-        MetConfig(directory=tmp_path, file_format=file_format, file_tres=file_tres),
-    )
+    return Met(name, MetConfig(directory=tmp_path))
 
 
 def _met(kind: str, tmp_path: Path, name: str, center: str) -> Met:
@@ -163,38 +133,12 @@ def _met(kind: str, tmp_path: Path, name: str, center: str) -> Met:
 
 
 #: ``(archive, kind)`` for every way a met gets the files of an archive.
-WAYS = [
-    (name, kind)
-    for name in ARCHIVE_NAMES
-    for kind in ("download", "local")
-    if kind == "download" or name in LOCAL_FILES
-]
+WAYS = [(name, kind) for name in ARCHIVE_NAMES for kind in ("download", "local")]
 
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
-
-def test_every_archive_is_found_locally_or_has_a_reason_it_is_not():
-    """A new archive in arlmet fails here until its local format is written down."""
-    assert set(LOCAL_FILES) | set(NOT_FOUND_LOCALLY) == set(ARCHIVES)
-    assert not set(LOCAL_FILES) & set(NOT_FOUND_LOCALLY)
-
-
-@pytest.mark.parametrize("name", LOCAL_NAMES)
-def test_the_local_formats_name_the_archives_files(name):
-    """``file_format`` of each file's period starts the name the archive gives that file."""
-    archive = get_archive(name)
-    file_format, file_tres = LOCAL_FILES[name]
-    times = [
-        time
-        for center in CENTERS.values()
-        for time in _steps_around(center, pd.Timedelta(hours=1))
-    ]
-    for time in times:
-        wanted = time.floor(file_tres).strftime(file_format)
-        assert _file_of(archive, time).startswith(wanted), (time, wanted)
 
 
 @pytest.mark.parametrize("center", CENTERS.values(), ids=CENTERS.keys())

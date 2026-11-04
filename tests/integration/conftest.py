@@ -16,7 +16,6 @@ from stilt.transport.hysplit import MetConfig
 
 from ..fixtures.factories import make_met_config
 from ..fixtures.r_stilt_reference import (
-    REFERENCE_MET_FILE_FORMAT,
     REFERENCE_TIME,
     reference_grid,
     reference_receptor,
@@ -25,9 +24,7 @@ from ..fixtures.r_stilt_reference import (
 
 def reference_met(met_dir: Path) -> MetConfig:
     """Return the met config of the test met cache: 6-hour HRRR files."""
-    return make_met_config(
-        met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
-    )
+    return make_met_config(met_dir)
 
 
 @pytest.fixture(scope="session")

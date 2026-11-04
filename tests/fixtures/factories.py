@@ -92,35 +92,27 @@ def write_arl_file(
     return path
 
 
-def make_met_config(
-    directory: str | Path,
-    *,
-    file_format: str = "%Y%m%d_%H",
-    file_tres: str = "1h",
-    **fields: Any,
-) -> MetConfig:
+def make_met_config(directory: str | Path, **fields: Any) -> MetConfig:
     """
-    Return a met config of files named by hour (``%Y%m%d_%H``) under *directory*.
+    Return a met config of the files under *directory*.
 
     When *directory* holds no files yet, an ARL file, ``header.arl``, is
-    written there, so the met's source can be read as a project reads it;
-    its name matches no hour. A directory of real met files is left alone.
+    written there, so the met's source can be read as a project reads it. It
+    holds one time in 2000, before any run. A directory of real met files is
+    left alone.
     """
     directory = Path(directory)
     if not (directory.is_dir() and any(directory.iterdir())):
         write_arl_file(directory / "header.arl")
-    return MetConfig(
-        directory=directory, file_format=file_format, file_tres=file_tres, **fields
-    )
+    return MetConfig(directory=directory, **fields)
 
 
 def make_met_files(directory: Path, time: Any, n_hours: int) -> list[Path]:
     """
     Write hourly met files that cover a run of *n_hours* from *time*, and return them.
 
-    They are named as :func:`make_met_config` expects, one hour beyond the
-    run on each side, so :class:`stilt.transport.hysplit.Met` finds them.
-    Each holds its own hour and the next (:func:`write_arl_file`), since
+    They reach one hour beyond the run on each side, so :class:`stilt.transport.hysplit.Met` finds them.
+    Each holds its own hour and half past it (:func:`write_arl_file`), since
     HYSPLIT cannot read a file with one time period and
     :meth:`stilt.transport.hysplit.Met.check` refuses it; the transport
     model cannot run on them.
@@ -138,7 +130,7 @@ def make_met_files(directory: Path, time: Any, n_hours: int) -> list[Path]:
     directory.mkdir(parents=True, exist_ok=True)
     files = []
     for hour in hours:
-        times = [hour, hour + pd.Timedelta(hours=1)]
+        times = [hour, hour + pd.Timedelta(minutes=30)]
         files.append(write_arl_file(directory / f"{hour:%Y%m%d_%H}", times=times))
     return files
 

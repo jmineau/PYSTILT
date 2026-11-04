@@ -119,8 +119,8 @@ class HysplitModel:
 
         The checks of :meth:`Met.check_receptors`: the met's directory
         holds ARL files, every file a run needs is there, and the receptors
-        are inside the crop. Nothing is run, opened past the first file's
-        header, or downloaded.
+        are inside the crop. Nothing is run or downloaded, and files are read
+        no further than their headers.
 
         Parameters
         ----------

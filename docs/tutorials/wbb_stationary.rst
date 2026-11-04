@@ -53,13 +53,7 @@ Step 2: Make the project
        receptors=receptors,
        n_hours=-24,
        numpar=100,
-       mets={
-           "hrrr": {
-               "directory": "/data/met/hrrr",
-               "file_format": "%Y%m%d_%H",
-               "file_tres": "6h",
-           }
-       },
+       mets={"hrrr": "/data/met/hrrr"},
        grid={
            "xmin": -114.0, "xmax": -109.0,
            "ymin": 39.0,   "ymax": 42.5,

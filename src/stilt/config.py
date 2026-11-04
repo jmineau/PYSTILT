@@ -24,7 +24,7 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cached_property
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any, NamedTuple, Self
 
 import yaml
@@ -240,12 +240,13 @@ class ProjectConfig(BaseModel):
             "are top-level keys of the config."
         ),
     )
-    mets: dict[str, dict[str, Any]] = Field(
+    mets: dict[str, dict[str, Any] | str] = Field(
         default_factory=dict,
         description=(
-            "Meteorology by name, such as ``hrrr``. At least one is required. "
-            "Each is checked by the met config of the transport model that "
-            "reads it (:class:`stilt.transport.hysplit.MetConfig` for HYSPLIT)."
+            "Meteorology by name, such as ``hrrr``: the folder of its files, or "
+            "a mapping of its settings. At least one is required. Each is "
+            "checked by the met config of the transport model that reads it "
+            "(:class:`stilt.transport.hysplit.MetConfig` for HYSPLIT)."
         ),
     )
     variants: dict[str, dict[str, Any]] = Field(
@@ -288,11 +289,13 @@ class ProjectConfig(BaseModel):
     @field_validator("mets", mode="before")
     @classmethod
     def _met_mappings(cls, mets: Any) -> Any:
-        """Accept a met config object in Python, kept as the settings it was given."""
+        """Accept a met config object or a path in Python, kept as the settings it was given."""
         if isinstance(mets, dict):
             return {
                 name: met.model_dump(mode="json", exclude_unset=True)
                 if isinstance(met, BaseModel)
+                else str(met)
+                if isinstance(met, PurePath)
                 else met
                 for name, met in mets.items()
             }
@@ -560,13 +563,10 @@ STARTER_CONFIG = """# PYSTILT project configuration
 # See docs for details: https://jmineau.github.io/PYSTILT
 
 
-# Meteorology, by name. Edit directory to point to your ARL files, or replace
-# file_format and file_tres with "download: hrrr" to download them from NOAA.
+# Meteorology, by name: the folder of your ARL files. To download them from NOAA
+# instead, write hrrr: {download: hrrr, directory: /path/to/keep/them}.
 mets:
-  hrrr:  # Unique name for this met.
-    directory: /path/to/arl/meteorology
-    file_format: "%Y%m%d_%H"
-    file_tres: 6h  # Hours each met file covers; the docs' HRRR files hold six.
+  hrrr: /path/to/arl/meteorology
 
 
 # Footprint grid. Remove it (or set grid: null) to make particles only.

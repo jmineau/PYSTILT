@@ -238,8 +238,6 @@ class ReferenceScenario:
             "mets": {
                 REFERENCE_MET: {
                     "directory": met_dir,
-                    "file_format": self.met_file_format,
-                    "file_tres": self.met_file_tres,
                 }
             },
             "n_hours": self.n_hours,

@@ -4,20 +4,16 @@ HYSPLIT's meteorology: the met config (:class:`MetConfig`), and finding, downloa
 
 from __future__ import annotations
 
-import bisect
-import fnmatch
 import functools
 import inspect
 import logging
 import os
 from collections.abc import Iterable, Iterator
-from functools import cached_property
 from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self
 
 import pandas as pd
-from pandas.tseries.frequencies import to_offset
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
 from stilt._exit_codes import EXIT_INTERRUPTED, error_exit_code
@@ -27,24 +23,23 @@ from stilt.identity import settings_hash
 from stilt.meteorology import run_window
 from stilt.spatial import Bounds
 
+from .catalog import Catalog, catalog_path, is_stray
+
 if TYPE_CHECKING:
     from arlmet.archives import Archive
 
 logger = logging.getLogger(__name__)
-
-#: The characters ``fnmatch`` reads as a wildcard in a file pattern.
-_WILDCARDS = frozenset("*?[")
 
 
 class MetConfig(BaseModel):
     """
     HYSPLIT's config for one met, as written under ``mets:`` in ``config.yaml``.
 
-    HYSPLIT reads ARL files. Give either ``download`` to download them with
-    arlmet, or ``file_format`` and ``file_tres`` to find them in
-    ``directory``. With ``download``, other keys are options for that
-    archive (such as ``domain`` for ``nams``). Any other unknown key is an
-    error.
+    HYSPLIT reads ARL files. A met of files you have needs only their folder,
+    so a string is the ``directory``: ``hrrr: /path/to/hrrr``. Each file's own
+    header says which times it holds, whatever it is named. With ``download``,
+    arlmet downloads them, and other keys are options for that archive (such
+    as ``domain`` for ``nams``). Any other unknown key is an error.
 
     A run records which weather product its met is and how it was cropped
     (:meth:`settings`), not where the files are kept or how they are named.
@@ -76,31 +71,13 @@ class MetConfig(BaseModel):
         None,
         description=(
             "Name of a NOAA ARL archive to download files from with arlmet, "
-            "such as ``hrrr``, ``nam12``, ``gdas1``, or ``gfs0p25``. When set, "
-            "``file_format`` and ``file_tres`` are not needed. Options for the "
-            "archive (such as ``domain: ak``) go in the same entry."
+            "such as ``hrrr``, ``nam12``, ``gdas1``, or ``gfs0p25``. Options "
+            "for the archive (such as ``domain: ak``) go in the same entry."
         ),
     )
     download_from: Literal["s3", "ftp", "http"] = Field(
         "s3",
         description="Server to download from: ``s3``, ``ftp``, or ``http``.",
-    )
-    file_format: str | None = Field(
-        None,
-        description=(
-            "``strftime`` pattern for the start of each file name, such as "
-            "``%Y%m%d_%H``. Files whose names start with it are found anywhere "
-            "under ``directory``, except lock files, backup copies ending in "
-            "``~``, and names ending in ``.partial`` or ``.bad``. Required "
-            "when ``download`` is not set."
-        ),
-    )
-    file_tres: str | None = Field(
-        None,
-        description=(
-            "Time covered by each file, as a pandas time string such as "
-            "``6h``. Required when ``download`` is not set."
-        ),
     )
     subgrid_enable: bool = Field(
         False,
@@ -121,6 +98,12 @@ class MetConfig(BaseModel):
 
     # The source read from the first file, kept after the first read.
     _source: str | None = PrivateAttr(None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _folder(cls, data: Any) -> Any:
+        """Read a string as the met's folder: ``hrrr: /path/to/hrrr``."""
+        return {"directory": data} if isinstance(data, str | os.PathLike) else data
 
     @model_validator(mode="after")
     def _validate_mode(self) -> Self:
@@ -147,14 +130,6 @@ class MetConfig(BaseModel):
             raise ValueError(
                 f"Unknown met settings {sorted(extra)}. Only a met with "
                 "download takes extra options."
-            )
-        if self.download is None and (
-            self.file_format is None or self.file_tres is None
-        ):
-            raise ValueError(
-                "file_format and file_tres are required to find local files. "
-                "Set download to an ARL archive name, such as hrrr, to "
-                "download the files instead."
             )
         if self.subgrid_enable and self.subgrid_bounds is None:
             raise ValueError("subgrid_bounds is required when subgrid_enable=True.")
@@ -215,19 +190,6 @@ class MetConfig(BaseModel):
         return dict(self.model_extra) if self.model_extra else {}
 
 
-def _is_stray(name: str) -> bool:
-    """
-    Whether the file *name* beside a met file is not one.
-
-    Files are found by the start of their names, so a sibling such as
-    ``20240702_00-05_hrrr.partial`` would be found with the block it sits
-    beside. Stray names are lock files, backup copies (``name~<timestamp>~``,
-    ``name.~1~``, and ``name~`` all end in ``~``), a download cut short
-    (``.partial``), and a copy set aside as damaged (``.bad``).
-    """
-    return ".lock" in name or name.endswith(("~", ".partial", ".bad"))
-
-
 def _time(value: Any) -> pd.Timestamp:
     """Return *value* as a Timestamp, raising for a missing time."""
     time = pd.Timestamp(value)
@@ -257,10 +219,10 @@ class Met:
     """
     The meteorology files of one met, found locally or downloaded.
 
-    Without ``download``, files are found under ``directory`` from
-    ``file_format`` and ``file_tres``. With ``download`` set to an ARL
-    archive name, arlmet downloads the files, cropping them as it goes when
-    subgridding is on. Local files are cropped with
+    Without ``download``, files are found under ``directory`` by what their
+    headers say they hold (:class:`~stilt.transport.hysplit.catalog.Catalog`).
+    With ``download`` set to an ARL archive name, arlmet downloads the files,
+    cropping them as it goes when subgridding is on. Local files are cropped with
     ``arlmet.extract_subset`` into :attr:`crop_dir`, which all simulations
     share.
 
@@ -278,79 +240,19 @@ class Met:
         #: ``config.directory``, made absolute. A relative path starts from
         #: the working directory, and ``~`` and ``$VARIABLES`` are expanded.
         self.directory = absolute(config.directory)
+        #: What the files under :attr:`directory` hold, read from their headers.
+        self.catalog = Catalog(
+            self.directory,
+            catalog_path(
+                self.directory,
+                None if config.subgrid_dir is None else absolute(config.subgrid_dir),
+            ),
+        )
         self._archive: Archive | None = None
-        self._matches: dict[str, list[Path]] = {}
-        self._sorted_tails: dict[int, tuple[list[str], list[Path]]] = {}
-        # The spacing of the met steps once read from one of its files, and
-        # why it was taken as one hour when no file could give it.
-        self._step: pd.Timedelta | None = None
-        self._step_problem: str | None = None
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-
-    @cached_property
-    def _listing(self) -> list[tuple[tuple[str, ...], Path]]:
-        """
-        Every file under :attr:`directory`, walked once, as its path's parts relative to it and the path.
-
-        Lock files, backup copies, and names ending in ``.partial`` or ``.bad`` are left out.
-        """
-        found: list[tuple[tuple[str, ...], Path]] = []
-        for root, names in _walk(self.directory):
-            parts = Path(root).relative_to(self.directory).parts
-            for name in names:
-                if not _is_stray(name):
-                    found.append(((*parts, name), Path(root) / name))
-        return found
-
-    def _tails(self, depth: int) -> tuple[list[str], list[Path]]:
-        """Return the last *depth* parts of each file's path as ``a/b`` strings, sorted, and the files in that order."""
-        if depth not in self._sorted_tails:
-            tails = sorted(
-                ("/".join(parts[-depth:]), path)
-                for parts, path in self._listing
-                if len(parts) >= depth
-            )
-            self._sorted_tails[depth] = ([t for t, _ in tails], [p for _, p in tails])
-        return self._sorted_tails[depth]
-
-    def _matching(self, pattern: str) -> list[Path]:
-        """
-        Return the files whose path ends in one that starts with *pattern*, as ``rglob(pattern + "*")`` finds them.
-
-        Each pattern is looked up once. Without a wildcard, the files are a
-        run of the sorted paths, found by bisection, so a check of many
-        receptors, which looks up thousands of patterns in a folder of
-        thousands of files, takes seconds.
-        """
-        if pattern not in self._matches:
-            depth = pattern.count("/") + 1
-            tails, paths = self._tails(depth)
-            if _WILDCARDS.isdisjoint(pattern):
-                start = bisect.bisect_left(tails, pattern)
-                end = start
-                while end < len(tails) and tails[end].startswith(pattern):
-                    end += 1
-                candidates = paths[start:end]
-            else:
-                match = f"{pattern}*"
-                candidates = [
-                    path
-                    for tail, path in zip(tails, paths, strict=True)
-                    if fnmatch.fnmatchcase(tail, match)
-                ]
-            self._matches[pattern] = [path for path in candidates if path.is_file()]
-        return self._matches[pattern]
-
-    @staticmethod
-    def _dedupe_matched_files(paths: list[Path]) -> list[Path]:
-        """Resolve symlinks and drop duplicate files, sorted by name."""
-        return sorted(
-            dict.fromkeys(path.resolve() for path in paths),
-            key=lambda path: path.name,
-        )
 
     def _get_archive(self) -> Archive:
         """Return the arlmet archive to download from, building it on first use."""
@@ -362,15 +264,6 @@ class Met:
                 self.config.download, **self.config.download_options
             )
         return self._archive
-
-    @cached_property
-    def _file_freq(self) -> str | None:
-        """Return the period of one local file as a pandas frequency, or None for a download."""
-        if self.config.download is not None or self.config.file_tres is None:
-            return None
-        # pandas-stubs' to_offset takes no Timedelta (pandas does)
-        # pyrefly: ignore[no-matching-overload]
-        return to_offset(pd.to_timedelta(self.config.file_tres)).freqstr
 
     def _bbox(self) -> tuple[float, float, float, float]:
         """Return the crop box, ``(west, south, east, north)``."""
@@ -443,13 +336,10 @@ class Met:
         HYSPLIT steps through a run with the two met steps around each of
         its times, so in either direction it needs the met step at or after
         the window's end: the release of a backward run, the end of a
-        forward one. When the end is past the last met step of its file,
-        the next file is added. The spacing of the met steps is read once,
-        from the index records of the file that holds the window's end, as
-        ``file_format`` finds it; other products in ``directory`` do not
-        change it. When that file cannot be read or holds one time period,
-        the spacing is taken as one hour and :meth:`check` says so.
-        Downloads the files first when ``download`` is set.
+        forward one. The files are the ones whose headers say they hold the
+        steps from the one at or before the start to that one
+        (:meth:`Catalog.cover`), whatever they are named. Downloads the files
+        first when ``download`` is set.
 
         Parameters
         ----------
@@ -463,107 +353,49 @@ class Met:
         Raises
         ------
         MeteorologyError
-            A file the run needs is missing. Every one is needed: HYSPLIT
-            would stop the particles where the met runs out.
+            A file the run needs is missing, or files of two products hold
+            the same time. Every file is needed: HYSPLIT would stop the
+            particles where the met runs out.
         """
         if self.config.download is not None:
             return self._download(window)
 
-        # Local files
-        file_format = self.config.file_format
-        assert file_format is not None  # MetConfig requires it without download
-        met_times, earlier, later = self._file_times(window)
-        patterns = list(dict.fromkeys(t.strftime(file_format) for t in met_times))
-
-        files: list[Path] = []
-        missing: list[str] = []
-        for pattern in patterns:
-            matches = self._matching(pattern)
-            if matches:
-                files.extend(matches)
-            else:
-                missing.append(pattern)
-
-        if missing:
-            hours = [
-                f"{t:%Y-%m-%d %H:%M}"
-                for t in met_times
-                if t.strftime(file_format) in missing
-            ]
+        earlier, later = (_time(t) for t in window)
+        cover = self.catalog.cover(earlier, later)
+        if cover.clash is not None:
+            raise MeteorologyError(cover.clash)
+        if cover.gaps:
             raise MeteorologyError(
-                f"No met file in {self.directory} for {', '.join(hours)} "
-                f"(each {self.config.file_tres}, named {', '.join(missing)}...). "
+                f"No met file in {self.directory} for {_spans(cover.gaps)}. "
                 f"The run covers {earlier:%Y-%m-%d %H:%M} to "
                 f"{later:%Y-%m-%d %H:%M}."
             )
-        return self._dedupe_matched_files(files)
+        return cover.files
 
-    def _file_times(
+    def missing(
         self, window: tuple[Any, Any]
-    ) -> tuple[pd.DatetimeIndex, pd.Timestamp, pd.Timestamp]:
+    ) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
         """
-        Return the times of the local files that cover *window*, and its start and end.
+        Return the stretches of *window* that no local file holds.
 
-        These are the files the window's times fall in, and the next file
-        when the window's end is past the last met step of its file. With
-        3-hourly steps in daily files, a backward run released at 22:00
-        needs the next day's 00:00 step, and one released at 21:00 needs
-        nothing past 21:00.
-        """
-        tres = self._file_freq
-        assert tres is not None  # MetConfig requires file_tres without download
-        earlier, later = (_time(t) for t in window)
-        last_file = later.floor(tres)
-        next_file = _time(last_file + to_offset(tres))
-        # An end on a file boundary needs nothing after it, whatever the step.
-        if later != last_file and later > next_file - self._step_at(last_file):
-            last_file = next_file  # past the last step of its file
-        times = pd.date_range(earlier.floor(tres), last_file, freq=tres)
-        return times, earlier, later
-
-    def _step_at(self, time: pd.Timestamp) -> pd.Timedelta:
-        """
-        Return the spacing of the met steps, read from this met's file for *time*.
-
-        The file is one ``file_format`` finds for *time*, so other products
-        in :attr:`directory` do not change it. Only its index records are
-        read, and the spacing is kept for the met once a file gives it. One
-        hour, the step of most met, when no file for *time* can be read or
-        it holds one time period; :meth:`check` then says why.
-        """
-        if self._step is None:
-            file_format = self.config.file_format
-            assert file_format is not None  # MetConfig requires it without download
-            pattern = time.strftime(file_format)
-            problem = f"no met file named {pattern}..."
-            for path in self._matching(pattern):
-                step, problem = _read_step(path)
-                if step is not None:
-                    self._step, self._step_problem = step, None
-                    return step
-            self._step_problem = problem
-            return pd.Timedelta(hours=1)
-        return self._step
-
-    def missing_hours(self, window: tuple[Any, Any]) -> list[pd.Timestamp]:
-        """
-        Return the times of the local files that cover *window* and are not found.
-
-        The files :meth:`files_for` fails for, without raising. Empty when
-        every file is there, and always empty with ``download``, which
+        The stretches :meth:`files_for` fails for, without raising. Empty
+        when every file is there, and always empty with ``download``, which
         fetches the files it lacks.
 
         Parameters
         ----------
         window : tuple of datetime-like
             The time to cover (:func:`run_window`).
+
+        Returns
+        -------
+        list of tuple of pandas.Timestamp
+            Each stretch's first and last time.
         """
         if self.config.download is not None:
             return []
-        file_format = self.config.file_format
-        assert file_format is not None  # MetConfig requires it without download
-        met_times, _, _ = self._file_times(window)
-        return [t for t in met_times if not self._matching(t.strftime(file_format))]
+        earlier, later = (_time(t) for t in window)
+        return self.catalog.cover(earlier, later).gaps
 
     def check_receptors(self, receptors: pd.DataFrame, n_hours: int) -> pd.DataFrame:
         """
@@ -571,16 +403,18 @@ class Met:
 
         The file check that :meth:`files_for` makes for each run, made for
         every receptor at once: the met's ``directory`` exists and holds an
-        ARL file, and every file a run needs is there. With the crop on, a
+        ARL file, and every file a run needs is there, holds at least two
+        time periods, and ends on a whole time step. With the crop on, a
         receptor outside ``subgrid_bounds`` is listed too, since HYSPLIT
         cannot start a particle outside the files. A met with ``download``
         has no files to look for before a run, so only its crop is checked.
-        This looks for files, not inside them, except that it opens the first
-        file the receptors need to count its time periods, which HYSPLIT
-        needs to be at least two, and reads the spacing of the met steps from
-        the file of a run's end, as :meth:`files_for` does. :meth:`check`
-        opens each file at a run, and a run that passes this one can still
-        fail as ``MET_COVERAGE`` when a file is damaged or cut short.
+
+        This brings the table of what the files hold up to date first
+        (:meth:`Catalog.refresh`), so it is the place to build it before a
+        batch: a first read of a large archive takes minutes. It reads each
+        file's first two index records, not the rest. :meth:`check` reads
+        each file at a run, and a run that passes this one can still fail as
+        ``MET_COVERAGE`` when a file is damaged in the middle.
 
         Parameters
         ----------
@@ -594,7 +428,7 @@ class Met:
         -------
         pandas.DataFrame
             One row for each thing found, with ``check`` (``met_directory``,
-            ``met_files``, ``met_periods``, or ``met_crop``), ``receptor`` (``NA`` when the
+            ``met_files``, ``met_periods``, ``met_cut``, or ``met_crop``), ``receptor`` (``NA`` when the
             finding is about the met), and ``message`` columns. Empty when
             nothing would stop a run.
         """
@@ -604,8 +438,8 @@ class Met:
             if problem is not None:
                 found.append(("met_directory", None, problem))
             else:
-                found += self._missing_files(receptors, n_hours)
-                found += self._one_period(receptors, n_hours)
+                self.catalog.refresh()
+                found += self._file_problems(receptors, n_hours)
         found += self._outside_crop(receptors)
         return pd.DataFrame(found, columns=["check", "receptor", "message"])
 
@@ -619,37 +453,42 @@ class Met:
             return str(error)
         return None
 
-    def _missing_files(
+    def _file_problems(
         self, receptors: pd.DataFrame, n_hours: int
     ) -> list[tuple[str, str | None, str]]:
-        """List the receptors that lack a file their run needs, and the hours of those files."""
+        """List the receptors that lack a file their run needs, and the files they need that cannot be read to the end."""
         first = receptors.drop_duplicates("receptor")
         messages: dict[Any, str | None] = {}
+        single: dict[Path, None] = {}
+        cut: dict[Path, None] = {}
         for time in first["time"].drop_duplicates():
-            window = run_window(time, n_hours)
-            hours = self.missing_hours(window)
-            messages[time] = (
-                "no met file for " + ", ".join(f"{t:%Y-%m-%d %H:%M}" for t in hours)
-                if hours
-                else None
+            earlier, later = (_time(t) for t in run_window(time, n_hours))
+            cover = self.catalog.cover(earlier, later)
+            messages[time] = cover.clash or (
+                f"no met file for {_spans(cover.gaps)}" if cover.gaps else None
             )
-        return [
+            single.update(dict.fromkeys(cover.single))
+            cut.update(dict.fromkeys(cover.cut))
+        found: list[tuple[str, str | None, str]] = [
             ("met_files", str(rid), message)
             for rid, time in zip(first["receptor"], first["time"], strict=True)
             if (message := messages[time]) is not None
         ]
-
-    def _one_period(
-        self, receptors: pd.DataFrame, n_hours: int
-    ) -> list[tuple[str, str | None, str]]:
-        """List the met when the first file the receptors need holds one time period, which HYSPLIT cannot read."""
-        file_format, tres = self.config.file_format, self._file_freq
-        assert file_format is not None and tres is not None  # a local met has both
-        start = _time(run_window(receptors["time"].min(), n_hours)[0]).floor(tres)
-        found = self._matching(start.strftime(file_format))
-        if found and _count_times(found[0]) == 1:
-            return [("met_periods", None, _one_period_message(found[0]))]
-        return []
+        if single:
+            more = f" {len(single) - 1} more do too." if len(single) > 1 else ""
+            found.append(
+                ("met_periods", None, _one_period_message(next(iter(single))) + more)
+            )
+        found += [
+            (
+                "met_cut",
+                None,
+                f"The met file {path} ends partway through a time step, so it "
+                "is damaged. Get it again.",
+            )
+            for path in cut
+        ]
+        return found
 
     def _outside_crop(
         self, receptors: pd.DataFrame
@@ -718,11 +557,6 @@ class Met:
 
         earlier, later = (_time(t) for t in window)
         needs = f"The run needs {earlier:%Y-%m-%d %H:%M} to {later:%Y-%m-%d %H:%M}."
-        if self._step_problem is not None:
-            needs += (
-                " The files were chosen with met steps taken as one hour, as "
-                f"their spacing could not be read: {self._step_problem}."
-            )
         steps = sorted(held)
         if not steps or steps[0] > earlier or steps[-1] < later:
             holds = (
@@ -852,6 +686,14 @@ class Met:
 
 #: Met settings that were removed, and what to do instead.
 _REMOVED = {
+    "file_format": (
+        "delete it. Each met file's header says which times it holds, so its "
+        "name no longer matters."
+    ),
+    "file_tres": (
+        "delete it. Each met file's header says which times it holds, so how "
+        "much a file covers is read from the file."
+    ),
     "subgrid_buffer": (
         "the crop is subgrid_bounds. Widen the bounds by the buffer instead (it "
         "was in degrees; STILT-R's met_subgrid_buffer is a fraction of the "
@@ -862,6 +704,11 @@ _REMOVED = {
         "hours with no file."
     ),
 }
+
+
+def _spans(gaps: list[tuple[pd.Timestamp, pd.Timestamp]]) -> str:
+    """Return stretches of time as text."""
+    return ", ".join(f"{a:%Y-%m-%d %H:%M} to {b:%Y-%m-%d %H:%M}" for a, b in gaps)
 
 
 def _overlapping(
@@ -921,17 +768,6 @@ def _inspect_file(
         return (), (str(exc),)
 
 
-def _count_times(path: Path) -> int | None:
-    """Return the number of time periods in the ARL file at *path*, or ``None`` when it cannot be read as one."""
-    from arlmet import ARLFormatError, File
-
-    try:
-        with File(path) as met:
-            return len(met.times)
-    except (ARLFormatError, OSError):
-        return None
-
-
 def _one_period_message(path: Path) -> str:
     """Return why the met file at *path*, which holds one time period, cannot be used."""
     return (
@@ -939,34 +775,6 @@ def _one_period_message(path: Path) -> str:
         "with one ('Only one time period of meteo data'), so each file must "
         "hold at least two, such as the 6-hour files of NOAA's HRRR archive."
     )
-
-
-def _walk(directory: Path) -> Iterator[tuple[str, list[str]]]:
-    """
-    Yield each folder under *directory*, itself first, with the names in it that are not folders.
-
-    Like :func:`os.walk`, it does not go into a symlink to a folder and skips
-    a folder it cannot read. Unlike it, it tells a folder from a file without
-    following symlinks, so it opens no symlink's target: an archive of
-    symlinks, such as one link per met file beside the files in
-    ``year/month`` folders, is listed from its folders alone. A symlink to a
-    folder is listed with the names, and a pattern that matches it finds
-    nothing, since only files are kept (:meth:`Met._matching`).
-    """
-    folders = [str(directory)]
-    while folders:
-        folder = folders.pop(0)
-        names: list[str] = []
-        try:
-            with os.scandir(folder) as entries:
-                for entry in entries:
-                    if entry.is_dir(follow_symlinks=False):
-                        folders.append(entry.path)
-                    else:
-                        names.append(entry.name)
-        except OSError:
-            continue
-        yield folder, names
 
 
 def _arl_candidates(directory: Path) -> Iterator[Path]:
@@ -977,8 +785,8 @@ def _arl_candidates(directory: Path) -> Iterator[Path]:
         return
     folders = []
     for entry in entries:
-        if _is_stray(entry.name):
-            continue  # as Met.files_for skips them
+        if is_stray(entry.name):
+            continue  # as the catalog skips them
         if entry.is_dir():
             folders.append(entry.path)
         elif entry.is_file():
@@ -1012,24 +820,6 @@ def _first_source(directory: Path) -> str:
         f"No ARL file under {directory}. A met's weather product, which a "
         "run records, is read from the header of the first file there."
     )
-
-
-def _read_step(path: Path) -> tuple[pd.Timedelta | None, str]:
-    """
-    Return the smallest spacing of the time periods in the ARL file at *path*, or ``None`` and why not.
-
-    Only the file's index records are read.
-    """
-    from arlmet import File
-
-    try:
-        with File(path) as met:
-            times = met.times
-    except (EOFError, OSError, ValueError) as error:  # ARLFormatError is a ValueError
-        return None, f"{path} could not be read as an ARL file ({error})"
-    if len(times) < 2:
-        return None, f"{path} holds {'one time period' if times else 'no time period'}"
-    return min(b - a for a, b in pairwise(times)), ""
 
 
 __all__ = ["Met", "MetConfig"]

@@ -70,7 +70,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
         hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met = Met("hrrr", make_met_config(met_dir, file_tres="6h"))
+    met = Met("hrrr", make_met_config(met_dir))
     result = _raw_particles(
         receptor, params, met, Path(tmp_path) / "hysplit_assignment", timeout=120
     )
@@ -121,7 +121,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
         hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met = Met("hrrr", make_met_config(met_dir, file_tres="6h"))
+    met = Met("hrrr", make_met_config(met_dir))
     result = _raw_particles(
         receptor,
         params,
@@ -162,7 +162,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
         hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met = Met("hrrr", make_met_config(met_dir, file_tres="6h"))
+    met = Met("hrrr", make_met_config(met_dir))
     result = _raw_particles(
         receptor, params, met, Path(tmp_path) / "hysplit_column_assignment", timeout=120
     )
@@ -214,7 +214,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
         altitudes=altitudes,
     )
     params = HysplitConfig(n_hours=-1, numpar=200, hnf_plume=False)
-    met = Met("hrrr", make_met_config(met_dir, file_tres="6h"))
+    met = Met("hrrr", make_met_config(met_dir))
     particles = _raw_particles(
         receptor, params, met, Path(tmp_path) / "close_slant", timeout=300
     )

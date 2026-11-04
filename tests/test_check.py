@@ -3,6 +3,7 @@
 import datetime as dt
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
@@ -61,11 +62,11 @@ def _project(
     *met* replaces the local met's settings, and *settings* the project's.
     """
     met_dir = tmp_path / "met"
-    config = make_met_config(met_dir, file_tres="1h")
+    config = make_met_config(met_dir)
     if files:
         make_met_files(met_dir, NOON, n_hours)
     if met is not None:
-        config = {"file_format": "%Y%m%d_%H", "file_tres": "1h", **met}
+        config = met
     settings.setdefault("grid", GRID)
     settings.setdefault("variants", {"hrrr": {}})
     return Project.init(
@@ -164,10 +165,7 @@ def test_a_receptor_missing_a_met_file_is_listed_with_its_hours(tmp_path):
     assert list(table["check"]) == ["met_files"]
     assert list(table["receptor"]) == [short.id]
     message = table["message"].iloc[0]
-    assert message == (
-        "no met file for 2023-01-01 17:00, 2023-01-01 18:00, "
-        "2023-01-01 19:00, 2023-01-01 20:00"
-    )
+    assert message == "no met file for 2023-01-01 17:00 to 2023-01-01 20:00"
 
 
 def _one_period_files(tmp_path: Path) -> list[Path]:
@@ -211,55 +209,87 @@ def test_a_missing_first_file_is_not_also_a_file_with_one_time_period(tmp_path):
     _one_period_files(tmp_path)
     (tmp_path / "met" / "20230101_09").unlink()
 
-    assert list(project.check()["check"]) == ["met_files"]
+    assert "met_files" in set(project.check()["check"])
 
 
-def test_a_damaged_first_file_is_left_to_the_run(tmp_path):
-    """The check counts time periods only; a file it cannot read as ARL fails at the run, which names the damage."""
+def test_a_file_cut_partway_through_a_time_step_is_named(tmp_path):
+    """Its size is no whole number of time steps, which the header and the size show."""
+    _block_met(tmp_path, 6)
+    project = _project(tmp_path, [_receptor(9)], files=False)
+    block = (tmp_path / "met" / "block_06").resolve()
+    block.write_bytes(block.read_bytes()[:-10])  # cut inside a record
+
+    table = project.check()
+
+    assert list(table["check"]) == ["met_cut"]
+    assert table["receptor"].isna().all()
+    assert str(block) in table["message"].iloc[0]
+
+
+def test_two_products_holding_one_time_are_found_for_the_receptors_they_stop(tmp_path):
     project = _project(tmp_path, [_receptor(12)])
-    first = tmp_path / "met" / "20230101_09"
-    first.write_bytes(first.read_bytes()[:-10])  # cut inside a record
+    write_arl_file(
+        tmp_path / "met" / "other_product",
+        times=pd.date_range("2023-01-01 09:00", periods=2, freq="h"),
+        source="NAM",
+    )
 
-    assert project.check().empty
+    table = project.check()
+
+    assert list(table["check"]) == ["met_files"]
+    assert "its own folder" in table["message"].iloc[0]
 
 
-def test_checking_opens_one_met_file(tmp_path, monkeypatch):
-    """The check counts the time periods of one file, not of every file the receptors need."""
+def test_checking_reads_no_met_file_past_its_header(tmp_path, monkeypatch):
+    """A whole read of a file is the run's: the check reads what a header says."""
     import arlmet
 
     project = _project(tmp_path, [_receptor(12), _receptor(13)])
-    opened: list[str] = []
-    real_file = arlmet.File
-
-    def counting_file(path, *args, **kwargs):
-        opened.append(Path(path).name)
-        return real_file(path, *args, **kwargs)
-
-    monkeypatch.setattr(arlmet, "File", counting_file)
+    monkeypatch.setattr(arlmet, "File", MagicMock(side_effect=AssertionError))
 
     assert project.check().empty
-    assert opened == ["20230101_09"]
+
+
+def test_checking_finds_files_added_since_the_catalog_was_kept(tmp_path):
+    project = _project(tmp_path, [_receptor(20)])
+    assert list(project.check()["check"]) == ["met_files"]
+
+    make_met_files(tmp_path / "met", _receptor(20).time, -3)
+
+    assert project.check().empty
+
+
+def _block_met(tmp_path, *starts):
+    """Write a 6-hour file of hourly steps for each hour in *starts*, on 2023-01-01."""
+    for start in starts:
+        write_arl_file(
+            tmp_path / "met" / f"block_{start:02d}",
+            times=pd.date_range(f"2023-01-01 {start:02d}:00", periods=6, freq="h"),
+        )
 
 
 def test_a_met_file_the_hour_after_a_backward_run_needs_is_found_missing(tmp_path):
-    """A backward run also reads the hour after the release, which HYSPLIT interpolates."""
-    receptor = _receptor(12.5)
-    project = _project(tmp_path, [receptor])
-    (tmp_path / "met" / "20230101_13").unlink()
+    """A backward run also reads the step after the release, which HYSPLIT interpolates."""
+    _block_met(tmp_path, 6)
+    project = _project(tmp_path, [_receptor(11.5)], files=False)
 
     table = project.check()
 
-    assert list(table["message"]) == ["no met file for 2023-01-01 13:00"]
+    assert list(table["message"]) == [
+        "no met file for 2023-01-01 11:00 to 2023-01-01 11:30"
+    ]
 
 
 def test_a_met_file_the_hour_after_a_forward_run_needs_is_found_missing(tmp_path):
-    """A forward run reads the hour after its end too, so `stilt check` lists it (#275)."""
-    project = _project(tmp_path, [_receptor(12.5)], n_hours=3)
-    (tmp_path / "met" / "20230101_16").unlink()
+    """A forward run reads the step after its end too, so `stilt check` lists it (#275)."""
+    _block_met(tmp_path, 6)
+    project = _project(tmp_path, [_receptor(8.5)], n_hours=3, files=False)
 
     table = project.check()
 
-    assert list(table["message"]) == ["no met file for 2023-01-01 16:00"]
+    assert list(table["message"]) == [
+        "no met file for 2023-01-01 11:00 to 2023-01-01 11:30"
+    ]
 
 
 @pytest.mark.parametrize("n_hours", [-3, -6, 4])
@@ -268,9 +298,12 @@ def test_receptors_are_listed_when_the_run_would_stop_for_a_missing_file(
 ):
     """The check and a run's own file search agree, on every hour of the files' 6 h span."""
     met_dir = tmp_path / "met"
-    config = make_met_config(met_dir, file_tres="6h")
-    for stamp in ("20230101_00", "20230101_06", "20230101_12", "20230101_18"):
-        write_arl_file(met_dir / stamp)
+    config = make_met_config(met_dir)
+    for hour in ("00", "06", "12", "18"):
+        write_arl_file(
+            met_dir / f"20230101_{hour}",
+            times=pd.date_range(f"2023-01-01 {hour}:00", periods=6, freq="h"),
+        )
     receptors = [
         _receptor(hour) for hour in (0, 1, 5, 6, 11, 12, 17, 18, 23, 24, 30, 35)
     ]

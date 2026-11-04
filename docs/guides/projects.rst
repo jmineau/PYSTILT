@@ -36,10 +36,7 @@ A typical config.yaml
 .. code-block:: yaml
 
    mets:
-     hrrr:
-       directory: /data/arl/hrrr
-       file_format: "%Y%m%d_%H"
-       file_tres: 6h
+     hrrr: /data/arl/hrrr
 
    variants:
      hrrr: {}            # every receptor runs once, with these settings
@@ -476,13 +473,7 @@ You can pass any ``config.yaml`` key to
 
    project = stilt.Project.init(
        "./my_project",
-       mets={
-           "hrrr": {
-               "directory": "/data/arl/hrrr",
-               "file_format": "%Y%m%d_%H",
-               "file_tres": "6h",
-           }
-       },
+       mets={"hrrr": "/data/arl/hrrr"},
        grid={
            "xmin": -114.0, "xmax": -111.0,
            "ymin": 39.0, "ymax": 42.0,
@@ -501,13 +492,7 @@ check:
    from stilt.transport.hysplit import MetConfig
 
    config = stilt.ProjectConfig(
-       mets={
-           "hrrr": MetConfig(
-               directory="/data/arl/hrrr",
-               file_format="%Y%m%d_%H",
-               file_tres="6h",
-           )
-       },
+       mets={"hrrr": MetConfig(directory="/data/arl/hrrr")},
        grid=stilt.Grid(
            xmin=-114.0, xmax=-111.0,
            ymin=39.0, ymax=42.0,

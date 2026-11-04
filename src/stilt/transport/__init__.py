@@ -530,11 +530,12 @@ def run_trajectories(
     ----------
     receptor : Receptor
         Where and when particles are released.
-    met : dict or BaseModel
+    met : str, dict or BaseModel
         The meteorology, as one entry under ``mets:`` in ``config.yaml``,
         checked by the model's met config
-        (:class:`stilt.transport.hysplit.MetConfig` for HYSPLIT). A relative
-        ``directory`` starts from the working directory.
+        (:class:`stilt.transport.hysplit.MetConfig` for HYSPLIT). A string is
+        the folder of its files, and a relative folder starts from the
+        working directory.
     model : str, default "hysplit"
         The transport model.
     workdir : str or Path, optional
@@ -567,13 +568,8 @@ def run_trajectories(
     >>> receptor = stilt.PointReceptor(  # doctest: +SKIP
     ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
     ... )
-    >>> met = {
-    ...     "directory": "/data/hrrr",
-    ...     "file_format": "%Y%m%d_%H",
-    ...     "file_tres": "6h",
-    ... }  # doctest: +SKIP
     >>> particles = stilt.run_trajectories(
-    ...     receptor, met, n_hours=-24, numpar=200
+    ...     receptor, "/data/hrrr", n_hours=-24, numpar=200
     ... )  # doctest: +SKIP
     """
     transport_model = get_model(model)

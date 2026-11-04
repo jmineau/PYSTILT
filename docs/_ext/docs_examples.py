@@ -72,7 +72,7 @@ def met() -> dict:
             f"{directory} is missing. The docs run on the met files the tests "
             "cache: see 'Examples in the docs' in CONTRIBUTING.md."
         )
-    return {"directory": str(directory), "file_format": "%Y%m%d_%H", "file_tres": "6h"}
+    return str(directory)
 
 
 def sample_project() -> Path:
