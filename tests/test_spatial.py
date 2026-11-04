@@ -85,6 +85,17 @@ def test_grid_reads_stilt_r_projection_as_crs():
     assert "crs" in old.model_dump() and "projection" not in old.model_dump()
 
 
+def test_grid_spans_at_most_360_degrees_of_longitude():
+    """A grid wider than a turn would hold some longitudes twice, so it is refused (#338)."""
+    kw = {"ymin": 40.0, "ymax": 41.0, "xres": 0.5, "yres": 0.5}
+    with pytest.raises(ValueError, match="at most 360 degrees"):
+        Grid(xmin=-200.0, xmax=200.0, **kw)
+    assert Grid(xmin=-180.0, xmax=180.0, **kw).xmax == 180.0
+    assert Grid(xmin=-10.0, xmax=190.0, **kw).xmin == -10.0
+    # Bounds, such as a met's crop box, are not grids and may be wider.
+    assert Bounds(xmin=-200.0, xmax=200.0, ymin=40.0, ymax=41.0).xmax == 200.0
+
+
 def test_grid_cell_starts_use_complete_half_open_cells():
     starts = _grid_cell_starts(0.0, 1.0, 0.3)
 

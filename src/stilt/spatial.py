@@ -11,11 +11,11 @@ does not need shapely, so any part of PYSTILT can use it. Polygons
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 import numpy as np
 import pandas as pd
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 if TYPE_CHECKING:
     import xarray as xr
@@ -204,7 +204,9 @@ class Grid(Bounds):
 
     The bounds are always longitude/latitude. With a projected ``crs``,
     the grid covers the bounds' extent in that projection and ``xres`` and
-    ``yres`` are in its units.
+    ``yres`` are in its units. Longitudes count modulo 360, so a grid
+    across 180 degrees is written ``xmin=170, xmax=190`` or ``xmin=170,
+    xmax=-170``. A grid spans at most 360 degrees of longitude.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -226,6 +228,18 @@ class Grid(Bounds):
             "before gridding. Also read under STILT-R's name, ``projection``."
         ),
     )
+
+    @model_validator(mode="after")
+    def _at_most_one_turn(self) -> Self:
+        """Refuse a grid wider than 360 degrees of longitude: it would hold some longitudes twice."""
+        if self.xmax - self.xmin > 360.0:
+            raise ValueError(
+                f"A grid spans at most 360 degrees of longitude; xmin={self.xmin:g} "
+                f"to xmax={self.xmax:g} spans {self.xmax - self.xmin:g}. A grid "
+                "across 180 degrees can be written either way, such as xmin=170, "
+                "xmax=190 or xmin=170, xmax=-170."
+            )
+        return self
 
     @property
     def is_longlat(self) -> bool:

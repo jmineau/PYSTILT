@@ -9,8 +9,9 @@ goes all the way around (``_unwrap_around_cloud``,
 ``_fold_padding_around_the_globe``), for particles across 180 degrees
 from the edge of a regional grid (``_onto_padded_axis``), and in the
 early-time interpolation of a particle that crosses 180 degrees
-(``_interpolate_longitudes``). Run the ``fidelity`` tests before merging
-any change to this module.
+(``_interpolate_longitudes``). They are also made on grids STILT-R
+cannot use, such as -10 to 190 degrees (``_wrap_antimeridian_longitudes``).
+Run the ``fidelity`` tests before merging any change to this module.
 """
 
 from __future__ import annotations
@@ -92,17 +93,25 @@ def _wrap_antimeridian_longitudes(
     Shift longitudes to 0 to 360 when the grid crosses the antimeridian.
 
     Only for longitude/latitude grids. A grid that covers the globe is
-    anchored to -180 to 180 and the longitudes are left as they are. Returns
-    ``(p, xmin, xmax, wrapped)``.
+    anchored to -180 to 180 and the longitudes are left as they are. A grid
+    across 180 degrees (``xmax < xmin``, or ``xmax > 180``) is shifted to 0
+    to 360 with its longitudes, as in STILT-R, when its edges are then in
+    order. Otherwise (``-10`` to ``190``, ``350`` to ``370``) it passes 0
+    there too, so it keeps its edges as written, with ``xmax`` a turn
+    later when it is west of ``xmin``, and the particles are moved onto it
+    by whole turns later (``_onto_padded_axis``). Returns ``(p, xmin, xmax,
+    wrapped)``.
     """
     if _covers_the_globe(xmin, xmax):
         return p, -180.0, 180.0, False
     if (xmax < xmin) or (xmax > 180):
-        p = p.copy()
-        p["lon"] = _wrap_longitudes(p["lon"])
-        xmin = _wrap_longitudes(xmin)
-        xmax = _wrap_longitudes(xmax)
-        return p, xmin, xmax, True
+        west, east = _wrap_longitudes(xmin), _wrap_longitudes(xmax)
+        if west < east:
+            p = p.copy()
+            p["lon"] = _wrap_longitudes(p["lon"])
+            return p, west, east, True
+        if xmax < xmin:
+            xmax += 360.0
     return p, xmin, xmax, False
 
 
@@ -758,8 +767,10 @@ def calc_footprint(
     receptor : Receptor
         Receptor the particles were released from.
     grid : Grid
-        Domain and resolution of the footprint. For a footprint given by a
-        geometry, derive it first: ``stilt.Mesh.from_spec(geometry).to_grid()``.
+        Domain and resolution of the footprint. Its longitudes count modulo
+        360, so ``xmin=-10, xmax=190`` is a grid across 180 degrees. For a
+        footprint given by a geometry, derive it first:
+        ``stilt.Mesh.from_spec(geometry).to_grid()``.
     smooth_factor : float, default 1.0
         Factor on the width of the Gaussian smoothing kernel. 0 turns
         smoothing off.

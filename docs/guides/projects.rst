@@ -79,8 +79,11 @@ The settings most people change
    * - ``grid``
      - The map grid for the footprint: the longitude range
        (``xmin``/``xmax``), the latitude range (``ymin``/``ymax``), and the
-       cell size in degrees (``xres``/``yres``). Leave it out, or set it to
-       ``null``, to make particles but no footprint.
+       cell size in degrees (``xres``/``yres``). Longitudes count modulo
+       360, so a grid across 180° can be written ``xmin: 170``, ``xmax:
+       190`` or ``xmin: 170``, ``xmax: -170``. A grid spans at most 360°.
+       Leave it out, or set it to ``null``, to make particles but no
+       footprint.
      - 0.01° (about 1 km) for a city, 0.1° for a region
    * - ``n_hours``
      - How many hours to follow the particles. Negative values run backward

@@ -173,6 +173,14 @@ What does not match
   gets the footprint it got before, bit for bit.
   ``test_grid_edge_at_180_intentionally_differs_from_r`` guards the
   difference.
+- **Grids written past ±180°.** STILT-R shifts a grid to 0° to 360° when
+  ``xmax < xmin`` or ``xmax > 180``. A grid that passes 0° there as well
+  then has no cells (``-10`` to ``190`` becomes ``350`` to ``190``), and a
+  grid west of -180° (``-190`` to ``-170``) is not shifted, so its particles
+  are dropped. PYSTILT shifts such a grid only when its edges stay in
+  order. Otherwise it keeps them as written and moves the particles onto it
+  by whole turns, as at a grid edge at 180°. A grid wider than 360° is
+  refused when it is made. Grids STILT-R handles are handled as before.
 - **The early-time interpolation across 180°.** HYSPLIT writes longitudes
   from -180° to 180°, and STILT-R interpolates them as written, so a step
   from 179.99° to -179.97° is interpolated through 0°, and the positions

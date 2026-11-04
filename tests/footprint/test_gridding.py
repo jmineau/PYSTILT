@@ -1593,6 +1593,68 @@ def _by_meridian(foot: xr.DataArray, turn: float = 0.0) -> pd.Series:
     ).sort_index()
 
 
+@pytest.mark.parametrize(
+    ("bounds", "same_box", "lon0"),
+    [
+        ((-190.0, -170.0), (170.0, -170.0), 179.9),  # west edge below -180
+        ((-10.0, 190.0), (170.0, 190.0), 179.9),  # across 180, west edge below 0
+        ((-10.0, 190.0), (-10.0, 10.0), 0.1),
+        ((350.0, 370.0), (-10.0, 10.0), 0.1),  # past 360
+        ((350.0, 360.0), (-10.0, 0.0), -5.0),  # an east edge of 360
+        ((-170.0, -190.0), (-170.0, 170.0), 0.1),  # xmax < xmin, xmin below 0
+    ],
+)
+def test_footprint_on_a_grid_written_past_180_is_that_of_the_same_box(
+    point_receptor, bounds, same_box, lon0
+):
+    """
+    A grid's longitudes count modulo 360, so a box written two ways gives one footprint.
+
+    Before, these grids gave ``EmptyFootprint``, or a ``ValueError`` from a
+    grid with no cells: the shift to 0 to 360 for a grid across 180 degrees
+    put ``-10`` to ``190`` at ``350`` to ``190``.
+    """
+    grid = Grid(
+        xmin=bounds[0], xmax=bounds[1], ymin=45.0, ymax=55.0, xres=0.1, yres=0.1
+    )
+    other = Grid(
+        xmin=same_box[0], xmax=same_box[1], ymin=45.0, ymax=55.0, xres=0.1, yres=0.1
+    )
+    receptor = point_receptor.model_copy(
+        update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
+    )
+    p = _edge_cloud(lon0)
+    foot = _by_meridian(calc_footprint(p, receptor, grid, time_integrate=True))
+    expected = _by_meridian(calc_footprint(p, receptor, other, time_integrate=True))
+    assert expected.sum() > 1e-5
+    pd.testing.assert_index_equal(foot.index, expected.index)
+    np.testing.assert_allclose(foot, expected, rtol=1e-12, atol=0)
+
+
+def test_footprint_on_a_grid_written_past_180_has_the_grids_own_cells(point_receptor):
+    """A grid left as written has the cells ``Grid.axes`` gives, so it can be stored."""
+    grid = Grid(xmin=-10.0, xmax=190.0, ymin=45.0, ymax=55.0, xres=0.5, yres=0.5)
+    receptor = point_receptor.model_copy(update={"longitude": 179.9, "latitude": 50.0})
+    foot = calc_footprint(_edge_cloud(179.9), receptor, grid, time_integrate=True)
+    x_axis, y_axis = grid.axes
+    np.testing.assert_array_equal(foot["lon"], x_axis)
+    np.testing.assert_array_equal(foot["lat"], y_axis)
+
+
+def test_wrap_antimeridian_longitudes_keeps_a_grid_that_passes_0_as_written():
+    """
+    A grid across 180 that passes 0 in 0 to 360 is not shifted, and its east edge follows its west.
+
+    ``_onto_padded_axis`` moves the particles onto it later.
+    """
+    p = pd.DataFrame({"lon": [-175.0, 5.0]})
+    out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=-10.0, xmax=190.0)
+    assert (xmin, xmax, wrapped) == (-10.0, 190.0, False)
+    np.testing.assert_array_equal(out["lon"], p["lon"])
+    _, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=-170.0, xmax=-190.0)
+    assert (xmin, xmax, wrapped) == (-170.0, 170.0, False)
+
+
 def _crossing_cloud(lon0: float, n: int = 40) -> pd.DataFrame:
     """
     *n* particles moving east 0.03 degree a minute from *lon0* for their first 100 minutes.
