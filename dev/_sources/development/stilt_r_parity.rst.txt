@@ -173,6 +173,31 @@ What does not match
   gets the footprint it got before, bit for bit.
   ``test_grid_edge_at_180_intentionally_differs_from_r`` guards the
   difference.
+- **The longitudes of a global grid not written from -180°.** STILT-R
+  labels the cells of any grid a whole turn wide from -180° to 180°. PYSTILT
+  keeps the longitudes the grid is written with, as on any other grid: 0° to
+  360° for a grid from 0° to 360°. The values are the same, a turn apart. A
+  grid across 180° (``170`` to ``190``, or ``170`` to ``-170``) has STILT-R's
+  longitudes, 170° to 190°: STILT-R shifts it to 0° to 360°, and PYSTILT moves
+  the particles onto it by whole turns instead.
+- **Grids written past ±180°.** A grid that passes 0° as well as 180° has no
+  cells in STILT-R (``-10`` to ``190`` becomes ``350`` to ``190``), and a
+  grid west of -180° (``-190`` to ``-170``) is not shifted, so its particles
+  are dropped. PYSTILT makes a footprint on these as on any other. A grid
+  wider than 360° is refused when it is made.
+- **The early-time interpolation across 180°.** HYSPLIT writes longitudes
+  from -180° to 180°, and STILT-R interpolates them as written, so a step
+  from 179.99° to -179.97° is interpolated through 0°, and the positions
+  added put part of that step's ``foot`` on the far side of the earth. On a
+  global grid that is a misplaced footprint (0.5 % of it for 40 particles
+  crossing 180° at 0.03° a minute on 0.01° cells); on a regional grid at
+  180° the part is lost. On a grid STILT-R shifts to 0° to 360° the same
+  happens to a particle that crosses 0°, and lands near 180°. PYSTILT interpolates
+  each step the short way round and measures it that way when it decides
+  whether to interpolate. A particle that takes no step across the seam is
+  interpolated as before, bit for bit.
+  ``test_early_interpolation_across_180_intentionally_differs_from_r``
+  guards the difference.
 - **Forward runs with the HNF correction.** STILT-R accumulates the plume
   from the far end of a forward trajectory back toward the release point,
   so its plume is widest at release. PYSTILT accumulates outward from the

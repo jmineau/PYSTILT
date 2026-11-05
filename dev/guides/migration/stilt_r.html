@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=ecd9cde1"></script>
+    <script src="../../_static/documentation_options.js?v=85f85005"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev14+g8ed823f5b" />
+  <meta name="docsearch:version" content="0.1.0a28.dev15+ge2ddbc259" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -520,11 +520,16 @@ HYSPLIT does, and a receptor above sea level, whose plume PYSTILT grows from
 the ground. Two are on a projected grid: the smoothing, which PYSTILT makes
 as wide as on a longitude/latitude grid and STILT-R makes a few meters wide,
 and the early-time interpolation, which STILT-R never runs on a grid in
-meters. Two are near 180°: a particle cloud on a grid that goes all the
+meters. Three are near 180°: a particle cloud on a grid that goes all the
 way around the earth, which PYSTILT smooths as one cloud and STILT-R smooths
-far too widely, and particles just across 180° from the edge of a regional
-grid, which PYSTILT smooths onto the grid and STILT-R drops (see
-<a class="reference internal" href="../../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a>).</p>
+far too widely, particles just across 180° from the edge of a regional
+grid, which PYSTILT smooths onto the grid and STILT-R drops, and the
+early-time interpolation of a particle that crosses 180°, which PYSTILT
+takes the short way round and STILT-R through 0° (see
+<a class="reference internal" href="../../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a>). A footprint on a global grid written from 0°
+to 360° keeps those longitudes, where STILT-R labels it from -180° to 180°.
+PYSTILT also takes grids that STILT-R cannot use, such as one from -10° to
+190°.</p>
 <p>What changes is where the settings live. Instead of editing variables in
 <code class="docutils literal notranslate"><span class="pre">run_stilt.r</span></code>, you write them in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> or pass them to
 <a class="reference internal" href="../../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.init()</span></code></a>. Receptors go in <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p>

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=ecd9cde1"></script>
+    <script src="../../_static/documentation_options.js?v=85f85005"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev14+g8ed823f5b" />
+  <meta name="docsearch:version" content="0.1.0a28.dev15+ge2ddbc259" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -903,7 +903,9 @@ it smooths a cloud near 180 degrees with a far too wide kernel and loses
 part of the footprint. On a grid that ends at or near 180 degrees
 (<code class="docutils literal notranslate"><span class="pre">xmin=-180</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax=-170</span></code>), particles just across 180 degrees
 smooth onto the grid, as particles just past any other edge do.
-STILT-R drops them.</p>
+STILT-R drops them. A particle that crosses 180 degrees in its first
+100 minutes is interpolated the short way round, on any grid; STILT-R
+interpolates it through 0 degrees.</p>
 <p>On a projected grid the kernel’s width is worked out in degrees, as on
 a longitude/latitude grid, and converted to the grid’s units, so the
 footprint is smoothed as much. STILT-R applies its formula to the
@@ -919,8 +921,10 @@ in meters.</p>
 <code class="docutils literal notranslate"><span class="pre">sim.particles</span></code>, with columns <code class="docutils literal notranslate"><span class="pre">particle</span></code>, <code class="docutils literal notranslate"><span class="pre">age</span></code> (minutes since
 release), <code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code>, and <code class="docutils literal notranslate"><span class="pre">foot</span></code>.</p></li>
 <li><p><strong>receptor</strong> (<span class="sphinx_autodoc_typehints-type">stilt.receptor.Receptor</span>) – Receptor the particles were released from.</p></li>
-<li><p><strong>grid</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Grid</span></code></span>) – Domain and resolution of the footprint. For a footprint given by a
-geometry, derive it first: <code class="docutils literal notranslate"><span class="pre">stilt.Mesh.from_spec(geometry).to_grid()</span></code>.</p></li>
+<li><p><strong>grid</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Grid</span></code></span>) – Domain and resolution of the footprint. Its longitudes count modulo
+360, so <code class="docutils literal notranslate"><span class="pre">xmin=-10,</span> <span class="pre">xmax=190</span></code> is a grid across 180 degrees. For a
+footprint given by a geometry, derive it first:
+<code class="docutils literal notranslate"><span class="pre">stilt.Mesh.from_spec(geometry).to_grid()</span></code>.</p></li>
 <li><p><strong>smooth_factor</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – Factor on the width of the Gaussian smoothing kernel. 0 turns
 smoothing off.</p></li>
 <li><p><strong>time_integrate</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – Sum the footprint over time into one layer instead of hourly layers.</p></li>
@@ -938,7 +942,9 @@ aggregating it onto another mesh warns.</p></li>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The footprint, named <code class="docutils literal notranslate"><span class="pre">foot</span></code>, with dimensions <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>
 or <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">y,</span> <span class="pre">x)</span></code> on a projected grid. Coordinates are cell
-centers, and <code class="docutils literal notranslate"><span class="pre">time</span></code> is the start of each hour. The <code class="docutils literal notranslate"><span class="pre">.stilt</span></code>
+centers, those of <code class="docutils literal notranslate"><span class="pre">Grid.axes</span></code>, so longitudes are the ones the grid
+is written with: 170.25 to 189.75 on a grid from 170 to 190, 0.5
+degree cells. <code class="docutils literal notranslate"><span class="pre">time</span></code> is the start of each hour. The <code class="docutils literal notranslate"><span class="pre">.stilt</span></code>
 accessor has the methods that use it.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>

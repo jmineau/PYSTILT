@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=ecd9cde1"></script>
+    <script src="../_static/documentation_options.js?v=85f85005"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev14+g8ed823f5b" />
+  <meta name="docsearch:version" content="0.1.0a28.dev15+ge2ddbc259" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -660,6 +660,31 @@ padded grid are not moved, so a grid whose padding does not reach 180°
 gets the footprint it got before, bit for bit.
 <code class="docutils literal notranslate"><span class="pre">test_grid_edge_at_180_intentionally_differs_from_r</span></code> guards the
 difference.</p></li>
+<li><p><strong>The longitudes of a global grid not written from -180°.</strong> STILT-R
+labels the cells of any grid a whole turn wide from -180° to 180°. PYSTILT
+keeps the longitudes the grid is written with, as on any other grid: 0° to
+360° for a grid from 0° to 360°. The values are the same, a turn apart. A
+grid across 180° (<code class="docutils literal notranslate"><span class="pre">170</span></code> to <code class="docutils literal notranslate"><span class="pre">190</span></code>, or <code class="docutils literal notranslate"><span class="pre">170</span></code> to <code class="docutils literal notranslate"><span class="pre">-170</span></code>) has STILT-R’s
+longitudes, 170° to 190°: STILT-R shifts it to 0° to 360°, and PYSTILT moves
+the particles onto it by whole turns instead.</p></li>
+<li><p><strong>Grids written past ±180°.</strong> A grid that passes 0° as well as 180° has no
+cells in STILT-R (<code class="docutils literal notranslate"><span class="pre">-10</span></code> to <code class="docutils literal notranslate"><span class="pre">190</span></code> becomes <code class="docutils literal notranslate"><span class="pre">350</span></code> to <code class="docutils literal notranslate"><span class="pre">190</span></code>), and a
+grid west of -180° (<code class="docutils literal notranslate"><span class="pre">-190</span></code> to <code class="docutils literal notranslate"><span class="pre">-170</span></code>) is not shifted, so its particles
+are dropped. PYSTILT makes a footprint on these as on any other. A grid
+wider than 360° is refused when it is made.</p></li>
+<li><p><strong>The early-time interpolation across 180°.</strong> HYSPLIT writes longitudes
+from -180° to 180°, and STILT-R interpolates them as written, so a step
+from 179.99° to -179.97° is interpolated through 0°, and the positions
+added put part of that step’s <code class="docutils literal notranslate"><span class="pre">foot</span></code> on the far side of the earth. On a
+global grid that is a misplaced footprint (0.5 % of it for 40 particles
+crossing 180° at 0.03° a minute on 0.01° cells); on a regional grid at
+180° the part is lost. On a grid STILT-R shifts to 0° to 360° the same
+happens to a particle that crosses 0°, and lands near 180°. PYSTILT interpolates
+each step the short way round and measures it that way when it decides
+whether to interpolate. A particle that takes no step across the seam is
+interpolated as before, bit for bit.
+<code class="docutils literal notranslate"><span class="pre">test_early_interpolation_across_180_intentionally_differs_from_r</span></code>
+guards the difference.</p></li>
 <li><p><strong>Forward runs with the HNF correction.</strong> STILT-R accumulates the plume
 from the far end of a forward trajectory back toward the release point,
 so its plume is widest at release. PYSTILT accumulates outward from the

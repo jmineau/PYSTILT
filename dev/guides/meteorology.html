@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=ecd9cde1"></script>
+    <script src="../_static/documentation_options.js?v=85f85005"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev14+g8ed823f5b" />
+  <meta name="docsearch:version" content="0.1.0a28.dev15+ge2ddbc259" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -589,7 +589,7 @@ run needs (<a class="reference internal" href="checking.html"><span class="doc">
 <p>A file that is there but damaged fails the run before HYSPLIT runs too,
 as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>: one cut short, holding an hour written partway, or
 with records lost to null bytes. PYSTILT reads the files with arlmet
-(<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.File.check.html#arlmet.File.check" title="(in arl-met v0.1.0b7)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">arlmet.File.check()</span></code></a>) and checks that together they hold every hour
+(<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.File.check.html#arlmet.File.check" title="(in arl-met v0.1.0b8)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">arlmet.File.check()</span></code></a>) and checks that together they hold every hour
 the run needs. Each file is read once in a process, since a check reads
 every record’s header: a few seconds for a 1 GB HRRR file. Particles that
 all leave the meteorology’s domain, or its crop, before the end of the run

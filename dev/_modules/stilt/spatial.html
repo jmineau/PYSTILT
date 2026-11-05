@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=ecd9cde1"></script>
+    <script src="../../_static/documentation_options.js?v=85f85005"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev14+g8ed823f5b" />
+  <meta name="docsearch:version" content="0.1.0a28.dev15+ge2ddbc259" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -460,11 +460,11 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Self</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">AliasChoices</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">AliasChoices</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">model_validator</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
@@ -587,6 +587,11 @@
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_east_edge</span><span class="p">(</span><span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a grid's east edge in degrees, a turn later when *xmax* is written west of *xmin*."""</span>
+    <span class="k">return</span> <span class="n">xmax</span> <span class="o">+</span> <span class="mf">360.0</span> <span class="k">if</span> <span class="n">xmax</span> <span class="o">&lt;</span> <span class="n">xmin</span> <span class="k">else</span> <span class="n">xmax</span>
+
+
 <div class="viewcode-block" id="Bounds">
 <a class="viewcode-back" href="../../reference/_api/stilt.Bounds.html#stilt.Bounds">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Bounds</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
@@ -664,7 +669,10 @@
 
 <span class="sd">    The bounds are always longitude/latitude. With a projected ``crs``,</span>
 <span class="sd">    the grid covers the bounds' extent in that projection and ``xres`` and</span>
-<span class="sd">    ``yres`` are in its units.</span>
+<span class="sd">    ``yres`` are in its units. Longitudes count modulo 360, so a grid</span>
+<span class="sd">    across 180 degrees is written ``xmin=170, xmax=190`` or ``xmin=170,</span>
+<span class="sd">    xmax=-170``. A footprint on either has longitudes 170 to 190. A grid</span>
+<span class="sd">    spans at most 360 degrees of longitude.</span>
 <span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -687,6 +695,18 @@
         <span class="p">),</span>
     <span class="p">)</span>
 
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_at_most_one_turn</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse a grid wider than 360 degrees of longitude: it would hold some longitudes twice."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="o">-</span><span class="mf">360.0</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span> <span class="o">&lt;=</span> <span class="mf">360.0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"A grid spans at most 360 degrees of longitude; xmin=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> "</span>
+                <span class="sa">f</span><span class="s2">"to xmax=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> does not. A grid "</span>
+                <span class="s2">"across 180 degrees can be written either way, such as xmin=170, "</span>
+                <span class="s2">"xmax=190 or xmin=170, xmax=-170."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Whether the grid is in longitude/latitude degrees."""</span>
@@ -702,13 +722,17 @@
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Cell-center coordinates ``(x, y)`` in projection units, ascending.</span>
 
-<span class="sd">        These are the footprint's coordinates on this grid. They are rounded</span>
+<span class="sd">        These are the footprint's coordinates on this grid. On a</span>
+<span class="sd">        longitude/latitude grid they run east from ``xmin``, past 180 if the</span>
+<span class="sd">        grid does: a grid from 170 to -170 has longitudes 170 to 190. They are rounded</span>
 <span class="sd">        to 10 decimals (``40.35`` rather than ``40.349999999999994``) so they</span>
 <span class="sd">        match labels built elsewhere from the same bounds and resolution.</span>
 <span class="sd">        Projected grids need ``pyproj``.</span>
 <span class="sd">        """</span>
         <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
+            <span class="n">xmax</span> <span class="o">=</span> <span class="n">_east_edge</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
 
             <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
