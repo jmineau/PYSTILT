@@ -106,14 +106,44 @@ add a step of zeros after the last to end it.
 
 .. _flux-step-labels:
 
+An inventory with CF time bounds
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``foot.stilt.enhancement`` and ``particles.stilt.enhancement`` read a flux
+by its CF time bounds when its ``time`` coordinate carries them: each
+footprint hour (or particle row) takes the step whose bounds hold it, so a
+label that disagrees with its own bounds, such as a step labeled at its
+middle or its end, no longer matters. There is nothing to guess at either
+edge, since the bounds say exactly where every step starts and ends: an
+hour before the first bound, after the last, or in a gap between bounds
+gets zero flux.
+
+A file's bounds usually arrive as a separate ``time_bnds`` variable, named
+by a ``bounds`` attribute on ``time``. Give the flux its bounds by making
+``time`` itself a :class:`pandas.IntervalIndex` of each step's start and
+end, closed on the left:
+
+.. code-block:: python
+
+   import pandas as pd
+
+   bounds = inventory["time_bnds"].to_numpy()  # (n_steps, 2): start, end
+   inventory = inventory.assign_coords(
+       time=pd.IntervalIndex.from_arrays(bounds[:, 0], bounds[:, 1], closed="left")
+   )
+
+``project.jacobian`` is unaffected: it takes its flux time bins explicitly
+(``time_bins``), not a flux array, so it never reads an inventory's bounds
+itself. Build ``time_bins`` from the same bounds directly
+(``pd.IntervalIndex.from_arrays(bounds[:, 0], bounds[:, 1], closed="left")``)
+to match what ``enhancement`` would give that inventory.
+
 Labels not at the start of a step
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``foot.stilt.enhancement``, ``particles.stilt.enhancement`` and
-``project.jacobian`` all read a flux's ``time`` labels as the starts of its
-steps. They do not look at the flux's CF time bounds, even when it has
-them: when it has none, this is the only reading available, so PYSTILT
-reads every flux this way, with or without bounds.
+Without CF time bounds, ``foot.stilt.enhancement``,
+``particles.stilt.enhancement`` and ``project.jacobian`` all read a flux's
+``time`` labels as the starts of its steps.
 
 An inventory labeled at the middle of its steps (a monthly mean dated the
 15th, or a 3-hourly mean dated 10:30) would be read half a step late.

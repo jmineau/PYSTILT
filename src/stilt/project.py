@@ -1026,14 +1026,16 @@ class Project:
         time_bins : pandas.IntervalIndex
             Flux time bins, such as a flux inventory's steps. They must be
             closed on the left (``closed="left"``): each bin holds the
-            footprint hours that start in it. Building the bins from an
-            inventory's own time labels (its left edges) reads each label
-            as the start of its step, the same reading
-            ``foot.stilt.enhancement`` gives a flux's ``time`` dimension; it
-            does not look at the inventory's CF time bounds, if it has any.
-            A flux not labeled at the start of its steps must be relabeled
-            first, or its bins built from the relabeled starts (see
-            :ref:`flux-step-labels`).
+            footprint hours that start in it. You build these yourself;
+            ``jacobian`` does not read them from an inventory's own CF time
+            bounds, unlike ``foot.stilt.enhancement`` with a flux that has
+            them. Building the bins from an inventory's own time labels
+            (its left edges) reads each label as the start of its step, the
+            same reading ``foot.stilt.enhancement`` gives a flux with no
+            bounds. A flux not labeled at the start of its steps must be
+            relabeled first, or its bins built from the relabeled starts;
+            one with bounds can have its bins built from them directly
+            instead (see :ref:`flux-step-labels`).
         workers : int, optional
             Threads that read and sum batches. Defaults to the CPUs this
             process may use (in a Slurm job, the job's), at most 8: more
