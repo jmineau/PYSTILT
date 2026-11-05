@@ -9,10 +9,10 @@ goes all the way around (``_unwrap_around_cloud``,
 ``_fold_padding_around_the_globe``), for particles across 180 degrees
 from the edge of a regional grid (``_onto_padded_axis``), and in the
 early-time interpolation of a particle that crosses 180 degrees
-(``_interpolate_longitudes``). A grid across 180 degrees has the same
-footprint and keeps the longitudes it is written with, where STILT-R labels
-its cells from -180 to 180. Footprints are also made on grids STILT-R cannot
-use, such as -10 to 190 degrees. Run the ``fidelity`` tests before merging any change to this module.
+(``_interpolate_longitudes``). A global grid keeps the longitudes it is
+written with (0 to 360), where STILT-R labels it from -180 to 180.
+Footprints are also made on grids STILT-R cannot use, such as -10 to 190
+degrees. Run the ``fidelity`` tests before merging any change to this module.
 """
 
 from __future__ import annotations

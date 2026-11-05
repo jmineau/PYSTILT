@@ -1615,16 +1615,13 @@ def test_early_interpolation_across_180_intentionally_differs_from_r(
 
 
 @pytest.mark.parametrize("xmax", [190.0, -170.0])
-def test_grid_across_180_is_stilt_rs_footprint_on_its_own_longitudes(
-    rscript, r_stilt_dir, tmp_path, xmax
-):
+def test_grid_across_180_matches_stilt_r(rscript, r_stilt_dir, tmp_path, xmax):
     """
-    A grid across 180° has STILT-R's values, labeled with the longitudes it is written with, on purpose.
+    A grid across 180° has STILT-R's footprint, longitudes included.
 
-    STILT-R shifts such a grid to 0° to 360° and labels its cells from -180°
-    to 180°, sorted, with a jump of 340° in the middle. PYSTILT moves the
-    particles onto the grid and keeps the grid's own longitudes, so the
-    footprint can be stored. Relabeled, the two are the same footprint.
+    STILT-R shifts such a grid and its particles to 0° to 360°, and labels
+    the cells east from ``xmin``: 170° to 190°. PYSTILT moves the particles
+    onto the grid by whole turns instead, and gets the same cells.
     """
     grid = Grid(xmin=170.0, xmax=xmax, ymin=48.0, ymax=52.0, xres=0.05, yres=0.05)
     rng = np.random.default_rng(11)
@@ -1645,6 +1642,4 @@ def test_grid_across_180_is_stilt_rs_footprint_on_its_own_longitudes(
     r = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, p, **kw)
 
     np.testing.assert_allclose(py.lon[[0, -1]], [170.025, 189.975], atol=1e-9)
-    assert r.lon.min() < -179 and r.lon.max() > 179, "STILT-R now labels its own way."
-    relabeled = py.assign_coords(lon=((py.lon + 180.0) % 360.0) - 180.0).sortby("lon")
-    _assert_footprint_close(relabeled, r, label="across_180")
+    _assert_footprint_close(py, r, label="across_180")

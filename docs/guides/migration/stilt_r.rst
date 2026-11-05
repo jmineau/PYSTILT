@@ -15,10 +15,10 @@ far too widely, particles just across 180° from the edge of a regional
 grid, which PYSTILT smooths onto the grid and STILT-R drops, and the
 early-time interpolation of a particle that crosses 180°, which PYSTILT
 takes the short way round and STILT-R through 0° (see
-:ref:`stilt-r-parity`). A footprint on a grid across 180° has the
-longitudes the grid is written with, 170° to 190° for a grid from 170° to
-190°, where STILT-R labels them from -180° to 180°. PYSTILT also takes grids
-that STILT-R cannot use, such as one from -10° to 190°.
+:ref:`stilt-r-parity`). A footprint on a global grid written from 0°
+to 360° keeps those longitudes, where STILT-R labels it from -180° to 180°.
+PYSTILT also takes grids that STILT-R cannot use, such as one from -10° to
+190°.
 
 What changes is where the settings live. Instead of editing variables in
 ``run_stilt.r``, you write them in ``config.yaml`` or pass them to

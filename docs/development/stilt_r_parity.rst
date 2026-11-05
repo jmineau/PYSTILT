@@ -173,15 +173,13 @@ What does not match
   gets the footprint it got before, bit for bit.
   ``test_grid_edge_at_180_intentionally_differs_from_r`` guards the
   difference.
-- **The longitudes of a grid across 180°.** The values match; the labels do
-  not. STILT-R shifts a grid to 0° to 360° when ``xmax < xmin`` or
-  ``xmax > 180``, and labels its cells from -180° to 180°, sorted, so a grid
-  from 170° to 190° has a jump of 340° in the middle. PYSTILT moves the
-  particles onto the grid by whole turns, as at a grid edge at 180°, and the
-  cells keep the longitudes the grid is written with: 170° to 190°, also for
-  a grid written from 170° to -170°, and 0° to 360° for a global grid written
-  that way. ``test_grid_across_180_is_stilt_rs_footprint_on_its_own_longitudes``
-  guards the difference.
+- **The longitudes of a global grid not written from -180°.** STILT-R
+  labels the cells of any grid a whole turn wide from -180° to 180°. PYSTILT
+  keeps the longitudes the grid is written with, as on any other grid: 0° to
+  360° for a grid from 0° to 360°. The values are the same, a turn apart. A
+  grid across 180° (``170`` to ``190``, or ``170`` to ``-170``) has STILT-R's
+  longitudes, 170° to 190°: STILT-R shifts it to 0° to 360°, and PYSTILT moves
+  the particles onto it by whole turns instead.
 - **Grids written past ±180°.** A grid that passes 0° as well as 180° has no
   cells in STILT-R (``-10`` to ``190`` becomes ``350`` to ``190``), and a
   grid west of -180° (``-190`` to ``-170``) is not shifted, so its particles
