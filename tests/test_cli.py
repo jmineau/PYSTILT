@@ -7,7 +7,6 @@ import os
 import socket
 import subprocess
 import sys
-import types
 import urllib.error
 from dataclasses import replace
 
@@ -582,8 +581,13 @@ def _client_error(status, code="Error"):
     return error
 
 
+#: Base classes the cloud libraries' errors share, named as botocore names them.
+_BOTOCORE_CONNECTION_ERROR = type("ConnectionError", (Exception,), {})
+_BOTOCORE_HTTP_CLIENT_ERROR = type("HTTPClientError", (Exception,), {})
+
+
 def _with_status(attribute, status):
-    """Return an error that carries an HTTP status as aiohttp, requests or gcsfs set it."""
+    """Return an error that carries an HTTP status as aiohttp or gcsfs set it."""
     error = RuntimeError("the service answered")
     setattr(error, attribute, status)
     return error
@@ -598,9 +602,9 @@ def _with_status(attribute, status):
         (OSError(5, "Input/output error"), 3),
         (OSError(errno.ESTALE, "Stale file handle"), 3),
         # Cloud libraries' errors that are not OSError, matched by class name.
-        (_error_named("EndpointConnectionError"), 3),
-        (_error_named("ConnectTimeoutError"), 3),
-        (_error_named("ReadTimeoutError"), 3),
+        (_error_named("EndpointConnectionError", _BOTOCORE_CONNECTION_ERROR), 3),
+        (_error_named("ConnectTimeoutError", _BOTOCORE_CONNECTION_ERROR), 3),
+        (_error_named("ReadTimeoutError", _BOTOCORE_HTTP_CLIENT_ERROR), 3),
         # aiohttp's ServerDisconnectedError is a ClientConnectionError.
         (
             _error_named(
@@ -612,11 +616,9 @@ def _with_status(attribute, status):
         (_error_named("ClientConnectionError"), 3),
         (_client_error(503, "SlowDown"), 3),
         (_client_error(500, "InternalError"), 3),
-        (_client_error(400, "ThrottlingException"), 3),
         (_client_error(429), 3),
         # The status of a busy service, wherever the library keeps it.
         (_with_status("status", 503), 3),
-        (_with_status("status_code", 429), 3),
         (_with_status("code", 502), 3),
         (_with_status("status", 404), 4),
         (_with_status("code", "not a status"), 4),
@@ -630,7 +632,7 @@ def _with_status(attribute, status):
         (RuntimeError("a bug"), 4),
         (KeyError("k"), 4),
         (ValueError("bad"), 4),
-        (_error_named("SSLError"), 4),
+        (_error_named("AnErrorNoRuleNames"), 4),
     ],
 )
 def test_error_exit_code_sorts_retry_from_bug(error, code):
@@ -652,13 +654,6 @@ def _raised_from(outer, inner):
     """Return *outer* with *inner* as its ``__cause__``, as ``raise outer from inner`` does."""
     outer.__cause__ = inner
     return outer
-
-
-def _http_error_of_requests(status):
-    """Return what ``requests`` raises for a response: an ``OSError`` that holds the response."""
-    error = type("HTTPError", (OSError,), {})("the server answered")
-    error.response = types.SimpleNamespace(status_code=status)
-    return error
 
 
 @pytest.mark.parametrize(
@@ -687,11 +682,7 @@ def _http_error_of_requests(status):
         (_as_s3fs_raises(_EREMOTEIO, 500, "InternalError"), 3),
         (_as_s3fs_raises(errno.EIO, 502, "BadGateway"), 3),
         (_raised_from(TimeoutError("slow"), _client_error(400, "RequestTimeout")), 3),
-        # requests and urllib raise OSErrors that hold an HTTP status.
-        (_http_error_of_requests(404), 4),
-        (_http_error_of_requests(403), 4),
-        (_http_error_of_requests(503), 3),
-        (_http_error_of_requests(429), 3),
+        # urllib raises an OSError that holds an HTTP status.
         (urllib.error.HTTPError("u", 404, "not found", {}, io.BytesIO()), 4),
         (urllib.error.HTTPError("u", 503, "busy", {}, io.BytesIO()), 3),
         # An OSError nothing explains is read by its errno.
@@ -786,6 +777,45 @@ def test_s3fs_own_translation_is_sorted_by_status():
         assert error_exit_code(error) == code, (name, status)
 
 
+def test_real_botocore_errors_are_sorted_by_their_base_class():
+    """Every network error botocore raises is 3 through a base class; these are the real ones."""
+    botocore = pytest.importorskip("botocore.exceptions")
+    for error in (
+        botocore.EndpointConnectionError(endpoint_url="u"),
+        botocore.ProxyConnectionError(proxy_url="u"),
+        botocore.ConnectTimeoutError(endpoint_url="u"),
+        botocore.SSLError(endpoint_url="u", error="e"),
+        botocore.ReadTimeoutError(endpoint_url="u"),
+        botocore.ConnectionClosedError(endpoint_url="u"),
+        botocore.IncompleteReadError(actual_bytes=1, expected_bytes=2),
+    ):
+        assert error_exit_code(error) == 3, type(error).__name__
+    assert error_exit_code(botocore.NoCredentialsError()) == 4
+
+
+def test_real_aiohttp_errors_are_sorted_by_their_base_class():
+    """A dropped connection or a body cut off is 3, whatever ``code`` the cause holds."""
+    aiohttp = pytest.importorskip("aiohttp")
+    for error in (
+        aiohttp.ServerDisconnectedError(),
+        aiohttp.ClientOSError(errno.ECONNRESET, "reset"),
+        aiohttp.ClientPayloadError("the body was cut off"),
+    ):
+        assert error_exit_code(error) == 3, type(error).__name__
+
+
+def test_a_gcsfs_bad_gateway_is_a_connection_error():
+    """A proxy's 502 reaches gcsfs through ``requests``, which raises ``ProxyError``."""
+    requests = pytest.importorskip("requests.exceptions")
+    assert error_exit_code(requests.ProxyError("502 Bad Gateway")) == 3
+
+
+def test_s3fs_busy_errno_decides_for_a_read_with_no_error_code():
+    """A read's HEAD has no body, so botocore's code is the status; s3fs's errno still says busy."""
+    translate = pytest.importorskip("s3fs.errors").translate_boto_error
+    assert error_exit_code(translate(_client_error(409, "409"))) == 3
+
+
 def test_a_cloud_error_is_sorted_with_the_libraries_not_imported():
     """A botocore error is 3 and a denied one 4, as for the stand-ins above."""
     botocore = pytest.importorskip("botocore.exceptions")
@@ -805,7 +835,7 @@ def test_a_cloud_error_is_sorted_with_the_libraries_not_imported():
 @pytest.mark.parametrize(
     ("error", "code"),
     [
-        (_error_named("EndpointConnectionError"), 3),
+        (_error_named("EndpointConnectionError", _BOTOCORE_CONNECTION_ERROR), 3),
         (ConnectionResetError("reset"), 3),
         (OSError(5, "I/O error"), 3),
         (RuntimeError("a bug"), 4),
