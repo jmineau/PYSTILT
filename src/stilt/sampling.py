@@ -6,7 +6,8 @@ A field is an :class:`xarray.DataArray` on a regular ``lat``/``lon`` grid
 dimension and an optional ``time`` dimension. Each point takes the value of
 the cell it falls in. ``foot.stilt.enhancement`` and
 ``particles.stilt.enhancement`` sample a surface flux this way, taking the
-flux step that starts at or before each time, and
+flux step that starts at or before each time, or, when the flux's ``time``
+coordinate carries CF time bounds, the step whose bounds hold the time, and
 :func:`stilt.particles.background` a mole-fraction field, taking the
 nearest time. PYSTILT does
 not convert units. A flux in µmol m⁻² s⁻¹ times a footprint in ppm per
@@ -26,6 +27,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from numpy.typing import ArrayLike
+from pandas.errors import InvalidIndexError
 
 from stilt.spatial import horizontal_dims
 
@@ -87,6 +89,27 @@ def vertical_dim(field: xr.DataArray) -> str | None:
     return extra[0] if extra else None
 
 
+def _bounds_indexer(
+    bounds: pd.IntervalIndex, stamps: pd.DatetimeIndex
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Return each stamp's step index from a flux's CF time bounds, and whether it falls in one.
+
+    A stamp before the first bound, after the last, or in a gap between
+    bounds falls in none: the bounds say where every step starts and ends,
+    so there is nothing to guess at either edge.
+    """
+    try:
+        it = bounds.get_indexer(stamps)
+    except InvalidIndexError as e:
+        raise ValueError(
+            "The field's time bounds overlap, so a time can fall in more than "
+            "one step. Two bounds cannot cover the same instant."
+        ) from e
+    in_step = it >= 0
+    return np.where(in_step, it, 0), in_step
+
+
 def sample_field(
     field: xr.DataArray,
     x: ArrayLike,
@@ -130,8 +153,14 @@ def sample_field(
         at or before its time, the rule of ``foot.stilt.aggregate`` and
         ``project.jacobian``. A point before the first label takes
         ``fill_value`` and a point after the last takes the last step, since
-        the labels do not say where it ends. The labels must strictly increase: a repeated label is an
-        error.
+        the labels do not say where it ends. The labels must strictly
+        increase: a repeated label is an error. When ``field["time"]`` is a
+        :class:`pandas.IntervalIndex` (its CF time bounds, read as each
+        step's start and end), a point is matched by which step's bounds
+        hold it instead: one before the first bound, after the last, or in
+        a gap between bounds takes ``fill_value``, since the bounds say
+        where every step starts and ends and there is nothing to guess at
+        either edge. The bounds must not overlap.
 
     Returns
     -------
@@ -170,22 +199,26 @@ def sample_field(
             raise ValueError("times must have the same length as x and y.")
         index = field.indexes["time"]
         if step_starts:
-            if not index.is_monotonic_increasing:
-                raise ValueError(
-                    "The field's time labels must strictly increase to be read as "
-                    "step starts."
-                )
-            if not index.is_unique:
-                repeated = index[index.duplicated()][0]
-                raise ValueError(
-                    "The field's time labels must strictly increase to be read as "
-                    f"step starts, but {repeated} is repeated. Two steps cannot "
-                    "start at the same time; drop one, such as the overlap of two "
-                    "concatenated files."
-                )
-            it = index.searchsorted(stamps, side="right") - 1
-            inside = inside & (it >= 0)
-            it = np.clip(it, 0, None)
+            if isinstance(index, pd.IntervalIndex):
+                it, in_step = _bounds_indexer(index, stamps)
+            else:
+                if not index.is_monotonic_increasing:
+                    raise ValueError(
+                        "The field's time labels must strictly increase to be read "
+                        "as step starts."
+                    )
+                if not index.is_unique:
+                    repeated = index[index.duplicated()][0]
+                    raise ValueError(
+                        "The field's time labels must strictly increase to be read "
+                        f"as step starts, but {repeated} is repeated. Two steps "
+                        "cannot start at the same time; drop one, such as the "
+                        "overlap of two concatenated files."
+                    )
+                it = index.searchsorted(stamps, side="right") - 1
+                in_step = it >= 0
+                it = np.clip(it, 0, None)
+            inside = inside & in_step
         else:
             it = index.get_indexer(stamps, method="nearest")
         indexers["time"] = xr.DataArray(it, dims="points")

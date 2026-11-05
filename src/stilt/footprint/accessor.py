@@ -202,24 +202,30 @@ class FootprintAccessor:
         flux : xarray.DataArray
             Surface flux on a ``lat``/``lon`` grid (``y``/``x`` for a
             projected footprint), in µmol m⁻² s⁻¹ for an enhancement in
-            ppm. A flux with a ``time`` dimension is read as steps that start
-            at their labels, as ``aggregate`` and ``project.jacobian`` read
-            them: each footprint hour takes the last flux step that starts at
-            or before the hour's start. A monthly flux labeled on the 1st
-            gives every hour of July 20 July's flux. An hour before the first
-            label gets zero flux, and an hour after the last label takes the
-            last step, since the labels do not say where it ends (add a step
-            of zeros to end it). This is the only reading PYSTILT does: it
-            does not look at the flux's CF time bounds, if it has any, so a
-            flux not labeled at the start of its steps must be relabeled
-            first. A flux labeled at the middle of its steps: shift its
-            labels back by half a step,
+            ppm. When the flux's ``time`` coordinate carries CF time bounds
+            (:func:`stilt.sampling.sample_field`'s ``step_starts``: its
+            ``time`` is a :class:`pandas.IntervalIndex`), each footprint
+            hour takes the step whose bounds hold it; an hour before the
+            first bound, after the last, or in a gap between bounds gets
+            zero flux, since the bounds say where every step starts and
+            ends. Without bounds, a flux with a ``time`` dimension is read
+            as steps that start at their labels, as ``aggregate`` and
+            ``project.jacobian`` read them: each footprint hour takes the
+            last flux step that starts at or before the hour's start. A
+            monthly flux labeled on the 1st gives every hour of July 20
+            July's flux. An hour before the first label gets zero flux, and
+            an hour after the last label takes the last step, since the
+            labels do not say where it ends (add a step of zeros to end
+            it). A flux not labeled at the start of its steps and with no
+            bounds must be relabeled first. A flux labeled at the middle of
+            its steps: shift its labels back by half a step,
             ``flux.assign_coords(time=flux.time - half_step)``. One labeled
             at the end of its steps, as an accumulation stamped when it
             ends (ERA5's hourly accumulated fields, for example), is read a
             full step late: shift its labels back by a full step instead.
-            See :ref:`flux-step-labels` for both shifts worked out. The
-            labels must strictly increase.
+            See :ref:`flux-step-labels` for both shifts worked out, and for
+            how to give a flux its bounds as an interval index. The labels
+            must strictly increase; the bounds must not overlap.
 
         Returns
         -------
@@ -233,9 +239,9 @@ class FootprintAccessor:
         ValueError
             If the flux has a ``time`` dimension and the footprint has none,
             since a time-summed footprint cannot say which flux step each
-            hour meets, if the flux cells are finer than the footprint's, or
-            if the flux's time labels do not strictly increase (a repeated
-            label is an error).
+            hour meets, if the flux cells are finer than the footprint's, if
+            the flux's time labels do not strictly increase (a repeated
+            label is an error), or if its CF time bounds overlap.
         """
         from stilt.sampling import sample_field
 

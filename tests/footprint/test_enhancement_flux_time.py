@@ -174,6 +174,71 @@ def test_a_repeated_flux_label_is_refused_and_named(foot):
         foot.stilt.enhancement(repeated)
 
 
+def _step_flux_with_bounds(starts, ends):
+    """Return a flux whose value is the step number, labeled at the step's middle, with CF time bounds."""
+    values = np.arange(1.0, len(starts) + 1)
+    bounds = pd.IntervalIndex.from_arrays(starts, ends, closed="left")
+    flux = xr.DataArray(
+        values[:, None, None] * np.ones((len(starts), 3, 3)),
+        dims=("time", "lat", "lon"),
+        coords={
+            "time": bounds,
+            "lat": [39.0, 40.5, 42.0],
+            "lon": [-114.0, -112.0, -110.0],
+        },
+    )
+    return flux, values
+
+
+def test_enhancement_reads_cf_time_bounds_even_though_the_label_disagrees(
+    foot, particles
+):
+    starts = STARTS["3-hourly"]
+    ends = starts[1:].append(starts[-1:] + (starts[-1] - starts[-2]))
+    flux, values = _step_flux_with_bounds(
+        starts, ends
+    )  # each step labeled at its own middle
+
+    # read the same steps without bounds, labeled correctly at their starts, as the reference
+    unbounded, _ = _step_flux(starts)
+    expected_foot = foot.stilt.enhancement(unbounded)
+    expected_particles = particles.stilt.enhancement(unbounded)
+
+    xr.testing.assert_allclose(foot.stilt.enhancement(flux), expected_foot)
+    pd.testing.assert_series_equal(
+        particles.stilt.enhancement(flux), expected_particles, check_names=False
+    )
+
+
+def test_an_hour_outside_cf_time_bounds_gets_zero_on_both_edges(foot):
+    # unlike the no-bounds rule (zero before the first label, the last step continues
+    # after the last label): with bounds, both edges say exactly where a step ends
+    starts = pd.DatetimeIndex(["2023-07-20 00:00", "2023-07-20 06:00"])
+    ends = starts + pd.Timedelta("6h")
+    late, _ = _step_flux_with_bounds(starts, ends)
+
+    per_hour = foot.stilt.enhancement(late).to_series()
+    totals = foot.sum(["lat", "lon"]).to_series()
+    before = per_hour.index < pd.Timestamp("2023-07-20 00:00")
+    middle = (per_hour.index >= pd.Timestamp("2023-07-20 00:00")) & (
+        per_hour.index < pd.Timestamp("2023-07-20 06:00")
+    )
+    after = per_hour.index >= pd.Timestamp(
+        "2023-07-20 12:00"
+    )  # past the second bound's end
+    assert (per_hour[before] == 0).all()
+    assert per_hour[middle].to_numpy() == pytest.approx(totals[middle].to_numpy() * 1.0)
+    assert (per_hour[after] == 0).all()  # zero, not the no-bounds "last step continues"
+
+
+def test_overlapping_cf_time_bounds_are_refused(foot):
+    starts = pd.DatetimeIndex(["2023-07-19 12:00", "2023-07-19 18:00"])
+    ends = starts + pd.Timedelta("9h")  # the two steps overlap by three hours
+    flux, _ = _step_flux_with_bounds(starts, ends)
+    with pytest.raises(ValueError, match="overlap"):
+        foot.stilt.enhancement(flux)
+
+
 def test_sample_field_reads_labels_as_step_starts_only_when_asked():
     flux, _ = _step_flux(pd.DatetimeIndex(["2023-01-01 00:00", "2023-01-01 06:00"]))
     times = [

@@ -67,16 +67,17 @@ class ParticlesAccessor:
         ----------
         flux : xarray.DataArray
             Surface flux on a ``lat``/``lon`` grid, in µmol m⁻² s⁻¹ for an
-            enhancement in ppm. A flux with a ``time`` dimension is read as
-            steps that start at their labels, as ``foot.stilt.enhancement``
-            reads it: each particle row takes the last flux step that
-            starts at or before the row's ``time``. A row before the first
-            label gets zero flux, and a row after the last label takes the
-            last step. This is the only reading PYSTILT does: it does not
-            look at the flux's CF time bounds, if it has any, so a flux not
-            labeled at the start of its steps must be relabeled first (see
-            ``foot.stilt.enhancement`` and :ref:`flux-step-labels`). Points
-            outside the flux grid, and missing cells, count as zero flux.
+            enhancement in ppm, read the same way ``foot.stilt.enhancement``
+            reads it: by its CF time bounds when it has them (a row before
+            the first bound, after the last, or in a gap between bounds
+            gets zero flux), or otherwise as steps that start at their
+            labels (each particle row takes the last flux step that starts
+            at or before the row's ``time``; a row before the first label
+            gets zero flux, and a row after the last label takes the last
+            step). A flux not labeled at the start of its steps and with no
+            bounds must be relabeled first (see ``foot.stilt.enhancement``
+            and :ref:`flux-step-labels`). Points outside the flux grid, and
+            missing cells, count as zero flux.
 
         Returns
         -------

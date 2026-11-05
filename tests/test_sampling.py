@@ -108,6 +108,92 @@ def test_sample_field_with_zero_fill_rejects_mismatched_lengths():
         sample_field(_flux(), x=[0.0, 1.0], y=[0.0], fill_value=0.0)
 
 
+def _bounded_flux(starts, ends, values=None):
+    """Return a flux uniform in space whose ``time`` is a CF-bounds IntervalIndex."""
+    values = np.arange(1.0, len(starts) + 1) if values is None else np.asarray(values)
+    bounds = pd.IntervalIndex.from_arrays(starts, ends, closed="left")
+    return xr.DataArray(
+        values[:, None, None] * np.ones((len(starts), 2, 3)),
+        dims=("time", "lat", "lon"),
+        coords={"time": bounds, "lat": [40.0, 41.0], "lon": [-112.0, -111.0, -110.0]},
+    )
+
+
+def test_sample_field_step_starts_reads_cf_time_bounds_when_present():
+    starts = pd.to_datetime(
+        ["2023-01-01 00:00", "2023-01-01 01:00", "2023-01-01 02:00"]
+    )
+    ends = starts + pd.Timedelta("1h")
+    flux = _bounded_flux(starts, ends)
+
+    times = [
+        "2022-12-31 23:00",  # before the first bound
+        "2023-01-01 00:30",  # inside step 0
+        "2023-01-01 01:30",  # inside step 1
+        "2023-01-01 02:59",  # inside step 2
+        "2023-01-01 03:00",  # at the last bound's end: outside, unlike the no-bounds rule
+    ]
+    sampled = sample_field(
+        flux,
+        x=[-111.0] * 5,
+        y=[40.0] * 5,
+        times=times,
+        fill_value=0.0,
+        step_starts=True,
+    )
+    assert sampled.tolist() == [0.0, 1.0, 2.0, 3.0, 0.0]
+
+
+def test_sample_field_step_starts_reads_bounds_even_when_the_label_disagrees():
+    # the bounds, not the (here middle-of-step) label, decide which step a time falls in
+    starts = pd.to_datetime(["2023-01-01 00:00", "2023-01-01 01:00"])
+    ends = starts + pd.Timedelta("1h")
+    flux = _bounded_flux(starts, ends)
+    assert flux.indexes["time"][0].left == starts[0]  # the interval carries both edges
+
+    sampled = sample_field(
+        flux,
+        x=[-111.0, -111.0],
+        y=[40.0, 40.0],
+        times=["2023-01-01 00:45", "2023-01-01 01:45"],
+        fill_value=0.0,
+        step_starts=True,
+    )
+    assert sampled.tolist() == [1.0, 2.0]
+
+
+def test_sample_field_step_starts_a_gap_between_bounds_gets_zero():
+    starts = pd.to_datetime(["2023-01-01 00:00", "2023-01-01 02:00"])  # a missing hour
+    ends = starts + pd.Timedelta("1h")
+    flux = _bounded_flux(starts, ends)
+
+    sampled = sample_field(
+        flux,
+        x=[-111.0],
+        y=[40.0],
+        times=["2023-01-01 01:30"],
+        fill_value=0.0,
+        step_starts=True,
+    )
+    assert sampled.tolist() == [0.0]
+
+
+def test_sample_field_step_starts_refuses_overlapping_bounds():
+    starts = pd.to_datetime(["2023-01-01 00:00", "2023-01-01 00:30"])
+    ends = starts + pd.Timedelta("1h")  # the two steps overlap by 30 minutes
+    flux = _bounded_flux(starts, ends)
+
+    with pytest.raises(ValueError, match="overlap"):
+        sample_field(
+            flux,
+            x=[-111.0],
+            y=[40.0],
+            times=["2023-01-01 00:45"],
+            fill_value=0.0,
+            step_starts=True,
+        )
+
+
 def _particles():
     # two particles; particle 2's second row is outside the flux field
     return pd.DataFrame(
