@@ -15,13 +15,14 @@ from stilt.footprint.gridding import (
     _fold_padding_around_the_globe,
     _grid_units_per_degree_longitude,
     _interpolate_early_timesteps,
+    _interpolate_longitudes,
     _interpolation_times,
     _make_gauss_kernel,
     _onto_padded_axis,
     _project_particles_to_crs,
     _unwrap_around_cloud,
-    _wrap_antimeridian_longitudes,
 )
+from stilt.footprint.io import read_footprint, write_footprint
 from stilt.receptors import PointReceptor
 from stilt.spatial import Grid
 
@@ -727,51 +728,6 @@ def test_concentration_reconstruction_from_known_footprint(point_receptor):
 # ---------------------------------------------------------------------------
 
 
-def test_wrap_antimeridian_longitudes_global_branch():
-    """``xdist == 0`` (global 360° grid) anchors to [-180, 180] without wrapping."""
-    p = pd.DataFrame({"lon": [-179.0, 0.0, 179.0]})
-    out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=-180.0, xmax=180.0)
-    assert xmin == -180.0
-    assert xmax == 180.0
-    assert wrapped is False
-    # Particle longitudes must be unchanged in the global branch.
-    np.testing.assert_array_equal(out["lon"].values, p["lon"].values)
-
-
-def test_wrap_antimeridian_longitudes_crossing_branch():
-    """``xmax < xmin`` (dateline crossing) rotates longitudes into [0, 360)."""
-    p = pd.DataFrame({"lon": [179.0, -179.0, 170.0, -170.0]})
-    out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=170.0, xmax=-170.0)
-    assert wrapped is True
-    # Bounds wrap to 170, 190 in [0, 360) space.
-    assert xmin == pytest.approx(170.0)
-    assert xmax == pytest.approx(190.0)
-    expected = np.array([179.0, 181.0, 170.0, 190.0])
-    np.testing.assert_allclose(out["lon"].values, expected)
-
-
-def test_wrap_antimeridian_longitudes_partial_wrap_branch():
-    """``xmax > 180`` (partial wrap, e.g. xmin=170, xmax=200) also rotates."""
-    p = pd.DataFrame({"lon": [175.0, -175.0]})
-    out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=170.0, xmax=200.0)
-    assert wrapped is True
-    assert xmin == pytest.approx(170.0)
-    assert xmax == pytest.approx(200.0)
-    np.testing.assert_allclose(out["lon"].values, np.array([175.0, 185.0]))
-
-
-def test_wrap_antimeridian_longitudes_no_wrap_branch():
-    """Standard CONUS domain (xmin=-113, xmax=-111) returns particles unchanged."""
-    p = pd.DataFrame({"lon": [-112.5, -111.5]})
-    out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(
-        p, xmin=-113.0, xmax=-111.0
-    )
-    assert wrapped is False
-    assert xmin == -113.0
-    assert xmax == -111.0
-    np.testing.assert_array_equal(out["lon"].values, p["lon"].values)
-
-
 def test_project_particles_to_crs_raises_on_missing_pyproj(monkeypatch):
     """Non-longlat path surfaces a clear ImportError when pyproj is absent."""
     real_import = builtins.__import__
@@ -1435,14 +1391,24 @@ def test_global_footprint_wraps_smoothing_across_the_seam(point_receptor):
     np.testing.assert_allclose(near.sum(), float(unsmoothed.sum()), rtol=1e-9)
 
 
-@pytest.mark.parametrize("bounds", [(0.0, 360.0), (-90.0, 270.0)])
-def test_global_footprint_is_the_same_on_a_grid_written_in_0_to_360(
-    point_receptor, bounds
-):
-    """A grid from 0 to 360, or any 360 degrees, is anchored to -180 to 180, as STILT-R does."""
-    reference = _global_footprint(179.9, point_receptor)
-    other = _global_footprint(179.9, point_receptor, xmin=bounds[0], xmax=bounds[1])
-    np.testing.assert_array_equal(other, reference)
+@pytest.mark.parametrize("west", [0.0, -90.0])
+def test_global_footprint_is_the_same_however_the_grid_is_written(point_receptor, west):
+    """A grid of any 360 degrees is one grid, smoothing past its edges included, and keeps its own longitudes."""
+    receptor = point_receptor.model_copy(update={"longitude": 179.9, "latitude": 50.0})
+    feet = [
+        calc_footprint(
+            _cloud_at(179.9),
+            receptor,
+            Grid(**{**_GLOBAL, "xres": 0.05, "yres": 0.05, "xmin": w, "xmax": w + 360}),
+            time_integrate=True,
+        )
+        for w in (west, -180.0)
+    ]
+    assert feet[0]["lon"][0] == pytest.approx(west + 0.025)
+    other, reference = _by_meridian(feet[0]), _by_meridian(feet[1])
+    assert reference.sum() > 1e-5
+    pd.testing.assert_index_equal(other.index, reference.index)
+    np.testing.assert_allclose(other, reference, rtol=1e-12, atol=0)
 
 
 def test_global_grid_with_cells_that_do_not_fit_360_degrees_is_not_wrapped(
@@ -1471,10 +1437,10 @@ def test_footprint_of_a_cloud_across_180_degrees_on_a_grid_that_crosses_it(
             calc_footprint(_cloud_at(lon0), receptor, grid, time_integrate=True)
         )
     across, at_zero = feet
-    # The grid across 180 degrees is stored west to east from -180 degrees:
-    # the 1.9 degrees east of 180 first (38 cells), then the 2.1 degrees west.
+    # The grid across 180 degrees runs west to east from its own west edge.
+    np.testing.assert_allclose(across["lon"][[0, -1]], [177.925, 181.875])
     np.testing.assert_allclose(
-        np.roll(across.isel(time=0).to_numpy(), 42, axis=1),
+        across.isel(time=0).to_numpy(),
         at_zero.isel(time=0).to_numpy(),
         atol=1e-14,
         rtol=0,
@@ -1550,7 +1516,6 @@ def test_footprint_beside_a_grid_edge_near_180_degrees_is_the_footprint_away_fro
     [
         (-112.0, (-113.0, -111.0)),  # a regional grid
         (-179.5, (-179.0, -170.0)),  # near 180, its padding short of it
-        (179.9, (177.9, -178.1)),  # across 180, written 0 to 360
         (179.9, (-180.0, 180.0)),  # all the way around
     ],
 )
@@ -1579,6 +1544,222 @@ def test_onto_padded_axis_moves_only_longitudes_off_the_axis():
     np.testing.assert_allclose(out, [-180.05, -179.95, 179.0, -175.0, 0.0, -180.0])
     # Longitudes already on the axis are the same objects' values, bit for bit.
     assert out.iloc[1] == lon.iloc[1] and out.iloc[3] == lon.iloc[3]
+
+
+def _by_meridian(foot: xr.DataArray, turn: float = 0.0) -> pd.Series:
+    """The nonzero cells of a time-integrated footprint, by longitude + *turn* modulo 360 and latitude."""
+    cells = foot.isel(time=0).to_series()
+    cells = cells[cells != 0]
+    index = cells.index.to_frame(index=False)
+    index["lon"] = np.round((index["lon"] + turn) % 360.0, 6)
+    return pd.Series(
+        cells.to_numpy(), index=pd.MultiIndex.from_frame(index)
+    ).sort_index()
+
+
+@pytest.mark.parametrize(
+    ("bounds", "same_box", "lon0"),
+    [
+        ((-190.0, -170.0), (170.0, -170.0), 179.9),  # west edge below -180
+        ((-10.0, 190.0), (170.0, 190.0), 179.9),  # across 180, west edge below 0
+        ((-10.0, 190.0), (-10.0, 10.0), 0.1),
+        ((350.0, 370.0), (-10.0, 10.0), 0.1),  # past 360
+        ((350.0, 360.0), (-10.0, 0.0), -5.0),  # an east edge of 360
+        ((-170.0, -190.0), (-170.0, 170.0), 0.1),  # xmax < xmin, xmin below 0
+    ],
+)
+def test_footprint_on_a_grid_written_past_180_is_that_of_the_same_box(
+    point_receptor, bounds, same_box, lon0
+):
+    """
+    A grid's longitudes count modulo 360, so a box written two ways gives one footprint.
+
+    Before, these grids gave ``EmptyFootprint``, or a ``ValueError`` from a
+    grid with no cells: the shift to 0 to 360 for a grid across 180 degrees
+    put ``-10`` to ``190`` at ``350`` to ``190``.
+    """
+    grid = Grid(
+        xmin=bounds[0], xmax=bounds[1], ymin=45.0, ymax=55.0, xres=0.1, yres=0.1
+    )
+    other = Grid(
+        xmin=same_box[0], xmax=same_box[1], ymin=45.0, ymax=55.0, xres=0.1, yres=0.1
+    )
+    receptor = point_receptor.model_copy(
+        update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
+    )
+    p = _edge_cloud(lon0)
+    foot = _by_meridian(calc_footprint(p, receptor, grid, time_integrate=True))
+    expected = _by_meridian(calc_footprint(p, receptor, other, time_integrate=True))
+    assert expected.sum() > 1e-5
+    pd.testing.assert_index_equal(foot.index, expected.index)
+    np.testing.assert_allclose(foot, expected, rtol=1e-12, atol=0)
+
+
+@pytest.mark.parametrize(
+    ("bounds", "first", "last", "lon0"),
+    [
+        ((170.0, 190.0), 170.25, 189.75, 179.9),
+        ((170.0, -170.0), 170.25, 189.75, 179.9),
+        ((-190.0, -170.0), -189.75, -170.25, 179.9),
+        ((-10.0, 190.0), -9.75, 189.75, 179.9),
+        ((-170.0, -190.0), -169.75, 169.75, 0.1),
+        ((350.0, 370.0), 350.25, 369.75, 0.1),
+        ((350.0, 10.0), 350.25, 369.75, 0.1),
+        ((400.0, 410.0), 400.25, 409.75, 45.0),
+        ((0.0, 360.0), 0.25, 359.75, 0.1),
+        ((-180.0, 180.0), -179.75, 179.75, 0.1),
+    ],
+)
+def test_footprint_has_the_longitudes_its_grid_is_written_with(
+    point_receptor, tmp_path, bounds, first, last, lon0
+):
+    """A footprint's cells are ``Grid.axes``, however the grid is written, so it can be stored and read back."""
+    grid = Grid(
+        xmin=bounds[0], xmax=bounds[1], ymin=45.0, ymax=55.0, xres=0.5, yres=0.5
+    )
+    receptor = point_receptor.model_copy(
+        update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
+    )
+    foot = calc_footprint(_edge_cloud(lon0), receptor, grid, time_integrate=True)
+    x_axis, y_axis = grid.axes
+    assert (x_axis[0], x_axis[-1]) == (first, last)
+    np.testing.assert_array_equal(foot["lon"], x_axis)
+    np.testing.assert_array_equal(foot["lat"], y_axis)
+    path = tmp_path / "foot.parquet"
+    write_footprint(path, foot)
+    back = read_footprint(path)
+    np.testing.assert_array_equal(back["lon"], x_axis)
+    np.testing.assert_allclose(back.sum(), foot.sum(), rtol=1e-6)
+
+
+def _crossing_cloud(lon0: float, n: int = 40) -> pd.DataFrame:
+    """
+    *n* particles moving east 0.03 degree a minute from *lon0* for their first 100 minutes.
+
+    The median step is above a 0.01 degree cell, so the early-time
+    interpolation runs. Longitudes are written in [-180, 180), as HYSPLIT
+    writes them, so a cloud from 179 jumps from 179.99 to -179.98.
+    """
+    rng = np.random.default_rng(5)
+    frames = []
+    for k in range(1, n + 1):
+        lon = lon0 + 0.03 * np.arange(100) + rng.normal(0.0, 0.002)
+        frames.append(
+            pd.DataFrame(
+                {
+                    "particle": k,
+                    "age": -np.arange(1, 101.0),
+                    "lon": ((lon + 180.0) % 360.0) - 180.0,
+                    "lat": 50.0 + 0.001 * np.arange(100),
+                    "zagl": 5.0,
+                    "foot": 1e-5,
+                }
+            )
+        )
+    return pd.concat(frames, ignore_index=True)
+
+
+def _crossing_footprint(
+    point_receptor: PointReceptor, lon0: float, bounds: tuple[float, float], crs: str
+) -> xr.DataArray:
+    """The unsmoothed, time-integrated footprint of ``_crossing_cloud(lon0)``."""
+    res = 0.01 if crs == "+proj=longlat" else 500.0
+    grid = Grid(
+        xmin=bounds[0],
+        xmax=bounds[1],
+        ymin=49.5,
+        ymax=50.5,
+        xres=res,
+        yres=res,
+        crs=crs,
+    )
+    receptor = point_receptor.model_copy(
+        update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
+    )
+    return calc_footprint(
+        _crossing_cloud(lon0), receptor, grid, time_integrate=True, smooth_factor=0
+    )
+
+
+@pytest.mark.parametrize(
+    ("bounds", "turned_bounds", "crs", "turned_crs"),
+    [
+        ((-180.0, 180.0), (-180.0, 180.0), "+proj=longlat", "+proj=longlat"),
+        ((-180.0, -170.0), (0.0, 10.0), "+proj=longlat", "+proj=longlat"),
+        (
+            (178.0, 182.0),
+            (-2.0, 2.0),
+            "+proj=laea +lat_0=50 +lon_0=180 +units=m",
+            "+proj=laea +lat_0=50 +lon_0=0 +units=m",
+        ),
+    ],
+)
+def test_early_interpolation_across_180_is_that_of_the_same_cloud_away_from_it(
+    point_receptor, bounds, turned_bounds, crs, turned_crs
+):
+    """
+    Positions interpolated across 180 degrees stay near the particles (#316).
+
+    The cloud and grid turned by 180 degrees, so the particles cross 0
+    instead, give the same footprint. Before, a step from 179.99 to -179.98
+    was interpolated through 0, which put 0.5 % of the footprint on a global
+    grid on the far side of the earth, and lost it on the other grids.
+    """
+    if crs != "+proj=longlat":
+        pytest.importorskip("pyproj")
+    near = _crossing_footprint(point_receptor, 179.0037, bounds, crs)
+    away = _crossing_footprint(point_receptor, -0.9963, turned_bounds, turned_crs)
+    assert float(near.sum()) > 1e-4
+    if crs == "+proj=longlat":
+        a, b = _by_meridian(near), _by_meridian(away, turn=180.0)
+        pd.testing.assert_index_equal(a.index, b.index)
+        np.testing.assert_allclose(a, b, rtol=1e-12, atol=0)
+    else:
+        np.testing.assert_allclose(near, away, rtol=1e-12, atol=0)
+
+
+def test_early_interpolation_across_0_puts_nothing_on_a_grid_across_180(
+    point_receptor,
+):
+    """On a grid across 180 degrees, particles crossing 0 put nothing at 180 degrees."""
+    with pytest.raises(EmptyFootprint):
+        _crossing_footprint(point_receptor, -0.9963, (170.0, 190.0), "+proj=longlat")
+
+
+def test_interpolate_longitudes_takes_the_short_way_round():
+    """A step across the seam passes the seam, and the positions stay in the frame written."""
+    time = np.array([0.0, 1.0, 2.0])
+    target = np.array([0.0, 0.5, 1.0, 1.25, 1.75, 2.0])
+    lon = np.array([179.8, 179.9, -179.9])
+    out = _interpolate_longitudes(target, time, lon)
+    np.testing.assert_allclose(out, [179.8, 179.85, 179.9, 179.95, -179.95, -179.9])
+    np.testing.assert_array_equal(out[[0, 2, 5]], lon)
+
+
+def test_early_step_across_180_is_measured_the_short_way_round():
+    """Steps of 0.003 degree across 180 are shorter than a 0.01 degree cell, so nothing is interpolated."""
+    p = pd.DataFrame(
+        {
+            "particle": [1, 1, 1, 2, 2, 2],
+            "age": [-1.0, -2.0, -3.0] * 2,
+            "lon": [179.998, -179.999, -179.996, 179.997, -180.0, -179.997],
+            "lat": [50.0] * 6,
+            "foot": [1e-5] * 6,
+        }
+    )
+    assert not _interpolates(p, xres=0.01, yres=0.01)
+
+
+def test_interpolate_longitudes_of_a_track_that_does_not_cross_is_unchanged():
+    """A track with no step over 180 degrees is interpolated as ``numpy.interp`` does, bit for bit."""
+    rng = np.random.default_rng(0)
+    time = np.sort(rng.uniform(-100.0, 0.0, 20))
+    target = np.unique(np.concatenate([time, np.linspace(-100.0, 0.0, 301)]))
+    lon = -112.0 + np.cumsum(rng.normal(0.0, 0.05, 20))
+    np.testing.assert_array_equal(
+        _interpolate_longitudes(target, time, lon),
+        np.interp(target, time, lon, left=np.nan, right=np.nan),
+    )
 
 
 def test_fold_padding_around_the_globe_adds_each_side_to_the_other():

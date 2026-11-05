@@ -11,11 +11,11 @@ does not need shapely, so any part of PYSTILT can use it. Polygons
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 import numpy as np
 import pandas as pd
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 if TYPE_CHECKING:
     import xarray as xr
@@ -135,6 +135,11 @@ def horizontal_dims(data: xr.DataArray) -> tuple[str, str]:
     )
 
 
+def _east_edge(xmin: float, xmax: float) -> float:
+    """Return a grid's east edge in degrees, a turn later when *xmax* is written west of *xmin*."""
+    return xmax + 360.0 if xmax < xmin else xmax
+
+
 class Bounds(BaseModel):
     """Longitude/latitude bounding box, in degrees."""
 
@@ -204,7 +209,10 @@ class Grid(Bounds):
 
     The bounds are always longitude/latitude. With a projected ``crs``,
     the grid covers the bounds' extent in that projection and ``xres`` and
-    ``yres`` are in its units.
+    ``yres`` are in its units. Longitudes count modulo 360, so a grid
+    across 180 degrees is written ``xmin=170, xmax=190`` or ``xmin=170,
+    xmax=-170``. A footprint on either has longitudes 170 to 190. A grid
+    spans at most 360 degrees of longitude.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -227,6 +235,18 @@ class Grid(Bounds):
         ),
     )
 
+    @model_validator(mode="after")
+    def _at_most_one_turn(self) -> Self:
+        """Refuse a grid wider than 360 degrees of longitude: it would hold some longitudes twice."""
+        if not -360.0 < self.xmax - self.xmin <= 360.0:
+            raise ValueError(
+                f"A grid spans at most 360 degrees of longitude; xmin={self.xmin:g} "
+                f"to xmax={self.xmax:g} does not. A grid "
+                "across 180 degrees can be written either way, such as xmin=170, "
+                "xmax=190 or xmin=170, xmax=-170."
+            )
+        return self
+
     @property
     def is_longlat(self) -> bool:
         """Whether the grid is in longitude/latitude degrees."""
@@ -242,13 +262,17 @@ class Grid(Bounds):
         """
         Cell-center coordinates ``(x, y)`` in projection units, ascending.
 
-        These are the footprint's coordinates on this grid. They are rounded
+        These are the footprint's coordinates on this grid. On a
+        longitude/latitude grid they run east from ``xmin``, past 180 if the
+        grid does: a grid from 170 to -170 has longitudes 170 to 190. They are rounded
         to 10 decimals (``40.35`` rather than ``40.349999999999994``) so they
         match labels built elsewhere from the same bounds and resolution.
         Projected grids need ``pyproj``.
         """
         xmin, xmax, ymin, ymax = self.xmin, self.xmax, self.ymin, self.ymax
-        if not self.is_longlat:
+        if self.is_longlat:
+            xmax = _east_edge(xmin, xmax)
+        else:
             from pyproj import Transformer
 
             tr = Transformer.from_crs("EPSG:4326", self.crs, always_xy=True)

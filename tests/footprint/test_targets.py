@@ -370,3 +370,40 @@ def test_exactextract_backend_matches_shapely_on_random_polygons():
     b = _mesh_weights_exactextract(mesh, x, y, 0.1, 0.1)
     assert a.shape == b.shape
     np.testing.assert_allclose(a.toarray(), b.toarray(), atol=1e-9)
+
+
+@pytest.mark.parametrize(
+    "raster",
+    [(170.0, 190.0), (170.0, -170.0), (-190.0, -170.0), (-10.0, 190.0)],
+)
+def test_overlap_weights_count_longitudes_modulo_360(raster):
+    """A raster across 180 degrees overlaps a target on its cells however either is written."""
+    grid = Grid(xmin=raster[0], xmax=raster[1], ymin=0.0, ymax=2.0, xres=0.5, yres=0.5)
+    x, y = grid.axes
+    kw = {"ymin": 0.0, "ymax": 2.0, "xres": 2.0, "yres": 2.0}
+    meshes = {
+        "written west of 180": Mesh(
+            ids=("a",), geometries=(shapely.box(-178.0, 0.0, -176.0, 2.0),)
+        ),
+        "written past 180": Mesh(
+            ids=("a",), geometries=(shapely.box(182.0, 0.0, 184.0, 2.0),)
+        ),
+    }
+    for mesh in meshes.values():
+        w = overlap_weights(mesh, x, y, 0.5, 0.5, "+proj=longlat").toarray()
+        # All 16 raster cells of the 2-degree box, each whole.
+        np.testing.assert_allclose(w.sum(), 16.0)
+    for west, east in [(-178.0, -176.0), (182.0, 184.0)]:
+        target = Grid(xmin=west, xmax=east, **kw)
+        w = overlap_weights(target, x, y, 0.5, 0.5, "+proj=longlat").toarray()
+        np.testing.assert_allclose(w.sum(), 16.0)
+
+
+def test_overlap_weights_on_a_global_raster_count_each_cell_once():
+    """A global raster and a global target, written from different meridians, overlap once per cell."""
+    grid = Grid(xmin=0.0, xmax=360.0, ymin=0.0, ymax=2.0, xres=2.0, yres=2.0)
+    target = Grid(xmin=-180.0, xmax=180.0, ymin=0.0, ymax=2.0, xres=2.0, yres=2.0)
+    x, y = grid.axes
+    w = overlap_weights(target, x, y, 2.0, 2.0, "+proj=longlat").toarray()
+    np.testing.assert_allclose(w.sum(axis=0), 1.0)
+    np.testing.assert_allclose(w.sum(axis=1), 1.0)

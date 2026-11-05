@@ -6,9 +6,13 @@ grid, where the smoothing (``_compute_kernel_bandwidths``) and the test for
 the early-time interpolation (``_interpolate_early_timesteps``) differ on
 purpose, in the smoothing of a cloud across 180 degrees on a grid that
 goes all the way around (``_unwrap_around_cloud``,
-``_fold_padding_around_the_globe``), and for particles across 180 degrees
-from the edge of a regional grid (``_onto_padded_axis``). Run the
-``fidelity`` tests before merging any change to this module.
+``_fold_padding_around_the_globe``), for particles across 180 degrees
+from the edge of a regional grid (``_onto_padded_axis``), and in the
+early-time interpolation of a particle that crosses 180 degrees
+(``_interpolate_longitudes``). A global grid keeps the longitudes it is
+written with (0 to 360), where STILT-R labels it from -180 to 180.
+Footprints are also made on grids STILT-R cannot use, such as -10 to 190
+degrees. Run the ``fidelity`` tests before merging any change to this module.
 """
 
 from __future__ import annotations
@@ -25,7 +29,7 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.particles import FOOTPRINT_COLUMNS, check_particles
 from stilt.receptors import Receptor
-from stilt.spatial import Grid, _grid_cell_starts, is_longlat
+from stilt.spatial import Grid, _east_edge, _grid_cell_starts, is_longlat
 from stilt.transforms import apply_transforms
 
 from .io import _footprint_array
@@ -78,40 +82,15 @@ def _wrap_longitudes(lon: Any, *, west: Any = 0.0) -> Any:
     return (((lon - west) % 360) + 360) % 360 + west
 
 
-def _covers_the_globe(xmin: float, xmax: float) -> bool:
-    """Return whether longitudes *xmin* to *xmax* span a whole number of turns (STILT-R's ``xdist == 0``)."""
-    return ((180 - xmin) - (-180 - xmax)) % 360 == 0
-
-
-def _wrap_antimeridian_longitudes(
-    p: pd.DataFrame, *, xmin: float, xmax: float
-) -> tuple[pd.DataFrame, float, float, bool]:
-    """
-    Shift longitudes to 0 to 360 when the grid crosses the antimeridian.
-
-    Only for longitude/latitude grids. A grid that covers the globe is
-    anchored to -180 to 180 and the longitudes are left as they are. Returns
-    ``(p, xmin, xmax, wrapped)``.
-    """
-    if _covers_the_globe(xmin, xmax):
-        return p, -180.0, 180.0, False
-    if (xmax < xmin) or (xmax > 180):
-        p = p.copy()
-        p["lon"] = _wrap_longitudes(p["lon"])
-        xmin = _wrap_longitudes(xmin)
-        xmax = _wrap_longitudes(xmax)
-        return p, xmin, xmax, True
-    return p, xmin, xmax, False
-
-
 def _onto_padded_axis(lon: pd.Series, *, west: float, east: float) -> pd.Series:
     """
     Return *lon*, each longitude off ``[west, east)`` moved by whole turns when that puts it on.
 
-    On a longitude/latitude grid the padded axis, the grid and the padding
-    smoothing reaches across, can pass 180 degrees though the grid does
-    not: a grid from -180 to -170 is padded to west of -180. A particle
-    written at 179.9 is in that padding, as -180.1. Longitudes already on
+    Particles are written from -180 to 180, and the padded axis, the grid
+    and the padding smoothing reaches across, can pass 180 degrees. On a
+    grid from 170 to 190 a particle written at -175 is at 185. A grid from
+    -180 to -170 is padded to west of -180, and a particle written at 179.9
+    is in that padding, as -180.1. Longitudes already on
     the axis are returned as they are, to the last bit, so only a padded
     axis that passes 180 degrees gets a different footprint.
     """
@@ -144,6 +123,14 @@ def _interpolate_early_timesteps(
     compares the steps in degrees with the cell size in the grid's units,
     which on a grid in meters never interpolates. The interpolation itself
     is done in degrees on any grid.
+
+    Longitudes are interpolated the short way round
+    (``_interpolate_longitudes``): a step from 179.99 to -179.97 passes
+    180, not 0. The positions added are from -180 to 180, as HYSPLIT writes
+    them. On a longitude/latitude grid a step is
+    measured the short way round as well. STILT-R interpolates and measures
+    the longitudes as written, so a step across the seam is taken through
+    the other side of the earth.
     """
     early = cast(pd.DataFrame, p[np.abs(p["age"]) < 100])
     if early.empty:
@@ -165,6 +152,9 @@ def _interpolate_early_timesteps(
         pd.DataFrame,
         sorted_early.groupby("particle", sort=False)[["lon", "lat"]].diff().abs(),
     )
+    if is_longlat(crs):
+        # A step across the seam is the short way round, not nearly 360 degrees.
+        diffs["lon"] = diffs["lon"].where(diffs["lon"] <= 180.0, 360.0 - diffs["lon"])
     per_particle_med = cast(
         pd.DataFrame, diffs.groupby(sorted_early["particle"]).median()
     )
@@ -205,7 +195,11 @@ def _interpolate_early_timesteps(
 
 
 def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.DataFrame:
-    """Interpolate lon/lat/foot for each particle on a dense time grid."""
+    """
+    Interpolate lon/lat/foot for each particle on a dense time grid.
+
+    Longitudes go the short way round (``_interpolate_longitudes``).
+    """
     frames: list[pd.DataFrame] = []
     original_columns = list(p.columns)
     for number, group in p.groupby("particle", sort=False):
@@ -232,7 +226,9 @@ def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.Da
         )
         for col in ["lon", "lat", "foot"]:
             values = group[col].to_numpy(dtype=float)[order][unique_idx]
-            if len(unique_time) >= 2:
+            if len(unique_time) >= 2 and col == "lon":
+                frame[col] = _interpolate_longitudes(target_time, unique_time, values)
+            elif len(unique_time) >= 2:
                 # left/right=nan matches R's na_interp: no extrapolation
                 # beyond the observed [min_time, max_time] range.
                 frame[col] = np.interp(
@@ -251,6 +247,33 @@ def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.Da
         .sort_values(["particle", "age"], ascending=[True, False], kind="stable")
         .reset_index(drop=True)
     )
+
+
+def _interpolate_longitudes(
+    target_time: np.ndarray, time: np.ndarray, lon: np.ndarray
+) -> np.ndarray:
+    """
+    Return one particle's longitudes *lon*, written at *time*, interpolated to *target_time* the short way round.
+
+    *target_time* holds every *time*, and nothing is extrapolated past
+    them (NaN, as R's ``na_interp``). HYSPLIT writes longitudes from -180
+    to 180, so a particle that crosses 180 degrees jumps from 179.99 to
+    -179.97, and a straight line between the two passes through 0. Here
+    each step of more than 180 degrees is taken as the shorter step the
+    other way (``numpy.unwrap``), and an interpolated position that comes
+    out past 180 is moved back by whole turns. The written positions are
+    returned as written. A track with no step over 180 degrees is interpolated as
+    before, to the last bit.
+    """
+    if not (np.abs(np.diff(lon)) > 180.0).any():
+        return np.interp(target_time, time, lon, left=np.nan, right=np.nan)
+    out = np.interp(
+        target_time, time, np.unwrap(lon, period=360.0), left=np.nan, right=np.nan
+    )
+    off = (out < -180.0) | (out > 180.0)
+    out = np.where(off, _wrap_longitudes(out, west=-180.0), out)
+    out[np.searchsorted(target_time, time)] = lon
+    return out
 
 
 def _project_particles_to_crs(
@@ -370,8 +393,7 @@ def _unwrap_around_cloud(p: pd.DataFrame) -> pd.Series:
     The circular mean is the direction of the mean of the unit vectors, so
     it is the cloud's center wherever the cloud is, and the window it opens
     has its seam on the far side of the globe from the cloud. The center is
-    expressed in the frame the longitudes are written in (-180 to 180, or
-    0 to 360 on a grid that crosses 180 degrees), so a longitude is shifted,
+    expressed in the range the longitudes are written in, so a longitude is shifted,
     by whole turns (``_wrap_longitudes``), only when it lies more than 180
     degrees from the center. The others are returned as they are, to the
     last bit.
@@ -682,7 +704,9 @@ def calc_footprint(
     part of the footprint. On a grid that ends at or near 180 degrees
     (``xmin=-180``, ``xmax=-170``), particles just across 180 degrees
     smooth onto the grid, as particles just past any other edge do.
-    STILT-R drops them.
+    STILT-R drops them. A particle that crosses 180 degrees in its first
+    100 minutes is interpolated the short way round, on any grid; STILT-R
+    interpolates it through 0 degrees.
 
     On a projected grid the kernel's width is worked out in degrees, as on
     a longitude/latitude grid, and converted to the grid's units, so the
@@ -702,8 +726,10 @@ def calc_footprint(
     receptor : Receptor
         Receptor the particles were released from.
     grid : Grid
-        Domain and resolution of the footprint. For a footprint given by a
-        geometry, derive it first: ``stilt.Mesh.from_spec(geometry).to_grid()``.
+        Domain and resolution of the footprint. Its longitudes count modulo
+        360, so ``xmin=-10, xmax=190`` is a grid across 180 degrees. For a
+        footprint given by a geometry, derive it first:
+        ``stilt.Mesh.from_spec(geometry).to_grid()``.
     smooth_factor : float, default 1.0
         Factor on the width of the Gaussian smoothing kernel. 0 turns
         smoothing off.
@@ -728,7 +754,9 @@ def calc_footprint(
     xarray.DataArray
         The footprint, named ``foot``, with dimensions ``(time, lat, lon)``
         or ``(time, y, x)`` on a projected grid. Coordinates are cell
-        centers, and ``time`` is the start of each hour. The ``.stilt``
+        centers, those of ``Grid.axes``, so longitudes are the ones the grid
+        is written with: 170.25 to 189.75 on a grid from 170 to 190, 0.5
+        degree cells. ``time`` is the start of each hour. The ``.stilt``
         accessor has the methods that use it.
 
     Raises
@@ -781,11 +809,8 @@ def calc_footprint(
     # time_sign: -1 for backward runs, +1 for forward.
     time_sign = int(np.sign(p["age"].median()))
 
-    wrapped_longitude = False
     if grid.is_longlat:
-        p, xmin, xmax, wrapped_longitude = _wrap_antimeridian_longitudes(
-            p, xmin=xmin, xmax=xmax
-        )
+        xmax = _east_edge(xmin, xmax)
 
     p = _interpolate_early_timesteps(
         p, xres=xres, yres=yres, time_sign=time_sign, crs=crs
@@ -817,11 +842,7 @@ def calc_footprint(
     n_lat = len(glati)
     rs = (xres, yres)
     # Cells that go all the way around: the east edge meets the west edge.
-    around_the_globe = (
-        grid.is_longlat
-        and _covers_the_globe(grid.xmin, grid.xmax)
-        and bool(np.isclose(n_lon * xres, 360.0))
-    )
+    around_the_globe = grid.is_longlat and bool(np.isclose(n_lon * xres, 360.0))
 
     max_kernel = (
         _make_gauss_kernel(rs, float(np.max(w))) if len(w) > 0 else np.array([[1.0]])
@@ -882,11 +903,6 @@ def calc_footprint(
     # file has the same coordinates as the one calculated.
     x_coords = np.round(glong + xres / 2, 10)
     y_coords = np.round(glati + yres / 2, 10)
-    if wrapped_longitude:
-        unwrapped = ((x_coords + 180.0) % 360.0) - 180.0
-        order = np.argsort(unwrapped)
-        x_coords = np.round(unwrapped[order], 10)
-        values = values[:, :, order]
     return _footprint_array(
         values, layers, receptor, config, name, x_coords, y_coords, geometry_hash
     )

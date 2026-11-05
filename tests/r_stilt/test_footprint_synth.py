@@ -45,11 +45,10 @@ from stilt.footprint.gridding import (
     _make_gauss_kernel,
     _padded_axes,
     _project_particles_to_crs,
-    _wrap_antimeridian_longitudes,
 )
 from stilt.particles import correct_near_field
 from stilt.receptors import PointReceptor
-from stilt.spatial import Grid, _grid_cell_starts
+from stilt.spatial import Grid, _east_edge, _grid_cell_starts
 
 from ..fixtures.particles import point_at
 
@@ -262,7 +261,7 @@ def _py_footprint_stages(
     p = _as_py(particles).copy(deep=False)
     time_sign = int(np.sign(p["age"].median()))
     if is_longlat:
-        p, xmin, xmax, _ = _wrap_antimeridian_longitudes(p, xmin=xmin, xmax=xmax)
+        xmax = _east_edge(xmin, xmax)
 
     # As calc_footprint does: on a projected grid the steps are measured in
     # the grid's units, which STILT-R does not do.
@@ -1446,8 +1445,7 @@ def test_global_grid_matches_r(rscript, r_stilt_dir, tmp_path):
     Global 360°-wide grid (xmin=-180, xmax=180).
 
     STILT-R (calc_footprint.r:87-91) detects ``xdist == 0`` and re-anchors
-    bounds to [-180, 180]; PYSTILT's _wrap_antimeridian_longitudes returns
-    the same anchoring with ``wrapped=False``.  The full pipeline must agree
+    bounds to [-180, 180], which is how the grid is written here.  The full pipeline must agree
     on a wide-grid scenario where the kernel doesn't span the antimeridian.
     """
     rng = np.random.default_rng(7)
@@ -1566,3 +1564,82 @@ def test_grid_edge_at_180_intentionally_differs_from_r(rscript, r_stilt_dir, tmp
     # Both are read back from their files, so compared at the files' precision.
     np.testing.assert_allclose(py.foot.to_numpy(), py_away.foot.to_numpy(), rtol=1e-6)
     assert float(py.foot.sum()) > 1e-5
+
+
+def test_early_interpolation_across_180_intentionally_differs_from_r(
+    rscript, r_stilt_dir, tmp_path
+):
+    """
+    Positions interpolated across 180° stay near the particles, unlike STILT-R's, on purpose.
+
+    HYSPLIT writes longitudes from -180 to 180, and STILT-R interpolates
+    them as written, so a step from 179.99° to -179.95° on a global grid
+    passes through 0° and puts part of its ``foot`` on the far side of the
+    earth. PYSTILT interpolates the short way round (#316). The same cloud
+    crossing 0° instead has no such step, and both agree there. Guarding the
+    difference keeps someone from "restoring parity" by interpolating the
+    longitudes as written again.
+    """
+    grid = Grid(xmin=-180.0, xmax=180.0, ymin=48.0, ymax=52.0, xres=0.05, yres=0.05)
+    rng = np.random.default_rng(5)
+    n, t = 40, np.arange(1.0, 101.0)
+    offsets = rng.normal(0.0, 0.002, n)
+
+    def cloud(lon0: float) -> pd.DataFrame:
+        """Each particle moves east 0.06° a minute, more than a cell, for 100 minutes."""
+        lon = lon0 + offsets[:, None] + 0.06 * (t - 1.0)
+        p = _particles(
+            n=n * len(t),
+            times=np.tile(-t, n).tolist(),
+            long=(((lon + 180.0) % 360.0) - 180.0).ravel().tolist(),
+            lati=np.tile(50.0 + 0.001 * (t - 1.0), n).tolist(),
+            foot=[1e-5] * (n * len(t)),
+        )
+        p["indx"] = np.repeat(np.arange(1.0, n + 1), len(t))
+        return p
+
+    kw = {"grid": grid, "smooth_factor": 0.0, "time_integrate": True}
+    py_away = _py_footprint(tmp_path / "py_away", cloud(-3.0037), **kw)
+    r_away = _r_footprint(
+        tmp_path / "r_away", rscript, r_stilt_dir, cloud(-3.0037), **kw
+    )
+    _assert_footprint_close(py_away, r_away, label="interpolation_across_0")
+
+    py = _py_footprint(tmp_path / "py", cloud(176.9963), **kw)
+    r = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, cloud(176.9963), **kw)
+    far = np.abs(py.lon.to_numpy()) < 90.0
+    py_foot, r_foot = py.foot.fillna(0).to_numpy(), r.foot.fillna(0).to_numpy()
+    assert py_foot[..., far].sum() == 0
+    np.testing.assert_allclose(py_foot.sum(), r_foot.sum(), rtol=1e-6)
+    assert r_foot[..., far].sum() > 0, "STILT-R now interpolates the short way round."
+
+
+@pytest.mark.parametrize("xmax", [190.0, -170.0])
+def test_grid_across_180_matches_stilt_r(rscript, r_stilt_dir, tmp_path, xmax):
+    """
+    A grid across 180° has STILT-R's footprint, longitudes included.
+
+    STILT-R shifts such a grid and its particles to 0° to 360°, and labels
+    the cells east from ``xmin``: 170° to 190°. PYSTILT moves the particles
+    onto the grid by whole turns instead, and gets the same cells.
+    """
+    grid = Grid(xmin=170.0, xmax=xmax, ymin=48.0, ymax=52.0, xres=0.05, yres=0.05)
+    rng = np.random.default_rng(11)
+    n, t = 40, np.arange(1.0, 121.0)
+    lon = 179.9 + rng.normal(0.0, 0.3, n)[:, None] * np.sqrt(t / t[-1])
+    lat = 50.0 + rng.normal(0.0, 0.3, n)[:, None] * np.sqrt(t / t[-1])
+    p = _particles(
+        n=n * len(t),
+        times=np.tile(-t, n).tolist(),
+        long=(((lon + 180.0) % 360.0) - 180.0).ravel().tolist(),
+        lati=lat.ravel().tolist(),
+        foot=[1e-3] * (n * len(t)),
+    )
+    p["indx"] = np.repeat(np.arange(1.0, n + 1), len(t))
+
+    kw = {"grid": grid, "smooth_factor": 1.0, "time_integrate": True}
+    py = _py_footprint(tmp_path / "py", p, **kw)
+    r = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, p, **kw)
+
+    np.testing.assert_allclose(py.lon[[0, -1]], [170.025, 189.975], atol=1e-9)
+    _assert_footprint_close(py, r, label="across_180")
