@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=e2e72b18"></script>
+    <script src="../../../../_static/documentation_options.js?v=ecd9cde1"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev13+gd0bb7909d" />
+  <meta name="docsearch:version" content="0.1.0a28.dev14+g8ed823f5b" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -468,8 +468,8 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">PrivateAttr</span><span class="p">,</span> <span class="n">model_validator</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt._exit_codes</span><span class="w"> </span><span class="kn">import</span> <span class="n">EXIT_INTERRUPTED</span><span class="p">,</span> <span class="n">error_exit_code</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span><span class="p">,</span> <span class="n">atomic_path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt._transient</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_transient</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeteorologyError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">settings_hash</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.meteorology</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_window</span>
@@ -1148,7 +1148,7 @@
             <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
                 <span class="c1"># fsspec's HTTP filesystem raises FileNotFoundError for a busy</span>
                 <span class="c1"># server too: the cause says, and a retry may get past it.</span>
-                <span class="k">if</span> <span class="n">error_exit_code</span><span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="o">==</span> <span class="n">EXIT_INTERRUPTED</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">is_transient</span><span class="p">(</span><span class="n">error</span><span class="p">):</span>
                     <span class="k">raise</span>
                 <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="p">(</span><span class="n">_time</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">window</span><span class="p">)</span>
                 <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">first</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">last</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span>
