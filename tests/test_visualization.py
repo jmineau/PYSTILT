@@ -749,3 +749,109 @@ def test_project_availability_rotates_the_dates_of_its_own_figure(receptor):
     ax = ProjectPlotAccessor(project).availability()
 
     assert {label.get_rotation() for label in ax.get_xticklabels()} == {30.0}
+
+
+# ---------------------------------------------------------------------------
+# Maps across 180 degrees
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def dateline_footprint():
+    """A footprint on a grid from 170 to 190 degrees east, written with the grid's own longitudes."""
+    receptor = PointReceptor(
+        time=dt.datetime(2023, 1, 1, 12), longitude=-179.5, latitude=45.0, altitude=5.0
+    )
+    grid = Grid(xmin=170.0, xmax=190.0, ymin=40.0, ymax=50.0, xres=1.0, yres=1.0)
+    lons = np.arange(170.5, 190.0, 1.0)
+    lats = np.arange(40.5, 50.0, 1.0)
+    data = xr.DataArray(
+        np.random.default_rng(0).random((1, len(lats), len(lons))),
+        dims=("time", "lat", "lon"),
+        coords={"time": [dt.datetime(2023, 1, 1, 12)], "lat": lats, "lon": lons},
+    )
+    return as_footprint(data, receptor, FootprintConfig(grid=grid), "")
+
+
+def _width_of_map(ax):
+    """Return the width in degrees of the longitudes a map shows, in its own coordinates (cartopy widens it to fill the axes)."""
+    west, east = ax.get_xlim()
+    return east - west
+
+
+def test_central_longitude_is_zero_unless_the_extent_runs_past_180():
+    from stilt.visualization import _central_longitude
+
+    assert _central_longitude(None) == 0.0
+    assert _central_longitude((-114.0, -111.0, 39.0, 42.0)) == 0.0
+    assert _central_longitude((-180.0, 180.0, -90.0, 90.0)) == 0.0
+    assert _central_longitude((169.95, 190.05, 40.0, 50.0)) == pytest.approx(180.0)
+    assert _central_longitude((-190.05, -169.95, 40.0, 50.0)) == pytest.approx(-180.0)
+
+
+def test_footprint_map_across_180_shows_only_the_grid(dateline_footprint):
+    pytest.importorskip("cartopy")
+    import cartopy.crs as ccrs
+
+    ax = dateline_footprint.stilt.plot.map(show_grid=True)
+
+    assert isinstance(ax.projection, ccrs.PlateCarree)
+    assert ax.projection.proj4_params["pm"] == pytest.approx(180.0)
+    assert 19.0 <= _width_of_map(ax) < 25.0  # the grid, not the globe's 360
+
+
+def test_footprint_map_across_180_without_cartopy_shows_only_the_grid(
+    dateline_footprint, monkeypatch
+):
+    monkeypatch.setitem(__import__("sys").modules, "cartopy", None)
+    monkeypatch.setitem(__import__("sys").modules, "cartopy.crs", None)
+
+    ax = dateline_footprint.stilt.plot.map()
+
+    assert ax.get_xlim() == pytest.approx((170.45, 189.55))
+
+
+def test_footprint_map_keeps_the_prime_meridian_center_elsewhere(minimal_footprint):
+    pytest.importorskip("cartopy")
+
+    ax = minimal_footprint.stilt.plot.map()
+
+    assert ax.projection.proj4_params["pm"] == 0
+    assert _width_of_map(ax) < 10.0
+
+
+def test_receptor_map_across_180_fits_the_domain(dateline_footprint):
+    pytest.importorskip("cartopy")
+    receptor = dateline_footprint.stilt.receptor
+
+    ax = receptor.plot.map(domain=dateline_footprint.stilt.grid)
+
+    assert ax.projection.proj4_params["pm"] == pytest.approx(180.0)
+    assert 20.0 <= _width_of_map(ax) < 25.0
+    # the receptor at -179.5 is drawn 0.5 degrees past 180: inside the map
+    (star,) = [c for c in ax.collections if c.get_label() == "Receptor"]
+    assert star.get_transform() is not ax.transData
+
+
+def test_simulation_map_across_180_fits_the_footprint(dateline_footprint):
+    pytest.importorskip("cartopy")
+    from unittest.mock import MagicMock
+
+    sim = MagicMock()
+    sim.receptor = dateline_footprint.stilt.receptor
+    sim.footprint = dateline_footprint
+    sim.particles = pd.DataFrame(
+        {
+            "age": [-60.0, -30.0, 0.0],
+            "lon": [-179.9, 179.9, 175.0],
+            "lat": [45.0, 45.1, 45.2],
+            "zagl": [10.0, 20.0, 30.0],
+            "foot": [0.1, 0.2, 0.3],
+        }
+    )
+    sim.id = "202301011200_test/hrrr"
+
+    ax = SimulationPlotAccessor(sim).map()
+
+    assert ax.projection.proj4_params["pm"] == pytest.approx(180.0)
+    assert 20.0 <= _width_of_map(ax) < 25.0

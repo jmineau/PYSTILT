@@ -43,14 +43,19 @@ def _make_ax(
 
         # Constrained layout makes room for each colorbar and its label.
         fig = plt.figure(layout="constrained")
-        ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+        center = _central_longitude(extent)
+        projection = ccrs.PlateCarree(central_longitude=center)
+        ax = fig.add_subplot(1, 1, 1, projection=projection)
         # pyrefly: ignore[missing-attribute]
         ax.add_feature(cfeature.STATES, linewidth=0.4, edgecolor="0.4")
         # pyrefly: ignore[missing-attribute]
         ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
         if extent is not None:
+            # The extent is given in the axes' own coordinates, which count
+            # degrees east of the center, so a map across 180 stays narrow.
+            west, east, south, north = extent
             # pyrefly: ignore[missing-attribute]
-            ax.set_extent(extent, crs=ccrs.PlateCarree())
+            ax.set_extent((west - center, east - center, south, north), crs=projection)
 
             if tiler is not None:
                 # pyrefly: ignore[bad-argument-type, bad-argument-count]
@@ -61,6 +66,36 @@ def _make_ax(
             ax.set_xlim(extent[0], extent[1])
             ax.set_ylim(extent[2], extent[3])
     return fig, ax
+
+
+def _central_longitude(extent: tuple[float, float, float, float] | None) -> float:
+    """
+    Return the longitude a new map is centered on.
+
+    This is 0 unless the extent runs past 180 or -180, as a footprint grid
+    from 170 to 190 does. Then it is the extent's middle, so the map shows
+    that box and not the whole globe.
+    """
+    if extent is None:
+        return 0.0
+    west, east = extent[0], extent[1]
+    if west < -180 or east > 180:
+        return (west + east) / 2
+    return 0.0
+
+
+def _data_crs(ax: Axes) -> dict:
+    """
+    Return the ``transform`` keyword that draws longitude and latitude on *ax*.
+
+    A cartopy map is centered on the longitude it was made with, so data in
+    degrees must say so. Plain matplotlib axes need no keyword.
+    """
+    if not hasattr(ax, "projection"):
+        return {}
+    import cartopy.crs as ccrs
+
+    return {"transform": ccrs.PlateCarree()}
 
 
 def _cell_lonlat(foot: xr.DataArray) -> tuple[np.ndarray, np.ndarray]:
@@ -131,6 +166,7 @@ def _draw_bounds_box(
         facecolor="none",
         linestyle=linestyle,
         label=label or None,
+        **_data_crs(ax),
     )
     ax.add_patch(rect)
 
@@ -223,7 +259,15 @@ class ParticlesPlotAccessor:
         extent = _extent(lons, lats, pad=0.5)
         fig, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
 
-        sc = ax.scatter(lons, lats, c=c, cmap=cmap, s=s, alpha=alpha, **kwargs)
+        sc = ax.scatter(
+            lons,
+            lats,
+            c=c,
+            cmap=cmap,
+            s=s,
+            alpha=alpha,
+            **{**_data_crs(ax), **kwargs},
+        )
         fig.colorbar(sc, ax=ax, label=cbar_label, shrink=0.7, pad=0.02)
 
         if receptor is not None:
@@ -305,7 +349,14 @@ class FootprintPlotAccessor:
         extent = _extent(LON, LAT, pad=0.05)
         fig, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
 
-        mesh = ax.pcolormesh(LON, LAT, vals, cmap=cmap, shading="auto", **kwargs)
+        mesh = ax.pcolormesh(
+            LON,
+            LAT,
+            vals,
+            cmap=cmap,
+            shading="auto",
+            **{**_data_crs(ax), **kwargs},
+        )
         fig.colorbar(mesh, ax=ax, label=cbar_label, shrink=0.7, pad=0.02)
 
         if show_grid:
@@ -465,7 +516,7 @@ class ReceptorPlotAccessor:
                 s=80,
                 zorder=5,
                 label="Receptors",
-                **kwargs,
+                **{**_data_crs(ax), **kwargs},
             )
             fig.colorbar(
                 sc,
@@ -483,12 +534,13 @@ class ReceptorPlotAccessor:
                 color=color,
                 zorder=5,
                 label="Receptor",
-                **kwargs,
+                **{**_data_crs(ax), **kwargs},
             )
             if isinstance(r, ColumnReceptor):
                 ax.annotate(
                     f"{r.bottom:.0f}–{r.top:.0f} m {r.altitude_ref.upper()}",
                     xy=(lons[0], lats[0]),
+                    xycoords=_data_crs(ax).get("transform", "data"),
                     xytext=(6, 4),
                     textcoords="offset points",
                     fontsize=8,
