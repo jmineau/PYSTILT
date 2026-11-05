@@ -34,7 +34,7 @@ An error the command did not expect ends it too, after its traceback: with
 reached or is busy, a stale disk), which a retry may get past, and with 4 for
 any other (a bug in PYSTILT or the project, a bucket in the wrong region, a
 403 or a 404, which a retry will repeat).
-``error_exit_code`` sorts them.
+``is_transient`` sorts them.
 """
 
 from __future__ import annotations
@@ -57,17 +57,17 @@ import yaml
 from pydantic import ValidationError
 from typer.core import TyperGroup
 
-from stilt._exit_codes import (
-    EXIT_BUG,
-    EXIT_COMPLETE,
-    EXIT_FAILED,
-    EXIT_INTERRUPTED,
-    EXIT_USAGE,
-    error_exit_code,
-)
+from stilt._transient import is_transient
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
 from stilt.project import STATES, Project
+
+#: Exit codes. 2 is also Click's own for an unknown option or command, so a
+#: driver never takes a typo for a run to retry. 3 says "run it again": the
+#: run was stopped, or hit a connection or I/O error; what finished is on
+#: disk. 4 says "do not": an unexpected error that a retry would repeat. 1 is
+#: the code of a run whose simulations failed, and no other.
+EXIT_COMPLETE, EXIT_FAILED, EXIT_USAGE, EXIT_INTERRUPTED, EXIT_BUG = 0, 1, 2, 3, 4
 
 
 class _Group(TyperGroup):
@@ -78,7 +78,8 @@ class _Group(TyperGroup):
     code of a run whose simulations failed. A driver that decides on a
     retry from the code cannot tell the two apart. So an error the command
     did not handle prints its traceback and ends with
-    ``error_exit_code``'s 3 or 4, and a ``KeyboardInterrupt`` that no
+    3 if a retry may get past it (``is_transient``)
+    and 4 if not, and a ``KeyboardInterrupt`` that no
     worker caught (Ctrl-C while waiting for a Slurm job, say) with 3, as one
     a worker caught does. Typer's and Click's own exceptions (an exit,
     a wrong command line) pass, matched by module so that it holds whether
@@ -98,7 +99,7 @@ class _Group(TyperGroup):
         except Exception as error:
             if type(error).__module__.partition(".")[0] in ("typer", "click"):
                 raise  # an exit, or a wrong command line: Click's own, and 2
-            code = error_exit_code(error)
+            code = EXIT_INTERRUPTED if is_transient(error) else EXIT_BUG
             traceback.print_exception(error)
             what = "a connection or I/O error, which a retry may get past"
             if code == EXIT_BUG:

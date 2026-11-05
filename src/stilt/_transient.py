@@ -1,10 +1,10 @@
 """
-Exit codes, and the one that an unexpected error ends a command with.
+Whether an error is one a retry may get past.
 
-``stilt`` and its callers share them. :func:`error_exit_code` reads an
-error for whether a retry may get past it, which ``stilt``'s command group
-asks of an error no command handled, and which a met fetch asks of one it
-could otherwise take for a missing file.
+``stilt``'s command group asks it of an error no command handled (3 if so,
+4 if not), a worker of an error that ended a simulation (no failure is
+recorded if so), and a met fetch of an error it could otherwise take for a
+missing file.
 """
 
 from __future__ import annotations
@@ -12,13 +12,6 @@ from __future__ import annotations
 import errno
 import socket
 from collections.abc import Iterator
-
-#: Exit codes. 2 is also Click's own for an unknown option or command, so a
-#: driver never takes a typo for a run to retry. 3 says "run it again": the
-#: run was stopped, or hit a connection or I/O error; what finished is on
-#: disk. 4 says "do not": an unexpected error that a retry would repeat. 1 is
-#: the code of a run whose simulations failed, and no other.
-EXIT_COMPLETE, EXIT_FAILED, EXIT_USAGE, EXIT_INTERRUPTED, EXIT_BUG = 0, 1, 2, 3, 4
 
 #: Errors from the cloud libraries that do not inherit from the built-in
 #: ``ConnectionError`` and mean the network failed. Matched by name along an
@@ -100,59 +93,55 @@ def _causes(error: BaseException) -> Iterator[BaseException]:
             current = None if current.__suppress_context__ else current.__context__
 
 
-def _says(error: BaseException) -> int | None:
-    """Return 3 or 4 when this one error says so by its type, errno or status; else None."""
+def _says(error: BaseException) -> bool | None:
+    """Return what this error says by its type, errno or status, or None."""
     if isinstance(error, ConnectionError | TimeoutError | socket.gaierror):
-        return EXIT_INTERRUPTED
+        return True
     if not _NETWORK_ERRORS.isdisjoint(c.__name__ for c in type(error).__mro__):
-        return EXIT_INTERRUPTED
+        return True
     if isinstance(error, OSError) and error.errno in _TRANSIENT_ERRNOS:
-        return EXIT_INTERRUPTED
+        return True
     status = _http_status(error)
     if status in _BUSY_STATUSES:
-        return EXIT_INTERRUPTED
+        return True
     if status is not None and status >= 300:
-        return EXIT_BUG
+        return False
     return None
 
 
-def error_exit_code(error: Exception) -> int:
+def is_transient(error: BaseException) -> bool:
     """
-    Return the exit code for an error the command did not expect.
+    Return whether a retry may get past *error*.
 
-    3 (:data:`EXIT_INTERRUPTED`, "run it again") when the error is a
-    connection or I/O error that a retry may get past, 4
-    (:data:`EXIT_BUG`, "do not") when it is any other.
+    True for a connection or I/O error, a busy service or an interrupted
+    call; False for any other error, which a retry would repeat.
 
     The error and its ``__cause__`` or ``__context__`` chain are read,
-    outermost first, and the first that says decides. An error says 3 by being
+    outermost first, and the first that says decides. An error says True by being
     a ``ConnectionError``, ``TimeoutError`` or name-resolution error, by a base
     class named in :data:`_NETWORK_ERRORS`, by an errno in
     :data:`_TRANSIENT_ERRNOS`, or by a busy service's HTTP status (408, 429,
-    500, 502, 503, 504). It says 4 by any other 3xx, 4xx or 5xx status (a bucket
+    500, 502, 503, 504). It says False by any other 3xx, 4xx or 5xx status (a bucket
     in another region, a bad request, a 403, a 404). The chain comes first
     because s3fs turns a ``ClientError`` into a plain ``OSError`` and keeps it
     in ``__cause__``, and fsspec's HTTP filesystem raises ``FileNotFoundError``
-    for every failure. If nothing in the chain says, ``EIO`` anywhere in it is 3
+    for every failure. If nothing in the chain says, ``EIO`` anywhere in it is True
     and anything else, ftplib's ``error_perm``, ``error_reply`` and
-    ``error_proto`` included, is 4.
+    ``error_proto`` included, is False.
 
     Parameters
     ----------
-    error : Exception
-        The error that ended the command.
+    error : BaseException
+        The error to read.
 
     Returns
     -------
-    int
-        3 or 4.
+    bool
+        True if a retry may get past it.
     """
     chain = list(_causes(error))
     for each in chain:
         verdict = _says(each)
         if verdict is not None:
             return verdict
-    unknown_io = any(
-        isinstance(each, OSError) and each.errno == errno.EIO for each in chain
-    )
-    return EXIT_INTERRUPTED if unknown_io else EXIT_BUG
+    return any(isinstance(each, OSError) and each.errno == errno.EIO for each in chain)

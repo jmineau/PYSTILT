@@ -634,7 +634,7 @@ def test_a_success_clears_the_failure_it_replaces(tmp_path, receptor, monkeypatc
 
 # A connection or I/O error that a retry may get past is not a failure of the
 # simulation: no record is written, so it stays unfinished and `stilt run`
-# exits with 3 (stilt._exit_codes.error_exit_code sorts the errors).
+# exits with 3 (stilt._transient.is_transient sorts the errors).
 
 
 def _client_error(status, code):
