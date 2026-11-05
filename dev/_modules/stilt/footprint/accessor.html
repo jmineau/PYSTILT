@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=85f85005"></script>
+    <script src="../../../_static/documentation_options.js?v=37d29c5f"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev15+ge2ddbc259" />
+  <meta name="docsearch:version" content="0.1.0a28.dev16+g2ca8e50f0" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -661,24 +661,30 @@
 <span class="sd">        flux : xarray.DataArray</span>
 <span class="sd">            Surface flux on a ``lat``/``lon`` grid (``y``/``x`` for a</span>
 <span class="sd">            projected footprint), in µmol m⁻² s⁻¹ for an enhancement in</span>
-<span class="sd">            ppm. A flux with a ``time`` dimension is read as steps that start</span>
-<span class="sd">            at their labels, as ``aggregate`` and ``project.jacobian`` read</span>
-<span class="sd">            them: each footprint hour takes the last flux step that starts at</span>
-<span class="sd">            or before the hour's start. A monthly flux labeled on the 1st</span>
-<span class="sd">            gives every hour of July 20 July's flux. An hour before the first</span>
-<span class="sd">            label gets zero flux, and an hour after the last label takes the</span>
-<span class="sd">            last step, since the labels do not say where it ends (add a step</span>
-<span class="sd">            of zeros to end it). This is the only reading PYSTILT does: it</span>
-<span class="sd">            does not look at the flux's CF time bounds, if it has any, so a</span>
-<span class="sd">            flux not labeled at the start of its steps must be relabeled</span>
-<span class="sd">            first. A flux labeled at the middle of its steps: shift its</span>
-<span class="sd">            labels back by half a step,</span>
+<span class="sd">            ppm. When the flux's ``time`` coordinate carries CF time bounds</span>
+<span class="sd">            (:func:`stilt.sampling.sample_field`'s ``step_starts``: its</span>
+<span class="sd">            ``time`` is a :class:`pandas.IntervalIndex`), each footprint</span>
+<span class="sd">            hour takes the step whose bounds hold it; an hour before the</span>
+<span class="sd">            first bound, after the last, or in a gap between bounds gets</span>
+<span class="sd">            zero flux, since the bounds say where every step starts and</span>
+<span class="sd">            ends. Without bounds, a flux with a ``time`` dimension is read</span>
+<span class="sd">            as steps that start at their labels, as ``aggregate`` and</span>
+<span class="sd">            ``project.jacobian`` read them: each footprint hour takes the</span>
+<span class="sd">            last flux step that starts at or before the hour's start. A</span>
+<span class="sd">            monthly flux labeled on the 1st gives every hour of July 20</span>
+<span class="sd">            July's flux. An hour before the first label gets zero flux, and</span>
+<span class="sd">            an hour after the last label takes the last step, since the</span>
+<span class="sd">            labels do not say where it ends (add a step of zeros to end</span>
+<span class="sd">            it). A flux not labeled at the start of its steps and with no</span>
+<span class="sd">            bounds must be relabeled first. A flux labeled at the middle of</span>
+<span class="sd">            its steps: shift its labels back by half a step,</span>
 <span class="sd">            ``flux.assign_coords(time=flux.time - half_step)``. One labeled</span>
 <span class="sd">            at the end of its steps, as an accumulation stamped when it</span>
 <span class="sd">            ends (ERA5's hourly accumulated fields, for example), is read a</span>
 <span class="sd">            full step late: shift its labels back by a full step instead.</span>
-<span class="sd">            See :ref:`flux-step-labels` for both shifts worked out. The</span>
-<span class="sd">            labels must strictly increase.</span>
+<span class="sd">            See :ref:`flux-step-labels` for both shifts worked out, and for</span>
+<span class="sd">            how to give a flux its bounds as an interval index. The labels</span>
+<span class="sd">            must strictly increase; the bounds must not overlap.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -692,9 +698,9 @@
 <span class="sd">        ValueError</span>
 <span class="sd">            If the flux has a ``time`` dimension and the footprint has none,</span>
 <span class="sd">            since a time-summed footprint cannot say which flux step each</span>
-<span class="sd">            hour meets, if the flux cells are finer than the footprint's, or</span>
-<span class="sd">            if the flux's time labels do not strictly increase (a repeated</span>
-<span class="sd">            label is an error).</span>
+<span class="sd">            hour meets, if the flux cells are finer than the footprint's, if</span>
+<span class="sd">            the flux's time labels do not strictly increase (a repeated</span>
+<span class="sd">            label is an error), or if its CF time bounds overlap.</span>
 <span class="sd">        """</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample_field</span>
 

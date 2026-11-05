@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=85f85005"></script>
+    <script src="../../_static/documentation_options.js?v=37d29c5f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev15+ge2ddbc259" />
+  <meta name="docsearch:version" content="0.1.0a28.dev16+g2ca8e50f0" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -455,7 +455,8 @@
 <span class="sd">dimension and an optional ``time`` dimension. Each point takes the value of</span>
 <span class="sd">the cell it falls in. ``foot.stilt.enhancement`` and</span>
 <span class="sd">``particles.stilt.enhancement`` sample a surface flux this way, taking the</span>
-<span class="sd">flux step that starts at or before each time, and</span>
+<span class="sd">flux step that starts at or before each time, or, when the flux's ``time``</span>
+<span class="sd">coordinate carries CF time bounds, the step whose bounds hold the time, and</span>
 <span class="sd">:func:`stilt.particles.background` a mole-fraction field, taking the</span>
 <span class="sd">nearest time. PYSTILT does</span>
 <span class="sd">not convert units. A flux in µmol m⁻² s⁻¹ times a footprint in ppm per</span>
@@ -475,6 +476,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pandas.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">InvalidIndexError</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">horizontal_dims</span>
 
@@ -542,6 +544,27 @@
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_bounds_indexer</span><span class="p">(</span>
+    <span class="n">bounds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="p">,</span> <span class="n">stamps</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return each stamp's step index from a flux's CF time bounds, and whether it falls in one.</span>
+
+<span class="sd">    A stamp before the first bound, after the last, or in a gap between</span>
+<span class="sd">    bounds falls in none: the bounds say where every step starts and ends,</span>
+<span class="sd">    so there is nothing to guess at either edge.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">it</span> <span class="o">=</span> <span class="n">bounds</span><span class="o">.</span><span class="n">get_indexer</span><span class="p">(</span><span class="n">stamps</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">InvalidIndexError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"The field's time bounds overlap, so a time can fall in more than "</span>
+            <span class="s2">"one step. Two bounds cannot cover the same instant."</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+    <span class="n">in_step</span> <span class="o">=</span> <span class="n">it</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">in_step</span><span class="p">,</span> <span class="n">it</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">in_step</span>
+
+
 <div class="viewcode-block" id="sample_field">
 <a class="viewcode-back" href="../../reference/_api/stilt.sampling.sample_field.html#stilt.sampling.sample_field">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">sample_field</span><span class="p">(</span>
@@ -587,8 +610,14 @@
 <span class="sd">        at or before its time, the rule of ``foot.stilt.aggregate`` and</span>
 <span class="sd">        ``project.jacobian``. A point before the first label takes</span>
 <span class="sd">        ``fill_value`` and a point after the last takes the last step, since</span>
-<span class="sd">        the labels do not say where it ends. The labels must strictly increase: a repeated label is an</span>
-<span class="sd">        error.</span>
+<span class="sd">        the labels do not say where it ends. The labels must strictly</span>
+<span class="sd">        increase: a repeated label is an error. When ``field["time"]`` is a</span>
+<span class="sd">        :class:`pandas.IntervalIndex` (its CF time bounds, read as each</span>
+<span class="sd">        step's start and end), a point is matched by which step's bounds</span>
+<span class="sd">        hold it instead: one before the first bound, after the last, or in</span>
+<span class="sd">        a gap between bounds takes ``fill_value``, since the bounds say</span>
+<span class="sd">        where every step starts and ends and there is nothing to guess at</span>
+<span class="sd">        either edge. The bounds must not overlap.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -627,22 +656,26 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"times must have the same length as x and y."</span><span class="p">)</span>
         <span class="n">index</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">step_starts</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span><span class="o">.</span><span class="n">is_monotonic_increasing</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">"The field's time labels must strictly increase to be read as "</span>
-                    <span class="s2">"step starts."</span>
-                <span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
-                <span class="n">repeated</span> <span class="o">=</span> <span class="n">index</span><span class="p">[</span><span class="n">index</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()][</span><span class="mi">0</span><span class="p">]</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">"The field's time labels must strictly increase to be read as "</span>
-                    <span class="sa">f</span><span class="s2">"step starts, but </span><span class="si">{</span><span class="n">repeated</span><span class="si">}</span><span class="s2"> is repeated. Two steps cannot "</span>
-                    <span class="s2">"start at the same time; drop one, such as the overlap of two "</span>
-                    <span class="s2">"concatenated files."</span>
-                <span class="p">)</span>
-            <span class="n">it</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">stamps</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">"right"</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
-            <span class="n">inside</span> <span class="o">=</span> <span class="n">inside</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">it</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="n">it</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">it</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="p">):</span>
+                <span class="n">it</span><span class="p">,</span> <span class="n">in_step</span> <span class="o">=</span> <span class="n">_bounds_indexer</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">stamps</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span><span class="o">.</span><span class="n">is_monotonic_increasing</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">"The field's time labels must strictly increase to be read "</span>
+                        <span class="s2">"as step starts."</span>
+                    <span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
+                    <span class="n">repeated</span> <span class="o">=</span> <span class="n">index</span><span class="p">[</span><span class="n">index</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()][</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">"The field's time labels must strictly increase to be read "</span>
+                        <span class="sa">f</span><span class="s2">"as step starts, but </span><span class="si">{</span><span class="n">repeated</span><span class="si">}</span><span class="s2"> is repeated. Two steps "</span>
+                        <span class="s2">"cannot start at the same time; drop one, such as the "</span>
+                        <span class="s2">"overlap of two concatenated files."</span>
+                    <span class="p">)</span>
+                <span class="n">it</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">stamps</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">"right"</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+                <span class="n">in_step</span> <span class="o">=</span> <span class="n">it</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+                <span class="n">it</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">it</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">inside</span> <span class="o">=</span> <span class="n">inside</span> <span class="o">&amp;</span> <span class="n">in_step</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">it</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get_indexer</span><span class="p">(</span><span class="n">stamps</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">)</span>
         <span class="n">indexers</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">it</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="s2">"points"</span><span class="p">)</span>

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=85f85005"></script>
+    <script src="../_static/documentation_options.js?v=37d29c5f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev15+ge2ddbc259" />
+  <meta name="docsearch:version" content="0.1.0a28.dev16+g2ca8e50f0" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -570,13 +570,39 @@ add a step of zeros after the last to end it.</p>
 <span class="n">modeled</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"time"</span><span class="p">)</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
 </pre></div>
 </div>
+<section id="an-inventory-with-cf-time-bounds">
+<span id="flux-step-labels"></span><h3>An inventory with CF time bounds<a class="headerlink" href="#an-inventory-with-cf-time-bounds" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> and <code class="docutils literal notranslate"><span class="pre">particles.stilt.enhancement</span></code> read a flux
+by its CF time bounds when its <code class="docutils literal notranslate"><span class="pre">time</span></code> coordinate carries them: each
+footprint hour (or particle row) takes the step whose bounds hold it, so a
+label that disagrees with its own bounds, such as a step labeled at its
+middle or its end, no longer matters. There is nothing to guess at either
+edge, since the bounds say exactly where every step starts and ends: an
+hour before the first bound, after the last, or in a gap between bounds
+gets zero flux.</p>
+<p>A file’s bounds usually arrive as a separate <code class="docutils literal notranslate"><span class="pre">time_bnds</span></code> variable, named
+by a <code class="docutils literal notranslate"><span class="pre">bounds</span></code> attribute on <code class="docutils literal notranslate"><span class="pre">time</span></code>. Give the flux its bounds by making
+<code class="docutils literal notranslate"><span class="pre">time</span></code> itself a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.IntervalIndex.html#pandas.IntervalIndex" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.IntervalIndex</span></code></a> of each step’s start and
+end, closed on the left:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="n">bounds</span> <span class="o">=</span> <span class="n">inventory</span><span class="p">[</span><span class="s2">"time_bnds"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>  <span class="c1"># (n_steps, 2): start, end</span>
+<span class="n">inventory</span> <span class="o">=</span> <span class="n">inventory</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span>
+    <span class="n">time</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">bounds</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">bounds</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">closed</span><span class="o">=</span><span class="s2">"left"</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> is unaffected: it takes its flux time bins explicitly
+(<code class="docutils literal notranslate"><span class="pre">time_bins</span></code>), not a flux array, so it never reads an inventory’s bounds
+itself. Build <code class="docutils literal notranslate"><span class="pre">time_bins</span></code> from the same bounds directly
+(<code class="docutils literal notranslate"><span class="pre">pd.IntervalIndex.from_arrays(bounds[:,</span> <span class="pre">0],</span> <span class="pre">bounds[:,</span> <span class="pre">1],</span> <span class="pre">closed=&quot;left&quot;)</span></code>)
+to match what <code class="docutils literal notranslate"><span class="pre">enhancement</span></code> would give that inventory.</p>
+</section>
 <section id="labels-not-at-the-start-of-a-step">
-<span id="flux-step-labels"></span><h3>Labels not at the start of a step<a class="headerlink" href="#labels-not-at-the-start-of-a-step" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>, <code class="docutils literal notranslate"><span class="pre">particles.stilt.enhancement</span></code> and
-<code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> all read a flux’s <code class="docutils literal notranslate"><span class="pre">time</span></code> labels as the starts of its
-steps. They do not look at the flux’s CF time bounds, even when it has
-them: when it has none, this is the only reading available, so PYSTILT
-reads every flux this way, with or without bounds.</p>
+<h3>Labels not at the start of a step<a class="headerlink" href="#labels-not-at-the-start-of-a-step" title="Link to this heading">#</a></h3>
+<p>Without CF time bounds, <code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>,
+<code class="docutils literal notranslate"><span class="pre">particles.stilt.enhancement</span></code> and <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> all read a flux’s
+<code class="docutils literal notranslate"><span class="pre">time</span></code> labels as the starts of its steps.</p>
 <p>An inventory labeled at the middle of its steps (a monthly mean dated the
 15th, or a 3-hourly mean dated 10:30) would be read half a step late.
 Shift its labels back by half a step first:</p>
@@ -699,6 +725,7 @@ the observations.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#starting-point">Starting point</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-few-point-sources">A few point sources</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-gridded-inventory">A gridded inventory</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#an-inventory-with-cf-time-bounds">An inventory with CF time bounds</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#labels-not-at-the-start-of-a-step">Labels not at the start of a step</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#inventory-and-footprint-grids">Inventory and footprint grids</a></li>
 </ul>

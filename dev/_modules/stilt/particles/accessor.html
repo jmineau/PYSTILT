@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=85f85005"></script>
+    <script src="../../../_static/documentation_options.js?v=37d29c5f"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev15+ge2ddbc259" />
+  <meta name="docsearch:version" content="0.1.0a28.dev16+g2ca8e50f0" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -523,16 +523,17 @@
 <span class="sd">        ----------</span>
 <span class="sd">        flux : xarray.DataArray</span>
 <span class="sd">            Surface flux on a ``lat``/``lon`` grid, in µmol m⁻² s⁻¹ for an</span>
-<span class="sd">            enhancement in ppm. A flux with a ``time`` dimension is read as</span>
-<span class="sd">            steps that start at their labels, as ``foot.stilt.enhancement``</span>
-<span class="sd">            reads it: each particle row takes the last flux step that</span>
-<span class="sd">            starts at or before the row's ``time``. A row before the first</span>
-<span class="sd">            label gets zero flux, and a row after the last label takes the</span>
-<span class="sd">            last step. This is the only reading PYSTILT does: it does not</span>
-<span class="sd">            look at the flux's CF time bounds, if it has any, so a flux not</span>
-<span class="sd">            labeled at the start of its steps must be relabeled first (see</span>
-<span class="sd">            ``foot.stilt.enhancement`` and :ref:`flux-step-labels`). Points</span>
-<span class="sd">            outside the flux grid, and missing cells, count as zero flux.</span>
+<span class="sd">            enhancement in ppm, read the same way ``foot.stilt.enhancement``</span>
+<span class="sd">            reads it: by its CF time bounds when it has them (a row before</span>
+<span class="sd">            the first bound, after the last, or in a gap between bounds</span>
+<span class="sd">            gets zero flux), or otherwise as steps that start at their</span>
+<span class="sd">            labels (each particle row takes the last flux step that starts</span>
+<span class="sd">            at or before the row's ``time``; a row before the first label</span>
+<span class="sd">            gets zero flux, and a row after the last label takes the last</span>
+<span class="sd">            step). A flux not labeled at the start of its steps and with no</span>
+<span class="sd">            bounds must be relabeled first (see ``foot.stilt.enhancement``</span>
+<span class="sd">            and :ref:`flux-step-labels`). Points outside the flux grid, and</span>
+<span class="sd">            missing cells, count as zero flux.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
