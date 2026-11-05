@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import pandas as pd
 import xarray as xr
 
-from stilt._exit_codes import EXIT_INTERRUPTED, error_exit_code
+from stilt._transient import is_transient
 from stilt.exceptions import EmptyFootprint, SimulationError
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import calc_footprint
@@ -108,14 +108,11 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> str:
     error logs, and records, its traceback.
 
     A connection or I/O error that a retry may get past
-    (:func:`stilt._exit_codes.error_exit_code` says 3: a bucket that stopped answering
+    (:func:`stilt._transient.is_transient` says so: a bucket that stopped answering
     while the result was written) is not a failure of the simulation, so
     nothing is recorded (:func:`_unfinished`). A ``SimulationError`` always is one.
     """
-    if (
-        not isinstance(error, SimulationError)
-        and error_exit_code(error) == EXIT_INTERRUPTED
-    ):
+    if not isinstance(error, SimulationError) and is_transient(error):
         return _unfinished(sim, step, error)
     expected = isinstance(error, SimulationError)
     reason = getattr(error, "reason", None) or type(error).__name__

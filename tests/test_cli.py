@@ -7,7 +7,6 @@ import os
 import socket
 import subprocess
 import sys
-import types
 import urllib.error
 from dataclasses import replace
 
@@ -17,7 +16,7 @@ import yaml
 from typer.testing import CliRunner
 
 import stilt.__main__
-from stilt._exit_codes import error_exit_code
+from stilt._transient import is_transient
 from stilt.cli import _resolve_project, app
 from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
@@ -582,59 +581,62 @@ def _client_error(status, code="Error"):
     return error
 
 
+#: Base classes the cloud libraries' errors share, named as botocore names them.
+_BOTOCORE_CONNECTION_ERROR = type("ConnectionError", (Exception,), {})
+_BOTOCORE_HTTP_CLIENT_ERROR = type("HTTPClientError", (Exception,), {})
+
+
 def _with_status(attribute, status):
-    """Return an error that carries an HTTP status as aiohttp, requests or gcsfs set it."""
+    """Return an error that carries an HTTP status as aiohttp or gcsfs set it."""
     error = RuntimeError("the service answered")
     setattr(error, attribute, status)
     return error
 
 
 @pytest.mark.parametrize(
-    ("error", "code"),
+    ("error", "transient"),
     [
         # Connection and I/O errors: run it again.
-        (ConnectionRefusedError("refused"), 3),
-        (TimeoutError("slow"), 3),
-        (OSError(5, "Input/output error"), 3),
-        (OSError(errno.ESTALE, "Stale file handle"), 3),
+        (ConnectionRefusedError("refused"), True),
+        (TimeoutError("slow"), True),
+        (OSError(5, "Input/output error"), True),
+        (OSError(errno.ESTALE, "Stale file handle"), True),
         # Cloud libraries' errors that are not OSError, matched by class name.
-        (_error_named("EndpointConnectionError"), 3),
-        (_error_named("ConnectTimeoutError"), 3),
-        (_error_named("ReadTimeoutError"), 3),
+        (_error_named("EndpointConnectionError", _BOTOCORE_CONNECTION_ERROR), True),
+        (_error_named("ConnectTimeoutError", _BOTOCORE_CONNECTION_ERROR), True),
+        (_error_named("ReadTimeoutError", _BOTOCORE_HTTP_CLIENT_ERROR), True),
         # aiohttp's ServerDisconnectedError is a ClientConnectionError.
         (
             _error_named(
                 "ServerDisconnectedError",
                 type("ClientConnectionError", (Exception,), {}),
             ),
-            3,
+            True,
         ),
-        (_error_named("ClientConnectionError"), 3),
-        (_client_error(503, "SlowDown"), 3),
-        (_client_error(500, "InternalError"), 3),
-        (_client_error(400, "ThrottlingException"), 3),
-        (_client_error(429), 3),
+        (_error_named("ClientConnectionError"), True),
+        (_client_error(503, "SlowDown"), True),
+        (_client_error(500, "InternalError"), True),
+        (_client_error(429), True),
         # The status of a busy service, wherever the library keeps it.
-        (_with_status("status", 503), 3),
-        (_with_status("status_code", 429), 3),
-        (_with_status("code", 502), 3),
-        (_with_status("status", 404), 4),
-        (_with_status("code", "not a status"), 4),
+        (_with_status("status", 503), True),
+        (_with_status("code", 502), True),
+        (_with_status("status", 404), False),
+        (_with_status("code", "not a status"), False),
         # Not transient: the path or the credentials are wrong, or it is a bug.
-        (_client_error(403, "AccessDenied"), 4),
-        (_client_error(404, "NoSuchKey"), 4),
-        (_client_error(None, "NoSuchKey"), 4),
-        (FileNotFoundError("no such file"), 4),
-        (PermissionError("denied"), 4),
-        (IsADirectoryError("a directory"), 4),
-        (RuntimeError("a bug"), 4),
-        (KeyError("k"), 4),
-        (ValueError("bad"), 4),
-        (_error_named("SSLError"), 4),
+        (_client_error(403, "AccessDenied"), False),
+        (_client_error(404, "NoSuchKey"), False),
+        (_client_error(None, "NoSuchKey"), False),
+        (FileNotFoundError("no such file"), False),
+        (PermissionError("denied"), False),
+        (IsADirectoryError("a directory"), False),
+        (RuntimeError("a bug"), False),
+        (KeyError("k"), False),
+        (ValueError("bad"), False),
+        (_error_named("AnErrorNoRuleNames"), False),
     ],
 )
-def test_error_exit_code_sorts_retry_from_bug(error, code):
-    assert error_exit_code(error) == code
+def test_is_transient_sorts_retry_from_bug(error, transient):
+    assert is_transient(error) is transient
 
 
 def _as_s3fs_raises(error_errno, status, code):
@@ -654,85 +656,86 @@ def _raised_from(outer, inner):
     return outer
 
 
-def _http_error_of_requests(status):
-    """Return what ``requests`` raises for a response: an ``OSError`` that holds the response."""
-    error = type("HTTPError", (OSError,), {})("the server answered")
-    error.response = types.SimpleNamespace(status_code=status)
-    return error
-
-
 @pytest.mark.parametrize(
-    ("error", "code"),
+    ("error", "transient"),
     [
         # s3fs turns a permanent S3 answer into a plain OSError: a retry meets it again.
-        (_as_s3fs_raises(_EREMCHG, 301, "PermanentRedirect"), 4),
-        (_as_s3fs_raises(errno.EINVAL, 400, "AuthorizationHeaderMalformed"), 4),
-        (_as_s3fs_raises(errno.EINVAL, 400, "InvalidBucketName"), 4),
-        (_as_s3fs_raises(errno.EINVAL, 400, "InvalidArgument"), 4),
-        (_as_s3fs_raises(errno.EINVAL, 400, "400"), 4),
-        (_as_s3fs_raises(errno.EPERM, 405, "MethodNotAllowed"), 4),
-        (_as_s3fs_raises(errno.EIO, 418, "Teapot"), 4),
+        (_as_s3fs_raises(_EREMCHG, 301, "PermanentRedirect"), False),
+        (_as_s3fs_raises(errno.EINVAL, 400, "AuthorizationHeaderMalformed"), False),
+        (_as_s3fs_raises(errno.EINVAL, 400, "InvalidBucketName"), False),
+        (_as_s3fs_raises(errno.EINVAL, 400, "InvalidArgument"), False),
+        (_as_s3fs_raises(errno.EINVAL, 400, "400"), False),
+        (_as_s3fs_raises(errno.EPERM, 405, "MethodNotAllowed"), False),
+        (_as_s3fs_raises(errno.EIO, 418, "Teapot"), False),
         (
             _raised_from(PermissionError("denied"), _client_error(403, "AccessDenied")),
-            4,
+            False,
         ),
         (
             _raised_from(FileNotFoundError("gone"), _client_error(404, "NoSuchBucket")),
-            4,
+            False,
         ),
         # ... and a busy one, a retry may get past.
-        (_as_s3fs_raises(errno.EBUSY, 503, "SlowDown"), 3),
-        (_as_s3fs_raises(errno.EBUSY, 503, "ServiceUnavailable"), 3),
-        (_as_s3fs_raises(errno.EBUSY, 409, "OperationAborted"), 3),
-        (_as_s3fs_raises(_EREMOTEIO, 500, "InternalError"), 3),
-        (_as_s3fs_raises(errno.EIO, 502, "BadGateway"), 3),
-        (_raised_from(TimeoutError("slow"), _client_error(400, "RequestTimeout")), 3),
-        # requests and urllib raise OSErrors that hold an HTTP status.
-        (_http_error_of_requests(404), 4),
-        (_http_error_of_requests(403), 4),
-        (_http_error_of_requests(503), 3),
-        (_http_error_of_requests(429), 3),
-        (urllib.error.HTTPError("u", 404, "not found", {}, io.BytesIO()), 4),
-        (urllib.error.HTTPError("u", 503, "busy", {}, io.BytesIO()), 3),
+        (_as_s3fs_raises(errno.EBUSY, 503, "SlowDown"), True),
+        (_as_s3fs_raises(errno.EBUSY, 503, "ServiceUnavailable"), True),
+        (_as_s3fs_raises(errno.EBUSY, 409, "OperationAborted"), True),
+        (_as_s3fs_raises(_EREMOTEIO, 500, "InternalError"), True),
+        (_as_s3fs_raises(errno.EIO, 502, "BadGateway"), True),
+        (
+            _raised_from(TimeoutError("slow"), _client_error(400, "RequestTimeout")),
+            True,
+        ),
+        # urllib raises an OSError that holds an HTTP status.
+        (urllib.error.HTTPError("u", 404, "not found", {}, io.BytesIO()), False),
+        (urllib.error.HTTPError("u", 503, "busy", {}, io.BytesIO()), True),
         # An OSError nothing explains is read by its errno.
-        (OSError(errno.EIO, "Input/output error"), 3),
-        (OSError(errno.ESTALE, "Stale file handle"), 3),
-        (OSError(errno.ETIMEDOUT, "timed out"), 3),
-        (socket.gaierror(socket.EAI_AGAIN, "try again"), 3),
-        (OSError(errno.EINVAL, "invalid"), 4),
-        (OSError(errno.ENOSPC, "no space left"), 4),
-        (OSError(errno.EROFS, "read-only"), 4),
-        (OSError("an OSError with no errno"), 4),
+        (OSError(errno.EIO, "Input/output error"), True),
+        (OSError(errno.ESTALE, "Stale file handle"), True),
+        (OSError(errno.ETIMEDOUT, "timed out"), True),
+        (socket.gaierror(socket.EAI_AGAIN, "try again"), True),
+        (OSError(errno.EINVAL, "invalid"), False),
+        (OSError(errno.ENOSPC, "no space left"), False),
+        (OSError(errno.EROFS, "read-only"), False),
+        (OSError("an OSError with no errno"), False),
         # The chain is read for a bug raised while handling or from a connection error.
-        (_raised_from(RuntimeError("wrapped"), ConnectionResetError("reset")), 3),
-        (_raised_from(RuntimeError("wrapped"), _client_error(403)), 4),
+        (_raised_from(RuntimeError("wrapped"), ConnectionResetError("reset")), True),
+        (_raised_from(RuntimeError("wrapped"), _client_error(403)), False),
     ],
 )
-def test_error_exit_code_reads_the_chain_and_the_status(error, code):
-    assert error_exit_code(error) == code
+def test_is_transient_reads_the_chain_and_the_status(error, transient):
+    assert is_transient(error) is transient
 
 
 @pytest.mark.parametrize(
-    ("error", "code"),
+    ("error", "transient"),
     [
         # FTP: a 4xx reply is transient by the standard, a 5xx is not.
-        (ftplib.error_temp("421 There are too many connected users"), 3),
-        (ftplib.error_temp("425 Can't open data connection"), 3),
-        (ftplib.error_perm("550 No such file"), 4),
-        (ftplib.error_perm("530 Login incorrect"), 4),
-        (ftplib.error_reply("unexpected reply"), 4),
-        (ftplib.error_proto("no FTP reply"), 4),
+        (ftplib.error_temp("421 There are too many connected users"), True),
+        (ftplib.error_temp("425 Can't open data connection"), True),
+        (ftplib.error_perm("550 No such file"), False),
+        (ftplib.error_perm("530 Login incorrect"), False),
+        (ftplib.error_reply("unexpected reply"), False),
+        (ftplib.error_proto("no FTP reply"), False),
         # fsspec's HTTP filesystem raises FileNotFoundError for every failure,
         # from the error that happened: that one decides.
-        (_raised_from(FileNotFoundError("http://x/f"), _with_status("status", 503)), 3),
-        (_raised_from(FileNotFoundError("http://x/f"), _with_status("status", 429)), 3),
-        (_raised_from(FileNotFoundError("http://x/f"), _with_status("status", 404)), 4),
+        (
+            _raised_from(FileNotFoundError("http://x/f"), _with_status("status", 503)),
+            True,
+        ),
+        (
+            _raised_from(FileNotFoundError("http://x/f"), _with_status("status", 429)),
+            True,
+        ),
+        (
+            _raised_from(FileNotFoundError("http://x/f"), _with_status("status", 404)),
+            False,
+        ),
         (
             _raised_from(FileNotFoundError("http://x/f"), ConnectionRefusedError()),
-            3,
+            True,
         ),
-        (_raised_from(FileNotFoundError("http://x/f"), TimeoutError()), 3),
-        (_raised_from(FileNotFoundError("http://x/f"), KeyError("k")), 4),
+        (_raised_from(FileNotFoundError("http://x/f"), TimeoutError()), True),
+        (_raised_from(FileNotFoundError("http://x/f"), KeyError("k")), False),
         (
             _raised_from(
                 FileNotFoundError("http://x/f"),
@@ -740,14 +743,14 @@ def test_error_exit_code_reads_the_chain_and_the_status(error, code):
                     "ClientOSError", type("ClientConnectionError", (Exception,), {})
                 ),
             ),
-            3,
+            True,
         ),
-        (_raised_from(PermissionError("denied"), _with_status("status", 503)), 3),
-        (FileNotFoundError("no cause"), 4),
+        (_raised_from(PermissionError("denied"), _with_status("status", 503)), True),
+        (FileNotFoundError("no cause"), False),
     ],
 )
-def test_error_exit_code_ftp_replies_and_wrapped_http_errors(error, code):
-    assert error_exit_code(error) == code
+def test_is_transient_ftp_replies_and_wrapped_http_errors(error, transient):
+    assert is_transient(error) is transient
 
 
 def test_an_error_raised_while_handling_a_connection_error_is_read_with_it():
@@ -757,33 +760,72 @@ def test_an_error_raised_while_handling_a_connection_error_is_read_with_it():
         except ConnectionRefusedError:
             raise RuntimeError("the handler failed") from None
     except RuntimeError as suppressed:
-        assert error_exit_code(suppressed) == 4
+        assert not is_transient(suppressed)
     try:
         try:
             raise ConnectionRefusedError("refused")
         except ConnectionRefusedError:
             raise RuntimeError("the handler failed")  # noqa: B904
     except RuntimeError as handling:
-        assert error_exit_code(handling) == 3
+        assert is_transient(handling)
 
 
 def test_s3fs_own_translation_is_sorted_by_status():
     """The real s3fs: every permanent code is 4 and a busy one 3, as the stand-ins above."""
     translate = pytest.importorskip("s3fs.errors").translate_boto_error
-    for name, status, code in [
-        ("PermanentRedirect", 301, 4),
-        ("AuthorizationHeaderMalformed", 400, 4),
-        ("InvalidBucketName", 400, 4),
-        ("InvalidArgument", 400, 4),
-        ("AccessDenied", 403, 4),
-        ("NoSuchBucket", 404, 4),
-        ("SlowDown", 503, 3),
-        ("InternalError", 500, 3),
-        ("SomethingNew", 500, 3),
-        ("SomethingNew", 418, 4),
+    for name, status, transient in [
+        ("PermanentRedirect", 301, False),
+        ("AuthorizationHeaderMalformed", 400, False),
+        ("InvalidBucketName", 400, False),
+        ("InvalidArgument", 400, False),
+        ("AccessDenied", 403, False),
+        ("NoSuchBucket", 404, False),
+        ("SlowDown", 503, True),
+        ("InternalError", 500, True),
+        ("SomethingNew", 500, True),
+        ("SomethingNew", 418, False),
     ]:
         error = translate(_client_error(status, name))
-        assert error_exit_code(error) == code, (name, status)
+        assert is_transient(error) is transient, (name, status)
+
+
+def test_real_botocore_errors_are_sorted_by_their_base_class():
+    """Every network error botocore raises is 3 through a base class; these are the real ones."""
+    botocore = pytest.importorskip("botocore.exceptions")
+    for error in (
+        botocore.EndpointConnectionError(endpoint_url="u"),
+        botocore.ProxyConnectionError(proxy_url="u"),
+        botocore.ConnectTimeoutError(endpoint_url="u"),
+        botocore.SSLError(endpoint_url="u", error="e"),
+        botocore.ReadTimeoutError(endpoint_url="u"),
+        botocore.ConnectionClosedError(endpoint_url="u"),
+        botocore.IncompleteReadError(actual_bytes=1, expected_bytes=2),
+    ):
+        assert is_transient(error), type(error).__name__
+    assert not is_transient(botocore.NoCredentialsError())
+
+
+def test_real_aiohttp_errors_are_sorted_by_their_base_class():
+    """A dropped connection or a body cut off is 3, whatever ``code`` the cause holds."""
+    aiohttp = pytest.importorskip("aiohttp")
+    for error in (
+        aiohttp.ServerDisconnectedError(),
+        aiohttp.ClientOSError(errno.ECONNRESET, "reset"),
+        aiohttp.ClientPayloadError("the body was cut off"),
+    ):
+        assert is_transient(error), type(error).__name__
+
+
+def test_a_gcsfs_bad_gateway_is_a_connection_error():
+    """A proxy's 502 reaches gcsfs through ``requests``, which raises ``ProxyError``."""
+    requests = pytest.importorskip("requests.exceptions")
+    assert is_transient(requests.ProxyError("502 Bad Gateway"))
+
+
+def test_s3fs_busy_errno_decides_for_a_read_with_no_error_code():
+    """A read's HEAD has no body, so botocore's code is the status; s3fs's errno still says busy."""
+    translate = pytest.importorskip("s3fs.errors").translate_boto_error
+    assert is_transient(translate(_client_error(409, "409")))
 
 
 def test_a_cloud_error_is_sorted_with_the_libraries_not_imported():
@@ -797,15 +839,15 @@ def test_a_cloud_error_is_sorted_with_the_libraries_not_imported():
         },
         "ListObjectsV2",
     )
-    assert error_exit_code(refused) == 3
-    assert error_exit_code(botocore.ReadTimeoutError(endpoint_url="u")) == 3
-    assert error_exit_code(denied) == 4
+    assert is_transient(refused)
+    assert is_transient(botocore.ReadTimeoutError(endpoint_url="u"))
+    assert not is_transient(denied)
 
 
 @pytest.mark.parametrize(
     ("error", "code"),
     [
-        (_error_named("EndpointConnectionError"), 3),
+        (_error_named("EndpointConnectionError", _BOTOCORE_CONNECTION_ERROR), 3),
         (ConnectionResetError("reset"), 3),
         (OSError(5, "I/O error"), 3),
         (RuntimeError("a bug"), 4),

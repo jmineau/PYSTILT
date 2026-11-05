@@ -16,8 +16,8 @@ from typing import TYPE_CHECKING, Any, Literal, Self
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
-from stilt._exit_codes import EXIT_INTERRUPTED, error_exit_code
 from stilt._paths import absolute, atomic_path
+from stilt._transient import is_transient
 from stilt.exceptions import MeteorologyError
 from stilt.identity import settings_hash
 from stilt.meteorology import run_window
@@ -665,7 +665,7 @@ class Met:
             except (ValueError, FileNotFoundError) as error:
                 # fsspec's HTTP filesystem raises FileNotFoundError for a busy
                 # server too: the cause says, and a retry may get past it.
-                if error_exit_code(error) == EXIT_INTERRUPTED:
+                if is_transient(error):
                     raise
                 first, last = (_time(t) for t in window)
                 return f"{first:%Y-%m-%d %H:%M} to {last:%Y-%m-%d %H:%M}: {error}"

@@ -174,7 +174,7 @@ refused, reset or timed-out connection or a name-resolution failure, an error of
 the cloud libraries that is not an ``OSError`` (such as botocore's
 ``EndpointConnectionError`` and ``ReadTimeoutError``), an FTP 4xx reply ("421
 too many users"), or has the status of a busy or briefly unavailable service
-(408, 429, 500, 502, 503, 504, and the throttling codes such as ``SlowDown``).
+(408, 429, 500, 502, 503, 504, or the errno s3fs gives such an answer).
 When an error hides its cause, as fsspec's HTTP filesystem does by raising
 ``FileNotFoundError`` for every failure, the cause decides. An ``OSError`` that nothing explains is
 3 when its errno is input/output trouble that goes away (``EIO``, a stale
