@@ -173,22 +173,28 @@ What does not match
   gets the footprint it got before, bit for bit.
   ``test_grid_edge_at_180_intentionally_differs_from_r`` guards the
   difference.
-- **Grids written past ±180°.** STILT-R shifts a grid to 0° to 360° when
-  ``xmax < xmin`` or ``xmax > 180``. A grid that passes 0° there as well
-  then has no cells (``-10`` to ``190`` becomes ``350`` to ``190``), and a
+- **The longitudes of a grid across 180°.** The values match; the labels do
+  not. STILT-R shifts a grid to 0° to 360° when ``xmax < xmin`` or
+  ``xmax > 180``, and labels its cells from -180° to 180°, sorted, so a grid
+  from 170° to 190° has a jump of 340° in the middle. PYSTILT moves the
+  particles onto the grid by whole turns, as at a grid edge at 180°, and the
+  cells keep the longitudes the grid is written with: 170° to 190°, also for
+  a grid written from 170° to -170°, and 0° to 360° for a global grid written
+  that way. ``test_grid_across_180_is_stilt_rs_footprint_on_its_own_longitudes``
+  guards the difference.
+- **Grids written past ±180°.** A grid that passes 0° as well as 180° has no
+  cells in STILT-R (``-10`` to ``190`` becomes ``350`` to ``190``), and a
   grid west of -180° (``-190`` to ``-170``) is not shifted, so its particles
-  are dropped. PYSTILT shifts such a grid only when its edges stay in
-  order. Otherwise it keeps them as written and moves the particles onto it
-  by whole turns, as at a grid edge at 180°. A grid wider than 360° is
-  refused when it is made. Grids STILT-R handles are handled as before.
+  are dropped. PYSTILT makes a footprint on these as on any other. A grid
+  wider than 360° is refused when it is made.
 - **The early-time interpolation across 180°.** HYSPLIT writes longitudes
   from -180° to 180°, and STILT-R interpolates them as written, so a step
   from 179.99° to -179.97° is interpolated through 0°, and the positions
   added put part of that step's ``foot`` on the far side of the earth. On a
   global grid that is a misplaced footprint (0.5 % of it for 40 particles
   crossing 180° at 0.03° a minute on 0.01° cells); on a regional grid at
-  180° the part is lost. On a grid shifted to 0° to 360° the same happens
-  to a particle that crosses 0°, and lands near 180°. PYSTILT interpolates
+  180° the part is lost. On a grid STILT-R shifts to 0° to 360° the same
+  happens to a particle that crosses 0°, and lands near 180°. PYSTILT interpolates
   each step the short way round and measures it that way when it decides
   whether to interpolate. A particle that takes no step across the seam is
   interpolated as before, bit for bit.

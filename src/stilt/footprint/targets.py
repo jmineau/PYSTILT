@@ -44,7 +44,7 @@ from scipy import sparse
 from shapely.geometry.base import BaseGeometry
 
 from stilt.footprint.config import FileGeometrySpec, GeometrySpec, H3GeometrySpec
-from stilt.spatial import Grid, is_longlat, same_crs
+from stilt.spatial import Grid, _east_edge, is_longlat, same_crs
 
 
 def _transform_geometries(
@@ -655,6 +655,9 @@ def overlap_weights(
     otherwise. Both give the same fractions. Results are cached, so repeated
     aggregations onto the same geometry are one matrix product each.
 
+    On a longitude/latitude raster, longitudes count modulo 360: a raster
+    from 170 to 190 overlaps a target written from -180 to -170.
+
     Parameters
     ----------
     geometry : Grid, Mesh, or Zones
@@ -683,13 +686,28 @@ def overlap_weights(
     if isinstance(geometry, Zones):
         base_w = overlap_weights(geometry.base, x, y, xres, yres, crs)
         w = sparse.csr_matrix(geometry.membership @ base_w)
-    elif isinstance(geometry, Grid):
-        if same_crs(geometry.crs, crs):
-            w = _grid_weights(geometry, x, y, xres, yres)
-        else:
-            w = _polygon_weights(Mesh.from_grid(geometry).to_crs(crs), x, y, xres, yres)
     else:
-        w = _polygon_weights(geometry.to_crs(crs), x, y, xres, yres)
+        if isinstance(geometry, Grid) and same_crs(geometry.crs, crs):
+            grid = geometry
+            west, east = grid.xmin, _east_edge(grid.xmin, grid.xmax)
+
+            def weigh(xs: np.ndarray) -> sparse.csr_matrix:
+                return _grid_weights(grid, xs, y, xres, yres)
+
+        else:
+            base = Mesh.from_grid(geometry) if isinstance(geometry, Grid) else geometry
+            mesh = base.to_crs(crs)
+            west, _, east, _ = mesh.bounds
+
+            def weigh(xs: np.ndarray) -> sparse.csr_matrix:
+                return _polygon_weights(mesh, xs, y, xres, yres)
+
+        w = weigh(x)
+        if is_longlat(crs):
+            # A raster cell a whole turn from a target cell is on the same meridian.
+            for turn in (-360.0, 360.0):
+                if x[0] - xres / 2 + turn < east and x[-1] + xres / 2 + turn > west:
+                    w = sparse.csr_matrix(w + weigh(x + turn))
 
     if len(_weight_cache) >= _WEIGHT_CACHE_SIZE:
         del _weight_cache[next(iter(_weight_cache))]
