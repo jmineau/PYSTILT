@@ -753,6 +753,21 @@ def test_is_transient_ftp_replies_and_wrapped_http_errors(error, transient):
     assert is_transient(error) is transient
 
 
+def test_an_eoferror_from_ftplib_is_transient_and_one_from_other_code_is_not():
+    # ftplib's own read of a closed connection, with no network
+    ftp = ftplib.FTP()
+    ftp.file = io.BytesIO(b"")
+    with pytest.raises(EOFError) as dropped:
+        ftp.getline()
+    assert is_transient(dropped.value)
+
+    # a bare EOFError, as arlmet raises for an ARL file that is cut short
+    with pytest.raises(EOFError) as cut_short:
+        raise EOFError("file ends in the middle of a record")
+    assert not is_transient(cut_short.value)
+    assert not is_transient(EOFError("never raised"))
+
+
 def test_an_error_raised_while_handling_a_connection_error_is_read_with_it():
     try:
         try:

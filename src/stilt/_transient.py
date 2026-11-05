@@ -93,9 +93,23 @@ def _causes(error: BaseException) -> Iterator[BaseException]:
             current = None if current.__suppress_context__ else current.__context__
 
 
+def _raised_in_ftplib(error: BaseException) -> bool:
+    """Return whether *error* was raised by ``ftplib`` itself, not by code that called it."""
+    traceback = error.__traceback__
+    if traceback is None:
+        return False
+    while traceback.tb_next is not None:
+        traceback = traceback.tb_next
+    return traceback.tb_frame.f_globals.get("__name__") == "ftplib"
+
+
 def _says(error: BaseException) -> bool | None:
     """Return what this error says by its type, errno or status, or None."""
     if isinstance(error, ConnectionError | TimeoutError | socket.gaierror):
+        return True
+    # ftplib raises a bare EOFError when the server closes the connection. arlmet
+    # raises one too for an ARL file that is cut short, which a retry meets again.
+    if isinstance(error, EOFError) and _raised_in_ftplib(error):
         return True
     if not _NETWORK_ERRORS.isdisjoint(c.__name__ for c in type(error).__mro__):
         return True
@@ -119,7 +133,8 @@ def is_transient(error: BaseException) -> bool:
     The error and its ``__cause__`` or ``__context__`` chain are read,
     outermost first, and the first that says decides. An error says True by being
     a ``ConnectionError``, ``TimeoutError`` or name-resolution error, by a base
-    class named in :data:`_NETWORK_ERRORS`, by an errno in
+    class named in :data:`_NETWORK_ERRORS`, by an ``EOFError`` that ``ftplib``
+    raised (a dropped FTP connection; the traceback's last frame says), by an errno in
     :data:`_TRANSIENT_ERRNOS`, or by a busy service's HTTP status (408, 429,
     500, 502, 503, 504). It says False by any other 3xx, 4xx or 5xx status (a bucket
     in another region, a bad request, a 403, a 404). The chain comes first
