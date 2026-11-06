@@ -82,8 +82,13 @@ The workflow side by side
      - ``grid: xmin``, ``xmax``, ``ymin``, ``ymax``
    * - ``xres``, ``yres``, ``projection``
      - ``grid: xres``, ``yres``, ``crs`` (``projection`` is read too)
-   * - ``smooth_factor``, ``time_integrate``
-     - same names, top level
+   * - ``smooth_factor``
+     - same name, top level
+   * - ``time_integrate``
+     - none: footprints keep their time layers (``tres``, an hour by
+       default), and ``foot.sum("time")`` gives the summed map. For one
+       layer as long as the run, set ``tres`` to its length (``tres: 1D``
+       for ``n_hours = -24``)
    * - ``n_hours``, ``numpar``, ``hnf_plume``, ``varsiwant``
      - same names, top level
    * - ``timeout``
@@ -301,7 +306,7 @@ It prints the met and the variant that name the imported folders, for
        geometry: null
        cells_per_target: 4.0
        smooth_factor: 1.0
-       time_integrate: false
+       tres: 1h
        transforms: []
 
 and returns the receptors, for ``receptors.csv``. Paste the printed lines into
@@ -345,8 +350,11 @@ STILT-R projects that differ only in ``n_hours`` land in two folders.
      - ``met_path``, the directory the ``CONTROL`` files name, as they name it.
        Each run's met files are recorded in its particle file; they need not
        exist any more
-   * - ``grid``, ``time_integrate``
-     - ``<id>_foot.nc``
+   * - ``grid``, ``tres``
+     - ``<id>_foot.nc``. A footprint STILT-R summed over time
+       (``time_integrate = T``) is one layer as long as the run: ``tres``
+       the run's ``n_hours``, stamped at the start of the run, not at the
+       receptor time
    * - ``smooth_factor``
      - ``params.RDS``, or the ``smooth_factor`` argument, as for
        :func:`~stilt.migration.read_stilt_r`

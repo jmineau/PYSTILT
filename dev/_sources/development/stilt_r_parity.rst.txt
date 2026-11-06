@@ -68,7 +68,8 @@ The scenarios cover:
   the met grid, and a small 0.1° domain that particles leave early
 - receptor heights above ground, above sea level (``kmsl=1``), and at 0.5 m
 - winter (stable) and summer (convective) HRRR
-- hourly footprints and ``time_integrate=True``
+- hourly footprints, and STILT-R's ``time_integrate=TRUE`` against one
+  PYSTILT layer as long as the run
 - a wind-error run (``siguverr=1`` m/s)
 
 The synthetic tests in

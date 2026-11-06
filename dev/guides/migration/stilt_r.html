@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=21832879"></script>
+    <script src="../../_static/documentation_options.js?v=7d5fa9ed"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev19+g6f360343a" />
+  <meta name="docsearch:version" content="0.1.0a28.dev20+g3588bf129" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -615,66 +615,72 @@ as <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">xres</span></code>, <code class="docutils literal notranslate"><span class="pre">yres</span></code>, <code class="docutils literal notranslate"><span class="pre">projection</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">grid:</span> <span class="pre">xres</span></code>, <code class="docutils literal notranslate"><span class="pre">yres</span></code>, <code class="docutils literal notranslate"><span class="pre">crs</span></code> (<code class="docutils literal notranslate"><span class="pre">projection</span></code> is read too)</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>, <code class="docutils literal notranslate"><span class="pre">time_integrate</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code></p></td>
+<td><p>same name, top level</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">time_integrate</span></code></p></td>
+<td><p>none: footprints keep their time layers (<code class="docutils literal notranslate"><span class="pre">tres</span></code>, an hour by
+default), and <code class="docutils literal notranslate"><span class="pre">foot.sum(&quot;time&quot;)</span></code> gives the summed map. For one
+layer as long as the run, set <code class="docutils literal notranslate"><span class="pre">tres</span></code> to its length (<code class="docutils literal notranslate"><span class="pre">tres:</span> <span class="pre">1D</span></code>
+for <code class="docutils literal notranslate"><span class="pre">n_hours</span> <span class="pre">=</span> <span class="pre">-24</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">numpar</span></code>, <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>, <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code></p></td>
 <td><p>same names, top level</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">numpar</span></code>, <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>, <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code></p></td>
-<td><p>same names, top level</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">timeout</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">timeout</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">execution:</span> <span class="pre">timeout</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">rm_dat</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">rm_dat</span></code></p></td>
 <td><p>no setting: a successful run’s working directory is removed;
 <code class="docutils literal notranslate"><span class="pre">execution:</span> <span class="pre">keep_workdir</span></code> keeps it</p></td>
 </tr>
-<tr class="row-odd"><td><p>HYSPLIT settings (<code class="docutils literal notranslate"><span class="pre">capemin</span></code>, <code class="docutils literal notranslate"><span class="pre">delt</span></code>, <code class="docutils literal notranslate"><span class="pre">kmix0</span></code>, <code class="docutils literal notranslate"><span class="pre">tlfrac</span></code>,
+<tr class="row-even"><td><p>HYSPLIT settings (<code class="docutils literal notranslate"><span class="pre">capemin</span></code>, <code class="docutils literal notranslate"><span class="pre">delt</span></code>, <code class="docutils literal notranslate"><span class="pre">kmix0</span></code>, <code class="docutils literal notranslate"><span class="pre">tlfrac</span></code>,
 <code class="docutils literal notranslate"><span class="pre">veght</span></code>, …)</p></td>
 <td><p>same names, top level</p></td>
 </tr>
-<tr class="row-even"><td><p>wind and mixing-depth error settings (<code class="docutils literal notranslate"><span class="pre">siguverr</span></code>, <code class="docutils literal notranslate"><span class="pre">tluverr</span></code>,
+<tr class="row-odd"><td><p>wind and mixing-depth error settings (<code class="docutils literal notranslate"><span class="pre">siguverr</span></code>, <code class="docutils literal notranslate"><span class="pre">tluverr</span></code>,
 <code class="docutils literal notranslate"><span class="pre">sigzierr</span></code>, …)</p></td>
 <td><p>same names, usually on a variant of their own
 (<a class="reference internal" href="../transport_error.html"><span class="doc">Transport Error</span></a>)</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">n_nodes</span></code> and <code class="docutils literal notranslate"><span class="pre">n_cores</span></code> with Slurm</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">n_nodes</span></code> and <code class="docutils literal notranslate"><span class="pre">n_cores</span></code> with Slurm</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">execution:</span> <span class="pre">backend:</span> <span class="pre">slurm</span></code>, with <code class="docutils literal notranslate"><span class="pre">n_workers</span></code> array tasks of
 <code class="docutils literal notranslate"><span class="pre">cpus</span></code> CPUs each (<a class="reference internal" href="../slurm.html"><span class="doc">On An HPC Cluster (Slurm)</span></a>)</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">slurm_options</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">slurm_options</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">mem</span></code>, <code class="docutils literal notranslate"><span class="pre">partition</span></code>, <code class="docutils literal notranslate"><span class="pre">account</span></code>, and <code class="docutils literal notranslate"><span class="pre">qos</span></code> under
 <code class="docutils literal notranslate"><span class="pre">execution</span></code>, and any other <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> option under
 <code class="docutils literal notranslate"><span class="pre">execution:</span> <span class="pre">slurm:</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">n_cores</span></code> without Slurm</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">n_cores</span></code> without Slurm</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">execution:</span> <span class="pre">cpus</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">before_footprint</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">before_footprint</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">transforms</span></code> (<a class="reference internal" href="../transforms.html"><span class="doc">Particle Weighting (Transforms)</span></a>)</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">before_trajec</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">before_trajec</span></code></p></td>
 <td><p>no equivalent</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">run_trajec</span></code>, <code class="docutils literal notranslate"><span class="pre">run_foot</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">run_trajec</span></code>, <code class="docutils literal notranslate"><span class="pre">run_foot</span></code></p></td>
 <td><p>not needed. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code> runs whatever outputs are missing, and
 <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--no-skip</span></code> reruns everything. To make a second
 footprint from the same particles, add a variant that changes only
 footprint settings; it shares the particles
 (<a class="reference internal" href="../projects.html"><span class="doc">Projects And Variants</span></a>).</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">simulation_id</span></code> (run a subset)</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">simulation_id</span></code> (run a subset)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">project.run(receptors=[...])</span></code> with the receptor ids you want,
 or <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--receptors</span> <span class="pre">ids.txt</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ziscale</span></code> as one list per receptor</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ziscale</span></code> as one list per receptor</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">ziscale</span></code> per variant, as one factor or one factor per hour. It is
 the same for every receptor. Per-receptor factors are not supported
 yet.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stilt_wd</span></code>, <code class="docutils literal notranslate"><span class="pre">output_wd</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stilt_wd</span></code>, <code class="docutils literal notranslate"><span class="pre">output_wd</span></code></p></td>
 <td><p>the project folder</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lib.loc</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lib.loc</span></code></p></td>
 <td><p>not needed</p></td>
 </tr>
 </tbody>
@@ -829,7 +835,7 @@ STILT-R project folder:</p>
 <span class="w">    </span><span class="nt">geometry</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
 <span class="w">    </span><span class="nt">cells_per_target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4.0</span>
 <span class="w">    </span><span class="nt">smooth_factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
-<span class="w">    </span><span class="nt">time_integrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">    </span><span class="nt">tres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1h</span>
 <span class="w">    </span><span class="nt">transforms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
 </pre></div>
 </div>
@@ -881,8 +887,11 @@ STILT-R projects that differ only in <code class="docutils literal notranslate">
 Each run’s met files are recorded in its particle file; they need not
 exist any more</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">grid</span></code>, <code class="docutils literal notranslate"><span class="pre">time_integrate</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_foot.nc</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">grid</span></code>, <code class="docutils literal notranslate"><span class="pre">tres</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_foot.nc</span></code>. A footprint STILT-R summed over time
+(<code class="docutils literal notranslate"><span class="pre">time_integrate</span> <span class="pre">=</span> <span class="pre">T</span></code>) is one layer as long as the run: <code class="docutils literal notranslate"><span class="pre">tres</span></code>
+the run’s <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, stamped at the start of the run, not at the
+receptor time</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">params.RDS</span></code>, or the <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> argument, as for

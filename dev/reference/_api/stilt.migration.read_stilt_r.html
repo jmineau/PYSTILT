@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=21832879"></script>
+    <script src="../../_static/documentation_options.js?v=7d5fa9ed"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev19+g6f360343a" />
+  <meta name="docsearch:version" content="0.1.0a28.dev20+g3588bf129" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -910,9 +910,11 @@ keeps its STILT-R name, <code class="docutils literal notranslate"><span class="
 near-field correction STILT-R applied stays as it is.</p>
 <p>The footprint is <code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_foot.nc</span></code>, on the grid its file gives, with
 layers stamped at the receptor time plus whole hours, as STILT-R stamps
-them. Its settings hold that grid, <code class="docutils literal notranslate"><span class="pre">time_integrate</span></code> (true for a
-backward run with one layer at the receptor time), and
-<code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>. The footprint file does not record <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>.
+them. Its settings hold that grid, <code class="docutils literal notranslate"><span class="pre">tres</span></code>, and <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>.
+<code class="docutils literal notranslate"><span class="pre">tres</span></code> is <code class="docutils literal notranslate"><span class="pre">1h</span></code>, except for a backward run whose footprint STILT-R
+summed over time (<code class="docutils literal notranslate"><span class="pre">time_integrate</span> <span class="pre">=</span> <span class="pre">T</span></code>, one layer at the receptor
+time): that is one layer as long as the run, <code class="docutils literal notranslate"><span class="pre">tres</span></code> the run’s
+<code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, stamped at the start of the run. The footprint file does not record <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>.
 It comes from <code class="docutils literal notranslate"><span class="pre">params.RDS</span></code>, which STILT-R’s Slurm runs (rslurm) leave
 in <code class="docutils literal notranslate"><span class="pre">_rslurm_&lt;project&gt;/</span></code> beside <code class="docutils literal notranslate"><span class="pre">out/</span></code>, or else from the
 <em>smooth_factor</em> argument. <code class="docutils literal notranslate"><span class="pre">params.RDS</span></code> is used only when its

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=21832879"></script>
+    <script src="../../../_static/documentation_options.js?v=7d5fa9ed"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev19+g6f360343a" />
+  <meta name="docsearch:version" content="0.1.0a28.dev20+g3588bf129" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -477,7 +477,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Annotated</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Self</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Annotated</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -556,6 +556,14 @@
 <span class="sd">"""Any geometry spec accepted by ``FootprintConfig.geometry``."""</span>
 
 
+<span class="c1">#: What to do instead of ``time_integrate``, which was removed.</span>
+<span class="n">TIME_INTEGRATE_REMOVED</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"time_integrate was removed. Sum the layers instead: foot.sum('time'), "</span>
+    <span class="s2">"or project.footprints().foot.sum('hour'). For one layer as long as the "</span>
+    <span class="s2">"run, set tres to the run's length (tres: 1D for a 24-hour run)."</span>
+<span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_minutes</span><span class="p">(</span><span class="n">tres</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">timedelta</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the length of a footprint time layer, *tres*, in whole minutes.</span>
@@ -631,10 +639,6 @@
             <span class="s2">"Factor on the width of the Gaussian smoothing kernel. 0 turns smoothing off."</span>
         <span class="p">),</span>
     <span class="p">)</span>
-    <span class="n">time_integrate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="kc">False</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">"Sum the footprint over time into a single layer instead of time layers."</span><span class="p">,</span>
-    <span class="p">)</span>
     <span class="n">tres</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="s2">"1h"</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
@@ -669,15 +673,18 @@
             <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">minutes</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="mi">60</span><span class="si">}</span><span class="s2">h"</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">minutes</span><span class="si">}</span><span class="s2">min"</span>
 
-    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_one_way_to_bin_time</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Refuse a layer length on a footprint summed over time, which has no layers."""</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_integrate</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">tres</span> <span class="o">!=</span> <span class="s2">"1h"</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">"time_integrate sums the footprint into one layer, so "</span>
-                <span class="sa">f</span><span class="s2">"tres (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tres</span><span class="si">}</span><span class="s2">) has no effect. Set one or the other."</span>
-            <span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span>
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_no_time_integrate</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Refuse ``time_integrate: true``, which was removed.</span>
+
+<span class="sd">        A stored record of an hourly footprint may still hold</span>
+<span class="sd">        ``time_integrate: false``, which is ignored, so its folder is found.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"time_integrate"</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">TIME_INTEGRATE_REMOVED</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span>
 
     <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"transforms"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
     <span class="nd">@classmethod</span>

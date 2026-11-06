@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=21832879"></script>
+    <script src="../_static/documentation_options.js?v=7d5fa9ed"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev19+g6f360343a" />
+  <meta name="docsearch:version" content="0.1.0a28.dev20+g3588bf129" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -969,7 +969,6 @@ reads as one dataset.</p>
 <span class="w">    </span><span class="nt">ymax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">41.25</span>
 <span class="w">    </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
 <span class="w">  </span><span class="nt">smooth_factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<span class="w">  </span><span class="nt">time_integrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 <span class="w">  </span><span class="nt">transforms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
 <span class="w">  </span><span class="nt">tres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1h</span>
 </pre></div>
@@ -1196,9 +1195,9 @@ falls in layer <code class="docutils literal notranslate"><span class="pre">floo
 </div>
 <p>The layers keep the receptor’s minute, so a receptor at 18:30 has layers
 starting at half past. With <code class="docutils literal notranslate"><span class="pre">tres:</span> <span class="pre">15min</span></code> its layer -1 covers 18:15
-to 18:30 and layer -2 covers 18:00 to 18:15. A footprint made with
-<code class="docutils literal notranslate"><span class="pre">time_integrate:</span> <span class="pre">true</span></code> has one layer, hour 0, stamped at the receptor
-time, which holds the whole run.</p>
+to 18:30 and layer -2 covers 18:00 to 18:15. With <code class="docutils literal notranslate"><span class="pre">tres</span></code> as long as the
+run (<code class="docutils literal notranslate"><span class="pre">1D</span></code> for a 24-hour run) there is one layer, -1, stamped at the
+start of the run, which holds the whole run.</p>
 </section>
 <section id="the-grid">
 <h3>The grid<a class="headerlink" href="#the-grid" title="Link to this heading">#</a></h3>

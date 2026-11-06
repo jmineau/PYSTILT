@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=21832879"></script>
+    <script src="../_static/documentation_options.js?v=7d5fa9ed"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev19+g6f360343a" />
+  <meta name="docsearch:version" content="0.1.0a28.dev20+g3588bf129" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -1339,15 +1339,11 @@ from, and a variant may override any of them.</p>
 <td><p>Factor on the width of the Gaussian smoothing kernel. 0 turns smoothing off.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">time_integrate</span></code></p></td>
-<td><p>Sum the footprint over time into a single layer instead of time layers.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tres</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tres</span></code></p></td>
 <td><p>Length of each time layer of the footprint, counted from the receptor time, as a duration in whole minutes: <code class="docutils literal notranslate"><span class="pre">1h</span></code> for hourly layers, <code class="docutils literal notranslate"><span class="pre">15min</span></code> for 15-minute data, <code class="docutils literal notranslate"><span class="pre">1D</span></code> for days.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">'1h'</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">transforms</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">transforms</span></code></p></td>
 <td><p>Particle transforms applied in order before the footprint is computed. Each entry’s <code class="docutils literal notranslate"><span class="pre">kind</span></code> is a built-in name (<code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code>, <code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code>, <code class="docutils literal notranslate"><span class="pre">first_order_lifetime</span></code>) or the import path of your own class.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">[]</span></code></p></td>
 </tr>

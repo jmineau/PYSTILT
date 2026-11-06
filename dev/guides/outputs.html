@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=21832879"></script>
+    <script src="../_static/documentation_options.js?v=7d5fa9ed"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev19+g6f360343a" />
+  <meta name="docsearch:version" content="0.1.0a28.dev20+g3588bf129" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -605,9 +605,8 @@ when the map is drawn, and <code class="docutils literal notranslate"><span clas
 <p>It has dimensions <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>, or <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">y,</span> <span class="pre">x)</span></code> on a projected
 grid. There is one map for each hour back from the receptor time (each
 <code class="docutils literal notranslate"><span class="pre">tres</span></code> back, when the footprint settings give another length), in
-units of ppm per (µmol m⁻² s⁻¹). With <code class="docutils literal notranslate"><span class="pre">time_integrate:</span> <span class="pre">true</span></code> in the
-footprint settings there is a single time step. Use xarray as you would on any other
-array:</p>
+units of ppm per (µmol m⁻² s⁻¹). <code class="docutils literal notranslate"><span class="pre">foot.sum(&quot;time&quot;)</span></code> is one map of the
+whole run. Use xarray as you would on any other array:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [13]: </span><span class="n">total</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"time"</span><span class="p">)</span>                                     <span class="c1"># summed over time</span>
 
 <span class="gp">In [14]: </span><span class="n">last_hours</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="s2">"2021-01-15 02:00"</span><span class="p">,</span> <span class="s2">"2021-01-15 07:00"</span><span class="p">))</span>
@@ -621,7 +620,7 @@ array:</p>
 <span class="gh">Out[16]: </span><span class="go">Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat')</span>
 
 <span class="gp">In [17]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">config</span>        <span class="c1"># all the footprint settings</span>
-<span class="gh">Out[17]: </span><span class="go">FootprintConfig(grid=Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat'), geometry=None, cells_per_target=4.0, smooth_factor=1.0, time_integrate=False, tres='1h', transforms=[])</span>
+<span class="gh">Out[17]: </span><span class="go">FootprintConfig(grid=Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat'), geometry=None, cells_per_target=4.0, smooth_factor=1.0, tres='1h', transforms=[])</span>
 </pre></div>
 </div>
 <p>The receptor id is also a coordinate, <code class="docutils literal notranslate"><span class="pre">foot.receptor</span></code>. It stays on the

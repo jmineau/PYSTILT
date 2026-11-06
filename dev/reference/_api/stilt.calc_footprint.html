@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=21832879"></script>
+    <script src="../../_static/documentation_options.js?v=7d5fa9ed"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev19+g6f360343a" />
+  <meta name="docsearch:version" content="0.1.0a28.dev20+g3588bf129" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -886,7 +886,7 @@
 <h1>stilt.calc_footprint<a class="headerlink" href="#stilt-calc-footprint" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="stilt.calc_footprint">
-<span class="sig-prename descclassname"><span class="pre">stilt.</span></span><span class="sig-name descname"><span class="pre">calc_footprint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receptor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_integrate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tres</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1h'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transforms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_hash</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/footprint/gridding.html#calc_footprint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.calc_footprint" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">stilt.</span></span><span class="sig-name descname"><span class="pre">calc_footprint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receptor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tres</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1h'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transforms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_hash</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/footprint/gridding.html#calc_footprint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.calc_footprint" title="Link to this definition">#</a></dt>
 <dd><p>Calculate a footprint from particles, as STILT-R’s <code class="docutils literal notranslate"><span class="pre">calc_footprint</span></code> does.</p>
 <p>The particle <em>transforms</em> are applied first, in order, so the footprint
 records exactly the transforms it was made with. Near the receptor,
@@ -895,7 +895,8 @@ more than a grid cell per step. Each particle’s <code class="docutils literal 
 cell it is in, and each time step is smoothed with a Gaussian kernel
 that widens with the particles’ spread and age. The sum is divided by
 the number of particles and binned into time layers <em>tres</em> long
-(an hour by default), unless <em>time_integrate</em> is set.</p>
+(an hour by default). Sum the layers, <code class="docutils literal notranslate"><span class="pre">foot.sum(&quot;time&quot;)</span></code>, for one map
+of the whole run.</p>
 <p>A grid that goes all the way around the earth (<code class="docutils literal notranslate"><span class="pre">xmin=-180</span></code>,
 <code class="docutils literal notranslate"><span class="pre">xmax=180</span></code>, with cells that fit 360 degrees) is treated as a circle:
 a particle cloud across 180 degrees is measured as one cloud, and
@@ -930,11 +931,9 @@ footprint given by a geometry, derive it first:
 <code class="docutils literal notranslate"><span class="pre">stilt.Mesh.from_spec(geometry).to_grid()</span></code>.</p></li>
 <li><p><strong>smooth_factor</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – Factor on the width of the Gaussian smoothing kernel. 0 turns
 smoothing off.</p></li>
-<li><p><strong>time_integrate</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – Sum the footprint over time into one layer instead of time layers.</p></li>
 <li><p><strong>tres</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.timedelta" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">timedelta</span></code></a></span>) – Length of each time layer from the receptor time, a duration in
 whole minutes such as <code class="docutils literal notranslate"><span class="pre">&quot;15min&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;1h&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;1D&quot;</span></code>. A particle
-row at <code class="docutils literal notranslate"><span class="pre">age</span></code> minutes falls in layer <code class="docutils literal notranslate"><span class="pre">floor(age</span> <span class="pre">/</span> <span class="pre">minutes)</span></code>.
-Leave it at <code class="docutils literal notranslate"><span class="pre">&quot;1h&quot;</span></code> when <em>time_integrate</em> is set.</p></li>
+row at <code class="docutils literal notranslate"><span class="pre">age</span></code> minutes falls in layer <code class="docutils literal notranslate"><span class="pre">floor(age</span> <span class="pre">/</span> <span class="pre">minutes)</span></code>.</p></li>
 <li><p><strong>transforms</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</span>) – Particle transforms applied before the footprint is calculated, as
 objects or as the mappings <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> takes
 (<code class="docutils literal notranslate"><span class="pre">{&quot;kind&quot;:</span> <span class="pre">&quot;pressure_weighting&quot;}</span></code>).</p></li>
@@ -960,8 +959,7 @@ accessor has the methods that use it.</p>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ImportError" title="(in Python v3.15)"><strong>ImportError</strong></a> – If a transform is a mapping whose <code class="docutils literal notranslate"><span class="pre">kind</span></code> cannot be imported.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <em>tres</em> is not a positive whole number of minutes, or is not an
-    hour when <em>time_integrate</em> is set.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <em>tres</em> is not a positive whole number of minutes.</p></li>
 <li><p><a class="reference internal" href="stilt.exceptions.EmptyFootprint.html#stilt.exceptions.EmptyFootprint" title="stilt.exceptions.EmptyFootprint"><strong>EmptyFootprint</strong></a> – If no particle is over the grid, or the table has none.</p></li>
 </ul>
 </dd>

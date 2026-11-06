@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=21832879"></script>
+    <script src="../_static/documentation_options.js?v=7d5fa9ed"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev19+g6f360343a" />
+  <meta name="docsearch:version" content="0.1.0a28.dev20+g3588bf129" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -641,9 +641,6 @@ near 180° (<code class="docutils literal notranslate"><span class="pre">xmin:</
 smooth onto the grid, as particles just past any other edge do.
 STILT-R drops them.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">time_integrate</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">true</span></code> sums the footprint over time into a single map, which makes
-smaller files. The default, <code class="docutils literal notranslate"><span class="pre">false</span></code>, keeps one layer per <code class="docutils literal notranslate"><span class="pre">tres</span></code>.</p>
-</dd>
 <dt><code class="docutils literal notranslate"><span class="pre">tres</span></code></dt><dd><p>The length of each time layer of the footprint, as a duration in whole
 minutes. The default, <code class="docutils literal notranslate"><span class="pre">1h</span></code>, gives one layer per hour back from the
 receptor time, as STILT-R does. Use <code class="docutils literal notranslate"><span class="pre">15min</span></code> for 15-minute
@@ -654,8 +651,9 @@ receptor at 18:30 with <code class="docutils literal notranslate"><span class="p
 its minutes, so the layers still sum to the same total footprint. The
 settings record it one way (<code class="docutils literal notranslate"><span class="pre">60min</span></code> is recorded as <code class="docutils literal notranslate"><span class="pre">1h</span></code>, <code class="docutils literal notranslate"><span class="pre">90min</span></code>
 stays <code class="docutils literal notranslate"><span class="pre">90min</span></code>), so two spellings of one length share a settings
-folder. Leave it at <code class="docutils literal notranslate"><span class="pre">1h</span></code> with <code class="docutils literal notranslate"><span class="pre">time_integrate:</span> <span class="pre">true</span></code>, which has no
-layers.</p>
+folder. For one map of the whole run, sum the layers
+(<code class="docutils literal notranslate"><span class="pre">foot.sum(&quot;time&quot;)</span></code>), or set <code class="docutils literal notranslate"><span class="pre">tres</span></code> to the run’s length for a
+single layer (<code class="docutils literal notranslate"><span class="pre">tres:</span> <span class="pre">1D</span></code> with <code class="docutils literal notranslate"><span class="pre">n_hours:</span> <span class="pre">-24</span></code>).</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">transforms</span></code></dt><dd><p>Steps that weight the particles before the footprint is made, mainly for
 column measurements. See <a class="reference internal" href="transforms.html"><span class="doc">Particle Weighting (Transforms)</span></a>.</p>
@@ -710,8 +708,8 @@ count later only adds realizations.</p>
 package is named by its import path (<a class="reference internal" href="../reference/execution.html"><span class="doc">Execution</span></a>).</p>
 </dd>
 <dt>Any other setting</dt><dd><p>Transport settings (<code class="docutils literal notranslate"><span class="pre">numpar</span></code>, <code class="docutils literal notranslate"><span class="pre">ziscale</span></code>, turbulence, wind errors)
-and footprint settings (<code class="docutils literal notranslate"><span class="pre">grid</span></code>, <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>, <code class="docutils literal notranslate"><span class="pre">time_integrate</span></code>,
-<code class="docutils literal notranslate"><span class="pre">tres</span></code>, <code class="docutils literal notranslate"><span class="pre">transforms</span></code>) override the defaults for that variant
+and footprint settings (<code class="docutils literal notranslate"><span class="pre">grid</span></code>, <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>, <code class="docutils literal notranslate"><span class="pre">tres</span></code>,
+<code class="docutils literal notranslate"><span class="pre">transforms</span></code>) override the defaults for that variant
 only.</p>
 </dd>
 </dl>

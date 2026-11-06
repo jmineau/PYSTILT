@@ -101,7 +101,6 @@ A footprints folder's adds the particles folder it was made from:
        ymax: 41.25
        yres: 0.01
      smooth_factor: 1
-     time_integrate: false
      transforms: []
      tres: 1h
 
@@ -271,9 +270,9 @@ falls in layer ``floor(age / m)``, where ``m`` is ``tres`` in minutes. For a rec
 
 The layers keep the receptor's minute, so a receptor at 18:30 has layers
 starting at half past. With ``tres: 15min`` its layer -1 covers 18:15
-to 18:30 and layer -2 covers 18:00 to 18:15. A footprint made with
-``time_integrate: true`` has one layer, hour 0, stamped at the receptor
-time, which holds the whole run.
+to 18:30 and layer -2 covers 18:00 to 18:15. With ``tres`` as long as the
+run (``1D`` for a 24-hour run) there is one layer, -1, stamped at the
+start of the run, which holds the whole run.
 
 The grid
 ~~~~~~~~
