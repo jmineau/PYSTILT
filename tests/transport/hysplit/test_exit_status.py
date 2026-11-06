@@ -92,6 +92,24 @@ def test_a_hycs_std_that_exits_1_part_way_fails_with_its_status(tmp_path, outdt)
     assert "status 1" in str(caught.value)
 
 
+@pytest.mark.parametrize(
+    "line",
+    [
+        "WARNING main: source point off grid",
+        "*ERROR* runset: Start height above mdl domain  Source - 1 Height - 100000.000",
+    ],
+)
+def test_a_receptor_outside_the_met_fails_with_hysplits_own_line(tmp_path, line):
+    """HYSPLIT exits 132 for both and names the cause in its log (#367)."""
+    build = _fake_hycs_std(tmp_path / "build", f"echo '{line}'\nexit 132\n")
+
+    with pytest.raises(SimulationError) as caught:
+        _model_run(tmp_path, build, outdt=0)
+
+    assert caught.value.reason == FailureReason.MET_COVERAGE
+    assert line in str(caught.value)
+
+
 def test_a_hycs_std_that_exits_0_with_the_full_run_is_complete(tmp_path):
     full = _particle_dat(tmp_path / "full.dat", abs(N_HOURS) * 60)
     build = _fake_hycs_std(tmp_path / "build", f"cp {full} PARTICLE_STILT.DAT\n")
