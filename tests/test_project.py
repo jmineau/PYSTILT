@@ -2,6 +2,7 @@
 
 import datetime as dt
 import doctest
+from dataclasses import replace
 from pathlib import Path
 
 import matplotlib
@@ -520,6 +521,63 @@ def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_rece
     assert project.simulation(point_receptor.id, "s2").has_particles
     assert not project.simulation(point_receptor.id, "zi08").has_particles
     assert len(project.output.hashes("particles")) == 1
+
+
+def _with_unreadable_met(project, tmp_path, **overrides):
+    """Open *project*'s directory again with a met whose directory does not exist."""
+    config = ProjectConfig(
+        mets={"hrrr": MetConfig(directory=tmp_path / "no-such-met")},
+        **{"variants": {"hrrr": {}}, "grid": _GRID, **overrides},
+    )
+    config.to_yaml(project.config_path)
+    return Project(project.directory)
+
+
+def test_status_without_a_readable_met_is_pending_when_no_folder_can_hold_results(
+    tmp_path, point_receptor
+):
+    """The weather product is the only part of the hash that needs the met (#377)."""
+    project = _project(tmp_path, [point_receptor], variants={"hrrr": {"ziscale": 0.8}})
+    _write_trajectory(project, point_receptor)
+
+    # The settings differ from the folder's in more than the met: nothing is there.
+    unread = _with_unreadable_met(project, tmp_path)
+    status = unread.status()
+    assert list(status["state"]) == ["pending"]
+    assert list(status["particles"]) == [False]
+    assert list(status["footprint"]) == [False]
+    assert unread.incomplete().shape[0] == 1
+    assert list(unread.folders()["variant"]) == [""]
+    assert "ziscale" in unread.folders().loc[0, "differs"]
+
+
+def test_status_without_a_readable_met_raises_when_a_folder_may_hold_results(
+    tmp_path, point_receptor
+):
+    """Same settings but the met's: the folder, whatever it is named, may be this variant's."""
+    project = _project(tmp_path, [point_receptor])
+    sim = project.simulation(point_receptor.id, "hrrr")
+    particles = finished(_particles(), sim.receptor, sim.transport)
+    renamed = replace(sim.variant, name="renamed")
+    sim.output.write_particles(renamed, sim.receptor, particles, [])
+
+    unread = _with_unreadable_met(project, tmp_path)
+
+    with pytest.raises(FileNotFoundError, match="Met 'hrrr'"):
+        unread.status()
+    with pytest.raises(FileNotFoundError, match="Met 'hrrr'"):
+        unread.folders()
+
+
+def test_status_without_a_readable_met_and_an_empty_output_is_pending(
+    tmp_path, point_receptor
+):
+    project = _project(tmp_path, [point_receptor])
+
+    unread = _with_unreadable_met(project, tmp_path)
+
+    assert list(unread.status()["state"]) == ["pending"]
+    assert unread.folders().empty
 
 
 def test_folders_say_which_the_config_no_longer_uses(tmp_path, point_receptor):
