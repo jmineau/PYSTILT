@@ -144,7 +144,7 @@ The same classes work directly on a simulation:
 
 These replace the transforms in the variant's own footprint settings, and
 the footprint records them. The other settings (``grid``,
-``smooth_factor``, ``time_integrate``, ``tres``) are replaced the
+``smooth_factor``, ``tres``) are replaced the
 same way, and nothing in the project changes. Without a simulation,
 :func:`stilt.calc_footprint` takes the same ``transforms``.
 

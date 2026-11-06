@@ -28,7 +28,7 @@ recorded with the footprints.
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, Literal
 
 import pandas as pd
 from pydantic import (
@@ -96,6 +96,14 @@ GeometrySpec = Annotated[
     Field(discriminator="kind"),
 ]
 """Any geometry spec accepted by ``FootprintConfig.geometry``."""
+
+
+#: What to do instead of ``time_integrate``, which was removed.
+TIME_INTEGRATE_REMOVED = (
+    "time_integrate was removed. Sum the layers instead: foot.sum('time'), "
+    "or project.footprints().foot.sum('hour'). For one layer as long as the "
+    "run, set tres to the run's length (tres: 1D for a 24-hour run)."
+)
 
 
 def _minutes(tres: str | timedelta) -> int:
@@ -171,10 +179,6 @@ class FootprintConfig(BaseModel):
             "Factor on the width of the Gaussian smoothing kernel. 0 turns smoothing off."
         ),
     )
-    time_integrate: bool = Field(
-        False,
-        description="Sum the footprint over time into a single layer instead of time layers.",
-    )
     tres: str = Field(
         "1h",
         description=(
@@ -209,15 +213,18 @@ class FootprintConfig(BaseModel):
             return f"{minutes // 60}h"
         return f"{minutes}min"
 
-    @model_validator(mode="after")
-    def _one_way_to_bin_time(self) -> Self:
-        """Refuse a layer length on a footprint summed over time, which has no layers."""
-        if self.time_integrate and self.tres != "1h":
-            raise ValueError(
-                "time_integrate sums the footprint into one layer, so "
-                f"tres ({self.tres}) has no effect. Set one or the other."
-            )
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def _no_time_integrate(cls, data: Any) -> Any:
+        """
+        Refuse ``time_integrate: true``, which was removed.
+
+        A stored record of an hourly footprint may still hold
+        ``time_integrate: false``, which is ignored, so its folder is found.
+        """
+        if isinstance(data, dict) and data.get("time_integrate"):
+            raise ValueError(TIME_INTEGRATE_REMOVED)
+        return data
 
     @field_validator("transforms", mode="before")
     @classmethod

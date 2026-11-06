@@ -120,9 +120,11 @@ def read_stilt_r(
 
     The footprint is ``<id>_foot.nc``, on the grid its file gives, with
     layers stamped at the receptor time plus whole hours, as STILT-R stamps
-    them. Its settings hold that grid, ``time_integrate`` (true for a
-    backward run with one layer at the receptor time), and
-    ``smooth_factor``. The footprint file does not record ``smooth_factor``.
+    them. Its settings hold that grid, ``tres``, and ``smooth_factor``.
+    ``tres`` is ``1h``, except for a backward run whose footprint STILT-R
+    summed over time (``time_integrate = T``, one layer at the receptor
+    time): that is one layer as long as the run, ``tres`` the run's
+    ``n_hours``, stamped at the start of the run. The footprint file does not record ``smooth_factor``.
     It comes from ``params.RDS``, which STILT-R's Slurm runs (rslurm) leave
     in ``_rslurm_<project>/`` beside ``out/``, or else from the
     *smooth_factor* argument. ``params.RDS`` is used only when its
@@ -438,7 +440,11 @@ def _axis(centers: np.ndarray, name: str, path: Path) -> tuple[float, float, flo
 
 
 def _footprint(
-    path: Path, receptor: Receptor, backward: bool, smooth_factor: float
+    path: Path,
+    receptor: Receptor,
+    backward: bool,
+    smooth_factor: float,
+    n_hours: int,
 ) -> xr.DataArray:
     """
     Return a STILT-R ``_foot.nc`` as a PYSTILT footprint.
@@ -446,7 +452,10 @@ def _footprint(
     STILT-R writes ``foot`` with dimensions ``lon``, ``lat``, and ``time``
     (seconds since 1970-01-01 UTC), at cell centers. The grid is rebuilt from
     the centers and checked against them, so the footprint has the
-    coordinates of a PYSTILT footprint on the same grid.
+    coordinates of a PYSTILT footprint on the same grid. A backward
+    footprint STILT-R summed over time has one layer, at the receptor time;
+    it becomes one layer of *n_hours*, layer -1, which starts where the run
+    ends.
     """
     with xr.open_dataset(path, decode_times=False) as ds:
         foot = ds["foot"].load()
@@ -479,10 +488,10 @@ def _footprint(
             f"{path}: the footprint's layers are not whole hours from the "
             f"receptor time {receptor.time}."
         )
-    integrated = backward and hours.size == 1 and hours[0] == 0
-    config = FootprintConfig(
-        grid=grid, smooth_factor=smooth_factor, time_integrate=bool(integrated)
-    )
+    tres = "1h"
+    if backward and hours.size == 1 and hours[0] == 0:
+        tres, hours = f"{abs(n_hours)}h", np.array([-1.0])
+    config = FootprintConfig(grid=grid, smooth_factor=smooth_factor, tres=tres)
     values = foot.to_numpy().astype("float64")
     return _footprint_array(values, hours.astype(int), receptor, config, "", x, y)
 
@@ -539,7 +548,7 @@ def _folder_footprint(
     )
     # STILT-R reads the run's direction the same way (calc_footprint).
     backward = bool(np.median(particles["age"]) < 0)
-    return _footprint(foot_path, receptor, backward, smooth)
+    return _footprint(foot_path, receptor, backward, smooth, control.n_hours)
 
 
 def import_stilt_r(
@@ -575,7 +584,7 @@ def import_stilt_r(
     - The met: the directory the ``CONTROL`` files name, as they name it.
       Each run's met files are recorded in its particle file, and need not
       exist any more.
-    - The footprint's grid and ``time_integrate`` from ``<id>_foot.nc``, and
+    - The footprint's grid and ``tres`` from ``<id>_foot.nc``, and
       its ``smooth_factor`` from ``params.RDS`` or *smooth_factor*, as
       :func:`read_stilt_r` reads them.
     - The STILT-R version, which no file records: *version*.

@@ -221,7 +221,7 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
             )
         },
         grid=grid,
-        time_integrate=True,
+        tres="15min",
         variants={"hrrr": {}},
     )
     path = tmp_path / "config.yaml"
@@ -231,6 +231,27 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
     assert (
         _default_footprint(loaded).model_dump() == _default_footprint(cfg).model_dump()
     )
+
+
+@pytest.mark.parametrize("where", ["top", "variant"])
+def test_time_integrate_is_refused_saying_what_to_do_instead(tmp_path, grid, where):
+    footprint = {"time_integrate": True}
+    top = footprint if where == "top" else {}
+    variant = {} if where == "top" else footprint
+    with pytest.raises(ValueError, match=r"time_integrate was removed.*sum\('time'\)"):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            grid=grid,
+            variants={"hrrr": variant},
+            **top,
+        )
+
+
+def test_a_stored_record_with_time_integrate_true_is_refused():
+    """A footprint summed over time is not read back as an hourly one."""
+    with pytest.raises(ValueError, match="time_integrate was removed"):
+        FootprintConfig.model_validate({"time_integrate": True})
+    assert FootprintConfig.model_validate({"time_integrate": False}).tres == "1h"
 
 
 def _met_config(tmp_path):

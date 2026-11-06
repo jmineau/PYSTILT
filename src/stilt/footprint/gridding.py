@@ -481,7 +481,6 @@ def _filter_and_rasterize_particles(
     ymax: float,
     xres: float,
     yres: float,
-    time_integrate: bool,
     layer_minutes: int,
     longlat: bool = False,
 ) -> tuple[pd.DataFrame, np.ndarray]:
@@ -490,9 +489,8 @@ def _filter_and_rasterize_particles(
 
     Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,
     foot, layer``, and ``layers`` holds the sorted layer indices, each
-    *layer_minutes* minutes long from the receptor time, or ``[0]`` when
-    ``time_integrate`` is set. Both are empty when no particle is on the
-    padded grid. On a *longlat* grid a particle a whole turn from the
+    *layer_minutes* minutes long from the receptor time. Both are empty
+    when no particle is on the padded grid. On a *longlat* grid a particle a whole turn from the
     padded grid is on it (``_onto_padded_axis``).
     """
     if longlat:
@@ -537,9 +535,8 @@ def _filter_and_rasterize_particles(
         filtered.groupby(["loi", "lai", "age", "rtime"], as_index=False)["foot"].sum(),
     )
 
-    # time_integrate=True collapses all steps into a single layer; otherwise
-    # bin into layers of layer_minutes (tres) for time-resolved output.
-    p["layer"] = 0 if time_integrate else np.floor(p["age"] / layer_minutes).astype(int)
+    # Bin the time steps into layers of layer_minutes (tres).
+    p["layer"] = np.floor(p["age"] / layer_minutes).astype(int)
     layers = np.sort(np.asarray(p["layer"].unique(), dtype=int))
     return p, layers
 
@@ -679,7 +676,6 @@ def calc_footprint(
     grid: Grid,
     *,
     smooth_factor: float = 1.0,
-    time_integrate: bool = False,
     tres: str | timedelta = "1h",
     transforms: Sequence[Any] = (),
     name: str = "",
@@ -696,7 +692,8 @@ def calc_footprint(
     cell it is in, and each time step is smoothed with a Gaussian kernel
     that widens with the particles' spread and age. The sum is divided by
     the number of particles and binned into time layers *tres* long
-    (an hour by default), unless *time_integrate* is set.
+    (an hour by default). Sum the layers, ``foot.sum("time")``, for one map
+    of the whole run.
 
     A grid that goes all the way around the earth (``xmin=-180``,
     ``xmax=180``, with cells that fit 360 degrees) is treated as a circle:
@@ -737,13 +734,10 @@ def calc_footprint(
     smooth_factor : float, default 1.0
         Factor on the width of the Gaussian smoothing kernel. 0 turns
         smoothing off.
-    time_integrate : bool, default False
-        Sum the footprint over time into one layer instead of time layers.
     tres : str or timedelta, default "1h"
         Length of each time layer from the receptor time, a duration in
         whole minutes such as ``"15min"``, ``"1h"`` or ``"1D"``. A particle
         row at ``age`` minutes falls in layer ``floor(age / minutes)``.
-        Leave it at ``"1h"`` when *time_integrate* is set.
     transforms : sequence, optional
         Particle transforms applied before the footprint is calculated, as
         objects or as the mappings ``config.yaml`` takes
@@ -773,8 +767,7 @@ def calc_footprint(
     ImportError
         If a transform is a mapping whose ``kind`` cannot be imported.
     ValueError
-        If *tres* is not a positive whole number of minutes, or is not an
-        hour when *time_integrate* is set.
+        If *tres* is not a positive whole number of minutes.
     EmptyFootprint
         If no particle is over the grid, or the table has none.
 
@@ -798,7 +791,6 @@ def calc_footprint(
         {
             "grid": grid,
             "smooth_factor": smooth_factor,
-            "time_integrate": time_integrate,
             "tres": tres,
             "transforms": list(transforms),
         }
@@ -811,7 +803,6 @@ def calc_footprint(
     xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
     smooth_factor = config.smooth_factor
-    time_integrate = config.time_integrate
     layer_minutes = config.tres_minutes
 
     if particles.empty:
@@ -885,7 +876,6 @@ def calc_footprint(
         ymax=ymax,
         xres=xres,
         yres=yres,
-        time_integrate=time_integrate,
         layer_minutes=layer_minutes,
         longlat=grid.is_longlat,
     )

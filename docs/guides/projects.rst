@@ -123,10 +123,6 @@ These footprint settings sit next to ``grid`` at the top level:
    smooth onto the grid, as particles just past any other edge do.
    STILT-R drops them.
 
-``time_integrate``
-   ``true`` sums the footprint over time into a single map, which makes
-   smaller files. The default, ``false``, keeps one layer per ``tres``.
-
 ``tres``
    The length of each time layer of the footprint, as a duration in whole
    minutes. The default, ``1h``, gives one layer per hour back from the
@@ -138,8 +134,9 @@ These footprint settings sit next to ``grid`` at the top level:
    its minutes, so the layers still sum to the same total footprint. The
    settings record it one way (``60min`` is recorded as ``1h``, ``90min``
    stays ``90min``), so two spellings of one length share a settings
-   folder. Leave it at ``1h`` with ``time_integrate: true``, which has no
-   layers.
+   folder. For one map of the whole run, sum the layers
+   (``foot.sum("time")``), or set ``tres`` to the run's length for a
+   single layer (``tres: 1D`` with ``n_hours: -24``).
 
 ``transforms``
    Steps that weight the particles before the footprint is made, mainly for
@@ -202,8 +199,8 @@ three variants make 300 simulations. A variant may set:
 
 Any other setting
    Transport settings (``numpar``, ``ziscale``, turbulence, wind errors)
-   and footprint settings (``grid``, ``smooth_factor``, ``time_integrate``,
-   ``tres``, ``transforms``) override the defaults for that variant
+   and footprint settings (``grid``, ``smooth_factor``, ``tres``,
+   ``transforms``) override the defaults for that variant
    only.
 
 Variant names may use lowercase letters, digits, and hyphens, because they

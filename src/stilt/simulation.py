@@ -290,7 +290,6 @@ class Simulation:
         *,
         grid: Grid | None = None,
         smooth_factor: float | None = None,
-        time_integrate: bool | None = None,
         tres: str | timedelta | None = None,
         transforms: Sequence[Any] | None = None,
     ) -> xr.DataArray | None:
@@ -340,9 +339,6 @@ class Simulation:
                 smooth_factor=own.smooth_factor
                 if smooth_factor is None
                 else smooth_factor,
-                time_integrate=own.time_integrate
-                if time_integrate is None
-                else time_integrate,
                 tres=own.tres if tres is None else tres,
                 transforms=own.transforms if transforms is None else transforms,
                 name=self.variant.name,

@@ -420,7 +420,8 @@ The near-field correction
 The units
    Footprints are in ppm per (µmol m⁻² s⁻¹), per time layer (an hour unless
    ``tres`` says otherwise). Multiplied by a flux in µmol m⁻² s⁻¹
-   and summed, they give ppm. ``time_integrate`` sums the layers into one.
+   and summed, they give ppm. ``foot.sum("time")`` gives one map of the
+   whole run.
 
 PYSTILT's footprints match STILT-R's to a relative 10⁻⁷ per cell, which
 the fidelity tests check (:doc:`../development/stilt_r_parity`). If yours differ from a STILT-R

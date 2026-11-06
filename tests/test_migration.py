@@ -209,7 +209,7 @@ def test_hourly_footprint_layers_are_stamped_as_stilt_r_stamps_them():
         pd.Timestamp("2015-07-04 23:00"),
     ]
     np.testing.assert_array_equal(foot["time"].to_numpy(), stamps.to_numpy())
-    assert foot.stilt.config.time_integrate is False
+    assert foot.stilt.config.tres == "1h"
 
 
 def test_footprint_values_are_the_file_values_on_its_grid():
@@ -224,11 +224,20 @@ def test_footprint_values_are_the_file_values_on_its_grid():
     assert (grid.xres, grid.yres) == (0.02, 0.025)
 
 
-def test_time_integrated_footprint_is_one_layer_at_the_receptor_time():
-    receptor, _, foot = _read()[COLUMN]
+def test_time_integrated_footprint_is_one_layer_as_long_as_the_run():
+    """STILT-R stamps its summed map at the receptor time; it is read as one layer of the run's length."""
+    receptor, particles, foot = _read()[COLUMN]
+    raw = _raw_foot(COLUMN)
+    assert raw.sizes["time"] == 1
     assert foot.sizes["time"] == 1
-    assert foot["time"].to_numpy()[0] == np.datetime64(receptor.time)
-    assert foot.stilt.config.time_integrate is True
+    run = pd.Timedelta(foot.stilt.config.tres)
+    assert run > pd.Timedelta(hours=1)
+    assert particles["age"].min() >= -run / pd.Timedelta(minutes=1)
+    assert foot["time"].to_numpy()[0] == np.datetime64(receptor.time - run)
+    np.testing.assert_array_equal(
+        foot.to_numpy(),
+        raw.transpose("time", "lat", "lon").to_numpy().astype("float64"),
+    )
     assert foot.stilt.receptor == receptor
 
 
@@ -245,7 +254,7 @@ def test_footprint_matches_pystilt_footprint_of_the_particles(name):
         receptor,
         config.grid,
         smooth_factor=config.smooth_factor,
-        time_integrate=config.time_integrate,
+        tres=config.tres,
     )
     assert mine is not None
     xr.testing.assert_allclose(mine, foot, rtol=1e-7, atol=1e-12)
@@ -527,7 +536,7 @@ def test_the_settings_are_what_the_files_record(tmp_path, capsys):
     }
     foot = _settings(output, "footprints", "stilt-r")
     assert foot["smooth_factor"] == 0.5
-    assert foot["time_integrate"] is False
+    assert foot["tres"] == "1h"
     assert foot["grid"]["yres"] == 0.025
     path = next((output / "particles").rglob(f"{POINT}.parquet"))
     assert [str(p) for p in particles_metadata(path).met_files] == [

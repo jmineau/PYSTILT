@@ -116,6 +116,11 @@ def test_footprint_is_the_file_written(written):
         with xr.open_dataset(path, decode_times=False) as ds:
             raw = ds["foot"].load().transpose("time", "lat", "lon")
         stamps = pd.to_datetime(raw["time"].to_numpy(), unit="s")
+        if foot.stilt.config.tres != "1h":
+            # STILT-R summed it over time and stamped it at the receptor
+            # time; it is one layer as long as the run, stamped at its start.
+            assert raw.sizes["time"] == 1
+            stamps = stamps - pd.Timedelta(foot.stilt.config.tres)
         np.testing.assert_array_equal(foot["time"].to_numpy(), stamps.to_numpy())
         np.testing.assert_array_equal(foot.to_numpy(), raw.to_numpy().astype(float))
         assert foot.stilt.config.smooth_factor == 0.5
