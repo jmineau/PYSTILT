@@ -102,9 +102,10 @@ A footprint is an :class:`xarray.DataArray`:
    foot = sim.footprint     # raises FileNotFoundError before that
 
 It has dimensions ``(time, lat, lon)``, or ``(time, y, x)`` on a projected
-grid. There is one map for each hour back from the receptor time, in units
-of ppm per (µmol m⁻² s⁻¹). With ``time_integrate: true`` in the footprint
-settings there is a single time step. Use xarray as you would on any other
+grid. There is one map for each hour back from the receptor time (each
+``tres`` back, when the footprint settings give another length), in
+units of ppm per (µmol m⁻² s⁻¹). With ``time_integrate: true`` in the
+footprint settings there is a single time step. Use xarray as you would on any other
 array:
 
 .. ipython:: python

@@ -286,3 +286,73 @@ def test_write_footprint_refuses_a_grid_wider_than_int16(tmp_path):
     with pytest.raises(ValueError, match="at most 32767"):
         write_footprint(tmp_path / "f.parquet", foot)
     assert not (tmp_path / "f.parquet").exists()
+
+
+def _two_particle_rows(age: float) -> pd.DataFrame:
+    """One particle on the grid at the receptor's first minute and at *age*."""
+    return pd.DataFrame(
+        {
+            "particle": [1.0, 1.0],
+            "age": [-1.0, age],
+            "lon": [-111.85, -111.85],
+            "lat": [40.77, 40.77],
+            "zagl": 5.0,
+            "foot": [1.0, 1.0],
+        }
+    )
+
+
+def test_a_stored_footprint_reads_back_with_its_layer_times(tmp_path):
+    from stilt.footprint import calc_footprint, write_footprint
+
+    receptor = PointReceptor(
+        time="2023-07-01 12:30", longitude=-111.85, latitude=40.77, altitude=5
+    )
+    grid = Grid(xmin=-112, xmax=-111.5, ymin=40.5, ymax=41, xres=0.1, yres=0.1)
+    foot = calc_footprint(
+        _two_particle_rows(-50.0), receptor, grid, smooth_factor=0, tres="15min"
+    )
+    # Layers -1 (12:15) and -4 (11:30): the ages -1 and -50.
+    assert list(foot.time.values) == list(
+        pd.DatetimeIndex(["2023-07-01 11:30", "2023-07-01 12:15"]).values
+    )
+
+    back = read_footprint(write_footprint(tmp_path / "f.parquet", foot))
+    np.testing.assert_array_equal(back.time.values, foot.time.values)
+    np.testing.assert_allclose(back.values, foot.values, rtol=1e-6)
+    assert back.stilt.config.tres == "15min"
+
+
+def test_write_footprint_refuses_more_layers_than_int16(tmp_path):
+    """The stored layer is an int16, so one more than 32767 layers back is refused."""
+    from stilt.footprint import calc_footprint, write_footprint
+
+    receptor = PointReceptor(
+        time="2023-07-01 12:00", longitude=-111.85, latitude=40.77, altitude=5
+    )
+    grid = Grid(xmin=-112, xmax=-111.5, ymin=40.5, ymax=41, xres=0.1, yres=0.1)
+    foot = calc_footprint(
+        _two_particle_rows(-40000.0), receptor, grid, smooth_factor=0, tres="1min"
+    )
+
+    with pytest.raises(ValueError, match="Use longer layers"):
+        write_footprint(tmp_path / "f.parquet", foot)
+    assert not (tmp_path / "f.parquet").exists()
+
+
+def test_write_footprint_refuses_layers_not_whole_layers_from_the_receptor(tmp_path):
+    """A 15-minute footprint stamped 5 minutes off its layers is refused, not rounded."""
+    from stilt.footprint import calc_footprint, write_footprint
+
+    receptor = PointReceptor(
+        time="2023-07-01 12:00", longitude=-111.85, latitude=40.77, altitude=5
+    )
+    grid = Grid(xmin=-112, xmax=-111.5, ymin=40.5, ymax=41, xres=0.1, yres=0.1)
+    foot = calc_footprint(
+        _two_particle_rows(-50.0), receptor, grid, smooth_factor=0, tres="15min"
+    )
+    shifted = foot.assign_coords(time=foot.time + np.timedelta64(5, "m"))
+
+    with pytest.raises(ValueError, match="not whole layers of 15min"):
+        write_footprint(tmp_path / "f.parquet", shifted)
+    assert not (tmp_path / "f.parquet").exists()

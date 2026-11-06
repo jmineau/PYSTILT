@@ -125,7 +125,21 @@ These footprint settings sit next to ``grid`` at the top level:
 
 ``time_integrate``
    ``true`` sums the footprint over time into a single map, which makes
-   smaller files. The default, ``false``, keeps one layer per hour.
+   smaller files. The default, ``false``, keeps one layer per ``tres``.
+
+``tres``
+   The length of each time layer of the footprint, as a duration in whole
+   minutes. The default, ``1h``, gives one layer per hour back from the
+   receptor time, as STILT-R does. Use ``15min`` for 15-minute
+   observations such as EM27/SUN columns, or ``1D`` for daily layers in a
+   coarse inversion. Layers are counted from the receptor time, so a
+   receptor at 18:30 with ``tres: 15min`` has layers starting at 18:15,
+   18:00, and so on. Each layer holds the influence of the particles in
+   its minutes, so the layers still sum to the same total footprint. The
+   settings record it one way (``60min`` is recorded as ``1h``, ``90min``
+   stays ``90min``), so two spellings of one length share a settings
+   folder. Leave it at ``1h`` with ``time_integrate: true``, which has no
+   layers.
 
 ``transforms``
    Steps that weight the particles before the footprint is made, mainly for
@@ -189,7 +203,8 @@ three variants make 300 simulations. A variant may set:
 Any other setting
    Transport settings (``numpar``, ``ziscale``, turbulence, wind errors)
    and footprint settings (``grid``, ``smooth_factor``, ``time_integrate``,
-   ``transforms``) override the defaults for that variant only.
+   ``tres``, ``transforms``) override the defaults for that variant
+   only.
 
 Variant names may use lowercase letters, digits, and hyphens, because they
 become folder names. The same rule applies to the names in ``mets``.

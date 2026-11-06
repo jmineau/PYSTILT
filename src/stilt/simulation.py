@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import timedelta
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -290,6 +291,7 @@ class Simulation:
         grid: Grid | None = None,
         smooth_factor: float | None = None,
         time_integrate: bool | None = None,
+        tres: str | timedelta | None = None,
         transforms: Sequence[Any] | None = None,
     ) -> xr.DataArray | None:
         """
@@ -316,6 +318,7 @@ class Simulation:
         Examples
         --------
         >>> smoother = sim.calc_footprint(smooth_factor=2.0)  # doctest: +SKIP
+        >>> quarter_hours = sim.calc_footprint(tres="15min")  # doctest: +SKIP
         >>> fine = sim.calc_footprint(
         ...     grid=hexes.to_grid(cells_per_target=4)
         ... )  # doctest: +SKIP
@@ -340,6 +343,7 @@ class Simulation:
                 time_integrate=own.time_integrate
                 if time_integrate is None
                 else time_integrate,
+                tres=own.tres if tres is None else tres,
                 transforms=own.transforms if transforms is None else transforms,
                 name=self.variant.name,
                 directory=self.directory,

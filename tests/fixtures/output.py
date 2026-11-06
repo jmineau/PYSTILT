@@ -66,9 +66,13 @@ def fake_particles(receptor: PointReceptor, n: int = 50) -> pd.DataFrame:
 
 
 def fake_footprint(
-    receptor: PointReceptor, hours=(-2, -1, 0), seed: int = 0, name: str = "hrrr"
+    receptor: PointReceptor,
+    hours=(-2, -1, 0),
+    seed: int = 0,
+    name: str = "hrrr",
+    tres: str = "1h",
 ) -> xr.DataArray:
-    """A footprint on GRID with a few non-zero cells per layer."""
+    """A footprint on GRID with a few non-zero cells per layer, *hours* layers of *tres* from the receptor time."""
     x_axis, y_axis = GRID.axes
     rng = np.random.default_rng(seed)
     values = np.zeros((len(hours), len(y_axis), len(x_axis)))
@@ -77,13 +81,15 @@ def fake_footprint(
             values[t, rng.integers(len(y_axis)), rng.integers(len(x_axis))] = (
                 rng.uniform(0.01, 1.0)
             )
-    times = [pd.Timestamp(receptor.time) + pd.Timedelta(hours=h) for h in hours]
+    step = pd.Timedelta(tres)
+    times = [pd.Timestamp(receptor.time) + h * step for h in hours]
     data = xr.DataArray(
         values,
         dims=["time", "lat", "lon"],
         coords={"time": times, "lat": y_axis, "lon": x_axis},
     )
-    return as_footprint(data, receptor, FootprintConfig(grid=GRID), name)
+    config = FootprintConfig(grid=GRID, tres=tres)
+    return as_footprint(data, receptor, config, name)
 
 
 def write_one(out: Output, variant: Variant = VARIANT, receptor=None) -> Path:

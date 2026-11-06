@@ -205,16 +205,16 @@ class FootprintAccessor:
             ppm. When the flux's ``time`` coordinate carries CF time bounds
             (:func:`stilt.sampling.sample_field`'s ``step_starts``: its
             ``time`` is a :class:`pandas.IntervalIndex`), each footprint
-            hour takes the step whose bounds hold it; an hour before the
-            first bound, after the last, or in a gap between bounds gets
+            layer takes the step whose bounds hold its start; a layer before
+            the first bound, after the last, or in a gap between bounds gets
             zero flux, since the bounds say where every step starts and
             ends. Without bounds, a flux with a ``time`` dimension is read
             as steps that start at their labels, as ``aggregate`` and
-            ``project.jacobian`` read them: each footprint hour takes the
-            last flux step that starts at or before the hour's start. A
+            ``project.jacobian`` read them: each footprint layer takes the
+            last flux step that starts at or before the layer's start. A
             monthly flux labeled on the 1st gives every hour of July 20
-            July's flux. An hour before the first label gets zero flux, and
-            an hour after the last label takes the last step, since the
+            July's flux. A layer before the first label gets zero flux, and
+            a layer after the last label takes the last step, since the
             labels do not say where it ends (add a step of zeros to end
             it). A flux not labeled at the start of its steps and with no
             bounds must be relabeled first. A flux labeled at the middle of
@@ -239,7 +239,7 @@ class FootprintAccessor:
         ValueError
             If the flux has a ``time`` dimension and the footprint has none,
             since a time-summed footprint cannot say which flux step each
-            hour meets, if the flux cells are finer than the footprint's, if
+            layer meets, if the flux cells are finer than the footprint's, if
             the flux's time labels do not strictly increase (a repeated
             label is an error), or if its CF time bounds overlap.
         """
@@ -311,7 +311,7 @@ class FootprintAccessor:
         time_bins : pandas.IntervalIndex
             Time intervals to sum over, such as the time steps of a flux
             inventory. They must be closed on the left
-            (``closed="left"``): each bin holds the footprint hours that
+            (``closed="left"``): each bin holds the footprint layers that
             start in it.
 
         Returns

@@ -103,6 +103,7 @@ A footprints folder's adds the particles folder it was made from:
      smooth_factor: 1
      time_integrate: false
      transforms: []
+     tres: 1h
 
 ``name``
    The variant that made the folder.
@@ -196,7 +197,8 @@ A footprint file holds only the cells that are not zero:
      - The receptor id.
    * - ``hour``
      - int16
-     - The layer, in hours after the receptor time (below).
+     - The layer, counted from the receptor time in layers of ``tres``:
+       hours, by default (below).
    * - ``y``
      - int16
      - The cell's row in the grid, 0 at ``ymin``.
@@ -246,10 +248,12 @@ missing, not as a footprint of zeros.
 The hour
 ~~~~~~~~
 
-Layer ``k`` holds the particles' influence from ``k`` hours to ``k + 1``
-hours after the receptor time, and is stamped at its start. A particle
-row at ``age`` minutes falls in layer ``floor(age / 60)``. For a receptor
-at 18:30 on a backward run:
+Layer ``k`` holds the particles' influence from ``k`` to ``k + 1`` layers
+after the receptor time, and is stamped at its start. A layer is
+``tres`` long, an hour by default, so the stored ``hour`` is the hour
+unless the settings give another length. A particle row at ``age`` minutes
+falls in layer ``floor(age / m)``, where ``m`` is ``tres`` in minutes. For a receptor at
+18:30 on a backward run with hourly layers:
 
 .. list-table::
    :header-rows: 1
@@ -266,8 +270,10 @@ at 18:30 on a backward run:
      - 16:30 to 17:30, stamped 16:30
 
 The layers keep the receptor's minute, so a receptor at 18:30 has layers
-starting at half past. A footprint made with ``time_integrate: true`` has
-one layer, hour 0, stamped at the receptor time, which holds the whole run.
+starting at half past. With ``tres: 15min`` its layer -1 covers 18:15
+to 18:30 and layer -2 covers 18:00 to 18:15. A footprint made with
+``time_integrate: true`` has one layer, hour 0, stamped at the receptor
+time, which holds the whole run.
 
 The grid
 ~~~~~~~~
@@ -306,7 +312,10 @@ For example, in pyarrow:
    foot[t, table["y"].to_numpy(), table["x"].to_numpy()] = table["foot"].to_numpy()
 
 The small tolerance keeps the last whole cell when the bounds are decimals
-that binary floats store a little short.
+that binary floats store a little short. Layer ``h`` starts
+``h`` times ``tres`` after the receptor time. ``tres`` is in
+``stilt:footprint``, written as minutes (``15min``), hours (``1h``) or days
+(``1D``); a file that does not record it has hourly layers.
 
 Units
 ~~~~~
