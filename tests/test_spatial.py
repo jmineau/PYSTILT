@@ -236,3 +236,43 @@ def test_a_grid_holds_points_as_its_bounds_do():
     grid = Grid(xmin=170, xmax=190, ymin=40, ymax=50, xres=1, yres=1)
 
     assert grid.contains([-175, 175, 0], 45.0).tolist() == [True, True, False]
+
+
+@pytest.mark.parametrize(
+    ("key", "nearest"), [("csr", "crs"), ("xrse", "xres"), ("xmn", "xmin")]
+)
+def test_grid_refuses_a_key_that_is_no_setting_and_names_the_nearest(key, nearest):
+    kw = {
+        "xmin": -113,
+        "xmax": -110,
+        "ymin": 40,
+        "ymax": 42,
+        "xres": 0.01,
+        "yres": 0.01,
+    }
+    with pytest.raises(
+        ValueError, match=rf"'{key}' is not a grid setting.*{nearest!r}"
+    ):
+        Grid(**kw, **{key: "EPSG:32612"})
+
+
+def test_grid_refuses_an_unknown_key_in_the_config(tmp_path):
+    import stilt
+
+    met = {"directory": str(tmp_path), "file_format": "%Y%m%d", "file_tres": "6h"}
+    grid = {
+        "xmin": -113,
+        "xmax": -110,
+        "ymin": 40,
+        "ymax": 42,
+        "xres": 1000,
+        "yres": 1000,
+    }
+    with pytest.raises(ValueError, match="'csr' is not a grid setting"):
+        stilt.ProjectConfig(
+            mets={"a": met}, variants={"a": {}}, grid={**grid, "csr": "EPSG:32612"}
+        )
+    with pytest.raises(ValueError, match="'xresolution' is not a grid setting"):
+        stilt.ProjectConfig(
+            mets={"a": met}, variants={"a": {"grid": {**grid, "xresolution": 3}}}
+        )

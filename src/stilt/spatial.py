@@ -10,6 +10,7 @@ does not need shapely, so any part of PYSTILT can use it. Polygons
 
 from __future__ import annotations
 
+import difflib
 import functools
 from typing import TYPE_CHECKING, Self
 
@@ -234,6 +235,19 @@ class Grid(Bounds):
             "before gridding. Also read under STILT-R's name, ``projection``."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_unknown_keys(cls, data: object) -> object:
+        """Refuse a key that is no grid setting, naming the nearest one, so ``csr`` is not dropped."""
+        if isinstance(data, dict):
+            known = [*cls.model_fields, "projection"]
+            for key in data:
+                if key not in known:
+                    close = difflib.get_close_matches(str(key), known, n=1)
+                    hint = f" Did you mean {close[0]!r}?" if close else ""
+                    raise ValueError(f"{key!r} is not a grid setting.{hint}")
+        return data
 
     @model_validator(mode="after")
     def _at_most_one_turn(self) -> Self:
