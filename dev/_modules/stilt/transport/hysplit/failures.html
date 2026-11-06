@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=0a1896a6"></script>
+    <script src="../../../../_static/documentation_options.js?v=f2825579"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev22+gcaa94ac48" />
+  <meta name="docsearch:version" content="0.1.0a28.dev23+g9cf7672c7" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -495,6 +495,10 @@
     <span class="s2">"too much time between files"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
     <span class="s2">"no meteo data at current time"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
     <span class="s2">"no data at current time on any grid"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
+    <span class="c1"># The receptor itself is where the met is not: HYSPLIT stops at once,</span>
+    <span class="c1"># with a bare exit status (132), after writing one of these.</span>
+    <span class="s2">"source point off grid"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
+    <span class="s2">"Start height above mdl domain"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
     <span class="s2">"meteorological data time interval varies"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">VARYING_MET_INTERVAL</span><span class="p">,</span>
     <span class="s2">"PARTICLE_STILT.DAT does not contain any trajectory data"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">NO_PARTICLE_DATA</span><span class="p">,</span>
     <span class="s2">"Fortran runtime error"</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">FORTRAN_RUNTIME_ERROR</span><span class="p">,</span>
