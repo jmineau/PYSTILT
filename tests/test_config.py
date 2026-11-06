@@ -135,6 +135,15 @@ def test_model_config_yaml_roundtrip_basic(tmp_path):
     assert "hrrr" in loaded.mets
 
 
+def test_model_config_reports_invalid_yaml(tmp_path):
+    """Malformed YAML is reported as an invalid config file, not a parser traceback."""
+    path = tmp_path / "config.yaml"
+    path.write_text("n_hours: [\n")
+
+    with pytest.raises(ValueError, match=r"config\.yaml is not valid YAML.*line \d+"):
+        ProjectConfig.from_yaml(path)
+
+
 def test_model_config_yaml_roundtrip_with_execution(tmp_path):
     cfg = ProjectConfig(
         mets=_met_config(tmp_path),

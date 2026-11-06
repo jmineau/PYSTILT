@@ -127,6 +127,19 @@ def test_status_exits_when_no_config(tmp_path):
     assert result.exit_code == 2
 
 
+@pytest.mark.parametrize("command", ["check", "status", "run"])
+def test_commands_report_invalid_config_yaml(tmp_path, command):
+    """A malformed project config is a usage error, not an internal traceback."""
+    (tmp_path / "config.yaml").write_text("n_hours: [\n")
+
+    result = runner.invoke(app, [command, str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert "Error: config.yaml is not valid YAML" in result.output
+    assert "line " in result.output
+    assert "Traceback" not in result.output
+
+
 def test_status_prints_project_info(tmp_path):
     """``status`` prints one summary line with the project root and counts."""
     _write_minimal_config(tmp_path)
