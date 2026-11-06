@@ -10,6 +10,7 @@ import xarray as xr
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calc_footprint, gridding
+from stilt.footprint.config import FootprintConfig
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
     _fold_padding_around_the_globe,
@@ -137,6 +138,89 @@ def test_calc_footprint_time_integrate_collapses_to_single_timestep(point_recept
     foot = calc_footprint(particles, point_receptor, _grid(), time_integrate=True)
     assert foot is not None
     assert len(foot.time) == 1
+
+
+def _particles_every_ten_minutes(n: int = 20, seed: int = 3) -> pd.DataFrame:
+    """Backward particles with a row every 10 minutes over the first two hours."""
+    rng = np.random.default_rng(seed)
+    ages = np.arange(-10.0, -121.0, -10.0)
+    return pd.DataFrame(
+        {
+            "age": np.repeat(ages, n),
+            "particle": np.tile(np.arange(1, n + 1, dtype=float), len(ages)),
+            "lon": rng.uniform(-113.9, -113.1, len(ages) * n),
+            "lat": rng.uniform(39.1, 39.9, len(ages) * n),
+            "zagl": rng.uniform(5, 100, len(ages) * n),
+            "foot": rng.uniform(1e-6, 1e-4, len(ages) * n),
+        }
+    )
+
+
+def test_ten_minute_layers_are_stamped_every_ten_minutes_and_sum_to_the_hours(
+    point_receptor,
+):
+    """Each 10-minute layer holds its own particle rows; six of them make the hour."""
+    particles = _particles_every_ten_minutes()
+    hourly = calc_footprint(particles, point_receptor, _grid())
+    tens = calc_footprint(particles, point_receptor, _grid(), tres="10min")
+
+    expected = [
+        pd.Timestamp(point_receptor.time) - pd.Timedelta(minutes=10 * k)
+        for k in range(12, 0, -1)
+    ]
+    np.testing.assert_array_equal(tens.time.values, pd.DatetimeIndex(expected))
+    assert tens.stilt.config.tres == "10min"
+    # The rows at age -60 fall in layer floor(-60 / 10) = -6, which starts at
+    # 11:00 and is in the hour from 11:00, layer -1 of the hourly footprint.
+    by_hour = tens.resample(time="60min").sum()
+    np.testing.assert_array_equal(by_hour.time.values, hourly.time.values)
+    np.testing.assert_allclose(by_hour.values, hourly.values, rtol=1e-12)
+
+
+def test_two_hour_layers_hold_two_hourly_layers(point_receptor):
+    particles = _particles_every_ten_minutes()
+    hourly = calc_footprint(particles, point_receptor, _grid())
+    two = calc_footprint(particles, point_receptor, _grid(), tres="2h")
+
+    assert len(two.time) == 1
+    assert two.time.values[0] == np.datetime64(
+        pd.Timestamp(point_receptor.time) - pd.Timedelta(hours=2)
+    )
+    np.testing.assert_allclose(two.values[0], hourly.sum("time").values, rtol=1e-12)
+
+
+def test_a_layer_length_with_time_integrate_is_refused(point_receptor):
+    with pytest.raises(ValueError, match="tres"):
+        calc_footprint(
+            _particles_in_domain(),
+            point_receptor,
+            _grid(),
+            time_integrate=True,
+            tres="15min",
+        )
+
+
+@pytest.mark.parametrize("tres", ["0min", "-10min", "90s", 15])
+def test_a_layer_length_must_be_positive_whole_minutes(point_receptor, tres):
+    with pytest.raises(ValueError, match="tres"):
+        calc_footprint(_particles_in_domain(), point_receptor, _grid(), tres=tres)
+
+
+@pytest.mark.parametrize(
+    ("tres", "written"),
+    [
+        ("60min", "1h"),
+        ("1h", "1h"),
+        ("90min", "90min"),
+        ("1.5h", "90min"),
+        ("1440min", "1D"),
+        ("48h", "2D"),
+        (pd.Timedelta(minutes=15), "15min"),
+    ],
+)
+def test_a_layer_length_is_written_one_way(tres, written):
+    """``60min`` and ``1h`` are one setting, so they name one settings folder."""
+    assert FootprintConfig(tres=tres).tres == written
 
 
 def test_calc_footprint_nonnegative_foot_values(point_receptor):

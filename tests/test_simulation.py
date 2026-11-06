@@ -289,6 +289,9 @@ def test_calc_footprint_replaces_the_settings_given(point_receptor, tmp_path):
     smooth = sim.calc_footprint(smooth_factor=0.0)
     assert smooth.stilt.config.smooth_factor == 0.0
     assert smooth.stilt.grid == GRID
+    quarters = sim.calc_footprint(time_integrate=False, tres="15min")
+    assert quarters.stilt.config.tres == "15min"
+    assert float(quarters.sum()) == pytest.approx(float(base.sum()))
     decay = sim.calc_footprint(transforms=[FirstOrderLifetime(lifetime_hours=1.0)])
     assert [transform_kind(t) for t in decay.stilt.config.transforms] == [
         "first_order_lifetime"

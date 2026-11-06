@@ -27,14 +27,17 @@ recorded with the footprints.
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from datetime import timedelta
+from typing import Annotated, Any, Literal, Self
 
+import pandas as pd
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
     field_serializer,
     field_validator,
+    model_validator,
 )
 
 from stilt.spatial import Bounds, Grid
@@ -95,6 +98,35 @@ GeometrySpec = Annotated[
 """Any geometry spec accepted by ``FootprintConfig.geometry``."""
 
 
+def _minutes(tres: str | timedelta) -> int:
+    """
+    Return the length of a footprint time layer, *tres*, in whole minutes.
+
+    *tres* is a duration such as ``"15min"``, ``"1h"`` or ``"1D"`` (any
+    string :class:`pandas.Timedelta` reads), or a :class:`datetime.timedelta`.
+
+    Raises
+    ------
+    ValueError
+        If *tres* is a number, is not positive, or is not whole minutes.
+
+    Examples
+    --------
+    >>> _minutes("15min"), _minutes("1h"), _minutes("1D")
+    (15, 60, 1440)
+    """
+    if not isinstance(tres, str | timedelta):
+        raise ValueError(
+            f"tres is a duration such as '15min', '1h' or '1D', not {tres!r}."
+        )
+    step = pd.Timedelta(tres)
+    if pd.isna(step) or step <= pd.Timedelta(0) or step % pd.Timedelta(minutes=1):
+        raise ValueError(
+            f"tres must be a positive whole number of minutes, not {tres!r}."
+        )
+    return int(step / pd.Timedelta(minutes=1))
+
+
 class FootprintConfig(BaseModel):
     """
     Footprint settings: the grid, smoothing, and particle transforms.
@@ -141,7 +173,15 @@ class FootprintConfig(BaseModel):
     )
     time_integrate: bool = Field(
         False,
-        description="Sum the footprint over time into a single layer instead of hourly layers.",
+        description="Sum the footprint over time into a single layer instead of time layers.",
+    )
+    tres: str = Field(
+        "1h",
+        description=(
+            "Length of each time layer of the footprint, counted from the "
+            "receptor time, as a duration in whole minutes: ``1h`` for hourly "
+            "layers, ``15min`` for 15-minute data, ``1D`` for days."
+        ),
     )
     transforms: list[Any] = Field(
         description=(
@@ -152,6 +192,32 @@ class FootprintConfig(BaseModel):
         ),
         default_factory=list,
     )
+
+    @property
+    def tres_minutes(self) -> int:
+        """Length of each time layer of the footprint, in minutes."""
+        return _minutes(self.tres)
+
+    @field_validator("tres", mode="before")
+    @classmethod
+    def _one_spelling(cls, value: Any) -> str:
+        """Write the layer length one way, so ``60min`` and ``1h`` name one settings folder."""
+        minutes = _minutes(value)
+        if minutes % 1440 == 0:
+            return f"{minutes // 1440}D"
+        if minutes % 60 == 0:
+            return f"{minutes // 60}h"
+        return f"{minutes}min"
+
+    @model_validator(mode="after")
+    def _one_way_to_bin_time(self) -> Self:
+        """Refuse a layer length on a footprint summed over time, which has no layers."""
+        if self.time_integrate and self.tres != "1h":
+            raise ValueError(
+                "time_integrate sums the footprint into one layer, so "
+                f"tres ({self.tres}) has no effect. Set one or the other."
+            )
+        return self
 
     @field_validator("transforms", mode="before")
     @classmethod

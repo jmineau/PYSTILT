@@ -30,7 +30,9 @@ on a rectangular grid and then summed onto a :class:`stilt.Grid`, a
 or :class:`stilt.Zones` (groups of cells), using cached overlap weights.
 ``Mesh.to_grid`` picks a grid for a geometry, the ``geometry``
 footprint setting names one in YAML, and ``sim.calc_footprint`` makes
-new footprints from saved particles.
+new footprints from saved particles. A footprint's time layers are an hour
+long by default, and ``tres`` sets another length, such as ``15min``
+for EM27/SUN data or a day for a coarse inversion.
 
 Most new work is on column and slant-column workflows for satellite and
 ground-based instruments (see *Future plans* below).

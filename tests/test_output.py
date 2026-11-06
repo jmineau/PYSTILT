@@ -449,6 +449,35 @@ def test_jacobian_matches_footprint_aggregate(written_footprints, target):
         np.testing.assert_allclose(got, expected.to_numpy(), rtol=1e-6, atol=1e-12)
 
 
+#: FEET with 15-minute footprint layers.
+QUARTERS = output_variant(footprint=FootprintConfig(grid=GRID, tres="15min"))
+
+
+def test_jacobian_of_fifteen_minute_layers_matches_footprint_aggregate(tmp_path):
+    """Each stored layer goes to the bin its 15-minute start falls in, not the hour's."""
+    out = Output(tmp_path / "output")
+    receptor = receptor_at(hour=12)
+    foot = fake_footprint(receptor, hours=(-5, -4, -3, -2, -1), tres="15min")
+    out.write_footprint(QUARTERS, foot)
+    edges = pd.date_range("2024-07-15 10:30", "2024-07-15 12:00", freq="30min")
+    bins = pd.IntervalIndex.from_breaks(edges, closed="left")
+    target = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.25, yres=0.25)
+
+    H = jacobian(
+        out.table("footprints", QUARTERS),
+        QUARTERS.footprint,
+        target,
+        bins,
+        [str(receptor.id)],
+    )
+
+    expected = foot.stilt.aggregate(target, bins)
+    # The layer at 10:45 is in the first bin, so not every bin is empty.
+    assert (expected.to_numpy().sum(axis=0) > 0).all()
+    got = H.to_frame().iloc[0].to_numpy().reshape(len(bins), len(target.index)).T
+    np.testing.assert_allclose(got, expected.to_numpy(), rtol=1e-6, atol=1e-12)
+
+
 def test_jacobian_sparse_row_matches_dense(written_footprints, monkeypatch):
     """A row too long to sum densely is summed sparsely, to the same matrix."""
     import stilt.footprint.aggregation as aggregation
@@ -663,6 +692,23 @@ def test_open_footprints_stacks_receptors_on_the_hour(tmp_path):
     # Hours a receptor has no layer for are zero, and still have a time.
     assert float(ds.foot.sel(receptor=early.id, hour=-2).sum()) == 0
     assert ds.time.sel(receptor=early.id, hour=0).values == np.datetime64(early.time)
+
+
+def test_open_footprints_times_fifteen_minute_layers(tmp_path):
+    out = Output(tmp_path / "output")
+    receptor = receptor_at(hour=12)
+    foot = fake_footprint(receptor, hours=(-3, -1), tres="15min")
+    out.write_footprint(QUARTERS, foot)
+
+    ds = open_footprints([out.path("footprints", QUARTERS, receptor.id)])
+
+    assert list(ds.hour.values) == [-3, -2, -1]
+    np.testing.assert_array_equal(
+        ds.time.sel(receptor=receptor.id).values,
+        pd.DatetimeIndex(["2024-07-15 11:15", "2024-07-15 11:30", "2024-07-15 11:45"]),
+    )
+    one = ds.sel(receptor=receptor.id, hour=[-3, -1])
+    np.testing.assert_allclose(one.foot.values, foot.values, rtol=1e-6)
 
 
 def test_open_footprints_reads_in_blocks_by_date_folder(tmp_path):

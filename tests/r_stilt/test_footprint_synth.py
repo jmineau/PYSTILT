@@ -323,6 +323,7 @@ def _py_footprint_stages(
         xres=xres,
         yres=yres,
         time_integrate=time_integrate,
+        layer_minutes=60,
         longlat=is_longlat,
     )
 

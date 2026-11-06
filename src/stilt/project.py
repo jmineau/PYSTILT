@@ -930,9 +930,10 @@ class Project:
         """
         Open the footprints of the selected simulations as one dataset.
 
-        Footprints are stacked by their hour from the receptor time, so
-        receptors at any time share one ``hour`` axis; the ``time``
-        coordinate says when each layer starts. Only the files' metadata is
+        Footprints are stacked by their layer from the receptor time, so
+        receptors at any time share one ``hour`` axis, which numbers the
+        layers (hours, with the default ``tres`` of ``1h``); the
+        ``time`` coordinate says when each layer starts. Only the files' metadata is
         read here. The values load with dask when they are used, in blocks
         of receptors from one date folder. The selection must hold one
         variant, as for :meth:`jacobian`.
@@ -1026,7 +1027,7 @@ class Project:
         time_bins : pandas.IntervalIndex
             Flux time bins, such as a flux inventory's steps. They must be
             closed on the left (``closed="left"``): each bin holds the
-            footprint hours that start in it. You build these yourself;
+            footprint layers that start in it. You build these yourself;
             ``jacobian`` does not read them from an inventory's own CF time
             bounds, unlike ``foot.stilt.enhancement`` with a flux that has
             them. Building the bins from an inventory's own time labels

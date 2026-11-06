@@ -18,6 +18,7 @@ degrees. Run the ``fidelity`` tests before merging any change to this module.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, cast
 
@@ -481,15 +482,17 @@ def _filter_and_rasterize_particles(
     xres: float,
     yres: float,
     time_integrate: bool,
+    layer_minutes: int,
     longlat: bool = False,
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """
     Sum ``foot`` by padded grid cell and time step for particles on the padded grid.
 
     Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,
-    foot, layer``, and ``layers`` holds the sorted hour indices, or ``[0]``
-    when ``time_integrate`` is set. Both are empty when no particle is on
-    the padded grid. On a *longlat* grid a particle a whole turn from the
+    foot, layer``, and ``layers`` holds the sorted layer indices, each
+    *layer_minutes* minutes long from the receptor time, or ``[0]`` when
+    ``time_integrate`` is set. Both are empty when no particle is on the
+    padded grid. On a *longlat* grid a particle a whole turn from the
     padded grid is on it (``_onto_padded_axis``).
     """
     if longlat:
@@ -535,8 +538,8 @@ def _filter_and_rasterize_particles(
     )
 
     # time_integrate=True collapses all steps into a single layer; otherwise
-    # bin into hourly layers for time-resolved output.
-    p["layer"] = 0 if time_integrate else np.floor(p["age"] / 60).astype(int)
+    # bin into layers of layer_minutes (tres) for time-resolved output.
+    p["layer"] = 0 if time_integrate else np.floor(p["age"] / layer_minutes).astype(int)
     layers = np.sort(np.asarray(p["layer"].unique(), dtype=int))
     return p, layers
 
@@ -677,6 +680,7 @@ def calc_footprint(
     *,
     smooth_factor: float = 1.0,
     time_integrate: bool = False,
+    tres: str | timedelta = "1h",
     transforms: Sequence[Any] = (),
     name: str = "",
     directory: str | Path | None = None,
@@ -691,8 +695,8 @@ def calc_footprint(
     more than a grid cell per step. Each particle's ``foot`` is added to the
     cell it is in, and each time step is smoothed with a Gaussian kernel
     that widens with the particles' spread and age. The sum is divided by
-    the number of particles and binned by hour, unless *time_integrate* is
-    set.
+    the number of particles and binned into time layers *tres* long
+    (an hour by default), unless *time_integrate* is set.
 
     A grid that goes all the way around the earth (``xmin=-180``,
     ``xmax=180``, with cells that fit 360 degrees) is treated as a circle:
@@ -734,7 +738,12 @@ def calc_footprint(
         Factor on the width of the Gaussian smoothing kernel. 0 turns
         smoothing off.
     time_integrate : bool, default False
-        Sum the footprint over time into one layer instead of hourly layers.
+        Sum the footprint over time into one layer instead of time layers.
+    tres : str or timedelta, default "1h"
+        Length of each time layer from the receptor time, a duration in
+        whole minutes such as ``"15min"``, ``"1h"`` or ``"1D"``. A particle
+        row at ``age`` minutes falls in layer ``floor(age / minutes)``.
+        Leave it at ``"1h"`` when *time_integrate* is set.
     transforms : sequence, optional
         Particle transforms applied before the footprint is calculated, as
         objects or as the mappings ``config.yaml`` takes
@@ -756,13 +765,16 @@ def calc_footprint(
         or ``(time, y, x)`` on a projected grid. Coordinates are cell
         centers, those of ``Grid.axes``, so longitudes are the ones the grid
         is written with: 170.25 to 189.75 on a grid from 170 to 190, 0.5
-        degree cells. ``time`` is the start of each hour. The ``.stilt``
+        degree cells. ``time`` is the start of each layer. The ``.stilt``
         accessor has the methods that use it.
 
     Raises
     ------
     ImportError
         If a transform is a mapping whose ``kind`` cannot be imported.
+    ValueError
+        If *tres* is not a positive whole number of minutes, or is not an
+        hour when *time_integrate* is set.
     EmptyFootprint
         If no particle is over the grid, or the table has none.
 
@@ -787,6 +799,7 @@ def calc_footprint(
             "grid": grid,
             "smooth_factor": smooth_factor,
             "time_integrate": time_integrate,
+            "tres": tres,
             "transforms": list(transforms),
         }
     )
@@ -799,6 +812,7 @@ def calc_footprint(
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
     smooth_factor = config.smooth_factor
     time_integrate = config.time_integrate
+    layer_minutes = config.tres_minutes
 
     if particles.empty:
         raise EmptyFootprint()
@@ -872,6 +886,7 @@ def calc_footprint(
         xres=xres,
         yres=yres,
         time_integrate=time_integrate,
+        layer_minutes=layer_minutes,
         longlat=grid.is_longlat,
     )
 
