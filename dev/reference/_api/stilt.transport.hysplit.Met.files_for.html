@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1f82aa54"></script>
+    <script src="../../_static/documentation_options.js?v=aa544266"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev24+g4699741bd" />
+  <meta name="docsearch:version" content="0.1.0a28.dev25+gc2c4a27dd" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -896,8 +896,10 @@ its times, so in either direction it needs the met step at or after
 the window’s end: the release of a backward run, the end of a
 forward one. The files are the ones whose headers say they hold the
 steps from the one at or before the start to that one
-(<code class="xref py py-meth docutils literal notranslate"><span class="pre">Catalog.cover()</span></code>), whatever they are named. Downloads the files
-first when <code class="docutils literal notranslate"><span class="pre">download</span></code> is set.</p>
+(<code class="xref py py-meth docutils literal notranslate"><span class="pre">Catalog.cover()</span></code>), whatever they are named. When local files
+are cropped, a crop in <a class="reference internal" href="stilt.transport.hysplit.Met.crop_dir.html#stilt.transport.hysplit.Met.crop_dir" title="stilt.transport.hysplit.Met.crop_dir"><code class="xref py py-attr docutils literal notranslate"><span class="pre">crop_dir</span></code></a> that holds part of the
+window is one of them, and the archive gives the rest. Downloads the
+files first when <code class="docutils literal notranslate"><span class="pre">download</span></code> is set.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>window</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</span>) – The time to cover (<code class="xref py py-func docutils literal notranslate"><span class="pre">run_window()</span></code>).</p>

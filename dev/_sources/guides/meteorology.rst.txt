@@ -308,6 +308,18 @@ or ``subgrid_levels`` starts a new folder, and projects with the same crop
 share one. ``Met(name, config).crop_dir`` gives
 the folder. Old folders are not deleted.
 
+The crops are found the way the archive's files are: by what their headers
+hold, kept in a catalog of their own in ``subgrid_dir/catalogs/``. A
+simulation reads the crops for the hours they hold, and asks the archive only
+for the hours they do not, cropping those files. So a crop serves a simulation
+whatever it is named, and whether or not the archive still has the file it
+was cropped from: a folder of crops staged from elsewhere, or recovered after
+the archive lost a file, works with no entry in ``directory``. A crop that
+holds fewer hours than the file it shares a name with, such as one cut short,
+is made again from that file when a simulation needs the hours it lacks.
+``stilt check`` brings both catalogs up to date. The run records the files it
+was given: the archive's, or the crops that held its hours.
+
 ``subgrid_levels`` also drops the upper vertical levels, for downloaded
 files and your own.
 

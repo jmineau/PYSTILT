@@ -480,8 +480,19 @@ table per folder is kept in ``subgrid_dir/catalogs/`` or the user's cache. A run
 trusts the table until it has a gap or a chosen file's size or modified time has
 changed, and then lists the folder once. ``stilt check`` always brings it up to
 date. The first build takes a lock, so a job array does not read an archive once
-per task. Stray names (``.partial``, ``.bad``, backups) stay out by name, because
-a crop being written can read as whole time steps.
+per task. Stray names (``.partial``, ``.bad``, backups, and ``atomic_path``'s
+``.name.<id>.tmp``) stay out by name, because a crop being written can read as
+whole time steps.
+
+When local files are cropped, ``crop_dir`` has its own table (``Met.crops``).
+``Met._cover`` asks the crops first and the archive only for the stretches they
+do not hold, then drops any file wholly inside another, a crop before an
+archive file. So a crop serves a run by what it holds, whatever its name and
+whether or not the archive still has its source, and the archive's table is not
+read at all when the crops hold the whole run. ``Met.readable`` keeps a file
+already in ``crop_dir`` as it is, and makes a crop of an archive file again
+when the crop under its name does not hold the source's steps (``_holds_as``,
+two probes).
 
 After the run, the driver's ``check_met_stop`` catches a silent stop that the
 check before it missed, whatever its cause. A run that stopped before

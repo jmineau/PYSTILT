@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=1f82aa54"></script>
+    <script src="../../../../_static/documentation_options.js?v=aa544266"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev24+g4699741bd" />
+  <meta name="docsearch:version" content="0.1.0a28.dev25+gc2c4a27dd" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -475,7 +475,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.meteorology</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_window</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.catalog</span><span class="w"> </span><span class="kn">import</span> <span class="n">Catalog</span><span class="p">,</span> <span class="n">catalog_path</span><span class="p">,</span> <span class="n">is_stray</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.catalog</span><span class="w"> </span><span class="kn">import</span> <span class="n">Catalog</span><span class="p">,</span> <span class="n">Cover</span><span class="p">,</span> <span class="n">catalog_path</span><span class="p">,</span> <span class="n">is_stray</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">arlmet.archives</span><span class="w"> </span><span class="kn">import</span> <span class="n">Archive</span>
@@ -690,7 +690,8 @@
 <span class="sd">    With ``download`` set to an ARL archive name, arlmet downloads the files,</span>
 <span class="sd">    cropping them as it goes when subgridding is on. Local files are cropped with</span>
 <span class="sd">    ``arlmet.extract_subset`` into :attr:`crop_dir`, which all simulations</span>
-<span class="sd">    share.</span>
+<span class="sd">    share, and the crops there are found by their headers too</span>
+<span class="sd">    (:attr:`crops`).</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -714,6 +715,16 @@
                 <span class="kc">None</span> <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">subgrid_dir</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">absolute</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">subgrid_dir</span><span class="p">),</span>
             <span class="p">),</span>
         <span class="p">)</span>
+        <span class="c1">#: What the crops in :attr:`crop_dir` hold, when local files are</span>
+        <span class="c1">#: cropped, else ``None``. A crop serves a run by the times its header</span>
+        <span class="c1">#: says it holds, whatever it is named and whether or not the archive</span>
+        <span class="c1">#: still has its source.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">crops</span><span class="p">:</span> <span class="n">Catalog</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">subgrid_dir</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">subgrid_dir</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">subgrid_enable</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">download</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">subgrid_dir</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">crops</span> <span class="o">=</span> <span class="n">Catalog</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">crop_dir</span><span class="p">,</span> <span class="n">catalog_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crop_dir</span><span class="p">,</span> <span class="n">absolute</span><span class="p">(</span><span class="n">subgrid_dir</span><span class="p">))</span>
+            <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_archive</span><span class="p">:</span> <span class="n">Archive</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
@@ -795,6 +806,53 @@
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">files</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_cover</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">earlier</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span> <span class="n">later</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Cover</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the files that hold a run from *earlier* to *later*: crops where there are some, else the archive's.</span>
+
+<span class="sd">        Without a crop, these are the archive's files (:meth:`Catalog.cover`).</span>
+<span class="sd">        With one, the crops in :attr:`crop_dir` serve every stretch they</span>
+<span class="sd">        hold, and each stretch they do not is asked of the archive, whose</span>
+<span class="sd">        files :meth:`readable` crops. Crops are told by what their headers</span>
+<span class="sd">        hold, never by their names, so the hours a short crop lacks come from</span>
+<span class="sd">        the archive's whole file, and a crop whose source the archive no</span>
+<span class="sd">        longer has still serves.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">crops</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">cover</span><span class="p">(</span><span class="n">earlier</span><span class="p">,</span> <span class="n">later</span><span class="p">)</span>
+        <span class="n">crops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">crops</span><span class="o">.</span><span class="n">cover</span><span class="p">(</span><span class="n">earlier</span><span class="p">,</span> <span class="n">later</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">crops</span><span class="o">.</span><span class="n">gaps</span> <span class="ow">or</span> <span class="n">crops</span><span class="o">.</span><span class="n">clash</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">crops</span>
+        <span class="n">fills</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">cover</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">crops</span><span class="o">.</span><span class="n">gaps</span><span class="p">]</span>
+        <span class="n">covers</span> <span class="o">=</span> <span class="p">[</span><span class="n">crops</span><span class="p">,</span> <span class="o">*</span><span class="n">fills</span><span class="p">]</span>
+        <span class="c1"># A file wholly inside another is dropped, the longer kept and a crop</span>
+        <span class="c1"># before an archive file, as Catalog.cover does within one folder.</span>
+        <span class="n">spans</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">path</span><span class="p">:</span> <span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">last</span><span class="p">,</span> <span class="n">cover</span> <span class="ow">is</span> <span class="n">crops</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">cover</span> <span class="ow">in</span> <span class="n">covers</span>
+            <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+                <span class="n">cover</span><span class="o">.</span><span class="n">files</span><span class="p">,</span> <span class="n">cover</span><span class="o">.</span><span class="n">firsts</span><span class="p">,</span> <span class="n">cover</span><span class="o">.</span><span class="n">lasts</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+        <span class="p">}</span>
+        <span class="n">kept</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span>
+            <span class="n">spans</span><span class="p">,</span>
+            <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="p">(</span><span class="n">spans</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">spans</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="ow">not</span> <span class="n">spans</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)),</span>
+        <span class="p">):</span>
+            <span class="n">first</span><span class="p">,</span> <span class="n">last</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">spans</span><span class="p">[</span><span class="n">path</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">spans</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">first</span> <span class="ow">and</span> <span class="n">last</span> <span class="o">&lt;=</span> <span class="n">spans</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">):</span>
+                <span class="n">kept</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">kept</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">path</span><span class="p">:</span> <span class="p">(</span><span class="n">spans</span><span class="p">[</span><span class="n">path</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">Cover</span><span class="p">(</span>
+            <span class="n">files</span><span class="o">=</span><span class="n">files</span><span class="p">,</span>
+            <span class="n">firsts</span><span class="o">=</span><span class="p">[</span><span class="n">spans</span><span class="p">[</span><span class="n">path</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">files</span><span class="p">],</span>
+            <span class="n">lasts</span><span class="o">=</span><span class="p">[</span><span class="n">spans</span><span class="p">[</span><span class="n">path</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">files</span><span class="p">],</span>
+            <span class="n">gaps</span><span class="o">=</span><span class="p">[</span><span class="n">gap</span> <span class="k">for</span> <span class="n">fill</span> <span class="ow">in</span> <span class="n">fills</span> <span class="k">for</span> <span class="n">gap</span> <span class="ow">in</span> <span class="n">fill</span><span class="o">.</span><span class="n">gaps</span><span class="p">],</span>
+            <span class="n">clash</span><span class="o">=</span><span class="nb">next</span><span class="p">((</span><span class="n">fill</span><span class="o">.</span><span class="n">clash</span> <span class="k">for</span> <span class="n">fill</span> <span class="ow">in</span> <span class="n">fills</span> <span class="k">if</span> <span class="n">fill</span><span class="o">.</span><span class="n">clash</span><span class="p">),</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="n">single</span><span class="o">=</span><span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">covers</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">c</span><span class="o">.</span><span class="n">single</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">],</span>
+            <span class="n">cut</span><span class="o">=</span><span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">covers</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">c</span><span class="o">.</span><span class="n">cut</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">],</span>
+        <span class="p">)</span>
+
 <div class="viewcode-block" id="Met.files_for">
 <a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.Met.files_for.html#stilt.transport.hysplit.Met.files_for">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">files_for</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
@@ -806,8 +864,10 @@
 <span class="sd">        the window's end: the release of a backward run, the end of a</span>
 <span class="sd">        forward one. The files are the ones whose headers say they hold the</span>
 <span class="sd">        steps from the one at or before the start to that one</span>
-<span class="sd">        (:meth:`Catalog.cover`), whatever they are named. Downloads the files</span>
-<span class="sd">        first when ``download`` is set.</span>
+<span class="sd">        (:meth:`Catalog.cover`), whatever they are named. When local files</span>
+<span class="sd">        are cropped, a crop in :attr:`crop_dir` that holds part of the</span>
+<span class="sd">        window is one of them, and the archive gives the rest. Downloads the</span>
+<span class="sd">        files first when ``download`` is set.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -829,12 +889,15 @@
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_download</span><span class="p">(</span><span class="n">window</span><span class="p">)</span>
 
         <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="p">(</span><span class="n">_time</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">window</span><span class="p">)</span>
-        <span class="n">cover</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">cover</span><span class="p">(</span><span class="n">earlier</span><span class="p">,</span> <span class="n">later</span><span class="p">)</span>
+        <span class="n">cover</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cover</span><span class="p">(</span><span class="n">earlier</span><span class="p">,</span> <span class="n">later</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">cover</span><span class="o">.</span><span class="n">clash</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">MeteorologyError</span><span class="p">(</span><span class="n">cover</span><span class="o">.</span><span class="n">clash</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">cover</span><span class="o">.</span><span class="n">gaps</span><span class="p">:</span>
+            <span class="n">where</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">crops</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">where</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">" or its crops in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">crop_dir</span><span class="si">}</span><span class="s2">"</span>
             <span class="k">raise</span> <span class="n">MeteorologyError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"No met file in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">_spans</span><span class="p">(</span><span class="n">cover</span><span class="o">.</span><span class="n">gaps</span><span class="p">)</span><span class="si">}</span><span class="s2">. "</span>
+                <span class="sa">f</span><span class="s2">"No met file in </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">_spans</span><span class="p">(</span><span class="n">cover</span><span class="o">.</span><span class="n">gaps</span><span class="p">)</span><span class="si">}</span><span class="s2">. "</span>
                 <span class="sa">f</span><span class="s2">"The run covers </span><span class="si">{</span><span class="n">earlier</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2"> to "</span>
                 <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">later</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
@@ -866,7 +929,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">download</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[]</span>
         <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="p">(</span><span class="n">_time</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">window</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">cover</span><span class="p">(</span><span class="n">earlier</span><span class="p">,</span> <span class="n">later</span><span class="p">)</span><span class="o">.</span><span class="n">gaps</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cover</span><span class="p">(</span><span class="n">earlier</span><span class="p">,</span> <span class="n">later</span><span class="p">)</span><span class="o">.</span><span class="n">gaps</span></div>
 
 
 <div class="viewcode-block" id="Met.check_receptors">
@@ -883,9 +946,9 @@
 <span class="sd">        cannot start a particle outside the files. A met with ``download``</span>
 <span class="sd">        has no files to look for before a run, so only its crop is checked.</span>
 
-<span class="sd">        This brings the table of what the files hold up to date first</span>
-<span class="sd">        (:meth:`Catalog.refresh`), so it is the place to build it before a</span>
-<span class="sd">        batch: a first read of a large archive takes minutes. It reads each</span>
+<span class="sd">        This brings the tables of what the files and their crops hold up to</span>
+<span class="sd">        date first (:meth:`Catalog.refresh`), so it is the place to build</span>
+<span class="sd">        them before a batch: a first read of a large archive takes minutes. It reads each</span>
 <span class="sd">        file's first two index records, not the rest. :meth:`check` reads</span>
 <span class="sd">        each file at a run, and a run that passes this one can still fail as</span>
 <span class="sd">        ``MET_COVERAGE`` when a file is damaged in the middle.</span>
@@ -913,6 +976,8 @@
                 <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">"met_directory"</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">problem</span><span class="p">))</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">crops</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">crops</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
                 <span class="n">found</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_problems</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">)</span>
         <span class="n">found</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outside_crop</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"check"</span><span class="p">,</span> <span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"message"</span><span class="p">])</span></div>
@@ -938,7 +1003,7 @@
         <span class="n">cut</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">time</span> <span class="ow">in</span> <span class="n">first</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">():</span>
             <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="p">(</span><span class="n">_time</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">run_window</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">))</span>
-            <span class="n">cover</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">cover</span><span class="p">(</span><span class="n">earlier</span><span class="p">,</span> <span class="n">later</span><span class="p">)</span>
+            <span class="n">cover</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cover</span><span class="p">(</span><span class="n">earlier</span><span class="p">,</span> <span class="n">later</span><span class="p">)</span>
             <span class="n">messages</span><span class="p">[</span><span class="n">time</span><span class="p">]</span> <span class="o">=</span> <span class="n">cover</span><span class="o">.</span><span class="n">clash</span> <span class="ow">or</span> <span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"no met file for </span><span class="si">{</span><span class="n">_spans</span><span class="p">(</span><span class="n">cover</span><span class="o">.</span><span class="n">gaps</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">cover</span><span class="o">.</span><span class="n">gaps</span> <span class="k">else</span> <span class="kc">None</span>
             <span class="p">)</span>
@@ -1061,11 +1126,12 @@
 <span class="sd">        Return the files a transport model should read in place of *files*.</span>
 
 <span class="sd">        When local files are cropped, these are the cropped copies in</span>
-<span class="sd">        :attr:`crop_dir`, made on first use. Downloaded files were cropped</span>
-<span class="sd">        as they were downloaded. When two files share a name, the first is</span>
+<span class="sd">        :attr:`crop_dir`, made on first use; a file already there is a crop,</span>
+<span class="sd">        and is read as it is. Downloaded files were cropped as they were</span>
+<span class="sd">        downloaded. When two files share a name, the first is</span>
 <span class="sd">        kept, since a model would otherwise read the same hours twice.</span>
 <span class="sd">        """</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">subgrid_enable</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">download</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">crops</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crop_local_files</span><span class="p">(</span><span class="n">files</span><span class="p">)</span>
         <span class="n">kept</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
@@ -1086,21 +1152,30 @@
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Crop local files into :attr:`crop_dir`, reusing crops that already exist.</span>
 
-<span class="sd">        Each crop is written to a temporary name and then renamed, so a</span>
-<span class="sd">        worker never reads a half-written file. Two workers cropping the</span>
-<span class="sd">        same file at once both finish, and the second rename wins.</span>
+<span class="sd">        A file already in :attr:`crop_dir` is a crop and is kept as it is.</span>
+<span class="sd">        A crop of another file is named as its source, and is reused only</span>
+<span class="sd">        when its header says it holds the source's time steps</span>
+<span class="sd">        (:func:`_holds_as`): a crop with that name that holds fewer, or</span>
+<span class="sd">        cannot be read, is made again. Each crop is written to a temporary</span>
+<span class="sd">        name and then renamed, so a worker never reads a half-written file.</span>
+<span class="sd">        Two workers cropping the same file at once both finish, and the</span>
+<span class="sd">        second rename wins.</span>
 <span class="sd">        """</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">arlmet</span><span class="w"> </span><span class="kn">import</span> <span class="n">extract_subset</span>
 
         <span class="n">crop_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">crop_dir</span>
         <span class="n">crop_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">inside</span> <span class="o">=</span> <span class="n">crop_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
         <span class="n">bbox</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bbox</span><span class="p">()</span>
         <span class="n">levels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_level_indices</span><span class="p">()</span>
 
         <span class="n">subsetted</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">src</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">is_relative_to</span><span class="p">(</span><span class="n">inside</span><span class="p">):</span>
+                <span class="n">subsetted</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+                <span class="k">continue</span>
             <span class="n">cache_path</span> <span class="o">=</span> <span class="n">crop_dir</span> <span class="o">/</span> <span class="n">src</span><span class="o">.</span><span class="n">name</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">cache_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_holds_as</span><span class="p">(</span><span class="n">cache_path</span><span class="p">,</span> <span class="n">src</span><span class="p">):</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Subsetting </span><span class="si">%s</span><span class="s2"> → </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">cache_path</span><span class="p">)</span>
                 <span class="k">with</span> <span class="n">atomic_path</span><span class="p">(</span><span class="n">cache_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
                     <span class="n">extract_subset</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">tmp</span><span class="p">,</span> <span class="n">bbox</span><span class="o">=</span><span class="n">bbox</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="n">levels</span><span class="p">)</span>
@@ -1251,6 +1326,26 @@
             <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">times</span><span class="p">),</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">check</span><span class="p">())</span>
     <span class="k">except</span> <span class="n">ARLFormatError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(),</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">),)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_holds_as</span><span class="p">(</span><span class="n">crop</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Whether the ARL file *crop* holds the time steps *source* holds, whole.</span>
+
+<span class="sd">    Each is known by its first two index records (:func:`arlmet.probe`). A</span>
+<span class="sd">    missing or unreadable *crop* holds nothing.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">arlmet</span><span class="w"> </span><span class="kn">import</span> <span class="n">ARLFormatError</span><span class="p">,</span> <span class="n">probe</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">made</span><span class="p">,</span> <span class="n">wanted</span> <span class="o">=</span> <span class="n">probe</span><span class="p">(</span><span class="n">crop</span><span class="p">),</span> <span class="n">probe</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">ARLFormatError</span><span class="p">,</span> <span class="ne">EOFError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="n">made</span><span class="o">.</span><span class="n">whole</span> <span class="ow">and</span> <span class="p">(</span><span class="n">made</span><span class="o">.</span><span class="n">first</span><span class="p">,</span> <span class="n">made</span><span class="o">.</span><span class="n">step</span><span class="p">,</span> <span class="n">made</span><span class="o">.</span><span class="n">n_steps</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span>
+        <span class="n">wanted</span><span class="o">.</span><span class="n">first</span><span class="p">,</span>
+        <span class="n">wanted</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+        <span class="n">wanted</span><span class="o">.</span><span class="n">n_steps</span><span class="p">,</span>
+    <span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_one_period_message</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
