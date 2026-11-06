@@ -199,17 +199,19 @@ synthetic files with the real format's quirks. Never commit met files.
 
 ### Documentation
 
-A user-facing change updates its guide or reference in `docs/` in the same
-change, and `just build-docs` must pass. Examples run when the docs build, so
+A user-facing change updates the docs in the same change: the guide when
+what the user does changes, the reference (docstring Notes) otherwise. A bug
+fix's edge case goes to the reference. `just build-docs` must pass. Examples run when the docs build, so
 they use synthetic data, a small repository file, a public download, or the
 test met cache, and seed their random numbers (`CONTRIBUTING.md`). Give
 every public property and attribute a docstring, with no colon in the middle
 of its first line (napoleon reads `text: more` as `type: description`).
 
 **Voice** (docs, docstrings, field descriptions, CLI help): write for
-scientists who want to run the model and trust the result. Open with what it
-does, then an example. One idea per sentence; no metaphors, selling, or
-filler; American spelling. The full guide, with the habits that read as
+scientists who want to run the model and trust the result. Open with the
+reader's goal, recommend a default and say why ("you" for the reader, "we"
+for our advice), and show real output. One point per paragraph; no
+metaphors, selling, or filler; American spelling. The full guide, with the habits that read as
 machine-written, is "Writing documentation" in `CONTRIBUTING.md`. Words:
 
 | Say (user-facing) | Not |
