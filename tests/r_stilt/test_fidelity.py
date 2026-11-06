@@ -430,7 +430,7 @@ def test_projected_smoothing_intentionally_differs_from_r(
         s.make_receptor(),
         s.make_grid(),
         smooth_factor=1.0,
-        time_integrate=s.time_integrate,
+        tres=s.make_footprint_config().tres,
     )
     py = py_foot.fillna(0).to_numpy().astype(np.float64)
     r_ds = _r_footprint_from_traj(

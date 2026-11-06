@@ -40,7 +40,11 @@ from pydantic import (
 
 from stilt._paths import absolute
 from stilt.execution.config import ExecutionConfig
-from stilt.footprint.config import FileGeometrySpec, FootprintConfig
+from stilt.footprint.config import (
+    TIME_INTEGRATE_REMOVED,
+    FileGeometrySpec,
+    FootprintConfig,
+)
 from stilt.footprint.targets import Mesh
 from stilt.identity import (
     footprint_hash,
@@ -734,6 +738,8 @@ def _check_keys(keys: Iterable[str], model: str, where: str, own: set[str]) -> N
     for key in keys:
         if key in parts or key == "from":  # "from:" has its own message
             continue
+        if key == "time_integrate":
+            raise ValueError(f"{where}: {TIME_INTEGRATE_REMOVED}")
         close = difflib.get_close_matches(key, list(parts), n=1)
         hint = f" Did you mean {close[0]!r}, {parts[close[0]]}?" if close else ""
         raise ValueError(f"{where}: {key!r} is not a setting.{hint}")

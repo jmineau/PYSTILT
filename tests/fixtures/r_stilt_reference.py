@@ -120,7 +120,9 @@ class ReferenceScenario:
     smooth_factor
         Gaussian footprint smoothing scale (1.0 = default).
     time_integrate
-        If True, collapse footprint over all time steps.
+        If True, STILT-R sums the footprint over time, and PYSTILT makes one
+        layer as long as the run (``tres`` of ``n_hours``), which must hold
+        the same values.
     xmin, xmax, ymin, ymax, xres, yres
         Output footprint grid.
     compare_columns
@@ -222,7 +224,7 @@ class ReferenceScenario:
         return FootprintConfig(
             grid=self.make_grid(),
             smooth_factor=self.smooth_factor,
-            time_integrate=self.time_integrate,
+            tres=f"{abs(self.n_hours)}h" if self.time_integrate else "1h",
         )
 
     @property

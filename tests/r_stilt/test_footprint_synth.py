@@ -7,7 +7,7 @@ tests cannot reliably target:
   test_single_particle_gaussian     One particle; verify Gaussian rasterization.
   test_all_outside_domain           All particles off-grid → zero footprint.
   test_boundary_particles           Particles at exact grid-edge fencepost.
-  test_time_integrate               time_integrate=True collapses time axis.
+  test_time_integrate               STILT-R's summed map is one layer as long as the run.
   test_smooth_factor_scaling        smooth_factor=0.5 produces narrower Gaussian.
   test_hnf_dilution_active          plume < mixing-depth → foot corrected.
   test_hnf_dilution_inactive        plume >> mixing-depth → foot unchanged.
@@ -228,14 +228,22 @@ def _py_footprint(
     smooth_factor: float = 1.0,
     time_integrate: bool = False,
 ) -> xr.Dataset:
-    """Call PYSTILT's calc_footprint on *particles*, return xr.Dataset."""
+    """
+    Call PYSTILT's calc_footprint on *particles*, return xr.Dataset.
+
+    For STILT-R's *time_integrate*, PYSTILT makes one layer as long as the
+    run: ``tres`` the whole hours that hold the oldest particle row.
+    """
     tmp_path.mkdir(parents=True, exist_ok=True)
+    tres = "1h"
+    if time_integrate:
+        tres = f"{max(1, int(np.ceil(np.abs(particles['time']).max() / 60)))}h"
     foot = calc_footprint(
         _as_py(particles),
         receptor,
         grid,
         smooth_factor=smooth_factor,
-        time_integrate=time_integrate,
+        tres=tres,
         name="test",
     )
     nc_path = tmp_path / "py_foot.nc"
@@ -250,7 +258,6 @@ def _py_footprint_stages(
     particles: pd.DataFrame,
     grid: Grid = _GRID,
     smooth_factor: float = 1.0,
-    time_integrate: bool = False,
 ) -> dict[str, pd.DataFrame]:
     """Return Python-side calc_footprint intermediate tables matching the R helper."""
     projection = grid.crs
@@ -322,7 +329,6 @@ def _py_footprint_stages(
         ymax=ymax,
         xres=xres,
         yres=yres,
-        time_integrate=time_integrate,
         layer_minutes=60,
         longlat=is_longlat,
     )
@@ -801,10 +807,11 @@ def test_utm_smoothing_intentionally_differs_from_r(rscript, r_stilt_dir, tmp_pa
 
 def test_time_integrate(rscript, r_stilt_dir, tmp_path):
     """
-    Particles at three distinct time steps with time_integrate=True.
+    Particles at three distinct time steps, summed over time.
 
-    The output footprint must have a single time layer whose values equal
-    the sum of the per-time-step footprints.  Both tools should agree.
+    STILT-R's ``time_integrate=TRUE`` gives one layer, the sum of the
+    per-time-step footprints. PYSTILT's one layer as long as the run must
+    hold the same values.
     """
     rng = np.random.default_rng(0)
     n_per_step = 20

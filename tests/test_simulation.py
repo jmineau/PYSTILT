@@ -18,7 +18,7 @@ from .fixtures.factories import make_met_config, make_variant
 from .fixtures.particles import finished
 
 GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
-FOOT = FootprintConfig(grid=GRID, time_integrate=True, smooth_factor=0.0)
+FOOT = FootprintConfig(grid=GRID, smooth_factor=0.0)
 
 
 def _met_config(tmp_path, **kwargs) -> MetConfig:
@@ -289,7 +289,7 @@ def test_calc_footprint_replaces_the_settings_given(point_receptor, tmp_path):
     smooth = sim.calc_footprint(smooth_factor=0.0)
     assert smooth.stilt.config.smooth_factor == 0.0
     assert smooth.stilt.grid == GRID
-    quarters = sim.calc_footprint(time_integrate=False, tres="15min")
+    quarters = sim.calc_footprint(tres="15min")
     assert quarters.stilt.config.tres == "15min"
     assert float(quarters.sum()) == pytest.approx(float(base.sum()))
     decay = sim.calc_footprint(transforms=[FirstOrderLifetime(lifetime_hours=1.0)])

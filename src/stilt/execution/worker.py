@@ -362,7 +362,6 @@ def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | N
             sim.receptor,
             config.grid,
             smooth_factor=config.smooth_factor,
-            time_integrate=config.time_integrate,
             tres=config.tres,
             transforms=config.transforms,
             name=sim.variant.name,

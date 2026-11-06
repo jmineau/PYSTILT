@@ -60,10 +60,9 @@ def _footprint_array(
 
     Layer ``k`` starts ``hours[k]`` layers of ``config.tres`` after the
     receptor time, and is stamped there, as in STILT-R; a backward run's
-    first layer is -1, and a time-integrated footprint is the one layer 0.
-    With the default ``tres`` of ``1h``, ``hours`` are hours. This
-    is the one place a footprint array is made, for :func:`calc_footprint`
-    and for :func:`read_footprint` alike.
+    first layer is -1. With the default ``tres`` of ``1h``, ``hours`` are
+    hours. This is the one place a footprint array is made, for
+    :func:`calc_footprint` and for :func:`read_footprint` alike.
     """
     if config.grid is None:
         raise ValueError("Footprint settings need a grid.")
