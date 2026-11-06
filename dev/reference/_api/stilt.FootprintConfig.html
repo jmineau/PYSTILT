@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=7ce62d87"></script>
+    <script src="../../_static/documentation_options.js?v=21832879"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,12 +59,12 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="stilt.ExecutionConfig" href="stilt.ExecutionConfig.html" />
+    <link rel="next" title="stilt.FootprintConfig.tres_minutes" href="stilt.FootprintConfig.tres_minutes.html" />
     <link rel="prev" title="stilt.ProjectConfig.to_yaml" href="stilt.ProjectConfig.to_yaml.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev18+gd18417244" />
+  <meta name="docsearch:version" content="0.1.0a28.dev19+g6f360343a" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -607,7 +607,10 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.to_yaml.html">stilt.ProjectConfig.to_yaml</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">stilt.FootprintConfig</a></li>
+<li class="toctree-l2 current active has-children"><a aria-current="page" class="current reference internal" href="#">stilt.FootprintConfig</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.tres_minutes.html">stilt.FootprintConfig.tres_minutes</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.ExecutionConfig.html">stilt.ExecutionConfig</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Bounds.html">stilt.Bounds</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Bounds.contains.html">stilt.Bounds.contains</a></li>
@@ -883,7 +886,7 @@
 <h1>stilt.FootprintConfig<a class="headerlink" href="#stilt-footprintconfig" title="Link to this heading">#</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="stilt.FootprintConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.</span></span><span class="sig-name descname"><span class="pre">FootprintConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">stilt.spatial.Grid</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated[stilt.footprint.config.FileGeometrySpec</span> <span class="pre">|</span> <span class="pre">stilt.footprint.config.H3GeometrySpec</span> <span class="pre">|</span> <span class="pre">stilt.footprint.config.WindowsGeometrySpec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">FieldInfo(annotation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">NoneType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discriminator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'kind')]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cells_per_target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated[float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Gt(gt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0)]</span> <span class="pre">=</span> <span class="pre">4.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_factor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_integrate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transforms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/stilt/footprint/config.html#FootprintConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.FootprintConfig" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.</span></span><span class="sig-name descname"><span class="pre">FootprintConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">stilt.spatial.Grid</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated[stilt.footprint.config.FileGeometrySpec</span> <span class="pre">|</span> <span class="pre">stilt.footprint.config.H3GeometrySpec</span> <span class="pre">|</span> <span class="pre">stilt.footprint.config.WindowsGeometrySpec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">FieldInfo(annotation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">NoneType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discriminator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'kind')]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cells_per_target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated[float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Gt(gt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0)]</span> <span class="pre">=</span> <span class="pre">4.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_factor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_integrate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tres</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'1h'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transforms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/stilt/footprint/config.html#FootprintConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.FootprintConfig" title="Link to this definition">#</a></dt>
 <dd><p>Footprint settings: the grid, smoothing, and particle transforms.</p>
 <p>The config and each variant hold these as their defaults and overrides,
 and every footprint keeps the settings it was calculated with.</p>
@@ -929,12 +932,27 @@ the footprints.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">time_integrate</span></code></p></td>
-<td><p>Sum the footprint over time into a single layer instead of hourly layers.</p></td>
+<td><p>Sum the footprint over time into a single layer instead of time layers.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">transforms</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tres</span></code></p></td>
+<td><p>Length of each time layer of the footprint, counted from the receptor time, as a duration in whole minutes: <code class="docutils literal notranslate"><span class="pre">1h</span></code> for hourly layers, <code class="docutils literal notranslate"><span class="pre">15min</span></code> for 15-minute data, <code class="docutils literal notranslate"><span class="pre">1D</span></code> for days.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">'1h'</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">transforms</span></code></p></td>
 <td><p>Particle transforms applied in order before the footprint is computed. Each entry’s <code class="docutils literal notranslate"><span class="pre">kind</span></code> is a built-in name (<code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code>, <code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code>, <code class="docutils literal notranslate"><span class="pre">first_order_lifetime</span></code>) or the import path of your own class.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">[]</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.FootprintConfig.tres_minutes.html#stilt.FootprintConfig.tres_minutes" title="stilt.FootprintConfig.tres_minutes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tres_minutes</span></code></a></p></td>
+<td><p>Length of each time layer of the footprint, in minutes.</p></td>
 </tr>
 </tbody>
 </table>
@@ -962,11 +980,11 @@ the footprints.</p>
       </div>
     </a>
     <a class="right-next"
-       href="stilt.ExecutionConfig.html"
+       href="stilt.FootprintConfig.tres_minutes.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">stilt.ExecutionConfig</p>
+        <p class="prev-next-title">stilt.FootprintConfig.tres_minutes</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -991,6 +1009,7 @@ the footprints.</p>
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.FootprintConfig"><code class="docutils literal notranslate"><span class="pre">FootprintConfig</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameters">Parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#attributes">Attributes</a></li>
 </ul>
   </nav></div>
 

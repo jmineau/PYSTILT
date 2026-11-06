@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=7ce62d87"></script>
+    <script src="../../../_static/documentation_options.js?v=21832879"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev18+gd18417244" />
+  <meta name="docsearch:version" content="0.1.0a28.dev19+g6f360343a" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -664,16 +664,16 @@
 <span class="sd">            ppm. When the flux's ``time`` coordinate carries CF time bounds</span>
 <span class="sd">            (:func:`stilt.sampling.sample_field`'s ``step_starts``: its</span>
 <span class="sd">            ``time`` is a :class:`pandas.IntervalIndex`), each footprint</span>
-<span class="sd">            hour takes the step whose bounds hold it; an hour before the</span>
-<span class="sd">            first bound, after the last, or in a gap between bounds gets</span>
+<span class="sd">            layer takes the step whose bounds hold its start; a layer before</span>
+<span class="sd">            the first bound, after the last, or in a gap between bounds gets</span>
 <span class="sd">            zero flux, since the bounds say where every step starts and</span>
 <span class="sd">            ends. Without bounds, a flux with a ``time`` dimension is read</span>
 <span class="sd">            as steps that start at their labels, as ``aggregate`` and</span>
-<span class="sd">            ``project.jacobian`` read them: each footprint hour takes the</span>
-<span class="sd">            last flux step that starts at or before the hour's start. A</span>
+<span class="sd">            ``project.jacobian`` read them: each footprint layer takes the</span>
+<span class="sd">            last flux step that starts at or before the layer's start. A</span>
 <span class="sd">            monthly flux labeled on the 1st gives every hour of July 20</span>
-<span class="sd">            July's flux. An hour before the first label gets zero flux, and</span>
-<span class="sd">            an hour after the last label takes the last step, since the</span>
+<span class="sd">            July's flux. A layer before the first label gets zero flux, and</span>
+<span class="sd">            a layer after the last label takes the last step, since the</span>
 <span class="sd">            labels do not say where it ends (add a step of zeros to end</span>
 <span class="sd">            it). A flux not labeled at the start of its steps and with no</span>
 <span class="sd">            bounds must be relabeled first. A flux labeled at the middle of</span>
@@ -698,7 +698,7 @@
 <span class="sd">        ValueError</span>
 <span class="sd">            If the flux has a ``time`` dimension and the footprint has none,</span>
 <span class="sd">            since a time-summed footprint cannot say which flux step each</span>
-<span class="sd">            hour meets, if the flux cells are finer than the footprint's, if</span>
+<span class="sd">            layer meets, if the flux cells are finer than the footprint's, if</span>
 <span class="sd">            the flux's time labels do not strictly increase (a repeated</span>
 <span class="sd">            label is an error), or if its CF time bounds overlap.</span>
 <span class="sd">        """</span>
@@ -773,7 +773,7 @@
 <span class="sd">        time_bins : pandas.IntervalIndex</span>
 <span class="sd">            Time intervals to sum over, such as the time steps of a flux</span>
 <span class="sd">            inventory. They must be closed on the left</span>
-<span class="sd">            (``closed="left"``): each bin holds the footprint hours that</span>
+<span class="sd">            (``closed="left"``): each bin holds the footprint layers that</span>
 <span class="sd">            start in it.</span>
 
 <span class="sd">        Returns</span>

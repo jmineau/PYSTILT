@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=7ce62d87"></script>
+    <script src="../../../_static/documentation_options.js?v=21832879"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev18+gd18417244" />
+  <meta name="docsearch:version" content="0.1.0a28.dev19+g6f360343a" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -467,6 +467,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">cast</span>
 
@@ -930,15 +931,17 @@
     <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">time_integrate</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">layer_minutes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">longlat</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Sum ``foot`` by padded grid cell and time step for particles on the padded grid.</span>
 
 <span class="sd">    Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,</span>
-<span class="sd">    foot, layer``, and ``layers`` holds the sorted hour indices, or ``[0]``</span>
-<span class="sd">    when ``time_integrate`` is set. Both are empty when no particle is on</span>
-<span class="sd">    the padded grid. On a *longlat* grid a particle a whole turn from the</span>
+<span class="sd">    foot, layer``, and ``layers`` holds the sorted layer indices, each</span>
+<span class="sd">    *layer_minutes* minutes long from the receptor time, or ``[0]`` when</span>
+<span class="sd">    ``time_integrate`` is set. Both are empty when no particle is on the</span>
+<span class="sd">    padded grid. On a *longlat* grid a particle a whole turn from the</span>
 <span class="sd">    padded grid is on it (``_onto_padded_axis``).</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="n">longlat</span><span class="p">:</span>
@@ -984,8 +987,8 @@
     <span class="p">)</span>
 
     <span class="c1"># time_integrate=True collapses all steps into a single layer; otherwise</span>
-    <span class="c1"># bin into hourly layers for time-resolved output.</span>
-    <span class="n">p</span><span class="p">[</span><span class="s2">"layer"</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">time_integrate</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span> <span class="o">/</span> <span class="mi">60</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="c1"># bin into layers of layer_minutes (tres) for time-resolved output.</span>
+    <span class="n">p</span><span class="p">[</span><span class="s2">"layer"</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">time_integrate</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span> <span class="o">/</span> <span class="n">layer_minutes</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
     <span class="n">layers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"layer"</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">layers</span>
 
@@ -1128,6 +1131,7 @@
     <span class="o">*</span><span class="p">,</span>
     <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
     <span class="n">time_integrate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">tres</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">timedelta</span> <span class="o">=</span> <span class="s2">"1h"</span><span class="p">,</span>
     <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
     <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1142,8 +1146,8 @@
 <span class="sd">    more than a grid cell per step. Each particle's ``foot`` is added to the</span>
 <span class="sd">    cell it is in, and each time step is smoothed with a Gaussian kernel</span>
 <span class="sd">    that widens with the particles' spread and age. The sum is divided by</span>
-<span class="sd">    the number of particles and binned by hour, unless *time_integrate* is</span>
-<span class="sd">    set.</span>
+<span class="sd">    the number of particles and binned into time layers *tres* long</span>
+<span class="sd">    (an hour by default), unless *time_integrate* is set.</span>
 
 <span class="sd">    A grid that goes all the way around the earth (``xmin=-180``,</span>
 <span class="sd">    ``xmax=180``, with cells that fit 360 degrees) is treated as a circle:</span>
@@ -1185,7 +1189,12 @@
 <span class="sd">        Factor on the width of the Gaussian smoothing kernel. 0 turns</span>
 <span class="sd">        smoothing off.</span>
 <span class="sd">    time_integrate : bool, default False</span>
-<span class="sd">        Sum the footprint over time into one layer instead of hourly layers.</span>
+<span class="sd">        Sum the footprint over time into one layer instead of time layers.</span>
+<span class="sd">    tres : str or timedelta, default "1h"</span>
+<span class="sd">        Length of each time layer from the receptor time, a duration in</span>
+<span class="sd">        whole minutes such as ``"15min"``, ``"1h"`` or ``"1D"``. A particle</span>
+<span class="sd">        row at ``age`` minutes falls in layer ``floor(age / minutes)``.</span>
+<span class="sd">        Leave it at ``"1h"`` when *time_integrate* is set.</span>
 <span class="sd">    transforms : sequence, optional</span>
 <span class="sd">        Particle transforms applied before the footprint is calculated, as</span>
 <span class="sd">        objects or as the mappings ``config.yaml`` takes</span>
@@ -1207,13 +1216,16 @@
 <span class="sd">        or ``(time, y, x)`` on a projected grid. Coordinates are cell</span>
 <span class="sd">        centers, those of ``Grid.axes``, so longitudes are the ones the grid</span>
 <span class="sd">        is written with: 170.25 to 189.75 on a grid from 170 to 190, 0.5</span>
-<span class="sd">        degree cells. ``time`` is the start of each hour. The ``.stilt``</span>
+<span class="sd">        degree cells. ``time`` is the start of each layer. The ``.stilt``</span>
 <span class="sd">        accessor has the methods that use it.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ImportError</span>
 <span class="sd">        If a transform is a mapping whose ``kind`` cannot be imported.</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If *tres* is not a positive whole number of minutes, or is not an</span>
+<span class="sd">        hour when *time_integrate* is set.</span>
 <span class="sd">    EmptyFootprint</span>
 <span class="sd">        If no particle is over the grid, or the table has none.</span>
 
@@ -1238,6 +1250,7 @@
             <span class="s2">"grid"</span><span class="p">:</span> <span class="n">grid</span><span class="p">,</span>
             <span class="s2">"smooth_factor"</span><span class="p">:</span> <span class="n">smooth_factor</span><span class="p">,</span>
             <span class="s2">"time_integrate"</span><span class="p">:</span> <span class="n">time_integrate</span><span class="p">,</span>
+            <span class="s2">"tres"</span><span class="p">:</span> <span class="n">tres</span><span class="p">,</span>
             <span class="s2">"transforms"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">transforms</span><span class="p">),</span>
         <span class="p">}</span>
     <span class="p">)</span>
@@ -1250,6 +1263,7 @@
     <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">yres</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span>
     <span class="n">smooth_factor</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">smooth_factor</span>
     <span class="n">time_integrate</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">time_integrate</span>
+    <span class="n">layer_minutes</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">tres_minutes</span>
 
     <span class="k">if</span> <span class="n">particles</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">EmptyFootprint</span><span class="p">()</span>
@@ -1323,6 +1337,7 @@
         <span class="n">xres</span><span class="o">=</span><span class="n">xres</span><span class="p">,</span>
         <span class="n">yres</span><span class="o">=</span><span class="n">yres</span><span class="p">,</span>
         <span class="n">time_integrate</span><span class="o">=</span><span class="n">time_integrate</span><span class="p">,</span>
+        <span class="n">layer_minutes</span><span class="o">=</span><span class="n">layer_minutes</span><span class="p">,</span>
         <span class="n">longlat</span><span class="o">=</span><span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">,</span>
     <span class="p">)</span>
 
