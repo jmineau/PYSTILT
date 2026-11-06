@@ -197,6 +197,20 @@ class Variant:
         )
 
     @cached_property
+    def run_settings_without_met(self) -> dict[str, Any]:
+        """
+        The settings that identify this variant's particles, except the met's.
+
+        What can be compared with a stored folder when the met's files
+        cannot be read, and so :attr:`run_settings` cannot be made.
+        """
+        settings = run_settings(
+            self.transport, {}, self.model, ensemble=self.realizations is not None
+        )
+        del settings["met"]
+        return settings
+
+    @cached_property
     def particles_hash(self) -> str:
         """Hash of :attr:`run_settings`, which finds the particles folder."""
         return settings_hash(self.run_settings)

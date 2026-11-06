@@ -3,6 +3,7 @@
 import errno
 import ftplib
 import io
+import json
 import os
 import socket
 import subprocess
@@ -209,7 +210,7 @@ def test_status_counts_each_state_per_variant(tmp_path, monkeypatch):
         }
     )
     monkeypatch.setattr(Project, "status", lambda self, sel=None: table)
-    monkeypatch.setattr("stilt.cli._print_folders", lambda project: None)
+    monkeypatch.setattr("stilt.cli._print_folders", lambda project, folders: None)
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -417,9 +418,7 @@ def _point_met_at(tmp_path, directory):
     config.write_text(text.replace(str(tmp_path / "met"), str(directory)))
 
 
-@pytest.mark.parametrize(
-    "command", [["run"], ["submit"], ["status"], ["status", "--json"]]
-)
+@pytest.mark.parametrize("command", [["run"], ["submit"]])
 def test_a_met_directory_that_does_not_exist_exits_2_in_one_line(
     tmp_path, calls, command
 ):
@@ -436,6 +435,76 @@ def test_a_met_directory_that_does_not_exist_exits_2_in_one_line(
     checked = runner.invoke(app, ["check", str(tmp_path)])
     assert checked.exit_code == 1
     assert f"{missing} does not exist." in checked.output
+
+
+def _make_results_folder(tmp_path, name="hrrr", **transport):
+    """Make a particles folder, as a run of variant *name* with *transport* settings, under the project's output."""
+    project = Project(tmp_path)
+    variant = project.variants["hrrr"]
+    if transport:
+        variant = replace(
+            variant, transport=variant.transport.model_copy(update=transport)
+        )
+    project.output.write_log(replace(variant, name=name), "202301011200_any", "")
+
+
+@pytest.mark.parametrize("flags", [[], ["--json"]])
+def test_status_with_an_unreadable_met_and_an_empty_output_is_all_pending(
+    tmp_path, flags
+):
+    """A bare project, as pystiltctl asks about it: nothing can be there (pystiltctl#37)."""
+    _write_minimal_config(tmp_path)
+    _point_met_at(tmp_path, tmp_path / "no-such-met")
+
+    result = runner.invoke(app, ["status", str(tmp_path), *flags])
+
+    assert result.exit_code == 0, result.output
+    if flags:
+        data = json.loads(result.output)
+        assert data["simulations"]["pending"] == data["simulations"]["total"] == 1
+        assert data["folders"] == []
+    else:
+        assert "total=1  complete=0  failed=0  interrupted=0  pending=1" in (
+            result.output
+        )
+        assert "no settings folders yet" in result.output
+
+
+def test_status_with_an_unreadable_met_lists_folders_of_other_settings(tmp_path):
+    """A folder of the variant's name that differs in a setting other than the met."""
+    _write_minimal_config(tmp_path)
+    _make_results_folder(tmp_path, numpar=7)
+    _point_met_at(tmp_path, tmp_path / "no-such-met")
+
+    result = runner.invoke(app, ["status", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "pending=1" in result.output
+    assert "Used by this project: none yet" in result.output
+    assert "settings=hrrr-" in result.output
+    assert "numpar" in result.output
+
+
+@pytest.mark.parametrize("flags", [[], ["--json"]])
+@pytest.mark.parametrize("name", ["hrrr", "renamed"])
+def test_status_with_an_unreadable_met_and_a_folder_that_may_hold_results_exits_2(
+    tmp_path, flags, name
+):
+    """
+    Same settings but the met's: pending could be false, so the met is needed.
+
+    The folder's name is the variant that first made it, so a renamed
+    variant, or another project's, owns it under another name.
+    """
+    _write_minimal_config(tmp_path)
+    _make_results_folder(tmp_path, name=name)
+    missing = tmp_path / "no-such-met"
+    _point_met_at(tmp_path, missing)
+
+    result = runner.invoke(app, ["status", str(tmp_path), *flags])
+
+    assert result.exit_code == 2, result.output
+    assert result.output == f"Error: Met 'hrrr': {missing} does not exist.\n"
 
 
 def test_a_met_directory_with_no_arl_file_exits_2_in_one_line(tmp_path, calls):
@@ -1394,7 +1463,6 @@ def test_status_counts_failures_by_reason(tmp_path):
 
 
 def test_status_json_is_the_same_as_data(tmp_path):
-    import json
 
     from stilt.project import Project
     from stilt.receptors import PointReceptor

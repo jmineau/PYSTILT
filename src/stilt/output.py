@@ -331,7 +331,12 @@ def _differences(
     """Return how a folder's stored settings differ from *variant*'s, the first four, ``; ``-joined."""
     if kind == "particles":
         stored = read_run_settings(record["settings"])
-        current: Mapping[str, Any] | None = variant.run_settings
+        try:
+            current: Mapping[str, Any] | None = variant.run_settings
+        except FileNotFoundError:
+            # The met cannot be read: compare what does not need it.
+            stored = _without_met(stored)
+            current = variant.run_settings_without_met
     else:
         config, geometry_hash = read_footprint_settings(record["settings"], str(path))
         stored = footprint_settings(config, geometry_hash)
@@ -344,6 +349,11 @@ def _differences(
     if len(found) > 4:
         found = [*found[:4], f"and {len(found) - 4} more"]
     return "; ".join(found)
+
+
+def _without_met(settings: Mapping[str, Any]) -> dict[str, Any]:
+    """Return run *settings* without the met, whose weather product needs the met's files."""
+    return {k: v for k, v in settings.items() if k != "met"}
 
 
 def _check_realization(variant: Variant, realization: int | None) -> None:
@@ -459,7 +469,7 @@ class Output:
                     using = [
                         name
                         for name, v in variants.items()
-                        if self._variant_hash(kind, v) == digest
+                        if self._lookup_hash(kind, v) == digest
                     ]
                     row["variant"] = ", ".join(using)
                     same = variants.get(row["name"])
@@ -497,9 +507,47 @@ class Output:
         _check_kind(kind)
         return variant.particles_hash if kind == "particles" else variant.footprint_hash
 
+    def _lookup_hash(self, kind: Kind, variant: Variant) -> str | None:
+        """
+        Return the hash that finds *variant*'s folder of *kind*, or ``None`` when no folder can be its.
+
+        ``None`` for footprints without a grid, and for a variant whose met
+        cannot be read when the output holds no particles folder with its
+        settings but the met's (:meth:`_may_hold`): the weather product is
+        the only part of the hash that needs the met, so no folder has its
+        results.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the met cannot be read and a folder may hold the results.
+        """
+        try:
+            return self._variant_hash(kind, variant)
+        except FileNotFoundError:
+            if self._may_hold(variant):
+                raise
+            return None
+
+    def _may_hold(self, variant: Variant) -> bool:
+        """
+        Return whether a particles folder has *variant*'s settings, the met's apart.
+
+        Footprints come from particles with the same hash, so when no
+        particles folder can hold the variant's results, no footprints
+        folder can either.
+        """
+        wanted = settings_hash(variant.run_settings_without_met)
+        for name in _settings_folders(self.directory / "particles"):
+            record = _read_yaml(self._dir("particles", name) / SETTINGS_FILE)
+            stored = _without_met(read_run_settings(record["settings"]))
+            if settings_hash(stored) == wanted:
+                return True
+        return False
+
     def _name(self, kind: Kind, variant: Variant) -> str | None:
         """Return the name of *variant*'s folder of *kind*, or ``None`` when it does not exist."""
-        digest = self._variant_hash(kind, variant)
+        digest = self._lookup_hash(kind, variant)
         if digest is None:
             return None
         for name, folder_hash in self._hashes[kind].items():

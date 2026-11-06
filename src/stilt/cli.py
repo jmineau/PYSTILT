@@ -25,9 +25,10 @@ exits with 0 when every met file the runs need is there, 1 when the archive
 lacks some, and 3 when it was stopped (Ctrl-C or SIGTERM) or the archive was
 busy or unreachable. Every command
 exits with 2 when its command line is wrong: an unknown option, a bad value,
-or a directory that is not a project. ``stilt run``, ``stilt submit``, and
-``stilt status`` also exit with 2 when a met directory does not exist or
-holds no ARL file, which ``stilt check`` lists.
+or a directory that is not a project. ``stilt run`` and ``stilt submit`` also
+exit with 2 when a met directory does not exist or holds no ARL file, which
+``stilt check`` lists. ``stilt status`` does too, unless the output holds no
+result the project could own: then it counts every simulation as pending.
 
 An error the command did not expect ends it too, after its traceback: with
 3 when the error is a connection or an I/O error (a bucket that cannot be
@@ -180,12 +181,17 @@ def _open(project: str | Path | None, output: str | None = None) -> Project:
     ``stilt check`` lists the same problem as a finding.
     """
     opened = Project(_resolve_project(project), output=output)
+    _require_met(opened)
+    return opened
+
+
+def _require_met(project: Project) -> None:
+    """Exit with 2 and the line ``stilt check`` lists when a variant's met cannot be read."""
     try:
-        for variant in opened.variants.values():
+        for variant in project.variants.values():
             _ = variant.met_settings
     except FileNotFoundError as error:
         _fail(str(error))
-    return opened
 
 
 # ---------------------------------------------------------------------------
@@ -601,15 +607,27 @@ def status(
     The counts are per variant when there are several. Each settings folder
     holds the results of one set of settings; the list says how many result
     files it holds, which variants use it, and, for a folder this project
-    does not use, how its settings differ from the variant of its name. Exits with
-    2 when the command line is wrong or a met cannot be read.
+    does not use, how its settings differ from the variant of its name.
+
+    The settings folders are named by the hash of the settings, which includes
+    the met's weather product, read from the met's files. When a met cannot
+    be read, status still counts every simulation as pending if no folder in
+    the output has the variant's other settings, since then no result can
+    exist. Otherwise it needs the met, and exits with 2, as it does when the
+    command line is wrong.
     """
-    opened = _open(project, output=output)
+    opened = Project(_resolve_project(project), output=output)
+    try:
+        table = opened.status()
+        folders = opened.folders()
+    except FileNotFoundError:
+        _require_met(opened)
+        raise
     if as_json:
-        typer.echo(json.dumps(_status_data(opened), indent=2))
+        typer.echo(json.dumps(_status_data(opened, table, folders), indent=2))
         return
-    _print_status(opened)
-    _print_folders(opened)
+    _print_status(opened, status=table)
+    _print_folders(opened, folders)
 
 
 # ---------------------------------------------------------------------------
@@ -622,14 +640,19 @@ def _counts(states: Iterable[str]) -> str:
     return "  ".join(f"{name}={n}" for name, n in _state_counts(states).items())
 
 
-def _print_status(project: Project, ran: pd.DataFrame | None = None) -> None:
+def _print_status(
+    project: Project,
+    ran: pd.DataFrame | None = None,
+    status: pd.DataFrame | None = None,
+) -> None:
     """
     Print a project status summary, per variant when there are several.
 
     With *ran*, the status table of a run, it sums up those simulations
-    only.
+    only. *status* is the project's status table, when the caller has it.
     """
-    table = project.status() if ran is None else ran
+    shown = status if ran is None else ran
+    table = project.status() if shown is None else shown
     label = f"Project: {project.directory}" if ran is None else "This run:"
     typer.echo(f"{label}  {_counts(table['state'])}")
     if len(project.variants) > 1:
@@ -651,17 +674,19 @@ def _state_counts(states: Iterable[str]) -> dict[str, int]:
     return {"total": counts.total(), **{s: counts[s] for s in STATES}}
 
 
-def _status_data(project: Project) -> dict[str, Any]:
+def _status_data(
+    project: Project, table: pd.DataFrame, folders: pd.DataFrame
+) -> dict[str, Any]:
     """
     Return what ``stilt status`` prints, as plain data.
+
+    *table* is the project's status table and *folders* its settings folders.
 
     ``simulations`` and ``variants`` count the simulations in each state,
     ``failed`` counts the failed ones by reason, and ``folders`` lists the
     settings folders as :meth:`stilt.Project.folders` does.
     """
-    table = project.status()
     failed = table.loc[table.state == "failed", "reason"]
-    folders = project.folders()
     return {
         "project": str(project.directory),
         "output": str(project.output.directory),
@@ -747,15 +772,15 @@ def _print_fetch(files: pd.DataFrame) -> int:
     return len(failed)
 
 
-def _print_folders(project: Project) -> None:
+def _print_folders(project: Project, table: pd.DataFrame) -> None:
     """
     Print the output directory's settings folders, this project's first.
 
     The folders no variant of this project uses (changed settings, a
     dropped variant, or another project sharing the output directory) follow
-    under their own heading, with how their settings differ.
+    under their own heading, with how their settings differ. *table* is
+    :meth:`stilt.Project.folders`.
     """
-    table = project.folders()
     typer.echo(f"Output: {project.output.directory}")
     if table.empty:
         typer.echo("  no settings folders yet")

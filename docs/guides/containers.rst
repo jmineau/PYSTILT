@@ -155,8 +155,9 @@ Exit codes
    * - 2
      - The command line was wrong: an unknown option, a bad value, or a
        directory that is not a project. Or a met directory does not exist
-       or holds no ARL file (``stilt check`` lists it). Nothing ran. Do not
-       retry.
+       or holds no ARL file (``stilt check`` lists it; ``stilt status`` exits
+       with 2 for it only when the output may hold results). Nothing ran. Do
+       not retry.
    * - 3
      - Retry it. Some simulations did not finish, because the run was
        stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), or a
