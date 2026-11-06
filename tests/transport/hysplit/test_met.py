@@ -271,17 +271,112 @@ def test_met_local_subgrid_calls_extract_subset(tmp_path):
     assert files[0].read_text() == "cropped"
 
 
+SIX_HOURS = pd.date_range("2023-01-01 12:00", periods=6, freq="h")
+
+
 def test_met_local_subgrid_reuses_cache(tmp_path):
     """extract_subset is not called again when the crop already exists."""
     met = _archive_met(tmp_path)
-    met.crop_dir.mkdir(parents=True)
-    (met.crop_dir / "20230101_12").write_text("cached")
+    crop = write_arl_file(met.crop_dir / "20230101_12", times=SIX_HOURS)
 
     with patch("arlmet.extract_subset") as mock_extract:
         files = _files(met)
 
     mock_extract.assert_not_called()
-    assert files[0].read_text() == "cached"
+    assert files == [crop.resolve()]
+
+
+def test_a_short_crop_with_the_sources_name_is_made_again(tmp_path):
+    """A crop holding fewer hours than its source, such as one cut short, is not reused by its name."""
+    met = _archive_met(tmp_path)
+    write_arl_file(met.crop_dir / "20230101_12", times=SIX_HOURS[:2])
+
+    with patch("arlmet.extract_subset", side_effect=_fake_extract()) as mock_extract:
+        files = met.readable(_run_files(met, dt.datetime(2023, 1, 1, 12), 4))
+
+    mock_extract.assert_called_once()
+    assert files == [met.crop_dir / "20230101_12"]
+    assert files[0].read_text() == "cropped"
+
+
+def test_a_short_crop_serves_a_run_it_holds(tmp_path):
+    met = _archive_met(tmp_path)
+    crop = write_arl_file(met.crop_dir / "20230101_12", times=SIX_HOURS[:2])
+
+    with patch("arlmet.extract_subset") as mock_extract:
+        files = _files(met)
+
+    mock_extract.assert_not_called()
+    assert files == [crop.resolve()]
+
+
+def test_a_crop_serves_a_run_the_archive_has_no_file_for(tmp_path):
+    """A crop whose source is gone from the archive is found by its header, whatever its name."""
+    met = _archive_met(tmp_path)
+    later = pd.date_range("2023-01-02 12:00", periods=6, freq="h")
+    crop = write_arl_file(met.crop_dir / "recovered", times=later)
+
+    with patch("arlmet.extract_subset") as mock_extract:
+        found = _run_files(met, dt.datetime(2023, 1, 2, 13), 1)
+        files = met.readable(found)
+
+    mock_extract.assert_not_called()
+    assert found == files == [crop.resolve()]
+    assert met.missing(run_window(dt.datetime(2023, 1, 2, 13), 1)) == []
+
+
+def test_crops_and_the_archive_together_cover_a_run(tmp_path):
+    """A run gets the crops for the hours they hold and the archive's files, cropped, for the rest."""
+    met = _archive_met(tmp_path)
+    write_arl_file(
+        tmp_path / "archive" / "20230101_18",
+        times=pd.date_range("2023-01-01 18:00", periods=6, freq="h"),
+    )
+    crop = write_arl_file(met.crop_dir / "recovered", times=SIX_HOURS)
+
+    with patch("arlmet.extract_subset", side_effect=_fake_extract()) as mock_extract:
+        found = _run_files(met, dt.datetime(2023, 1, 1, 15), 4)
+        files = met.readable(found)
+
+    assert found == [crop.resolve(), (tmp_path / "archive" / "20230101_18").resolve()]
+    mock_extract.assert_called_once()
+    assert files == [crop.resolve(), met.crop_dir / "20230101_18"]
+
+
+def test_a_run_neither_the_crops_nor_the_archive_hold_names_both(tmp_path):
+    met = _archive_met(tmp_path)
+    write_arl_file(met.crop_dir / "20230101_12", times=SIX_HOURS)
+
+    with pytest.raises(MeteorologyError, match="or its crops in") as error:
+        _run_files(met, dt.datetime(2023, 1, 3, 12), 1)
+    assert str(met.crop_dir) in str(error.value)
+
+
+def test_a_crop_being_written_is_not_one(tmp_path):
+    """The temporary name a crop is written under is passed over until it is renamed into place."""
+    met = _archive_met(tmp_path)
+    later = pd.date_range("2023-01-02 12:00", periods=6, freq="h")
+    write_arl_file(met.crop_dir / ".recovered.0123abcd.tmp", times=later)
+
+    window = run_window(dt.datetime(2023, 1, 2, 13), 1)
+    assert met.missing(window) != []
+
+
+def test_check_finds_a_crop_the_archive_has_no_file_for(tmp_path):
+    """The check before a batch reads the crops too, so a run a crop serves is not reported."""
+    met = _archive_met(tmp_path)
+    later = pd.date_range("2023-01-02 12:00", periods=6, freq="h")
+    write_arl_file(met.crop_dir / "recovered", times=later)
+    receptors = pd.DataFrame(
+        {
+            "receptor": ["a"],
+            "time": [pd.Timestamp("2023-01-02 13:00")],
+            "longitude": [-112.0],
+            "latitude": [40.5],
+        }
+    )
+
+    assert met.check_receptors(receptors, 1).empty
 
 
 def test_met_local_subgrid_levels(tmp_path):
