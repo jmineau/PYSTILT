@@ -343,6 +343,57 @@ def test_check_exits_2_when_the_project_files_are_invalid(tmp_path):
     assert "nonsense" in result.output
 
 
+@pytest.mark.parametrize(
+    ("setting", "message"),
+    [
+        ({"numpar": 0}, "numpar"),
+        ({"n_hours": 0}, "n_hours must not be 0"),
+        (
+            {
+                "grid": {
+                    "xmin": -111,
+                    "xmax": -110,
+                    "ymin": 40,
+                    "ymax": 41,
+                    "xres": 0,
+                    "yres": 0.1,
+                }
+            },
+            "xres",
+        ),
+        (
+            {
+                "grid": {
+                    "xmin": -111,
+                    "xmax": -110,
+                    "ymin": 41,
+                    "ymax": 40,
+                    "xres": 0.1,
+                    "yres": 0.1,
+                }
+            },
+            "ymin < ymax",
+        ),
+    ],
+)
+def test_check_exits_2_for_a_run_setting_or_grid_no_run_can_use(
+    tmp_path, setting, message
+):
+    """A numpar or n_hours of 0 and a grid with no cells were found only after the HYSPLIT run (#366)."""
+    import yaml
+
+    _write_checkable_config(tmp_path)
+    config = tmp_path / "config.yaml"
+    settings = yaml.safe_load(config.read_text())
+    settings.update(setting)
+    config.write_text(yaml.safe_dump(settings))
+
+    result = runner.invoke(app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 2, result.output
+    assert message in result.output
+
+
 def test_check_exits_2_for_a_varsiwant_name_hycs_std_stops_on(tmp_path):
     """`zfx1` passed validation and stopped hycs_std; now check names the spelling it reads (#324)."""
     _write_checkable_config(tmp_path)
