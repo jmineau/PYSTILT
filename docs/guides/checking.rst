@@ -296,7 +296,10 @@ The reasons
          rows, a particle's last row can be far from where it left.
        - A HYSPLIT message, such as ``start point not within (x,y,t) any
          data file``: the receptor is outside the files, in time or in
-         space.
+         space. ``source point off grid`` says the receptor is outside the
+         met's grid (check the sign of its longitude), and ``Start height
+         above mdl domain`` that it is above the met's top; the line gives the
+         height and the top.
    * - ``VARYING_MET_INTERVAL``
      - The met files do not all have the same time step, such as hourly
        and 3-hourly files mixed in one directory. Keep one product per

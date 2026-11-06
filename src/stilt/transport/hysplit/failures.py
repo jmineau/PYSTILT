@@ -40,6 +40,10 @@ FAILURE_PHRASES: dict[str, FailureReason] = {
     "too much time between files": FailureReason.MET_COVERAGE,
     "no meteo data at current time": FailureReason.MET_COVERAGE,
     "no data at current time on any grid": FailureReason.MET_COVERAGE,
+    # The receptor itself is where the met is not: HYSPLIT stops at once,
+    # with a bare exit status (132), after writing one of these.
+    "source point off grid": FailureReason.MET_COVERAGE,
+    "Start height above mdl domain": FailureReason.MET_COVERAGE,
     "meteorological data time interval varies": FailureReason.VARYING_MET_INTERVAL,
     "PARTICLE_STILT.DAT does not contain any trajectory data": FailureReason.NO_PARTICLE_DATA,
     "Fortran runtime error": FailureReason.FORTRAN_RUNTIME_ERROR,
