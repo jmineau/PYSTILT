@@ -183,7 +183,7 @@ def _open(project: str | Path | None, output: str | None = None) -> Project:
     try:
         for variant in opened.variants.values():
             _ = variant.met_settings
-    except FileNotFoundError as error:
+    except (FileNotFoundError, ValueError) as error:
         _fail(str(error))
     return opened
 
