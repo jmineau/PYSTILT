@@ -23,7 +23,7 @@ from stilt.identity import settings_hash
 from stilt.meteorology import run_window
 from stilt.spatial import Bounds
 
-from .catalog import Catalog, catalog_path, is_stray
+from .catalog import Catalog, Cover, catalog_path, is_stray
 
 if TYPE_CHECKING:
     from arlmet.archives import Archive
@@ -224,7 +224,8 @@ class Met:
     With ``download`` set to an ARL archive name, arlmet downloads the files,
     cropping them as it goes when subgridding is on. Local files are cropped with
     ``arlmet.extract_subset`` into :attr:`crop_dir`, which all simulations
-    share.
+    share, and the crops there are found by their headers too
+    (:attr:`crops`).
 
     Parameters
     ----------
@@ -248,6 +249,16 @@ class Met:
                 None if config.subgrid_dir is None else absolute(config.subgrid_dir),
             ),
         )
+        #: What the crops in :attr:`crop_dir` hold, when local files are
+        #: cropped, else ``None``. A crop serves a run by the times its header
+        #: says it holds, whatever it is named and whether or not the archive
+        #: still has its source.
+        self.crops: Catalog | None = None
+        subgrid_dir = config.subgrid_dir
+        if config.subgrid_enable and config.download is None and subgrid_dir:
+            self.crops = Catalog(
+                self.crop_dir, catalog_path(self.crop_dir, absolute(subgrid_dir))
+            )
         self._archive: Archive | None = None
 
     # ------------------------------------------------------------------
@@ -329,6 +340,53 @@ class Met:
             )
         return files
 
+    def _cover(self, earlier: pd.Timestamp, later: pd.Timestamp) -> Cover:
+        """
+        Return the files that hold a run from *earlier* to *later*: crops where there are some, else the archive's.
+
+        Without a crop, these are the archive's files (:meth:`Catalog.cover`).
+        With one, the crops in :attr:`crop_dir` serve every stretch they
+        hold, and each stretch they do not is asked of the archive, whose
+        files :meth:`readable` crops. Crops are told by what their headers
+        hold, never by their names, so the hours a short crop lacks come from
+        the archive's whole file, and a crop whose source the archive no
+        longer has still serves.
+        """
+        if self.crops is None:
+            return self.catalog.cover(earlier, later)
+        crops = self.crops.cover(earlier, later)
+        if not crops.gaps or crops.clash is not None:
+            return crops
+        fills = [self.catalog.cover(a, b) for a, b in crops.gaps]
+        covers = [crops, *fills]
+        # A file wholly inside another is dropped, the longer kept and a crop
+        # before an archive file, as Catalog.cover does within one folder.
+        spans = {
+            path: (first, last, cover is crops)
+            for cover in covers
+            for path, first, last in zip(
+                cover.files, cover.firsts, cover.lasts, strict=True
+            )
+        }
+        kept: list[Path] = []
+        for path in sorted(
+            spans,
+            key=lambda p: (spans[p][0] - spans[p][1], not spans[p][2], str(p)),
+        ):
+            first, last, _ = spans[path]
+            if not any(spans[k][0] <= first and last <= spans[k][1] for k in kept):
+                kept.append(path)
+        files = sorted(kept, key=lambda path: (spans[path][0], str(path)))
+        return Cover(
+            files=files,
+            firsts=[spans[path][0] for path in files],
+            lasts=[spans[path][1] for path in files],
+            gaps=[gap for fill in fills for gap in fill.gaps],
+            clash=next((fill.clash for fill in fills if fill.clash), None),
+            single=[p for c in covers for p in c.single if p in kept],
+            cut=[p for c in covers for p in c.cut if p in kept],
+        )
+
     def files_for(self, window: tuple[Any, Any]) -> list[Path]:
         """
         Return the met files that cover *window*, ``(start, end)`` in time order.
@@ -338,8 +396,10 @@ class Met:
         the window's end: the release of a backward run, the end of a
         forward one. The files are the ones whose headers say they hold the
         steps from the one at or before the start to that one
-        (:meth:`Catalog.cover`), whatever they are named. Downloads the files
-        first when ``download`` is set.
+        (:meth:`Catalog.cover`), whatever they are named. When local files
+        are cropped, a crop in :attr:`crop_dir` that holds part of the
+        window is one of them, and the archive gives the rest. Downloads the
+        files first when ``download`` is set.
 
         Parameters
         ----------
@@ -361,12 +421,15 @@ class Met:
             return self._download(window)
 
         earlier, later = (_time(t) for t in window)
-        cover = self.catalog.cover(earlier, later)
+        cover = self._cover(earlier, later)
         if cover.clash is not None:
             raise MeteorologyError(cover.clash)
         if cover.gaps:
+            where = str(self.directory)
+            if self.crops is not None:
+                where += f" or its crops in {self.crop_dir}"
             raise MeteorologyError(
-                f"No met file in {self.directory} for {_spans(cover.gaps)}. "
+                f"No met file in {where} for {_spans(cover.gaps)}. "
                 f"The run covers {earlier:%Y-%m-%d %H:%M} to "
                 f"{later:%Y-%m-%d %H:%M}."
             )
@@ -395,7 +458,7 @@ class Met:
         if self.config.download is not None:
             return []
         earlier, later = (_time(t) for t in window)
-        return self.catalog.cover(earlier, later).gaps
+        return self._cover(earlier, later).gaps
 
     def check_receptors(self, receptors: pd.DataFrame, n_hours: int) -> pd.DataFrame:
         """
@@ -409,9 +472,9 @@ class Met:
         cannot start a particle outside the files. A met with ``download``
         has no files to look for before a run, so only its crop is checked.
 
-        This brings the table of what the files hold up to date first
-        (:meth:`Catalog.refresh`), so it is the place to build it before a
-        batch: a first read of a large archive takes minutes. It reads each
+        This brings the tables of what the files and their crops hold up to
+        date first (:meth:`Catalog.refresh`), so it is the place to build
+        them before a batch: a first read of a large archive takes minutes. It reads each
         file's first two index records, not the rest. :meth:`check` reads
         each file at a run, and a run that passes this one can still fail as
         ``MET_COVERAGE`` when a file is damaged in the middle.
@@ -439,6 +502,8 @@ class Met:
                 found.append(("met_directory", None, problem))
             else:
                 self.catalog.refresh()
+                if self.crops is not None:
+                    self.crops.refresh()
                 found += self._file_problems(receptors, n_hours)
         found += self._outside_crop(receptors)
         return pd.DataFrame(found, columns=["check", "receptor", "message"])
@@ -463,7 +528,7 @@ class Met:
         cut: dict[Path, None] = {}
         for time in first["time"].drop_duplicates():
             earlier, later = (_time(t) for t in run_window(time, n_hours))
-            cover = self.catalog.cover(earlier, later)
+            cover = self._cover(earlier, later)
             messages[time] = cover.clash or (
                 f"no met file for {_spans(cover.gaps)}" if cover.gaps else None
             )
@@ -581,11 +646,12 @@ class Met:
         Return the files a transport model should read in place of *files*.
 
         When local files are cropped, these are the cropped copies in
-        :attr:`crop_dir`, made on first use. Downloaded files were cropped
-        as they were downloaded. When two files share a name, the first is
+        :attr:`crop_dir`, made on first use; a file already there is a crop,
+        and is read as it is. Downloaded files were cropped as they were
+        downloaded. When two files share a name, the first is
         kept, since a model would otherwise read the same hours twice.
         """
-        if self.config.subgrid_enable and self.config.download is None:
+        if self.crops is not None:
             files = self._crop_local_files(files)
         kept: dict[str, Path] = {}
         for path in files:
@@ -605,21 +671,30 @@ class Met:
         """
         Crop local files into :attr:`crop_dir`, reusing crops that already exist.
 
-        Each crop is written to a temporary name and then renamed, so a
-        worker never reads a half-written file. Two workers cropping the
-        same file at once both finish, and the second rename wins.
+        A file already in :attr:`crop_dir` is a crop and is kept as it is.
+        A crop of another file is named as its source, and is reused only
+        when its header says it holds the source's time steps
+        (:func:`_holds_as`): a crop with that name that holds fewer, or
+        cannot be read, is made again. Each crop is written to a temporary
+        name and then renamed, so a worker never reads a half-written file.
+        Two workers cropping the same file at once both finish, and the
+        second rename wins.
         """
         from arlmet import extract_subset
 
         crop_dir = self.crop_dir
         crop_dir.mkdir(parents=True, exist_ok=True)
+        inside = crop_dir.resolve()
         bbox = self._bbox()
         levels = self._level_indices()
 
         subsetted: list[Path] = []
         for src in files:
+            if src.resolve().is_relative_to(inside):
+                subsetted.append(src)
+                continue
             cache_path = crop_dir / src.name
-            if not cache_path.exists():
+            if not _holds_as(cache_path, src):
                 logger.info("Subsetting %s → %s", src.name, cache_path)
                 with atomic_path(cache_path) as tmp:
                     extract_subset(src, tmp, bbox=bbox, levels=levels)
@@ -766,6 +841,26 @@ def _inspect_file(
             return tuple(met.times), tuple(met.check())
     except ARLFormatError as exc:
         return (), (str(exc),)
+
+
+def _holds_as(crop: Path, source: Path) -> bool:
+    """
+    Whether the ARL file *crop* holds the time steps *source* holds, whole.
+
+    Each is known by its first two index records (:func:`arlmet.probe`). A
+    missing or unreadable *crop* holds nothing.
+    """
+    from arlmet import ARLFormatError, probe
+
+    try:
+        made, wanted = probe(crop), probe(source)
+    except (ARLFormatError, EOFError, OSError, ValueError):
+        return False
+    return made.whole and (made.first, made.step, made.n_steps) == (
+        wanted.first,
+        wanted.step,
+        wanted.n_steps,
+    )
 
 
 def _one_period_message(path: Path) -> str:

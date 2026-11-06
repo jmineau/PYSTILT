@@ -229,8 +229,8 @@ class HysplitModel:
         except SimulationError as error:
             error.log = _read_log(workdir)
             raise
-        # The record names the source files; the crop settings are in the
-        # run's settings.
+        # The record names the files found for the run: the archive's, or a
+        # crop that served it; the crop settings are in the run's settings.
         return ModelRun(particles=particles, log=_read_log(workdir), met_files=source)
 
 
