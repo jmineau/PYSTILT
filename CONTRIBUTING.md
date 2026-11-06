@@ -43,38 +43,60 @@ relies on.
 ## Writing documentation
 
 The sources are in `docs/`: `getting_started/` (install, quickstart,
-concepts), `guides/` (task-oriented how-tos, one idea per page, with
+concepts), `guides/` (task-oriented how-tos, one task per page, with
 `guides/migration/` for moving from STILT-R, X-STILT, stiltctl, and Jena
 STILT), `tutorials/` (end-to-end worked examples), `reference/` (API pages
 built from docstrings, and the table of every `config.yaml` key, made by the
 `config-model` directive in `docs/_ext/`), and `development/` (architecture,
-STILT-R parity, roadmap). A user-facing change needs a guide or reference
-update, and `just build-docs` must pass: warnings are errors. The
-Documentation workflow builds the docs on every pull request and publishes
-`main` as `dev/` and each release under its version.
+STILT-R parity, roadmap). A user-facing change updates the docs: the guide
+when what the user does changes, the reference otherwise. `just build-docs`
+must pass, and warnings are errors. The Documentation workflow builds the
+docs on every pull request and publishes `main` as `dev/` and each release
+under its version.
 
 ### Voice
 
-Docs, docstrings, config field descriptions, and CLI help all follow this
-voice. Most readers are scientists who want to run the model and trust the
-result; write for them. Good examples are the
-[STILT-R docs](https://uataq.github.io/stilt/) and the xarray, pandas, and
-MetPy user guides.
+Docs, docstrings, config field descriptions, and CLI help are written for
+scientists who want to run the model and trust the result. Our models are the
+[STILT-R docs](https://uataq.github.io/stilt/), the xarray and MetPy user
+guides, and Herbie's tutorials.
 
-- **Start with what it is for.** Open a page or docstring with what the thing
-  does, in plain words. Then show an example. Internals and edge cases go
-  last, or in `docs/development/architecture.rst`.
-- **Keep sentences short.** One idea per sentence. If a sentence needs a
-  colon, a semicolon, and a parenthesis, split it.
+- **Start from the reader's goal.** Open a page or section with what the
+  reader wants to do and why it matters to their result. Then show it.
+- **Recommend.** When there is a choice, say which one we would use and why
+  ("Start with HRRR, because its 3 km grid resolves the valleys around a
+  city"). "We" is the developers, "you" is the reader.
+- **Give the reason in the same sentence.** Join cause and effect with
+  "because" or "so". Keep one point per paragraph, and let a sentence be as
+  long as its reason needs.
+- **Show real output, and say what to notice in it.** Prefer an `ipython`
+  block to a `code-block`, and a figure to a paragraph that describes one.
+- **A guide holds what the reader acts on.** Exact rules, failure behavior,
+  file-name rules and internals go in the docstring (Notes) and the
+  reference. Measured accuracy goes on a Development page, with its test or
+  study. A bug fix changes a guide only when it changes what the user does.
+- **Say it once.** A caveat lives on one page, and the others link to it.
 - **Use the reader's words.** Receptor, particles, footprint, meteorology.
   Internal names (store key, publish, resolve) belong only on pages about
   internals. Describe a config's fields (its parameters) in plain English,
   naming no class or module. `AGENTS.md` has the table of words to use.
-- **Show it.** A short code block, with its output when that helps, is
-  clearer than a paragraph describing it.
 - **Say it plainly.** No metaphors ("a dial worth turning"), no selling
   ("powerful", "seamless"), no filler ("note that", "it's worth noting").
   Use American spelling (meters, modeled, center).
+
+Each kind of page has its own job:
+
+- **Getting Started** tells one story, from a measurement to a footprint
+  map, and says what to notice in each output.
+- **Tutorials** answer a science question end to end. They run when the docs
+  build and end in a figure.
+- **User Guide** pages each cover one task, in the order a user meets them.
+  A page opens with why the reader would do it, recommends a default, shows
+  real output, and ends by linking to checking for when it goes wrong.
+- **API Reference** pages are complete and exact, so the edge cases live
+  there.
+- **Development** pages hold the architecture, STILT-R parity, the roadmap,
+  and measured accuracy.
 
 Some habits make text read as machine-written. Avoid them:
 
@@ -82,13 +104,16 @@ Some habits make text read as machine-written. Avoid them:
   "PYSTILT follows the air."
 - "X, not Y" contrasts when nobody suggested Y.
 - A bold sentence at the start of a paragraph that states its point.
-- Dashes joining clauses. Use a period or parentheses.
-- Lists of three out of habit, and closing sentences that restate the
-  paragraph.
+- A page that begins "This page covers", and closing sentences that restate
+  the paragraph.
+- A run of sentences that each say what something does *not* do.
+- Lists of three out of habit.
 - Asides about what the code does "deliberately" or used to do.
-- Validation statistics in a user guide. Give the reader the setting to use
-  and cite the study.
 - Labels invented on one line and referred to later ("the first case").
+
+Before you commit a page, read it top to bottom as someone who has never run
+STILT. If a paragraph is there because of a bug fix, move it to the
+reference.
 
 Docstrings follow the NumPy style. The summary line says what the object is
 or what the function returns. Parameter descriptions give the meaning and
