@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from stilt.exceptions import SimulationError
 from stilt.meteorology import run_window
@@ -112,6 +112,18 @@ class TransportConfig(BaseModel):
         -24,
         description="Length of each simulation, in hours. Negative runs backward in time.",
     )
+
+    @field_validator("n_hours")
+    @classmethod
+    def _n_hours_is_not_zero(cls, n_hours: int) -> int:
+        """Refuse a run of no hours, which releases particles and follows none."""
+        if n_hours == 0:
+            raise ValueError(
+                "n_hours must not be 0: use a negative number of hours for a "
+                "backward run and a positive one for a forward run."
+            )
+        return n_hours
+
     hnf_plume: bool = Field(
         True,
         description=(

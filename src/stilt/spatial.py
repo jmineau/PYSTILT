@@ -27,9 +27,9 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
-def _grid_cell_starts(minimum: float, maximum: float, resolution: float) -> np.ndarray:
+def _grid_cell_count(minimum: float, maximum: float, resolution: float) -> int:
     """
-    Return the lower edges of the whole cells between two grid bounds.
+    Return the number of whole cells between two grid bounds.
 
     Cells start at ``minimum`` and step by ``resolution`` while the whole cell
     fits inside ``[minimum, maximum]``, so ``maximum`` is the outer edge of
@@ -40,6 +40,11 @@ def _grid_cell_starts(minimum: float, maximum: float, resolution: float) -> np.n
     ``0.4799999999999969``). The tolerance is sized to that error so the last
     intended cell is kept (48 cells here at 0.01, as STILT-R's ``seq()``
     gives) and a partial cell is still dropped.
+
+    Raises
+    ------
+    ValueError
+        If *resolution* is not positive or no whole cell fits.
     """
     if resolution <= 0:
         raise ValueError("Grid resolution must be positive.")
@@ -49,6 +54,12 @@ def _grid_cell_starts(minimum: float, maximum: float, resolution: float) -> np.n
     n_cells = int(np.floor(quotient + tol))
     if n_cells < 1:
         raise ValueError("Grid extent must contain at least one complete cell.")
+    return n_cells
+
+
+def _grid_cell_starts(minimum: float, maximum: float, resolution: float) -> np.ndarray:
+    """Return the lower edges of the whole cells between two grid bounds (:func:`_grid_cell_count`)."""
+    n_cells = _grid_cell_count(minimum, maximum, resolution)
     return minimum + np.arange(n_cells, dtype=float) * resolution
 
 
@@ -220,10 +231,12 @@ class Grid(Bounds):
 
     xres: float = Field(
         ...,
+        gt=0,
         description="Cell width in projection units (degrees for longlat, meters for UTM).",
     )
     yres: float = Field(
         ...,
+        gt=0,
         description="Cell height in projection units (degrees for longlat, meters for UTM).",
     )
     crs: str = Field(
@@ -259,6 +272,33 @@ class Grid(Bounds):
                 "across 180 degrees can be written either way, such as xmin=170, "
                 "xmax=190 or xmin=170, xmax=-170."
             )
+        return self
+
+    @model_validator(mode="after")
+    def _latitudes_and_cells(self) -> Self:
+        """Refuse latitudes off the globe and, on a longitude/latitude grid, a box that holds no whole cell."""
+        if not -90.0 <= self.ymin < self.ymax <= 90.0:
+            raise ValueError(
+                f"A grid needs -90 <= ymin < ymax <= 90 degrees latitude; got "
+                f"ymin={self.ymin:g}, ymax={self.ymax:g}."
+            )
+        if self.xmax == self.xmin:
+            raise ValueError(
+                f"A grid needs xmin and xmax to differ; both are {self.xmin:g}."
+            )
+        if self.is_longlat:
+            # The grid's own message, with the axis it is about.
+            for axis, low, high, res in (
+                ("x", self.xmin, _east_edge(self.xmin, self.xmax), self.xres),
+                ("y", self.ymin, self.ymax, self.yres),
+            ):
+                try:
+                    _grid_cell_count(low, high, res)
+                except ValueError as error:
+                    raise ValueError(
+                        f"{error} The {axis} axis runs {low:g} to {high:g} "
+                        f"with {axis}res={res:g}."
+                    ) from None
         return self
 
     @property

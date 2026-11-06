@@ -51,6 +51,7 @@ class HysplitConfig(TransportConfig):
 
     numpar: int = Field(
         200,
+        ge=1,
         description=(
             "Number of particles released per simulation. More particles give a "
             "less noisy footprint and take longer to run."

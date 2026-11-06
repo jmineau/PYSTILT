@@ -276,3 +276,36 @@ def test_grid_refuses_an_unknown_key_in_the_config(tmp_path):
         stilt.ProjectConfig(
             mets={"a": met}, variants={"a": {"grid": {**grid, "xresolution": 3}}}
         )
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ({"xres": 0}, "xres"),
+        ({"yres": -0.01}, "yres"),
+        ({"ymin": 42, "ymax": 40}, "ymin < ymax"),
+        ({"ymax": 100}, "ymin < ymax"),
+        ({"xmax": -113}, "xmin and xmax to differ"),
+        ({"xres": 5}, "at least one complete cell.*x axis"),
+        ({"yres": 5}, "at least one complete cell.*y axis"),
+    ],
+)
+def test_grid_refuses_values_that_leave_no_cell(change, message):
+    kw = {
+        "xmin": -113,
+        "xmax": -110,
+        "ymin": 40,
+        "ymax": 42,
+        "xres": 0.01,
+        "yres": 0.01,
+    }
+    with pytest.raises(ValueError, match=message):
+        Grid(**{**kw, **change})
+
+
+def test_a_projected_grid_is_not_checked_for_cells_until_it_is_projected():
+    """Xres is in meters there, so the longitude/latitude extent says nothing."""
+    grid = Grid(
+        xmin=-113, xmax=-110, ymin=40, ymax=42, xres=1000, yres=1000, crs="EPSG:32612"
+    )
+    assert len(grid.axes[0]) > 100

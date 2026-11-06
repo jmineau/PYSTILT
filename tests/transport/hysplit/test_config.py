@@ -91,3 +91,15 @@ def test_varsiwant_refuses_zfx1_and_names_zcfx(name):
 def test_varsiwant_refuses_a_name_hysplit_does_not_read(name):
     with pytest.raises(ValidationError, match="varsiwant"):
         HysplitConfig(varsiwant=["time", "indx", "long", "lati", name])
+
+
+@pytest.mark.parametrize("numpar", [0, -5])
+def test_numpar_must_be_at_least_one(numpar):
+    with pytest.raises(ValidationError, match="numpar"):
+        HysplitConfig(numpar=numpar)
+
+
+def test_n_hours_must_not_be_zero():
+    with pytest.raises(ValidationError, match="n_hours must not be 0"):
+        HysplitConfig(n_hours=0)
+    assert HysplitConfig(n_hours=6).n_hours == 6
