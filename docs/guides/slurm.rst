@@ -47,7 +47,9 @@ Options
    and ``n_workers: 200``, each task runs 50 receptors one after another.
    Each receptor runs once per variant, so set ``time`` long enough for one
    task's share. If fewer receptors are left than ``n_workers``, PYSTILT
-   submits one task per receptor.
+   submits one task per receptor. We size the tasks to run an hour or two,
+   because each task first loads Python and the project, and a shorter
+   task spends more of its time on that.
 
 ``cpus``
    CPUs per array task (default 1). With more than one, each task runs that
