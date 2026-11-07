@@ -279,7 +279,7 @@ def sample_met(
     - ``zsfc`` is ``SHGT``, the terrain height, in m above sea level.
 
     ``pres`` and ``dens`` follow what HYSPLIT reads, to the differences
-    :doc:`/guides/meteorology` gives. ``mlht`` is the met's: HYSPLIT's is the
+    :doc:`/development/validation` gives. ``mlht`` is the met's: HYSPLIT's is the
     met's ``PBLH`` only with ``kmixd: 0``, and then it is at least ``kmix0``;
     the default, ``kmixd: 3``, finds the mixed layer from the profile.
 
