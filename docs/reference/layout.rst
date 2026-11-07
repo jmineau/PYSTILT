@@ -382,3 +382,13 @@ a rule changed.
   are Parquet files in settings folders, and an empty footprint is marked
   ``stilt:empty``. Files from development builds before it carry a
   version ending in ``.dev...``, and may differ.
+
+Why the output has separate trees
+---------------------------------
+
+The output directory keeps results, logs, and kept workdirs in separate
+trees (``particles/``, ``footprints/``, ``logs/``, ``scratch/``). Each
+results tree holds Parquet files only, so pyarrow, DuckDB, polars, and R
+read it as one table, and a log or a failure record beside a result would
+break that. Whether a simulation is complete is read from the results
+trees alone; the logs tree only explains the ones that are not.
