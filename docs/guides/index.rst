@@ -25,9 +25,8 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 - :doc:`outputs`: load and plot footprints and particles
 - :doc:`aggregation`: sum footprints over counties, hexagons, or sources,
   and many at once into a Jacobian
-- :doc:`transport_error`: the modeled enhancement from a flux field, and
-  its transport uncertainty
-- :doc:`wind_errors`: the wind-error statistics a transport-error run needs
+- :doc:`transport_error`: the transport uncertainty of a modeled
+  enhancement, and the wind-error statistics it needs
 - :doc:`background`: the mole fraction at the trajectory endpoints, as a
   background for the receptor
 - :doc:`trajectory_analyses`: residence time, PSCF, CWT, mean paths, and transit time from a source
@@ -41,7 +40,7 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
   (EM27/SUN, TCCON, off-nadir satellites)
 - :doc:`transforms`: averaging kernels, pressure weighting, and your own
   particle weights
-- :doc:`plume_background`: a background from the soundings a forward-run
+- :ref:`plume-background`: a background from the soundings a forward-run
   plume did not reach
 - :doc:`../tutorials/satellite_column`: from satellite soundings to
   receptors, kernels, and modeled enhancements
@@ -90,7 +89,6 @@ steps are in PYSTILT.
    outputs
    aggregation
    transport_error
-   wind_errors
    background
    trajectory_analyses
 
@@ -101,7 +99,6 @@ steps are in PYSTILT.
    readers
    slant_columns
    transforms
-   plume_background
 
 .. toctree::
    :hidden:

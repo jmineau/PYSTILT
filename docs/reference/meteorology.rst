@@ -94,7 +94,7 @@ Wind-error statistics
 ---------------------
 
 Variograms of analysis-minus-observation winds. Fit them to get the
-wind-error settings for a transport-error run (:doc:`/guides/wind_errors`).
+wind-error settings for a transport-error run (:ref:`wind-error-statistics`).
 
 .. autosummary::
    :toctree: _api
