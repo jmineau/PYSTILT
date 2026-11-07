@@ -11,6 +11,8 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 - :doc:`meteorology`: use your own ARL files or download them from NOAA
 - :doc:`projects`: what goes in ``config.yaml``, variants, and how reruns
   and changed settings work
+- :doc:`choosing_settings`: how many particles, how long a run, which grid
+  and which met, and how to check each choice
 
 **Running**
 
@@ -74,6 +76,7 @@ steps are in PYSTILT.
    receptors
    meteorology
    projects
+   choosing_settings
 
 .. toctree::
    :hidden:
