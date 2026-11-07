@@ -1,15 +1,17 @@
 Tutorials
 =========
 
-Complete worked examples, each building on :doc:`../getting_started/quickstart`.
+Each tutorial answers a question from start to finish. They assume
+:doc:`../getting_started/quickstart` and nothing else. The first two run
+when these pages are built, so their numbers and figures are real output.
 
 :doc:`wbb_stationary`
-   Run a week of hourly footprints for a rooftop tower and make an average
-   footprint map.
+   Run a footprint for every hour of a winter day at a rooftop tower, and
+   compare where the air comes from in the afternoon and at night.
 
 :doc:`flux_inversion`
-   Combine footprints with emissions to model the concentrations a tower
-   should have seen, and compare with observations.
+   Multiply footprints by an emissions map and a few point sources to model
+   the enhancements a tower should have seen.
 
 :doc:`satellite_column`
    Turn a TROPOMI methane orbit into receptors with their own averaging

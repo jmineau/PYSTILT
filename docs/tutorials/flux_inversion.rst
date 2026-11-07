@@ -1,223 +1,177 @@
 Tutorial: From Footprints To Concentrations
 ===========================================
 
-A footprint says how much each grid cell influences a measurement. Multiply
-it by how much each cell emits and add it all up. The result is how much the
-emissions should raise the concentration at the receptor, called the
-*enhancement* above background. Inversions are built on this link between
-transport and emissions.
+A footprint says how much each grid cell influences a measurement.
+Multiply it by how much each cell emits, add it all up, and you have the
+enhancement, the rise in concentration at the receptor that those
+emissions explain. Comparing modeled enhancements with measured ones is how
+an inventory is tested, and an inversion is built on the same link. In this
+tutorial we make an emissions map and a few point sources, and model the
+enhancements a tower should have seen.
 
-The units work out directly. Footprints are in ppm per (µmol m⁻² s⁻¹). Fluxes
-in µmol m⁻² s⁻¹ times footprints, summed over cells and hours, give ppm.
+The units work out directly. Footprints are in ppm per (µmol m⁻² s⁻¹), so a
+flux in µmol m⁻² s⁻¹ times a footprint, summed over cells and hours, gives
+ppm.
 
-What you'll learn
------------------
+.. This page runs when the docs are built, on the docs' sample project: four
+   receptors an hour apart on the morning of 15 January 2021 at the
+   University of Utah, run on the met files the tests cache
+   (docs/_ext/docs_examples.py).
 
-- how to model enhancements from a few point sources
-- how to model enhancements from a gridded emissions inventory
-- how to compare modeled and observed concentrations
+.. ipython:: python
+   :suppress:
 
-Starting point
+   import os
+
+   import docs_examples
+
+   docs_cwd = docs_examples.temp_workdir(sample=True)
+
+The footprints
 --------------
 
-This tutorial uses the ``project`` from :doc:`wbb_stationary`.
-Any project with footprints works.
+We use a small project of four hourly receptors at the University of Utah
+on 15 January 2021, from 06:00 to 09:00 UTC. The project from
+:doc:`wbb_stationary`, or any project with footprints, works the same way.
+
+.. ipython:: python
+
+   import numpy as np
+   import pandas as pd
+   import xarray as xr
+
+   import stilt
+
+   project = stilt.Project("./my_project")
+   sims = project.simulations
+   feet = [project.simulation(rid, "hrrr").footprint for rid in sims.receptor]
+   feet = [foot for foot in feet if foot is not None]   # an empty footprint is None
+   len(feet)
+
+An emissions map
+----------------
+
+An inventory is an :class:`xarray.DataArray` of fluxes in µmol m⁻² s⁻¹ with
+``lat`` and ``lon`` dimensions. Ours is made up: a city of methane emissions
+centered on Salt Lake City, strongest downtown and fading over about 10 km,
+on the footprint's own grid. A real inventory you would open with
+``xr.open_dataarray("inventory.nc")``.
+
+.. ipython:: python
+
+   grid = feet[0]
+   lon, lat = np.meshgrid(grid.lon, grid.lat)
+   distance_km = 111 * np.hypot((lon + 111.89) * np.cos(np.radians(40.76)), lat - 40.76)
+   inventory = xr.DataArray(
+       0.5 * np.exp(-((distance_km / 10) ** 2)),
+       coords={"lat": grid.lat, "lon": grid.lon},
+       dims=("lat", "lon"),
+       attrs={"units": "umol m-2 s-1"},
+   )
+
+   import matplotlib.pyplot as plt
+
+   fig, ax = plt.subplots(layout="constrained")
+   inventory.plot(ax=ax, cmap="Greys", cbar_kwargs={"label": "CH₄ flux (µmol m⁻² s⁻¹)"})
+   feet[-1].sum("time").plot.contour(ax=ax, levels=[1e-4], colors="tab:red", add_labels=False)
+   ax.set_xlim(-112.3, -111.5); ax.set_ylim(40.4, 41.2);
+
+   @savefig flux_inventory.png width=5in
+   ax.set_title("The inventory, and where the 09:00 footprint is above 1e-4");
+
+``foot.stilt.enhancement`` multiplies a footprint by the inventory, cell by
+cell, for each hour of the footprint. Summed over the hours, it is the
+receptor's enhancement:
+
+.. ipython:: python
+
+   modeled = pd.Series(
+       {foot.stilt.receptor.time: float(foot.stilt.enhancement(inventory).sum()) for foot in feet},
+       name="city",
+   )
+   modeled
+
+The enhancement grows from 0.24 ppm at 06:00 UTC to 0.43 ppm at 09:00
+(23:00 to 02:00 in Salt Lake City). The city lies under the tower, and as
+the night goes on the footprint over it doubles, because the air near the
+ground mixes less and lingers over the city longer.
+
+An inventory with a ``time`` dimension works the same way, each footprint
+hour taking the flux step it falls in. How the steps are read, and what to
+do when the inventory's grid differs from the footprint's, is in
+:doc:`../guides/aggregation` ("Footprints times a flux").
 
 A few point sources
 -------------------
 
-For a handful of known sources, draw a small window around each one with
-:meth:`stilt.Mesh.from_windows`. ``foot.stilt.aggregate`` adds up
-the footprint inside each window. Multiply each sum by that source's flux and
-add them up.
+For a handful of known sources, such as a landfill or a treatment plant,
+draw a small window around each one with :meth:`stilt.Mesh.from_windows`.
+``foot.stilt.aggregate`` sums the footprint inside each window, and each
+sum times the source's flux is its share of the enhancement. Make each
+window at least two footprint cells wide, because a smaller window falls
+inside one cell and the footprint cannot say how much of the cell it covers.
 
-.. code-block:: python
+.. ipython:: python
 
-   import pandas as pd
-
-   import stilt
-
-   project = stilt.Project("./wbb_project")
-   sims = project.simulations
-   hrrr = sims[sims.variant == "hrrr"]
-   feet = [project.simulation(rid, "hrrr").footprint for rid in hrrr.receptor]
-   feet = [foot for foot in feet if foot is not None]   # skip empty footprints
-
-   # longitude, latitude, flux (µmol m⁻² s⁻¹, averaged over the window)
+   # made-up sources: longitude, latitude, flux averaged over the window (µmol m⁻² s⁻¹)
    sources = {
-       "landfill": (-111.970, 40.515, 45.0),
-       "wwtp": (-112.015, 40.779, 120.0),
-       "refinery": (-111.890, 40.650, 30.0),
+       "landfill": (-111.95, 41.23, 1.5),
+       "treatment plant": (-111.78, 40.78, 0.8),
+       "gas plant": (-111.70, 40.97, 0.5),
    }
    windows = stilt.Mesh.from_windows(
-       [(lon, lat) for lon, lat, _ in sources.values()],
-       size=0.05,  # window width in degrees
+       [(x, y) for x, y, _ in sources.values()],
+       size=0.05,   # window width in degrees
        ids=list(sources),
    )
    flux = pd.Series({name: f for name, (_, _, f) in sources.items()})
 
-   rows = []
+   rows = {}
    for foot in feet:
        hours = foot.indexes["time"]
        whole_run = pd.IntervalIndex.from_tuples(
            [(hours.min(), hours.max() + pd.Timedelta("1h"))], closed="left"
        )
-       in_window = foot.stilt.aggregate(windows, whole_run).iloc[:, 0]  # one value per source
-       rows.append(
-           {"time": foot.stilt.receptor.time, "enhancement_ppm": (in_window * flux).sum()}
-       )
+       in_window = foot.stilt.aggregate(windows, whole_run).iloc[:, 0]   # one sum per source
+       rows[foot.stilt.receptor.time] = in_window * flux
 
-   modeled = pd.DataFrame(rows).set_index("time").sort_index()
+   by_source = pd.DataFrame(rows).T
+   by_source
 
-Make each window at least two footprint cells wide. A smaller window gets a
-warning, because the footprint is too coarse to say how much of a cell falls
-inside it.
+The landfill, 50 km north, adds 0.02 to 0.11 ppm, because the air passed
+over it on its way down the valley. The treatment plant, 5 km east of the
+tower, adds almost nothing until 09:00, the only hour whose footprint
+reaches it. A source matters only where the footprint is, however much it
+emits.
 
-A gridded inventory
--------------------
+Together
+--------
 
-For an emissions map, ``foot.stilt.enhancement`` does the
-multiplication. The inventory is an :class:`xarray.DataArray` in
-µmol m⁻² s⁻¹ with ``lat`` and ``lon`` dimensions. Each footprint cell takes
-the flux of the inventory cell it falls in. If the inventory has a ``time``
-dimension, its labels are the starts of its steps, the convention of a
-CF-compliant inventory's time bounds, and each footprint hour takes the
-last step that starts at or before the hour's start. This is the rule
-``foot.stilt.aggregate`` and ``project.jacobian`` use, so an enhancement
-and a Jacobian built on the same inventory agree. A monthly inventory
-labeled on the 1st gives every hour of July 20 July's flux; a 3-hourly
-inventory labeled 09:00 gives the hours from 09:00 to 11:00 its 09:00 step.
-A footprint hour before the first label gets zero flux. An hour after the
-last label takes the last step, since the labels do not say where it ends;
-add a step of zeros after the last to end it.
+The modeled enhancement at each hour is the sum of the parts:
 
-.. code-block:: python
+.. ipython:: python
 
-   import xarray as xr
+   total = by_source.assign(city=modeled)
+   total.index = total.index.strftime("%H:%M")
 
-   inventory = xr.open_dataarray("inventory.nc")
+   fig, ax = plt.subplots(layout="constrained")
+   total.plot.bar(ax=ax, stacked=True, rot=0)
+   ax.set_xlabel("receptor time (UTC), 15 January 2021")
 
-   rows = []
-   for foot in feet:
-       enhancement = float(foot.stilt.enhancement(inventory).sum())   # sum over hours
-       rows.append({"time": foot.stilt.receptor.time, "enhancement_ppm": enhancement})
+   @savefig flux_enhancements.png width=5in
+   ax.set_ylabel("modeled CH₄ enhancement (ppm)");
 
-   modeled = pd.DataFrame(rows).set_index("time").sort_index()
+.. ipython:: python
+   :suppress:
 
-.. _flux-step-labels:
+   os.chdir(docs_cwd)
 
-An inventory with CF time bounds
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To compare with a measurement, subtract a background from it first, or add
+one to the model. The background is the concentration of the air before it
+reached the region, and :doc:`../guides/background` shows how to get it.
 
-``foot.stilt.enhancement`` and ``particles.stilt.enhancement`` read a flux
-by its CF time bounds when its ``time`` coordinate carries them: each
-footprint hour (or particle row) takes the step whose bounds hold it, so a
-label that disagrees with its own bounds, such as a step labeled at its
-middle or its end, no longer matters. There is nothing to guess at either
-edge, since the bounds say exactly where every step starts and ends: an
-hour before the first bound, after the last, or in a gap between bounds
-gets zero flux.
-
-A file's bounds usually arrive as a separate ``time_bnds`` variable, named
-by a ``bounds`` attribute on ``time``. Give the flux its bounds by making
-``time`` itself a :class:`pandas.IntervalIndex` of each step's start and
-end, closed on the left:
-
-.. code-block:: python
-
-   import pandas as pd
-
-   bounds = inventory["time_bnds"].to_numpy()  # (n_steps, 2): start, end
-   inventory = inventory.assign_coords(
-       time=pd.IntervalIndex.from_arrays(bounds[:, 0], bounds[:, 1], closed="left")
-   )
-
-``project.jacobian`` is unaffected: it takes its flux time bins explicitly
-(``time_bins``), not a flux array, so it never reads an inventory's bounds
-itself. Build ``time_bins`` from the same bounds directly
-(``pd.IntervalIndex.from_arrays(bounds[:, 0], bounds[:, 1], closed="left")``)
-to match what ``enhancement`` would give that inventory.
-
-Labels not at the start of a step
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Without CF time bounds, ``foot.stilt.enhancement``,
-``particles.stilt.enhancement`` and ``project.jacobian`` all read a flux's
-``time`` labels as the starts of its steps.
-
-An inventory labeled at the middle of its steps (a monthly mean dated the
-15th, or a 3-hourly mean dated 10:30) would be read half a step late.
-Shift its labels back by half a step first:
-
-.. code-block:: python
-
-   half_step = (inventory.time[1] - inventory.time[0]) / 2   # for equal steps
-   inventory = inventory.assign_coords(time=inventory.time - half_step)
-
-An inventory labeled at the end of its steps (an hourly accumulation
-stamped when it ends, as ERA5's accumulated fields are) would be read a
-full step late. Shift its labels back by a full step instead:
-
-.. code-block:: python
-
-   full_step = inventory.time[1] - inventory.time[0]   # for equal steps
-   inventory = inventory.assign_coords(time=inventory.time - full_step)
-
-For steps of unequal length, such as calendar months, build the starts
-yourself, for example ``inventory.assign_coords(time=month_starts)``,
-whichever shift your inventory needs. The labels must strictly increase; a
-repeated label, such as the overlap of two concatenated files, is an
-error.
-
-Inventory and footprint grids
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Each footprint cell takes the flux of the inventory cell nearest its
-center. That is right when the inventory's cells are as large as the
-footprint's or larger. Choose the footprint grid with your inventories in
-mind:
-
-- Match the footprint grid to the finest inventory you will use. Every
-  inventory is then as coarse as the footprint, or coarser.
-- For a coarser inventory, or to solve for fluxes on coarse cells, sum the
-  footprints onto its cells with ``project.jacobian`` or
-  ``foot.stilt.aggregate`` (:doc:`../guides/aggregation`).
-- For a finer inventory, put it on the footprint grid as an area-weighted
-  mean, such as with `xESMF <https://xesmf.readthedocs.io>`_'s conservative
-  regridding, or make the footprints on the inventory's grid with
-  ``sim.calc_footprint(grid=...)``.
-
-``foot.stilt.enhancement`` refuses an inventory with finer cells than the
-footprint's, and warns when cells of one size are offset by more than a
-tenth of a cell.
-
-A flux is averaged onto larger cells, because it is per unit area. A
-footprint is summed, because each value belongs to its whole cell. Never
-put a footprint through a conservative (averaging) regridder: it would come
-out too small by the ratio of the cell areas.
-
-Comparing with observations
----------------------------
-
-.. code-block:: python
-
-   import matplotlib.pyplot as plt
-
-   # observed CH4 minus background, in ppm
-   observed = pd.read_csv("observations.csv", index_col="time", parse_dates=True)
-
-   fig, ax = plt.subplots(figsize=(12, 4))
-   observed["ch4_enhancement_ppm"].plot(ax=ax, label="Observed", color="k", alpha=0.7)
-   modeled["enhancement_ppm"].plot(ax=ax, label="Modeled enhancement", color="tab:red")
-   ax.legend()
-   ax.set_ylabel("CH4 enhancement (ppm)")
-   plt.tight_layout()
-
-PYSTILT gives only the enhancement. Before comparing, subtract a background
-from the observations, or add one to the modeled enhancement. The
-background is the concentration of the air arriving from outside the
-domain (see :doc:`../guides/background`).
-
-This is the forward half of an inversion. An inversion goes the other
-way. It adjusts the emissions until the modeled enhancements best match
-the observations.
+This is the forward half of an inversion. An inversion goes the other way,
+adjusting the emissions until the modeled enhancements best match the
+measured ones. ``project.jacobian`` builds the matrix it needs, one
+footprint per row summed onto the cells or regions being solved for
+(:doc:`../guides/aggregation`).
