@@ -63,7 +63,7 @@ the ones that have an equivalent.
        settings. X-STILT estimates only ``siguverr`` and fixes the others.
        The met is sampled at the observations with ``arlmet.sample_points``
        instead of one HYSPLIT run per sonde, and sondes come from IGRA2
-       through siphon. See :doc:`/guides/wind_errors`.
+       through siphon. See :ref:`wind-error-statistics`.
    * - Mixing-height scaling for the vertical transport error (``run_ver_err``, ``zisf``)
      - ``get.zierr``
      - ``ziscale``, one variant per factor in the same project (see the
@@ -83,7 +83,7 @@ the ones that have an equivalent.
      - ``background/``
      - :func:`stilt.observations.plume_polygon` and
        :func:`stilt.observations.plume_background` on forward runs
-       (:doc:`/guides/plume_background`)
+       (:ref:`plume-background`)
 
 Runs you already have in X-STILT's ``out/by-id`` folder are read with
 :func:`stilt.migration.read_stilt_r` (:doc:`stilt_r`). X-STILT weights the

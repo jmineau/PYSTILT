@@ -4,8 +4,11 @@ Summing Footprints: Areas And The Jacobian
 Footprints are calculated on the regular grid in your config, as in
 STILT-R. An inversion or an emissions comparison needs the influence of
 other areas: counties, hexagons, sectors, or small windows around point
-sources. This page sums a footprint over such areas, and many footprints
-at once into a Jacobian.
+sources. ``foot.stilt.aggregate`` sums a footprint over such areas, and
+``project.jacobian`` sums many footprints at once into the matrix an
+inversion solves with. We keep the footprint grid fine and aggregate after
+the run, because one fine footprint serves every set of areas you try
+later.
 
 One footprint over areas
 ------------------------
@@ -140,3 +143,87 @@ column of ``project.simulations`` and loop:
 one realization is missing from that matrix alone. The dict holds every
 matrix at once. When each is large, loop with ``for`` instead and keep
 only what you compute from each one, such as a posterior.
+
+Footprints times a flux
+-----------------------
+
+``foot.stilt.enhancement(flux)`` multiplies a footprint by a flux and
+gives the enhancement, the rise in concentration at the receptor that the
+flux explains, for each hour of the footprint. Sum it over the hours for
+the receptor's total. The flux is an :class:`xarray.DataArray` in
+µmol m⁻² s⁻¹ with ``lat`` and ``lon`` dimensions.
+:doc:`../tutorials/flux_inversion` uses it step by step. Two things decide
+whether the numbers are right: which flux step each footprint hour takes,
+and how the two grids line up.
+
+Time steps
+~~~~~~~~~~
+
+PYSTILT reads a flux's ``time`` labels as the start of each step, as CF
+time bounds do, and each footprint hour takes the last step that starts at
+or before it. A monthly inventory labeled on the 1st gives 20 July the July
+flux, and a 3-hourly inventory labeled 09:00 gives 09:00 to 11:59 its 09:00
+step. ``foot.stilt.aggregate`` and ``project.jacobian`` use the same rule,
+so an enhancement and a Jacobian built on one inventory agree. An hour
+before the first label gets zero flux, and an hour after the last takes the
+last step, because the labels do not say where it ends. Add a step of zeros
+after the last to end it.
+
+.. _flux-step-labels:
+
+When the labels are not the starts
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If your file has CF time bounds (a ``time_bnds`` variable), use them, so
+that every step has an exact start and end. Make ``time`` an interval index
+of the bounds. ``foot.stilt.enhancement`` and ``particles.stilt.enhancement``
+then give each hour the step whose bounds hold it, and zero outside every
+step:
+
+.. code-block:: python
+
+   import pandas as pd
+
+   bounds = inventory["time_bnds"].to_numpy()  # (n_steps, 2): start, end
+   inventory = inventory.assign_coords(
+       time=pd.IntervalIndex.from_arrays(bounds[:, 0], bounds[:, 1], closed="left")
+   )
+
+``project.jacobian`` takes its time bins as an argument, so give it the
+same intervals as ``time_bins``.
+
+Without bounds, shift the labels to the starts yourself. A mean labeled at
+the middle of its step (a monthly mean dated the 15th, a 3-hourly mean
+dated 10:30) would be read half a step late, and an accumulation labeled at
+its end (as ERA5's accumulated fields are) a full step late:
+
+.. code-block:: python
+
+   step = inventory.time[1] - inventory.time[0]   # for equal steps
+   inventory = inventory.assign_coords(time=inventory.time - step / 2)   # or - step
+
+For steps of unequal length, such as calendar months, set the starts
+directly with ``inventory.assign_coords(time=month_starts)``. The labels
+must strictly increase, so the overlap of two concatenated files is an
+error.
+
+Grids
+~~~~~
+
+Each footprint cell takes the flux of the inventory cell nearest its
+center, which is right when the inventory's cells are as large as the
+footprint's or larger. So make the footprint grid as fine as the finest
+inventory you will use. For a coarser inventory, or to solve for fluxes on
+coarse cells, sum the footprints onto its cells with ``project.jacobian``
+or ``foot.stilt.aggregate`` (above). For a finer inventory, average it onto
+the footprint grid with a conservative regridder such as
+`xESMF <https://xesmf.readthedocs.io>`_, or make the footprints on the
+inventory's grid with ``sim.calc_footprint(grid=...)``.
+``foot.stilt.enhancement`` refuses an inventory with finer cells than the
+footprint's, and warns when grids of one cell size are offset by more than
+a tenth of a cell.
+
+A flux is averaged onto larger cells because it is per unit area, and a
+footprint is summed because each value belongs to its whole cell. A
+conservative (averaging) regridder would make a footprint too small by the
+ratio of the cell areas.

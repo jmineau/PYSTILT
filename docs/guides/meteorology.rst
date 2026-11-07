@@ -1,162 +1,162 @@
 Meteorology
 ===========
 
-STILT moves particles with gridded fields from a weather model: winds,
-temperature, turbulence, and boundary-layer height. The files must be in
-NOAA's :term:`ARL` format. NOAA publishes ARL files for HRRR, NAM, GDAS,
-GFS, and other models.
+STILT moves its particles with the winds, temperatures and turbulence of a
+weather model, so a footprint can only be as good as the meteorology behind
+it. Choose a weather product first, then point PYSTILT at its files or
+let it download them, and crop them to your region so runs stay fast.
 
-You can give PYSTILT meteorology in two ways:
+PYSTILT reads meteorology in the format of NOAA's Air Resources Laboratory
+(:term:`ARL`), the format HYSPLIT reads. NOAA publishes ARL files for HRRR,
+NAM, GDAS, GFS and other models, and many research groups keep an archive
+of them.
 
-- Point it at files you already have, such as your group's archive.
-- Let it download the files from NOAA. PYSTILT fetches the files each
-  simulation needs and keeps them for later runs.
+.. This page runs when the docs are built, on the HRRR files the tests cache
+   (14 and 15 January 2021 around Salt Lake City).
 
-Each set of meteorology files is a *met* with a name in ``config.yaml``
-(``hrrr`` in the examples below). Variants refer to a met by this name, and
-a variant named after a met runs with it (see :doc:`projects`). Give
-each met a variant to run the same receptors with several mets and compare
-them.
+.. ipython:: python
+   :suppress:
+
+   import docs_examples
+
+   met_dir = docs_examples.met()
+
+Which weather product
+---------------------
+
+Choose the finest product that covers your place and years. Air near a
+city is steered by valleys, coastlines and the depth of the mixed layer,
+and a coarse grid smooths all three away.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 18 20 40
+
+   * - Product
+     - Grid
+     - Covers
+     - Use it for
+   * - HRRR (``hrrr``, ``hrrr.v1``)
+     - 3 km, hourly
+     - Contiguous US, June 2015 on
+     - Cities and towers in the US. This is our default.
+   * - NAM (``nam12``)
+     - 12 km, 3-hourly
+     - North America, 2007 on
+     - US work before mid-2015, and Canada and Mexico.
+   * - GFS and GDAS (``gfs0p25``, ``gdas0p5``, ``gdas1``)
+     - 0.25 to 1 degree
+     - The globe
+     - Places no regional product covers, and long runs that cross
+       continents.
+   * - ERA5
+     - 0.25 degree, hourly
+     - The globe, 1940 on
+     - Long, consistent records. You convert it to ARL yourself
+       (`ERA5`_ below).
+
+If you run the same receptors with two products, give each its own met and
+its own variant, and compare the footprints (:doc:`projects`).
 
 Use files you already have
 --------------------------
 
-Give the folder:
+Give each met a name and the folder that holds its files:
 
 .. code-block:: yaml
 
    mets:
      hrrr: /data/met/hrrr
 
-That is the whole entry. Subfolders are searched too, and links are followed
-to the files they point at. The files can have any names, because each ARL
-file says in its own header which times it holds: its first index record has
-the first time and the size of a time step, and its second has the spacing.
-PYSTILT reads those and nothing else to choose a file, so NOAA's names, your
-own product, and a folder of links all work the same way. Lock files, backup
-copies that end in ``~``, and names that end in ``.partial`` or ``.bad`` are
-skipped, and so is anything that is not an ARL file, such as a README.
+That is all PYSTILT needs. It reads the header of each ARL file to learn
+which hours the file holds, so the files can have any names and can sit in
+subfolders, such as one folder per year. A variant named after a met
+(``hrrr`` here) runs with it.
 
-A met with other settings, such as a crop (below), is a mapping with the folder
-as ``directory``:
+To see what PYSTILT will read for a run, ask the met which files cover the
+run's hours. For a receptor at 19:00 UTC on 14 January 2021, followed 12
+hours back:
 
-.. code-block:: yaml
+.. ipython:: python
 
-   mets:
-     hrrr:
-       directory: /data/met/hrrr
-       subgrid_enable: true
-       subgrid_bounds: {xmin: -114, xmax: -110, ymin: 39, ymax: 42}
-       subgrid_dir: /scratch/met_subgrid/hrrr_slv
+   from stilt.meteorology import run_window
+   from stilt.transport.hysplit import Met, MetConfig
 
-A string is always a folder: ``hrrr: hrrr`` means a folder named ``hrrr`` in
-the project. To download NOAA's HRRR, write ``download: hrrr`` (below).
+   hrrr = Met("hrrr", MetConfig(directory=met_dir))
+   window = run_window("2021-01-14 19:00", n_hours=-12)
+   window
 
-What the files hold is kept in a catalog, one table per folder, in
-``catalogs/`` inside ``subgrid_dir``, or under your cache directory
-(``$XDG_CACHE_HOME``, else ``~/.cache``) without one. The first read of a large
-archive takes minutes: 16,600 HRRR files on a network filesystem took about two.
-``stilt check`` brings it up to date, so run it before a batch. Otherwise the
-first simulation builds it while the others wait. After that a simulation reads
-the table, and looks in the folder again only when the table has no file for one
-of its hours or a file it chose has changed. New files are found without you
-doing anything.
+   [f.name for f in hrrr.files_for(window)]
 
-Keep each product in its own folder. Files of two products or two grids that
-hold the same time fail the run, naming both, because a run records one
-product and which one it means cannot be told. A file that holds part of what
-another file of the same product holds, such as a short copy, is passed over for
-the longer one.
+These HRRR files hold 6 hours each, so three of them cover the 12 hours. A
+24-hour run would need files from the 13th as well, and this folder has
+none:
 
-For each simulation, PYSTILT asks the catalog for the files that hold the hours
-the run spans (``n_hours`` from the receptor time). HYSPLIT interpolates between
-the met steps on either side of each of its times, so the files must also hold
-the met step at or after the run's last time: the release of a backward run, the
-end of a forward one. With 6-hour HRRR files of hourly steps, a backward run
-released at 23:30 needs the next day's first file, and so does a forward run that
-ends at 23:30; one released at 23:00 does not. With daily NAM12 files of 3-hourly
-steps (00:00 to 21:00), a run released at 22:00 needs the next day's file, and
-one released at 21:00 does not. A 24-hour backward run with 6-hour HRRR files
-needs 5 or 6 files, depending on the receptor hour. Every one is needed. If one
-is missing, the simulation fails before HYSPLIT runs, as ``MET_COVERAGE``, naming
-the hours no file holds. A file whose first index record cannot be read holds
-nothing as far as the catalog can tell, so it is reported the same way. ``stilt
-check`` makes this search for every receptor before any run starts
-(:doc:`checking`).
+.. ipython:: python
 
-A file that holds one time period fails the run before HYSPLIT runs, as
-``MET_COVERAGE``, naming the file. ``stilt check`` finds them in the files a
-run needs (:doc:`checking`).
+   hrrr.missing(run_window("2021-01-14 19:00", n_hours=-24))
 
-A file that is there but damaged fails the run before HYSPLIT runs too,
-as ``MET_COVERAGE``: one cut short, holding an hour written partway, or
-with records lost to null bytes. PYSTILT reads the files with arlmet
-(:meth:`arlmet.File.check`) and checks that together they hold every hour
-the run needs. Each file is read once in a process, since a check reads
-every record's header: a few seconds for a 1 GB HRRR file. Particles that
-all leave the meteorology's domain, or its crop, before the end of the run
-are not a failure. The run is complete, and its footprint holds the hours
-the particles were inside (:doc:`checking`).
+A run with hours missing stops before HYSPLIT starts, and says which hours
+they are. ``stilt check`` makes the same search for every receptor in a
+project, so run it before you submit a batch (:doc:`checking`).
 
-After the run, PYSTILT checks where the particles stopped. Particles that
-leave the domain end within 2 grid cells of its edge. If the run stopped
-before ``n_hours`` and a particle at its last time step is more than 5
-grid cells from every side of the met grid, the met ran out: the run fails
-as ``MET_COVERAGE``, even when HYSPLIT wrote no warning. This check needs a
-particle row every time step, so it runs only when ``outdt`` is 0, the
-default. The top of the domain is not an edge: HYSPLIT keeps particles
-from rising above it. On a domain only a few dozen grid cells across, a met stop late
-in a run, when nearly every particle has already left, can pass as a domain
-exit. The footprint lost in such a run was under 3 % in every case measured.
+Each file holds gridded fields for every hour it covers. Here is the
+mixed-layer height at the receptor's hour. It is about 600 m over the
+receptor (the star), and ranges from under 100 m to over 1,500 m across
+the region, which is the kind of detail a coarser product would lose:
 
-In Python, the same settings are a dictionary or a
-:class:`~stilt.transport.hysplit.MetConfig`, HYSPLIT's met config:
+.. ipython:: python
 
-.. code-block:: python
+   import arlmet
+   import matplotlib.pyplot as plt
 
-   from stilt.transport.hysplit import MetConfig
+   ds = arlmet.open_dataset(hrrr.files_for(window)[-1], levels=[0])
+   pblh = ds["PBLH"].sel(time="2021-01-14 19:00")
 
-   hrrr = MetConfig(directory="/data/met/hrrr")
+   fig, ax = plt.subplots(layout="constrained")
+   pblh.plot(x="lon", y="lat", ax=ax, cbar_kwargs={"label": "mixed-layer height (m)"})
+   ax.plot(-111.848, 40.766, marker="*", markersize=14, color="white", markeredgecolor="black")
 
-You can list several mets:
+   @savefig meteorology_pblh.png width=5in
+   ax.set_title("HRRR, 14 January 2021, 19:00 UTC");
 
-.. code-block:: yaml
+Keep each product in its own folder. If an HRRR file and a NAM file in
+one folder both hold the same hour, PYSTILT cannot tell which one you
+meant, and the run stops and names both files.
 
-   mets:
-     hrrr: /data/met/hrrr
-     gfs: /data/met/gfs
-
+The first time PYSTILT reads a large archive, it builds a table of what
+each file holds. For tens of thousands of files on a network disk this
+takes a few minutes, and ``stilt check`` is a good time to do it. Later
+runs read the table and find new files on their own.
 
 Download from NOAA
 ------------------
 
-Set ``download`` to the name of one of NOAA's ARL archives and
-``directory`` to where the downloads should go.
+If you have no ARL files, PYSTILT can download them from NOAA's archive.
+Name the archive and the folder to keep the files in:
 
 .. code-block:: yaml
 
    mets:
      hrrr:
        download: hrrr
-       directory: /data/met/hrrr     # downloads are kept here
+       directory: /data/met/hrrr
 
-Downloading needs the ``download`` extra (``pip install "pystilt[download]"``).
-The `arl-met <https://github.com/jmineau/arl-met>`_ package does the
-downloading.
+Downloading needs the ``download`` extra
+(``pip install "pystilt[download]"``). Each simulation downloads the files
+its run needs and leaves them in ``directory``, so later runs reuse them.
 
 .. warning::
 
-   NOAA's files cover a continent or the whole globe, so each one is large,
-   often several gigabytes. The whole file is downloaded before it is
-   cropped. Crop to your region (see below) so that what is kept is small,
-   and download on a machine with a fast connection and plenty of disk
-   space.
+   NOAA's files cover a continent or the globe, and each one is several
+   gigabytes. Crop them to your region (below), so that only a small copy
+   is kept, and download on a machine with a fast connection.
 
-These archives are available:
+The archives you can name are:
 
 .. list-table::
    :header-rows: 1
-   :widths: 15 35 20 30
+   :widths: 15 40 20 25
 
    * - Name
      - Product
@@ -165,240 +165,134 @@ These archives are available:
    * - ``hrrr``
      - HRRR 3 km analysis
      - CONUS
-     - Jun 2019–present
+     - Jun 2019 to present
    * - ``hrrr.v1``
-     - HRRR 3 km analysis v1
+     - HRRR 3 km analysis, version 1
      - CONUS
-     - Jun 2015–2019
+     - Jun 2015 to 2019
    * - ``nam12``
      - NAM 12 km analysis
      - North America
-     - May 2007–present
+     - May 2007 to present
    * - ``nams``
      - NAMS hybrid sigma-pressure
-     - CONUS / AK / HI
-     - Jan 2010–present
+     - CONUS, Alaska, Hawaii
+     - Jan 2010 to present
    * - ``gdas1``
-     - GDAS 1-degree global
+     - GDAS 1 degree
      - Global
-     - Dec 2004–present
+     - Dec 2004 to present
    * - ``gdas0p5``
-     - GDAS 0.5-degree global
+     - GDAS 0.5 degree
      - Global
-     - Sep 2007–mid 2019
+     - Sep 2007 to mid 2019
    * - ``gfs0p25``
-     - GFS 0.25-degree global
+     - GFS 0.25 degree
      - Global
-     - Jun 2019–present
+     - Jun 2019 to present
    * - ``reanalysis``
-     - NCEP/NCAR Reanalysis 2.5-degree
+     - NCEP/NCAR Reanalysis, 2.5 degree
      - Global
-     - 1948–present
+     - 1948 to present
    * - ``narr``
-     - NCEP North American Regional Reanalysis 32 km
+     - North American Regional Reanalysis, 32 km
      - North America
-     - 1979–2019
+     - 1979 to 2019
 
-Some archives take extra options, which you write next to the other fields.
-For example, ``nams`` takes a ``domain``:
+Some archives take an option of their own, written beside the others.
+``nams`` takes a ``domain`` (``conus``, the default, ``ak`` or ``hi``):
 
-.. code-block:: python
+.. code-block:: yaml
 
-   nams_ak = MetConfig(
-       download="nams",
-       domain="ak",            # "conus" (default), "ak", or "hi"
-       directory="/data/met/nams_ak",
-   )
+   mets:
+     nams_ak:
+       download: nams
+       domain: ak
+       directory: /data/met/nams_ak
 
-``download_from`` picks the server. The default, ``"s3"``, is NOAA's
-archive on AWS. The others are ``"ftp"`` and ``"http"``.
+Files come from NOAA's archive on Amazon S3. If that is slow or blocked
+where you are, set ``download_from`` to ``ftp`` or ``http``.
 
-.. code-block:: python
+Crop to your region
+-------------------
 
-   MetConfig(download="gdas1", directory="/data/met/gdas1", download_from="ftp")
+Most runs need only a small part of a weather model's grid. Cropping the
+files to a box around your region makes each run read less and use less
+memory, which matters most for global products and on cluster nodes.
 
-Files already in ``directory`` are not downloaded again.
+.. code-block:: yaml
 
-A download follows the same rule as local files: it gets the files up to the
-met step at or after the run's end, using the time between steps of the
-archive (arlmet's ``Archive.step``). With ``download: nam12`` or
-``download: gdas0p5``, daily files of 3-hourly steps, a run that ends at 22:00
-gets the next day's file too, and one that ends at 21:00 does not. With
-``hrrr``, whose steps are hourly and whose files hold 6 hours, a run that ends
-at 05:30 gets the 06-11 file, and one that ends at 05:00, the last step of the
-00-05 file, does not.
+   mets:
+     hrrr:
+       directory: /data/met/hrrr
+       subgrid_enable: true
+       subgrid_bounds: {xmin: -114, xmax: -110, ymin: 39, ymax: 42}
+       subgrid_dir: /scratch/met_crops
+
+Make the box larger than your footprint grid. A particle that leaves the
+box stops, just as it would at the edge of the weather model's grid, so a
+box that is too tight quietly cuts off the far end of a footprint. Plot
+the particles of a few runs (:doc:`outputs`) to see how far they go.
+
+With your own files, PYSTILT crops each file the first time a run needs
+it, writes the copy to ``subgrid_dir`` and reuses it after that.
+``subgrid_dir`` is required, so that PYSTILT never writes into your
+archive. It reads your files where they are and changes none of them.
+Scratch space suits it, and several projects with the same box share the
+copies. PYSTILT finds the crops by their headers, as it finds your files, so
+a folder of crops copied from another machine works even where the archive
+is not. With ``download``, each file is cropped as it arrives and only the
+crop is kept, so ``subgrid_dir`` is not needed.
+
+``subgrid_levels: 20`` also keeps only the lowest 20 levels, which helps
+for runs that stay in the lower atmosphere.
 
 ERA5
 ----
 
-ERA5, ECMWF's global reanalysis, is hourly on a 0.25 degree grid. NOAA
-does not publish it in ARL format, and PYSTILT does not convert it, so
-convert it to ARL first. Then it is a met like any other:
+ERA5, ECMWF's reanalysis, is not published in ARL format, and PYSTILT does
+not convert it, so convert it to ARL first. Then it is a met like any other.
+We recommend two settings that differ from the defaults:
 
 .. code-block:: yaml
 
    mets:
      era5: /data/met/era5
+
    variants:
      era5:
        met: era5
-       kbls: 2
-       kmixd: 0
+       kbls: 2      # stability from the wind and temperature profiles
+       kmixd: 0     # ERA5's own boundary-layer height
 
-Two settings differ from the defaults:
+ERA5's friction velocity is too small (ECMWF's documentation says so), and
+the stability HYSPLIT derives from it by default can leave too little
+mixing, so ``kbls: 2`` derives it from the profiles instead. HYSPLIT would
+otherwise estimate the boundary-layer height from ERA5's pressure levels,
+about 200 m apart near the ground, so ``kmixd: 0`` uses the height ECMWF
+computed on its model levels. The converted files need that field (PBLH).
 
-``kbls: 2``
-   Derive the boundary layer's stability from the wind and temperature
-   profiles. ERA5's friction velocity is too small (ECMWF's ERA5
-   documentation says so), and stability derived from it, the default
-   ``kbls: 1``, can leave too little mixing.
+What a run records
+------------------
 
-``kmixd: 0``
-   Use ERA5's own boundary-layer height, which ECMWF computes on its model
-   levels. HYSPLIT's own estimate, the default ``kmixd: 3``, would come
-   from ERA5's pressure levels, about 200 m apart near the ground. The
-   converted files need the boundary-layer height (PBLH) for this.
+Each run records which weather product it used, read from the files'
+headers, and the crop:
 
-Cropping to your region
------------------------
+.. ipython:: python
 
-Set ``subgrid_enable`` and ``subgrid_bounds`` to crop the meteorology to a
-box around your region before HYSPLIT reads it. Smaller files make runs
-faster and use less memory. Cropping matters most for global products
-(GFS, GDAS, Reanalysis) and on cluster nodes with limited memory.
+   MetConfig(directory=met_dir).settings()
 
-.. code-block:: python
+It does not record where the files are or what they are named. You can
+move your archive, or switch to a copy with different names, and every run
+already made still counts. Two products in folders named alike, such as
+HRRR and NAM, still give different results folders.
 
-   from stilt import Bounds
-   from stilt.transport.hysplit import MetConfig
+When the meteorology is the problem
+-----------------------------------
 
-   hrrr = MetConfig(
-       download="hrrr",
-       directory="/data/met/hrrr",
-       subgrid_enable=True,
-       subgrid_bounds=Bounds(xmin=-114, xmax=-110, ymin=39, ymax=42),
-   )
-
-A particle that leaves the box stops, as it would at the edge of the
-weather model's grid. Make the box wide enough for where the particles go
-over the whole run, not only the footprint grid. A box too tight cuts off
-the far part of a footprint without any warning.
-
-When downloading, each file is cropped right after it arrives and only the
-cropped copy is kept.
-
-With your own files, each file is cropped the first time a simulation needs
-it, and every later simulation reuses the crop. Set ``subgrid_dir`` to the
-directory for the cropped copies. It is required, so that PYSTILT never
-writes into your met archive. Scratch space suits it well, and several
-projects can share one:
-
-.. code-block:: python
-
-   MetConfig(
-       directory="/data/met/hrrr",
-       subgrid_enable=True,
-       subgrid_bounds=Bounds(xmin=-114, xmax=-110, ymin=39, ymax=42),
-       subgrid_dir="/scratch/met_subgrid/hrrr_slv",
-   )
-
-Inside ``subgrid_dir``, each crop gets its own folder, named by a short
-code computed from the crop box and ``subgrid_levels``. Changing ``subgrid_bounds``
-or ``subgrid_levels`` starts a new folder, and projects with the same crop
-share one. ``Met(name, config).crop_dir`` gives
-the folder. Old folders are not deleted.
-
-The crops are found the way the archive's files are: by what their headers
-hold, kept in a catalog of their own in ``subgrid_dir/catalogs/``. A
-simulation reads the crops for the hours they hold, and asks the archive only
-for the hours they do not, cropping those files. So a crop serves a simulation
-whatever it is named, and whether or not the archive still has the file it
-was cropped from: a folder of crops staged from elsewhere, or recovered after
-the archive lost a file, works with no entry in ``directory``. A crop that
-holds fewer hours than the file it shares a name with, such as one cut short,
-is made again from that file when a simulation needs the hours it lacks.
-``stilt check`` brings both catalogs up to date. The run records the files it
-was given: the archive's, or the crops that held its hours.
-
-``subgrid_levels`` also drops the upper vertical levels, for downloaded
-files and your own.
-
-.. code-block:: python
-
-   MetConfig(
-       ...,
-       subgrid_levels=20,   # keep the lowest 20 levels
-   )
-
-
-Which weather a run records
----------------------------
-
-Each ARL file names the weather model it comes from in its header, such
-as ``HRRR``, ``NAM``, or ``GDAS``. A run's settings folder records that
-name, read from the header of the first file in ``directory``, and the
-crop. A downloaded met's name comes from its archive, so no file is read.
-
-Where the files are kept and how they are named are not recorded. Moving
-the met files, or switching to a copy named differently, keeps every run
-already made. Two mets whose files are named alike but come from
-different weather models, such as an HRRR and a NAM archive, give
-different settings folders.
-
-The header is read when a project's settings folders are first needed,
-to run it or to read its results. A met's ``directory`` must hold its
-files on the machine that opens the project.
-
-Met at particle positions
--------------------------
-
-:func:`stilt.sampling.sample_met` reads met files at each particle's
-position and time, and adds ``mlht``, ``dens``, ``pres``, or ``zsfc`` to the
-particle table. A transport model that writes only positions can get these
-columns this way. Give it the files the run read and the top of its domain,
-both of which a stored run records:
-
-.. code-block:: python
-
-   import stilt
-   from stilt.sampling import sample_met
-
-   particles = sim.particles.drop(columns=["mlht", "dens"])
-   meta = stilt.particles.particles_metadata(sim.particles_path)
-   sampled = sample_met(
-       particles, meta.met_files, columns=["mlht", "dens"], z_top=meta.settings["z_top"]
-   )
-
-``mlht`` is the met's ``PBLH``, ``pres`` its ``PRES``, ``zsfc`` its
-``SHGT``, and ``dens`` is computed from ``PRES``, ``TEMP``, and ``SPHU``.
-arlmet reads them across the grid and between the internal levels HYSPLIT
-uses, which depend on ``z_top``, and PYSTILT then interpolates in time between
-the two met times around each particle's. ``z_top`` defaults to 25000, the
-default of a run. ``z_top=None`` reads the met's own levels instead, for a
-transport model that is not HYSPLIT; a particle below the lowest of them (8 to
-9 m above ground for HRRR) then gets NaN. Terrain-following (flag 3) files are
-read on their own levels, not on the internal levels HYSPLIT puts them on, so
-their values are further from HYSPLIT's, by an amount not measured, and they
-take only the default ``z_top`` or ``None``.
-
-On two 6-hour HRRR runs from Salt Lake City
-(``tests/integration/test_sample_met.py``), these values against HYSPLIT's own
-columns:
-
-- ``zsfc`` matches to a few meters.
-- ``mlht`` matches HYSPLIT's with ``kmixd: 0``, floored at ``kmix0``,
-  to a median of 16 to 30 m. The default, ``kmixd: 3``, finds a
-  different mixed layer from the profile.
-- ``pres`` matches HYSPLIT's to a median of 0.02 hPa, and to 0.23 to
-  0.30 hPa at the 95th percentile. The worst case is 1.4 to 4.6 hPa.
-  ``dens`` is higher than HYSPLIT's by 0.17 to 0.57 %.
-- On one of those runs with a 10 km top, ``z_top=10000`` gives a median
-  ``pres`` difference of 0.024 hPa, where the default gives 0.032. The 95th
-  percentile is about 0.29 hPa with either.
-
-Where HYSPLIT reads the files
------------------------------
-
-HYSPLIT reads the files where they are. PYSTILT does not change or copy
-your files, apart from the cropped copies it makes when you ask for a
-crop.
+A run whose files are missing, damaged or cut short fails before HYSPLIT
+starts, as ``MET_COVERAGE``, and its message names the file or the hours.
+A run whose particles all leave the met's domain is a success, with a
+footprint of the hours they were inside it. :doc:`checking` explains each
+failure and what to do about it, and :doc:`../reference/meteorology` gives
+the exact rules for which files a run reads.

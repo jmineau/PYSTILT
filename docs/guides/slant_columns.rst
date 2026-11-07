@@ -8,9 +8,6 @@ models the path as a :class:`~stilt.MultiPointReceptor` whose points step up
 the line of sight. All the points run in one simulation, and the particles
 are weighted afterwards.
 
-This page covers the geometry, an EM27/SUN example, and satellite
-soundings.
-
 Geometry
 --------
 
