@@ -4,10 +4,9 @@ Trajectory-Style Analyses
 Tools such as HyTraj and pysplit work with a few trajectories per
 measurement: residence time, potential source contribution (PSCF),
 concentration-weighted trajectories (CWT), a mean path, the time the
-air took from a source. This page does the same with PYSTILT's results.
-A run gives hundreds of particles per receptor, and a footprint that
-already weights them by their time near the ground, so most of these
-analyses get simpler.
+air took from a source. PYSTILT's results do all of these, and most get
+simpler, because a run gives hundreds of particles per receptor and a
+footprint that already weights them by their time near the ground.
 
 The examples use a month of receptors at one site, and a table of your
 measurements with a ``receptor`` column, such as ``project.simulations``
