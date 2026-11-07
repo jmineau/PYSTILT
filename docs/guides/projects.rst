@@ -87,7 +87,7 @@ The settings most people change
    * - ``n_hours``
      - How many hours to follow the particles. Negative values run backward
        in time, which is what footprints need. Positive values run forward
-       from the receptor (see :doc:`plume_background`).
+       from the receptor (see :ref:`plume-background`).
      - ``-24`` to ``-72``
    * - ``numpar``
      - Particles released per simulation. More particles give a smoother
