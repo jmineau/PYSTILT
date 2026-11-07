@@ -11,7 +11,9 @@ Each simulation is one receptor run under one variant
 Variants that differ only in footprint settings share one set of
 particles.
 
-This page shows how to plot them and load them for analysis.
+Look at both before you trust a batch. We plot the particles of a few
+simulations first, because they show where the air went whatever the
+footprint grid, and only then load the footprints for analysis.
 :doc:`aggregation` sums footprints over areas, and many at once into a
 Jacobian.
 
@@ -203,6 +205,30 @@ The file holds the receptor, the meteorology files the run read, and the
 settings it ran with, the same ones as its folder's ``_settings.yaml``.
 ``realization`` is which realization of an ensemble the file is, or
 ``None`` for a single run. :doc:`../reference/layout` lists every key.
+
+Met at particle positions
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A transport model that writes only positions can still get the met columns
+HYSPLIT writes. :func:`stilt.sampling.sample_met` reads ``mlht``, ``dens``,
+``pres`` or ``zsfc`` from the met files at each particle's position and
+time. Give it the files the run read and the top of its domain, which a
+stored run records:
+
+.. code-block:: python
+
+   from stilt.sampling import sample_met
+
+   meta = stilt.particles.particles_metadata(sim.particles_path)
+   sampled = sample_met(
+       particles.drop(columns=["mlht", "dens"]),
+       meta.met_files,
+       columns=["mlht", "dens"],
+       z_top=meta.settings["z_top"],
+   )
+
+How closely the sampled values match HYSPLIT's own is on
+:doc:`../development/validation`.
 
 Empty footprints
 ----------------
