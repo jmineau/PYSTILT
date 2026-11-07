@@ -65,6 +65,9 @@ _temporary_folders: list[Path] = []
 
 def met() -> dict:
     """Return the met config of the files the tests cache."""
+    import matplotlib.pyplot as plt
+
+    plt.close("all")  # the pages share one session; a page starts with no figures
     default = DOCS.parent / "tests" / "met_cache"
     directory = Path(os.environ.get("STILT_TEST_MET_DIR", default)).resolve()
     if not directory.is_dir():
@@ -199,6 +202,9 @@ def temp_workdir(sample: bool = False) -> str:
     With ``sample``, the new folder holds a copy of the sample project as
     ``my_project``, so a page can open it the way a reader would.
     """
+    import matplotlib.pyplot as plt
+
+    plt.close("all")  # the pages share one session; a page starts with no figures
     previous = os.getcwd()
     work = Path(tempfile.mkdtemp())
     _temporary_folders.append(work)
