@@ -4,8 +4,11 @@ Summing Footprints: Areas And The Jacobian
 Footprints are calculated on the regular grid in your config, as in
 STILT-R. An inversion or an emissions comparison needs the influence of
 other areas: counties, hexagons, sectors, or small windows around point
-sources. This page sums a footprint over such areas, and many footprints
-at once into a Jacobian.
+sources. ``foot.stilt.aggregate`` sums a footprint over such areas, and
+``project.jacobian`` sums many footprints at once into the matrix an
+inversion solves with. We keep the footprint grid fine and aggregate after
+the run, because one fine footprint serves every set of areas you try
+later.
 
 One footprint over areas
 ------------------------
