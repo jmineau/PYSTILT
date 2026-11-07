@@ -13,9 +13,16 @@ place and time of your measurement and some meteorology, and it computes a
 footprint. The footprint is a map of the upwind surface areas that influenced
 the measurement, and by how much.
 
+.. image:: _static/footprint-circle.png
+   :alt: A footprint over the Salt Lake Valley: a band of color stretching
+         north-northwest from a sensor in Salt Lake City toward the Great Salt Lake.
+   :width: 320px
+   :align: center
+
 PYSTILT works for towers, aircraft, mobile platforms, and satellite or
 ground-based column measurements. The same project can run one simulation on a
-laptop or tens of thousands on an HPC cluster.
+laptop or tens of thousands on an HPC cluster. The map above, from STILT-R's
+documentation, is a footprint of a sensor in Salt Lake City.
 
 .. note::
 
@@ -25,47 +32,36 @@ laptop or tens of thousands on an HPC cluster.
 .. grid:: 1 1 2 2
    :gutter: 2
 
-   .. grid-item-card:: :fas:`wind` New to STILT?
-      :link: getting_started/what_is_stilt
+   .. grid-item-card:: :fas:`play` Getting Started
+      :link: getting_started/index
       :link-type: doc
 
-      What a footprint is, how STILT makes one, and what you need to get
-      started.
+      What a footprint is, how to install PYSTILT, and your first footprint
+      map in a few steps.
 
-   .. grid-item-card:: :fas:`play` Your first footprint
-      :link: getting_started/quickstart
+   .. grid-item-card:: :fas:`graduation-cap` Tutorials
+      :link: tutorials/index
       :link-type: doc
 
-      Install PYSTILT and go from one measurement to a footprint map in a
-      few steps.
+      Complete studies. A day of tower footprints, modeled concentrations
+      from an inventory, and footprints of a satellite column.
 
-   .. grid-item-card:: :fas:`book` User guide
+   .. grid-item-card:: :fas:`book` User Guide
       :link: guides/index
       :link-type: doc
 
       How to describe your measurements, set up meteorology, run on a
       cluster, and load and plot results.
 
-   .. grid-item-card:: :fas:`graduation-cap` Tutorials
-      :link: tutorials/index
-      :link-type: doc
-
-      Complete examples. Run a week of tower footprints, turn footprints
-      into modeled concentrations, and scale up on a Slurm cluster.
-
-   .. grid-item-card:: :fas:`right-left` Coming from another STILT?
-      :link: coming-from-another-stilt
-      :link-type: ref
-      :link-alt: Coming from another STILT
-
-      Where the settings and steps of STILT-R, X-STILT, stiltctl, and Jena
-      STILT are in PYSTILT.
-
-   .. grid-item-card:: :fas:`code` API reference
+   .. grid-item-card:: :fas:`code` API Reference
       :link: reference/index
       :link-type: doc
 
       Every class, function, and configuration option.
+
+Used STILT-R, X-STILT, stiltctl or Jena STILT before?
+:ref:`Coming from another STILT <coming-from-another-stilt>` says where
+their settings and steps are in PYSTILT.
 
 .. toctree::
    :hidden:
