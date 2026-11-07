@@ -13,9 +13,33 @@ place and time of your measurement and some meteorology, and it computes a
 footprint. The footprint is a map of the upwind surface areas that influenced
 the measurement, and by how much.
 
+.. ipython:: python
+   :suppress:
+
+   import os
+
+   import docs_examples
+   import stilt
+
+   docs_cwd = docs_examples.temp_workdir()
+   receptor = stilt.PointReceptor(
+       time="2021-01-14 19:00", longitude=-111.848, latitude=40.766, altitude=10
+   )
+   particles = stilt.run_trajectories(
+       receptor, docs_examples.met(), n_hours=-12, numpar=200, krand=2, seed=42
+   )
+   grid = stilt.Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01)
+   foot = stilt.calc_footprint(particles, receptor, grid)
+
+   @savefig index_footprint.png width=5in
+   foot.stilt.plot.map();
+
+   os.chdir(docs_cwd)
+
 PYSTILT works for towers, aircraft, mobile platforms, and satellite or
 ground-based column measurements. The same project can run one simulation on a
-laptop or tens of thousands on an HPC cluster.
+laptop or tens of thousands on an HPC cluster. The map above is a footprint of
+a sensor in Salt Lake City, made when these pages were built.
 
 .. note::
 
@@ -25,47 +49,36 @@ laptop or tens of thousands on an HPC cluster.
 .. grid:: 1 1 2 2
    :gutter: 2
 
-   .. grid-item-card:: :fas:`wind` New to STILT?
-      :link: getting_started/what_is_stilt
+   .. grid-item-card:: :fas:`play` Getting Started
+      :link: getting_started/index
       :link-type: doc
 
-      What a footprint is, how STILT makes one, and what you need to get
-      started.
+      What a footprint is, how to install PYSTILT, and your first footprint
+      map in a few steps.
 
-   .. grid-item-card:: :fas:`play` Your first footprint
-      :link: getting_started/quickstart
+   .. grid-item-card:: :fas:`graduation-cap` Tutorials
+      :link: tutorials/index
       :link-type: doc
 
-      Install PYSTILT and go from one measurement to a footprint map in a
-      few steps.
+      Complete studies. A day of tower footprints, modeled concentrations
+      from an inventory, and footprints of a satellite column.
 
-   .. grid-item-card:: :fas:`book` User guide
+   .. grid-item-card:: :fas:`book` User Guide
       :link: guides/index
       :link-type: doc
 
       How to describe your measurements, set up meteorology, run on a
       cluster, and load and plot results.
 
-   .. grid-item-card:: :fas:`graduation-cap` Tutorials
-      :link: tutorials/index
-      :link-type: doc
-
-      Complete examples. Run a week of tower footprints, turn footprints
-      into modeled concentrations, and scale up on a Slurm cluster.
-
-   .. grid-item-card:: :fas:`right-left` Coming from another STILT?
-      :link: coming-from-another-stilt
-      :link-type: ref
-      :link-alt: Coming from another STILT
-
-      Where the settings and steps of STILT-R, X-STILT, stiltctl, and Jena
-      STILT are in PYSTILT.
-
-   .. grid-item-card:: :fas:`code` API reference
+   .. grid-item-card:: :fas:`code` API Reference
       :link: reference/index
       :link-type: doc
 
       Every class, function, and configuration option.
+
+Used STILT-R, X-STILT, stiltctl or Jena STILT before?
+:ref:`Coming from another STILT <coming-from-another-stilt>` says where
+their settings and steps are in PYSTILT.
 
 .. toctree::
    :hidden:
