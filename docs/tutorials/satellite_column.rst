@@ -156,7 +156,7 @@ The footprint, weighted by the kernel and the pressure weights, gives the
 modeled enhancement for a flux field. The observed enhancement is the
 retrieved value minus a background. Here the background is the median of
 the soundings outside the plume of a forward run
-(:doc:`../guides/plume_background`); a mole-fraction field also works
+(:ref:`plume-background`); a mole-fraction field also works
 (:doc:`../guides/background`).
 
 ``plume`` is the outline of the forward run's particles at the overpass

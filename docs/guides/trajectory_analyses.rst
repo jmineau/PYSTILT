@@ -216,7 +216,7 @@ Some variations:
   smoke injected above the boundary layer drops out. The region version
   above does not depend on ``foot``.
 - **Forward runs from the source.** When the release is the source, a
-  row's ``age`` is already its transit time (:doc:`plume_background`).
+  row's ``age`` is already its transit time (:ref:`plume-background`).
 
 Comparing variants
 ------------------
