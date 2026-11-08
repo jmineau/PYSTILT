@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=aa544266"></script>
+    <script src="../_static/documentation_options.js?v=d6763cd6"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev25+gc2c4a27dd" />
+  <meta name="docsearch:version" content="0.1.0a28.dev26+g91d75521b" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -667,8 +667,11 @@ use them. <code class="docutils literal notranslate"><span class="pre">--json</s
 <p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code> exits with 0 when every simulation it ran is complete, 1 when
 some failed, and 3 when some did not finish because the run was stopped. It
 exits with 2 when its command line is wrong, or when a met directory does
-not exist or holds no ARL file; <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code> and <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> do
-too. An error the command did not expect prints its traceback and exits
+not exist or holds no ARL file; <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code> does too. So does
+<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code>, unless no settings folder in the output could hold the
+project’s results, apart from the weather product the met’s files name:
+then it reports every simulation pending, as it does for a project that has
+not run. An error the command did not expect prints its traceback and exits
 with 3 when it is a connection or I/O error, such as an output bucket that
 cannot be reached, and with 4 for any other (<a class="reference internal" href="containers.html#exit-codes"><span class="std std-ref">Exit codes</span></a>). Every
 command does this, not only <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>.</p>

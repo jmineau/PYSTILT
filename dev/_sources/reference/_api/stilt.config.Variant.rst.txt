@@ -25,6 +25,7 @@ Attributes
    ~Variant.particles_hash
    ~Variant.realization_numbers
    ~Variant.run_settings
+   ~Variant.run_settings_without_met
 
 
 
