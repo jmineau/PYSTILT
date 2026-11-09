@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=79e2fe3b"></script>
+    <script src="../_static/documentation_options.js?v=cc16caf6"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev46+g326d76343" />
+  <meta name="docsearch:version" content="0.1.0a28.dev47+gdaecddd7e" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -620,7 +620,9 @@ each footprint hour takes the last step that starts at or before it
 (<a class="reference internal" href="aggregation.html#flux-step-labels"><span class="std std-ref">When the labels are not the starts</span></a> says what to do with CF time bounds, and with
 labels not at the start of a step). A flux with finer cells than the
 footprint’s must be put on the footprint grid first
-(<a class="reference internal" href="../tutorials/flux_inversion.html"><span class="doc">Tutorial: From Footprints To Concentrations</span></a> says how).</p>
+(<a class="reference internal" href="../tutorials/flux_inversion.html"><span class="doc">Tutorial: From Footprints To Concentrations</span></a> says how), and one with steps shorter
+than the footprint’s layers (<code class="docutils literal notranslate"><span class="pre">tres</span></code>) must be averaged onto the layers,
+or the footprints made with a shorter <code class="docutils literal notranslate"><span class="pre">tres</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">flux</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataarray</span><span class="p">(</span><span class="s2">"ch4_flux.nc"</span><span class="p">)</span>          <span class="c1"># µmol m⁻² s⁻¹ on lat/lon</span>
 <span class="n">foot</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">"hrrr"</span><span class="p">)</span><span class="o">.</span><span class="n">footprint</span>
 <span class="n">enhancement</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span>             <span class="c1"># ppm per footprint time step</span>

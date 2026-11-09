@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=79e2fe3b"></script>
+    <script src="../_static/documentation_options.js?v=cc16caf6"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev46+g326d76343" />
+  <meta name="docsearch:version" content="0.1.0a28.dev47+gdaecddd7e" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -663,6 +663,21 @@ so an enhancement and a Jacobian built on one inventory agree. An hour
 before the first label gets zero flux, and an hour after the last takes the
 last step, because the labels do not say where it ends. Add a step of zeros
 after the last to end it.</p>
+<p>A footprint layer takes the flux of the one step where it starts, so the
+layers (<code class="docutils literal notranslate"><span class="pre">tres</span></code>) must be no longer than the flux’s steps. A 1-day layer
+over an hourly flux would take the flux of its first hour for the whole
+day, which can be far from the day’s mean, so <code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>
+raises, and so do <code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> and <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> for a
+time bin shorter than the layers. Make the footprints with a shorter
+<code class="docutils literal notranslate"><span class="pre">tres</span></code>, or average the flux onto the layers first. A flux with steps as
+long as the layers or longer passes, and so does a flux with one time (a
+static flux), but a layer that crosses a step boundary still takes only the
+step where it starts. Layers are counted back from the receptor’s time, not
+from the clock, so receptors on the hour with hourly or longer flux steps
+line up, and a receptor at 18:30 does not: its hourly layers run from :30 to
+:30, and each takes the flux of the step where it starts, half an hour
+early. The steps of a flux with CF time bounds are the bounds; without them,
+the gaps between the labels.</p>
 <section id="when-the-labels-are-not-the-starts">
 <span id="flux-step-labels"></span><h4>When the labels are not the starts<a class="headerlink" href="#when-the-labels-are-not-the-starts" title="Link to this heading">#</a></h4>
 <p>If your file has CF time bounds (a <code class="docutils literal notranslate"><span class="pre">time_bnds</span></code> variable), use them, so

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=79e2fe3b"></script>
+    <script src="../../../_static/documentation_options.js?v=cc16caf6"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev46+g326d76343" />
+  <meta name="docsearch:version" content="0.1.0a28.dev47+gdaecddd7e" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -468,7 +468,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">horizontal_dims</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.aggregation</span><span class="w"> </span><span class="kn">import</span> <span class="n">aggregate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.aggregation</span><span class="w"> </span><span class="kn">import</span> <span class="n">_check_steps_hold_layers</span><span class="p">,</span> <span class="n">aggregate</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">_naive_utc</span><span class="p">,</span> <span class="n">_with_cf_metadata</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.targets</span><span class="w"> </span><span class="kn">import</span> <span class="n">Geometry</span>
 
@@ -684,7 +684,13 @@
 <span class="sd">            full step late: shift its labels back by a full step instead.</span>
 <span class="sd">            See :ref:`flux-step-labels` for both shifts worked out, and for</span>
 <span class="sd">            how to give a flux its bounds as an interval index. The labels</span>
-<span class="sd">            must strictly increase; the bounds must not overlap.</span>
+<span class="sd">            must strictly increase; the bounds must not overlap. A layer</span>
+<span class="sd">            takes the flux of the one step where it starts, so the steps</span>
+<span class="sd">            must be as long as the footprint's layers (``tres``) or longer:</span>
+<span class="sd">            a flux with a shorter step is an error. A flux with one time</span>
+<span class="sd">            (a static flux) is not checked. Layers start at the receptor's</span>
+<span class="sd">            time, so a layer that crosses a step boundary still takes the</span>
+<span class="sd">            step where it starts.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -699,6 +705,8 @@
 <span class="sd">            If the flux has a ``time`` dimension and the footprint has none,</span>
 <span class="sd">            since a time-summed footprint cannot say which flux step each</span>
 <span class="sd">            layer meets, if the flux cells are finer than the footprint's, if</span>
+<span class="sd">            a step of the flux is shorter than the footprint's layers (use a</span>
+<span class="sd">            shorter ``tres``, or average the flux onto the layers first), if</span>
 <span class="sd">            the flux's time labels do not strictly increase (a repeated</span>
 <span class="sd">            label is an error), or if its CF time bounds overlap.</span>
 <span class="sd">        """</span>
@@ -716,6 +724,7 @@
             <span class="n">foot</span><span class="p">[</span><span class="n">y_dim</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">foot</span><span class="p">[</span><span class="n">x_dim</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">"ij"</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="s2">"time"</span> <span class="ow">in</span> <span class="n">flux</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
+            <span class="n">_check_steps_hold_layers</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">tres_minutes</span><span class="p">)</span>
             <span class="n">layers</span> <span class="o">=</span> <span class="p">[</span>
                 <span class="n">sample_field</span><span class="p">(</span>
                     <span class="n">flux</span><span class="p">,</span>
@@ -774,7 +783,10 @@
 <span class="sd">            Time intervals to sum over, such as the time steps of a flux</span>
 <span class="sd">            inventory. They must be closed on the left</span>
 <span class="sd">            (``closed="left"``): each bin holds the footprint layers that</span>
-<span class="sd">            start in it.</span>
+<span class="sd">            start in it. A layer goes whole into the bin where it starts, so</span>
+<span class="sd">            the bins must be as long as the footprint's layers (``tres``) or</span>
+<span class="sd">            longer. Layers start at the receptor's time, so one that crosses</span>
+<span class="sd">            a bin edge still goes into the bin where it starts.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -789,7 +801,8 @@
 <span class="sd">        TypeError</span>
 <span class="sd">            If ``time_bins`` is not a :class:`pandas.IntervalIndex`.</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If ``time_bins`` is not closed on the left.</span>
+<span class="sd">            If ``time_bins`` is not closed on the left, or a bin is shorter</span>
+<span class="sd">            than the footprint's layers (use a shorter ``tres``).</span>
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="n">aggregate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_foot</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">time_bins</span><span class="p">)</span></div>
 </div>

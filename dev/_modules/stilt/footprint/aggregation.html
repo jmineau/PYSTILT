@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=79e2fe3b"></script>
+    <script src="../../../_static/documentation_options.js?v=cc16caf6"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev46+g326d76343" />
+  <meta name="docsearch:version" content="0.1.0a28.dev47+gdaecddd7e" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -506,6 +506,40 @@
     <span class="k">return</span> <span class="n">_naive_utc_ns</span><span class="p">(</span><span class="n">time_bins</span><span class="o">.</span><span class="n">left</span><span class="p">),</span> <span class="n">_naive_utc_ns</span><span class="p">(</span><span class="n">time_bins</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_steps_hold_layers</span><span class="p">(</span>
+    <span class="n">steps</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">,</span> <span class="n">layer_minutes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"flux"</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Raise when a step of the flux, or a time bin, is shorter than a footprint layer.</span>
+
+<span class="sd">    A layer is put whole in the step where it starts, so a step shorter than</span>
+<span class="sd">    the layer would give the rest of the layer the wrong flux. *steps* is a</span>
+<span class="sd">    flux's ``time`` index or the time bins: an interval index gives each</span>
+<span class="sd">    step's length from its bounds, and plain labels, which start their</span>
+<span class="sd">    steps, from the gaps between them. A single label has no gaps (a static</span>
+<span class="sd">    flux), so nothing is checked, and labels that do not strictly increase</span>
+<span class="sd">    are left for :func:`stilt.sampling.sample_field` to refuse.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="p">):</span>
+        <span class="n">lengths</span> <span class="o">=</span> <span class="n">steps</span><span class="o">.</span><span class="n">right</span> <span class="o">-</span> <span class="n">steps</span><span class="o">.</span><span class="n">left</span>
+    <span class="k">elif</span> <span class="n">steps</span><span class="o">.</span><span class="n">is_monotonic_increasing</span> <span class="ow">and</span> <span class="n">steps</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
+        <span class="n">lengths</span> <span class="o">=</span> <span class="n">steps</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">steps</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">lengths</span><span class="p">):</span>
+        <span class="k">return</span>
+    <span class="n">shortest</span> <span class="o">=</span> <span class="n">lengths</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+    <span class="n">layer</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">layer_minutes</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">shortest</span> <span class="o">&lt;</span> <span class="n">layer</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The footprint's layers are </span><span class="si">{</span><span class="n">layer</span><span class="si">}</span><span class="s2"> long but a step of the </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> "</span>
+            <span class="sa">f</span><span class="s2">"is </span><span class="si">{</span><span class="n">shortest</span><span class="si">}</span><span class="s2">, so a layer would take the flux of the one step "</span>
+            <span class="s2">"where it starts in place of the mean over its whole length. Make "</span>
+            <span class="s2">"the footprints with a tres no longer than the shortest step, or "</span>
+            <span class="sa">f</span><span class="s2">"average the </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> onto the footprint's layers first."</span>
+        <span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_time_bin</span><span class="p">(</span><span class="n">times_ns</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">left</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">right</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return the bin each time falls in, or -1 for a time in no bin."""</span>
     <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">times_ns</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">"right"</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
@@ -805,7 +839,9 @@
 <span class="sd">    target : Grid, Mesh, or Zones</span>
 <span class="sd">        Cells to sum onto.</span>
 <span class="sd">    time_bins : pandas.IntervalIndex</span>
-<span class="sd">        Time intervals, closed on the left.</span>
+<span class="sd">        Time intervals, closed on the left and each as long as the</span>
+<span class="sd">        footprints' layers (``tres``) or longer. A layer that crosses a bin</span>
+<span class="sd">        edge still goes into the bin where it starts.</span>
 <span class="sd">    receptors : list of str</span>
 <span class="sd">        Receptors to give rows, in row order. Those with no cells in *table*</span>
 <span class="sd">        are empty footprints and get none.</span>
@@ -818,6 +854,14 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Jacobian</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        If *time_bins* is not a :class:`pandas.IntervalIndex`.</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If *time_bins* is not closed on the left, or a bin is shorter than</span>
+<span class="sd">        the footprints' layers (use a shorter ``tres``).</span>
 <span class="sd">    """</span>
     <span class="n">cells</span> <span class="o">=</span> <span class="n">_by_receptor</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
     <span class="n">none</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">empty_table</span><span class="p">()</span>
@@ -853,6 +897,7 @@
 <span class="sd">    """</span>
     <span class="n">workers</span> <span class="o">=</span> <span class="n">_threads</span><span class="p">(</span><span class="n">workers</span><span class="p">)</span>
     <span class="n">edges</span> <span class="o">=</span> <span class="n">_bin_edges</span><span class="p">(</span><span class="n">time_bins</span><span class="p">)</span>  <span class="c1"># raises for bins not closed on the left</span>
+    <span class="n">_check_steps_hold_layers</span><span class="p">(</span><span class="n">time_bins</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">tres_minutes</span><span class="p">,</span> <span class="s2">"time bins"</span><span class="p">)</span>
     <span class="n">grid</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span>
     <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The footprint settings have no grid."</span><span class="p">)</span>
@@ -929,6 +974,7 @@
             <span class="s2">"The footprint has no time dimension, so its layers cannot be put "</span>
             <span class="s2">"in time bins. Aggregate the footprint before summing it over time."</span>
         <span class="p">)</span>
+    <span class="n">_check_steps_hold_layers</span><span class="p">(</span><span class="n">time_bins</span><span class="p">,</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">tres_minutes</span><span class="p">,</span> <span class="s2">"time bins"</span><span class="p">)</span>
     <span class="n">columns</span> <span class="o">=</span> <span class="n">_naive_utc</span><span class="p">(</span><span class="n">time_bins</span><span class="o">.</span><span class="n">left</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">foot</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">target</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
