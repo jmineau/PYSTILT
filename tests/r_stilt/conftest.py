@@ -141,6 +141,7 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
             # The MAXPAR PYSTILT gave HYSPLIT, which is above numpar for a
             # multipoint receptor, so both release the same particles.
             _setup_value(setup_file, "maxpar"),
+            f"{scenario.veght:g}",
         ],
         capture_output=True,
         text=True,

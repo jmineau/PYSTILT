@@ -18,11 +18,11 @@ Pinned upstream commit
    * - Upstream
      - https://github.com/uataq/stilt
    * - Pinned SHA
-     - ``0e290a68730e155bc2156e28af492a463228c88a``
+     - ``278b1ef6d542efd21c6ccab2a85b796acd9812a6``
    * - Pin location
      - ``.github/workflows/tests.yml`` (env ``STILT_R_SHA``)
    * - Last verified
-     - 2026-06-25
+     - 2026-11-08
 
 When the fidelity tests pass, PYSTILT matches STILT-R at this commit. It
 says nothing about STILT-R's current ``main`` branch.
@@ -30,7 +30,7 @@ says nothing about STILT-R's current ``main`` branch.
 What matches
 ------------
 
-PYSTILT's footprints match STILT-R's for the 20 fidelity scenarios in
+PYSTILT's footprints match STILT-R's for the 21 fidelity scenarios in
 `tests/fixtures/r_stilt_reference.py <https://github.com/jmineau/PYSTILT/blob/main/tests/fixtures/r_stilt_reference.py>`_,
 within these tolerances:
 
@@ -60,10 +60,11 @@ The scenarios cover:
 
 - point, column, and three-location multipoint receptors
 - 6 h and 24 h backward runs, and a 6 h forward run
-- the hyper-near-field (HNF) plume correction on (12 scenarios) and off
+- the hyper-near-field (HNF) plume correction on (every scenario but one) and
+  off, with ``veght`` at its default of 0.5 (a fraction of the mixed-layer
+  height) and at 100 (meters above ground)
 - ``smooth_factor`` of 0, 0.5, 1, and 2
-- 0.01° and 0.05° longitude/latitude grids and an unsmoothed UTM grid, all
-  with square cells
+- 0.01° and 0.05° longitude/latitude grids and an unsmoothed UTM grid
 - a 2° box, a receptor in the domain's corner, a receptor at the edge of
   the met grid, and a small 0.1° domain that particles leave early
 - receptor heights above ground, above sea level (``kmsl=1``), and at 0.5 m
@@ -71,6 +72,7 @@ The scenarios cover:
 - hourly footprints, and STILT-R's ``time_integrate=TRUE`` against one
   PYSTILT layer as long as the run
 - a wind-error run (``siguverr=1`` m/s)
+- cells with ``xres`` different from ``yres``, in both orders (synthetic particles)
 
 The synthetic tests in
 `tests/r_stilt/test_footprint_synth.py <https://github.com/jmineau/PYSTILT/blob/main/tests/r_stilt/test_footprint_synth.py>`_
@@ -90,20 +92,6 @@ What does not match
   fill value of ``-1``. PYSTILT writes CF-1.8 NetCDF with dimensions
   ``(time, lat, lon)``. Read PYSTILT files as ordinary CF NetCDF. Tools that
   expect STILT-R's layout will not read them.
-- **Smoothing on cells that are not square.** When ``xres`` and ``yres``
-  differ, a smoothing kernel wider than one cell has a different number of
-  cells along longitude and along latitude. STILT-R's ``permute.f90`` reads
-  the kernel as if the two numbers were equal. With ``xres`` larger than
-  ``yres``, its footprint total comes out 5 to 13 % high on 24 h runs. With
-  ``yres`` larger than ``xres``, it reads memory past the end of the kernel.
-  The footprint then loses mass (15 % in one case), holds values near
-  ``1e300``, or R crashes
-  (`uataq/stilt#116 <https://github.com/uataq/stilt/issues/116>`_; the fix is
-  `uataq/stilt#148 <https://github.com/uataq/stilt/pull/148>`_).
-  PYSTILT adds each kernel along the axis each cell count belongs to, so
-  smoothing keeps the footprint total. Its footprint equals STILT-R's with
-  ``permute.f90`` reading the kernel that way, to within ``2e-15`` of the
-  peak. On square cells the two agree.
 - **Smoothing on a projected grid.** The kernel width,
   ``0.06 * (var(x) + var(y))**0.25 * sqrt(|rtime| / 1440)``, is made for
   coordinates in degrees. STILT-R applies it to the projected coordinates,
@@ -199,18 +187,6 @@ What does not match
   interpolated as before, bit for bit.
   ``test_early_interpolation_across_180_intentionally_differs_from_r``
   guards the difference.
-- **Forward runs with the HNF correction.** STILT-R accumulates the plume
-  from the far end of a forward trajectory back toward the release point,
-  so its plume is widest at release. PYSTILT accumulates outward from the
-  release point. The two ``foot`` values differ on purpose, and
-  ``test_forward_hnf_foot_intentionally_differs_from_r`` guards the
-  difference.
-- **The HNF correction with ``veght`` above 1.** HYSPLIT reads such a
-  ``veght`` as meters above ground, and so does PYSTILT's correction.
-  STILT-R multiplies it by the mixed-layer height, which removes most of
-  the footprint after the first hour
-  (`uataq/stilt#142 <https://github.com/uataq/stilt/issues/142>`_). No
-  fidelity scenario sets ``veght`` above 1.
 - **The HNF correction of a receptor above sea level.** PYSTILT grows the
   plume from the release height above ground, so it needs ``zsfc`` in
   ``varsiwant`` for an MSL receptor. STILT-R grows it from the
@@ -221,8 +197,22 @@ What does not match
 - **Untested inputs.** Runs longer than 24 h backward, latitudes above 80°,
   and grids finer than 0.001° have not been compared.
 - **Other STILT-R commits.** Nothing detects upstream changes to
-  ``calc_footprint.r``, ``permute.f90``, or ``calc_trajectory.r``. Bump the
-  pinned SHA by hand (below).
+  ``calc_footprint.r``, ``permute.f90``, ``calc_trajectory.r``, or
+  ``calc_plume_dilution.r``. Bump the pinned SHA by hand (below).
+- **STILT-R before the pinned commit.** Older STILT-R accumulated the
+  near-field plume from the far end of a forward trajectory, which made it
+  widest at the release point
+  (`uataq/stilt#144 <https://github.com/uataq/stilt/pull/144>`_), and
+  multiplied a ``veght`` above 1 by the mixed-layer height instead of reading
+  it as meters above ground, as HYSPLIT does
+  (`uataq/stilt#145 <https://github.com/uataq/stilt/pull/145>`_). Its
+  ``permute.f90`` also read a smoothing kernel as if it had the same number
+  of cells along longitude and latitude, so on cells with ``xres`` different
+  from ``yres`` the footprint total came out wrong or the kernel was read past
+  its end
+  (`uataq/stilt#148 <https://github.com/uataq/stilt/pull/148>`_). A forward
+  run with the near-field correction, a ``veght`` above 1, or cells that are
+  not square matches PYSTILT only on the pinned commit or a later one.
 
 Large-scale comparison
 ----------------------
@@ -260,7 +250,9 @@ relative difference, which is what an inversion sums over, is also about
 Reading the same met files on both sides over the full date range needs the
 ``find_met_files`` fix in the pinned STILT-R commit. HRRR archives can hold
 the same file both at the top level (as a symlink) and in a ``YYYY/MM/``
-subdirectory, and older STILT-R listed it twice.
+subdirectory, and older STILT-R listed it twice. The pinned commit also
+lists the next met file for a run that ends partway through a file
+(`uataq/stilt#149 <https://github.com/uataq/stilt/pull/149>`_), as PYSTILT does.
 
 Moving to a newer STILT-R commit
 --------------------------------
@@ -292,6 +284,7 @@ These STILT-R files determine the numbers PYSTILT is compared against:
 
 - ``r/src/calc_footprint.r``: footprint kernel and gridding
 - ``r/src/calc_trajectory.r``: the HYSPLIT wrapper, random seed, and ``krand``
+- ``r/src/calc_plume_dilution.r``: the near-field plume correction (``hnf_plume``)
 - ``r/src/permute.f90``: the Fortran loop that adds each particle's kernel to
   the grid
 

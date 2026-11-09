@@ -103,8 +103,8 @@ particles. PYSTILT includes it for Linux and macOS (Intel).
 Why PYSTILT?
 ------------
 
-PYSTILT gives the same footprints as STILT-R on longitude/latitude grids with
-square cells, checked cell by cell (:ref:`stilt-r-parity` lists the few cases
+PYSTILT gives the same footprints as STILT-R on longitude/latitude grids,
+checked cell by cell (:ref:`stilt-r-parity` lists the few cases
 that differ). It also makes a few things easier.
 
 * You work in Python only. There is no R to install, and results load

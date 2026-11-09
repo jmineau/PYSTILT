@@ -76,12 +76,13 @@ jobs:
       #
       # WHAT TO WATCH in uataq/stilt git log:
       #   r/src/calc_footprint.r   — gridding, interpolation, kernel bandwidth
-      #   r/src/calc_trajectory.r  — HNF plume dilution (calc_plume_dilution)
+      #   r/src/calc_trajectory.r  — the HYSPLIT wrapper, random seed, krand
+      #   r/src/calc_plume_dilution.r — HNF plume dilution
       #   r/src/permute.f90        — inner Gaussian scatter loop
       #   r/src/write_footprint.r  — output format / precision (float32 assumption)
       #
       # IGNORE: run_stilt.r, stilt_cli.r, docs, R package scaffolding.
-      STILT_R_SHA: 0e290a68730e155bc2156e28af492a463228c88a
+      STILT_R_SHA: 278b1ef6d542efd21c6ccab2a85b796acd9812a6
 
     steps:
       - uses: actions/checkout@v7
