@@ -160,6 +160,19 @@ def test_job_script_shares_cpus_a_slurm_option_adds_among_the_workers(tmp_path):
     assert _omp_threads_after_setup(script) == "4"
 
 
+def test_job_script_gives_one_thread_when_cpus_per_task_is_not_a_number(tmp_path):
+    # sbatch refuses the value; writing the script must not fail first.
+    script = job_script(
+        Project(tmp_path, output=tmp_path / "out"),
+        ExecutionConfig(
+            backend="slurm", time="01:00:00", slurm={"cpus_per_task": "many"}
+        ),
+        tmp_path,
+        1,
+    )
+    assert _omp_threads_after_setup(script) == "1"
+
+
 def test_job_script_leaves_the_thread_count_to_a_setup_line(tmp_path):
     script = job_script(
         Project(tmp_path, output=tmp_path / "out"),
