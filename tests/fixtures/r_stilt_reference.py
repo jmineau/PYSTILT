@@ -117,6 +117,9 @@ class ReferenceScenario:
         Transport controls passed to :class:`~stilt.config.ProjectConfig`.
     hnf_plume
         Whether to apply hyper-near-field plume dilution.
+    veght
+        Height below which a particle counts toward ``foot``: a fraction of the
+        mixed-layer height when 1 or less, meters above ground when larger.
     smooth_factor
         Gaussian footprint smoothing scale (1.0 = default).
     time_integrate
@@ -141,6 +144,7 @@ class ReferenceScenario:
     krand: int = REFERENCE_KRAND
     seed: int = REFERENCE_SEED
     hnf_plume: bool = True
+    veght: float = 0.5
     smooth_factor: float = 1.0
     time_integrate: bool = False
     xmin: float = REFERENCE_XMIN
@@ -247,6 +251,7 @@ class ReferenceScenario:
             "krand": self.krand,
             "seed": self.seed,
             "hnf_plume": self.hnf_plume,
+            "veght": self.veght,
             "varsiwant": [*REFERENCE_VARSIWANT, *self.extra_varsiwant],
             # The fidelity tests read SETUP.CFG afterwards.
             "execution": {"keep_workdir": True},
@@ -446,8 +451,9 @@ HIGH_SMOOTH = ReferenceScenario(
 )
 
 #: Forward 6-hour run from 2021-01-14 12Z to 18Z — verifies time_sign=+1 in both
-#: PYSTILT footprint calculation and STILT-R.  Met files 20210114_12 and 20210114_18
-#: are present in the test cache.
+#: PYSTILT footprint calculation and STILT-R, and that both grow the near-field
+#: plume outward from the release point (STILT-R sorts by particle age).  Met
+#: files 20210114_12 and 20210114_18 are present in the test cache.
 FORWARD = ReferenceScenario(
     name="forward",
     description="Point receptor, n_hours=+6 — forward trajectory; time_sign=+1 in footprint",
@@ -535,6 +541,16 @@ SPARSE_TIGHT_DOMAIN = ReferenceScenario(
     shares_trajectory_with="point",
 )
 
+#: veght above 1 is meters above ground, as HYSPLIT reads it: the near-field
+#: plume is corrected only while it is below 100 m.  The default 0.5 would put
+#: that height at half the mixed-layer height.  HYSPLIT also counts a particle
+#: toward foot only below 100 m, so the trajectory differs from POINT's.
+VEGHT_METERS = ReferenceScenario(
+    name="veght_meters",
+    description="Point receptor, veght=100 — near-field correction below 100 m above ground",
+    veght=100.0,
+)
+
 #: All canonical scenarios in priority order.
 ALL_SCENARIOS: list[ReferenceScenario] = [
     POINT,
@@ -557,6 +573,7 @@ ALL_SCENARIOS: list[ReferenceScenario] = [
     MSL_ALTITUDE,
     WINDERR,
     SPARSE_TIGHT_DOMAIN,
+    VEGHT_METERS,
 ]
 
 

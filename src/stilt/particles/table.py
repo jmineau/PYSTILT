@@ -505,9 +505,6 @@ def correct_near_field(
     depth in its place. The worker applies it to any model's particles when
     ``hnf_plume`` is set.
 
-    STILT-R multiplies ``veght`` by the mixed-layer height whatever its
-    value, so the two differ when ``veght`` is above 1.
-
     Needs the columns :data:`HNF_PLUME_COLUMNS`, and the release height:
     ``release_height`` (:func:`add_release_heights`) or the altitude of a point
     receptor. The plume grows from the ground, so for a receptor whose
