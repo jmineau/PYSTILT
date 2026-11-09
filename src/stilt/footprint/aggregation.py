@@ -57,6 +57,40 @@ def _bin_edges(time_bins: pd.IntervalIndex) -> tuple[np.ndarray, np.ndarray]:
     return _naive_utc_ns(time_bins.left), _naive_utc_ns(time_bins.right)
 
 
+def _check_steps_hold_layers(
+    steps: pd.Index, layer_minutes: int, name: str = "flux"
+) -> None:
+    """
+    Raise when a step of the flux, or a time bin, is shorter than a footprint layer.
+
+    A layer is put whole in the step where it starts, so a step shorter than
+    the layer would give the rest of the layer the wrong flux. *steps* is a
+    flux's ``time`` index or the time bins: an interval index gives each
+    step's length from its bounds, and plain labels, which start their
+    steps, from the gaps between them. A single label has no gaps (a static
+    flux), so nothing is checked, and labels that do not strictly increase
+    are left for :func:`stilt.sampling.sample_field` to refuse.
+    """
+    if isinstance(steps, pd.IntervalIndex):
+        lengths = steps.right - steps.left
+    elif steps.is_monotonic_increasing and steps.is_unique:
+        lengths = steps[1:] - steps[:-1]
+    else:
+        return
+    if not len(lengths):
+        return
+    shortest = lengths.min()
+    layer = pd.Timedelta(minutes=layer_minutes)
+    if shortest < layer:
+        raise ValueError(
+            f"The footprint's layers are {layer} long but a step of the {name} "
+            f"is {shortest}, so a layer would take the flux of the one step "
+            "where it starts in place of the mean over its whole length. Make "
+            "the footprints with a tres no longer than the shortest step, or "
+            f"average the {name} onto the footprint's layers first."
+        )
+
+
 def _time_bin(times_ns: np.ndarray, left: np.ndarray, right: np.ndarray) -> np.ndarray:
     """Return the bin each time falls in, or -1 for a time in no bin."""
     b = np.searchsorted(left, times_ns, side="right") - 1
@@ -347,7 +381,9 @@ def jacobian(
     target : Grid, Mesh, or Zones
         Cells to sum onto.
     time_bins : pandas.IntervalIndex
-        Time intervals, closed on the left.
+        Time intervals, closed on the left and each as long as the
+        footprints' layers (``tres``) or longer. A layer that crosses a bin
+        edge still goes into the bin where it starts.
     receptors : list of str
         Receptors to give rows, in row order. Those with no cells in *table*
         are empty footprints and get none.
@@ -360,6 +396,14 @@ def jacobian(
     Returns
     -------
     Jacobian
+
+    Raises
+    ------
+    TypeError
+        If *time_bins* is not a :class:`pandas.IntervalIndex`.
+    ValueError
+        If *time_bins* is not closed on the left, or a bin is shorter than
+        the footprints' layers (use a shorter ``tres``).
     """
     cells = _by_receptor(table)
     none = table.schema.empty_table()
@@ -395,6 +439,7 @@ def _jacobian(
     """
     workers = _threads(workers)
     edges = _bin_edges(time_bins)  # raises for bins not closed on the left
+    _check_steps_hold_layers(time_bins, config.tres_minutes, "time bins")
     grid = config.grid
     if grid is None:
         raise ValueError("The footprint settings have no grid.")
@@ -471,6 +516,7 @@ def aggregate(
             "The footprint has no time dimension, so its layers cannot be put "
             "in time bins. Aggregate the footprint before summing it over time."
         )
+    _check_steps_hold_layers(time_bins, foot.stilt.config.tres_minutes, "time bins")
     columns = _naive_utc(time_bins.left)
     if foot.size == 0:
         return pd.DataFrame(0.0, index=target.index, columns=columns)

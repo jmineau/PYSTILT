@@ -19,7 +19,7 @@ from stilt.identity import read_footprint_settings
 from stilt.receptors import Receptor
 from stilt.spatial import Grid, horizontal_dims
 
-from .aggregation import aggregate
+from .aggregation import _check_steps_hold_layers, aggregate
 from .io import _naive_utc, _with_cf_metadata
 from .targets import Geometry
 
@@ -225,7 +225,13 @@ class FootprintAccessor:
             full step late: shift its labels back by a full step instead.
             See :ref:`flux-step-labels` for both shifts worked out, and for
             how to give a flux its bounds as an interval index. The labels
-            must strictly increase; the bounds must not overlap.
+            must strictly increase; the bounds must not overlap. A layer
+            takes the flux of the one step where it starts, so the steps
+            must be as long as the footprint's layers (``tres``) or longer:
+            a flux with a shorter step is an error. A flux with one time
+            (a static flux) is not checked. Layers start at the receptor's
+            time, so a layer that crosses a step boundary still takes the
+            step where it starts.
 
         Returns
         -------
@@ -240,6 +246,8 @@ class FootprintAccessor:
             If the flux has a ``time`` dimension and the footprint has none,
             since a time-summed footprint cannot say which flux step each
             layer meets, if the flux cells are finer than the footprint's, if
+            a step of the flux is shorter than the footprint's layers (use a
+            shorter ``tres``, or average the flux onto the layers first), if
             the flux's time labels do not strictly increase (a repeated
             label is an error), or if its CF time bounds overlap.
         """
@@ -257,6 +265,7 @@ class FootprintAccessor:
             foot[y_dim].to_numpy(), foot[x_dim].to_numpy(), indexing="ij"
         )
         if "time" in flux.dims:
+            _check_steps_hold_layers(flux.indexes["time"], self.config.tres_minutes)
             layers = [
                 sample_field(
                     flux,
@@ -312,7 +321,10 @@ class FootprintAccessor:
             Time intervals to sum over, such as the time steps of a flux
             inventory. They must be closed on the left
             (``closed="left"``): each bin holds the footprint layers that
-            start in it.
+            start in it. A layer goes whole into the bin where it starts, so
+            the bins must be as long as the footprint's layers (``tres``) or
+            longer. Layers start at the receptor's time, so one that crosses
+            a bin edge still goes into the bin where it starts.
 
         Returns
         -------
@@ -327,6 +339,7 @@ class FootprintAccessor:
         TypeError
             If ``time_bins`` is not a :class:`pandas.IntervalIndex`.
         ValueError
-            If ``time_bins`` is not closed on the left.
+            If ``time_bins`` is not closed on the left, or a bin is shorter
+            than the footprint's layers (use a shorter ``tres``).
         """
         return aggregate(self._foot, target, time_bins)

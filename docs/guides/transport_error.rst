@@ -123,7 +123,9 @@ each footprint hour takes the last step that starts at or before it
 (:ref:`flux-step-labels` says what to do with CF time bounds, and with
 labels not at the start of a step). A flux with finer cells than the
 footprint's must be put on the footprint grid first
-(:doc:`../tutorials/flux_inversion` says how).
+(:doc:`../tutorials/flux_inversion` says how), and one with steps shorter
+than the footprint's layers (``tres``) must be averaged onto the layers,
+or the footprints made with a shorter ``tres``.
 
 .. code-block:: python
 

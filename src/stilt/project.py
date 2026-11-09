@@ -1027,7 +1027,10 @@ class Project:
         time_bins : pandas.IntervalIndex
             Flux time bins, such as a flux inventory's steps. They must be
             closed on the left (``closed="left"``): each bin holds the
-            footprint layers that start in it. You build these yourself;
+            footprint layers that start in it. A layer goes whole into the
+            bin where it starts, so the bins must be as long as the
+            footprints' layers (``tres``) or longer; a layer that crosses a
+            bin edge still goes into the bin where it starts. You build these yourself;
             ``jacobian`` does not read them from an inventory's own CF time
             bounds, unlike ``foot.stilt.enhancement`` with a flux that has
             them. Building the bins from an inventory's own time labels
@@ -1057,7 +1060,9 @@ class Project:
         ValueError
             If the selection holds more or fewer than one variant, or
             several realizations of an ensemble, the variant has no grid or
-            no footprints yet, or ``time_bins`` is not closed on the left.
+            no footprints yet, ``time_bins`` is not closed on the left, or a
+            bin is shorter than the footprints' layers (use a shorter
+            ``tres``).
         """
         frame = self._selected(sel)
         name, k = _one_group(frame, "A Jacobian")
