@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=72bbb1c4"></script>
+    <script src="../../../_static/documentation_options.js?v=c962346c"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev43+g277285a55" />
+  <meta name="docsearch:version" content="0.1.0a28.dev44+g2d53fd30a" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -1160,10 +1160,16 @@
 <span class="sd">    100 minutes is interpolated the short way round, on any grid; STILT-R</span>
 <span class="sd">    interpolates it through 0 degrees.</span>
 
-<span class="sd">    On a projected grid the kernel's width is worked out in degrees, as on</span>
-<span class="sd">    a longitude/latitude grid, and converted to the grid's units, so the</span>
-<span class="sd">    footprint is smoothed as much. STILT-R applies its formula to the</span>
-<span class="sd">    projected coordinates and barely smooths a footprint there. The step</span>
+<span class="sd">    The kernel has one width on both axes of the grid. On a</span>
+<span class="sd">    longitude/latitude grid that width is in degrees, so on the ground the</span>
+<span class="sd">    kernel is ``1 / cos(latitude)`` times wider from north to south than</span>
+<span class="sd">    from east to west (1.32 times at 40.7° N). STILT-R does the same. On a</span>
+<span class="sd">    projected grid the width is worked out in degrees, as on a</span>
+<span class="sd">    longitude/latitude grid, and converted to the grid's units by the length</span>
+<span class="sd">    of one degree of longitude, so the kernel is as wide from east to west as</span>
+<span class="sd">    on a longitude/latitude grid and round on the ground. STILT-R applies its</span>
+<span class="sd">    formula to the projected coordinates, which makes the kernel a few meters</span>
+<span class="sd">    wide and barely smooths a footprint. The step</span>
 <span class="sd">    that decides the early-time interpolation is measured on the projected</span>
 <span class="sd">    grid, in its units, so a grid of 100 m cells is interpolated as a 0.001°</span>
 <span class="sd">    grid is. STILT-R measures it in degrees and never interpolates on a grid</span>

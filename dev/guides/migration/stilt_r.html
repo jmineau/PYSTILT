@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=72bbb1c4"></script>
+    <script src="../../_static/documentation_options.js?v=c962346c"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev43+g277285a55" />
+  <meta name="docsearch:version" content="0.1.0a28.dev44+g2d53fd30a" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -511,8 +511,10 @@
                   
   <section id="coming-from-stilt-r">
 <h1>Coming From STILT-R<a class="headerlink" href="#coming-from-stilt-r" title="Link to this heading">#</a></h1>
-<p>PYSTILT does the same science as STILT-R, and its footprints match STILT-R’s
-cell by cell. A few cases differ on purpose. Three are in the near-field
+<p>PYSTILT does the same science as STILT-R. On longitude/latitude grids with
+square cells its footprints match STILT-R’s cell by cell, to a relative
+tolerance of 1e-7 in the 20 scenarios the tests compare. A few cases differ on
+purpose (<a class="reference internal" href="../../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a> has them all). Three are in the near-field
 correction (<code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>): forward runs, where PYSTILT fixes how the plume
 grows, a <code class="docutils literal notranslate"><span class="pre">veght</span></code> above 1, which PYSTILT reads as meters above ground, as
 HYSPLIT does, and a receptor above sea level, whose plume PYSTILT grows from
@@ -524,9 +526,11 @@ way around the earth, which PYSTILT smooths as one cloud and STILT-R smooths
 far too widely, particles just across 180° from the edge of a regional
 grid, which PYSTILT smooths onto the grid and STILT-R drops, and the
 early-time interpolation of a particle that crosses 180°, which PYSTILT
-takes the short way round and STILT-R through 0° (see
-<a class="reference internal" href="../../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a>). A footprint on a global grid written from 0°
-to 360° keeps those longitudes, where STILT-R labels it from -180° to 180°.
+takes the short way round and STILT-R through 0°. Smoothing on cells that
+are not square differs too: PYSTILT adds each kernel along the axis its
+cell count belongs to, so the footprint keeps its total. A footprint on a
+global grid written from 0° to 360° keeps those longitudes, where STILT-R
+labels it from -180° to 180°.
 PYSTILT also takes grids that STILT-R cannot use, such as one from -10° to
 190°.</p>
 <p>What changes is where the settings live. Instead of editing variables in
