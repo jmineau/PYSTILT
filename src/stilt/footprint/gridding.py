@@ -709,10 +709,16 @@ def calc_footprint(
     100 minutes is interpolated the short way round, on any grid; STILT-R
     interpolates it through 0 degrees.
 
-    On a projected grid the kernel's width is worked out in degrees, as on
-    a longitude/latitude grid, and converted to the grid's units, so the
-    footprint is smoothed as much. STILT-R applies its formula to the
-    projected coordinates and barely smooths a footprint there. The step
+    The kernel has one width on both axes of the grid. On a
+    longitude/latitude grid that width is in degrees, so on the ground the
+    kernel is ``1 / cos(latitude)`` times wider from north to south than
+    from east to west (1.32 times at 40.7° N). STILT-R does the same. On a
+    projected grid the width is worked out in degrees, as on a
+    longitude/latitude grid, and converted to the grid's units by the length
+    of one degree of longitude, so the kernel is as wide from east to west as
+    on a longitude/latitude grid and round on the ground. STILT-R applies its
+    formula to the projected coordinates, which makes the kernel a few meters
+    wide and barely smooths a footprint. The step
     that decides the early-time interpolation is measured on the projected
     grid, in its units, so a grid of 100 m cells is interpolated as a 0.001°
     grid is. STILT-R measures it in degrees and never interpolates on a grid
