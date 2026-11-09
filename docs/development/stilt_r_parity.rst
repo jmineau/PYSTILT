@@ -62,8 +62,8 @@ The scenarios cover:
 - 6 h and 24 h backward runs, and a 6 h forward run
 - the hyper-near-field (HNF) plume correction on (12 scenarios) and off
 - ``smooth_factor`` of 0, 0.5, 1, and 2
-- 0.01° and 0.05° longitude/latitude grids and a UTM grid, all with square
-  cells
+- 0.01° and 0.05° longitude/latitude grids and an unsmoothed UTM grid, all
+  with square cells
 - a 2° box, a receptor in the domain's corner, a receptor at the edge of
   the met grid, and a small 0.1° domain that particles leave early
 - receptor heights above ground, above sea level (``kmsl=1``), and at 0.5 m

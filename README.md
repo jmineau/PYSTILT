@@ -261,10 +261,13 @@ STILT-R made.
 ## STILT-R parity
 
 PYSTILT footprints match the [STILT-R](https://github.com/uataq/stilt) footprints to a relative
-tolerance of 1e-7 in every grid cell. The test suite checks this against a pinned STILT-R
-commit. The NetCDF files are laid out differently from STILT-R's, so read them as standard
+tolerance of 1e-7 in every grid cell, on longitude/latitude grids with square cells. The test
+suite checks this on 20 scenarios against a pinned STILT-R commit. A few cases differ on
+purpose: smoothing on a projected grid, grids and particles near 180°, cells that are not
+square, and the near-field correction for forward runs, a `veght` above 1 and receptors above
+sea level. The NetCDF files are laid out differently from STILT-R's, so read them as standard
 CF-1.8 NetCDF. The [STILT-R parity page](https://jmineau.github.io/PYSTILT/stable/development/stilt_r_parity.html)
-of the development docs has the details.
+of the development docs lists every difference.
 
 ## Roadmap
 
