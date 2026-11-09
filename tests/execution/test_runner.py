@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import signal
 import subprocess
 from pathlib import Path
@@ -45,7 +46,7 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
         account="lin-np",
         qos="lin-np",
         array_parallelism=10,
-        setup=["module load gcc", "export OMP_NUM_THREADS=1"],
+        setup=["module load gcc", "export OMP_NUM_THREADS=2"],
         slurm={"exclude": "notch345", "signal": "B:USR1@300", "exclusive": True},
     )
 
@@ -70,9 +71,11 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
     }
     lines = script.splitlines()
     # The log says where and when the task ran, before any setup can fail.
-    header = lines.index("module load gcc") - 1
+    header = lines.index("module load gcc") - 2
     assert lines[header].startswith('echo "$(date -u +%FT%TZ) $SLURMD_NODENAME job ')
-    assert lines.index("module load gcc") < lines.index("export OMP_NUM_THREADS=1")
+    # The script's own OMP_NUM_THREADS comes before setup, so a setup line has the last word.
+    assert lines.index("export OMP_NUM_THREADS=1") < lines.index("module load gcc")
+    assert lines.index("module load gcc") < lines.index("export OMP_NUM_THREADS=2")
     last = lines[-1]
     assert last.startswith("exec ")
     assert f"-m stilt run {project.directory} " in last
@@ -114,6 +117,62 @@ def test_job_script_runs_again_only_on_the_first_start_and_names_a_compute_root(
     assert script.splitlines()[-1].endswith(
         f"--compute-root {(tmp_path / 'scratch').resolve()} $skip"
     )
+
+
+def _omp_threads_after_setup(script: str) -> str:
+    """What OMP_NUM_THREADS is when the script reaches its last line, run in bash."""
+    before_exec = script.rstrip("\n").rpartition("\n")[0]
+    done = subprocess.run(
+        ["bash", "-c", before_exec + '\necho "${OMP_NUM_THREADS-unset}"'],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={"PATH": os.environ["PATH"]},
+    )
+    return done.stdout.splitlines()[-1]
+
+
+def test_job_script_gives_each_worker_one_thread_of_the_tasks_cpus(tmp_path):
+    # Four workers on four CPUs: without this a worker's BLAS sizes its pool by the node.
+    script = job_script(
+        Project(tmp_path, output=tmp_path / "out"),
+        ExecutionConfig(backend="slurm", time="01:00:00", cpus=4),
+        tmp_path,
+        1,
+    )
+    assert "export OMP_NUM_THREADS=1" in script.splitlines()
+    assert _omp_threads_after_setup(script) == "1"
+
+
+def test_job_script_shares_cpus_a_slurm_option_adds_among_the_workers(tmp_path):
+    # 2 workers on 8 CPUs (cpus-per-task replaced in `slurm`): 4 threads each.
+    script = job_script(
+        Project(tmp_path, output=tmp_path / "out"),
+        ExecutionConfig(
+            backend="slurm",
+            time="01:00:00",
+            cpus=2,
+            slurm={"cpus_per_task": 8},
+        ),
+        tmp_path,
+        1,
+    )
+    assert _omp_threads_after_setup(script) == "4"
+
+
+def test_job_script_leaves_the_thread_count_to_a_setup_line(tmp_path):
+    script = job_script(
+        Project(tmp_path, output=tmp_path / "out"),
+        ExecutionConfig(
+            backend="slurm",
+            time="01:00:00",
+            cpus=4,
+            setup=["export OMP_NUM_THREADS=3"],
+        ),
+        tmp_path,
+        1,
+    )
+    assert _omp_threads_after_setup(script) == "3"
 
 
 def test_job_script_is_valid_bash(tmp_path):

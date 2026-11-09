@@ -92,8 +92,9 @@ class ExecutionConfig(BaseModel):
         default_factory=list,
         description=(
             "Shell commands run in each Slurm task before the worker, such as "
-            "``module load`` lines. The worker itself runs with the Python "
-            "that submitted it."
+            "``module load`` lines. They run after the script exports "
+            "``OMP_NUM_THREADS``, one thread per worker, so a line here can "
+            "change it. The worker itself runs with the Python that submitted it."
         ),
     )
     slurm: dict[str, Any] = Field(
