@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=f6669f6b"></script>
+    <script src="../../../_static/documentation_options.js?v=72bbb1c4"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev41+g4ffb36cd5" />
+  <meta name="docsearch:version" content="0.1.0a28.dev43+g277285a55" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -825,6 +825,20 @@
     <span class="k">return</span> <span class="n">lines</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_threads_per_worker</span><span class="p">(</span><span class="n">options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">execution</span><span class="p">:</span> <span class="n">ExecutionConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the threads each worker process gets: the task's CPUs shared among its workers.</span>
+
+<span class="sd">    The task's CPUs are ``--cpus-per-task`` as written, so a ``slurm`` option</span>
+<span class="sd">    that replaces it counts. With ``cpus`` workers on ``cpus`` CPUs this is 1.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">task_cpus</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s2">"cpus-per-task"</span><span class="p">])</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">1</span>  <span class="c1"># sbatch will refuse the value; do not fail here</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">task_cpus</span> <span class="o">//</span> <span class="n">execution</span><span class="o">.</span><span class="n">cpus</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="job_script">
 <a class="viewcode-back" href="../../../reference/_api/stilt.execution.job_script.html#stilt.execution.job_script">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">job_script</span><span class="p">(</span>
@@ -844,7 +858,10 @@
 <span class="sd">    that called this. The ``#SBATCH`` lines come from *execution*: its</span>
 <span class="sd">    resources, ``--requeue``, ``--signal=B:USR1@120`` (see :func:`run`),</span>
 <span class="sd">    and its ``slurm`` options, which can replace any of them. Its ``setup``</span>
-<span class="sd">    commands run before the task.</span>
+<span class="sd">    commands run before the task, after the script exports ``OMP_NUM_THREADS``</span>
+<span class="sd">    as the task's CPUs divided by the workers it runs at once (``cpus``),</span>
+<span class="sd">    which a ``setup`` line can export again. NumPy's BLAS follows it, so a</span>
+<span class="sd">    worker does not start a thread pool the size of the node.</span>
 <span class="sd">    """</span>
     <span class="n">options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">"job-name"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"pystilt-</span><span class="si">{</span><span class="n">_project_slug</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
@@ -892,7 +909,17 @@
         <span class="s2">"job $</span><span class="si">{SLURM_ARRAY_JOB_ID}</span><span class="s2">_$</span><span class="si">{SLURM_ARRAY_TASK_ID}</span><span class="s2"> "</span>
         <span class="s1">'restart $</span><span class="si">{SLURM_RESTART_COUNT:-0}</span><span class="s1">"'</span>
     <span class="p">)</span>
-    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"#!/bin/bash"</span><span class="p">,</span> <span class="o">*</span><span class="n">_sbatch_lines</span><span class="p">(</span><span class="n">options</span><span class="p">),</span> <span class="s2">""</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="o">*</span><span class="n">execution</span><span class="o">.</span><span class="n">setup</span><span class="p">]</span>
+    <span class="c1"># One thread per worker unless the task has CPUs to spare. Before setup,</span>
+    <span class="c1"># so an export there decides.</span>
+    <span class="n">threads</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"export OMP_NUM_THREADS=</span><span class="si">{</span><span class="n">_threads_per_worker</span><span class="p">(</span><span class="n">options</span><span class="p">,</span><span class="w"> </span><span class="n">execution</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">"#!/bin/bash"</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">_sbatch_lines</span><span class="p">(</span><span class="n">options</span><span class="p">),</span>
+        <span class="s2">""</span><span class="p">,</span>
+        <span class="n">header</span><span class="p">,</span>
+        <span class="n">threads</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">execution</span><span class="o">.</span><span class="n">setup</span><span class="p">,</span>
+    <span class="p">]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_existing</span><span class="p">:</span>
         <span class="c1"># A requeued task keeps what it finished before.</span>
         <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span>

@@ -54,6 +54,13 @@ Options
 ``cpus``
    CPUs per array task (default 1). With more than one, each task runs that
    many receptors at the same time. A local run uses ``cpus`` the same way.
+   Each worker is one process that uses one CPU, so the job script sets
+   ``OMP_NUM_THREADS=1`` for it. Without that, NumPy's BLAS starts a thread
+   pool the size of the node in every worker (64 threads on a 104-core node)
+   and the threads sit idle. A task with more CPUs than workers
+   (``slurm: {cpus_per_task: 8}`` with ``cpus: 2``) gives each worker its
+   share, 4 here. To choose another value, export ``OMP_NUM_THREADS`` in
+   ``setup``.
 
 ``time``
    The time limit of each array task, written to ``--time`` as you give
@@ -73,7 +80,8 @@ Options
 
 ``setup``
    Shell commands to run at the start of each task, before PYSTILT. Use it
-   to load modules or set environment variables.
+   to load modules or set environment variables. They run after the script
+   exports ``OMP_NUM_THREADS`` (see ``cpus``), so they can change it.
 
 ``slurm``
    Any other ``sbatch`` option, by name:

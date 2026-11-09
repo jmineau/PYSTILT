@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=f6669f6b"></script>
+    <script src="../../../_static/documentation_options.js?v=72bbb1c4"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev41+g4ffb36cd5" />
+  <meta name="docsearch:version" content="0.1.0a28.dev43+g277285a55" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -543,8 +543,9 @@
         <span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Shell commands run in each Slurm task before the worker, such as "</span>
-            <span class="s2">"``module load`` lines. The worker itself runs with the Python "</span>
-            <span class="s2">"that submitted it."</span>
+            <span class="s2">"``module load`` lines. They run after the script exports "</span>
+            <span class="s2">"``OMP_NUM_THREADS``, one thread per worker, so a line here can "</span>
+            <span class="s2">"change it. The worker itself runs with the Python that submitted it."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">slurm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>

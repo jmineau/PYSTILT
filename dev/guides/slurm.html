@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=f6669f6b"></script>
+    <script src="../_static/documentation_options.js?v=72bbb1c4"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev41+g4ffb36cd5" />
+  <meta name="docsearch:version" content="0.1.0a28.dev43+g277285a55" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -557,7 +557,14 @@ because each task first loads Python and the project, and a shorter
 task spends more of its time on that.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">cpus</span></code></dt><dd><p>CPUs per array task (default 1). With more than one, each task runs that
-many receptors at the same time. A local run uses <code class="docutils literal notranslate"><span class="pre">cpus</span></code> the same way.</p>
+many receptors at the same time. A local run uses <code class="docutils literal notranslate"><span class="pre">cpus</span></code> the same way.
+Each worker is one process that uses one CPU, so the job script sets
+<code class="docutils literal notranslate"><span class="pre">OMP_NUM_THREADS=1</span></code> for it. Without that, NumPy’s BLAS starts a thread
+pool the size of the node in every worker (64 threads on a 104-core node)
+and the threads sit idle. A task with more CPUs than workers
+(<code class="docutils literal notranslate"><span class="pre">slurm:</span> <span class="pre">{cpus_per_task:</span> <span class="pre">8}</span></code> with <code class="docutils literal notranslate"><span class="pre">cpus:</span> <span class="pre">2</span></code>) gives each worker its
+share, 4 here. To choose another value, export <code class="docutils literal notranslate"><span class="pre">OMP_NUM_THREADS</span></code> in
+<code class="docutils literal notranslate"><span class="pre">setup</span></code>.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">time</span></code></dt><dd><p>The time limit of each array task, written to <code class="docutils literal notranslate"><span class="pre">--time</span></code> as you give
 it. It is required: without it a task gets the partition’s default
@@ -573,7 +580,8 @@ limits. <code class="docutils literal notranslate"><span class="pre">array_paral
 Slurm’s own limits apply.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">setup</span></code></dt><dd><p>Shell commands to run at the start of each task, before PYSTILT. Use it
-to load modules or set environment variables.</p>
+to load modules or set environment variables. They run after the script
+exports <code class="docutils literal notranslate"><span class="pre">OMP_NUM_THREADS</span></code> (see <code class="docutils literal notranslate"><span class="pre">cpus</span></code>), so they can change it.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">slurm</span></code></dt><dd><p>Any other <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> option, by name:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">execution</span><span class="p">:</span>
