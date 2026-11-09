@@ -2,6 +2,7 @@
 
 import datetime as dt
 import errno
+from concurrent.futures import Future
 from typing import ClassVar
 
 import pandas as pd
@@ -10,7 +11,7 @@ from typer.testing import CliRunner
 
 from stilt.cli import _exit_code, app
 from stilt.config import ProjectConfig, Variant
-from stilt.exceptions import MeteorologyError, SimulationError
+from stilt.exceptions import MeteorologyError, SimulationError, WorkerDied
 from stilt.execution import worker
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.worker import make_footprint, run_receptor, run_receptors
@@ -1053,62 +1054,55 @@ def test_run_receptors_inline_stops_after_interrupt(
 
 
 # ---------------------------------------------------------------------------
-# run_receptors: process pool (plumbing only, with a synchronous fake Pool)
+# run_receptors: process pool (plumbing only, with a synchronous fake executor)
 # ---------------------------------------------------------------------------
 
 
-class _FakePool:
+class _FakeExecutor:
     """
-    Synchronous stand-in for ``multiprocessing.Pool``.
+    Synchronous stand-in for ``ProcessPoolExecutor``.
 
-    Runs the initializer in-process at construction and applies the mapped
-    function immediately in ``imap_unordered``, yielding in *reverse* order so
-    a test can prove results are re-ordered by index. Records ``terminate()``.
+    Runs the initializer in-process at construction and the function at
+    ``submit``, returning a finished future that holds its result or its
+    error. Records how it was stopped.
     """
 
-    instances: list["_FakePool"] = []
+    instances: list["_FakeExecutor"] = []
 
-    def __init__(self, n_cores, initializer=None, initargs=()):
-        self.n_cores = n_cores
-        self.terminated = False
-        self.closed = False
-        self.joined = False
+    def __init__(self, max_workers, initializer=None, initargs=()):
+        self.max_workers = max_workers
+        self.submitted = 0
+        self.shutdowns: list[dict] = []
+        self._processes: dict = {}
         if initializer is not None:
             initializer(*initargs)
-        _FakePool.instances.append(self)
+        _FakeExecutor.instances.append(self)
 
-    def __enter__(self):
-        return self
+    def submit(self, func, item):
+        self.submitted += 1
+        future: Future = Future()
+        try:
+            future.set_result(func(item))
+        except Exception as error:  # a KeyboardInterrupt goes up, as a signal does
+            future.set_exception(error)
+        return future
 
-    def __exit__(self, exc_type, exc, tb):
-        return False
-
-    def imap_unordered(self, func, iterable):
-        for item in reversed(list(iterable)):
-            yield func(item)
-
-    def terminate(self):
-        self.terminated = True
-
-    def close(self):
-        self.closed = True
-
-    def join(self):
-        self.joined = True
+    def shutdown(self, wait=True, *, cancel_futures=False):
+        self.shutdowns.append({"wait": wait, "cancel_futures": cancel_futures})
 
 
 @pytest.fixture
 def fake_pool(monkeypatch):
-    """Patch the pool and keep the worker's module-level pool state isolated."""
-    _FakePool.instances = []
-    monkeypatch.setattr(worker.multiprocessing, "Pool", _FakePool)
+    """Patch the executor and keep the worker's module-level pool state isolated."""
+    _FakeExecutor.instances = []
+    monkeypatch.setattr(worker, "ProcessPoolExecutor", _FakeExecutor)
     monkeypatch.setattr(worker, "_check_workers_can_start", lambda cpus: None)
     # The initializer installs a SIGTERM handler; keep it out of the test process.
     monkeypatch.setattr(worker.signal, "signal", lambda *a, **k: None)
     monkeypatch.setattr(worker, "_POOL_PROJECT", None)
     monkeypatch.setattr(worker, "_POOL_COMPUTE_ROOT", None)
     monkeypatch.setattr(worker, "_POOL_SKIP", True)
-    return _FakePool
+    return _FakeExecutor
 
 
 def test_run_receptors_pool_rebuilds_the_project_in_each_worker(
@@ -1128,9 +1122,9 @@ def test_run_receptors_pool_rebuilds_the_project_in_each_worker(
     )
 
     [pool] = fake_pool.instances
-    assert pool.n_cores == 2
-    assert not pool.terminated
-    assert pool.closed and pool.joined
+    assert pool.max_workers == 2
+    # A normal finish waits for the workers to exit on their own.
+    assert pool.shutdowns == [{"wait": True, "cancel_futures": False}]
     # The initializer opened the project again from its directory.
     assert worker._POOL_PROJECT is not None
     assert worker._POOL_PROJECT is not model
@@ -1142,15 +1136,42 @@ def test_run_receptors_pool_rebuilds_the_project_in_each_worker(
     assert [c["skip_existing"] for c in calls] == [False, False]
 
 
-def test_run_receptors_pool_terminates_and_says_how_far_it_got(
+def test_run_receptors_pool_logs_every_receptor_once(
+    tmp_path, receptor, other_receptor, monkeypatch, fake_pool, caplog
+):
+    model = _model(tmp_path, [receptor, other_receptor])
+    ids = list(model.receptors["receptor"])
+    monkeypatch.setattr(
+        worker, "run_receptor", _fake_run_receptor([], {ids[0]: "failed"})
+    )
+
+    with caplog.at_level("INFO", logger="stilt.execution.worker"):
+        run_receptors(
+            model,
+            ids,
+            compute_root=tmp_path / "scratch",
+            execution=ExecutionConfig(cpus=2),
+        )
+
+    # Receptors are logged as they finish, in either order, counted 1 then 2.
+    lines = {m.split("] ", 1)[1] for m in caplog.messages}
+    assert lines == {
+        f"{ids[0]}: hrrr failed during particles (X): boom",
+        f"{ids[1]} complete",
+    }
+    assert sorted(m.split("]")[0] for m in caplog.messages) == ["[1/2", "[2/2"]
+
+
+def test_run_receptors_pool_stops_its_workers_and_says_how_far_it_got(
     tmp_path, receptor, other_receptor, monkeypatch, fake_pool, caplog
 ):
     model = _model(tmp_path, [receptor, other_receptor])
     ids = list(model.receptors["receptor"])
     calls: list[dict] = []
-    # The fake pool yields the *last* id first, so it is stopped on the second.
+    # The fake runs each receptor as it is submitted, so the second is stopped
+    # before the first one's result is read.
     monkeypatch.setattr(
-        worker, "run_receptor", _fake_run_receptor(calls, {ids[0]: "interrupted"})
+        worker, "run_receptor", _fake_run_receptor(calls, {ids[1]: "interrupted"})
     )
 
     with caplog.at_level("INFO", logger="stilt.execution.worker"):
@@ -1162,15 +1183,16 @@ def test_run_receptors_pool_terminates_and_says_how_far_it_got(
         )
 
     [pool] = fake_pool.instances
-    assert pool.terminated and not pool.closed
-    assert [c["receptor"] for c in calls] == [ids[1], ids[0]]
-    assert "stopped after 1 of 2 receptors; the rest did not run" in caplog.text
+    # The workers are stopped, and what has not started is cancelled.
+    assert pool.shutdowns == [{"wait": False, "cancel_futures": True}]
+    assert [c["receptor"] for c in calls] == ids
+    assert "stopped after 0 of 2 receptors; the rest did not run" in caplog.text
 
 
 def test_a_pool_worker_exits_on_sigterm_and_ignores_ctrl_c(
     tmp_path, receptor, monkeypatch, fake_pool
 ):
-    """A worker that survived SIGTERM would keep Pool.terminate() waiting for ever (#309)."""
+    """A worker that survived SIGTERM would keep the stop waiting for ever (#309)."""
     import signal
 
     model = _model(tmp_path, [receptor])
@@ -1196,53 +1218,23 @@ def test_a_pool_worker_exits_on_sigterm_and_ignores_ctrl_c(
         handler(signal.SIGTERM, None)
 
 
-def test_run_receptors_pool_keyboard_interrupt_terminates(
-    tmp_path, receptor, other_receptor, monkeypatch, fake_pool
-):
-    """A KeyboardInterrupt in the parent loop terminates the pool."""
-    model = _model(tmp_path, [receptor, other_receptor])
-    ids = list(model.receptors["receptor"])
-    calls: list[dict] = []
-
-    def imap_then_interrupt(self, func, iterable):
-        items = list(iterable)
-        yield func(items[0])
-        raise KeyboardInterrupt
-
-    monkeypatch.setattr(fake_pool, "imap_unordered", imap_then_interrupt)
-    monkeypatch.setattr(worker, "run_receptor", _fake_run_receptor(calls))
-
-    run_receptors(
-        model, ids, compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=2)
-    )
-
-    [pool] = fake_pool.instances
-    assert pool.terminated
-    assert [c["receptor"] for c in calls] == [ids[0]]
-
-
-def test_run_receptors_pool_worker_error_terminates_and_is_not_masked(
+def test_run_receptors_pool_worker_error_stops_the_workers_and_is_not_masked(
     tmp_path, receptor, other_receptor, monkeypatch, fake_pool
 ):
     """
-    A worker's own error must reach the caller, not `Pool.join()`'s "Pool is still running" (#320).
+    A worker's own error must reach the caller, with the workers stopped (#320).
 
     An error that escapes a receptor's own handling (anything outside
-    ``run_receptor``'s particles and footprint ``try`` blocks) is re-raised by
-    ``imap_unordered``. Before the fix, nothing terminated the pool first, so
-    the ``finally``'s ``pool.join()`` raised ``ValueError("Pool is still
-    running")`` and hid the real error.
+    ``run_receptor``'s particles and footprint ``try`` blocks) is re-raised
+    by the future's ``result()``.
     """
     model = _model(tmp_path, [receptor, other_receptor])
     ids = list(model.receptors["receptor"])
 
-    def imap_then_fail(self, func, iterable):
-        items = list(iterable)
-        yield func(items[0])
+    def fail(*args, **kwargs):
         raise ConnectionError("output bucket unreachable")
 
-    monkeypatch.setattr(fake_pool, "imap_unordered", imap_then_fail)
-    monkeypatch.setattr(worker, "run_receptor", _fake_run_receptor([]))
+    monkeypatch.setattr(worker, "run_receptor", fail)
 
     with pytest.raises(ConnectionError, match="output bucket unreachable"):
         run_receptors(
@@ -1253,8 +1245,37 @@ def test_run_receptors_pool_worker_error_terminates_and_is_not_masked(
         )
 
     [pool] = fake_pool.instances
-    assert pool.terminated and not pool.closed
-    assert pool.joined
+    assert pool.shutdowns == [{"wait": False, "cancel_futures": True}]
+
+
+def test_run_receptors_pool_dead_worker_stops_the_run_and_names_what_was_running(
+    tmp_path, receptor, other_receptor, monkeypatch, fake_pool
+):
+    """A worker killed outright breaks the pool: stop, and name the receptors in progress."""
+    from concurrent.futures.process import BrokenProcessPool
+
+    model = _model(tmp_path, [receptor, other_receptor])
+    ids = list(model.receptors["receptor"])
+
+    def kill(*args, **kwargs):
+        raise BrokenProcessPool("a process was terminated abruptly")
+
+    monkeypatch.setattr(worker, "run_receptor", kill)
+
+    with pytest.raises(WorkerDied) as stopped:
+        run_receptors(
+            model,
+            ids,
+            compute_root=tmp_path / "scratch",
+            execution=ExecutionConfig(cpus=2),
+        )
+
+    message = str(stopped.value)
+    assert all(rid in message for rid in ids)
+    assert "memory" in message
+    assert "run it again" in message
+    [pool] = fake_pool.instances
+    assert pool.shutdowns == [{"wait": False, "cancel_futures": True}]
 
 
 #: A transport model in its own package, which pool workers import by path.
@@ -1330,6 +1351,82 @@ def test_a_run_on_two_cpus_writes_to_the_output_it_was_given(tmp_path):
     assert done.returncode == 0, done.stdout + done.stderr
     assert len(list(override.glob("particles/*/date=*/*.parquet"))) == 4
     assert not (project / "output").exists()
+
+
+#: A toy model whose run at altitude 99 is killed outright, as the out-of-memory
+#: killer would, when ``TOY_KILL`` is set; the others wait, so they are still
+#: in progress when the pool finds its worker dead.
+_KILLING_TOY_PACKAGE = """
+import os
+import signal
+import time
+
+from toypool import ToyModel
+
+class KillingToy(ToyModel):
+    def run(self, receptor, config, met, window, workdir=None, timeout=None):
+        if os.environ.get("TOY_KILL"):
+            if receptor.altitude == 99.0:
+                os.kill(os.getpid(), signal.SIGKILL)  # the worker's own pid
+            time.sleep(30)  # until the pool stops it
+        return super().run(receptor, config, met, window, workdir, timeout)
+"""
+
+
+def test_a_worker_killed_outright_stops_the_run_and_a_rerun_finishes_it(tmp_path):
+    """A pool worker that dies without Python's say used to hang the run for ever (#382)."""
+    import os
+    import subprocess
+    import sys
+
+    for name, source in (("toypool", _TOY_PACKAGE), ("toykill", _KILLING_TOY_PACKAGE)):
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "__init__.py").write_text(source)
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "config.yaml").write_text(
+        "model: toykill.KillingToy\n"
+        "n_hours: -1\n"
+        "hnf_plume: false\n"
+        "mets:\n  toy:\n    weather: hrrr\n"
+        "variants:\n  toy: {}\n"
+    )
+    # The first two start together on two cpus; the killed one is the first.
+    altitudes = [99.0, 5.0, 5.0, 5.0]
+    (project / "receptors.csv").write_text(
+        "time,longitude,latitude,altitude\n"
+        + "".join(
+            f"2023-01-01 {h:02d}:00:00,-111.85,40.77,{altitude}\n"
+            for h, altitude in enumerate(altitudes)
+        )
+    )
+    command = [sys.executable, "-m", "stilt", "run", str(project), "--cpus", "2"]
+    command += ["--compute-root", str(tmp_path / "work")]
+    env = {**os.environ, "PYTHONPATH": str(tmp_path)}
+
+    # On main this hangs; the timeout turns that into a failure.
+    killed = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        env={**env, "TOY_KILL": "1"},
+    )
+
+    ids = list(Project(project).receptors["receptor"])
+    assert killed.returncode == 3, killed.stdout + killed.stderr
+    # It names the two receptors in progress, not the two that had not started.
+    assert all(rid in killed.stderr for rid in ids[:2]), killed.stderr
+    assert not any(rid in killed.stderr for rid in ids[2:]), killed.stderr
+    assert "memory" in killed.stderr
+    assert "run it again" in killed.stderr
+
+    rerun = subprocess.run(
+        command, capture_output=True, text=True, timeout=120, env=env
+    )
+
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
+    assert len(list((project / "output").glob("particles/*/date=*/*.parquet"))) == 4
 
 
 # ---------------------------------------------------------------------------

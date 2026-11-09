@@ -45,6 +45,19 @@ cover fails as ``MET_COVERAGE``.
    stilt.exceptions.SimulationError
    stilt.exceptions.MeteorologyError
 
+Stopped runs
+------------
+
+A run on ``cpus`` above 1 raises :class:`~stilt.exceptions.WorkerDied` when a
+worker process is killed outright, as the out-of-memory killer does. It is not
+a failed simulation: nothing is recorded, and running again continues.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.exceptions.WorkerDied
+
 Setup
 -----
 
