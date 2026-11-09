@@ -361,6 +361,20 @@ def _sbatch_lines(options: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _threads_per_worker(options: dict[str, Any], execution: ExecutionConfig) -> int:
+    """
+    Return the threads each worker process gets: the task's CPUs shared among its workers.
+
+    The task's CPUs are ``--cpus-per-task`` as written, so a ``slurm`` option
+    that replaces it counts. With ``cpus`` workers on ``cpus`` CPUs this is 1.
+    """
+    try:
+        task_cpus = int(options["cpus-per-task"])
+    except (TypeError, ValueError):
+        return 1  # sbatch will refuse the value; do not fail here
+    return max(1, task_cpus // execution.cpus)
+
+
 def job_script(
     project: Project,
     execution: ExecutionConfig,
@@ -378,7 +392,10 @@ def job_script(
     that called this. The ``#SBATCH`` lines come from *execution*: its
     resources, ``--requeue``, ``--signal=B:USR1@120`` (see :func:`run`),
     and its ``slurm`` options, which can replace any of them. Its ``setup``
-    commands run before the task.
+    commands run before the task, after the script exports ``OMP_NUM_THREADS``
+    as the task's CPUs divided by the workers it runs at once (``cpus``),
+    which a ``setup`` line can export again. NumPy's BLAS follows it, so a
+    worker does not start a thread pool the size of the node.
     """
     options: dict[str, Any] = {
         "job-name": f"pystilt-{_project_slug(project.directory)}",
@@ -426,7 +443,17 @@ def job_script(
         "job ${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} "
         'restart ${SLURM_RESTART_COUNT:-0}"'
     )
-    lines = ["#!/bin/bash", *_sbatch_lines(options), "", header, *execution.setup]
+    # One thread per worker unless the task has CPUs to spare. Before setup,
+    # so an export there decides.
+    threads = f"export OMP_NUM_THREADS={_threads_per_worker(options, execution)}"
+    lines = [
+        "#!/bin/bash",
+        *_sbatch_lines(options),
+        "",
+        header,
+        threads,
+        *execution.setup,
+    ]
     if not skip_existing:
         # A requeued task keeps what it finished before.
         lines += [
