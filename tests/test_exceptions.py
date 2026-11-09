@@ -12,6 +12,7 @@ from stilt.exceptions import (
     MeteorologyError,
     SimulationError,
     StiltError,
+    WorkerDied,
 )
 from stilt.transport.hysplit import FailureReason
 
@@ -22,6 +23,7 @@ PARENTS = {
     MeteorologyError: (SimulationError,),
     HYSPLITNotFoundError: (StiltError, FileNotFoundError),
     EmptyFootprint: (StiltError,),
+    WorkerDied: (StiltError, RuntimeError),
 }
 
 

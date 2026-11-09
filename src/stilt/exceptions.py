@@ -81,10 +81,24 @@ class EmptyFootprint(StiltError):
         super().__init__("No particle is over the footprint grid.")
 
 
+class WorkerDied(StiltError, RuntimeError):
+    """
+    A worker process died without Python's say, and the run stopped.
+
+    A run on ``cpus`` above 1 raises it when a worker is killed outright
+    (``SIGKILL``, as the kernel's out-of-memory killer sends). The pool
+    cannot say which receptor the worker held, so the message names every
+    receptor that was in progress. What finished is kept and nothing is marked
+    failed: run again, and only what is missing runs. ``stilt run`` ends
+    with exit code 3.
+    """
+
+
 __all__ = [
     "EmptyFootprint",
     "HYSPLITNotFoundError",
     "MeteorologyError",
     "SimulationError",
     "StiltError",
+    "WorkerDied",
 ]

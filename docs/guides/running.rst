@@ -89,6 +89,15 @@ You can stop a run at any time with Ctrl-C (or ``SIGTERM`` from ``kill``,
 Slurm or Kubernetes). Receptors that finished stay finished, and running
 again starts the ones that were cut off from the beginning.
 
+If a worker process is killed outright, most often by the kernel's
+out-of-memory killer, the run stops with an error
+(:class:`~stilt.exceptions.WorkerDied`) and ``stilt run`` exits with 3. The pool
+cannot say which receptor the worker held, so the error names every receptor
+that was in progress. Nothing is marked failed and what finished stays
+finished: run it again and only what is missing runs, with a lower ``cpus`` or
+more memory per task if memory was the cause. The killed worker's directory in
+the compute root is not removed; clear it by hand.
+
 Save now, run later
 -------------------
 
@@ -141,7 +150,7 @@ Commands
 
    - ``--backend`` and ``--n-workers`` override ``config.yaml`` for this run.
    - ``--cpus N`` runs ``N`` receptors at once. Ctrl-C or ``SIGTERM`` stops
-     them all and exits with 3.
+     them all and exits with 3, as does a worker killed for memory.
    - ``--no-skip`` reruns every simulation, finished or not.
    - ``--receptors FILE`` runs only the receptors listed in ``FILE``, one
      id per line.

@@ -18,7 +18,8 @@ prints a short summary. Examples::
 
 ``stilt run`` exits with 0 when every simulation it ran is complete, 1 when
 some failed, and 3 when some did not finish because the run was
-interrupted (Ctrl-C, or SIGTERM from a scheduler) or a connection or I/O error
+interrupted (Ctrl-C, or SIGTERM from a scheduler), a worker process was killed
+(often for memory), or a connection or I/O error
 stopped them (an output bucket that stopped answering while a simulation wrote). ``stilt check`` exits
 with 0 when it finds nothing and 1 when it lists anything. ``stilt fetch``
 exits with 0 when every met file the runs need is there, 1 when the archive
@@ -59,6 +60,7 @@ from pydantic import ValidationError
 from typer.core import TyperGroup
 
 from stilt._transient import is_transient
+from stilt.exceptions import WorkerDied
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
 from stilt.project import STATES, Project
@@ -514,7 +516,8 @@ def run(
     Kubernetes indexed Job.
 
     Exits with 0 when every simulation that ran is complete, 1 when some
-    failed, 3 when some did not finish (the run was stopped, or a connection
+    failed, 3 when some did not finish (the run was stopped, a worker process
+    was killed, often for memory, or a connection
     or I/O error stopped them while they wrote), and 2 when
     the command line is wrong or a met cannot be read (nothing ran). An
     error the run did not expect prints its traceback and exits with 3 when
@@ -544,6 +547,10 @@ def run(
         table = opened.run(receptors=receptor_ids, task=share, **options)
     except ValueError as error:
         _fail(str(error))
+    except WorkerDied as error:
+        # A worker was killed, most likely for memory; the message says what to do.
+        typer.echo(f"stilt run stopped: {error}", err=True)
+        raise typer.Exit(code=EXIT_INTERRUPTED) from None
     if receptor_ids is None and share is None:
         _print_status(opened)
     else:

@@ -20,12 +20,15 @@ import contextlib
 import datetime as dt
 import logging
 import multiprocessing
+import os
 import shutil
 import signal
 import socket
 import threading
 import traceback
 import uuid
+from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
+from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -33,7 +36,7 @@ import pandas as pd
 import xarray as xr
 
 from stilt._transient import is_transient
-from stilt.exceptions import EmptyFootprint, SimulationError
+from stilt.exceptions import EmptyFootprint, SimulationError, WorkerDied
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import calc_footprint
 from stilt.output import Kind
@@ -597,7 +600,7 @@ def _init_pool_worker(
 
     The parent stops its workers with SIGTERM (:func:`run_receptors`). A
     worker that gets it ends the transport model run it is in the middle
-    of and exits, so it never goes back to the pool's queue. It ignores
+    of and exits (:func:`_pool_run`). It ignores
     Ctrl-C, which the terminal also sends to it: the parent answers that.
 
     *rows* are the receptor rows the parent took in place of
@@ -620,14 +623,21 @@ def _pool_run(item: tuple[int, str]) -> tuple[int, list[str]]:
     """Run one receptor in a pool worker, returning its index and problems."""
     idx, receptor_id = item
     assert _POOL_PROJECT is not None and _POOL_COMPUTE_ROOT is not None
-    return idx, run_receptor(
-        _POOL_PROJECT,
-        receptor_id,
-        compute_root=_POOL_COMPUTE_ROOT,
-        execution=_POOL_EXECUTION,
-        skip_existing=_POOL_SKIP,
-        batched=False,  # run_receptors ran those first
-    )
+    try:
+        return idx, run_receptor(
+            _POOL_PROJECT,
+            receptor_id,
+            compute_root=_POOL_COMPUTE_ROOT,
+            execution=_POOL_EXECUTION,
+            skip_existing=_POOL_SKIP,
+            batched=False,  # run_receptors ran those first
+        )
+    except SystemExit:
+        # SIGTERM (:func:`_exit_worker`), after the run's `finally` blocks
+        # have cleaned up. The executor's worker loop catches every
+        # BaseException and waits for more work, so the process would
+        # outlive the stop; end it here.
+        os._exit(1)
 
 
 def _check_workers_can_start(cpus: int) -> None:
@@ -637,9 +647,11 @@ def _check_workers_can_start(cpus: int) -> None:
     Python 3.14 on Linux, and macOS and Windows, start a worker by running
     the calling script again, as ``__mp_main__``. A script that runs the
     project at the top level, without ``if __name__ == "__main__":``, fails
-    in every worker, and a pool starts a new worker for each one that
-    died, for ever. Starting one worker first turns that into an error that
-    shows the fix. ``fork`` runs no script again, so it skips the check.
+    in every worker. The pool would then stop with
+    :class:`~stilt.exceptions.WorkerDied`, which blames memory, or with a
+    bare connection error (``forkserver``). Starting one worker first turns
+    that into an error that shows the fix. ``fork`` runs no script again,
+    so it skips the check.
     """
     method = multiprocessing.get_start_method()
     if method == "fork":
@@ -665,6 +677,107 @@ def _check_workers_can_start(cpus: int) -> None:
         "        project.run()\n\n"
         "`stilt run --cpus N` and a `cpus` of 1 need no guard."
     ) from failure
+
+
+def _stop_workers(executor: ProcessPoolExecutor) -> None:
+    """
+    End the pool's workers now: cancel what has not started, SIGTERM the rest.
+
+    A worker that gets SIGTERM ends its transport model run and exits
+    (:func:`_init_pool_worker`). The executor has no call for this before
+    Python 3.14, so the workers are read from ``_processes``.
+    """
+    workers = list(executor._processes.values())
+    executor.shutdown(wait=False, cancel_futures=True)
+    for process in workers:
+        process.terminate()
+    for process in workers:
+        process.join()
+
+
+def _run_in_pool(
+    project: Project,
+    receptor_ids: list[str],
+    earlier: dict[str, list[str]],
+    *,
+    compute_root: Path,
+    execution: ExecutionConfig,
+    skip_existing: bool,
+) -> None:
+    """
+    Run *receptor_ids* in ``execution.cpus`` worker processes, one receptor in each at a time.
+
+    Only as many receptors are given to the pool as there are workers, so a
+    receptor given to it is a receptor in progress. If a worker dies without
+    Python's say (SIGKILL, as the out-of-memory killer sends), the pool cannot say which
+    receptor it held, and it cannot be used again: the run stops with
+    :class:`~stilt.exceptions.WorkerDied`, naming every receptor in progress.
+    """
+    total = len(receptor_ids)
+    _check_workers_can_start(execution.cpus)
+    executor = ProcessPoolExecutor(
+        execution.cpus,
+        initializer=_init_pool_worker,
+        initargs=(
+            str(project.directory),
+            str(project.output.directory),
+            str(compute_root),
+            execution,
+            skip_existing,
+            project._taken_rows,
+        ),
+    )
+    waiting = enumerate(receptor_ids)
+    running: dict[Future[tuple[int, list[str]]], int] = {}  # each one's index
+    done = 0
+    with _sigterm_as_interrupt():
+        try:
+            while True:
+                while len(running) < execution.cpus:
+                    item = next(waiting, None)
+                    if item is None:
+                        break
+                    running[executor.submit(_pool_run, item)] = item[0]
+                if not running:
+                    break
+                finished, _ = wait(running, return_when=FIRST_COMPLETED)
+                for future in finished:
+                    idx, problems = future.result()
+                    del running[future]
+                    done += 1
+                    rid = receptor_ids[idx]
+                    _log_progress(rid, earlier.get(rid, []) + problems, done, total)
+            # Normal completion: let the workers exit on their own.
+            executor.shutdown()
+        except KeyboardInterrupt:
+            # Preempted or Ctrl-C: SIGTERM the workers, which end their runs
+            # and exit; what finished is written.
+            logger.info(
+                "stopped after %d of %d receptors; the rest did not run", done, total
+            )
+            _stop_workers(executor)
+        except BrokenProcessPool as error:
+            # A receptor that finished in the same moment is not lost.
+            lost = [
+                receptor_ids[idx]
+                for future, idx in running.items()
+                if not future.done() or future.exception() is not None
+            ]
+            _stop_workers(executor)
+            raise WorkerDied(
+                f"A worker process died after {done} of {total} receptors finished, "
+                f"most likely killed for using too much memory. These were in progress, "
+                f"and the pool cannot say which one it held: {', '.join(lost)}. "
+                "The run stopped. What finished is kept; run it again to continue "
+                "with what is missing, with fewer cpus or more memory per task if "
+                "workers keep dying."
+            ) from error
+        except BaseException:
+            # A requeued Slurm task exits here (SystemExit), or a worker's
+            # own error re-raised by result(): the workers must not outlive
+            # the run, and the error reaches the caller.
+            _stop_workers(executor)
+            raise
 
 
 def run_receptors(
@@ -744,50 +857,14 @@ def run_receptors(
                 _log_progress(receptor_id, problems, i, total)
         return
 
-    _check_workers_can_start(execution.cpus)
-    pool = multiprocessing.Pool(
-        execution.cpus,
-        initializer=_init_pool_worker,
-        initargs=(
-            str(project.directory),
-            str(project.output.directory),
-            str(compute_root),
-            execution,
-            skip_existing,
-            project._taken_rows,
-        ),
+    _run_in_pool(
+        project,
+        receptor_ids,
+        earlier,
+        compute_root=compute_root,
+        execution=execution,
+        skip_existing=skip_existing,
     )
-    done = 0
-    with _sigterm_as_interrupt():
-        try:
-            for idx, problems in pool.imap_unordered(
-                _pool_run, list(enumerate(receptor_ids))
-            ):
-                done += 1
-                rid = receptor_ids[idx]
-                _log_progress(rid, earlier.get(rid, []) + problems, done, total)
-            # Normal completion: let the workers exit on their own.
-            pool.close()
-        except KeyboardInterrupt:
-            # Preempted or Ctrl-C: SIGTERM the workers, which end their runs
-            # and exit; what finished is written.
-            logger.info(
-                "stopped after %d of %d receptors; the rest did not run", done, total
-            )
-            pool.terminate()
-        except SystemExit:
-            # A requeued Slurm task exits here; its workers must not outlive it.
-            pool.terminate()
-            raise
-        except BaseException:
-            # A worker's own error, re-raised here by imap_unordered, or
-            # anything else unexpected: terminate the still-running pool so
-            # the error reaches the caller, instead of `finally`'s
-            # pool.join() raising "Pool is still running" and hiding it (#320).
-            pool.terminate()
-            raise
-        finally:
-            pool.join()
 
 
 __all__ = [

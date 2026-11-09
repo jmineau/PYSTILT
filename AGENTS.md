@@ -287,9 +287,14 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
 - **Docs `.. ipython::` blocks**: no multi-line statement may be a block's 10th
   (or 100th) statement, because the directive runs only that statement's first
   line. Split the block.
+- **The pool is a `ProcessPoolExecutor`** holding at most `cpus` receptors, so
+  the ones it holds are in progress. A worker killed outright breaks it:
+  `run_receptors` raises `WorkerDied` naming them, and `stilt run` exits with 3.
+  Workers must exit on SIGTERM: the executor's loop catches `SystemExit`, so
+  `_pool_run` ends the process itself, or a stop waits for ever.
 - **A pool with `cpus` above 1 first starts one worker that does nothing**
   (`_check_workers_can_start`), unless the start method is `fork`. Under `spawn`
   and `forkserver` a worker runs the user's script again, and a script without
-  `if __name__ == "__main__":` fails in every worker; a `Pool` starts a new
-  worker for each one that died, for ever. The check turns that hang into an
-  error that shows the guard. Tests that fake the pool patch it out.
+  `if __name__ == "__main__":` fails in every worker; the pool would end with
+  `WorkerDied` ("out of memory") or a bare connection error. The check shows
+  the guard instead. Tests that fake the pool patch it out.
