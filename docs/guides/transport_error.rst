@@ -232,6 +232,19 @@ you whether a value means anything:
   noise into a positive error. ``result.sd`` treats a negative variance as
   zero, so use it only once the variance is resolved.
 
+For a column receptor, the estimate is biased low when the wind error adds
+little spread to each level, and a median over receptors does not remove
+the bias. The levels are combined through the signed square roots of their
+``dvar`` (`What the numbers mean`_). When ``dvar`` is noisy, those square
+roots come out too small on average, so every receptor is pulled down the
+same way and the bias does not average out. In a test with a synthetic
+3000 m column of 1000 particles and the default ``levels`` and
+``length_scale``, the estimate was more than half too low when the true
+variance was twice ``noise``, and about 40 % too low when it was eight
+times ``noise``, where the first check above calls it resolved. The bias
+falls as the wind error grows. A point receptor, and a column with
+``length_scale=None``, have no such bias.
+
 The signal is largest when turbulence spreads the particles least, at night
 and in winter. On a convective afternoon the unperturbed particles already
 fill the boundary layer. The wind error adds little, and the estimate is
@@ -295,11 +308,14 @@ damps the few particles that pass over a point source at the cost of a
 small bias. The :doc:`X-STILT migration page <migration/x_stilt>` lists
 where the rest of the calculation differs.
 
-PYSTILT uses each level's ``dvar`` as it is, with its sign, so that the
-noise in it averages out over many receptors. Fitting a line through only
-the levels where ``dvar`` is positive would bias the result upward: it
-keeps the levels whose variance happened to rise, so under pure sampling
-noise it reports a positive error at every level.
+PYSTILT uses each level's ``dvar`` as it is, with its sign. For a point
+receptor, and in the first sum of the formula above, the noise in it then
+averages out over many receptors. The second sum uses the signed square
+roots, whose noise does not average out (`Is the estimate meaningful?`_).
+Fitting a line through only the levels where ``dvar`` is positive would
+bias the result upward: it keeps the levels whose variance happened to
+rise, so under pure sampling noise it reports a positive error at every
+level.
 
 The method measures how much the wind error moves particles between flux
 cells. It says little when the flux field is uniform, and it is only as
