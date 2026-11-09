@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 210" font-family="Helvetica, Arial, sans-serif" font-size="14">
+  <title>How a STILT study goes from a measurement to a modeled concentration</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7785"/>
+    </marker>
+    <style>
+      .box { fill: #eef3f8; stroke: #4a6d8c; stroke-width: 1.5; }
+      .input { fill: #f6efe4; stroke: #a07a3e; stroke-width: 1.5; }
+      .head { font-weight: bold; fill: #1f2d3a; }
+      .sub { fill: #3d4b58; font-size: 12px; }
+      .line { stroke: #6b7785; stroke-width: 1.5; fill: none; }
+    </style>
+  </defs>
+
+  <!-- the inputs -->
+  <rect class="input" x="10" y="20" width="150" height="62" rx="8"/>
+  <text class="head" x="85" y="45" text-anchor="middle">Measurement</text>
+  <text class="sub" x="85" y="66" text-anchor="middle">where and when: a receptor</text>
+
+  <rect class="input" x="10" y="122" width="150" height="62" rx="8"/>
+  <text class="head" x="85" y="147" text-anchor="middle">Meteorology</text>
+  <text class="sub" x="85" y="168" text-anchor="middle">ARL files: HRRR, NAM, GFS</text>
+
+  <!-- the steps PYSTILT runs -->
+  <rect class="box" x="215" y="70" width="150" height="62" rx="8"/>
+  <text class="head" x="290" y="95" text-anchor="middle">Particles</text>
+  <text class="sub" x="290" y="116" text-anchor="middle">followed back in time</text>
+
+  <rect class="box" x="420" y="70" width="150" height="62" rx="8"/>
+  <text class="head" x="495" y="95" text-anchor="middle">Footprint</text>
+  <text class="sub" x="495" y="116" text-anchor="middle">influence of each cell</text>
+
+  <!-- the user's own inputs to the science -->
+  <rect class="input" x="420" y="152" width="150" height="46" rx="8"/>
+  <text class="head" x="495" y="180" text-anchor="middle">Flux inventory</text>
+
+  <rect class="box" x="625" y="70" width="110" height="62" rx="8"/>
+  <text class="head" x="680" y="95" text-anchor="middle">Enhancement</text>
+  <text class="sub" x="680" y="116" text-anchor="middle">footprint × flux</text>
+
+  <rect class="input" x="625" y="12" width="110" height="40" rx="8"/>
+  <text class="head" x="680" y="37" text-anchor="middle">Background</text>
+
+  <rect class="box" x="770" y="70" width="80" height="62" rx="8"/>
+  <text class="head" x="810" y="95" text-anchor="middle">Modeled</text>
+  <text class="sub" x="810" y="116" text-anchor="middle">to compare</text>
+
+  <path class="line" d="M160,51 C190,51 190,90 213,95" marker-end="url(#arrow)"/>
+  <path class="line" d="M160,153 C190,153 190,112 213,107" marker-end="url(#arrow)"/>
+  <path class="line" d="M365,101 L418,101" marker-end="url(#arrow)"/>
+  <path class="line" d="M570,101 L623,101" marker-end="url(#arrow)"/>
+  <path class="line" d="M570,175 C600,175 600,125 623,118" marker-end="url(#arrow)"/>
+  <path class="line" d="M735,101 L768,101" marker-end="url(#arrow)"/>
+  <path class="line" d="M735,32 C760,32 760,80 768,88" marker-end="url(#arrow)"/>
+</svg>

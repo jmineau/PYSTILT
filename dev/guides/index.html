@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=62c95b9e"></script>
+    <script src="../_static/documentation_options.js?v=fd846a84"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev27+g38e3a7613" />
+  <meta name="docsearch:version" content="0.1.0a28.dev39+gde4911878" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -414,6 +414,7 @@
 <li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
+<li class="toctree-l1"><a class="reference internal" href="choosing_settings.html">Choosing Settings</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Running</span></p>
 <ul class="nav bd-sidenav">
@@ -429,7 +430,6 @@
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Footprints And Particles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="aggregation.html">Summing Footprints: Areas And The Jacobian</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transport_error.html">Transport Error</a></li>
-<li class="toctree-l1"><a class="reference internal" href="wind_errors.html">Wind Error Statistics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
 <li class="toctree-l1"><a class="reference internal" href="trajectory_analyses.html">Trajectory-Style Analyses</a></li>
 </ul>
@@ -438,7 +438,6 @@
 <li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
 <li class="toctree-l1"><a class="reference internal" href="slant_columns.html">Slant Columns</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="plume_background.html">Plume Background</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
 <ul class="nav bd-sidenav">
@@ -518,6 +517,8 @@ satellites)</p></li>
 <li><p><a class="reference internal" href="meteorology.html"><span class="doc">Meteorology</span></a>: use your own ARL files or download them from NOAA</p></li>
 <li><p><a class="reference internal" href="projects.html"><span class="doc">Projects And Variants</span></a>: what goes in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, variants, and how reruns
 and changed settings work</p></li>
+<li><p><a class="reference internal" href="choosing_settings.html"><span class="doc">Choosing Settings</span></a>: how many particles, how long a run, which grid
+and which met, and how to check each choice</p></li>
 </ul>
 <p><strong>Running</strong></p>
 <ul class="simple">
@@ -532,9 +533,8 @@ to do when a footprint looks wrong</p></li>
 <li><p><a class="reference internal" href="outputs.html"><span class="doc">Footprints And Particles</span></a>: load and plot footprints and particles</p></li>
 <li><p><a class="reference internal" href="aggregation.html"><span class="doc">Summing Footprints: Areas And The Jacobian</span></a>: sum footprints over counties, hexagons, or sources,
 and many at once into a Jacobian</p></li>
-<li><p><a class="reference internal" href="transport_error.html"><span class="doc">Transport Error</span></a>: the modeled enhancement from a flux field, and
-its transport uncertainty</p></li>
-<li><p><a class="reference internal" href="wind_errors.html"><span class="doc">Wind Error Statistics</span></a>: the wind-error statistics a transport-error run needs</p></li>
+<li><p><a class="reference internal" href="transport_error.html"><span class="doc">Transport Error</span></a>: the transport uncertainty of a modeled
+enhancement, and the wind-error statistics it needs</p></li>
 <li><p><a class="reference internal" href="background.html"><span class="doc">Background</span></a>: the mole fraction at the trajectory endpoints, as a
 background for the receptor</p></li>
 <li><p><a class="reference internal" href="trajectory_analyses.html"><span class="doc">Trajectory-Style Analyses</span></a>: residence time, PSCF, CWT, mean paths, and transit time from a source
@@ -548,7 +548,7 @@ soundings, or add your own instrument</p></li>
 (EM27/SUN, TCCON, off-nadir satellites)</p></li>
 <li><p><a class="reference internal" href="transforms.html"><span class="doc">Particle Weighting (Transforms)</span></a>: averaging kernels, pressure weighting, and your own
 particle weights</p></li>
-<li><p><a class="reference internal" href="plume_background.html"><span class="doc">Plume Background</span></a>: a background from the soundings a forward-run
+<li><p><a class="reference internal" href="background.html#plume-background"><span class="std std-ref">A background from a satellite swath</span></a>: a background from the soundings a forward-run
 plume did not reach</p></li>
 <li><p><a class="reference internal" href="../tutorials/satellite_column.html"><span class="doc">Tutorial: A Satellite Column, Start To Finish</span></a>: from satellite soundings to
 receptors, kernels, and modeled enhancements</p></li>

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=62c95b9e"></script>
+    <script src="../_static/documentation_options.js?v=fd846a84"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev27+g38e3a7613" />
+  <meta name="docsearch:version" content="0.1.0a28.dev39+gde4911878" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -504,22 +504,35 @@ counts this up on a map grid. The result is a <a class="reference internal" href
 each grid cell’s value says how much a unit of emissions there would
 change the measurement.</p></li>
 </ol>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="../_images/what_is_stilt_footprint.png"><img alt="../_images/what_is_stilt_footprint.png" src="../_images/what_is_stilt_footprint.png" style="width: 5in;" />
+</a>
+<p>The map above is a footprint PYSTILT made for a sensor on the University of
+Utah campus at noon on 14 January 2021, from 200 particles followed 12 hours
+back. The air came from the north-northwest, so the footprint stretches that
+way from the sensor, and the cells nearest the sensor influenced the
+measurement most. The colors are on a log scale, because a footprint spans
+many orders of magnitude.</p>
+<p>A study goes on from the footprint. Multiply it by a map of surface fluxes and
+you get the enhancement, the part of the measured concentration those fluxes
+explain. Add the background, the concentration of the air before it reached
+the region, and you have a modeled value to compare with the measurement:</p>
 <figure class="align-center" id="id2">
-<img alt="Example footprint showing upwind surface influence" src="https://uataq.github.io/stilt/static/img/footprint.png" />
+<a class="reference internal image-reference" href="../_images/workflow.svg"><img alt="A measurement and meteorology give particles, the particles give a footprint, the footprint times a flux inventory gives the enhancement, and the enhancement plus the background is the modeled concentration." src="../_images/workflow.svg" style="width: 100%;" />
+</a>
 <figcaption>
-<p><span class="caption-text">A footprint for a receptor over Salt Lake City. Warm colors mark the
-areas that most strongly influenced the measurement.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+<p><span class="caption-text">The inputs (tan) are yours. PYSTILT makes the particles and the footprint,
+and computes the enhancement from a flux you give it.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 </section>
 <section id="what-you-can-do-with-a-footprint">
 <h2>What you can do with a footprint<a class="headerlink" href="#what-you-can-do-with-a-footprint" title="Link to this heading">#</a></h2>
-<p>Multiply a footprint by an emissions map (a flux inventory) and add it up,
-and you get the concentration increase your receptor should have seen. Do
-that for many measurements and compare with what was actually observed, and
-you can test an inventory or estimate emissions in an inversion. The
-<a class="reference internal" href="../tutorials/flux_inversion.html"><span class="doc">Tutorial: From Footprints To Concentrations</span></a> tutorial covers the first step, turning
-footprints into modeled concentrations.</p>
+<p>Do the comparison above for many measurements and you can test an emissions
+inventory, or correct it in an inversion. The <a class="reference internal" href="../tutorials/flux_inversion.html"><span class="doc">Tutorial: From Footprints To Concentrations</span></a>
+tutorial takes the first step, from footprints to modeled concentrations.</p>
 </section>
 <section id="what-you-need">
 <h2>What you need<a class="headerlink" href="#what-you-need" title="Link to this heading">#</a></h2>

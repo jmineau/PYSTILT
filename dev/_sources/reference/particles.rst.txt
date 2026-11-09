@@ -119,7 +119,7 @@ was skipped.
 ``mlht``, ``dens``, ``pres``, and ``zsfc`` can also be sampled from the met
 files at each particle's position, for a model that writes only positions:
 :func:`stilt.sampling.sample_met`. They differ a little from HYSPLIT's own
-columns; :doc:`../guides/meteorology` says by how much.
+columns; :doc:`/development/validation` says by how much.
 
 Columns PYSTILT adds
 --------------------

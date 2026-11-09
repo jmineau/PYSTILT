@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=62c95b9e"></script>
+    <script src="../_static/documentation_options.js?v=fd846a84"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev27+g38e3a7613" />
+  <meta name="docsearch:version" content="0.1.0a28.dev39+gde4911878" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -415,6 +415,7 @@
 <li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
+<li class="toctree-l1"><a class="reference internal" href="choosing_settings.html">Choosing Settings</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Running</span></p>
 <ul class="nav bd-sidenav">
@@ -430,7 +431,6 @@
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Footprints And Particles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="aggregation.html">Summing Footprints: Areas And The Jacobian</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transport_error.html">Transport Error</a></li>
-<li class="toctree-l1"><a class="reference internal" href="wind_errors.html">Wind Error Statistics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
 <li class="toctree-l1"><a class="reference internal" href="trajectory_analyses.html">Trajectory-Style Analyses</a></li>
 </ul>
@@ -439,7 +439,6 @@
 <li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
 <li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Slant Columns</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="plume_background.html">Plume Background</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
 <ul class="nav bd-sidenav">
@@ -519,8 +518,6 @@ sun. An off-nadir satellite sounding looks toward the satellite. PYSTILT
 models the path as a <a class="reference internal" href="../reference/_api/stilt.MultiPointReceptor.html#stilt.MultiPointReceptor" title="stilt.MultiPointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code></a> whose points step up
 the line of sight. All the points run in one simulation, and the particles
 are weighted afterwards.</p>
-<p>This page covers the geometry, an EM27/SUN example, and satellite
-soundings.</p>
 <section id="geometry">
 <h2>Geometry<a class="headerlink" href="#geometry" title="Link to this heading">#</a></h2>
 <p><a class="reference internal" href="../reference/_api/stilt.observations.slant_points.html#stilt.observations.slant_points" title="stilt.observations.slant_points"><code class="xref py py-func docutils literal notranslate"><span class="pre">slant_points()</span></code></a> turns a location, a list of

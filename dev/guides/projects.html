@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=62c95b9e"></script>
+    <script src="../_static/documentation_options.js?v=fd846a84"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,12 +59,12 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Running" href="running.html" />
+    <link rel="next" title="Choosing Settings" href="choosing_settings.html" />
     <link rel="prev" title="Meteorology" href="meteorology.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev27+g38e3a7613" />
+  <meta name="docsearch:version" content="0.1.0a28.dev39+gde4911878" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -414,6 +414,7 @@
 <li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Projects And Variants</a></li>
+<li class="toctree-l1"><a class="reference internal" href="choosing_settings.html">Choosing Settings</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Running</span></p>
 <ul class="nav bd-sidenav">
@@ -429,7 +430,6 @@
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Footprints And Particles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="aggregation.html">Summing Footprints: Areas And The Jacobian</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transport_error.html">Transport Error</a></li>
-<li class="toctree-l1"><a class="reference internal" href="wind_errors.html">Wind Error Statistics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
 <li class="toctree-l1"><a class="reference internal" href="trajectory_analyses.html">Trajectory-Style Analyses</a></li>
 </ul>
@@ -438,7 +438,6 @@
 <li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
 <li class="toctree-l1"><a class="reference internal" href="slant_columns.html">Slant Columns</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="plume_background.html">Plume Background</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
 <ul class="nav bd-sidenav">
@@ -515,9 +514,10 @@
 <p>A PYSTILT <a class="reference internal" href="../getting_started/glossary.html#term-project"><span class="xref std std-term">project</span></a> is a folder with your settings and your
 receptors. Every receptor runs once under each <a class="reference internal" href="../getting_started/glossary.html#term-variant"><span class="xref std std-term">variant</span></a>, a named set
 of settings, and the results go to an output directory the settings name.
-This page covers what is in the folder, the settings most projects need,
-variants, and how reruns and changed settings work.
-<a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a> lists every option.</p>
+We keep one project per study, because a project reruns only what is
+missing and never overwrites a result, so you can add receptors and try
+other settings as the study grows. Most projects need only the settings
+below, and <a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a> lists every option.</p>
 <section id="the-project-folder">
 <h2>The project folder<a class="headerlink" href="#the-project-folder" title="Link to this heading">#</a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>my_project/
@@ -591,25 +591,23 @@ check their spelling yourself.</p>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">grid</span></code></p></td>
 <td><p>The map grid for the footprint: the longitude range
 (<code class="docutils literal notranslate"><span class="pre">xmin</span></code>/<code class="docutils literal notranslate"><span class="pre">xmax</span></code>), the latitude range (<code class="docutils literal notranslate"><span class="pre">ymin</span></code>/<code class="docutils literal notranslate"><span class="pre">ymax</span></code>), and the
-cell size in degrees (<code class="docutils literal notranslate"><span class="pre">xres</span></code>/<code class="docutils literal notranslate"><span class="pre">yres</span></code>). Longitudes count modulo
-360, so a grid across 180° can be written <code class="docutils literal notranslate"><span class="pre">xmin:</span> <span class="pre">170</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax:</span>
-<span class="pre">190</span></code> or <code class="docutils literal notranslate"><span class="pre">xmin:</span> <span class="pre">170</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax:</span> <span class="pre">-170</span></code>. The footprint’s longitudes
-are then 170 to 190. A grid spans at most 360°.
-Leave it out, or set it to <code class="docutils literal notranslate"><span class="pre">null</span></code>, to make particles but no
-footprint.</p></td>
+cell size in degrees (<code class="docutils literal notranslate"><span class="pre">xres</span></code>/<code class="docutils literal notranslate"><span class="pre">yres</span></code>). Make it cover where the
+air comes from over the whole run. Leave it out, or set it to
+<code class="docutils literal notranslate"><span class="pre">null</span></code>, to make particles but no footprint.</p></td>
 <td><p>0.01° (about 1 km) for a city, 0.1° for a region</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">n_hours</span></code></p></td>
 <td><p>How many hours to follow the particles. Negative values run backward
 in time, which is what footprints need. Positive values run forward
-from the receptor (see <a class="reference internal" href="plume_background.html"><span class="doc">Plume Background</span></a>).</p></td>
+from the receptor (see <a class="reference internal" href="background.html#plume-background"><span class="std std-ref">A background from a satellite swath</span></a>).</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">-24</span></code> to <code class="docutils literal notranslate"><span class="pre">-72</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">numpar</span></code></p></td>
 <td><p>Particles released per simulation. More particles give a smoother
-footprint and take longer. The default is 200; the config
-<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code> writes sets 1000.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">200</span></code> to <code class="docutils literal notranslate"><span class="pre">1000</span></code></p></td>
+footprint and take longer. The default is 200, enough to try a
+project; we use 1000 for results, as the config <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code>
+writes does.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1000</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
 <td><p>Where results go (<a class="reference internal" href="#the-output-directory">The output directory</a>).</p></td>
@@ -625,48 +623,28 @@ footprint and take longer. The default is 200; the config
 </div>
 <p>These footprint settings sit next to <code class="docutils literal notranslate"><span class="pre">grid</span></code> at the top level:</p>
 <dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code></dt><dd><p>Scales the Gaussian smoothing applied to each particle’s influence. The
-default, <code class="docutils literal notranslate"><span class="pre">1.0</span></code>, is standard STILT. Smaller values smooth less. The
-kernel widens as the particles spread and age. Its width is worked out
-in degrees. On a projected <code class="docutils literal notranslate"><span class="pre">grid</span></code> (a <code class="docutils literal notranslate"><span class="pre">crs</span></code> such as <code class="docutils literal notranslate"><span class="pre">EPSG:32612</span></code>) it
-is converted to the grid’s units, so a footprint is smoothed about as
-much on 1 km UTM cells as on 0.01° cells. STILT-R smooths a footprint on a
-projected grid much less (<a class="reference internal" href="../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a>). A particle cloud on
-both sides of 180° is measured as one cloud. A grid that goes all the way
-around the earth (<code class="docutils literal notranslate"><span class="pre">xmin:</span> <span class="pre">-180</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax:</span> <span class="pre">180</span></code>, with cells that fit
-360°) is a circle: smoothing that passes the east edge returns at the
-west edge. STILT-R smooths such a cloud far too widely and loses part
-of the footprint (<a class="reference internal" href="../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a>). On a grid that ends at or
-near 180° (<code class="docutils literal notranslate"><span class="pre">xmin:</span> <span class="pre">-180</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax:</span> <span class="pre">-170</span></code>), particles just across 180°
-smooth onto the grid, as particles just past any other edge do.
-STILT-R drops them.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code></dt><dd><p>Scales the Gaussian smoothing applied to each particle’s influence,
+which widens as the particles spread and age. Leave it at <code class="docutils literal notranslate"><span class="pre">1.0</span></code>,
+standard STILT, unless you are testing how much the smoothing matters;
+smaller values smooth less.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">tres</span></code></dt><dd><p>The length of each time layer of the footprint, as a duration in whole
-minutes. The default, <code class="docutils literal notranslate"><span class="pre">1h</span></code>, gives one layer per hour back from the
-receptor time, as STILT-R does. Use <code class="docutils literal notranslate"><span class="pre">15min</span></code> for 15-minute
-observations such as EM27/SUN columns, or <code class="docutils literal notranslate"><span class="pre">1D</span></code> for daily layers in a
-coarse inversion. Layers are counted from the receptor time, so a
-receptor at 18:30 with <code class="docutils literal notranslate"><span class="pre">tres:</span> <span class="pre">15min</span></code> has layers starting at 18:15,
-18:00, and so on. Each layer holds the influence of the particles in
-its minutes, so the layers still sum to the same total footprint. The
-settings record it one way (<code class="docutils literal notranslate"><span class="pre">60min</span></code> is recorded as <code class="docutils literal notranslate"><span class="pre">1h</span></code>, <code class="docutils literal notranslate"><span class="pre">90min</span></code>
-stays <code class="docutils literal notranslate"><span class="pre">90min</span></code>), so two spellings of one length share a settings
-folder. For one map of the whole run, sum the layers
-(<code class="docutils literal notranslate"><span class="pre">foot.sum(&quot;time&quot;)</span></code>), or set <code class="docutils literal notranslate"><span class="pre">tres</span></code> to the run’s length for a
-single layer (<code class="docutils literal notranslate"><span class="pre">tres:</span> <span class="pre">1D</span></code> with <code class="docutils literal notranslate"><span class="pre">n_hours:</span> <span class="pre">-24</span></code>).</p>
+<dt><code class="docutils literal notranslate"><span class="pre">tres</span></code></dt><dd><p>The length of each time layer of the footprint. The default, <code class="docutils literal notranslate"><span class="pre">1h</span></code>,
+gives one layer per hour back from the receptor time, as STILT-R does.
+Use <code class="docutils literal notranslate"><span class="pre">15min</span></code> for 15-minute observations such as EM27/SUN columns, or
+<code class="docutils literal notranslate"><span class="pre">1D</span></code> for daily layers in a coarse inversion. Layers are counted from
+the receptor time, so a receptor at 18:30 with <code class="docutils literal notranslate"><span class="pre">tres:</span> <span class="pre">15min</span></code> has
+layers starting at 18:15, 18:00, and so on. For one map of the whole
+run, sum the layers (<code class="docutils literal notranslate"><span class="pre">foot.sum(&quot;time&quot;)</span></code>).</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">transforms</span></code></dt><dd><p>Steps that weight the particles before the footprint is made, mainly for
 column measurements. See <a class="reference internal" href="transforms.html"><span class="doc">Particle Weighting (Transforms)</span></a>.</p>
 </dd>
 </dl>
-<p>A <code class="docutils literal notranslate"><span class="pre">grid</span></code> can be projected: give it a <code class="docutils literal notranslate"><span class="pre">crs</span></code> such as <code class="docutils literal notranslate"><span class="pre">EPSG:32612</span></code> and
-<code class="docutils literal notranslate"><span class="pre">xres</span></code> and <code class="docutils literal notranslate"><span class="pre">yres</span></code> in the projection’s units (meters for UTM). The bounds
-stay in degrees. The two steps that depend on the cell size work in the
-grid’s units. One is the smoothing. The other is the early-time
-interpolation, which adds particle positions between output steps in the
-first 100 minutes when the particles move more than a cell per step. On
-100 m UTM cells it runs as it does on 0.001° cells. STILT-R decides it in
-degrees and never runs it on a grid in meters (<a class="reference internal" href="../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a>).</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">grid</span></code> can be projected, with a <code class="docutils literal notranslate"><span class="pre">crs</span></code> such as <code class="docutils literal notranslate"><span class="pre">EPSG:32612</span></code> and
+<code class="docutils literal notranslate"><span class="pre">xres</span></code> and <code class="docutils literal notranslate"><span class="pre">yres</span></code> in the projection’s units (meters for UTM), and it can
+cross 180° (<code class="docutils literal notranslate"><span class="pre">xmin:</span> <span class="pre">170</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax:</span> <span class="pre">-170</span></code>).
+<a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a> (“Footprint grids”) says how the smoothing
+and the time layers work on such grids.</p>
 <p><code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> also takes the lower-level HYSPLIT and STILT settings, such
 as turbulence, time step, and output variables, by the names STILT-R uses.
 Most projects never change them; <a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a>
@@ -793,12 +771,10 @@ editing it, give <code class="docutils literal notranslate"><span class="pre">--
 <span class="pre">output=&quot;s3://my-bucket/slv-2023&quot;)</span></code>.</p>
 <p>Everything else is the same: the folder layout, reruns that skip finished
 simulations, <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code>, and loading results. Runs write each result
-straight to the store. An output on <code class="docutils literal notranslate"><span class="pre">memory://</span></code> lasts only as long as the
-process that made it, so <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> from a new process finds no
-settings folders there. HYSPLIT itself still runs in a workdir on local disk
-(<code class="docutils literal notranslate"><span class="pre">--compute-root</span></code> or <code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code>). Listing an object store
-takes longer than listing a disk, so <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> on a large project is
-slower.</p>
+straight to the store, while HYSPLIT itself still runs in a workdir on local
+disk (<code class="docutils literal notranslate"><span class="pre">--compute-root</span></code> or <code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code>). Listing an object
+store takes longer than listing a disk, so <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> on a large
+project is slower.</p>
 </section>
 </section>
 <section id="reruns-skip-finished-work">
@@ -894,20 +870,13 @@ one variant per geometry; they share the particles:</p>
 <span class="w">      </span><span class="nt">ids</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">landfill</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">wwtp</span><span class="p p-Indicator">]</span>
 </pre></div>
 </div>
-<p>Loading <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> does not read the shapefile. PYSTILT reads it
-once, when it works out the variants’ settings, and picks the grid then.
-To make that grid finer or coarser, change <code class="docutils literal notranslate"><span class="pre">cells_per_target</span></code>. A variant
-cannot change only part of it (<code class="docutils literal notranslate"><span class="pre">grid:</span> <span class="pre">{xres:</span> <span class="pre">0.1}</span></code>), because the grid is
-not known until the shapefile is read.</p>
-<p>The grid PYSTILT picks is saved in the footprint folder’s <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code>
-and with each footprint, so you do not need the shapefile again to read a
-footprint. If you give both <code class="docutils literal notranslate"><span class="pre">grid</span></code> and <code class="docutils literal notranslate"><span class="pre">geometry</span></code>, the <code class="docutils literal notranslate"><span class="pre">grid</span></code> is used
-as given. The geometry is kept with the settings, and
-<code class="docutils literal notranslate"><span class="pre">stilt.Mesh.from_spec(sim.variant.footprint.geometry)</span></code> reads the
-<a class="reference internal" href="../reference/_api/stilt.Mesh.html#stilt.Mesh" title="stilt.Mesh"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Mesh</span></code></a> to aggregate onto. Each footprint file also stores a
-code for the geometry it was made for, and <code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> warns
-if the mesh you pass no longer matches, for example because the shapefile
-was edited after the run.</p>
+<p>To make the grid PYSTILT picks finer or coarser, change
+<code class="docutils literal notranslate"><span class="pre">cells_per_target</span></code>. The grid is saved with each footprint, so you do not
+need the shapefile again to read one, and
+<code class="docutils literal notranslate"><span class="pre">stilt.Mesh.from_spec(sim.variant.footprint.geometry)</span></code> gives back the
+<a class="reference internal" href="../reference/_api/stilt.Mesh.html#stilt.Mesh" title="stilt.Mesh"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Mesh</span></code></a> to aggregate onto. <code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> warns if the
+mesh you pass no longer matches the one the footprint was made for, for
+example because the shapefile was edited after the run.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p><a class="reference internal" href="../reference/_api/stilt.Zones.html#stilt.Zones" title="stilt.Zones"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Zones</span></code></a> (groups of grid cells) cannot be written in YAML.
@@ -1015,11 +984,11 @@ check:</p>
       </div>
     </a>
     <a class="right-next"
-       href="running.html"
+       href="choosing_settings.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Running</p>
+        <p class="prev-next-title">Choosing Settings</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
