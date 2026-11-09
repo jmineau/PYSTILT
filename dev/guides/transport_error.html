@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d0ccac31"></script>
+    <script src="../_static/documentation_options.js?v=f6669f6b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev40+gb7a6e1242" />
+  <meta name="docsearch:version" content="0.1.0a28.dev41+g4ffb36cd5" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -645,15 +645,20 @@ units. Put it on the footprint grid and compute two limits:</p>
 </div>
 <p>The first assumes the errors in all cells move together, so it is an upper
 bound. <code class="docutils literal notranslate"><span class="pre">sigma</span></code> can come from the spread of several inventories. The
-second assumes the cells are independent, which gives a lower bound. Real
-inventory errors are correlated over some distance, so the true value lies
-in between. Computing it needs the covariance of the flux errors, which is
-the prior error covariance of an inversion. If you set up the inversion with
-fips, <code class="docutils literal notranslate"><span class="pre">InverseProblem.prior_obs_error</span></code> is that covariance carried to every
-observation (the footprint matrix times the prior covariance times its
-transpose). The square root of its diagonal is each observation’s emission
-error. Add it in quadrature to the transport and retrieval errors to get
-the total error of a modeled value.</p>
+second assumes the cells are independent. Both values sum the footprint
+over time first, so they take each cell’s flux error to be the same at
+every hour. The second is a lower bound only if that holds and no errors
+are negatively correlated: errors that vary independently from hour to
+hour, or in opposite directions in neighboring cells, can give a smaller
+value. Real inventory errors are correlated over some distance, so for
+errors that do not change with time and are never negatively correlated,
+the true value lies between the two. Computing it needs the covariance of
+the flux errors, which is the prior error covariance of an inversion. If
+you set up the inversion with fips, <code class="docutils literal notranslate"><span class="pre">InverseProblem.prior_obs_error</span></code> is
+that covariance carried to every observation (the footprint matrix times
+the prior covariance times its transpose). The square root of its diagonal
+is each observation’s emission error. Add it in quadrature to the transport
+and retrieval errors to get the total error of a modeled value.</p>
 </section>
 <section id="the-transport-error">
 <h2>The transport error<a class="headerlink" href="#the-transport-error" title="Link to this heading">#</a></h2>
@@ -674,6 +679,9 @@ a background field (<a class="reference internal" href="background.html"><span c
 realizations of the error variant went into the estimate: every one that
 has run. A receptor without particles in either variant gets NaN and
 <code class="docutils literal notranslate"><span class="pre">realizations</span></code> 0.</p>
+<p><code class="docutils literal notranslate"><span class="pre">errors</span></code> has a row for every receptor in the selection. A Jacobian built
+from the same selection leaves out the receptors with an empty footprint, so
+match the two by <code class="docutils literal notranslate"><span class="pre">H.receptors</span></code> (<a class="reference internal" href="aggregation.html#jacobian-rows"><span class="std std-ref">the rows of H</span></a>).</p>
 <p>Each receptor’s particles are read whole. A table of 1.4 million rows
 takes about a second to read, so a selection of hundreds of receptors takes
 minutes. For a whole large project, make the call in a Slurm job.
@@ -711,6 +719,21 @@ zero, so use it only once the variance is resolved.</p></li>
 and in winter. On a convective afternoon the unperturbed particles already
 fill the boundary layer. The wind error adds little, and the estimate is
 usually within its noise.</p>
+</section>
+<section id="one-variance-per-receptor">
+<h2>One variance per receptor<a class="headerlink" href="#one-variance-per-receptor" title="Link to this heading">#</a></h2>
+<p>An inversion that uses <code class="docutils literal notranslate"><span class="pre">variance</span></code> as the transport part of the
+model-data mismatch gets a diagonal matrix, because PYSTILT gives one
+variance per receptor. That treats the transport errors of different
+observations as independent, and they are not. A wind error with
+<code class="docutils literal notranslate"><span class="pre">tluverr:</span> <span class="pre">260</span></code> stays correlated for about four hours, so hourly
+observations at one tower share most of their transport error with their
+neighbors, and nearby sites share it too. PYSTILT does not estimate that
+covariance. Used as it is, the diagonal counts correlated observations as
+independent information, so the posterior uncertainty tends to come out too
+small. Averaging the observations over the correlation time before the
+inversion, or adding off-diagonal terms from your own estimate, reduces
+the effect.</p>
 </section>
 <section id="what-the-numbers-mean">
 <h2>What the numbers mean<a class="headerlink" href="#what-the-numbers-mean" title="Link to this heading">#</a></h2>
@@ -937,6 +960,16 @@ launch time), in 100 m bins up to 3 km.</p></li>
 <li><p>The horizontal variogram pairs stations at one time, out to 50 km.</p></li>
 <li><p>Each fit fixes σ at the standard deviation of the errors it was built
 from.</p></li>
+<li><p>The fit has no nugget, and it is an unweighted least squares on the bins.
+Noise in the observed winds, such as instrument error or a difference
+between what a station and a 3 km grid cell represent, adds a variance
+that stays at small separations. The model cannot hold it, so the fit
+shortens the scale instead. In a test with a true scale of 450 m, noise
+that was 20% of the variance gave a fitted scale of about 330 m, and noise
+of 40% gave about 260 m. A scale that is too short makes the perturbation
+average out (<a class="reference internal" href="#choosing-the-settings">Choosing the settings</a>), so a scale fitted to noisy winds is
+likely too short. In the plot below, a variogram that is well above zero
+at its smallest lags is the sign.</p></li>
 <li><p>u and v are done separately and averaged.</p></li>
 <li><p>The mean error (the bias) is ignored, as in Lin and Gerbig. The
 perturbation does not represent it.</p></li>
@@ -1073,6 +1106,7 @@ falls below <code class="docutils literal notranslate"><span class="pre">1/sqrt(
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-emission-error">The emission error</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-transport-error">The transport error</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#is-the-estimate-meaningful">Is the estimate meaningful?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-variance-per-receptor">One variance per receptor</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-numbers-mean">What the numbers mean</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mixed-layer-height">Mixed-layer height</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#wind-error-statistics">Wind-error statistics</a><ul class="pst-show_toc_level nav section-nav flex-column">

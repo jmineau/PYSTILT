@@ -114,6 +114,16 @@ from the optional ``sparse`` package (``pip install pystilt[sparse]``), or
 a NumPy array with ``dense=True``. Receptors whose footprint is empty are
 in ``H.empty``, and those not run yet in ``H.missing``.
 
+.. _jacobian-rows:
+
+``H`` has a row only for each selected receptor with a non-empty footprint,
+so it can have fewer rows than the selection. Build the observations ``y``,
+and their errors, in the rows of ``H``, not of the selection: with
+``observed`` a Series of observations indexed by receptor id,
+``y = observed.loc[H.receptors]``. Matching them by position instead
+shifts every observation after the first dropped receptor onto the wrong
+row of ``H``.
+
 The columns are the time bin and then the target's cells, as named levels:
 ``time, cell`` for zones or a mesh, and ``time, lon, lat`` for a grid
 (``time, x, y`` when it is projected). For a grid,

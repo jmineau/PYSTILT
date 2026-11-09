@@ -153,15 +153,20 @@ units. Put it on the footprint grid and compute two limits:
 
 The first assumes the errors in all cells move together, so it is an upper
 bound. ``sigma`` can come from the spread of several inventories. The
-second assumes the cells are independent, which gives a lower bound. Real
-inventory errors are correlated over some distance, so the true value lies
-in between. Computing it needs the covariance of the flux errors, which is
-the prior error covariance of an inversion. If you set up the inversion with
-fips, ``InverseProblem.prior_obs_error`` is that covariance carried to every
-observation (the footprint matrix times the prior covariance times its
-transpose). The square root of its diagonal is each observation's emission
-error. Add it in quadrature to the transport and retrieval errors to get
-the total error of a modeled value.
+second assumes the cells are independent. Both values sum the footprint
+over time first, so they take each cell's flux error to be the same at
+every hour. The second is a lower bound only if that holds and no errors
+are negatively correlated: errors that vary independently from hour to
+hour, or in opposite directions in neighboring cells, can give a smaller
+value. Real inventory errors are correlated over some distance, so for
+errors that do not change with time and are never negatively correlated,
+the true value lies between the two. Computing it needs the covariance of
+the flux errors, which is the prior error covariance of an inversion. If
+you set up the inversion with fips, ``InverseProblem.prior_obs_error`` is
+that covariance carried to every observation (the footprint matrix times
+the prior covariance times its transpose). The square root of its diagonal
+is each observation's emission error. Add it in quadrature to the transport
+and retrieval errors to get the total error of a modeled value.
 
 The transport error
 -------------------
@@ -185,6 +190,10 @@ a background field (:doc:`background`). ``realizations`` is how many
 realizations of the error variant went into the estimate: every one that
 has run. A receptor without particles in either variant gets NaN and
 ``realizations`` 0.
+
+``errors`` has a row for every receptor in the selection. A Jacobian built
+from the same selection leaves out the receptors with an empty footprint, so
+match the two by ``H.receptors`` (:ref:`the rows of H <jacobian-rows>`).
 
 Each receptor's particles are read whole. A table of 1.4 million rows
 takes about a second to read, so a selection of hundreds of receptors takes
@@ -227,6 +236,22 @@ The signal is largest when turbulence spreads the particles least, at night
 and in winter. On a convective afternoon the unperturbed particles already
 fill the boundary layer. The wind error adds little, and the estimate is
 usually within its noise.
+
+One variance per receptor
+-------------------------
+
+An inversion that uses ``variance`` as the transport part of the
+model-data mismatch gets a diagonal matrix, because PYSTILT gives one
+variance per receptor. That treats the transport errors of different
+observations as independent, and they are not. A wind error with
+``tluverr: 260`` stays correlated for about four hours, so hourly
+observations at one tower share most of their transport error with their
+neighbors, and nearby sites share it too. PYSTILT does not estimate that
+covariance. Used as it is, the diagonal counts correlated observations as
+independent information, so the posterior uncertainty tends to come out too
+small. Averaging the observations over the correlation time before the
+inversion, or adding off-diagonal terms from your own estimate, reduces
+the effect.
 
 What the numbers mean
 ---------------------
@@ -487,6 +512,16 @@ The recipe makes these choices, and you can change any of them:
 - The horizontal variogram pairs stations at one time, out to 50 km.
 - Each fit fixes σ at the standard deviation of the errors it was built
   from.
+- The fit has no nugget, and it is an unweighted least squares on the bins.
+  Noise in the observed winds, such as instrument error or a difference
+  between what a station and a 3 km grid cell represent, adds a variance
+  that stays at small separations. The model cannot hold it, so the fit
+  shortens the scale instead. In a test with a true scale of 450 m, noise
+  that was 20% of the variance gave a fitted scale of about 330 m, and noise
+  of 40% gave about 260 m. A scale that is too short makes the perturbation
+  average out (`Choosing the settings`_), so a scale fitted to noisy winds is
+  likely too short. In the plot below, a variogram that is well above zero
+  at its smallest lags is the sign.
 - u and v are done separately and averaged.
 - The mean error (the bias) is ignored, as in Lin and Gerbig. The
   perturbation does not represent it.

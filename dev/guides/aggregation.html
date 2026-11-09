@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d0ccac31"></script>
+    <script src="../_static/documentation_options.js?v=f6669f6b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev40+gb7a6e1242" />
+  <meta name="docsearch:version" content="0.1.0a28.dev41+g4ffb36cd5" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -610,6 +610,13 @@ memory stays at a few footprints whatever the selection’s size. <code class="d
 from the optional <code class="docutils literal notranslate"><span class="pre">sparse</span></code> package (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pystilt[sparse]</span></code>), or
 a NumPy array with <code class="docutils literal notranslate"><span class="pre">dense=True</span></code>. Receptors whose footprint is empty are
 in <code class="docutils literal notranslate"><span class="pre">H.empty</span></code>, and those not run yet in <code class="docutils literal notranslate"><span class="pre">H.missing</span></code>.</p>
+<p id="jacobian-rows"><code class="docutils literal notranslate"><span class="pre">H</span></code> has a row only for each selected receptor with a non-empty footprint,
+so it can have fewer rows than the selection. Build the observations <code class="docutils literal notranslate"><span class="pre">y</span></code>,
+and their errors, in the rows of <code class="docutils literal notranslate"><span class="pre">H</span></code>, not of the selection: with
+<code class="docutils literal notranslate"><span class="pre">observed</span></code> a Series of observations indexed by receptor id,
+<code class="docutils literal notranslate"><span class="pre">y</span> <span class="pre">=</span> <span class="pre">observed.loc[H.receptors]</span></code>. Matching them by position instead
+shifts every observation after the first dropped receptor onto the wrong
+row of <code class="docutils literal notranslate"><span class="pre">H</span></code>.</p>
 <p>The columns are the time bin and then the target’s cells, as named levels:
 <code class="docutils literal notranslate"><span class="pre">time,</span> <span class="pre">cell</span></code> for zones or a mesh, and <code class="docutils literal notranslate"><span class="pre">time,</span> <span class="pre">lon,</span> <span class="pre">lat</span></code> for a grid
 (<code class="docutils literal notranslate"><span class="pre">time,</span> <span class="pre">x,</span> <span class="pre">y</span></code> when it is projected). For a grid,
