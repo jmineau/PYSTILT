@@ -33,7 +33,8 @@ def _met_catalogs_stay_out_of_the_home_folder(tmp_path_factory, monkeypatch):
 _TESTS_DIR = Path(__file__).parent
 _MET_CACHE = _TESTS_DIR / "met_cache"
 
-# SLV bounding box for bbox-cropped HRRRArchive downloads (~16 MB per 6h block)
+# SLV bounding box for bbox-cropped HRRRArchive downloads. Each 6h block is a
+# 3.42 GB full-domain file, cropped to 130 x 129 cells (30.2 MB) once it is down.
 _SLV_BBOX = (-114.0, 39.0, -110.0, 42.0)  # (west, south, east, north)
 
 # Individual 6h HRRR blocks needed by all 12 fidelity scenarios.
@@ -61,8 +62,10 @@ def met_dir() -> Path:
     Resolution order:
     1. STILT_TEST_MET_DIR env var — point at a pre-downloaded cache directory.
     2. STILT_TEST_FETCH_MET=1 — download all 7 bbox-cropped 6h blocks in parallel
-       via HRRRArchive into tests/met_cache/ (gitignored; ~112 MB total; cached in CI).
-       Already-present files are skipped automatically.
+       via HRRRArchive into tests/met_cache/ (gitignored; cached in CI).
+       Already-present files are skipped automatically. Each block is
+       downloaded whole (3.42 GB) and then cropped, so the 7 blocks download
+       23.9 GB, all staged in tests/met_cache/ at once, and keep 211 MB.
     3. Otherwise skip.
     """
     env = os.environ.get("STILT_TEST_MET_DIR")

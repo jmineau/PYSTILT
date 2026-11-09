@@ -208,6 +208,15 @@ fails when one breaks.
     --setup-only -q
   ```
 
+  The fetch is large. NOAA's HRRR files cover the whole CONUS grid and are
+  3.42 GB each; each is downloaded whole and then cropped to the 130 by 129
+  cells around Salt Lake, which keeps 30.2 MB. The seven blocks the tests need
+  therefore download 23.9 GB, all seven at once into `tests/met_cache`, so that
+  folder's disk needs about 24 GB free while it runs. After the crop it holds
+  211 MB. The time depends on your connection (at 10 MB/s it is about 40
+  minutes). Fetch once, and keep the folder: a file already in it is not
+  downloaded again.
+
   A receptor on the page must stay inside that time window. `docs.yml`
   restores the same cache the tests use.
 - **The guides that open a project start from a sample project**

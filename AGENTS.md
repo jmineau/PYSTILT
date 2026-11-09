@@ -159,7 +159,8 @@ are errors (a test that expects one uses `pytest.warns`). CI also runs
 
 - `integration`: end to end with real met files and HYSPLIT. Needs
   `STILT_TEST_MET_DIR` (HRRR ARL files) or `STILT_TEST_FETCH_MET=1` (downloads
-  seven 6 h blocks into the ignored `tests/met_cache/`); otherwise they skip.
+  seven 6 h blocks, 23.9 GB in all, and keeps 211 MB in the ignored
+  `tests/met_cache/`); otherwise they skip.
 - `fidelity`: PYSTILT against STILT-R, both running HYSPLIT. Needs the met,
   `STILT_R_DIR` (a STILT-R checkout built as `tests.yml` builds it), `Rscript`.
 - `r_only`: STILT-R comparisons with no met or HYSPLIT (`STILT_R_DIR`, `Rscript`).
