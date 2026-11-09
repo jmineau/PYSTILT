@@ -160,10 +160,12 @@ Exit codes
        not retry.
    * - 3
      - Retry it. Some simulations did not finish, because the run was
-       stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), or a
-       connection or I/O error, such as an output bucket that could not be
-       reached, stopped an unfinished simulation or ended the run. A retry
-       continues where it stopped.
+       stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), a worker
+       process was killed (``--cpus`` above 1; the error names the receptors
+       that were in progress, and it is usually the out-of-memory killer, so a
+       retry may need fewer ``--cpus``), or a connection or I/O error, such as
+       an output bucket that could not be reached, stopped an unfinished
+       simulation or ended the run. A retry continues where it stopped.
    * - 4
      - A bug: any other error the command did not expect. Its traceback is
        printed. Do not retry; a retry meets the same error.

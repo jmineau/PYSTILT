@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=17cc2023"></script>
+    <script src="../_static/documentation_options.js?v=79e2fe3b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev45+g6d2a3a767" />
+  <meta name="docsearch:version" content="0.1.0a28.dev46+g326d76343" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -661,10 +661,12 @@ not retry.</p></td>
 </tr>
 <tr class="row-odd"><td><p>3</p></td>
 <td><p>Retry it. Some simulations did not finish, because the run was
-stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), or a
-connection or I/O error, such as an output bucket that could not be
-reached, stopped an unfinished simulation or ended the run. A retry
-continues where it stopped.</p></td>
+stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), a worker
+process was killed (<code class="docutils literal notranslate"><span class="pre">--cpus</span></code> above 1; the error names the receptors
+that were in progress, and it is usually the out-of-memory killer, so a
+retry may need fewer <code class="docutils literal notranslate"><span class="pre">--cpus</span></code>), or a connection or I/O error, such as
+an output bucket that could not be reached, stopped an unfinished
+simulation or ended the run. A retry continues where it stopped.</p></td>
 </tr>
 <tr class="row-even"><td><p>4</p></td>
 <td><p>A bug: any other error the command did not expect. Its traceback is

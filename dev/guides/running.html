@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=17cc2023"></script>
+    <script src="../_static/documentation_options.js?v=79e2fe3b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev45+g6d2a3a767" />
+  <meta name="docsearch:version" content="0.1.0a28.dev46+g326d76343" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -595,6 +595,14 @@ script runs again in every worker. <code class="docutils literal notranslate"><s
 <p>You can stop a run at any time with Ctrl-C (or <code class="docutils literal notranslate"><span class="pre">SIGTERM</span></code> from <code class="docutils literal notranslate"><span class="pre">kill</span></code>,
 Slurm or Kubernetes). Receptors that finished stay finished, and running
 again starts the ones that were cut off from the beginning.</p>
+<p>If a worker process is killed outright, most often by the kernel’s
+out-of-memory killer, the run stops with an error
+(<a class="reference internal" href="../reference/_api/stilt.exceptions.WorkerDied.html#stilt.exceptions.WorkerDied" title="stilt.exceptions.WorkerDied"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkerDied</span></code></a>) and <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code> exits with 3. The pool
+cannot say which receptor the worker held, so the error names every receptor
+that was in progress. Nothing is marked failed and what finished stays
+finished: run it again and only what is missing runs, with a lower <code class="docutils literal notranslate"><span class="pre">cpus</span></code> or
+more memory per task if memory was the cause. The killed worker’s directory in
+the compute root is not removed; clear it by hand.</p>
 </section>
 <section id="save-now-run-later">
 <h2>Save now, run later<a class="headerlink" href="#save-now-run-later" title="Link to this heading">#</a></h2>
@@ -639,7 +647,7 @@ as a Slurm job array. Its options:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">--backend</span></code> and <code class="docutils literal notranslate"><span class="pre">--n-workers</span></code> override <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> for this run.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--cpus</span> <span class="pre">N</span></code> runs <code class="docutils literal notranslate"><span class="pre">N</span></code> receptors at once. Ctrl-C or <code class="docutils literal notranslate"><span class="pre">SIGTERM</span></code> stops
-them all and exits with 3.</p></li>
+them all and exits with 3, as does a worker killed for memory.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--no-skip</span></code> reruns every simulation, finished or not.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--receptors</span> <span class="pre">FILE</span></code> runs only the receptors listed in <code class="docutils literal notranslate"><span class="pre">FILE</span></code>, one
 id per line.</p></li>

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=17cc2023"></script>
+    <script src="../_static/documentation_options.js?v=79e2fe3b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev45+g6d2a3a767" />
+  <meta name="docsearch:version" content="0.1.0a28.dev46+g326d76343" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -816,6 +816,7 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.StiltError.html">stilt.StiltError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.SimulationError.html">stilt.exceptions.SimulationError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.MeteorologyError.html">stilt.exceptions.MeteorologyError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.WorkerDied.html">stilt.exceptions.WorkerDied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.HYSPLITNotFoundError.html">stilt.exceptions.HYSPLITNotFoundError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.EmptyFootprint.html">stilt.exceptions.EmptyFootprint</a></li>
 </ul>
@@ -928,6 +929,20 @@ cover fails as <code class="docutils literal notranslate"><span class="pre">MET_
 </table>
 </div>
 </section>
+<section id="stopped-runs">
+<h2>Stopped runs<a class="headerlink" href="#stopped-runs" title="Link to this heading">#</a></h2>
+<p>A run on <code class="docutils literal notranslate"><span class="pre">cpus</span></code> above 1 raises <a class="reference internal" href="_api/stilt.exceptions.WorkerDied.html#stilt.exceptions.WorkerDied" title="stilt.exceptions.WorkerDied"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkerDied</span></code></a> when a
+worker process is killed outright, as the out-of-memory killer does. It is not
+a failed simulation: nothing is recorded, and running again continues.</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.exceptions.WorkerDied.html#stilt.exceptions.WorkerDied" title="stilt.exceptions.WorkerDied"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stilt.exceptions.WorkerDied</span></code></a></p></td>
+<td><p>A worker process died without Python's say, and the run stopped.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 <section id="setup">
 <h2>Setup<a class="headerlink" href="#setup" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
@@ -1005,6 +1020,7 @@ empty (<a class="reference internal" href="layout.html"><span class="doc">Output
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#base-class">Base class</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#failed-runs">Failed runs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stopped-runs">Stopped runs</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#setup">Setup</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#empty-footprints">Empty footprints</a></li>
 </ul>

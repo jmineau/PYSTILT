@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=17cc2023"></script>
+    <script src="../../_static/documentation_options.js?v=79e2fe3b"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev45+g6d2a3a767" />
+  <meta name="docsearch:version" content="0.1.0a28.dev46+g326d76343" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -545,12 +545,29 @@
 
 
 
+<div class="viewcode-block" id="WorkerDied">
+<a class="viewcode-back" href="../../reference/_api/stilt.exceptions.WorkerDied.html#stilt.WorkerDied">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">WorkerDied</span><span class="p">(</span><span class="n">StiltError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    A worker process died without Python's say, and the run stopped.</span>
+
+<span class="sd">    A run on ``cpus`` above 1 raises it when a worker is killed outright</span>
+<span class="sd">    (``SIGKILL``, as the kernel's out-of-memory killer sends). The pool</span>
+<span class="sd">    cannot say which receptor the worker held, so the message names every</span>
+<span class="sd">    receptor that was in progress. What finished is kept and nothing is marked</span>
+<span class="sd">    failed: run again, and only what is missing runs. ``stilt run`` ends</span>
+<span class="sd">    with exit code 3.</span>
+<span class="sd">    """</span></div>
+
+
+
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">"EmptyFootprint"</span><span class="p">,</span>
     <span class="s2">"HYSPLITNotFoundError"</span><span class="p">,</span>
     <span class="s2">"MeteorologyError"</span><span class="p">,</span>
     <span class="s2">"SimulationError"</span><span class="p">,</span>
     <span class="s2">"StiltError"</span><span class="p">,</span>
+    <span class="s2">"WorkerDied"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 
