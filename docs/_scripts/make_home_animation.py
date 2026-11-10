@@ -185,7 +185,8 @@ def render(project: Path) -> None:
         ax.set_axis_off()
 
     ages = np.arange(0, -24 * 60 - STEP_MIN, -STEP_MIN)
-    layer_start = pd.to_datetime(foot["time"].values)
+    # Each layer is labeled by its start: 19:00 holds 19:00 to 20:00.
+    layer_end = pd.to_datetime(foot["time"].values) + pd.Timedelta(hours=1)
     frames = Path(tempfile.mkdtemp(prefix="home-animation-"))
 
     # Size the figure to the map, two panels side by side over the color bar.
@@ -277,12 +278,13 @@ def render(project: Path) -> None:
                 zorder=5,
             )
         )
-        # The footprint so far: every hourly layer that starts after this time.
-        done = layer_start > receptor_time + pd.Timedelta(minutes=int(age))
-        if age == 0 or not done.any():
+        # The footprint so far: every hourly layer the particles have reached,
+        # the one they are in included, so it grows from the first frame.
+        reached = layer_end > receptor_time + pd.Timedelta(minutes=int(age))
+        if age == 0 or not reached.any():
             so_far = None
         else:
-            so_far = foot.isel(time=np.flatnonzero(done)).sum("time").values
+            so_far = foot.isel(time=np.flatnonzero(reached)).sum("time").values
         if so_far is not None:
             shown = np.ma.masked_less_equal(so_far, norm.vmin)
             dynamic.append(
