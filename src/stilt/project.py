@@ -1123,8 +1123,7 @@ class Project:
             this process may use (in a Slurm job, the job's), at most 8.
         **options
             Passed to :func:`stilt.particles.transport_error`: ``levels``,
-            ``length_scale``, ``percentile``, ``noise_splits``, and
-            ``background``.
+            ``length_scale``, ``percentile``, and ``background``.
 
         Returns
         -------

@@ -396,7 +396,7 @@ class Simulation:
         wind-error variant of the same receptor adds (Lin and Gerbig, 2005).
         See :func:`stilt.particles.transport_error`, which documents the
         options (``levels``, ``length_scale``, ``percentile``,
-        ``noise_splits``, ``background``).
+        ``background``).
 
         Parameters
         ----------

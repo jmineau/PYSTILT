@@ -372,15 +372,14 @@ def test_background_and_transport_error_weight_the_particles_like_the_footprint(
         dims=("lat", "lon"),
         coords={"lat": [40.6, 40.7, 40.8], "lon": [-112.0, -111.9, -111.8]},
     )
-    one = sim.transport_error(err, flux, noise_splits=0)
-    many = sim.transport_error([err, err], flux, noise_splits=0)
+    one = sim.transport_error(err, flux)
+    many = sim.transport_error([err, err], flux)
     error = transport_error(
         particles,
         [err.particles],
         flux,
         transforms=lifetime,
         receptor=point_receptor,
-        noise_splits=0,
     )
     np.testing.assert_equal(
         (one.variance, one.enhancement), (error.variance, error.enhancement)

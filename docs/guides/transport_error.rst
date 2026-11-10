@@ -104,8 +104,9 @@ them before taking the difference:
 
 More realizations help less than you might expect. They reduce the noise
 of the perturbed runs, but every realization is compared with the same
-unperturbed run, so the noise of the estimate falls by at most a factor of
-√2 (see `Notes`_). Realizations are worth their cost when a single run's
+unperturbed run, whose noise stays. When the two runs spread about alike,
+the noise of the estimate falls by at most a factor of √2 (see `Notes`_).
+Realizations are worth their cost when a single run's
 ``variance`` is within a factor of two of its ``noise``. When ``variance``
 is far below ``noise``, check the wind-error scales instead.
 
@@ -185,7 +186,8 @@ name of the wind-error variant, and the flux field:
 
 ``errors`` is ``wbb`` with six more columns. ``variance`` is the
 transport-error variance of the modeled enhancement, in the enhancement's
-units squared, and ``noise`` is its noise (`Is the estimate meaningful?`_).
+units squared, and ``noise`` is its standard error
+(`Is the estimate meaningful?`_).
 ``enhancement`` and ``enhancement_perturbed`` are the modeled enhancement
 without and with the perturbation, and ``background`` is 0 unless you pass
 a background field (:doc:`background`). ``realizations`` is how many
@@ -226,26 +228,18 @@ Is the estimate meaningful?
 thousand particles. It is noisy and is sometimes negative. Two checks tell
 you whether a value means anything:
 
-- ``result.noise`` is the standard deviation ``variance`` would have with no
-  wind error at all. A ``variance`` within two or three times ``noise`` is
-  not resolved.
+- ``result.noise`` is the standard error of ``variance``, from the
+  particles of both runs. A ``variance`` within two or three times ``noise``
+  is not resolved.
 - Over many receptors, take the median of the signed ``variance``, by hour,
   season, or site. Do not clip each value at zero first, because that turns
   noise into a positive error. ``result.sd`` treats a negative variance as
   zero, so use it only once the variance is resolved.
 
-For a column receptor, the estimate is biased low when the wind error adds
-little spread to each level, and a median over receptors does not remove
-the bias. The levels are combined through the signed square roots of their
-``dvar`` (`What the numbers mean`_). When ``dvar`` is noisy, those square
-roots come out too small on average, so every receptor is pulled down the
-same way and the bias does not average out. In a test with a synthetic
-3000 m column of 1000 particles and the default ``levels`` and
-``length_scale``, the estimate was more than half too low when the true
-variance was twice ``noise``, and about 40 % too low when it was eight
-times ``noise``, where the first check above calls it resolved. The bias
-falls as the wind error grows. A point receptor, and a column with
-``length_scale=None``, have no such bias.
+For a column receptor the levels are added so that the noise in each level
+averages out over receptors, as it does for a point receptor
+(`What the numbers mean`_). Where the error changes sharply with height,
+the column variance comes out high, by up to about 20 %.
 
 The signal is largest when turbulence spreads the particles least, at night
 and in winter. On a convective afternoon the unperturbed particles already
@@ -283,7 +277,9 @@ receptor has one level.
 - ``var_orig`` and ``var_err`` are the variances of the per-particle
   enhancement, and ``dvar`` is their difference. This is Lin and Gerbig's
   equation 4 for the level.
-- ``sd_trans`` is the square root of ``dvar``, keeping its sign.
+- ``noise`` is the standard error of ``dvar``.
+- ``factor`` is what the level's ``dvar`` is multiplied by in the column.
+  ``result.variance`` is ``(factor * dvar).sum()``.
 
 ``result.enhancement`` is close to what the footprint gives. The two differ
 a little because the footprint smooths the particles onto its grid.
@@ -291,16 +287,31 @@ a little because the footprint smooths the particles onto its grid.
 A column receptor's particles are grouped into ``levels`` release-height
 bins of equal width, 20 by default. A multipoint or slant receptor with no
 more than ``levels`` release heights gets one level per height. The levels
-are then combined with an exponential error correlation in the vertical:
+are then added with an exponential error correlation in the vertical:
 
 .. math::
 
-   \sigma^2 = \sum_i w_i^2\, \mathrm{dvar}_i
-            + \sum_{i \ne j} w_i w_j s_i s_j\, e^{-|h_i - h_j| / L}
+   \sigma^2 = \sum_i \mathrm{factor}_i\, \mathrm{dvar}_i,
+   \qquad
+   \mathrm{factor}_i = w_i \sum_j w_j R_{ij}
 
-Here ``w`` is ``weight``, ``s`` is ``sd_trans``, ``h`` is ``height``, and
-``L`` is ``length_scale``, 356 m by default (X-STILT's value). With
-``length_scale=None`` the levels are independent.
+Here ``w`` is ``weight``. ``R`` is the correlation between two levels: the
+mean of :math:`e^{-|h_p - h_q| / L}` over the particles ``p`` of one level
+and ``q`` of the other, where ``h`` is a particle's release height. ``L`` is
+``length_scale``, 356 m by default (X-STILT's value). With
+``length_scale=None`` the levels are independent, and ``factor`` is
+``weight`` squared. For a point receptor ``factor`` is 1.
+
+Written over pairs of levels, the sum is
+
+.. math::
+
+   \sigma^2 = \sum_{i,j} w_i w_j R_{ij}\,
+              \frac{\mathrm{dvar}_i + \mathrm{dvar}_j}{2}
+
+so a pair of levels counts with the mean of its two ``dvar``. ``R`` is
+taken between the particles, not between the levels' mean heights, so
+``levels`` only sets how finely ``dvar`` is resolved in height.
 
 By default every particle counts, as in Lin and Gerbig. ``percentile=0.99``
 reproduces X-STILT's trimming
@@ -310,10 +321,19 @@ damps the few particles that pass over a point source at the cost of a
 small bias. The :doc:`X-STILT migration page <migration/x_stilt>` lists
 where the rest of the calculation differs.
 
-PYSTILT uses each level's ``dvar`` as it is, with its sign. For a point
-receptor, and in the first sum of the formula above, the noise in it then
-averages out over many receptors. The second sum uses the signed square
-roots, whose noise does not average out (`Is the estimate meaningful?`_).
+PYSTILT uses each level's ``dvar`` as it is, with its sign, and the column
+sum is linear in it. The noise in ``dvar`` therefore averages out over many
+receptors, for a column as for a point receptor.
+
+A pair of levels could instead count with the product of its two standard
+deviations, :math:`\sqrt{\mathrm{dvar}_i\, \mathrm{dvar}_j}`. The two
+forms agree when both levels have the same error. Where the error changes
+with height within a correlation length, the mean is the larger: by 2 % for
+an error that falls by a factor of e in 1000 m, 7 % in 500 m, and 20 % in
+250 m. PYSTILT takes the mean because the square root of a noisy ``dvar`` is
+too small on average, by the same amount at every receptor, so an average
+over receptors stays too small.
+
 Fitting a line through only the levels where ``dvar`` is positive would
 bias the result upward: it keeps the levels whose variance happened to
 rise, so under pure sampling noise it reports a positive error at every
@@ -609,8 +629,12 @@ Notes
   unlikely. With a hundred it is more likely than not.
 - With ``krand: 2``, realization 0 uses ``seed`` itself, as STILT-R's error
   run does.
-- ``noise`` comes from splitting the unperturbed particles into random
-  halves and treating one half as the perturbed run
-  (``noise_splits`` times, 16 by default). With ``N`` realizations the
-  noise is ``sqrt((1 + 1/N) / 2)`` times that of a single run, which never
-  falls below ``1/sqrt(2)``. ``result.noise`` already includes this factor.
+- ``noise`` is a standard error. The variance of ``n`` values has the
+  sampling variance ``(m4 - var²) / n``, where ``m4`` is their fourth
+  central moment. A level's ``noise`` adds this for the unperturbed run and
+  for the perturbed run, the second divided by the number of realizations
+  ``N``, and ``result.noise`` is ``sqrt(((factor * noise) ** 2).sum())``.
+  For two runs that spread alike, the noise with ``N`` realizations is
+  ``sqrt((1 + 1/N) / 2)`` times that of a single run, which never falls
+  below ``1/sqrt(2)``. With ``percentile`` below 1 the moments are those of
+  the particles kept.

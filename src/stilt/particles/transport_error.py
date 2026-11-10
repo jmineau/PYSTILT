@@ -13,11 +13,11 @@ varies more across them. The increase is the transport-error variance
     var_transport = var(enhancement | perturbed) − var(enhancement | unperturbed)
 
 For a column receptor the difference is taken per release level, and the
-levels are combined with the column weighting and a vertical error
-correlation, as in X-STILT (Wu et al., 2018, GMD). The difference of two
-sample variances is noisy and can be negative. It is returned with its sign
-and with an estimate of its noise, so many receptors can be combined with a
-median and a single value can be compared with its noise.
+levels are added with the column weighting and X-STILT's vertical error
+correlation (Wu et al., 2018, GMD). The difference of two sample variances
+is noisy and can be negative. It is returned with its sign and with its
+standard error, so many receptors can be combined with a median and a
+single value can be compared with its noise.
 """
 
 from __future__ import annotations
@@ -68,8 +68,7 @@ class TransportError:
         Transport-error variance, the extra spread the wind perturbation
         added. Kept with its sign, since a negative value is sampling noise.
     noise : float
-        Standard deviation of ``variance`` expected with no perturbation,
-        estimated from random halves of the unperturbed particles.
+        Standard error of ``variance``, from the particles of both runs.
         ``variance`` is resolved only when it is several times ``noise``.
     enhancement : float
         Modeled enhancement from the unperturbed particles.
@@ -81,8 +80,9 @@ class TransportError:
         height, m), ``n`` (particles), ``weight`` (share of the particles),
         ``mean_orig``, ``var_orig``, ``mean_err``, and ``var_err`` (mean and
         variance of the per-particle enhancement without and with the
-        perturbation), ``dvar`` (``var_err - var_orig``), and ``sd_trans``
-        (signed square root of ``dvar``).
+        perturbation), ``dvar`` (``var_err - var_orig``), ``noise`` (standard
+        error of ``dvar``), and ``factor`` (what ``dvar`` is multiplied by in
+        the column, so ``variance`` is ``(factor * dvar).sum()``).
     length_scale : float or None
         Vertical correlation length used to combine the levels, in m.
     background : float
@@ -141,18 +141,27 @@ def _level_stats(x: pd.Series, labels: pd.Series, percentile: float) -> pd.DataF
     Return each level's mean and variance of ``x``, indexed by level.
 
     The mean is over all the level's finite values and the variance over
-    those at or below ``percentile``. A level with fewer than two such
-    values has NaN variance.
+    those at or below ``percentile``. ``var_of_var`` is the sampling variance
+    of that variance, ``(m4 - var²) / n`` for ``n`` values with fourth
+    central moment ``m4``. A level with fewer than two such values has NaN
+    for both.
     """
-
-    def var(values: pd.Series) -> float:
+    rows = {}
+    for level, values in x.reindex(labels.index).groupby(labels):
         v = _finite(values)
+        mean = float(v.mean()) if v.size else np.nan
         if v.size and percentile < 1.0:
             v = v[v <= np.quantile(v, percentile)]
-        return float(v.var(ddof=0)) if v.size >= 2 else np.nan
-
-    groups = x.reindex(labels.index).groupby(labels)
-    return pd.DataFrame({"mean": groups.apply(_mean), "var": groups.apply(var)})
+        if v.size < 2:
+            rows[level] = (mean, np.nan, np.nan)
+            continue
+        var = float(v.var(ddof=0))
+        m4 = float(np.mean((v - v.mean()) ** 4))
+        # m4 is never below var²; rounding can put it there when they are equal.
+        rows[level] = (mean, var, max(m4 - var**2, 0.0) / v.size)
+    return pd.DataFrame.from_dict(
+        rows, orient="index", columns=["mean", "var", "var_of_var"]
+    )
 
 
 def _finite(values: pd.Series) -> np.ndarray:
@@ -167,56 +176,86 @@ def _mean(values: pd.Series) -> float:
     return float(v.mean()) if v.size else np.nan
 
 
-def _signed_sqrt(values: np.ndarray) -> np.ndarray:
-    """Return ``sign(v) * sqrt(|v|)``, with NaN as 0."""
-    v = np.nan_to_num(np.asarray(values, dtype=float), nan=0.0)
-    return np.sign(v) * np.sqrt(np.abs(v))
-
-
-def _combine(levels: pd.DataFrame, length_scale: float | None) -> float:
+def _correlated_counts(heights: np.ndarray, length_scale: float) -> np.ndarray:
     """
-    Return the column variance ``Σ_i w_i² v_i + Σ_{i≠j} w_i w_j s_i s_j corr_ij``.
+    Return ``Σ_q exp(-|h_p - h_q| / length_scale)`` for each particle ``p``, itself included.
 
-    ``s`` is the per-level ``sd_trans``. On the diagonal, ``v`` is the
-    signed variance difference, so a level whose spread fell counts
-    negatively. The cross terms use the signed square roots, so correlated levels of the
-    same sign add and levels of opposite sign cancel.
+    With the heights sorted, the sum over the particles below ``p`` is a
+    running sum of ``exp(h_q / L)`` times ``exp(-h_p / L)``, and likewise
+    above. The running sums are kept as logarithms (``logaddexp``), so a tall
+    column with a short length scale does not overflow.
     """
-    w = levels["weight"].to_numpy(dtype=float)
-    s = levels["sd_trans"].to_numpy(dtype=float)
-    h = levels["height"].to_numpy(dtype=float)
-    diag = np.nan_to_num(levels["dvar"].to_numpy(dtype=float), nan=0.0)
+    order = np.argsort(heights)
+    z = heights[order] / length_scale
+    below = np.exp(np.logaddexp.accumulate(z) - z)  # particles at or below p
+    above = np.exp(np.logaddexp.accumulate(-z[::-1])[::-1] + z)  # at or above p
+    counts = np.empty_like(z)
+    counts[order] = below + above - 1.0  # p itself is in both
+    return counts
+
+
+def _level_factors(
+    heights: pd.Series, labels: pd.Series, length_scale: float | None
+) -> pd.Series:
+    """
+    Return each level's factor in the column variance, indexed by level.
+
+    The column variance is ``Σ_i factor_i dvar_i``. Two particles' transport
+    errors correlate as ``exp(-|h_p - h_q| / length_scale)``, with ``h``
+    their release heights, and a level's factor is the sum of that
+    correlation over its particles and every particle, divided by ``N²``.
+    That is ``w_i Σ_j w_j R_ij``, with ``w`` the levels' shares of the
+    particles and ``R_ij`` the mean correlation between the particles of two
+    levels, so a pair of levels counts with the mean of their two ``dvar``.
+    The correlation is between particles, not between the levels' mean
+    heights, so an error that is the same at every height gives the same
+    column variance whatever the number of levels. With no ``length_scale``
+    the levels are independent and the factor is ``w_i²``.
+    """
+    in_level = labels.notna()
+    lab = labels[in_level]
     if length_scale is None:
-        corr = np.eye(len(h))
-    else:
-        corr = np.exp(-np.abs(h[:, None] - h[None, :]) / length_scale)
-    prod = w[:, None] * w[None, :] * s[:, None] * s[None, :] * corr
-    np.fill_diagonal(prod, w**2 * diag)
-    return float(prod.sum())
+        return (lab.value_counts().sort_index() / len(labels)) ** 2
+    h = heights.reindex(lab.index).to_numpy(dtype=float)
+    counts = pd.Series(_correlated_counts(h, length_scale), index=lab.index)
+    return counts.groupby(lab).sum() / len(labels) ** 2
 
 
 def _level_table(
     x_orig: pd.Series,
     x_errs: Sequence[pd.Series],
+    h_orig: pd.Series,
     label_orig: pd.Series,
     label_errs: Sequence[pd.Series],
-    level_height: pd.Series,
     *,
     percentile: float,
+    length_scale: float | None,
 ) -> pd.DataFrame:
     """
     Return the table of means, variances, and weights per release level.
 
     The perturbed mean and variance of each level are averaged over the
     error realizations (one ``x_errs`` and ``label_errs`` pair each) before
-    ``dvar`` is taken.
+    ``dvar`` is taken. ``noise`` is the standard error of ``dvar``: the
+    sampling variance of the unperturbed variance plus that of the mean of
+    the realizations' variances, which are independent runs.
     """
-    orig = _level_stats(x_orig, label_orig, percentile).reindex(level_height.index)
+    level_height = h_orig.groupby(label_orig).apply(_mean)
+    levels = level_height.index
+    orig = _level_stats(x_orig, label_orig, percentile).reindex(levels)
     errs = [
-        _level_stats(x, label, percentile).reindex(level_height.index)
+        _level_stats(x, label, percentile).reindex(levels)
         for x, label in zip(x_errs, label_errs, strict=True)
     ]
-    n = label_orig.value_counts().reindex(level_height.index, fill_value=0)
+    n = label_orig.value_counts().reindex(levels, fill_value=0)
+    var_errs = np.column_stack([e["var"].to_numpy(dtype=float) for e in errs])
+    var_of_var_errs = np.column_stack(
+        [e["var_of_var"].to_numpy(dtype=float) for e in errs]
+    )
+    # A realization with too few particles in a level is left out of its mean.
+    used = np.isfinite(var_errs).sum(axis=1)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        var_of_var_err = np.nansum(var_of_var_errs, axis=1) / used**2
     table = pd.DataFrame(
         {
             "height": level_height.to_numpy(dtype=float),
@@ -225,11 +264,14 @@ def _level_table(
             "mean_orig": orig["mean"].to_numpy(),
             "mean_err": _nanmean([e["mean"].to_numpy(dtype=float) for e in errs]),
             "var_orig": orig["var"].to_numpy(),
-            "var_err": _nanmean([e["var"].to_numpy(dtype=float) for e in errs]),
+            "var_err": _nanmean(list(var_errs.T)),
         }
     )
     table["dvar"] = table["var_err"] - table["var_orig"]
-    table["sd_trans"] = _signed_sqrt(table["dvar"].to_numpy())
+    table["noise"] = np.sqrt(orig["var_of_var"].to_numpy() + var_of_var_err)
+    table["factor"] = (
+        _level_factors(h_orig, label_orig, length_scale).reindex(levels).to_numpy()
+    )
     return table
 
 
@@ -240,50 +282,6 @@ def _nanmean(columns: Sequence[np.ndarray]) -> np.ndarray:
     count = ok.sum(axis=1)
     total = np.where(ok, arr, 0.0).sum(axis=1)
     return np.divide(total, count, out=np.full(len(arr), np.nan), where=count > 0)
-
-
-def _noise(
-    x_orig: pd.Series,
-    label_orig: pd.Series,
-    level_height: pd.Series,
-    *,
-    splits: int,
-    percentile: float,
-    length_scale: float | None,
-) -> float:
-    """
-    Return the standard deviation of ``variance`` with no perturbation.
-
-    The unperturbed particles of each level are split into two random halves,
-    treated as the unperturbed and perturbed tables. The spread of the
-    estimate over ``splits`` random splits, divided by ``sqrt(2)`` to go from
-    half to full ensembles, is the noise. Returns NaN for fewer than two
-    splits.
-    """
-    if splits < 2:
-        return float("nan")
-    rng = np.random.default_rng(0)
-    indx = x_orig.index.to_numpy()
-    lab = label_orig.reindex(indx).to_numpy()
-    estimates = []
-    for _ in range(splits):
-        half = np.zeros(len(indx), dtype=bool)
-        for lvl in np.unique(lab[np.isfinite(lab)]):
-            members = np.flatnonzero(lab == lvl)
-            chosen = rng.permutation(members)[: len(members) // 2]
-            half[chosen] = True
-        a, b = x_orig.iloc[half], x_orig.iloc[~half]
-        table = _level_table(
-            a,
-            [b],
-            label_orig.reindex(a.index),
-            [label_orig.reindex(b.index)],
-            level_height,
-            percentile=percentile,
-        )
-        table["weight"] = table["n"] / table["n"].sum()
-        estimates.append(_combine(table, length_scale))
-    return float(np.std(estimates, ddof=1) / np.sqrt(2.0))
 
 
 def transport_error(
@@ -297,7 +295,6 @@ def transport_error(
     levels: int | Sequence[float] = 20,
     length_scale: float | None = DEFAULT_LENGTH_SCALE,
     percentile: float = 1.0,
-    noise_splits: int = 16,
     background: xr.DataArray | None = None,
 ) -> TransportError:
     """
@@ -330,15 +327,12 @@ def transport_error(
     length_scale : float or None, default 356.0
         Vertical e-folding length of the error correlation between levels,
         in meters (X-STILT's value). ``None`` treats the levels as
-        uncorrelated. It has no effect for a point receptor.
+        independent. It has no effect for a point receptor.
     percentile : float, default 1.0
         In each level, drop particles above this quantile of the enhancement
         before taking the variance. 1.0 keeps every particle, as Lin and
         Gerbig do. X-STILT uses 0.99 to limit the few particles that cross a
         point source. Means always use every particle.
-    noise_splits : int, default 16
-        Number of random half-splits of the unperturbed particles used to
-        estimate ``noise``. Fewer than 2 skips it and gives NaN.
     background : xarray.DataArray, optional
         Background field sampled at each particle's endpoint (see
         :func:`background`). Wind errors move the
@@ -353,22 +347,38 @@ def transport_error(
     Notes
     -----
     Per level ``l`` with ``n_l`` of ``N`` particles, ``dvar_l`` is the change
-    in the variance of the per-particle enhancement under the perturbation,
-    ``s_l = sign(dvar_l) sqrt(|dvar_l|)``, and the column variance is
-    ``Σ_ij w_i w_j s_i s_j exp(-|h_i - h_j| / L)`` with ``w_l = n_l / N`` and
-    ``h`` the level heights. For one level it is ``dvar`` itself. The
-    transforms are applied to the particles first, so the level statistics
-    are already column-weighted and the level weights are particle counts.
+    in the variance of the per-particle enhancement under the perturbation.
+    Two particles' transport errors correlate as ``exp(-|h_p - h_q| / L)``,
+    with ``h`` their release heights, and the column variance is
+    ``Σ_l factor_l dvar_l``. ``factor_l`` is the sum of that correlation over
+    the particles of level ``l`` and every particle, divided by ``N²``, which
+    is ``w_l Σ_m w_m R_lm`` with ``w_l = n_l / N`` and ``R_lm`` the mean
+    correlation between the particles of two levels. A pair of levels
+    therefore counts with the mean of their two ``dvar``. For one level the
+    variance is ``dvar`` itself, and with ``length_scale=None`` it is
+    ``Σ_l w_l² dvar_l``. The transforms are applied to the particles first,
+    so the level statistics are already column-weighted and the level
+    weights are particle counts.
+
+    The sum is linear in ``dvar``, so the sampling noise in each level's
+    ``dvar`` averages out over many receptors. Where the error changes
+    sharply with height within a correlation length, the mean of two levels'
+    ``dvar`` is above the product of their standard deviations, and the
+    column variance is high by up to about 20 %.
+
+    ``noise`` is the standard error of ``variance``. A variance of ``n``
+    values with fourth central moment ``m4`` has the sampling variance
+    ``(m4 - var²) / n``. Each level's ``noise`` adds that of the unperturbed
+    run and of the perturbed run, and the column's is
+    ``sqrt(Σ_l (factor_l noise_l)²)``.
 
     With several error realizations, each level's ``mean_err`` and
     ``var_err`` are averaged over them before ``dvar`` is formed, so the
-    perturbed side's sampling noise falls as ``1/sqrt(N)``. The unperturbed
-    side is the same particles in every realization, so its noise does not
-    fall: with ``N`` realizations the null spread of ``variance`` is
-    ``sqrt((1 + 1/N) / 2)`` times the single-realization ``noise``, which
-    tends to ``1/sqrt(2)``. ``noise`` includes that factor. More
-    realizations therefore give at most a ``sqrt(2)`` tighter estimate and
-    cannot resolve a case that one realization leaves unresolved.
+    perturbed side's sampling variance falls as ``1/N``. The unperturbed
+    side is the same particles in every realization, so its part does not
+    fall. More realizations therefore tighten the estimate by about
+    ``sqrt(2)`` at most and cannot resolve a case that one realization
+    leaves far from resolved.
 
     The signal is the extra spread the perturbation adds. It is small when
     the wind error decorrelates quickly (HYSPLIT decorrelates it with the
@@ -409,8 +419,6 @@ def transport_error(
         raise ValueError("percentile must be in (0, 1].")
     if length_scale is not None and length_scale <= 0:
         raise ValueError("length_scale must be > 0 or None.")
-    if noise_splits < 0:
-        raise ValueError("noise_splits must be >= 0.")
     transforms = list(transforms)
     error_tables = (
         [error_particles]
@@ -449,7 +457,6 @@ def transport_error(
 
     edges = _level_edges(h_orig, levels)
     label_orig = _level_labels(h_orig, edges)
-    level_height = h_orig.groupby(label_orig).apply(_mean)
 
     x_errs, label_errs = [], []
     for err in error_tables:
@@ -460,33 +467,24 @@ def transport_error(
     table = _level_table(
         x_orig,
         x_errs,
+        h_orig,
         label_orig,
         label_errs,
-        level_height,
         percentile=percentile,
+        length_scale=length_scale,
     )
-    n_real = len(error_tables)
-    # The main particles are shared by every realization, so only the
-    # perturbed side's noise averages down; see the Notes.
-    noise_factor = float(np.sqrt((1.0 + 1.0 / n_real) / 2.0))
     w = table["weight"].to_numpy()
+    factor = table["factor"].to_numpy()
+    # A level with too few particles for a variance (NaN) adds nothing.
     return TransportError(
-        variance=_combine(table, length_scale),
-        noise=noise_factor
-        * _noise(
-            x_orig,
-            label_orig,
-            level_height,
-            splits=noise_splits,
-            percentile=percentile,
-            length_scale=length_scale,
-        ),
+        variance=float(np.nansum(factor * table["dvar"].to_numpy())),
+        noise=float(np.sqrt(np.nansum((factor * table["noise"].to_numpy()) ** 2))),
         enhancement=float(np.nansum(w * table["mean_orig"].to_numpy())),
         enhancement_perturbed=float(np.nansum(w * table["mean_err"].to_numpy())),
         levels=table,
         length_scale=length_scale,
         background=background_value,
-        realizations=n_real,
+        realizations=len(error_tables),
     )
 
 

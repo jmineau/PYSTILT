@@ -15,6 +15,34 @@ FLUX = xr.DataArray(
 )
 
 
+def _particles(release_height, foot):
+    """Particles with one row each, so a particle's enhancement on FLUX is its foot."""
+    n = len(foot)
+    return pd.DataFrame(
+        {
+            "particle": np.arange(1, n + 1),
+            "age": np.zeros(n),
+            "lon": np.full(n, -111.0),
+            "lat": np.full(n, 41.0),
+            "release_height": np.asarray(release_height, dtype=float),
+            "foot": np.asarray(foot, dtype=float),
+            "time": pd.to_datetime(["2023-01-01"] * n),
+        }
+    )
+
+
+def _pair_correlation(heights, length_scale):
+    """Correlation of every particle pair, the direct N x N way."""
+    h = np.asarray(heights, dtype=float)
+    return np.exp(-np.abs(h[:, None] - h[None, :]) / length_scale)
+
+
+def _var_of_var(values):
+    """Sampling variance of the variance of *values*: (m4 - var²) / n."""
+    dev = np.asarray(values) - np.mean(values)
+    return (np.mean(dev**4) - np.mean(dev**2) ** 2) / len(dev)
+
+
 def _column(n_levels=4, per_level=200, spread=1.0, seed=0, level_spacing=500.0):
     """Column particles: each particle's foot sum ~ N(10, spread²); one row each."""
     rng = np.random.default_rng(seed)
@@ -45,7 +73,7 @@ def test_no_perturbation_gives_zero_error_and_the_enhancement():
     assert result.sd == pytest.approx(0.0)
     assert result.enhancement == pytest.approx(p["foot"].mean(), rel=1e-12)
     assert result.enhancement_perturbed == result.enhancement
-    assert result.noise > 0  # halves of the same ensemble still differ
+    assert result.noise > 0  # a variance of 200 particles is not exact
     assert len(result.levels) == 4
     assert result.levels["n"].tolist() == [200] * 4
     assert result.levels["weight"].sum() == pytest.approx(1.0)
@@ -54,23 +82,111 @@ def test_no_perturbation_gives_zero_error_and_the_enhancement():
 
 def test_error_is_the_extra_spread_combined_over_levels():
     main = _column(spread=1.0, seed=1)
-    err = _column(
-        spread=np.sqrt(1.0 + 4.0), seed=2
-    )  # +4 variance => sd_trans 2 per level
+    err = _column(spread=np.sqrt(1.0 + 4.0), seed=2)  # +4 variance per level
 
-    uncorrelated = transport_error(main, err, FLUX, length_scale=None)
+    independent = transport_error(main, err, FLUX, length_scale=None)
     fully = transport_error(main, err, FLUX, length_scale=1e12)
     default = transport_error(main, err, FLUX)
 
-    sd_levels = uncorrelated.levels["sd_trans"].to_numpy()
-    assert sd_levels == pytest.approx(2.0, rel=0.15)
-    # uncorrelated: sqrt(sum w^2 sd^2) ~ 2/sqrt(4); fully correlated: sum w sd ~ 2
-    assert uncorrelated.sd == pytest.approx(np.sqrt(np.sum(0.25**2 * sd_levels**2)))
-    assert fully.sd == pytest.approx(np.sum(0.25 * sd_levels), rel=1e-6)
-    assert uncorrelated.sd < default.sd < fully.sd
+    dvar = independent.levels["dvar"].to_numpy()
+    assert dvar == pytest.approx(4.0, rel=0.3)
+    # independent levels: sum w² dvar ~ 4/4; fully correlated: sum w dvar ~ 4
+    assert independent.variance == pytest.approx(np.sum(0.25**2 * dvar))
+    assert fully.variance == pytest.approx(np.sum(0.25 * dvar), rel=1e-6)
+    assert independent.variance < default.variance < fully.variance
     assert default.length_scale == 356.0
     # a real signal (4 per level) stands well above the estimator's noise
     assert default.variance > 5 * default.noise
+
+
+def test_the_column_variance_is_the_sum_over_levels_of_factor_times_dvar():
+    """A known answer: the pair sum over the particles, with one level's spread falling."""
+    sizes, extra = (40, 120, 60, 180), (0.6, -0.3, 0.2, 0.5)
+    edges = [0.0, 300.0, 1200.0, 1500.0, 3000.0]
+    rng = np.random.default_rng(0)
+    heights, sign, d = [], [], []
+    for lo, hi, size, d_level in zip(edges[:-1], edges[1:], sizes, extra, strict=True):
+        heights.append(rng.uniform(lo + 1.0, hi, size))
+        sign.append(np.tile([1.0, -1.0], size // 2))  # variance exactly 1
+        d.append(np.full(size, d_level))
+    heights, sign, d = (np.concatenate(a) for a in (heights, sign, d))
+    main = _particles(heights, 10.0 + sign)
+    err = _particles(heights, 10.0 + sign * np.sqrt(1.0 + d))
+
+    result = transport_error(main, err, FLUX, levels=edges)
+
+    levels = result.levels
+    assert levels["dvar"].to_numpy() == pytest.approx(extra)
+    assert result.variance == pytest.approx((levels["factor"] * levels["dvar"]).sum())
+    # Each pair of particles counts with the mean of their two extra variances.
+    corr = _pair_correlation(heights, 356.0)
+    pair_mean = (d[:, None] + d[None, :]) / 2.0
+    expected = (pair_mean * corr).sum() / len(d) ** 2
+    assert result.variance == pytest.approx(expected, rel=1e-10)
+
+
+def test_the_number_of_levels_does_not_change_the_column_variance():
+    n, extra = 400, 0.5
+    heights = np.linspace(0.0, 2000.0, n)
+    sign = np.tile([1.0, -1.0], n // 2)  # variance exactly 1 in any even bin
+    main = _particles(heights, 10.0 + sign)
+    err = _particles(heights, 10.0 + sign * np.sqrt(1.0 + extra))
+
+    two = transport_error(main, err, FLUX, levels=2)
+    four = transport_error(main, err, FLUX, levels=4)
+
+    expected = extra * _pair_correlation(heights, 356.0).sum() / n**2
+    assert len(two.levels) == 2
+    assert len(four.levels) == 4
+    assert two.variance == pytest.approx(expected, rel=1e-10)
+    assert four.variance == pytest.approx(expected, rel=1e-10)
+
+
+def test_a_short_length_scale_on_a_tall_column_does_not_overflow():
+    heights = np.linspace(0.0, 20000.0, 200)
+    sign = np.tile([1.0, -1.0], 100)
+    main = _particles(heights, 10.0 + sign)
+    err = _particles(heights, 10.0 + sign * np.sqrt(1.5))
+
+    result = transport_error(main, err, FLUX, levels=4, length_scale=0.5)
+
+    expected = 0.5 * _pair_correlation(heights, 0.5).sum() / 200**2
+    assert result.variance == pytest.approx(expected, rel=1e-10)
+
+
+def test_a_small_error_in_a_column_is_not_underestimated():
+    """Mean over receptors at a signal a few times the noise (#383)."""
+    n, extra, receptors = 1000, 0.2, 100
+    rng = np.random.default_rng(383)
+    heights = rng.uniform(0.0, 3000.0, n)
+    truth = extra * _pair_correlation(heights, 356.0).sum() / n**2
+
+    variances = []
+    for _ in range(receptors):
+        main = _particles(heights, 10.0 + rng.standard_normal(n))
+        err = _particles(heights, 10.0 + np.sqrt(1.0 + extra) * rng.standard_normal(n))
+        variances.append(transport_error(main, err, FLUX).variance)
+
+    # The mean's standard error is about 4 % of the truth. With the levels
+    # combined through square roots of dvar it was 40 % low.
+    assert np.mean(variances) == pytest.approx(truth, rel=0.15)
+
+
+@pytest.mark.parametrize("column", [False, True], ids=["point", "column"])
+def test_noise_is_the_spread_of_the_variance_with_no_perturbation(column):
+    n, receptors = 1000, 150
+    rng = np.random.default_rng(7)
+    heights = rng.uniform(0.0, 3000.0, n) if column else np.zeros(n)
+
+    variances, noises = [], []
+    for _ in range(receptors):
+        main = _particles(heights, 10.0 + rng.standard_normal(n))
+        err = _particles(heights, 10.0 + rng.standard_normal(n))
+        result = transport_error(main, err, FLUX)
+        variances.append(result.variance)
+        noises.append(result.noise)
+
+    assert np.mean(noises) / np.std(variances, ddof=1) == pytest.approx(1.0, abs=0.15)
 
 
 def test_percentile_clips_the_top_of_each_level():
@@ -92,7 +208,7 @@ def test_level_statistics_are_numpy_means_and_variances():
     errs = [_column(spread=2.0, seed=9), _column(spread=3.0, seed=10)]
     errs[0] = errs[0].drop(index=errs[0].index[:30])  # level 0 loses particles
 
-    result = transport_error(main, errs, FLUX, percentile=0.9, noise_splits=0)
+    result = transport_error(main, errs, FLUX, percentile=0.9)
 
     def stats(p, level):
         v = p.loc[p["release_height"] == 250.0 + 500.0 * level, "foot"].to_numpy()
@@ -115,8 +231,9 @@ def test_point_receptor_particles_are_one_level():
 
     assert len(result.levels) == 1
     assert result.levels.loc[0, "height"] == 0.0
+    assert result.levels.loc[0, "factor"] == pytest.approx(1.0)
     assert result.variance == pytest.approx(result.levels.loc[0, "dvar"])
-    assert result.sd == pytest.approx(result.levels.loc[0, "sd_trans"])
+    assert result.noise == pytest.approx(result.levels.loc[0, "noise"])
     assert result.sd == pytest.approx(np.sqrt(4.0 - 1.0), rel=0.2)
 
 
@@ -146,9 +263,7 @@ def test_transforms_are_applied_to_both_tables():
     weighted = transport_error(main, err, FLUX, transforms=[kernel], length_scale=None)
 
     top = weighted.levels.index[-1]
-    assert (
-        weighted.levels.loc[top, "sd_trans"] < 0.3 * plain.levels.loc[top, "sd_trans"]
-    )
+    assert weighted.levels.loc[top, "dvar"] < 0.1 * plain.levels.loc[top, "dvar"]
     assert weighted.enhancement < plain.enhancement
     assert weighted.sd < plain.sd
 
@@ -181,11 +296,9 @@ def test_rejects_bad_arguments():
         transport_error(p, p, FLUX, length_scale=0.0)
     with pytest.raises(ValueError, match="levels"):
         transport_error(p, p, FLUX, levels=0)
-    with pytest.raises(ValueError, match="noise_splits"):
-        transport_error(p, p, FLUX, noise_splits=-1)
 
 
-# -- signed estimator and noise floor ------------------------------
+# -- signed estimator and noise -------------------------------------
 
 
 def test_less_spread_gives_a_negative_variance_and_zero_sd():
@@ -196,10 +309,10 @@ def test_less_spread_gives_a_negative_variance_and_zero_sd():
 
     assert result.variance == pytest.approx(1.0 - 4.0, rel=0.2)
     assert result.sd == 0.0
-    assert result.levels.loc[0, "sd_trans"] < 0  # signed square root
+    assert result.levels.loc[0, "dvar"] < 0  # kept with its sign
 
 
-def test_independent_unperturbed_runs_sit_within_the_noise_floor():
+def test_independent_unperturbed_runs_sit_within_the_noise():
     """Two runs that differ only by seed: |variance| should be O(noise), not O(signal)."""
     ratios = []
     for seed in range(12):
@@ -214,17 +327,16 @@ def test_independent_unperturbed_runs_sit_within_the_noise_floor():
     assert max(ratios) < 8.0
 
 
-def test_noise_is_reproducible_and_optional():
-    main = _column(spread=1.0, seed=12)
-    err = _column(spread=2.0, seed=13)
+def test_noise_is_the_standard_error_from_both_runs():
+    main = _column(n_levels=1, spread=1.0, seed=12).drop(columns="release_height")
+    err = _column(n_levels=1, spread=2.0, seed=13).drop(columns="release_height")
 
-    a = transport_error(main, err, FLUX)
-    b = transport_error(main, err, FLUX)
-    off = transport_error(main, err, FLUX, noise_splits=0)
+    result = transport_error(main, err, FLUX)
 
-    assert a.noise == b.noise
-    assert np.isnan(off.noise)
-    assert off.variance == a.variance
+    expected = np.sqrt(_var_of_var(main["foot"]) + _var_of_var(err["foot"]))
+    assert result.noise == pytest.approx(expected)
+    # the perturbed run spreads more, so it carries most of the noise
+    assert result.noise > np.sqrt(2.0 * _var_of_var(main["foot"]))
 
 
 def test_background_field_adds_the_endpoint_spread_to_the_error():
@@ -239,10 +351,8 @@ def test_background_field_adds_the_endpoint_spread_to_the_error():
     err = _column(spread=1.0, seed=8)
     err["lon"] = np.where(np.arange(len(err)) % 2 == 0, -112.0, -110.0)  # 0 or 2
 
-    still = transport_error(main, main.copy(), FLUX, background=field, noise_splits=0)
-    moved = transport_error(
-        main, err, FLUX, background=field, length_scale=None, noise_splits=0
-    )
+    still = transport_error(main, main.copy(), FLUX, background=field)
+    moved = transport_error(main, err, FLUX, background=field, length_scale=None)
 
     assert still.background == pytest.approx(1.0)
     assert still.background == pytest.approx(background(main, field).value)
@@ -251,7 +361,7 @@ def test_background_field_adds_the_endpoint_spread_to_the_error():
     # the perturbed endpoints alternate between 0 and 2: +1 variance per level,
     # combined uncorrelated over four equal levels -> sum(w^2) = 0.25
     assert moved.variance == pytest.approx(0.25, rel=0.4)
-    assert transport_error(main, err, FLUX, noise_splits=0).background == 0.0
+    assert transport_error(main, err, FLUX).background == 0.0
 
 
 # -- realizations ------------------------------------------------------------------
@@ -267,16 +377,29 @@ def test_one_realization_in_a_list_matches_the_bare_table():
     assert listed.realizations == single.realizations == 1
 
 
-def test_identical_realizations_keep_the_variance_and_tighten_the_noise():
+def test_realizations_keep_the_variance_and_tighten_the_noise():
     main, err = _column(seed=1), _column(spread=np.sqrt(5.0), seed=2)
-    single = transport_error(main, err, FLUX)
-    triple = transport_error(main, [err, err.copy(), err.copy()], FLUX)
+    single = transport_error(main, err, FLUX, length_scale=None)
+    triple = transport_error(
+        main, [err, err.copy(), err.copy()], FLUX, length_scale=None
+    )
 
     assert triple.realizations == 3
     assert triple.variance == pytest.approx(single.variance)
     assert triple.enhancement_perturbed == pytest.approx(single.enhancement_perturbed)
-    # the unperturbed side is shared, so the null spread only falls to sqrt((1+1/N)/2)
-    assert triple.noise == pytest.approx(single.noise * np.sqrt((1 + 1 / 3) / 2))
+
+    # Only the perturbed side averages down: the unperturbed particles are
+    # the same in every realization.
+    def noise(realizations):
+        total = 0.0
+        for height in main["release_height"].unique():
+            of_main = _var_of_var(main.loc[main["release_height"] == height, "foot"])
+            of_err = _var_of_var(err.loc[err["release_height"] == height, "foot"])
+            total += 0.25**4 * (of_main + of_err / realizations)
+        return np.sqrt(total)
+
+    assert single.noise == pytest.approx(noise(1))
+    assert triple.noise == pytest.approx(noise(3))
 
 
 def test_averaging_realizations_pulls_the_estimate_toward_the_truth():
