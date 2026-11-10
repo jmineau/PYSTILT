@@ -1429,6 +1429,23 @@ def test_a_worker_killed_outright_stops_the_run_and_a_rerun_finishes_it(tmp_path
     assert len(list((project / "output").glob("particles/*/date=*/*.parquet"))) == 4
 
 
+@pytest.mark.parametrize(
+    ("alive", "died"),
+    [([True, True], False), ([True, False], True), ([False, True], True)],
+)
+def test_a_dead_pool_worker_is_found_by_looking_at_the_workers(alive, died):
+    """The loop looks at the workers itself, since the pool can miss a kill (#400)."""
+    from types import SimpleNamespace
+
+    processes = {
+        i: SimpleNamespace(is_alive=lambda state=state: state)
+        for i, state in enumerate(alive)
+    }
+    executor = SimpleNamespace(_processes=processes)
+
+    assert worker._a_worker_died(executor) is died
+
+
 # ---------------------------------------------------------------------------
 # A batched transport model
 # ---------------------------------------------------------------------------
