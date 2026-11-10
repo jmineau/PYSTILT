@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=f5751531"></script>
+    <script src="../../_static/documentation_options.js?v=c63fe947"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev54+g4204f4251" />
+  <meta name="docsearch:version" content="0.1.0a28.dev56+g5aef4952b" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -656,24 +656,32 @@ and Gerbig’s equation 4), so the noise in it averages out over many
 receptors. <code class="docutils literal notranslate"><span class="pre">noise</span></code> says how large it is
 (<a class="reference internal" href="../transport_error.html"><span class="doc">Transport Error</span></a>).</p></td>
 </tr>
-<tr class="row-odd"><td><p>Particles kept in each level (<code class="docutils literal notranslate"><span class="pre">pct</span></code>)</p></td>
+<tr class="row-odd"><td><p>Sum of the levels into the column (<code class="docutils literal notranslate"><span class="pre">cal.var.cov</span></code>)</p></td>
+<td><p>Counts a pair of levels with the product of their two standard
+deviations, times the correlation between them.</p></td>
+<td><p>Counts a pair with the mean of their two variance differences, times
+the correlation between them. The sum is then linear in the variance
+differences, so their noise averages out over receptors too. The two
+agree when both levels have the same error.</p></td>
+</tr>
+<tr class="row-even"><td><p>Particles kept in each level (<code class="docutils literal notranslate"><span class="pre">pct</span></code>)</p></td>
 <td><p>Drops the particles above the 99th percentile of the enhancement.</p></td>
 <td><p>Keeps every particle, as Lin and Gerbig do. <code class="docutils literal notranslate"><span class="pre">percentile=0.99</span></code>
 gives X-STILT’s trimming.</p></td>
 </tr>
-<tr class="row-even"><td><p>Vertical correlation of the level errors (<code class="docutils literal notranslate"><span class="pre">Lh</span></code>)</p></td>
+<tr class="row-odd"><td><p>Vertical correlation of the level errors (<code class="docutils literal notranslate"><span class="pre">Lh</span></code>)</p></td>
 <td><p>356 m, an empirical mean length scale.</p></td>
 <td><p>356 m by default (<code class="docutils literal notranslate"><span class="pre">length_scale</span></code>). <code class="docutils literal notranslate"><span class="pre">None</span></code> treats the levels as
 independent.</p></td>
 </tr>
-<tr class="row-odd"><td><p>Emission error (<code class="docutils literal notranslate"><span class="pre">cal.emiss.err</span></code>)</p></td>
+<tr class="row-even"><td><p>Emission error (<code class="docutils literal notranslate"><span class="pre">cal.emiss.err</span></code>)</p></td>
 <td><p>Reports the fully correlated sum, a footprint times a <code class="docutils literal notranslate"><span class="pre">sigma</span></code> from
 the spread of several inventories.</p></td>
 <td><p>The same sum, and also the root-sum-square for independent cells,
 which bounds the error from below. With a spatial correlation, fips’s
 <code class="docutils literal notranslate"><span class="pre">prior_obs_error</span></code> gives the value in between.</p></td>
 </tr>
-<tr class="row-even"><td><p>Pressure weighting (<code class="docutils literal notranslate"><span class="pre">get.wgt.*.func</span></code>)</p></td>
+<tr class="row-odd"><td><p>Pressure weighting (<code class="docutils literal notranslate"><span class="pre">get.wgt.*.func</span></code>)</p></td>
 <td><p>Gives each particle the layer below its release pressure, from the
 next particle down (or the ground, for the lowest). A particle released
 at the surface gets almost no weight.</p></td>

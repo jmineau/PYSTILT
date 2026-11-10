@@ -118,6 +118,13 @@ X-STILT. Each row says what each one does.
        and Gerbig's equation 4), so the noise in it averages out over many
        receptors. ``noise`` says how large it is
        (:doc:`/guides/transport_error`).
+   * - Sum of the levels into the column (``cal.var.cov``)
+     - Counts a pair of levels with the product of their two standard
+       deviations, times the correlation between them.
+     - Counts a pair with the mean of their two variance differences, times
+       the correlation between them. The sum is then linear in the variance
+       differences, so their noise averages out over receptors too. The two
+       agree when both levels have the same error.
    * - Particles kept in each level (``pct``)
      - Drops the particles above the 99th percentile of the enhancement.
      - Keeps every particle, as Lin and Gerbig do. ``percentile=0.99``
