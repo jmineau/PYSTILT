@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=cc16caf6"></script>
+    <script src="../_static/documentation_options.js?v=eeee55da"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev47+gdaecddd7e" />
+  <meta name="docsearch:version" content="0.1.0a28.dev49+g94e4cd6ee" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -492,13 +492,13 @@ STILT-R” covers and how to move to a newer STILT-R commit.</p>
 <td><p><a class="github reference external" href="https://github.com/uataq/stilt">uataq/stilt</a></p></td>
 </tr>
 <tr class="row-odd"><td><p>Pinned SHA</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">0e290a68730e155bc2156e28af492a463228c88a</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">278b1ef6d542efd21c6ccab2a85b796acd9812a6</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p>Pin location</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">.github/workflows/tests.yml</span></code> (env <code class="docutils literal notranslate"><span class="pre">STILT_R_SHA</span></code>)</p></td>
 </tr>
 <tr class="row-odd"><td><p>Last verified</p></td>
-<td><p>2026-06-25</p></td>
+<td><p>2026-11-08</p></td>
 </tr>
 </tbody>
 </table>
@@ -508,7 +508,7 @@ says nothing about STILT-R’s current <code class="docutils literal notranslate
 </section>
 <section id="what-matches">
 <h2>What matches<a class="headerlink" href="#what-matches" title="Link to this heading">#</a></h2>
-<p>PYSTILT’s footprints match STILT-R’s for the 20 fidelity scenarios in
+<p>PYSTILT’s footprints match STILT-R’s for the 21 fidelity scenarios in
 <a class="reference external" href="https://github.com/jmineau/PYSTILT/blob/main/tests/fixtures/r_stilt_reference.py">tests/fixtures/r_stilt_reference.py</a>,
 within these tolerances:</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -549,10 +549,11 @@ within these tolerances:</p>
 <ul class="simple">
 <li><p>point, column, and three-location multipoint receptors</p></li>
 <li><p>6 h and 24 h backward runs, and a 6 h forward run</p></li>
-<li><p>the hyper-near-field (HNF) plume correction on (12 scenarios) and off</p></li>
+<li><p>the hyper-near-field (HNF) plume correction on (every scenario but one) and
+off, with <code class="docutils literal notranslate"><span class="pre">veght</span></code> at its default of 0.5 (a fraction of the mixed-layer
+height) and at 100 (meters above ground)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> of 0, 0.5, 1, and 2</p></li>
-<li><p>0.01° and 0.05° longitude/latitude grids and an unsmoothed UTM grid, all
-with square cells</p></li>
+<li><p>0.01° and 0.05° longitude/latitude grids and an unsmoothed UTM grid</p></li>
 <li><p>a 2° box, a receptor in the domain’s corner, a receptor at the edge of
 the met grid, and a small 0.1° domain that particles leave early</p></li>
 <li><p>receptor heights above ground, above sea level (<code class="docutils literal notranslate"><span class="pre">kmsl=1</span></code>), and at 0.5 m</p></li>
@@ -560,6 +561,7 @@ the met grid, and a small 0.1° domain that particles leave early</p></li>
 <li><p>hourly footprints, and STILT-R’s <code class="docutils literal notranslate"><span class="pre">time_integrate=TRUE</span></code> against one
 PYSTILT layer as long as the run</p></li>
 <li><p>a wind-error run (<code class="docutils literal notranslate"><span class="pre">siguverr=1</span></code> m/s)</p></li>
+<li><p>cells with <code class="docutils literal notranslate"><span class="pre">xres</span></code> different from <code class="docutils literal notranslate"><span class="pre">yres</span></code>, in both orders (synthetic particles)</p></li>
 </ul>
 <p>The synthetic tests in
 <a class="reference external" href="https://github.com/jmineau/PYSTILT/blob/main/tests/r_stilt/test_footprint_synth.py">tests/r_stilt/test_footprint_synth.py</a>
@@ -578,20 +580,6 @@ no meteorology or HYSPLIT, so they run anywhere R is installed:</p>
 fill value of <code class="docutils literal notranslate"><span class="pre">-1</span></code>. PYSTILT writes CF-1.8 NetCDF with dimensions
 <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>. Read PYSTILT files as ordinary CF NetCDF. Tools that
 expect STILT-R’s layout will not read them.</p></li>
-<li><p><strong>Smoothing on cells that are not square.</strong> When <code class="docutils literal notranslate"><span class="pre">xres</span></code> and <code class="docutils literal notranslate"><span class="pre">yres</span></code>
-differ, a smoothing kernel wider than one cell has a different number of
-cells along longitude and along latitude. STILT-R’s <code class="docutils literal notranslate"><span class="pre">permute.f90</span></code> reads
-the kernel as if the two numbers were equal. With <code class="docutils literal notranslate"><span class="pre">xres</span></code> larger than
-<code class="docutils literal notranslate"><span class="pre">yres</span></code>, its footprint total comes out 5 to 13 % high on 24 h runs. With
-<code class="docutils literal notranslate"><span class="pre">yres</span></code> larger than <code class="docutils literal notranslate"><span class="pre">xres</span></code>, it reads memory past the end of the kernel.
-The footprint then loses mass (15 % in one case), holds values near
-<code class="docutils literal notranslate"><span class="pre">1e300</span></code>, or R crashes
-(<a class="reference external" href="https://github.com/uataq/stilt/issues/116">uataq/stilt#116</a>; the fix is
-<a class="reference external" href="https://github.com/uataq/stilt/pull/148">uataq/stilt#148</a>).
-PYSTILT adds each kernel along the axis each cell count belongs to, so
-smoothing keeps the footprint total. Its footprint equals STILT-R’s with
-<code class="docutils literal notranslate"><span class="pre">permute.f90</span></code> reading the kernel that way, to within <code class="docutils literal notranslate"><span class="pre">2e-15</span></code> of the
-peak. On square cells the two agree.</p></li>
 <li><p><strong>Smoothing on a projected grid.</strong> The kernel width,
 <code class="docutils literal notranslate"><span class="pre">0.06</span> <span class="pre">*</span> <span class="pre">(var(x)</span> <span class="pre">+</span> <span class="pre">var(y))**0.25</span> <span class="pre">*</span> <span class="pre">sqrt(|rtime|</span> <span class="pre">/</span> <span class="pre">1440)</span></code>, is made for
 coordinates in degrees. STILT-R applies it to the projected coordinates,
@@ -687,18 +675,6 @@ whether to interpolate. A particle that takes no step across the seam is
 interpolated as before, bit for bit.
 <code class="docutils literal notranslate"><span class="pre">test_early_interpolation_across_180_intentionally_differs_from_r</span></code>
 guards the difference.</p></li>
-<li><p><strong>Forward runs with the HNF correction.</strong> STILT-R accumulates the plume
-from the far end of a forward trajectory back toward the release point,
-so its plume is widest at release. PYSTILT accumulates outward from the
-release point. The two <code class="docutils literal notranslate"><span class="pre">foot</span></code> values differ on purpose, and
-<code class="docutils literal notranslate"><span class="pre">test_forward_hnf_foot_intentionally_differs_from_r</span></code> guards the
-difference.</p></li>
-<li><p><strong>The HNF correction with ``veght`` above 1.</strong> HYSPLIT reads such a
-<code class="docutils literal notranslate"><span class="pre">veght</span></code> as meters above ground, and so does PYSTILT’s correction.
-STILT-R multiplies it by the mixed-layer height, which removes most of
-the footprint after the first hour
-(<a class="reference external" href="https://github.com/uataq/stilt/issues/142">uataq/stilt#142</a>). No
-fidelity scenario sets <code class="docutils literal notranslate"><span class="pre">veght</span></code> above 1.</p></li>
 <li><p><strong>The HNF correction of a receptor above sea level.</strong> PYSTILT grows the
 plume from the release height above ground, so it needs <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> in
 <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> for an MSL receptor. STILT-R grows it from the
@@ -709,8 +685,8 @@ scenario compares the uncorrected <code class="docutils literal notranslate"><sp
 <li><p><strong>Untested inputs.</strong> Runs longer than 24 h backward, latitudes above 80°,
 and grids finer than 0.001° have not been compared.</p></li>
 <li><p><strong>Other STILT-R commits.</strong> Nothing detects upstream changes to
-<code class="docutils literal notranslate"><span class="pre">calc_footprint.r</span></code>, <code class="docutils literal notranslate"><span class="pre">permute.f90</span></code>, or <code class="docutils literal notranslate"><span class="pre">calc_trajectory.r</span></code>. Bump the
-pinned SHA by hand (below).</p></li>
+<code class="docutils literal notranslate"><span class="pre">calc_footprint.r</span></code>, <code class="docutils literal notranslate"><span class="pre">permute.f90</span></code>, <code class="docutils literal notranslate"><span class="pre">calc_trajectory.r</span></code>, or
+<code class="docutils literal notranslate"><span class="pre">calc_plume_dilution.r</span></code>. Bump the pinned SHA by hand (below).</p></li>
 </ul>
 </section>
 <section id="large-scale-comparison">
@@ -754,7 +730,9 @@ relative difference, which is what an inversion sums over, is also about
 <p>Reading the same met files on both sides over the full date range needs the
 <code class="docutils literal notranslate"><span class="pre">find_met_files</span></code> fix in the pinned STILT-R commit. HRRR archives can hold
 the same file both at the top level (as a symlink) and in a <code class="docutils literal notranslate"><span class="pre">YYYY/MM/</span></code>
-subdirectory, and older STILT-R listed it twice.</p>
+subdirectory, and older STILT-R listed it twice. The pinned commit also
+lists the next met file for a run that ends partway through a file
+(<a class="reference external" href="https://github.com/uataq/stilt/pull/149">uataq/stilt#149</a>), as PYSTILT does.</p>
 </section>
 <section id="moving-to-a-newer-stilt-r-commit">
 <h2>Moving to a newer STILT-R commit<a class="headerlink" href="#moving-to-a-newer-stilt-r-commit" title="Link to this heading">#</a></h2>
@@ -787,6 +765,7 @@ Then do one of the following:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">r/src/calc_footprint.r</span></code>: footprint kernel and gridding</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">r/src/calc_trajectory.r</span></code>: the HYSPLIT wrapper, random seed, and <code class="docutils literal notranslate"><span class="pre">krand</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">r/src/calc_plume_dilution.r</span></code>: the near-field plume correction (<code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">r/src/permute.f90</span></code>: the Fortran loop that adds each particle’s kernel to
 the grid</p></li>
 </ul>

@@ -1,13 +1,11 @@
 Coming From STILT-R
 ===================
 
-PYSTILT does the same science as STILT-R. On longitude/latitude grids with
-square cells its footprints match STILT-R's cell by cell, to a relative
-tolerance of 1e-7 in the 20 scenarios the tests compare. A few cases differ on
-purpose (:ref:`stilt-r-parity` has them all). Three are in the near-field
-correction (``hnf_plume``): forward runs, where PYSTILT fixes how the plume
-grows, a ``veght`` above 1, which PYSTILT reads as meters above ground, as
-HYSPLIT does, and a receptor above sea level, whose plume PYSTILT grows from
+PYSTILT does the same science as STILT-R. On longitude/latitude grids its
+footprints match STILT-R's cell by cell, to a relative tolerance of 1e-7 in
+the 21 scenarios the tests compare. A few cases differ on purpose
+(:ref:`stilt-r-parity` has them all). One is in the near-field correction
+(``hnf_plume``): a receptor above sea level, whose plume PYSTILT grows from
 the ground. Two are on a projected grid: the smoothing, which PYSTILT makes
 as wide as on a longitude/latitude grid and STILT-R makes a few meters wide,
 and the early-time interpolation, which STILT-R never runs on a grid in
@@ -16,9 +14,7 @@ way around the earth, which PYSTILT smooths as one cloud and STILT-R smooths
 far too widely, particles just across 180° from the edge of a regional
 grid, which PYSTILT smooths onto the grid and STILT-R drops, and the
 early-time interpolation of a particle that crosses 180°, which PYSTILT
-takes the short way round and STILT-R through 0°. Smoothing on cells that
-are not square differs too: PYSTILT adds each kernel along the axis its
-cell count belongs to, so the footprint keeps its total. A footprint on a
+takes the short way round and STILT-R through 0°. A footprint on a
 global grid written from 0° to 360° keeps those longitudes, where STILT-R
 labels it from -180° to 180°.
 PYSTILT also takes grids that STILT-R cannot use, such as one from -10° to
