@@ -199,20 +199,6 @@ What does not match
 - **Other STILT-R commits.** Nothing detects upstream changes to
   ``calc_footprint.r``, ``permute.f90``, ``calc_trajectory.r``, or
   ``calc_plume_dilution.r``. Bump the pinned SHA by hand (below).
-- **STILT-R before the pinned commit.** Older STILT-R accumulated the
-  near-field plume from the far end of a forward trajectory, which made it
-  widest at the release point
-  (`uataq/stilt#144 <https://github.com/uataq/stilt/pull/144>`_), and
-  multiplied a ``veght`` above 1 by the mixed-layer height instead of reading
-  it as meters above ground, as HYSPLIT does
-  (`uataq/stilt#145 <https://github.com/uataq/stilt/pull/145>`_). Its
-  ``permute.f90`` also read a smoothing kernel as if it had the same number
-  of cells along longitude and latitude, so on cells with ``xres`` different
-  from ``yres`` the footprint total came out wrong or the kernel was read past
-  its end
-  (`uataq/stilt#148 <https://github.com/uataq/stilt/pull/148>`_). A forward
-  run with the near-field correction, a ``veght`` above 1, or cells that are
-  not square matches PYSTILT only on the pinned commit or a later one.
 
 Large-scale comparison
 ----------------------
