@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=2ed25515"></script>
+    <script src="../../../_static/documentation_options.js?v=80ba5f70"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev51+ga83e31cdd" />
+  <meta name="docsearch:version" content="0.1.0a28.dev52+g75958273c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -1153,6 +1153,25 @@
         <span class="n">process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
 
 
+<span class="c1">#: Seconds the pool loop waits for a receptor to finish before it looks at the workers.</span>
+<span class="n">_WORKER_CHECK_SECONDS</span> <span class="o">=</span> <span class="mf">2.0</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_a_worker_died</span><span class="p">(</span><span class="n">executor</span><span class="p">:</span> <span class="n">ProcessPoolExecutor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Say whether a pool worker has exited, which it does only if it was killed.</span>
+
+<span class="sd">    The pool reports a worker killed outright (SIGKILL, as the out-of-memory</span>
+<span class="sd">    killer sends) by itself, but not always at once. On Python 3.14 it starts</span>
+<span class="sd">    the second worker after waking the thread that watches the workers, which</span>
+<span class="sd">    may already have made its list. If that worker is the one killed, the pool</span>
+<span class="sd">    learns of it only when another receptor finishes, which can be hours later</span>
+<span class="sd">    (#400). Workers stay alive until the loop in :func:`_run_in_pool` ends, so</span>
+<span class="sd">    one that is not alive has died.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="ow">not</span> <span class="n">process</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span> <span class="k">for</span> <span class="n">process</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">executor</span><span class="o">.</span><span class="n">_processes</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_run_in_pool</span><span class="p">(</span>
     <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span>
     <span class="n">receptor_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
@@ -1198,7 +1217,13 @@
                     <span class="n">running</span><span class="p">[</span><span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">_pool_run</span><span class="p">,</span> <span class="n">item</span><span class="p">)]</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">running</span><span class="p">:</span>
                     <span class="k">break</span>
-                <span class="n">finished</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">wait</span><span class="p">(</span><span class="n">running</span><span class="p">,</span> <span class="n">return_when</span><span class="o">=</span><span class="n">FIRST_COMPLETED</span><span class="p">)</span>
+                <span class="n">finished</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">wait</span><span class="p">(</span>
+                    <span class="n">running</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">_WORKER_CHECK_SECONDS</span><span class="p">,</span> <span class="n">return_when</span><span class="o">=</span><span class="n">FIRST_COMPLETED</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">finished</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">_a_worker_died</span><span class="p">(</span><span class="n">executor</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="n">BrokenProcessPool</span><span class="p">(</span><span class="s2">"a worker process died"</span><span class="p">)</span>
+                    <span class="k">continue</span>
                 <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">finished</span><span class="p">:</span>
                     <span class="n">idx</span><span class="p">,</span> <span class="n">problems</span> <span class="o">=</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
                     <span class="k">del</span> <span class="n">running</span><span class="p">[</span><span class="n">future</span><span class="p">]</span>
