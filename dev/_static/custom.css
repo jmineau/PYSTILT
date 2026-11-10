@@ -117,3 +117,10 @@ html[data-theme="dark"] .rst-content code.literal {
   font-size: 0.9rem;
   color: var(--pst-color-text-muted);
 }
+
+/* An `.. ipython::` block with `:suppress:` and a `@savefig` still writes an
+   empty code box above its figure. Hide a box whose only content is the
+   empty span Pygments starts every block with. */
+div.highlight-ipython:has(pre > span:only-child:empty) {
+  display: none;
+}
