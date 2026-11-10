@@ -16,8 +16,8 @@ For a column receptor the difference is taken per release level, and the
 levels are added with the column weighting and X-STILT's vertical error
 correlation (Wu et al., 2018, GMD). The difference of two sample variances
 is noisy and can be negative. It is returned with its sign and with its
-standard error, so many receptors can be combined with a median and a
-single value can be compared with its noise.
+standard error, so many receptors can be combined with a mean and a single
+value can be compared with its noise.
 """
 
 from __future__ import annotations
@@ -385,7 +385,7 @@ def transport_error(
     distance a particle travels as well as with time), and when turbulence
     already spreads the particles widely, as on a convective afternoon.
     Compare a single value with ``noise``. Over many receptors, combine the
-    signed ``variance`` values with a median instead of clipping each at
+    signed ``variance`` values with a mean instead of clipping each at
     zero.
 
     Examples
