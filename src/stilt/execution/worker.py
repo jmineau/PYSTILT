@@ -695,6 +695,25 @@ def _stop_workers(executor: ProcessPoolExecutor) -> None:
         process.join()
 
 
+#: Seconds the pool loop waits for a receptor to finish before it looks at the workers.
+_WORKER_CHECK_SECONDS = 2.0
+
+
+def _a_worker_died(executor: ProcessPoolExecutor) -> bool:
+    """
+    Say whether a pool worker has exited, which it does only if it was killed.
+
+    The pool reports a worker killed outright (SIGKILL, as the out-of-memory
+    killer sends) by itself, but not always at once. On Python 3.14 it starts
+    the second worker after waking the thread that watches the workers, which
+    may already have made its list. If that worker is the one killed, the pool
+    learns of it only when another receptor finishes, which can be hours later
+    (#400). Workers stay alive until the loop in :func:`_run_in_pool` ends, so
+    one that is not alive has died.
+    """
+    return any(not process.is_alive() for process in list(executor._processes.values()))
+
+
 def _run_in_pool(
     project: Project,
     receptor_ids: list[str],
@@ -740,7 +759,13 @@ def _run_in_pool(
                     running[executor.submit(_pool_run, item)] = item[0]
                 if not running:
                     break
-                finished, _ = wait(running, return_when=FIRST_COMPLETED)
+                finished, _ = wait(
+                    running, timeout=_WORKER_CHECK_SECONDS, return_when=FIRST_COMPLETED
+                )
+                if not finished:
+                    if _a_worker_died(executor):
+                        raise BrokenProcessPool("a worker process died")
+                    continue
                 for future in finished:
                     idx, problems = future.result()
                     del running[future]
