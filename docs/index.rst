@@ -13,16 +13,24 @@ place and time of your measurement and some meteorology, and it computes a
 footprint. The footprint is a map of the upwind surface areas that influenced
 the measurement, and by how much.
 
-.. image:: _static/footprint-circle.png
-   :alt: A footprint over the Salt Lake Valley: a band of color stretching
-         north-northwest from a sensor in Salt Lake City toward the Great Salt Lake.
-   :width: 320px
-   :align: center
+.. raw:: html
+
+   <figure class="home-animation">
+     <video autoplay loop muted playsinline poster="_static/home-animation-poster.jpg"
+            aria-label="Particles travel backward in time from a tower in northern Wisconsin, north into Canada, while a footprint map fills in behind them.">
+       <source src="_static/home-animation.mp4" type="video/mp4">
+     </video>
+     <figcaption>
+       The WLEF tall tower in Park Falls, Wisconsin, at 2 pm on 8 February 2019.
+       Left: PYSTILT's particles traveling back in time from the 396 m inlet.
+       Right: the footprint they make. Particles that reach the northern edge of
+       the HRRR meteorology stop there.
+     </figcaption>
+   </figure>
 
 PYSTILT works for towers, aircraft, mobile platforms, and satellite or
 ground-based column measurements. The same project can run one simulation on a
-laptop or tens of thousands on an HPC cluster. The map above, from STILT-R's
-documentation, is a footprint of a sensor in Salt Lake City.
+laptop or tens of thousands on an HPC cluster.
 
 .. note::
 
