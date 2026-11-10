@@ -327,7 +327,12 @@ def test_run_times_out_and_keeps_log_output(tmp_path):
 
 
 def _kill_when_started(workdir: Path, sig: int):
-    """Send *sig* to the script in *workdir* once it has written its pid, from another thread."""
+    """
+    Send *sig* to the script in *workdir* once it has written its pid, from another thread.
+
+    The script must write ``pid`` last, just before ``exec``, so the kill cannot land
+    before the script has written what the test reads afterwards (#396).
+    """
     import os
     import threading
     import time
@@ -352,9 +357,9 @@ def test_run_fails_when_hycs_std_is_killed_from_outside(tmp_path):
 
     _script(
         tmp_path,
-        "echo $$ > pid\n"
         "echo 'starting hycs_std'\n"
         "printf 'first line\\nlast line of MESSAGE\\n' > MESSAGE\n"
+        "echo $$ > pid\n"
         "exec sleep 60\n",
     )
     thread = _kill_when_started(tmp_path, signal.SIGKILL)
