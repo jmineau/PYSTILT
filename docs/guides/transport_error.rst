@@ -182,7 +182,7 @@ name of the wind-error variant, and the flux field:
    sims = project.simulations
    wbb = sims[(sims.variant == "hrrr") & (sims.site == "WBB")]
    errors = project.transport_error(wbb, "hrrr-err", flux)
-   errors.groupby(errors.time.dt.month).variance.median()
+   errors.groupby(errors.time.dt.month).variance.mean()
 
 ``errors`` is ``wbb`` with six more columns. ``variance`` is the
 transport-error variance of the modeled enhancement, in the enhancement's
@@ -231,10 +231,22 @@ you whether a value means anything:
 - ``result.noise`` is the standard error of ``variance``, from the
   particles of both runs. A ``variance`` within two or three times ``noise``
   is not resolved.
-- Over many receptors, take the median of the signed ``variance``, by hour,
-  season, or site. Do not clip each value at zero first, because that turns
-  noise into a positive error. ``result.sd`` treats a negative variance as
-  zero, so use it only once the variance is resolved.
+- Over many receptors, take the mean of the signed ``variance``, by hour,
+  season, or site. Its uncertainty is the standard deviation of the
+  receptors' values divided by the square root of their number. Do not clip
+  each value at zero first, because that turns noise into a positive error.
+  ``result.sd`` treats a negative variance as zero, so use it only once the
+  variance is resolved.
+
+Take the mean and not the median. Most particles miss the sources and a few
+cross them, so the per-particle enhancement is skewed, and so is the
+estimate. The median of a skewed estimate is below its mean. In a test with
+skewed enhancements at a point receptor, the median over receptors was 17
+to 35 % low, and the mean was within 4 %.
+
+Near a strong source a few particles carry most of the enhancement. One
+receptor's ``variance`` then depends on those few particles and is rarely
+resolved. Combine receptors.
 
 For a column receptor the levels are added so that the noise in each level
 averages out over receptors, as it does for a point receptor
