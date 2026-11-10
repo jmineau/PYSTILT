@@ -101,8 +101,8 @@ A footprints folder's adds the particles folder it was made from:
        ymax: 41.25
        yres: 0.01
      smooth_factor: 1
-     time_integrate: false
      transforms: []
+     tres: 1h
 
 ``name``
    The variant that made the folder.
@@ -196,7 +196,8 @@ A footprint file holds only the cells that are not zero:
      - The receptor id.
    * - ``hour``
      - int16
-     - The layer, in hours after the receptor time (below).
+     - The layer, counted from the receptor time in layers of ``tres``:
+       hours, by default (below).
    * - ``y``
      - int16
      - The cell's row in the grid, 0 at ``ymin``.
@@ -246,10 +247,12 @@ missing, not as a footprint of zeros.
 The hour
 ~~~~~~~~
 
-Layer ``k`` holds the particles' influence from ``k`` hours to ``k + 1``
-hours after the receptor time, and is stamped at its start. A particle
-row at ``age`` minutes falls in layer ``floor(age / 60)``. For a receptor
-at 18:30 on a backward run:
+Layer ``k`` holds the particles' influence from ``k`` to ``k + 1`` layers
+after the receptor time, and is stamped at its start. A layer is
+``tres`` long, an hour by default, so the stored ``hour`` is the hour
+unless the settings give another length. A particle row at ``age`` minutes
+falls in layer ``floor(age / m)``, where ``m`` is ``tres`` in minutes. For a receptor at
+18:30 on a backward run with hourly layers:
 
 .. list-table::
    :header-rows: 1
@@ -266,8 +269,10 @@ at 18:30 on a backward run:
      - 16:30 to 17:30, stamped 16:30
 
 The layers keep the receptor's minute, so a receptor at 18:30 has layers
-starting at half past. A footprint made with ``time_integrate: true`` has
-one layer, hour 0, stamped at the receptor time, which holds the whole run.
+starting at half past. With ``tres: 15min`` its layer -1 covers 18:15
+to 18:30 and layer -2 covers 18:00 to 18:15. With ``tres`` as long as the
+run (``1D`` for a 24-hour run) there is one layer, -1, stamped at the
+start of the run, which holds the whole run.
 
 The grid
 ~~~~~~~~
@@ -306,7 +311,10 @@ For example, in pyarrow:
    foot[t, table["y"].to_numpy(), table["x"].to_numpy()] = table["foot"].to_numpy()
 
 The small tolerance keeps the last whole cell when the bounds are decimals
-that binary floats store a little short.
+that binary floats store a little short. Layer ``h`` starts
+``h`` times ``tres`` after the receptor time. ``tres`` is in
+``stilt:footprint``, written as minutes (``15min``), hours (``1h``) or days
+(``1D``); a file that does not record it has hourly layers.
 
 Units
 ~~~~~
@@ -374,3 +382,13 @@ a rule changed.
   are Parquet files in settings folders, and an empty footprint is marked
   ``stilt:empty``. Files from development builds before it carry a
   version ending in ``.dev...``, and may differ.
+
+Why the output has separate trees
+---------------------------------
+
+The output directory keeps results, logs, and kept workdirs in separate
+trees (``particles/``, ``footprints/``, ``logs/``, ``scratch/``). Each
+results tree holds Parquet files only, so pyarrow, DuckDB, polars, and R
+read it as one table, and a log or a failure record beside a result would
+break that. Whether a simulation is complete is read from the results
+trees alone; the logs tree only explains the ones that are not.

@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Your First Footprint &#8212; PYSTILT 0.1.0a27</title>
+    <title>Your First Footprint &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -476,19 +476,10 @@
                   
   <section id="your-first-footprint">
 <h1>Your First Footprint<a class="headerlink" href="#your-first-footprint" title="Link to this heading">#</a></h1>
-<p>This page takes you from one measurement to a footprint map. It uses Python.
-The first part makes one footprint with two function calls. The second
-part runs the same thing as a project, which is how you run many
-receptors and keep the results. The same project from the command line is
-at the end.</p>
-<p>You will:</p>
-<ol class="arabic simple">
-<li><p>describe one measurement (a <a class="reference internal" href="glossary.html#term-receptor"><span class="xref std std-term">receptor</span></a>)</p></li>
-<li><p>point PYSTILT at <a class="reference internal" href="glossary.html#term-meteorology"><span class="xref std std-term">meteorology</span></a></p></li>
-<li><p>follow particles back in time from the receptor</p></li>
-<li><p>calculate and plot the footprint</p></li>
-<li><p>run the same receptor as a project</p></li>
-</ol>
+<p>You will make the footprint of one measurement, a map of where its air came
+from, with two function calls in Python. Then you will run the same
+measurement as a project, which is how you run thousands of them and keep
+the results. The command-line version of the project is at the end.</p>
 <section id="before-you-start">
 <h2>Before you start<a class="headerlink" href="#before-you-start" title="Link to this heading">#</a></h2>
 <p>STILT moves particles with wind fields from a weather model, stored as
@@ -497,13 +488,9 @@ every hour of the run before it: for a 24-hour backward run, from 24 hours
 before the measurement to just after it. A simulation with a file missing
 fails, naming the hours.</p>
 <p>If you already have ARL files, for example in a group archive, tell PYSTILT
-the folder they are in, a pattern for their names, and how many hours each
-file covers. For files named like <code class="docutils literal notranslate"><span class="pre">20210115_06</span></code>, each holding six hours:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">met</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">"directory"</span><span class="p">:</span> <span class="s2">"/path/to/arl/hrrr"</span><span class="p">,</span>
-    <span class="s2">"file_format"</span><span class="p">:</span> <span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">_%H"</span><span class="p">,</span>   <span class="c1"># date codes: %Y year, %m month, %d day, %H hour</span>
-    <span class="s2">"file_tres"</span><span class="p">:</span> <span class="s2">"6h"</span><span class="p">,</span>            <span class="c1"># each file covers 6 hours</span>
-<span class="p">}</span>
+the folder they are in. Each file’s header says which times it holds, so their
+names do not matter:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">met</span> <span class="o">=</span> <span class="s2">"/path/to/arl/hrrr"</span>
 </pre></div>
 </div>
 <p>If you don’t have ARL files, PYSTILT can download them from NOAA’s archive
@@ -562,8 +549,9 @@ what you want for measurements. 24 to 72 hours is typical. This page uses 12
 because its met files start 13 hours before the measurement.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">numpar</span></code></dt><dd><p>How many particles to release. More particles give a smoother footprint
-but take longer. 200 is fine for a first try. Research runs often use
-500 to 1000.</p>
+but take longer. 200 is enough to see the shape. For results you will
+publish we use 1000, STILT-R’s default, because a footprint from fewer
+particles is noisy far from the receptor.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">krand</span></code> and <code class="docutils literal notranslate"><span class="pre">seed</span></code></dt><dd><p>HYSPLIT draws random numbers for the turbulence that moves each particle.
 <code class="docutils literal notranslate"><span class="pre">krand=2</span></code> with a <code class="docutils literal notranslate"><span class="pre">seed</span></code> makes the draws the same on every run, so your
@@ -700,32 +688,24 @@ the variant name:</p>
 <a class="reference internal image-reference" href="../_images/quickstart_sim_footprint.png"><img alt="../_images/quickstart_sim_footprint.png" src="../_images/quickstart_sim_footprint.png" style="width: 6in;" />
 </a>
 <p>This is the same footprint as in Step 3, because the settings and the seed
-are the same. The seed belongs to the variant, so every receptor of a variant
-runs with it. Without <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code> and a <code class="docutils literal notranslate"><span class="pre">seed</span></code>, each run draws its own
-random numbers for the turbulence, and 200 particles are few, so a second
-run’s footprint looks a little different.</p>
+are the same.</p>
 </section>
 <section id="what-pystilt-wrote">
 <h2>What PYSTILT wrote<a class="headerlink" href="#what-pystilt-wrote" title="Link to this heading">#</a></h2>
 <p>Your inputs are in the project folder, and the results in its <code class="docutils literal notranslate"><span class="pre">output</span></code>
-folder.</p>
+folder:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>my_first_project/
-  config.yaml                 # your settings
-  receptors.csv               # your receptors
+  config.yaml        # your settings
+  receptors.csv      # your receptors
   output/
-    particles/settings=hrrr-c05088/_settings.yaml     # the settings, written out in full
-    particles/settings=hrrr-c05088/date=2021-01-14/202101141900_-111.848_40.766_10.parquet
-    footprints/settings=hrrr-5b2b7e/_settings.yaml
-    footprints/settings=hrrr-5b2b7e/date=2021-01-14/202101141900_-111.848_40.766_10.parquet
-    logs/settings=hrrr-c05088/date=2021-01-14/202101141900_-111.848_40.766_10.log
+    particles/       # where each particle went, one file per simulation
+    footprints/      # the footprints, one file per simulation
+    logs/            # HYSPLIT's log of each run
 </pre></div>
 </div>
-<p>Each folder under <code class="docutils literal notranslate"><span class="pre">particles</span></code>, <code class="docutils literal notranslate"><span class="pre">footprints</span></code>, and <code class="docutils literal notranslate"><span class="pre">logs</span></code> is a
-<a class="reference internal" href="glossary.html#term-settings-folder"><span class="xref std std-term">settings folder</span></a>: the variant’s name, <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>,
-plus a short code made from its settings. The <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> in a
-particles or footprints folder lists them. Change a setting and the next run
-writes to a new folder, so nothing is overwritten. The file name is the
-<a class="reference internal" href="glossary.html#term-receptor-id"><span class="xref std std-term">receptor id</span></a>: the time, longitude, latitude, and altitude.</p>
+<p>Each result is kept under the settings it was made with. Change a setting and
+the next run writes new files beside the old ones, so nothing is
+overwritten. <a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a> has the full layout.</p>
 <p>Your settings and receptors are saved in the folder, so you can open the
 project again later without repeating them:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"./my_first_project"</span><span class="p">)</span>
@@ -744,14 +724,11 @@ outputs already exist and skips them. If you add receptors with
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>init<span class="w"> </span>./my_first_project
 </pre></div>
 </div>
-<p>Open <code class="docutils literal notranslate"><span class="pre">my_first_project/config.yaml</span></code> and set the meteorology folder, file
-pattern, and footprint grid. The keys are the same as in the Python example
+<p>Open <code class="docutils literal notranslate"><span class="pre">my_first_project/config.yaml</span></code> and set the meteorology folder and the
+footprint grid. The keys are the same as in the Python example
 above:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/arl/hrrr</span>
-<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">"%Y%m%d_%H"</span>
-<span class="w">    </span><span class="nt">file_tres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6h</span>
+<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/arl/hrrr</span>
 
 <span class="nt">variants</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
@@ -789,7 +766,7 @@ prints <code class="docutils literal notranslate"><span class="pre">No</span> <s
 <section id="next-steps">
 <h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p>Run many receptors: <a class="reference internal" href="../tutorials/wbb_stationary.html"><span class="doc">Tutorial: A Week Of Tower Footprints</span></a></p></li>
+<li><p>Run many receptors: <a class="reference internal" href="../tutorials/wbb_stationary.html"><span class="doc">Tutorial: A Day Of Tower Footprints</span></a></p></li>
 <li><p>Understand the different receptor types: <a class="reference internal" href="../guides/receptors.html"><span class="doc">Receptors</span></a></p></li>
 <li><p>More plotting and analysis: <a class="reference internal" href="../guides/outputs.html"><span class="doc">Footprints And Particles</span></a></p></li>
 <li><p>Run thousands of simulations on a cluster: <a class="reference internal" href="../guides/slurm.html"><span class="doc">On An HPC Cluster (Slurm)</span></a></p></li>

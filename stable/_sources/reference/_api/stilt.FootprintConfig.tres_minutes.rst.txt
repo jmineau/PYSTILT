@@ -1,0 +1,6 @@
+stilt.FootprintConfig.tres\_minutes
+===================================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: FootprintConfig.tres_minutes

@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.particles.ParticlesAccessor.endpoints &#8212; PYSTILT 0.1.0a27</title>
+    <title>stilt.particles.ParticlesAccessor.endpoints &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -503,6 +503,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.particles_hash.html">stilt.config.Variant.particles_hash</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.realization_numbers.html">stilt.config.Variant.realization_numbers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings.html">stilt.config.Variant.run_settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings_without_met.html">stilt.config.Variant.run_settings_without_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.transport_for.html">stilt.config.Variant.transport_for</a></li>
 </ul>
 </details></li>
@@ -607,9 +608,15 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.to_yaml.html">stilt.ProjectConfig.to_yaml</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.FootprintConfig.html">stilt.FootprintConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.FootprintConfig.html">stilt.FootprintConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.tres_minutes.html">stilt.FootprintConfig.tres_minutes</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.ExecutionConfig.html">stilt.ExecutionConfig</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.Bounds.html">stilt.Bounds</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Bounds.html">stilt.Bounds</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Bounds.contains.html">stilt.Bounds.contains</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Grid.html">stilt.Grid</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Grid.axes.html">stilt.Grid.axes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Grid.cells.html">stilt.Grid.cells</a></li>
@@ -639,7 +646,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.fetch.html">stilt.transport.hysplit.Met.fetch</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing_hours.html">stilt.transport.hysplit.Met.missing_hours</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing.html">stilt.transport.hysplit.Met.missing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -809,6 +816,7 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.StiltError.html">stilt.StiltError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.SimulationError.html">stilt.exceptions.SimulationError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.MeteorologyError.html">stilt.exceptions.MeteorologyError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.WorkerDied.html">stilt.exceptions.WorkerDied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.HYSPLITNotFoundError.html">stilt.exceptions.HYSPLITNotFoundError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.EmptyFootprint.html">stilt.exceptions.EmptyFootprint</a></li>
 </ul>

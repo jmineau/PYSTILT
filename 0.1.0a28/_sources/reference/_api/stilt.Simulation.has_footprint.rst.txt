@@ -1,0 +1,6 @@
+stilt.Simulation.has\_footprint
+===============================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Simulation.has_footprint

@@ -4,9 +4,10 @@ Projects And Variants
 A PYSTILT :term:`project` is a folder with your settings and your
 receptors. Every receptor runs once under each :term:`variant`, a named set
 of settings, and the results go to an output directory the settings name.
-This page covers what is in the folder, the settings most projects need,
-variants, and how reruns and changed settings work.
-:doc:`../reference/configuration` lists every option.
+We keep one project per study, because a project reruns only what is
+missing and never overwrites a result, so you can add receptors and try
+other settings as the study grows. Most projects need only the settings
+below, and :doc:`../reference/configuration` lists every option.
 
 The project folder
 ------------------
@@ -36,10 +37,7 @@ A typical config.yaml
 .. code-block:: yaml
 
    mets:
-     hrrr:
-       directory: /data/arl/hrrr
-       file_format: "%Y%m%d_%H"
-       file_tres: 6h
+     hrrr: /data/arl/hrrr
 
    variants:
      hrrr: {}            # every receptor runs once, with these settings
@@ -82,19 +80,21 @@ The settings most people change
    * - ``grid``
      - The map grid for the footprint: the longitude range
        (``xmin``/``xmax``), the latitude range (``ymin``/``ymax``), and the
-       cell size in degrees (``xres``/``yres``). Leave it out, or set it to
+       cell size in degrees (``xres``/``yres``). Make it cover where the
+       air comes from over the whole run. Leave it out, or set it to
        ``null``, to make particles but no footprint.
      - 0.01° (about 1 km) for a city, 0.1° for a region
    * - ``n_hours``
      - How many hours to follow the particles. Negative values run backward
        in time, which is what footprints need. Positive values run forward
-       from the receptor (see :doc:`plume_background`).
+       from the receptor (see :ref:`plume-background`).
      - ``-24`` to ``-72``
    * - ``numpar``
      - Particles released per simulation. More particles give a smoother
-       footprint and take longer. The default is 200; the config
-       ``stilt init`` writes sets 1000.
-     - ``200`` to ``1000``
+       footprint and take longer. The default is 200, enough to try a
+       project; we use 1000 for results, as the config ``stilt init``
+       writes does.
+     - ``1000``
    * - ``output``
      - Where results go (`The output directory`_).
      - ``./output``
@@ -106,35 +106,29 @@ The settings most people change
 These footprint settings sit next to ``grid`` at the top level:
 
 ``smooth_factor``
-   Scales the Gaussian smoothing applied to each particle's influence. The
-   default, ``1.0``, is standard STILT. Smaller values smooth less. The
-   kernel widens as the particles spread and age. Its width is worked out
-   in degrees. On a projected ``grid`` (a ``crs`` such as ``EPSG:32612``) it
-   is converted to the grid's units, so a footprint is smoothed about as
-   much on 1 km UTM cells as on 0.01° cells. STILT-R smooths a footprint on a
-   projected grid much less (:ref:`stilt-r-parity`). A particle cloud on
-   both sides of 180° is measured as one cloud. A grid that goes all the way
-   around the earth (``xmin: -180``, ``xmax: 180``, with cells that fit
-   360°) is a circle: smoothing that passes the east edge returns at the
-   west edge. STILT-R smooths such a cloud far too widely and loses part
-   of the footprint (:ref:`stilt-r-parity`).
+   Scales the Gaussian smoothing applied to each particle's influence,
+   which widens as the particles spread and age. Leave it at ``1.0``,
+   standard STILT, unless you are testing how much the smoothing matters;
+   smaller values smooth less.
 
-``time_integrate``
-   ``true`` sums the footprint over time into a single map, which makes
-   smaller files. The default, ``false``, keeps one layer per hour.
+``tres``
+   The length of each time layer of the footprint. The default, ``1h``,
+   gives one layer per hour back from the receptor time, as STILT-R does.
+   Use ``15min`` for 15-minute observations such as EM27/SUN columns, or
+   ``1D`` for daily layers in a coarse inversion. Layers are counted from
+   the receptor time, so a receptor at 18:30 with ``tres: 15min`` has
+   layers starting at 18:15, 18:00, and so on. For one map of the whole
+   run, sum the layers (``foot.sum("time")``).
 
 ``transforms``
    Steps that weight the particles before the footprint is made, mainly for
    column measurements. See :doc:`transforms`.
 
-A ``grid`` can be projected: give it a ``crs`` such as ``EPSG:32612`` and
-``xres`` and ``yres`` in the projection's units (meters for UTM). The bounds
-stay in degrees. The two steps that depend on the cell size work in the
-grid's units. One is the smoothing. The other is the early-time
-interpolation, which adds particle positions between output steps in the
-first 100 minutes when the particles move more than a cell per step. On
-100 m UTM cells it runs as it does on 0.001° cells. STILT-R decides it in
-degrees and never runs it on a grid in meters (:ref:`stilt-r-parity`).
+A ``grid`` can be projected, with a ``crs`` such as ``EPSG:32612`` and
+``xres`` and ``yres`` in the projection's units (meters for UTM), and it can
+cross 180° (``xmin: 170``, ``xmax: -170``).
+:doc:`../reference/configuration` ("Footprint grids") says how the smoothing
+and the time layers work on such grids.
 
 ``config.yaml`` also takes the lower-level HYSPLIT and STILT settings, such
 as turbulence, time step, and output variables, by the names STILT-R uses.
@@ -184,8 +178,9 @@ three variants make 300 simulations. A variant may set:
 
 Any other setting
    Transport settings (``numpar``, ``ziscale``, turbulence, wind errors)
-   and footprint settings (``grid``, ``smooth_factor``, ``time_integrate``,
-   ``transforms``) override the defaults for that variant only.
+   and footprint settings (``grid``, ``smooth_factor``, ``tres``,
+   ``transforms``) override the defaults for that variant
+   only.
 
 Variant names may use lowercase letters, digits, and hyphens, because they
 become folder names. The same rule applies to the names in ``mets``.
@@ -282,12 +277,10 @@ output="s3://my-bucket/slv-2023")``.
 
 Everything else is the same: the folder layout, reruns that skip finished
 simulations, ``stilt status``, and loading results. Runs write each result
-straight to the store. An output on ``memory://`` lasts only as long as the
-process that made it, so ``stilt status`` from a new process finds no
-settings folders there. HYSPLIT itself still runs in a workdir on local disk
-(``--compute-root`` or ``PYSTILT_COMPUTE_ROOT``). Listing an object store
-takes longer than listing a disk, so ``stilt status`` on a large project is
-slower.
+straight to the store, while HYSPLIT itself still runs in a workdir on local
+disk (``--compute-root`` or ``PYSTILT_COMPUTE_ROOT``). Listing an object
+store takes longer than listing a disk, so ``stilt status`` on a large
+project is slower.
 
 Reruns skip finished work
 -------------------------
@@ -395,21 +388,13 @@ one variant per geometry; they share the particles:
          size: 0.01
          ids: [landfill, wwtp]
 
-Loading ``config.yaml`` does not read the shapefile. PYSTILT reads it
-once, when it works out the variants' settings, and picks the grid then.
-To make that grid finer or coarser, change ``cells_per_target``. A variant
-cannot change only part of it (``grid: {xres: 0.1}``), because the grid is
-not known until the shapefile is read.
-
-The grid PYSTILT picks is saved in the footprint folder's ``_settings.yaml``
-and with each footprint, so you do not need the shapefile again to read a
-footprint. If you give both ``grid`` and ``geometry``, the ``grid`` is used
-as given. The geometry is kept with the settings, and
-``stilt.Mesh.from_spec(sim.variant.footprint.geometry)`` reads the
-:class:`stilt.Mesh` to aggregate onto. Each footprint file also stores a
-code for the geometry it was made for, and ``foot.stilt.aggregate`` warns
-if the mesh you pass no longer matches, for example because the shapefile
-was edited after the run.
+To make the grid PYSTILT picks finer or coarser, change
+``cells_per_target``. The grid is saved with each footprint, so you do not
+need the shapefile again to read one, and
+``stilt.Mesh.from_spec(sim.variant.footprint.geometry)`` gives back the
+:class:`stilt.Mesh` to aggregate onto. ``foot.stilt.aggregate`` warns if the
+mesh you pass no longer matches the one the footprint was made for, for
+example because the shapefile was edited after the run.
 
 .. note::
 
@@ -476,13 +461,7 @@ You can pass any ``config.yaml`` key to
 
    project = stilt.Project.init(
        "./my_project",
-       mets={
-           "hrrr": {
-               "directory": "/data/arl/hrrr",
-               "file_format": "%Y%m%d_%H",
-               "file_tres": "6h",
-           }
-       },
+       mets={"hrrr": "/data/arl/hrrr"},
        grid={
            "xmin": -114.0, "xmax": -111.0,
            "ymin": 39.0, "ymax": 42.0,
@@ -501,13 +480,7 @@ check:
    from stilt.transport.hysplit import MetConfig
 
    config = stilt.ProjectConfig(
-       mets={
-           "hrrr": MetConfig(
-               directory="/data/arl/hrrr",
-               file_format="%Y%m%d_%H",
-               file_tres="6h",
-           )
-       },
+       mets={"hrrr": MetConfig(directory="/data/arl/hrrr")},
        grid=stilt.Grid(
            xmin=-114.0, xmax=-111.0,
            ymin=39.0, ymax=42.0,

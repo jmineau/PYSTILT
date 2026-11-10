@@ -1,0 +1,6 @@
+﻿stilt.receptors.receptors\_from\_frame
+======================================
+
+.. currentmodule:: stilt.receptors
+
+.. autofunction:: receptors_from_frame

@@ -1,0 +1,6 @@
+stilt.transport.stilt\_r.StiltRModel.data\_files
+================================================
+
+.. currentmodule:: stilt.transport.stilt_r
+
+.. automethod:: StiltRModel.data_files

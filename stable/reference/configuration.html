@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Configuration &#8212; PYSTILT 0.1.0a27</title>
+    <title>Configuration &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -503,6 +503,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.particles_hash.html">stilt.config.Variant.particles_hash</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.realization_numbers.html">stilt.config.Variant.realization_numbers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.run_settings.html">stilt.config.Variant.run_settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.run_settings_without_met.html">stilt.config.Variant.run_settings_without_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.transport_for.html">stilt.config.Variant.transport_for</a></li>
 </ul>
 </details></li>
@@ -607,9 +608,15 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.ProjectConfig.to_yaml.html">stilt.ProjectConfig.to_yaml</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.FootprintConfig.html">stilt.FootprintConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.FootprintConfig.html">stilt.FootprintConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.FootprintConfig.tres_minutes.html">stilt.FootprintConfig.tres_minutes</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.ExecutionConfig.html">stilt.ExecutionConfig</a></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.Bounds.html">stilt.Bounds</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Bounds.html">stilt.Bounds</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Bounds.contains.html">stilt.Bounds.contains</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Grid.html">stilt.Grid</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Grid.axes.html">stilt.Grid.axes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Grid.cells.html">stilt.Grid.cells</a></li>
@@ -639,7 +646,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.fetch.html">stilt.transport.hysplit.Met.fetch</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.missing_hours.html">stilt.transport.hysplit.Met.missing_hours</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.missing.html">stilt.transport.hysplit.Met.missing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -809,6 +816,7 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.StiltError.html">stilt.StiltError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.SimulationError.html">stilt.exceptions.SimulationError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.MeteorologyError.html">stilt.exceptions.MeteorologyError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.WorkerDied.html">stilt.exceptions.WorkerDied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.HYSPLITNotFoundError.html">stilt.exceptions.HYSPLITNotFoundError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.EmptyFootprint.html">stilt.exceptions.EmptyFootprint</a></li>
 </ul>
@@ -917,7 +925,7 @@ from, and a variant may override any of them.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">'hysplit'</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mets</span></code></p></td>
-<td><p>Meteorology by name, such as <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>. At least one is required. Each is checked by the met config of the transport model that reads it (<a class="reference internal" href="_api/stilt.transport.hysplit.MetConfig.html#stilt.transport.hysplit.MetConfig" title="stilt.transport.hysplit.MetConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transport.hysplit.MetConfig</span></code></a> for HYSPLIT).</p></td>
+<td><p>Meteorology by name, such as <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>: the folder of its files, or a mapping of its settings. At least one is required. Each is checked by the met config of the transport model that reads it (<a class="reference internal" href="_api/stilt.transport.hysplit.MetConfig.html#stilt.transport.hysplit.MetConfig" title="stilt.transport.hysplit.MetConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transport.hysplit.MetConfig</span></code></a> for HYSPLIT).</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">{}</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">variants</span></code></p></td>
@@ -1333,9 +1341,9 @@ from, and a variant may override any of them.</p>
 <td><p>Factor on the width of the Gaussian smoothing kernel. 0 turns smoothing off.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">time_integrate</span></code></p></td>
-<td><p>Sum the footprint over time into a single layer instead of hourly layers.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tres</span></code></p></td>
+<td><p>Length of each time layer of the footprint, counted from the receptor time, as a duration in whole minutes: <code class="docutils literal notranslate"><span class="pre">1h</span></code> for hourly layers, <code class="docutils literal notranslate"><span class="pre">15min</span></code> for 15-minute data, <code class="docutils literal notranslate"><span class="pre">1D</span></code> for days.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">'1h'</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">transforms</span></code></p></td>
 <td><p>Particle transforms applied in order before the footprint is computed. Each entry’s <code class="docutils literal notranslate"><span class="pre">kind</span></code> is a built-in name (<code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code>, <code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code>, <code class="docutils literal notranslate"><span class="pre">first_order_lifetime</span></code>) or the import path of your own class.</p></td>
@@ -1344,6 +1352,38 @@ from, and a variant may override any of them.</p>
 </tbody>
 </table>
 </div>
+<section id="footprint-grids">
+<h4>Footprint grids<a class="headerlink" href="#footprint-grids" title="Link to this heading">#</a></h4>
+<p>Longitudes count modulo 360, so a grid across 180° can be written
+<code class="docutils literal notranslate"><span class="pre">xmin:</span> <span class="pre">170</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax:</span> <span class="pre">190</span></code> or <code class="docutils literal notranslate"><span class="pre">xmin:</span> <span class="pre">170</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax:</span> <span class="pre">-170</span></code>, and the
+footprint’s longitudes are then 170 to 190. A grid spans at most 360°. A
+particle cloud on both sides of 180° is measured as one cloud for the
+smoothing. A grid that goes all the way around (<code class="docutils literal notranslate"><span class="pre">xmin:</span> <span class="pre">-180</span></code>,
+<code class="docutils literal notranslate"><span class="pre">xmax:</span> <span class="pre">180</span></code>, with cells that fit 360°) is a circle, so smoothing that
+passes the east edge returns at the west edge. On a grid that ends at or
+near 180°, particles just across 180° smooth onto the grid, as particles
+just past any other edge do.</p>
+<p>Projected grids (a <code class="docutils literal notranslate"><span class="pre">crs</span></code> such as <code class="docutils literal notranslate"><span class="pre">EPSG:32612</span></code>) keep their bounds in
+degrees and take <code class="docutils literal notranslate"><span class="pre">xres</span></code> and <code class="docutils literal notranslate"><span class="pre">yres</span></code> in the projection’s units. The two
+steps that depend on the cell size work in the grid’s units. The smoothing
+kernel’s width is worked out in degrees and converted, so a footprint is
+smoothed about as much on 1 km UTM cells as on 0.01° cells. The early-time
+interpolation, which adds particle positions between output steps in the
+first 100 minutes when the particles move more than a cell per step, runs
+on 100 m UTM cells as it does on 0.001° cells. <a class="reference internal" href="../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a> says
+where STILT-R differs on these grids.</p>
+<p>Time layers (<code class="docutils literal notranslate"><span class="pre">tres</span></code>) are recorded one way, so <code class="docutils literal notranslate"><span class="pre">60min</span></code> is recorded as
+<code class="docutils literal notranslate"><span class="pre">1h</span></code> and two spellings of one length share a settings folder. Each layer
+holds the influence of the particles in its minutes, so the layers sum to
+the same total footprint whatever <code class="docutils literal notranslate"><span class="pre">tres</span></code> is.</p>
+<p>Loading <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> does not read a <code class="docutils literal notranslate"><span class="pre">geometry</span></code> file.
+PYSTILT reads it once, when it works out the variants’ settings, and picks
+the grid then (<a class="reference internal" href="_api/stilt.Mesh.to_grid.html#stilt.Mesh.to_grid" title="stilt.Mesh.to_grid"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Mesh.to_grid()</span></code></a>), so a variant with a geometry
+cannot change only part of the grid (<code class="docutils literal notranslate"><span class="pre">grid:</span> <span class="pre">{xres:</span> <span class="pre">0.1}</span></code>). A <code class="docutils literal notranslate"><span class="pre">grid</span></code>
+given with a <code class="docutils literal notranslate"><span class="pre">geometry</span></code> is used as given. Each footprint file stores a
+code for the geometry it was made for, which is how
+<code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> knows when a mesh no longer matches.</p>
+</section>
 </section>
 <section id="a-met">
 <h3>A met<a class="headerlink" href="#a-met" title="Link to this heading">#</a></h3>
@@ -1371,20 +1411,12 @@ from, and a variant may override any of them.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">download</span></code></p></td>
-<td><p>Name of a NOAA ARL archive to download files from with arlmet, such as <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>, <code class="docutils literal notranslate"><span class="pre">nam12</span></code>, <code class="docutils literal notranslate"><span class="pre">gdas1</span></code>, or <code class="docutils literal notranslate"><span class="pre">gfs0p25</span></code>. When set, <code class="docutils literal notranslate"><span class="pre">file_format</span></code> and <code class="docutils literal notranslate"><span class="pre">file_tres</span></code> are not needed. Options for the archive (such as <code class="docutils literal notranslate"><span class="pre">domain:</span> <span class="pre">ak</span></code>) go in the same entry.</p></td>
+<td><p>Name of a NOAA ARL archive to download files from with arlmet, such as <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>, <code class="docutils literal notranslate"><span class="pre">nam12</span></code>, <code class="docutils literal notranslate"><span class="pre">gdas1</span></code>, or <code class="docutils literal notranslate"><span class="pre">gfs0p25</span></code>. Options for the archive (such as <code class="docutils literal notranslate"><span class="pre">domain:</span> <span class="pre">ak</span></code>) go in the same entry.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">download_from</span></code></p></td>
 <td><p>Server to download from: <code class="docutils literal notranslate"><span class="pre">s3</span></code>, <code class="docutils literal notranslate"><span class="pre">ftp</span></code>, or <code class="docutils literal notranslate"><span class="pre">http</span></code>.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">'s3'</span></code></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">file_format</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">strftime</span></code> pattern for the start of each file name, such as <code class="docutils literal notranslate"><span class="pre">%Y%m%d_%H</span></code>. Files whose names start with it are found anywhere under <code class="docutils literal notranslate"><span class="pre">directory</span></code>, except lock files, backup copies ending in <code class="docutils literal notranslate"><span class="pre">~</span></code>, and names ending in <code class="docutils literal notranslate"><span class="pre">.partial</span></code> or <code class="docutils literal notranslate"><span class="pre">.bad</span></code>. Required when <code class="docutils literal notranslate"><span class="pre">download</span></code> is not set.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">file_tres</span></code></p></td>
-<td><p>Time covered by each file, as a pandas time string such as <code class="docutils literal notranslate"><span class="pre">6h</span></code>. Required when <code class="docutils literal notranslate"><span class="pre">download</span></code> is not set.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">subgrid_enable</span></code></p></td>
 <td><p>Crop the meteorology to <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code> before running.</p></td>
@@ -1463,7 +1495,7 @@ from, and a variant may override any of them.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">setup</span></code></p></td>
-<td><p>Shell commands run in each Slurm task before the worker, such as <code class="docutils literal notranslate"><span class="pre">module</span> <span class="pre">load</span></code> lines. The worker itself runs with the Python that submitted it.</p></td>
+<td><p>Shell commands run in each Slurm task before the worker, such as <code class="docutils literal notranslate"><span class="pre">module</span> <span class="pre">load</span></code> lines. They run after the script exports <code class="docutils literal notranslate"><span class="pre">OMP_NUM_THREADS</span></code>, one thread per worker, so a line here can change it. The worker itself runs with the Python that submitted it.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">[]</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">slurm</span></code></p></td>
@@ -1588,7 +1620,10 @@ parameters PYSTILT reads itself (<code class="docutils literal notranslate"><spa
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#every-key">Every key</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#top-level">Top level</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#hysplit">HYSPLIT</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#footprint">Footprint</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#footprint">Footprint</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#footprint-grids">Footprint grids</a></li>
+</ul>
+</li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-met">A met</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#execution">Execution</a></li>
 </ul>

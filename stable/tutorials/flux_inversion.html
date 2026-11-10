@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Tutorial: From Footprints To Concentrations &#8212; PYSTILT 0.1.0a27</title>
+    <title>Tutorial: From Footprints To Concentrations &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -60,11 +60,11 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Tutorial: A Satellite Column, Start To Finish" href="satellite_column.html" />
-    <link rel="prev" title="Tutorial: A Week Of Tower Footprints" href="wbb_stationary.html" />
+    <link rel="prev" title="Tutorial: A Day Of Tower Footprints" href="wbb_stationary.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -410,7 +410,7 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="wbb_stationary.html">Tutorial: A Week Of Tower Footprints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wbb_stationary.html">Tutorial: A Day Of Tower Footprints</a></li>
 <li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Tutorial: From Footprints To Concentrations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="satellite_column.html">Tutorial: A Satellite Column, Start To Finish</a></li>
 </ul>
@@ -475,163 +475,188 @@
                   
   <section id="tutorial-from-footprints-to-concentrations">
 <h1>Tutorial: From Footprints To Concentrations<a class="headerlink" href="#tutorial-from-footprints-to-concentrations" title="Link to this heading">#</a></h1>
-<p>A footprint says how much each grid cell influences a measurement. Multiply
-it by how much each cell emits and add it all up. The result is how much the
-emissions should raise the concentration at the receptor, called the
-<em>enhancement</em> above background. Inversions are built on this link between
-transport and emissions.</p>
-<p>The units work out directly. Footprints are in ppm per (µmol m⁻² s⁻¹). Fluxes
-in µmol m⁻² s⁻¹ times footprints, summed over cells and hours, give ppm.</p>
-<section id="what-you-ll-learn">
-<h2>What you’ll learn<a class="headerlink" href="#what-you-ll-learn" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p>how to model enhancements from a few point sources</p></li>
-<li><p>how to model enhancements from a gridded emissions inventory</p></li>
-<li><p>how to compare modeled and observed concentrations</p></li>
-</ul>
+<p>A footprint says how much each grid cell influences a measurement.
+Multiply it by how much each cell emits, add it all up, and you have the
+enhancement, the rise in concentration at the receptor that those
+emissions explain. Comparing modeled enhancements with measured ones is how
+an inventory is tested, and an inversion is built on the same link. In this
+tutorial we make an emissions map and a few point sources, and model the
+enhancements a tower should have seen.</p>
+<p>The units work out directly. Footprints are in ppm per (µmol m⁻² s⁻¹), so a
+flux in µmol m⁻² s⁻¹ times a footprint, summed over cells and hours, gives
+ppm.</p>
+<section id="the-footprints">
+<h2>The footprints<a class="headerlink" href="#the-footprints" title="Link to this heading">#</a></h2>
+<p>We use a small project of four hourly receptors at the University of Utah
+on 15 January 2021, from 06:00 to 09:00 UTC. The project from
+<a class="reference internal" href="wbb_stationary.html"><span class="doc">Tutorial: A Day Of Tower Footprints</span></a>, or any project with footprints, works the same way.</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="gp">In [2]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="gp">In [3]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+
+<span class="gp">In [4]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+
+<span class="gp">In [5]: </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"./my_project"</span><span class="p">)</span>
+
+<span class="gp">In [6]: </span><span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
+
+<span class="gp">In [7]: </span><span class="n">feet</span> <span class="o">=</span> <span class="p">[</span><span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">"hrrr"</span><span class="p">)</span><span class="o">.</span><span class="n">footprint</span> <span class="k">for</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">sims</span><span class="o">.</span><span class="n">receptor</span><span class="p">]</span>
+
+<span class="gp">In [8]: </span><span class="n">feet</span> <span class="o">=</span> <span class="p">[</span><span class="n">foot</span> <span class="k">for</span> <span class="n">foot</span> <span class="ow">in</span> <span class="n">feet</span> <span class="k">if</span> <span class="n">foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>   <span class="c1"># an empty footprint is None</span>
+
+<span class="gp">In [9]: </span><span class="nb">len</span><span class="p">(</span><span class="n">feet</span><span class="p">)</span>
+<span class="gh">Out[9]: </span><span class="go">4</span>
+</pre></div>
+</div>
 </section>
-<section id="starting-point">
-<h2>Starting point<a class="headerlink" href="#starting-point" title="Link to this heading">#</a></h2>
-<p>This tutorial uses the <code class="docutils literal notranslate"><span class="pre">project</span></code> from <a class="reference internal" href="wbb_stationary.html"><span class="doc">Tutorial: A Week Of Tower Footprints</span></a>.
-Any project with footprints works.</p>
+<section id="an-emissions-map">
+<h2>An emissions map<a class="headerlink" href="#an-emissions-map" title="Link to this heading">#</a></h2>
+<p>An inventory is an <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> of fluxes in µmol m⁻² s⁻¹ with
+<code class="docutils literal notranslate"><span class="pre">lat</span></code> and <code class="docutils literal notranslate"><span class="pre">lon</span></code> dimensions. Ours is made up: a city of methane emissions
+centered on Salt Lake City, strongest downtown and fading over about 10 km,
+on the footprint’s own grid. A real inventory you would open with
+<code class="docutils literal notranslate"><span class="pre">xr.open_dataarray(&quot;inventory.nc&quot;)</span></code>.</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [10]: </span><span class="n">grid</span> <span class="o">=</span> <span class="n">feet</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="gp">In [11]: </span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">lat</span><span class="p">)</span>
+
+<span class="gp">In [12]: </span><span class="n">distance_km</span> <span class="o">=</span> <span class="mi">111</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">((</span><span class="n">lon</span> <span class="o">+</span> <span class="mf">111.89</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mf">40.76</span><span class="p">)),</span> <span class="n">lat</span> <span class="o">-</span> <span class="mf">40.76</span><span class="p">)</span>
+
+<span class="gp">In [13]: </span><span class="n">inventory</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+<span class="gp">   ....: </span>    <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">distance_km</span> <span class="o">/</span> <span class="mi">10</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)),</span>
+<span class="gp">   ....: </span>    <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">"lat"</span><span class="p">:</span> <span class="n">grid</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">:</span> <span class="n">grid</span><span class="o">.</span><span class="n">lon</span><span class="p">},</span>
+<span class="gp">   ....: </span>    <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">),</span>
+<span class="gp">   ....: </span>    <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"units"</span><span class="p">:</span> <span class="s2">"umol m-2 s-1"</span><span class="p">},</span>
+<span class="gp">   ....: </span><span class="p">)</span>
+<span class="gp">   ....: </span>
+
+<span class="gp">In [14]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="gp">In [15]: </span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">layout</span><span class="o">=</span><span class="s2">"constrained"</span><span class="p">)</span>
+
+<span class="gp">In [16]: </span><span class="n">inventory</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">"Greys"</span><span class="p">,</span> <span class="n">cbar_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">"label"</span><span class="p">:</span> <span class="s2">"CH₄ flux (µmol m⁻² s⁻¹)"</span><span class="p">})</span>
+<span class="gh">Out[16]: </span><span class="go">&lt;matplotlib.collections.QuadMesh at 0x7bb859fa0f50&gt;</span>
+
+<span class="gp">In [17]: </span><span class="n">feet</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"time"</span><span class="p">)</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="mf">1e-4</span><span class="p">],</span> <span class="n">colors</span><span class="o">=</span><span class="s2">"tab:red"</span><span class="p">,</span> <span class="n">add_labels</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gh">Out[17]: </span><span class="go">&lt;matplotlib.contour.QuadContourSet at 0x7bb859646120&gt;</span>
+
+<span class="gp">In [18]: </span><span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mf">112.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">111.5</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mf">40.4</span><span class="p">,</span> <span class="mf">41.2</span><span class="p">);</span>
+
+<span class="gp">In [19]: </span><span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"The inventory, and where the 09:00 footprint is above 1e-4"</span><span class="p">);</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="../_images/flux_inventory.png"><img alt="../_images/flux_inventory.png" src="../_images/flux_inventory.png" style="width: 5in;" />
+</a>
+<p><code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> multiplies a footprint by the inventory, cell by
+cell, for each hour of the footprint. Summed over the hours, it is the
+receptor’s enhancement:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [20]: </span><span class="n">modeled</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span>
+<span class="gp">   ....: </span>    <span class="p">{</span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">inventory</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="k">for</span> <span class="n">foot</span> <span class="ow">in</span> <span class="n">feet</span><span class="p">},</span>
+<span class="gp">   ....: </span>    <span class="n">name</span><span class="o">=</span><span class="s2">"city"</span><span class="p">,</span>
+<span class="gp">   ....: </span><span class="p">)</span>
+<span class="gp">   ....: </span>
+
+<span class="gp">In [21]: </span><span class="n">modeled</span>
+<span class="gh">Out[21]: </span>
+<span class="go">2021-01-15 06:00:00    0.238288</span>
+<span class="go">2021-01-15 07:00:00    0.291821</span>
+<span class="go">2021-01-15 08:00:00    0.397760</span>
+<span class="go">2021-01-15 09:00:00    0.433454</span>
+<span class="go">Name: city, dtype: float64</span>
+</pre></div>
+</div>
+<p>The enhancement grows from 0.24 ppm at 06:00 UTC to 0.43 ppm at 09:00
+(23:00 to 02:00 in Salt Lake City). The city lies under the tower, and as
+the night goes on the footprint over it doubles, because the air near the
+ground mixes less and lingers over the city longer.</p>
+<p>An inventory with a <code class="docutils literal notranslate"><span class="pre">time</span></code> dimension works the same way, each footprint
+hour taking the flux step it falls in. How the steps are read, and what to
+do when the inventory’s grid differs from the footprint’s, is in
+<a class="reference internal" href="../guides/aggregation.html"><span class="doc">Summing Footprints: Areas And The Jacobian</span></a> (“Footprints times a flux”).</p>
 </section>
 <section id="a-few-point-sources">
 <h2>A few point sources<a class="headerlink" href="#a-few-point-sources" title="Link to this heading">#</a></h2>
-<p>For a handful of known sources, draw a small window around each one with
-<a class="reference internal" href="../reference/_api/stilt.Mesh.from_windows.html#stilt.Mesh.from_windows" title="stilt.Mesh.from_windows"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Mesh.from_windows()</span></code></a>. <code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> adds up
-the footprint inside each window. Multiply each sum by that source’s flux and
-add them up.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<p>For a handful of known sources, such as a landfill or a treatment plant,
+draw a small window around each one with <a class="reference internal" href="../reference/_api/stilt.Mesh.from_windows.html#stilt.Mesh.from_windows" title="stilt.Mesh.from_windows"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Mesh.from_windows()</span></code></a>.
+<code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> sums the footprint inside each window, and each
+sum times the source’s flux is its share of the enhancement. Make each
+window at least two footprint cells wide, because a smaller window falls
+inside one cell and the footprint cannot say how much of the cell it covers.</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="go"># made-up sources: longitude, latitude, flux averaged over the window (µmol m⁻² s⁻¹)</span>
+<span class="gp">In [22]: </span><span class="n">sources</span> <span class="o">=</span> <span class="p">{</span>
+<span class="gp">   ....: </span>    <span class="s2">"landfill"</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">111.95</span><span class="p">,</span> <span class="mf">41.23</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">),</span>
+<span class="gp">   ....: </span>    <span class="s2">"treatment plant"</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">111.78</span><span class="p">,</span> <span class="mf">40.78</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">),</span>
+<span class="gp">   ....: </span>    <span class="s2">"gas plant"</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">111.70</span><span class="p">,</span> <span class="mf">40.97</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span>
+<span class="gp">   ....: </span><span class="p">}</span>
+<span class="gp">   ....: </span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+<span class="gp">In [23]: </span><span class="n">windows</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">from_windows</span><span class="p">(</span>
+<span class="gp">   ....: </span>    <span class="p">[(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">sources</span><span class="o">.</span><span class="n">values</span><span class="p">()],</span>
+<span class="gp">   ....: </span>    <span class="n">size</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>   <span class="c1"># window width in degrees</span>
+<span class="gp">   ....: </span>    <span class="n">ids</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">sources</span><span class="p">),</span>
+<span class="gp">   ....: </span><span class="p">)</span>
+<span class="gp">   ....: </span>
 
-<span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"./wbb_project"</span><span class="p">)</span>
-<span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
-<span class="n">hrrr</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr"</span><span class="p">]</span>
-<span class="n">feet</span> <span class="o">=</span> <span class="p">[</span><span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">"hrrr"</span><span class="p">)</span><span class="o">.</span><span class="n">footprint</span> <span class="k">for</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">hrrr</span><span class="o">.</span><span class="n">receptor</span><span class="p">]</span>
-<span class="n">feet</span> <span class="o">=</span> <span class="p">[</span><span class="n">foot</span> <span class="k">for</span> <span class="n">foot</span> <span class="ow">in</span> <span class="n">feet</span> <span class="k">if</span> <span class="n">foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>   <span class="c1"># skip empty footprints</span>
+<span class="gp">In [24]: </span><span class="n">flux</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">({</span><span class="n">name</span><span class="p">:</span> <span class="n">f</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="ow">in</span> <span class="n">sources</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
 
-<span class="c1"># longitude, latitude, flux (µmol m⁻² s⁻¹, averaged over the window)</span>
-<span class="n">sources</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">"landfill"</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">111.970</span><span class="p">,</span> <span class="mf">40.515</span><span class="p">,</span> <span class="mf">45.0</span><span class="p">),</span>
-    <span class="s2">"wwtp"</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">112.015</span><span class="p">,</span> <span class="mf">40.779</span><span class="p">,</span> <span class="mf">120.0</span><span class="p">),</span>
-    <span class="s2">"refinery"</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">111.890</span><span class="p">,</span> <span class="mf">40.650</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">),</span>
-<span class="p">}</span>
-<span class="n">windows</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">from_windows</span><span class="p">(</span>
-    <span class="p">[(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">)</span> <span class="k">for</span> <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">sources</span><span class="o">.</span><span class="n">values</span><span class="p">()],</span>
-    <span class="n">size</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>  <span class="c1"># window width in degrees</span>
-    <span class="n">ids</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">sources</span><span class="p">),</span>
-<span class="p">)</span>
-<span class="n">flux</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">({</span><span class="n">name</span><span class="p">:</span> <span class="n">f</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="ow">in</span> <span class="n">sources</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+<span class="gp">In [25]: </span><span class="n">rows</span> <span class="o">=</span> <span class="p">{}</span>
 
-<span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">foot</span> <span class="ow">in</span> <span class="n">feet</span><span class="p">:</span>
-    <span class="n">hours</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span>
-    <span class="n">whole_run</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="o">.</span><span class="n">from_tuples</span><span class="p">(</span>
-        <span class="p">[(</span><span class="n">hours</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">hours</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="s2">"1h"</span><span class="p">))],</span> <span class="n">closed</span><span class="o">=</span><span class="s2">"left"</span>
-    <span class="p">)</span>
-    <span class="n">in_window</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">windows</span><span class="p">,</span> <span class="n">whole_run</span><span class="p">)</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># one value per source</span>
-    <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-        <span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="s2">"enhancement_ppm"</span><span class="p">:</span> <span class="p">(</span><span class="n">in_window</span> <span class="o">*</span> <span class="n">flux</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()}</span>
-    <span class="p">)</span>
+<span class="gp">In [26]: </span><span class="k">for</span> <span class="n">foot</span> <span class="ow">in</span> <span class="n">feet</span><span class="p">:</span>
+<span class="gp">   ....: </span>    <span class="n">hours</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span>
+<span class="gp">   ....: </span>    <span class="n">whole_run</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="o">.</span><span class="n">from_tuples</span><span class="p">(</span>
+<span class="gp">   ....: </span>        <span class="p">[(</span><span class="n">hours</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">hours</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="s2">"1h"</span><span class="p">))],</span> <span class="n">closed</span><span class="o">=</span><span class="s2">"left"</span>
+<span class="gp">   ....: </span>    <span class="p">)</span>
+<span class="gp">   ....: </span>    <span class="n">in_window</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">windows</span><span class="p">,</span> <span class="n">whole_run</span><span class="p">)</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>   <span class="c1"># one sum per source</span>
+<span class="gp">   ....: </span>    <span class="n">rows</span><span class="p">[</span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">]</span> <span class="o">=</span> <span class="n">in_window</span> <span class="o">*</span> <span class="n">flux</span>
+<span class="gp">   ....: </span>
 
-<span class="n">modeled</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"time"</span><span class="p">)</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
+<span class="gp">In [27]: </span><span class="n">by_source</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+<span class="gp">In [28]: </span><span class="n">by_source</span>
+<span class="gh">Out[28]: </span>
+<span class="go">cell                 landfill  treatment plant  gas plant</span>
+<span class="go">2021-01-15 06:00:00  0.058369         0.000000   0.000000</span>
+<span class="go">2021-01-15 07:00:00  0.026310         0.001188   0.002808</span>
+<span class="go">2021-01-15 08:00:00  0.020597         0.000002   0.008820</span>
+<span class="go">2021-01-15 09:00:00  0.054162         0.016467   0.005595</span>
 </pre></div>
 </div>
-<p>Make each window at least two footprint cells wide. A smaller window gets a
-warning, because the footprint is too coarse to say how much of a cell falls
-inside it.</p>
+<p>The landfill, 50 km north, adds 0.02 to 0.11 ppm, because the air passed
+over it on its way down the valley. The treatment plant, 5 km east of the
+tower, adds almost nothing until 09:00, the only hour whose footprint
+reaches it. A source matters only where the footprint is, however much it
+emits.</p>
 </section>
-<section id="a-gridded-inventory">
-<h2>A gridded inventory<a class="headerlink" href="#a-gridded-inventory" title="Link to this heading">#</a></h2>
-<p>For an emissions map, <code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> does the
-multiplication. The inventory is an <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> in
-µmol m⁻² s⁻¹ with <code class="docutils literal notranslate"><span class="pre">lat</span></code> and <code class="docutils literal notranslate"><span class="pre">lon</span></code> dimensions. Each footprint cell takes
-the flux of the inventory cell it falls in. If the inventory has a <code class="docutils literal notranslate"><span class="pre">time</span></code>
-dimension, its labels are the starts of its steps, the convention of a
-CF-compliant inventory’s time bounds, and each footprint hour takes the
-last step that starts at or before the hour’s start. This is the rule
-<code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> and <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> use, so an enhancement
-and a Jacobian built on the same inventory agree. A monthly inventory
-labeled on the 1st gives every hour of July 20 July’s flux; a 3-hourly
-inventory labeled 09:00 gives the hours from 09:00 to 11:00 its 09:00 step.
-A footprint hour before the first label gets zero flux. An hour after the
-last label takes the last step, since the labels do not say where it ends;
-add a step of zeros after the last to end it.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<section id="together">
+<h2>Together<a class="headerlink" href="#together" title="Link to this heading">#</a></h2>
+<p>The modeled enhancement at each hour is the sum of the parts:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [29]: </span><span class="n">total</span> <span class="o">=</span> <span class="n">by_source</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">city</span><span class="o">=</span><span class="n">modeled</span><span class="p">)</span>
 
-<span class="n">inventory</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataarray</span><span class="p">(</span><span class="s2">"inventory.nc"</span><span class="p">)</span>
+<span class="gp">In [30]: </span><span class="n">total</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">total</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%H:%M"</span><span class="p">)</span>
 
-<span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">foot</span> <span class="ow">in</span> <span class="n">feet</span><span class="p">:</span>
-    <span class="n">enhancement</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">inventory</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>   <span class="c1"># sum over hours</span>
-    <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"time"</span><span class="p">:</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="s2">"enhancement_ppm"</span><span class="p">:</span> <span class="n">enhancement</span><span class="p">})</span>
+<span class="gp">In [31]: </span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">layout</span><span class="o">=</span><span class="s2">"constrained"</span><span class="p">)</span>
 
-<span class="n">modeled</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"time"</span><span class="p">)</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
+<span class="gp">In [32]: </span><span class="n">total</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">stacked</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">rot</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="gh">Out[32]: </span><span class="go">&lt;Axes: &gt;</span>
+
+<span class="gp">In [33]: </span><span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"receptor time (UTC), 15 January 2021"</span><span class="p">)</span>
+<span class="gh">Out[33]: </span><span class="go">Text(0.5, 0, 'receptor time (UTC), 15 January 2021')</span>
+
+<span class="gp">In [34]: </span><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"modeled CH₄ enhancement (ppm)"</span><span class="p">);</span>
 </pre></div>
 </div>
-<section id="labels-at-the-middle-of-a-step">
-<span id="flux-step-labels"></span><h3>Labels at the middle of a step<a class="headerlink" href="#labels-at-the-middle-of-a-step" title="Link to this heading">#</a></h3>
-<p>An inventory labeled at the middle of its steps (a monthly mean dated the
-15th, or a 3-hourly mean dated 10:30) would be read half a step late.
-Shift its labels back by half a step first:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">half_step</span> <span class="o">=</span> <span class="p">(</span><span class="n">inventory</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">inventory</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>   <span class="c1"># for equal steps</span>
-<span class="n">inventory</span> <span class="o">=</span> <span class="n">inventory</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">inventory</span><span class="o">.</span><span class="n">time</span> <span class="o">-</span> <span class="n">half_step</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>For steps of unequal length, such as calendar months, build the starts
-yourself, for example <code class="docutils literal notranslate"><span class="pre">inventory.assign_coords(time=month_starts)</span></code>. The
-labels must strictly increase; a repeated label,
-such as the overlap of two concatenated files, is an error.</p>
-</section>
-<section id="inventory-and-footprint-grids">
-<h3>Inventory and footprint grids<a class="headerlink" href="#inventory-and-footprint-grids" title="Link to this heading">#</a></h3>
-<p>Each footprint cell takes the flux of the inventory cell nearest its
-center. That is right when the inventory’s cells are as large as the
-footprint’s or larger. Choose the footprint grid with your inventories in
-mind:</p>
-<ul class="simple">
-<li><p>Match the footprint grid to the finest inventory you will use. Every
-inventory is then as coarse as the footprint, or coarser.</p></li>
-<li><p>For a coarser inventory, or to solve for fluxes on coarse cells, sum the
-footprints onto its cells with <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> or
-<code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> (<a class="reference internal" href="../guides/aggregation.html"><span class="doc">Summing Footprints: Areas And The Jacobian</span></a>).</p></li>
-<li><p>For a finer inventory, put it on the footprint grid as an area-weighted
-mean, such as with <a class="reference external" href="https://xesmf.readthedocs.io">xESMF</a>’s conservative
-regridding, or make the footprints on the inventory’s grid with
-<code class="docutils literal notranslate"><span class="pre">sim.calc_footprint(grid=...)</span></code>.</p></li>
-</ul>
-<p><code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> refuses an inventory with finer cells than the
-footprint’s, and warns when cells of one size are offset by more than a
-tenth of a cell.</p>
-<p>A flux is averaged onto larger cells, because it is per unit area. A
-footprint is summed, because each value belongs to its whole cell. Never
-put a footprint through a conservative (averaging) regridder: it would come
-out too small by the ratio of the cell areas.</p>
-</section>
-</section>
-<section id="comparing-with-observations">
-<h2>Comparing with observations<a class="headerlink" href="#comparing-with-observations" title="Link to this heading">#</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
-
-<span class="c1"># observed CH4 minus background, in ppm</span>
-<span class="n">observed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">"observations.csv"</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s2">"time"</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
-<span class="n">observed</span><span class="p">[</span><span class="s2">"ch4_enhancement_ppm"</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"Observed"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">)</span>
-<span class="n">modeled</span><span class="p">[</span><span class="s2">"enhancement_ppm"</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"Modeled enhancement"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"tab:red"</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"CH4 enhancement (ppm)"</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-</pre></div>
-</div>
-<p>PYSTILT gives only the enhancement. Before comparing, subtract a background
-from the observations, or add one to the modeled enhancement. The
-background is the concentration of the air arriving from outside the
-domain (see <a class="reference internal" href="../guides/background.html"><span class="doc">Background</span></a>).</p>
-<p>This is the forward half of an inversion. An inversion goes the other
-way. It adjusts the emissions until the modeled enhancements best match
-the observations.</p>
+<a class="reference internal image-reference" href="../_images/flux_enhancements.png"><img alt="../_images/flux_enhancements.png" src="../_images/flux_enhancements.png" style="width: 5in;" />
+</a>
+<p>To compare with a measurement, subtract a background from it first, or add
+one to the model. The background is the concentration of the air before it
+reached the region, and <a class="reference internal" href="../guides/background.html"><span class="doc">Background</span></a> shows how to get it.</p>
+<p>This is the forward half of an inversion. An inversion goes the other way,
+adjusting the emissions until the modeled enhancements best match the
+measured ones. <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> builds the matrix it needs, one
+footprint per row summed onto the cells or regions being solved for
+(<a class="reference internal" href="../guides/aggregation.html"><span class="doc">Summing Footprints: Areas And The Jacobian</span></a>).</p>
 </section>
 </section>
 
@@ -651,7 +676,7 @@ the observations.</p>
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Tutorial: A Week Of Tower Footprints</p>
+        <p class="prev-next-title">Tutorial: A Day Of Tower Footprints</p>
       </div>
     </a>
     <a class="right-next"
@@ -682,15 +707,10 @@ the observations.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-you-ll-learn">What you’ll learn</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#starting-point">Starting point</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-footprints">The footprints</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#an-emissions-map">An emissions map</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-few-point-sources">A few point sources</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-gridded-inventory">A gridded inventory</a><ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#labels-at-the-middle-of-a-step">Labels at the middle of a step</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#inventory-and-footprint-grids">Inventory and footprint grids</a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#comparing-with-observations">Comparing with observations</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#together">Together</a></li>
 </ul>
   </nav></div>
 

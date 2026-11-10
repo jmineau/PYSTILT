@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.output &#8212; PYSTILT 0.1.0a27</title>
+    <title>stilt.output &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -33,7 +33,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -783,7 +783,12 @@
 <span class="w">    </span><span class="sd">"""Return how a folder's stored settings differ from *variant*'s, the first four, ``; ``-joined."""</span>
     <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"particles"</span><span class="p">:</span>
         <span class="n">stored</span> <span class="o">=</span> <span class="n">read_run_settings</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">"settings"</span><span class="p">])</span>
-        <span class="n">current</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">run_settings</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">current</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">run_settings</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="c1"># The met cannot be read: compare what does not need it.</span>
+            <span class="n">stored</span> <span class="o">=</span> <span class="n">_without_met</span><span class="p">(</span><span class="n">stored</span><span class="p">)</span>
+            <span class="n">current</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">run_settings_without_met</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span> <span class="o">=</span> <span class="n">read_footprint_settings</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">"settings"</span><span class="p">],</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
         <span class="n">stored</span> <span class="o">=</span> <span class="n">footprint_settings</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">)</span>
@@ -796,6 +801,11 @@
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">4</span><span class="p">:</span>
         <span class="n">found</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="n">found</span><span class="p">[:</span><span class="mi">4</span><span class="p">],</span> <span class="sa">f</span><span class="s2">"and </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">4</span><span class="si">}</span><span class="s2"> more"</span><span class="p">]</span>
     <span class="k">return</span> <span class="s2">"; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">found</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_without_met</span><span class="p">(</span><span class="n">settings</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return run *settings* without the met, whose weather product needs the met's files."""</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">settings</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s2">"met"</span><span class="p">}</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_check_realization</span><span class="p">(</span><span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -918,7 +928,7 @@
                     <span class="n">using</span> <span class="o">=</span> <span class="p">[</span>
                         <span class="n">name</span>
                         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">variants</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variant_hash</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="o">==</span> <span class="n">digest</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup_hash</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="o">==</span> <span class="n">digest</span>
                     <span class="p">]</span>
                     <span class="n">row</span><span class="p">[</span><span class="s2">"variant"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">using</span><span class="p">)</span>
                     <span class="n">same</span> <span class="o">=</span> <span class="n">variants</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"name"</span><span class="p">])</span>
@@ -957,9 +967,47 @@
         <span class="n">_check_kind</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">variant</span><span class="o">.</span><span class="n">particles_hash</span> <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"particles"</span> <span class="k">else</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint_hash</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_lookup_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the hash that finds *variant*'s folder of *kind*, or ``None`` when no folder can be its.</span>
+
+<span class="sd">        ``None`` for footprints without a grid, and for a variant whose met</span>
+<span class="sd">        cannot be read when the output holds no particles folder with its</span>
+<span class="sd">        settings but the met's (:meth:`_may_hold`): the weather product is</span>
+<span class="sd">        the only part of the hash that needs the met, so no folder has its</span>
+<span class="sd">        results.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        FileNotFoundError</span>
+<span class="sd">            If the met cannot be read and a folder may hold the results.</span>
+<span class="sd">        """</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variant_hash</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_may_hold</span><span class="p">(</span><span class="n">variant</span><span class="p">):</span>
+                <span class="k">raise</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_may_hold</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return whether a particles folder has *variant*'s settings, the met's apart.</span>
+
+<span class="sd">        Footprints come from particles with the same hash, so when no</span>
+<span class="sd">        particles folder can hold the variant's results, no footprints</span>
+<span class="sd">        folder can either.</span>
+<span class="sd">        """</span>
+        <span class="n">wanted</span> <span class="o">=</span> <span class="n">settings_hash</span><span class="p">(</span><span class="n">variant</span><span class="o">.</span><span class="n">run_settings_without_met</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_settings_folders</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">"particles"</span><span class="p">):</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="n">_read_yaml</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dir</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="o">/</span> <span class="n">SETTINGS_FILE</span><span class="p">)</span>
+            <span class="n">stored</span> <span class="o">=</span> <span class="n">_without_met</span><span class="p">(</span><span class="n">read_run_settings</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">"settings"</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="n">settings_hash</span><span class="p">(</span><span class="n">stored</span><span class="p">)</span> <span class="o">==</span> <span class="n">wanted</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the name of *variant*'s folder of *kind*, or ``None`` when it does not exist."""</span>
-        <span class="n">digest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variant_hash</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
+        <span class="n">digest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup_hash</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">digest</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">folder_hash</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hashes</span><span class="p">[</span><span class="n">kind</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>

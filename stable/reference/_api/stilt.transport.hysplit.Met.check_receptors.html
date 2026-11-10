@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.transport.hysplit.Met.check_receptors &#8212; PYSTILT 0.1.0a27</title>
+    <title>stilt.transport.hysplit.Met.check_receptors &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -503,6 +503,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.particles_hash.html">stilt.config.Variant.particles_hash</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.realization_numbers.html">stilt.config.Variant.realization_numbers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings.html">stilt.config.Variant.run_settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings_without_met.html">stilt.config.Variant.run_settings_without_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.transport_for.html">stilt.config.Variant.transport_for</a></li>
 </ul>
 </details></li>
@@ -607,9 +608,15 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.to_yaml.html">stilt.ProjectConfig.to_yaml</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.FootprintConfig.html">stilt.FootprintConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.FootprintConfig.html">stilt.FootprintConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.tres_minutes.html">stilt.FootprintConfig.tres_minutes</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.ExecutionConfig.html">stilt.ExecutionConfig</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.Bounds.html">stilt.Bounds</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Bounds.html">stilt.Bounds</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Bounds.contains.html">stilt.Bounds.contains</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Grid.html">stilt.Grid</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Grid.axes.html">stilt.Grid.axes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Grid.cells.html">stilt.Grid.cells</a></li>
@@ -639,7 +646,7 @@
 <li class="toctree-l3 current active"><a aria-current="page" class="current reference internal" href="#">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.fetch.html">stilt.transport.hysplit.Met.fetch</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing_hours.html">stilt.transport.hysplit.Met.missing_hours</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing.html">stilt.transport.hysplit.Met.missing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -809,6 +816,7 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.StiltError.html">stilt.StiltError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.SimulationError.html">stilt.exceptions.SimulationError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.MeteorologyError.html">stilt.exceptions.MeteorologyError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.WorkerDied.html">stilt.exceptions.WorkerDied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.HYSPLITNotFoundError.html">stilt.exceptions.HYSPLITNotFoundError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.EmptyFootprint.html">stilt.exceptions.EmptyFootprint</a></li>
 </ul>
@@ -887,16 +895,17 @@
 <dd><p>Return what would stop runs of <em>receptors</em> before HYSPLIT starts, found without running.</p>
 <p>The file check that <a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html#stilt.transport.hysplit.Met.files_for" title="stilt.transport.hysplit.Met.files_for"><code class="xref py py-meth docutils literal notranslate"><span class="pre">files_for()</span></code></a> makes for each run, made for
 every receptor at once: the met’s <code class="docutils literal notranslate"><span class="pre">directory</span></code> exists and holds an
-ARL file, and every file a run needs is there. With the crop on, a
+ARL file, and every file a run needs is there, holds at least two
+time periods, and ends on a whole time step. With the crop on, a
 receptor outside <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code> is listed too, since HYSPLIT
 cannot start a particle outside the files. A met with <code class="docutils literal notranslate"><span class="pre">download</span></code>
-has no files to look for before a run, so only its crop is checked.
-This looks for files, not inside them, except that it opens the first
-file the receptors need to count its time periods, which HYSPLIT
-needs to be at least two, and reads the spacing of the met steps from
-the file of a run’s end, as <a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html#stilt.transport.hysplit.Met.files_for" title="stilt.transport.hysplit.Met.files_for"><code class="xref py py-meth docutils literal notranslate"><span class="pre">files_for()</span></code></a> does. <a class="reference internal" href="stilt.transport.hysplit.Met.check.html#stilt.transport.hysplit.Met.check" title="stilt.transport.hysplit.Met.check"><code class="xref py py-meth docutils literal notranslate"><span class="pre">check()</span></code></a>
-opens each file at a run, and a run that passes this one can still
-fail as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code> when a file is damaged or cut short.</p>
+has no files to look for before a run, so only its crop is checked.</p>
+<p>This brings the tables of what the files and their crops hold up to
+date first (<code class="xref py py-meth docutils literal notranslate"><span class="pre">Catalog.refresh()</span></code>), so it is the place to build
+them before a batch: a first read of a large archive takes minutes. It reads each
+file’s first two index records, not the rest. <a class="reference internal" href="stilt.transport.hysplit.Met.check.html#stilt.transport.hysplit.Met.check" title="stilt.transport.hysplit.Met.check"><code class="xref py py-meth docutils literal notranslate"><span class="pre">check()</span></code></a> reads
+each file at a run, and a run that passes this one can still fail as
+<code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code> when a file is damaged in the middle.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -907,7 +916,7 @@ fail as <code class="docutils literal notranslate"><span class="pre">MET_COVERAG
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>One row for each thing found, with <code class="docutils literal notranslate"><span class="pre">check</span></code> (<code class="docutils literal notranslate"><span class="pre">met_directory</span></code>,
-<code class="docutils literal notranslate"><span class="pre">met_files</span></code>, <code class="docutils literal notranslate"><span class="pre">met_periods</span></code>, or <code class="docutils literal notranslate"><span class="pre">met_crop</span></code>), <code class="docutils literal notranslate"><span class="pre">receptor</span></code> (<code class="docutils literal notranslate"><span class="pre">NA</span></code> when the
+<code class="docutils literal notranslate"><span class="pre">met_files</span></code>, <code class="docutils literal notranslate"><span class="pre">met_periods</span></code>, <code class="docutils literal notranslate"><span class="pre">met_cut</span></code>, or <code class="docutils literal notranslate"><span class="pre">met_crop</span></code>), <code class="docutils literal notranslate"><span class="pre">receptor</span></code> (<code class="docutils literal notranslate"><span class="pre">NA</span></code> when the
 finding is about the met), and <code class="docutils literal notranslate"><span class="pre">message</span></code> columns. Empty when
 nothing would stop a run.</p>
 </dd>

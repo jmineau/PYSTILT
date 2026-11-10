@@ -1,0 +1,22 @@
+﻿stilt.footprint.config.WindowsGeometrySpec
+==========================================
+
+.. currentmodule:: stilt.footprint.config
+
+
+
+
+.. class-signature:: stilt.footprint.config.WindowsGeometrySpec
+
+
+Parameters
+----------
+
+.. config-model:: stilt.footprint.config.WindowsGeometrySpec
+
+
+
+
+
+
+

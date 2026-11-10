@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.spatial &#8212; PYSTILT 0.1.0a27</title>
+    <title>stilt.spatial &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -33,7 +33,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -459,24 +459,26 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">difflib</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Self</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">AliasChoices</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">AliasChoices</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">model_validator</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
 
 <span class="c1"># ---------------------------------------------------------------------------</span>
 <span class="c1"># Bounds and grids</span>
 <span class="c1"># ---------------------------------------------------------------------------</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_grid_cell_starts</span><span class="p">(</span><span class="n">minimum</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">maximum</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">resolution</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_grid_cell_count</span><span class="p">(</span><span class="n">minimum</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">maximum</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">resolution</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the lower edges of the whole cells between two grid bounds.</span>
+<span class="sd">    Return the number of whole cells between two grid bounds.</span>
 
 <span class="sd">    Cells start at ``minimum`` and step by ``resolution`` while the whole cell</span>
 <span class="sd">    fits inside ``[minimum, maximum]``, so ``maximum`` is the outer edge of</span>
@@ -487,6 +489,11 @@
 <span class="sd">    ``0.4799999999999969``). The tolerance is sized to that error so the last</span>
 <span class="sd">    intended cell is kept (48 cells here at 0.01, as STILT-R's ``seq()``</span>
 <span class="sd">    gives) and a partial cell is still dropped.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If *resolution* is not positive or no whole cell fits.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="n">resolution</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Grid resolution must be positive."</span><span class="p">)</span>
@@ -496,6 +503,12 @@
     <span class="n">n_cells</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">quotient</span> <span class="o">+</span> <span class="n">tol</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">n_cells</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Grid extent must contain at least one complete cell."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">n_cells</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_grid_cell_starts</span><span class="p">(</span><span class="n">minimum</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">maximum</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">resolution</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the lower edges of the whole cells between two grid bounds (:func:`_grid_cell_count`)."""</span>
+    <span class="n">n_cells</span> <span class="o">=</span> <span class="n">_grid_cell_count</span><span class="p">(</span><span class="n">minimum</span><span class="p">,</span> <span class="n">maximum</span><span class="p">,</span> <span class="n">resolution</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">minimum</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="n">resolution</span>
 
 
@@ -586,6 +599,11 @@
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_east_edge</span><span class="p">(</span><span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a grid's east edge in degrees, a turn later when *xmax* is written west of *xmin*."""</span>
+    <span class="k">return</span> <span class="n">xmax</span> <span class="o">+</span> <span class="mf">360.0</span> <span class="k">if</span> <span class="n">xmax</span> <span class="o">&lt;</span> <span class="n">xmin</span> <span class="k">else</span> <span class="n">xmax</span>
+
+
 <div class="viewcode-block" id="Bounds">
 <a class="viewcode-back" href="../../reference/_api/stilt.Bounds.html#stilt.Bounds">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Bounds</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
@@ -596,7 +614,62 @@
     <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Western edge, in degrees longitude."</span><span class="p">)</span>
     <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Eastern edge, in degrees longitude."</span><span class="p">)</span>
     <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Southern edge, in degrees latitude."</span><span class="p">)</span>
-    <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Northern edge, in degrees latitude."</span><span class="p">)</span></div>
+    <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Northern edge, in degrees latitude."</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Bounds.contains">
+<a class="viewcode-back" href="../../reference/_api/stilt.Bounds.contains.html#stilt.Bounds.contains">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">contains</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">longitude</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">latitude</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return whether each point is in the box, counting longitudes modulo 360.</span>
+
+<span class="sd">        A longitude is in the box when, counted east from ``xmin``, it is</span>
+<span class="sd">        within the box's width, so a box may cross the dateline (``xmin=170``,</span>
+<span class="sd">        ``xmax=-170``) or reach past 180 (``xmax=190``), and ``-175`` and</span>
+<span class="sd">        ``185`` are the same meridian. A box 360 degrees wide or more holds</span>
+<span class="sd">        every longitude. Points on an edge are inside; the longitude edges</span>
+<span class="sd">        allow ``1e-9`` degree for rounding, since a sum such as</span>
+<span class="sd">        ``184.7 + 175.3`` need not give exactly 360. A point with a</span>
+<span class="sd">        missing coordinate is not in the box.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        longitude, latitude : array_like of float</span>
+<span class="sd">            Degrees. Scalars or arrays, broadcast against each other.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray of bool</span>
+<span class="sd">            One value per point (a 0-d array for scalars).</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; import stilt</span>
+<span class="sd">        &gt;&gt;&gt; utah = stilt.Bounds(xmin=-114, xmax=-109, ymin=37, ymax=42)</span>
+<span class="sd">        &gt;&gt;&gt; bool(utah.contains(-111.9, 40.8))</span>
+<span class="sd">        True</span>
+<span class="sd">        &gt;&gt;&gt; bool(utah.contains(-111.9, 45.0))</span>
+<span class="sd">        False</span>
+
+<span class="sd">        A box may cross the dateline, and ``-175`` and ``185`` are one meridian:</span>
+
+<span class="sd">        &gt;&gt;&gt; pacific = stilt.Bounds(xmin=170, xmax=-170, ymin=-10, ymax=10)</span>
+<span class="sd">        &gt;&gt;&gt; pacific.contains([175, -175, 185, 0], 0).tolist()</span>
+<span class="sd">        [True, True, True, False]</span>
+<span class="sd">        """</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">longitude</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">latitude</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">in_latitude</span> <span class="o">=</span> <span class="p">(</span><span class="n">lat</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lat</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span> <span class="o">&gt;=</span> <span class="mf">360.0</span><span class="p">:</span>
+            <span class="n">in_longitude</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tolerance</span> <span class="o">=</span> <span class="mf">1e-9</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">)</span> <span class="o">%</span> <span class="mf">360.0</span>
+            <span class="n">from_west</span> <span class="o">=</span> <span class="p">(</span><span class="n">lon</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">)</span> <span class="o">%</span> <span class="mf">360.0</span>
+            <span class="n">in_longitude</span> <span class="o">=</span> <span class="p">(</span><span class="n">from_west</span> <span class="o">&lt;=</span> <span class="n">width</span> <span class="o">+</span> <span class="n">tolerance</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span>
+                <span class="n">from_west</span> <span class="o">&gt;=</span> <span class="mf">360.0</span> <span class="o">-</span> <span class="n">tolerance</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">in_longitude</span> <span class="o">&amp;</span> <span class="n">in_latitude</span><span class="p">)</span></div>
+</div>
 
 
 
@@ -608,17 +681,22 @@
 
 <span class="sd">    The bounds are always longitude/latitude. With a projected ``crs``,</span>
 <span class="sd">    the grid covers the bounds' extent in that projection and ``xres`` and</span>
-<span class="sd">    ``yres`` are in its units.</span>
+<span class="sd">    ``yres`` are in its units. Longitudes count modulo 360, so a grid</span>
+<span class="sd">    across 180 degrees is written ``xmin=170, xmax=190`` or ``xmin=170,</span>
+<span class="sd">    xmax=-170``. A footprint on either has longitudes 170 to 190. A grid</span>
+<span class="sd">    spans at most 360 degrees of longitude.</span>
 <span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="o">...</span><span class="p">,</span>
+        <span class="n">gt</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Cell width in projection units (degrees for longlat, meters for UTM)."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="o">...</span><span class="p">,</span>
+        <span class="n">gt</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Cell height in projection units (degrees for longlat, meters for UTM)."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -630,6 +708,58 @@
             <span class="s2">"before gridding. Also read under STILT-R's name, ``projection``."</span>
         <span class="p">),</span>
     <span class="p">)</span>
+
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_no_unknown_keys</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse a key that is no grid setting, naming the nearest one, so ``csr`` is not dropped."""</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">known</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="bp">cls</span><span class="o">.</span><span class="n">model_fields</span><span class="p">,</span> <span class="s2">"projection"</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">known</span><span class="p">:</span>
+                    <span class="n">close</span> <span class="o">=</span> <span class="n">difflib</span><span class="o">.</span><span class="n">get_close_matches</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">known</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">hint</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" Did you mean </span><span class="si">{</span><span class="n">close</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">?"</span> <span class="k">if</span> <span class="n">close</span> <span class="k">else</span> <span class="s2">""</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2"> is not a grid setting.</span><span class="si">{</span><span class="n">hint</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_at_most_one_turn</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse a grid wider than 360 degrees of longitude: it would hold some longitudes twice."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="o">-</span><span class="mf">360.0</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span> <span class="o">&lt;=</span> <span class="mf">360.0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"A grid spans at most 360 degrees of longitude; xmin=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> "</span>
+                <span class="sa">f</span><span class="s2">"to xmax=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> does not. A grid "</span>
+                <span class="s2">"across 180 degrees can be written either way, such as xmin=170, "</span>
+                <span class="s2">"xmax=190 or xmin=170, xmax=-170."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_latitudes_and_cells</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse latitudes off the globe and, on a longitude/latitude grid, a box that holds no whole cell."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="o">-</span><span class="mf">90.0</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span> <span class="o">&lt;=</span> <span class="mf">90.0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"A grid needs -90 &lt;= ymin &lt; ymax &lt;= 90 degrees latitude; got "</span>
+                <span class="sa">f</span><span class="s2">"ymin=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">, ymax=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"A grid needs xmin and xmax to differ; both are </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
+            <span class="c1"># The grid's own message, with the axis it is about.</span>
+            <span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span> <span class="n">res</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="p">(</span><span class="s2">"x"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">_east_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">xres</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">"y"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yres</span><span class="p">),</span>
+            <span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">_grid_cell_count</span><span class="p">(</span><span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2"> The </span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s2"> axis runs </span><span class="si">{</span><span class="n">low</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">high</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> "</span>
+                        <span class="sa">f</span><span class="s2">"with </span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s2">res=</span><span class="si">{</span><span class="n">res</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
+                    <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="k">return</span> <span class="bp">self</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
@@ -646,13 +776,17 @@
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Cell-center coordinates ``(x, y)`` in projection units, ascending.</span>
 
-<span class="sd">        These are the footprint's coordinates on this grid. They are rounded</span>
+<span class="sd">        These are the footprint's coordinates on this grid. On a</span>
+<span class="sd">        longitude/latitude grid they run east from ``xmin``, past 180 if the</span>
+<span class="sd">        grid does: a grid from 170 to -170 has longitudes 170 to 190. They are rounded</span>
 <span class="sd">        to 10 decimals (``40.35`` rather than ``40.349999999999994``) so they</span>
 <span class="sd">        match labels built elsewhere from the same bounds and resolution.</span>
 <span class="sd">        Projected grids need ``pyproj``.</span>
 <span class="sd">        """</span>
         <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
+            <span class="n">xmax</span> <span class="o">=</span> <span class="n">_east_edge</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
 
             <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>

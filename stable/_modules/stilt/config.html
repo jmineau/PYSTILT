@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.config &#8212; PYSTILT 0.1.0a27</title>
+    <title>stilt.config &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -33,7 +33,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -473,7 +473,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span><span class="p">,</span> <span class="n">PurePath</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Self</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
@@ -489,7 +489,11 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileGeometrySpec</span><span class="p">,</span> <span class="n">FootprintConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">TIME_INTEGRATE_REMOVED</span><span class="p">,</span>
+    <span class="n">FileGeometrySpec</span><span class="p">,</span>
+    <span class="n">FootprintConfig</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.targets</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mesh</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">footprint_hash</span><span class="p">,</span>
@@ -652,6 +656,23 @@
         <span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="Variant.run_settings_without_met">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.run_settings_without_met.html#stilt.Variant.run_settings_without_met">[docs]</a>
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_settings_without_met</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        The settings that identify this variant's particles, except the met's.</span>
+
+<span class="sd">        What can be compared with a stored folder when the met's files</span>
+<span class="sd">        cannot be read, and so :attr:`run_settings` cannot be made.</span>
+<span class="sd">        """</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="n">run_settings</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="p">,</span> <span class="p">{},</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">ensemble</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">realizations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="p">)</span>
+        <span class="k">del</span> <span class="n">settings</span><span class="p">[</span><span class="s2">"met"</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">settings</span></div>
+
+
 <div class="viewcode-block" id="Variant.particles_hash">
 <a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.particles_hash.html#stilt.Variant.particles_hash">[docs]</a>
     <span class="nd">@cached_property</span>
@@ -712,12 +733,13 @@
             <span class="s2">"are top-level keys of the config."</span>
         <span class="p">),</span>
     <span class="p">)</span>
-    <span class="n">mets</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+    <span class="n">mets</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">"Meteorology by name, such as ``hrrr``. At least one is required. "</span>
-            <span class="s2">"Each is checked by the met config of the transport model that "</span>
-            <span class="s2">"reads it (:class:`stilt.transport.hysplit.MetConfig` for HYSPLIT)."</span>
+            <span class="s2">"Meteorology by name, such as ``hrrr``: the folder of its files, or "</span>
+            <span class="s2">"a mapping of its settings. At least one is required. Each is "</span>
+            <span class="s2">"checked by the met config of the transport model that reads it "</span>
+            <span class="s2">"(:class:`stilt.transport.hysplit.MetConfig` for HYSPLIT)."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">variants</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -760,11 +782,13 @@
     <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"mets"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_met_mappings</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">mets</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Accept a met config object in Python, kept as the settings it was given."""</span>
+<span class="w">        </span><span class="sd">"""Accept a met config object or a path in Python, kept as the settings it was given."""</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mets</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="k">return</span> <span class="p">{</span>
                 <span class="n">name</span><span class="p">:</span> <span class="n">met</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">,</span> <span class="n">exclude_unset</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">met</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">)</span>
+                <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">met</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">met</span><span class="p">,</span> <span class="n">PurePath</span><span class="p">)</span>
                 <span class="k">else</span> <span class="n">met</span>
                 <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">met</span> <span class="ow">in</span> <span class="n">mets</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
             <span class="p">}</span>
@@ -1048,13 +1072,10 @@
 <span class="s2"># See docs for details: https://jmineau.github.io/PYSTILT</span>
 
 
-<span class="s2"># Meteorology, by name. Edit directory to point to your ARL files, or replace</span>
-<span class="s2"># file_format and file_tres with "download: hrrr" to download them from NOAA.</span>
+<span class="s2"># Meteorology, by name: the folder of your ARL files. To download them from NOAA</span>
+<span class="s2"># instead, write hrrr: {download: hrrr, directory: /path/to/keep/them}.</span>
 <span class="s2">mets:</span>
-<span class="s2">  hrrr:  # Unique name for this met.</span>
-<span class="s2">    directory: /path/to/arl/meteorology</span>
-<span class="s2">    file_format: "%Y%m</span><span class="si">%d</span><span class="s2">_%H"</span>
-<span class="s2">    file_tres: 6h  # Hours each met file covers; the docs' HRRR files hold six.</span>
+<span class="s2">  hrrr: /path/to/arl/meteorology</span>
 
 
 <span class="s2"># Footprint grid. Remove it (or set grid: null) to make particles only.</span>
@@ -1222,6 +1243,8 @@
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">parts</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">"from"</span><span class="p">:</span>  <span class="c1"># "from:" has its own message</span>
             <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">"time_integrate"</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">TIME_INTEGRATE_REMOVED</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="n">close</span> <span class="o">=</span> <span class="n">difflib</span><span class="o">.</span><span class="n">get_close_matches</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">parts</span><span class="p">),</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">hint</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" Did you mean </span><span class="si">{</span><span class="n">close</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">, </span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="n">close</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="si">}</span><span class="s2">?"</span> <span class="k">if</span> <span class="n">close</span> <span class="k">else</span> <span class="s2">""</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2"> is not a setting.</span><span class="si">{</span><span class="n">hint</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>

@@ -1,0 +1,6 @@
+stilt.Project.name
+==================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Project.name

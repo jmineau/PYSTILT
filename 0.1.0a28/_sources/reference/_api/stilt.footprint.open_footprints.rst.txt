@@ -1,0 +1,6 @@
+﻿stilt.footprint.open\_footprints
+================================
+
+.. currentmodule:: stilt.footprint
+
+.. autofunction:: open_footprints

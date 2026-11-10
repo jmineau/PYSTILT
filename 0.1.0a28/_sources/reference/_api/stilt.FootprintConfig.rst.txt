@@ -1,0 +1,30 @@
+﻿stilt.FootprintConfig
+=====================
+
+.. currentmodule:: stilt
+
+
+
+
+.. class-signature:: stilt.FootprintConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.FootprintConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~FootprintConfig.tres_minutes
+
+
+
+
+

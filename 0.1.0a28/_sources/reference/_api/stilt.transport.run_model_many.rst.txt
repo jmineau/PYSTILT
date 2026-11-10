@@ -1,0 +1,6 @@
+﻿stilt.transport.run\_model\_many
+================================
+
+.. currentmodule:: stilt.transport
+
+.. autofunction:: run_model_many

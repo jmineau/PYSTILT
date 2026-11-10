@@ -1,34 +1,47 @@
-Tutorial: A Week Of Tower Footprints
-====================================
+Tutorial: A Day Of Tower Footprints
+===================================
 
-This tutorial runs hourly footprints for one week at a rooftop measurement
-site. Then it averages them into one map that shows which areas usually
-influence the site.
+A tower measures the same place every hour, but the air it samples does not
+come from the same place. In the afternoon the boundary layer is deep and
+the wind brings air from farther away. At night the air near the ground
+grows still and the tower sees more of its own neighborhood. In this
+tutorial we run a footprint for every hour of one winter day at a rooftop
+site and compare the afternoon with the night.
 
 The site is WBB, a long-running greenhouse gas site on the roof of the
 William Browning Building at the University of Utah in Salt Lake City. The
-same steps work for any fixed site. Just change the coordinates.
+same steps work for any fixed site, with its own coordinates.
 
-What you'll learn
------------------
+.. This page runs when the docs are built, on the HRRR files the tests cache
+   (14 and 15 January 2021 around Salt Lake), in a temporary folder
+   (docs/_ext/docs_examples.py).
 
-- how to make many receptors at once
-- how to run them in parallel on your computer
-- how to load many footprints and combine them
+.. ipython:: python
+   :suppress:
 
-You'll need ARL meteorology for 4 to 11 July 2015. That is the week plus the
-day before it, which the 24-hour back-trajectories reach into. See
-:doc:`../guides/meteorology`.
+   import os
+
+   import docs_examples
+
+   met = docs_examples.met()
+   docs_cwd = docs_examples.temp_workdir()
+
+You need ARL meteorology for the hours of your receptors and the hours the
+runs go back into. Here that is 06:00 UTC on 14 January 2021 to 11:00 UTC on
+15 January (:doc:`../guides/meteorology`).
 
 Step 1: One receptor per hour
 -----------------------------
 
-.. code-block:: python
+Each measurement is a receptor. We make one for every hour from 18:00 UTC on
+14 January (11:00 in Salt Lake City) to 11:00 UTC the next morning (04:00):
+
+.. ipython:: python
 
    import pandas as pd
    import stilt
 
-   times = pd.date_range("2015-07-05 00:00", "2015-07-11 23:00", freq="1h")
+   times = pd.date_range("2021-01-14 18:00", "2021-01-15 11:00", freq="1h")
    receptors = [
        stilt.PointReceptor(
            time=t,
@@ -38,106 +51,137 @@ Step 1: One receptor per hour
        )
        for t in times
    ]
-   len(receptors)                 # 168, one per hour for 7 days
+   len(receptors)
 
-If your measurement times are in a spreadsheet, save them as a CSV and use
-:func:`stilt.read_receptors` instead (see :doc:`../guides/receptors`).
+If your measurement times are in a spreadsheet, save them as a CSV and read
+them with :func:`stilt.read_receptors` (:doc:`../guides/receptors`).
 
 Step 2: Make the project
 ------------------------
 
-.. code-block:: python
+A project keeps the receptors, the settings and the results together, so
+you can stop and pick up where you left off:
+
+.. ipython:: python
 
    project = stilt.Project.init(
        "./wbb_project",
        receptors=receptors,
-       n_hours=-24,
-       numpar=100,
-       mets={
-           "hrrr": {
-               "directory": "/data/met/hrrr",
-               "file_format": "%Y%m%d_%H",
-               "file_tres": "6h",
-           }
-       },
+       n_hours=-12,              # follow the air 12 hours back
+       numpar=100,               # particles per receptor
+       krand=2,
+       seed=42,                  # the same particles on every run
+       mets={"hrrr": met},
        grid={
-           "xmin": -114.0, "xmax": -109.0,
-           "ymin": 39.0,   "ymax": 42.5,
+           "xmin": -113.0, "xmax": -110.5,
+           "ymin": 40.0,   "ymax": 42.0,
            "xres": 0.01,   "yres": 0.01,
        },
        variants={"hrrr": {}},
        execution={"backend": "local", "cpus": 4},   # 4 receptors at a time
    )
 
-``numpar=100`` keeps this tutorial quick. Use more particles for research
-results (see :doc:`../guides/projects`).
+We use 100 particles and 12 hours so that this page builds quickly. For a
+study we would use 1000 particles and 24 hours or more, because a footprint
+from few particles is noisy far from the site, and 12 hours may not reach
+the far edge of the region (:doc:`../guides/projects`).
 
-``Project.init`` writes ``config.yaml`` and ``receptors.csv`` to
-``./wbb_project`` and stops if the folder already has a ``config.yaml``.
-In a later session, open the project instead:
+In a later session, open the project with ``stilt.Project("./wbb_project")``.
 
-.. code-block:: python
+Step 3: Check and run
+---------------------
 
-   project = stilt.Project("./wbb_project")
+``check`` finds what would stop a run, such as a missing met file, before
+anything starts. An empty table means nothing is in the way:
 
-Step 3: Run
------------
+.. ipython:: python
 
-.. code-block:: python
+   project.check()
 
-   project.run()
+   project.run();
 
-There are 168 simulations, so this takes a while, four at a time.
+A run you stop with Ctrl-C picks up where it left off when you start it
+again, and ``stilt status ./wbb_project`` shows the progress from another
+terminal.
 
 .. note::
 
    In a script (``python wbb.py``), put everything from Step 1 on under
    ``if __name__ == "__main__":``. With ``cpus`` above 1, Python 3.14, macOS,
    and Windows start each worker by importing the script again, which would
-   run ``Project.init`` again and stop with a ``FileExistsError``. Without the
-   guard, PYSTILT stops with "A worker process could not start" and shows the
-   fix. The command ``stilt run ./wbb_project --cpus 4`` needs no guard.
+   run ``Project.init`` again and stop with a ``FileExistsError``.
 
-You can stop it at any time with Ctrl-C. Running it again picks up where it left
-off. To check progress from another terminal:
+Step 4: Afternoon against night
+-------------------------------
 
-.. code-block:: bash
+``project.footprints()`` loads every footprint into one dataset, with a
+``receptor`` axis. We sum each footprint over its hours, then split the
+receptors into the afternoon (11:00 to 16:00 local time) and the night
+(22:00 to 04:00):
 
-   stilt status ./wbb_project
+.. ipython:: python
 
-Step 4: Average the footprints
-------------------------------
+   footprints = project.footprints()
+   total = footprints.foot.sum("hour").compute()
 
-Load all 168 footprints, sum each one over time, and average them:
+   utc = project.simulations.set_index("receptor")["time"]
+   local = (utc - pd.Timedelta("7h")).dt.hour.reindex(total.receptor.values)
+   afternoon = total.sel(receptor=local.index[local.between(11, 16)])
+   night = total.sel(receptor=local.index[(local >= 22) | (local <= 4)])
 
-.. code-block:: python
+Then we map the mean of each group:
+
+.. ipython:: python
 
    import matplotlib.colors as mcolors
    import matplotlib.pyplot as plt
 
-   footprints = project.footprints()   # one dataset: receptor, hour, lat, lon
+   fig, axes = plt.subplots(1, 2, figsize=(10, 4.2), sharey=True, layout="constrained")
+   norm = mcolors.LogNorm(vmin=1e-6, vmax=1e-1)
+   for ax, group, name in zip(axes, [afternoon, night], ["Afternoon", "Night"]):
+       mean = group.mean("receptor")
+       mesh = mean.where(mean > 0).plot(ax=ax, norm=norm, cmap="YlOrRd", add_colorbar=False)
+       ax.plot(-111.8472, 40.7665, marker="*", markersize=14, markerfacecolor="none", color="k")
+       ax.set_title(f"{name}, {group.sizes['receptor']} hours")
 
-   mean_foot = footprints.foot.sum("hour").mean("receptor")
+   fig.colorbar(mesh, ax=axes, label="footprint (ppm per µmol m⁻² s⁻¹)");
 
-   fig, ax = plt.subplots(figsize=(10, 6))
-   mean_foot.plot(
-       ax=ax,
-       norm=mcolors.LogNorm(vmin=1e-6, vmax=1e-2),
-       cmap="YlOrRd",
-       cbar_kwargs={"label": "footprint (ppm per µmol m⁻² s⁻¹)"},
-   )
-   ax.scatter(-111.8472, 40.7665, marker="*", s=160, c="k", zorder=5)
-   ax.set_title("Mean footprint at WBB, 5–11 July 2015")
-   plt.tight_layout()
+   @savefig wbb_afternoon_night.png width=6in
+   fig.suptitle("Mean footprint at WBB, 14 to 15 January 2021");
 
-Footprints are strongest right around the site and fall off quickly with
-distance. They span several orders of magnitude, so the color scale is
-logarithmic.
+Both maps point north-northwest, up the valley along the east shore of the
+Great Salt Lake, because the wind came from there through the whole day.
+In the afternoon the footprint is one band about 100 km long, with the most
+influence along it near the site. At night the band breaks up, and much of
+the footprint sits in the few cells around the site, inside the star. The
+night's footprint is also more than twice as large in total, because the
+shallow night-time layer holds the air close to the ground, where the
+surface fluxes enter it.
+
+One number sums up the difference: the share of each footprint within about
+5 km of the site.
+
+.. ipython:: python
+
+   near = (abs(total.lon + 111.8472) < 0.06) & (abs(total.lat - 40.7665) < 0.045)
+   share = total.where(near).sum(["lat", "lon"]) / total.sum(["lat", "lon"])
+   print(f"afternoon {share.sel(receptor=afternoon.receptor).mean():.0%}, "
+         f"night {share.sel(receptor=night.receptor).mean():.0%}")
+
+So at night the tower is mostly a measurement of its own neighborhood,
+and in the afternoon of the valley to the north. A study that compares
+modeled and measured concentrations often keeps only afternoon hours for
+this reason, because the footprints there are less sensitive to the
+details of the night-time boundary layer.
+
+.. ipython:: python
+   :suppress:
+
+   os.chdir(docs_cwd)
 
 Next
 ----
 
-- Turn these footprints into modeled concentrations in
-  :doc:`flux_inversion`.
-- See :doc:`../guides/outputs` for more ways to load and plot results.
+- Turn footprints into modeled concentrations in :doc:`flux_inversion`.
+- Load and plot results in other ways: :doc:`../guides/outputs`.
 - Run a whole year on a cluster: :doc:`../guides/slurm`.

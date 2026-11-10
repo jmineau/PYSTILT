@@ -1,0 +1,6 @@
+stilt.output.Output.log\_path
+=============================
+
+.. currentmodule:: stilt.output
+
+.. automethod:: Output.log_path

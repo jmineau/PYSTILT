@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.project &#8212; PYSTILT 0.1.0a27</title>
+    <title>stilt.project &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -33,7 +33,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -634,15 +634,10 @@
 <span class="sd">    &gt;&gt;&gt; receptor = stilt.PointReceptor(  # doctest: +SKIP</span>
 <span class="sd">    ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10</span>
 <span class="sd">    ... )</span>
-<span class="sd">    &gt;&gt;&gt; met = {</span>
-<span class="sd">    ...     "directory": "/data/hrrr",</span>
-<span class="sd">    ...     "file_format": "%Y%m%d_%H",</span>
-<span class="sd">    ...     "file_tres": "6h",</span>
-<span class="sd">    ... }  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; project = stilt.Project.init(  # doctest: +SKIP</span>
 <span class="sd">    ...     "./my_project",</span>
 <span class="sd">    ...     receptors=[receptor],</span>
-<span class="sd">    ...     mets={"hrrr": met},</span>
+<span class="sd">    ...     mets={"hrrr": "/data/hrrr"},</span>
 <span class="sd">    ...     variants={"hrrr": {}},</span>
 <span class="sd">    ...     n_hours=-24,</span>
 <span class="sd">    ...     grid={</span>
@@ -1433,9 +1428,10 @@
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Open the footprints of the selected simulations as one dataset.</span>
 
-<span class="sd">        Footprints are stacked by their hour from the receptor time, so</span>
-<span class="sd">        receptors at any time share one ``hour`` axis; the ``time``</span>
-<span class="sd">        coordinate says when each layer starts. Only the files' metadata is</span>
+<span class="sd">        Footprints are stacked by their layer from the receptor time, so</span>
+<span class="sd">        receptors at any time share one ``hour`` axis, which numbers the</span>
+<span class="sd">        layers (hours, with the default ``tres`` of ``1h``); the</span>
+<span class="sd">        ``time`` coordinate says when each layer starts. Only the files' metadata is</span>
 <span class="sd">        read here. The values load with dask when they are used, in blocks</span>
 <span class="sd">        of receptors from one date folder. The selection must hold one</span>
 <span class="sd">        variant, as for :meth:`jacobian`.</span>
@@ -1532,7 +1528,19 @@
 <span class="sd">        time_bins : pandas.IntervalIndex</span>
 <span class="sd">            Flux time bins, such as a flux inventory's steps. They must be</span>
 <span class="sd">            closed on the left (``closed="left"``): each bin holds the</span>
-<span class="sd">            footprint hours that start in it.</span>
+<span class="sd">            footprint layers that start in it. A layer goes whole into the</span>
+<span class="sd">            bin where it starts, so the bins must be as long as the</span>
+<span class="sd">            footprints' layers (``tres``) or longer; a layer that crosses a</span>
+<span class="sd">            bin edge still goes into the bin where it starts. You build these yourself;</span>
+<span class="sd">            ``jacobian`` does not read them from an inventory's own CF time</span>
+<span class="sd">            bounds, unlike ``foot.stilt.enhancement`` with a flux that has</span>
+<span class="sd">            them. Building the bins from an inventory's own time labels</span>
+<span class="sd">            (its left edges) reads each label as the start of its step, the</span>
+<span class="sd">            same reading ``foot.stilt.enhancement`` gives a flux with no</span>
+<span class="sd">            bounds. A flux not labeled at the start of its steps must be</span>
+<span class="sd">            relabeled first, or its bins built from the relabeled starts;</span>
+<span class="sd">            one with bounds can have its bins built from them directly</span>
+<span class="sd">            instead (see :ref:`flux-step-labels`).</span>
 <span class="sd">        workers : int, optional</span>
 <span class="sd">            Threads that read and sum batches. Defaults to the CPUs this</span>
 <span class="sd">            process may use (in a Slurm job, the job's), at most 8: more</span>
@@ -1553,7 +1561,9 @@
 <span class="sd">        ValueError</span>
 <span class="sd">            If the selection holds more or fewer than one variant, or</span>
 <span class="sd">            several realizations of an ensemble, the variant has no grid or</span>
-<span class="sd">            no footprints yet, or ``time_bins`` is not closed on the left.</span>
+<span class="sd">            no footprints yet, ``time_bins`` is not closed on the left, or a</span>
+<span class="sd">            bin is shorter than the footprints' layers (use a shorter</span>
+<span class="sd">            ``tres``).</span>
 <span class="sd">        """</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
         <span class="n">name</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">"A Jacobian"</span><span class="p">)</span>
@@ -1617,8 +1627,7 @@
 <span class="sd">            this process may use (in a Slurm job, the job's), at most 8.</span>
 <span class="sd">        **options</span>
 <span class="sd">            Passed to :func:`stilt.particles.transport_error`: ``levels``,</span>
-<span class="sd">            ``length_scale``, ``percentile``, ``noise_splits``, and</span>
-<span class="sd">            ``background``.</span>
+<span class="sd">            ``length_scale``, ``percentile``, and ``background``.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1728,8 +1737,9 @@
 <span class="sd">        - the met's ``directory`` exists and holds an ARL file (``met_directory``);</span>
 <span class="sd">        - every met file each receptor's run needs is there, naming the</span>
 <span class="sd">          hours (``met_files``);</span>
-<span class="sd">        - the first met file they need holds at least two time periods, which</span>
-<span class="sd">          HYSPLIT needs (``met_periods``);</span>
+<span class="sd">        - each met file they need holds at least two time periods, which</span>
+<span class="sd">          HYSPLIT needs (``met_periods``), and ends on a whole time step</span>
+<span class="sd">          (``met_cut``);</span>
 <span class="sd">        - each receptor is inside the met's crop box, ``subgrid_bounds``,</span>
 <span class="sd">          when the crop is on (``met_crop``);</span>
 <span class="sd">        - each receptor is inside the footprint grid (``grid``);</span>
@@ -1789,7 +1799,7 @@
 
 <span class="sd">        For each met, gets the files that cover the time of every</span>
 <span class="sd">        simulation in *sel* whose transport model has yet to run, as a run</span>
-<span class="sd">        would ask for them (the hour after a run's end too). With</span>
+<span class="sd">        would ask for them (the met step at or after a run's end too). With</span>
 <span class="sd">        ``download``, it downloads what is missing and crops it as it</span>
 <span class="sd">        goes, so the runs that follow find every file and download nothing.</span>
 <span class="sd">        A met without ``download`` is only checked: its missing files are</span>

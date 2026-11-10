@@ -1,0 +1,6 @@
+stilt.config.Variant.met\_settings
+==================================
+
+.. currentmodule:: stilt.config
+
+.. autoproperty:: Variant.met_settings

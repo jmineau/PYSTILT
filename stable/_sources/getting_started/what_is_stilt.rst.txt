@@ -33,22 +33,58 @@ How STILT works, in three steps
    each grid cell's value says how much a unit of emissions there would
    change the measurement.
 
-.. figure:: https://uataq.github.io/stilt/static/img/footprint.png
-   :alt: Example footprint showing upwind surface influence
-   :align: center
+.. ipython:: python
+   :suppress:
 
-   A footprint for a receptor over Salt Lake City. Warm colors mark the
-   areas that most strongly influenced the measurement.
+   import os
+
+   import docs_examples
+   import stilt
+
+   docs_cwd = docs_examples.temp_workdir()
+   receptor = stilt.PointReceptor(
+       time="2021-01-14 19:00", longitude=-111.848, latitude=40.766, altitude=10
+   )
+   particles = stilt.run_trajectories(
+       receptor, docs_examples.met(), n_hours=-12, numpar=200, krand=2, seed=42
+   )
+   grid = stilt.Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01)
+   foot = stilt.calc_footprint(particles, receptor, grid)
+
+   @savefig what_is_stilt_footprint.png width=5in
+   foot.stilt.plot.map();
+
+   os.chdir(docs_cwd)
+
+The map above is a footprint PYSTILT made for a sensor on the University of
+Utah campus at noon on 14 January 2021, from 200 particles followed 12 hours
+back. The air came from the north-northwest, so the footprint stretches that
+way from the sensor, and the cells nearest the sensor influenced the
+measurement most. The colors are on a log scale, because a footprint spans
+many orders of magnitude.
+
+A study goes on from the footprint. Multiply it by a map of surface fluxes and
+you get the enhancement, the part of the measured concentration those fluxes
+explain. Add the background, the concentration of the air before it reached
+the region, and you have a modeled value to compare with the measurement:
+
+.. figure:: ../_static/workflow.svg
+   :alt: A measurement and meteorology give particles, the particles give a
+         footprint, the footprint times a flux inventory gives the
+         enhancement, and the enhancement plus the background is the modeled
+         concentration.
+   :align: center
+   :width: 100%
+
+   The inputs (tan) are yours. PYSTILT makes the particles and the footprint,
+   and computes the enhancement from a flux you give it.
 
 What you can do with a footprint
 --------------------------------
 
-Multiply a footprint by an emissions map (a flux inventory) and add it up,
-and you get the concentration increase your receptor should have seen. Do
-that for many measurements and compare with what was actually observed, and
-you can test an inventory or estimate emissions in an inversion. The
-:doc:`../tutorials/flux_inversion` tutorial covers the first step, turning
-footprints into modeled concentrations.
+Do the comparison above for many measurements and you can test an emissions
+inventory, or correct it in an inversion. The :doc:`../tutorials/flux_inversion`
+tutorial takes the first step, from footprints to modeled concentrations.
 
 What you need
 -------------
@@ -67,8 +103,9 @@ particles. PYSTILT includes it for Linux and macOS (Intel).
 Why PYSTILT?
 ------------
 
-PYSTILT gives the same footprints as STILT-R, checked cell by cell. It also
-makes a few things easier.
+PYSTILT gives the same footprints as STILT-R on longitude/latitude grids,
+checked cell by cell (:ref:`stilt-r-parity` lists the few cases
+that differ). It also makes a few things easier.
 
 * You work in Python only. There is no R to install, and results load
   straight into pandas and xarray.

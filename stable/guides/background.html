@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Background &#8212; PYSTILT 0.1.0a27</title>
+    <title>Background &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -60,11 +60,11 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Trajectory-Style Analyses" href="trajectory_analyses.html" />
-    <link rel="prev" title="Wind Error Statistics" href="wind_errors.html" />
+    <link rel="prev" title="Transport Error" href="transport_error.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -414,6 +414,7 @@
 <li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
+<li class="toctree-l1"><a class="reference internal" href="choosing_settings.html">Choosing Settings</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Running</span></p>
 <ul class="nav bd-sidenav">
@@ -429,7 +430,6 @@
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Footprints And Particles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="aggregation.html">Summing Footprints: Areas And The Jacobian</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transport_error.html">Transport Error</a></li>
-<li class="toctree-l1"><a class="reference internal" href="wind_errors.html">Wind Error Statistics</a></li>
 <li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Background</a></li>
 <li class="toctree-l1"><a class="reference internal" href="trajectory_analyses.html">Trajectory-Style Analyses</a></li>
 </ul>
@@ -438,7 +438,6 @@
 <li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
 <li class="toctree-l1"><a class="reference internal" href="slant_columns.html">Slant Columns</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="plume_background.html">Plume Background</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
 <ul class="nav bd-sidenav">
@@ -524,7 +523,7 @@ with any field you give it (<a class="reference internal" href="../reference/_ap
 project). X-STILT does the same with
 CarbonTracker in <code class="docutils literal notranslate"><span class="pre">endpts.trajfoot</span></code>. For a satellite swath you can also
 take the background from the soundings that a city’s plume did not reach
-(<a class="reference internal" href="plume_background.html"><span class="doc">Plume Background</span></a>).</p>
+(<a class="reference internal" href="#plume-background"><span class="std std-ref">A background from a satellite swath</span></a>).</p>
 <section id="the-field">
 <h2>The field<a class="headerlink" href="#the-field" title="Link to this heading">#</a></h2>
 <p>The field is an <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> with <code class="docutils literal notranslate"><span class="pre">lat</span></code> and <code class="docutils literal notranslate"><span class="pre">lon</span></code>
@@ -610,6 +609,154 @@ rest. Check <code class="docutils literal notranslate"><span class="pre">bg.per_
 every endpoint.</p></li>
 </ul>
 </section>
+<section id="a-background-from-a-satellite-swath">
+<span id="plume-background"></span><h2>A background from a satellite swath<a class="headerlink" href="#a-background-from-a-satellite-swath" title="Link to this heading">#</a></h2>
+<p>The sections above take the background from a model field at the
+trajectory endpoints. For a satellite swath, the swath itself holds a
+background. Soundings that the city’s plume did not reach saw clean air at
+the same time, with the same instrument and the same biases. To find those
+soundings, run particles forward from the city over the hours before the
+overpass, see where they are when the satellite passes, and draw the plume
+around them. <a class="reference internal" href="../reference/_api/stilt.observations.plume_polygon.html#stilt.observations.plume_polygon" title="stilt.observations.plume_polygon"><code class="xref py py-func docutils literal notranslate"><span class="pre">plume_polygon()</span></code></a> draws the plume and
+<a class="reference internal" href="../reference/_api/stilt.observations.plume_background.html#stilt.observations.plume_background" title="stilt.observations.plume_background"><code class="xref py py-func docutils literal notranslate"><span class="pre">plume_background()</span></code></a> picks the background
+soundings. This follows X-STILT’s <code class="docutils literal notranslate"><span class="pre">fit.kde.plume</span></code> and <code class="docutils literal notranslate"><span class="pre">calc.bg.upwind</span></code>
+(method M3 in <a class="reference external" href="https://doi.org/10.5194/gmd-11-4843-2018">Wu et al., 2018</a>).</p>
+<section id="forward-runs">
+<h3>Forward runs<a class="headerlink" href="#forward-runs" title="Link to this heading">#</a></h3>
+<p>A forward run is a run with a positive <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>. Everything else stays
+the same. The receptor is where and when the particles are released, and
+the particle table records where they go.</p>
+<p>A plume is what the whole city puts out, so spread the release over a box
+around the city, just above the surface. Repeat it every half hour over
+the hours before the overpass, so that air of every age is included.
+X-STILT’s defaults are a 0.3° box, 10 m above ground, and releases from ten
+hours before the overpass up to the overpass, each followed twelve hours
+forward with 1000 particles. In PYSTILT each release is a
+<code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code>, and
+<a class="reference internal" href="../reference/_api/stilt.observations.jitter_points.html#stilt.observations.jitter_points" title="stilt.observations.jitter_points"><code class="xref py py-func docutils literal notranslate"><span class="pre">jitter_points()</span></code></a> spreads its points over the box:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">jitter_points</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiPointReceptor</span>
+
+<span class="n">site</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mf">111.9</span><span class="p">,</span> <span class="mf">40.75</span><span class="p">)</span>                       <span class="c1"># Salt Lake City</span>
+<span class="n">overpass</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">"2023-10-19 19:42"</span><span class="p">)</span>  <span class="c1"># from the sounding times</span>
+<span class="n">half</span> <span class="o">=</span> <span class="mf">0.15</span>
+<span class="n">box</span> <span class="o">=</span> <span class="p">[(</span><span class="n">site</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">half</span><span class="p">,</span> <span class="n">site</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">half</span><span class="p">),</span> <span class="p">(</span><span class="n">site</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">half</span><span class="p">,</span> <span class="n">site</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">half</span><span class="p">),</span>
+       <span class="p">(</span><span class="n">site</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">half</span><span class="p">,</span> <span class="n">site</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">half</span><span class="p">),</span> <span class="p">(</span><span class="n">site</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">half</span><span class="p">,</span> <span class="n">site</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">half</span><span class="p">)]</span>
+<span class="n">points</span> <span class="o">=</span> <span class="n">jitter_points</span><span class="p">(</span><span class="n">box</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+
+<span class="n">receptors</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">MultiPointReceptor</span><span class="p">(</span>
+        <span class="n">time</span><span class="o">=</span><span class="n">t</span><span class="p">,</span>
+        <span class="n">longitudes</span><span class="o">=</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">],</span>
+        <span class="n">latitudes</span><span class="o">=</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">],</span>
+        <span class="n">altitudes</span><span class="o">=</span><span class="p">[</span><span class="mf">10.0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">overpass</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span> <span class="n">overpass</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s2">"30min"</span><span class="p">)</span>
+<span class="p">]</span>
+
+<span class="n">forward</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
+    <span class="s2">"./forward_12h"</span><span class="p">,</span>             <span class="c1"># keep forward runs in a project of their own</span>
+    <span class="n">receptors</span><span class="o">=</span><span class="n">receptors</span><span class="p">,</span>
+    <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="n">met</span><span class="p">},</span>          <span class="c1"># as in the quickstart</span>
+    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{}},</span>
+    <span class="n">n_hours</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span>                  <span class="c1"># positive: forward in time</span>
+    <span class="n">numpar</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">forward</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>No footprint is needed. The plume only needs the particle tables, which
+hold each particle’s position at every output step along with its
+<code class="docutils literal notranslate"><span class="pre">time</span></code>.</p>
+</section>
+<section id="the-plume">
+<h3>The plume<a class="headerlink" href="#the-plume" title="Link to this heading">#</a></h3>
+<p>Pool the particle rows that fall within a few minutes of the overpass,
+across all the forward runs, and outline them:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">plume_polygon</span>
+
+<span class="n">window</span> <span class="o">=</span> <span class="p">(</span><span class="n">overpass</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span> <span class="n">overpass</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+<span class="n">particles</span> <span class="o">=</span> <span class="n">forward</span><span class="o">.</span><span class="n">particles</span><span class="p">()</span>
+<span class="n">particles</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="n">particles</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="o">*</span><span class="n">window</span><span class="p">)]</span>
+
+<span class="n">plume</span> <span class="o">=</span> <span class="n">plume_polygon</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">],</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">])</span>
+<span class="n">plume</span><span class="o">.</span><span class="n">polygon</span>      <span class="c1"># shapely Polygon in longitude and latitude</span>
+<span class="n">plume</span><span class="o">.</span><span class="n">density</span>      <span class="c1"># the kernel density it was cut from, (lat, lon), max 1</span>
+</pre></div>
+</div>
+<p>The plume is where the 2-D kernel density of these positions is at least a
+tenth of its maximum. <code class="docutils literal notranslate"><span class="pre">threshold</span></code> sets that fraction. A higher value
+gives a tighter plume, and a lower value a wider one. <code class="docutils literal notranslate"><span class="pre">bandwidth</span></code> sets
+the smoothing, 0.1° in longitude and 0.15° in latitude by default. As in
+R’s <code class="docutils literal notranslate"><span class="pre">kde2d</span></code>, the kernel’s standard deviation is a quarter of the
+bandwidth. If the area above the threshold falls into separate pieces, the
+largest piece is the plume. The outline follows the cells of the density
+grid, 100 by 100 over the particles by default, so it looks a little
+blocky. Raise <code class="docutils literal notranslate"><span class="pre">n</span></code> for a finer outline.</p>
+<p>Plot <code class="docutils literal notranslate"><span class="pre">plume.density</span></code> with the soundings and the outline before you trust
+it. A plume that misses the swath, or one that covers all of it, leaves no
+background to take.</p>
+</section>
+<section id="the-background">
+<h3>The background<a class="headerlink" href="#the-background" title="Link to this heading">#</a></h3>
+<p>Pass the soundings of the overpass and the plume to
+<a class="reference internal" href="../reference/_api/stilt.observations.plume_background.html#stilt.observations.plume_background" title="stilt.observations.plume_background"><code class="xref py py-func docutils literal notranslate"><span class="pre">plume_background()</span></code></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">plume_background</span><span class="p">,</span> <span class="n">read_tropomi_ch4</span>
+
+<span class="n">obs</span> <span class="o">=</span> <span class="n">read_tropomi_ch4</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">lon_range</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">113.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">110.5</span><span class="p">),</span> <span class="n">lat_range</span><span class="o">=</span><span class="p">(</span><span class="mf">39.5</span><span class="p">,</span> <span class="mf">42.0</span><span class="p">))</span>
+<span class="n">obs</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="s2">"good"</span><span class="p">]]</span>
+
+<span class="n">bg</span> <span class="o">=</span> <span class="n">plume_background</span><span class="p">(</span>
+    <span class="n">obs</span><span class="p">[</span><span class="s2">"longitude"</span><span class="p">],</span> <span class="n">obs</span><span class="p">[</span><span class="s2">"latitude"</span><span class="p">],</span> <span class="n">obs</span><span class="p">[</span><span class="s2">"value"</span><span class="p">],</span> <span class="n">plume</span><span class="p">,</span>
+    <span class="n">uncertainties</span><span class="o">=</span><span class="n">obs</span><span class="p">[</span><span class="s2">"uncertainty"</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="n">bg</span><span class="o">.</span><span class="n">value</span>          <span class="c1"># the background, ppb here</span>
+<span class="n">bg</span><span class="o">.</span><span class="n">uncertainty</span>    <span class="c1"># spread of the background soundings and their retrieval error, in quadrature</span>
+<span class="n">bg</span><span class="o">.</span><span class="n">sides</span>          <span class="c1"># the same for each side of the plume</span>
+<span class="n">obs</span><span class="p">[</span><span class="s2">"in_plume"</span><span class="p">]</span> <span class="o">=</span> <span class="n">bg</span><span class="o">.</span><span class="n">in_plume</span>
+<span class="n">obs</span><span class="p">[</span><span class="s2">"enhancement"</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">"value"</span><span class="p">]</span> <span class="o">-</span> <span class="n">bg</span><span class="o">.</span><span class="n">value</span>
+</pre></div>
+</div>
+<p>The soundings inside the plume are the enhanced ones. PYSTILT draws the
+bounding box of those soundings and pads it on each side by <code class="docutils literal notranslate"><span class="pre">pad</span></code> times
+its size (0.1 by default). The background candidates are the soundings
+outside the plume within <code class="docutils literal notranslate"><span class="pre">width</span></code> degrees (0.5 by default) of that box, to
+the north, south, east, or west. The background is their median.</p>
+<p><code class="docutils literal notranslate"><span class="pre">bg.sides</span></code> has the count, mean, median, spread, and retrieval error of
+the soundings on each side. If the sides disagree, one of them is probably
+downwind of another source. Pass the upwind side, for example
+<code class="docutils literal notranslate"><span class="pre">side=&quot;west&quot;</span></code>, to use that side alone. The drift of the forward particles
+tells you which side is upwind.</p>
+<p>Before any of that, <code class="docutils literal notranslate"><span class="pre">trim</span></code> drops the out-of-plume soundings above the
+90th percentile of their values. This guards against enhanced air that the
+outline missed, at the cost of a slightly low background when the air is
+clean. <code class="docutils literal notranslate"><span class="pre">trim=None</span></code> keeps every sounding.</p>
+<p><a class="reference internal" href="../reference/_api/stilt.observations.plume_background.html#stilt.observations.plume_background" title="stilt.observations.plume_background"><code class="xref py py-func docutils literal notranslate"><span class="pre">plume_background()</span></code></a> raises an error when no
+sounding lies inside the plume, because then the overpass did not see the
+city. Pass only good-quality soundings. Missing values are ignored.</p>
+</section>
+<section id="id1">
+<h3>Choices made here<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>The background comes from the swath, not from a model. It carries the
+instrument’s bias, which cancels when the enhancement is
+<code class="docutils literal notranslate"><span class="pre">value</span> <span class="pre">-</span> <span class="pre">background</span></code> from the same swath.</p></li>
+<li><p>The outline is built from the density grid cells above the threshold
+rather than traced as a contour. It matches the grid exactly and never
+crosses itself. X-STILT traces the contour and repairs broken pieces.
+Keeping the largest piece does the same job here.</p></li>
+<li><p>You choose the threshold. X-STILT raises it automatically when no low
+density falls in the release box. Here you look at the density and
+decide.</p></li>
+<li><p>The side strips cover only the length of the padded box, so a northern
+strip does not run across the whole swath.</p></li>
+<li><p>Each sounding is a point at its center. A pixel that straddles the
+outline counts as inside or outside by where its center falls.</p></li>
+</ul>
+</section>
+</section>
 </section>
 
 
@@ -623,12 +770,12 @@ every endpoint.</p></li>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="wind_errors.html"
+       href="transport_error.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Wind Error Statistics</p>
+        <p class="prev-next-title">Transport Error</p>
       </div>
     </a>
     <a class="right-next"
@@ -664,6 +811,13 @@ every endpoint.</p></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-column-s-weights-cover">What a column’s weights cover</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#with-transport-error">With transport error</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#choices-made-here">Choices made here</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-background-from-a-satellite-swath">A background from a satellite swath</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#forward-runs">Forward runs</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-plume">The plume</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-background">The background</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Choices made here</a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 

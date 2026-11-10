@@ -1,9 +1,10 @@
 Running
 =======
 
-The same project runs on your computer or on an HPC cluster. Only the
-``execution`` section of ``config.yaml`` changes. Your receptors,
-meteorology, footprints, and outputs stay the same.
+The same project runs on your computer or on an HPC cluster, and only the
+``execution`` section of ``config.yaml`` changes. We start every project on
+a laptop or one node with a few receptors, because a mistake shows up in
+minutes there, and move it to Slurm once the footprints look right.
 
 .. list-table::
    :header-rows: 1
@@ -65,8 +66,8 @@ To run several receptors at once, set ``cpus``:
 
 or, for one run, ``stilt run ./my_project --cpus 4``. Each of the ``cpus``
 processes runs one receptor at a time, with all of that receptor's
-variants. Set it no higher than the number of CPU cores you have. ``cpus``
-means the same on Slurm, per array task.
+variants. Set it to the number of CPU cores you can spare, because each
+HYSPLIT run uses one core. ``cpus`` means the same on Slurm, per array task.
 
 A Python script that calls ``project.run()`` with ``cpus`` above 1 needs its
 code under ``if __name__ == "__main__":``. Python 3.14, macOS, and Windows
@@ -82,15 +83,20 @@ script runs again in every worker. ``Project.init`` there stops with a
        project = stilt.Project("./my_project")
        project.run()
 
-Without the guard, PYSTILT stops with "A worker process could not start" and
-shows this fix. ``stilt run --cpus 4`` and a ``cpus`` of 1 need no guard.
+``stilt run --cpus 4`` and a ``cpus`` of 1 need no guard.
 
-Ctrl-C, or ``SIGTERM`` from ``kill``, ``timeout``, Slurm, or Kubernetes, stops
-a run on any number of ``cpus`` the same way. The HYSPLIT runs are ended, the
-workers exit, and ``stilt run`` prints how many receptors had finished and
-exits with 3, within a few seconds. Receptors that finished stay finished.
-``stilt status`` counts a receptor that was cut off as ``interrupted``, and
-running again runs it from the start.
+You can stop a run at any time with Ctrl-C (or ``SIGTERM`` from ``kill``,
+Slurm or Kubernetes). Receptors that finished stay finished, and running
+again starts the ones that were cut off from the beginning.
+
+If a worker process is killed outright, most often by the kernel's
+out-of-memory killer, the run stops with an error
+(:class:`~stilt.exceptions.WorkerDied`) and ``stilt run`` exits with 3. The pool
+cannot say which receptor the worker held, so the error names every receptor
+that was in progress. Nothing is marked failed and what finished stays
+finished: run it again and only what is missing runs, with a lower ``cpus`` or
+more memory per task if memory was the cause. The killed worker's directory in
+the compute root is not removed; clear it by hand.
 
 Save now, run later
 -------------------
@@ -144,7 +150,7 @@ Commands
 
    - ``--backend`` and ``--n-workers`` override ``config.yaml`` for this run.
    - ``--cpus N`` runs ``N`` receptors at once. Ctrl-C or ``SIGTERM`` stops
-     them all and exits with 3.
+     them all and exits with 3, as does a worker killed for memory.
    - ``--no-skip`` reruns every simulation, finished or not.
    - ``--receptors FILE`` runs only the receptors listed in ``FILE``, one
      id per line.
@@ -165,14 +171,10 @@ Commands
    List the settings folders in the output directory and which variants
    use them. ``--json`` prints the same as JSON, for a program to read.
 
-``stilt run`` exits with 0 when every simulation it ran is complete, 1 when
-some failed, and 3 when some did not finish because the run was stopped. It
-exits with 2 when its command line is wrong, or when a met directory does
-not exist or holds no ARL file; ``stilt submit`` and ``stilt status`` do
-too. An error the command did not expect prints its traceback and exits
-with 3 when it is a connection or I/O error, such as an output bucket that
-cannot be reached, and with 4 for any other (:ref:`exit-codes`). Every
-command does this, not only ``stilt run``.
+Every command exits with 0 when all went well, 1 when some simulations
+failed or ``stilt check`` found something, and 3 when a run was stopped
+before it finished, so a script can rerun on 3 (:ref:`exit-codes` lists
+every code).
 
 When a simulation fails
 -----------------------
@@ -180,10 +182,7 @@ When a simulation fails
 A failed simulation doesn't stop the others. The worker records why it
 failed and goes on, and the next ``stilt run`` tries it again.
 ``stilt status`` counts the failures by reason, and :doc:`checking` says
-what each reason means and where to look. A connection or I/O error while
-a result is written, such as an output bucket that stops answering, is not a
-failure: nothing is recorded, the simulation stays unfinished, and the run
-ends with 3 so that the next ``stilt run`` picks it up (:ref:`exit-codes`).
+what each reason means and where to look.
 
 .. toctree::
    :maxdepth: 1

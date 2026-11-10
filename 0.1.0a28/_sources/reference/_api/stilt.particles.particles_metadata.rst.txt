@@ -1,0 +1,6 @@
+﻿stilt.particles.particles\_metadata
+===================================
+
+.. currentmodule:: stilt.particles
+
+.. autofunction:: particles_metadata

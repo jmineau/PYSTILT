@@ -1,0 +1,6 @@
+stilt.ProjectConfig.from\_yaml
+==============================
+
+.. currentmodule:: stilt
+
+.. automethod:: ProjectConfig.from_yaml

@@ -45,7 +45,7 @@ Plume background
 ----------------
 
 The outline of a forward-run plume over a satellite swath, and the
-background from the soundings beside it (:doc:`/guides/plume_background`).
+background from the soundings beside it (:ref:`plume-background`).
 
 .. autosummary::
    :toctree: _api

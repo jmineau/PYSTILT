@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Tutorial: A Week Of Tower Footprints &#8212; PYSTILT 0.1.0a27</title>
+    <title>Tutorial: A Day Of Tower Footprints &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -410,7 +410,7 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Tutorial: A Week Of Tower Footprints</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Tutorial: A Day Of Tower Footprints</a></li>
 <li class="toctree-l1"><a class="reference internal" href="flux_inversion.html">Tutorial: From Footprints To Concentrations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="satellite_column.html">Tutorial: A Satellite Column, Start To Finish</a></li>
 </ul>
@@ -456,7 +456,7 @@
     
     <li class="breadcrumb-item"><a href="index.html" class="nav-link">Tutorials</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Tutorial: A Week Of Tower Footprints</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Tutorial: A Day Of Tower Footprints</span></li>
   </ul>
 </nav>
 </div>
@@ -473,132 +473,174 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="tutorial-a-week-of-tower-footprints">
-<h1>Tutorial: A Week Of Tower Footprints<a class="headerlink" href="#tutorial-a-week-of-tower-footprints" title="Link to this heading">#</a></h1>
-<p>This tutorial runs hourly footprints for one week at a rooftop measurement
-site. Then it averages them into one map that shows which areas usually
-influence the site.</p>
+  <section id="tutorial-a-day-of-tower-footprints">
+<h1>Tutorial: A Day Of Tower Footprints<a class="headerlink" href="#tutorial-a-day-of-tower-footprints" title="Link to this heading">#</a></h1>
+<p>A tower measures the same place every hour, but the air it samples does not
+come from the same place. In the afternoon the boundary layer is deep and
+the wind brings air from farther away. At night the air near the ground
+grows still and the tower sees more of its own neighborhood. In this
+tutorial we run a footprint for every hour of one winter day at a rooftop
+site and compare the afternoon with the night.</p>
 <p>The site is WBB, a long-running greenhouse gas site on the roof of the
 William Browning Building at the University of Utah in Salt Lake City. The
-same steps work for any fixed site. Just change the coordinates.</p>
-<section id="what-you-ll-learn">
-<h2>What you’ll learn<a class="headerlink" href="#what-you-ll-learn" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p>how to make many receptors at once</p></li>
-<li><p>how to run them in parallel on your computer</p></li>
-<li><p>how to load many footprints and combine them</p></li>
-</ul>
-<p>You’ll need ARL meteorology for 4 to 11 July 2015. That is the week plus the
-day before it, which the 24-hour back-trajectories reach into. See
-<a class="reference internal" href="../guides/meteorology.html"><span class="doc">Meteorology</span></a>.</p>
-</section>
+same steps work for any fixed site, with its own coordinates.</p>
+<p>You need ARL meteorology for the hours of your receptors and the hours the
+runs go back into. Here that is 06:00 UTC on 14 January 2021 to 11:00 UTC on
+15 January (<a class="reference internal" href="../guides/meteorology.html"><span class="doc">Meteorology</span></a>).</p>
 <section id="step-1-one-receptor-per-hour">
 <h2>Step 1: One receptor per hour<a class="headerlink" href="#step-1-one-receptor-per-hour" title="Link to this heading">#</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+<p>Each measurement is a receptor. We make one for every hour from 18:00 UTC on
+14 January (11:00 in Salt Lake City) to 11:00 UTC the next morning (04:00):</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-<span class="n">times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="s2">"2015-07-05 00:00"</span><span class="p">,</span> <span class="s2">"2015-07-11 23:00"</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s2">"1h"</span><span class="p">)</span>
-<span class="n">receptors</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
-        <span class="n">time</span><span class="o">=</span><span class="n">t</span><span class="p">,</span>
-        <span class="n">latitude</span><span class="o">=</span><span class="mf">40.7665</span><span class="p">,</span>
-        <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.8472</span><span class="p">,</span>
-        <span class="n">altitude</span><span class="o">=</span><span class="mf">21.0</span><span class="p">,</span>         <span class="c1"># inlet height above ground, in meters</span>
-    <span class="p">)</span>
-    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">times</span>
-<span class="p">]</span>
-<span class="nb">len</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>                 <span class="c1"># 168, one per hour for 7 days</span>
+<span class="gp">In [2]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+
+<span class="gp">In [3]: </span><span class="n">times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="s2">"2021-01-14 18:00"</span><span class="p">,</span> <span class="s2">"2021-01-15 11:00"</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s2">"1h"</span><span class="p">)</span>
+
+<span class="gp">In [4]: </span><span class="n">receptors</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">   ...: </span>    <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
+<span class="gp">   ...: </span>        <span class="n">time</span><span class="o">=</span><span class="n">t</span><span class="p">,</span>
+<span class="gp">   ...: </span>        <span class="n">latitude</span><span class="o">=</span><span class="mf">40.7665</span><span class="p">,</span>
+<span class="gp">   ...: </span>        <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.8472</span><span class="p">,</span>
+<span class="gp">   ...: </span>        <span class="n">altitude</span><span class="o">=</span><span class="mf">21.0</span><span class="p">,</span>         <span class="c1"># inlet height above ground, in meters</span>
+<span class="gp">   ...: </span>    <span class="p">)</span>
+<span class="gp">   ...: </span>    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">times</span>
+<span class="gp">   ...: </span><span class="p">]</span>
+<span class="gp">   ...: </span>
+
+<span class="gp">In [5]: </span><span class="nb">len</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+<span class="gh">Out[5]: </span><span class="go">18</span>
 </pre></div>
 </div>
-<p>If your measurement times are in a spreadsheet, save them as a CSV and use
-<a class="reference internal" href="../reference/_api/stilt.read_receptors.html#stilt.read_receptors" title="stilt.read_receptors"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.read_receptors()</span></code></a> instead (see <a class="reference internal" href="../guides/receptors.html"><span class="doc">Receptors</span></a>).</p>
+<p>If your measurement times are in a spreadsheet, save them as a CSV and read
+them with <a class="reference internal" href="../reference/_api/stilt.read_receptors.html#stilt.read_receptors" title="stilt.read_receptors"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.read_receptors()</span></code></a> (<a class="reference internal" href="../guides/receptors.html"><span class="doc">Receptors</span></a>).</p>
 </section>
 <section id="step-2-make-the-project">
 <h2>Step 2: Make the project<a class="headerlink" href="#step-2-make-the-project" title="Link to this heading">#</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
-    <span class="s2">"./wbb_project"</span><span class="p">,</span>
-    <span class="n">receptors</span><span class="o">=</span><span class="n">receptors</span><span class="p">,</span>
-    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>
-    <span class="n">numpar</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-    <span class="n">mets</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">"directory"</span><span class="p">:</span> <span class="s2">"/data/met/hrrr"</span><span class="p">,</span>
-            <span class="s2">"file_format"</span><span class="p">:</span> <span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">_%H"</span><span class="p">,</span>
-            <span class="s2">"file_tres"</span><span class="p">:</span> <span class="s2">"6h"</span><span class="p">,</span>
-        <span class="p">}</span>
-    <span class="p">},</span>
-    <span class="n">grid</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">"xmin"</span><span class="p">:</span> <span class="o">-</span><span class="mf">114.0</span><span class="p">,</span> <span class="s2">"xmax"</span><span class="p">:</span> <span class="o">-</span><span class="mf">109.0</span><span class="p">,</span>
-        <span class="s2">"ymin"</span><span class="p">:</span> <span class="mf">39.0</span><span class="p">,</span>   <span class="s2">"ymax"</span><span class="p">:</span> <span class="mf">42.5</span><span class="p">,</span>
-        <span class="s2">"xres"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>   <span class="s2">"yres"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
-    <span class="p">},</span>
-    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{}},</span>
-    <span class="n">execution</span><span class="o">=</span><span class="p">{</span><span class="s2">"backend"</span><span class="p">:</span> <span class="s2">"local"</span><span class="p">,</span> <span class="s2">"cpus"</span><span class="p">:</span> <span class="mi">4</span><span class="p">},</span>   <span class="c1"># 4 receptors at a time</span>
-<span class="p">)</span>
+<p>A project keeps the receptors, the settings and the results together, so
+you can stop and pick up where you left off:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
+<span class="gp">   ...: </span>    <span class="s2">"./wbb_project"</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">receptors</span><span class="o">=</span><span class="n">receptors</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">12</span><span class="p">,</span>              <span class="c1"># follow the air 12 hours back</span>
+<span class="gp">   ...: </span>    <span class="n">numpar</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>               <span class="c1"># particles per receptor</span>
+<span class="gp">   ...: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>                  <span class="c1"># the same particles on every run</span>
+<span class="gp">   ...: </span>    <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="n">met</span><span class="p">},</span>
+<span class="gp">   ...: </span>    <span class="n">grid</span><span class="o">=</span><span class="p">{</span>
+<span class="gp">   ...: </span>        <span class="s2">"xmin"</span><span class="p">:</span> <span class="o">-</span><span class="mf">113.0</span><span class="p">,</span> <span class="s2">"xmax"</span><span class="p">:</span> <span class="o">-</span><span class="mf">110.5</span><span class="p">,</span>
+<span class="gp">   ...: </span>        <span class="s2">"ymin"</span><span class="p">:</span> <span class="mf">40.0</span><span class="p">,</span>   <span class="s2">"ymax"</span><span class="p">:</span> <span class="mf">42.0</span><span class="p">,</span>
+<span class="gp">   ...: </span>        <span class="s2">"xres"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>   <span class="s2">"yres"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="p">},</span>
+<span class="gp">   ...: </span>    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{}},</span>
+<span class="gp">   ...: </span>    <span class="n">execution</span><span class="o">=</span><span class="p">{</span><span class="s2">"backend"</span><span class="p">:</span> <span class="s2">"local"</span><span class="p">,</span> <span class="s2">"cpus"</span><span class="p">:</span> <span class="mi">4</span><span class="p">},</span>   <span class="c1"># 4 receptors at a time</span>
+<span class="gp">   ...: </span><span class="p">)</span>
+<span class="gp">   ...: </span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">numpar=100</span></code> keeps this tutorial quick. Use more particles for research
-results (see <a class="reference internal" href="../guides/projects.html"><span class="doc">Projects And Variants</span></a>).</p>
-<p><code class="docutils literal notranslate"><span class="pre">Project.init</span></code> writes <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> and <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> to
-<code class="docutils literal notranslate"><span class="pre">./wbb_project</span></code> and stops if the folder already has a <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.
-In a later session, open the project instead:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"./wbb_project"</span><span class="p">)</span>
-</pre></div>
-</div>
+<p>We use 100 particles and 12 hours so that this page builds quickly. For a
+study we would use 1000 particles and 24 hours or more, because a footprint
+from few particles is noisy far from the site, and 12 hours may not reach
+the far edge of the region (<a class="reference internal" href="../guides/projects.html"><span class="doc">Projects And Variants</span></a>).</p>
+<p>In a later session, open the project with <code class="docutils literal notranslate"><span class="pre">stilt.Project(&quot;./wbb_project&quot;)</span></code>.</p>
 </section>
-<section id="step-3-run">
-<h2>Step 3: Run<a class="headerlink" href="#step-3-run" title="Link to this heading">#</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<section id="step-3-check-and-run">
+<h2>Step 3: Check and run<a class="headerlink" href="#step-3-check-and-run" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">check</span></code> finds what would stop a run, such as a missing met file, before
+anything starts. An empty table means nothing is in the way:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [7]: </span><span class="n">project</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+<span class="gh">Out[7]: </span>
+<span class="go">Empty DataFrame</span>
+<span class="go">Columns: [check, variant, receptor, message]</span>
+<span class="go">Index: []</span>
+
+<span class="gp">In [8]: </span><span class="n">project</span><span class="o">.</span><span class="n">run</span><span class="p">();</span>
 </pre></div>
 </div>
-<p>There are 168 simulations, so this takes a while, four at a time.</p>
+<p>A run you stop with Ctrl-C picks up where it left off when you start it
+again, and <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span> <span class="pre">./wbb_project</span></code> shows the progress from another
+terminal.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>In a script (<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">wbb.py</span></code>), put everything from Step 1 on under
 <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">__name__</span> <span class="pre">==</span> <span class="pre">&quot;__main__&quot;:</span></code>. With <code class="docutils literal notranslate"><span class="pre">cpus</span></code> above 1, Python 3.14, macOS,
 and Windows start each worker by importing the script again, which would
-run <code class="docutils literal notranslate"><span class="pre">Project.init</span></code> again and stop with a <code class="docutils literal notranslate"><span class="pre">FileExistsError</span></code>. Without the
-guard, PYSTILT stops with “A worker process could not start” and shows the
-fix. The command <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">./wbb_project</span> <span class="pre">--cpus</span> <span class="pre">4</span></code> needs no guard.</p>
-</div>
-<p>You can stop it at any time with Ctrl-C. Running it again picks up where it left
-off. To check progress from another terminal:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>status<span class="w"> </span>./wbb_project
-</pre></div>
+run <code class="docutils literal notranslate"><span class="pre">Project.init</span></code> again and stop with a <code class="docutils literal notranslate"><span class="pre">FileExistsError</span></code>.</p>
 </div>
 </section>
-<section id="step-4-average-the-footprints">
-<h2>Step 4: Average the footprints<a class="headerlink" href="#step-4-average-the-footprints" title="Link to this heading">#</a></h2>
-<p>Load all 168 footprints, sum each one over time, and average them:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.colors</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mcolors</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<section id="step-4-afternoon-against-night">
+<h2>Step 4: Afternoon against night<a class="headerlink" href="#step-4-afternoon-against-night" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">project.footprints()</span></code> loads every footprint into one dataset, with a
+<code class="docutils literal notranslate"><span class="pre">receptor</span></code> axis. We sum each footprint over its hours, then split the
+receptors into the afternoon (11:00 to 16:00 local time) and the night
+(22:00 to 04:00):</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [9]: </span><span class="n">footprints</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">footprints</span><span class="p">()</span>
 
-<span class="n">footprints</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">footprints</span><span class="p">()</span>   <span class="c1"># one dataset: receptor, hour, lat, lon</span>
+<span class="gp">In [10]: </span><span class="n">total</span> <span class="o">=</span> <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"hour"</span><span class="p">)</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
 
-<span class="n">mean_foot</span> <span class="o">=</span> <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"hour"</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span>
+<span class="gp">In [11]: </span><span class="n">utc</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)[</span><span class="s2">"time"</span><span class="p">]</span>
 
-<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
-<span class="n">mean_foot</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
-    <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
-    <span class="n">norm</span><span class="o">=</span><span class="n">mcolors</span><span class="o">.</span><span class="n">LogNorm</span><span class="p">(</span><span class="n">vmin</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">),</span>
-    <span class="n">cmap</span><span class="o">=</span><span class="s2">"YlOrRd"</span><span class="p">,</span>
-    <span class="n">cbar_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">"label"</span><span class="p">:</span> <span class="s2">"footprint (ppm per µmol m⁻² s⁻¹)"</span><span class="p">},</span>
-<span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="o">-</span><span class="mf">111.8472</span><span class="p">,</span> <span class="mf">40.7665</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">"*"</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">160</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"Mean footprint at WBB, 5–11 July 2015"</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="gp">In [12]: </span><span class="n">local</span> <span class="o">=</span> <span class="p">(</span><span class="n">utc</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="s2">"7h"</span><span class="p">))</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">total</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+
+<span class="gp">In [13]: </span><span class="n">afternoon</span> <span class="o">=</span> <span class="n">total</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">local</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">local</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span> <span class="mi">16</span><span class="p">)])</span>
+
+<span class="gp">In [14]: </span><span class="n">night</span> <span class="o">=</span> <span class="n">total</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">local</span><span class="o">.</span><span class="n">index</span><span class="p">[(</span><span class="n">local</span> <span class="o">&gt;=</span> <span class="mi">22</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">local</span> <span class="o">&lt;=</span> <span class="mi">4</span><span class="p">)])</span>
 </pre></div>
 </div>
-<p>Footprints are strongest right around the site and fall off quickly with
-distance. They span several orders of magnitude, so the color scale is
-logarithmic.</p>
+<p>Then we map the mean of each group:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [15]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.colors</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mcolors</span>
+
+<span class="gp">In [16]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="gp">In [17]: </span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mf">4.2</span><span class="p">),</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">"constrained"</span><span class="p">)</span>
+
+<span class="gp">In [18]: </span><span class="n">norm</span> <span class="o">=</span> <span class="n">mcolors</span><span class="o">.</span><span class="n">LogNorm</span><span class="p">(</span><span class="n">vmin</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mf">1e-1</span><span class="p">)</span>
+
+<span class="gp">In [19]: </span><span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="p">[</span><span class="n">afternoon</span><span class="p">,</span> <span class="n">night</span><span class="p">],</span> <span class="p">[</span><span class="s2">"Afternoon"</span><span class="p">,</span> <span class="s2">"Night"</span><span class="p">]):</span>
+<span class="gp">   ....: </span>    <span class="n">mean</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span>
+<span class="gp">   ....: </span>    <span class="n">mesh</span> <span class="o">=</span> <span class="n">mean</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mean</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="n">norm</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">"YlOrRd"</span><span class="p">,</span> <span class="n">add_colorbar</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">   ....: </span>    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="mf">111.8472</span><span class="p">,</span> <span class="mf">40.7665</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">"*"</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">markerfacecolor</span><span class="o">=</span><span class="s2">"none"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">)</span>
+<span class="gp">   ....: </span>    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">group</span><span class="o">.</span><span class="n">sizes</span><span class="p">[</span><span class="s1">'receptor'</span><span class="p">]</span><span class="si">}</span><span class="s2"> hours"</span><span class="p">)</span>
+<span class="gp">   ....: </span>
+
+<span class="gp">In [20]: </span><span class="n">fig</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"footprint (ppm per µmol m⁻² s⁻¹)"</span><span class="p">);</span>
+
+<span class="gp">In [21]: </span><span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">"Mean footprint at WBB, 14 to 15 January 2021"</span><span class="p">);</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="../_images/wbb_afternoon_night.png"><img alt="../_images/wbb_afternoon_night.png" src="../_images/wbb_afternoon_night.png" style="width: 6in;" />
+</a>
+<p>Both maps point north-northwest, up the valley along the east shore of the
+Great Salt Lake, because the wind came from there through the whole day.
+In the afternoon the footprint is one band about 100 km long, with the most
+influence along it near the site. At night the band breaks up, and much of
+the footprint sits in the few cells around the site, inside the star. The
+night’s footprint is also more than twice as large in total, because the
+shallow night-time layer holds the air close to the ground, where the
+surface fluxes enter it.</p>
+<p>One number sums up the difference: the share of each footprint within about
+5 km of the site.</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [22]: </span><span class="n">near</span> <span class="o">=</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">total</span><span class="o">.</span><span class="n">lon</span> <span class="o">+</span> <span class="mf">111.8472</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.06</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">total</span><span class="o">.</span><span class="n">lat</span> <span class="o">-</span> <span class="mf">40.7665</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.045</span><span class="p">)</span>
+
+<span class="gp">In [23]: </span><span class="n">share</span> <span class="o">=</span> <span class="n">total</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">near</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">])</span> <span class="o">/</span> <span class="n">total</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">])</span>
+
+<span class="gp">In [24]: </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"afternoon </span><span class="si">{</span><span class="n">share</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">afternoon</span><span class="o">.</span><span class="n">receptor</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2">, "</span>
+<span class="gp">   ....: </span>      <span class="sa">f</span><span class="s2">"night </span><span class="si">{</span><span class="n">share</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">night</span><span class="o">.</span><span class="n">receptor</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="gp">   ....: </span>
+<span class="go">afternoon 29%, night 77%</span>
+</pre></div>
+</div>
+<p>So at night the tower is mostly a measurement of its own neighborhood,
+and in the afternoon of the valley to the north. A study that compares
+modeled and measured concentrations often keeps only afternoon hours for
+this reason, because the footprints there are less sensitive to the
+details of the night-time boundary layer.</p>
 </section>
 <section id="next">
 <h2>Next<a class="headerlink" href="#next" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p>Turn these footprints into modeled concentrations in
-<a class="reference internal" href="flux_inversion.html"><span class="doc">Tutorial: From Footprints To Concentrations</span></a>.</p></li>
-<li><p>See <a class="reference internal" href="../guides/outputs.html"><span class="doc">Footprints And Particles</span></a> for more ways to load and plot results.</p></li>
+<li><p>Turn footprints into modeled concentrations in <a class="reference internal" href="flux_inversion.html"><span class="doc">Tutorial: From Footprints To Concentrations</span></a>.</p></li>
+<li><p>Load and plot results in other ways: <a class="reference internal" href="../guides/outputs.html"><span class="doc">Footprints And Particles</span></a>.</p></li>
 <li><p>Run a whole year on a cluster: <a class="reference internal" href="../guides/slurm.html"><span class="doc">On An HPC Cluster (Slurm)</span></a>.</p></li>
 </ul>
 </section>
@@ -651,11 +693,10 @@ logarithmic.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-you-ll-learn">What you’ll learn</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-one-receptor-per-hour">Step 1: One receptor per hour</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-make-the-project">Step 2: Make the project</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-run">Step 3: Run</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-average-the-footprints">Step 4: Average the footprints</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-check-and-run">Step 3: Check and run</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-afternoon-against-night">Step 4: Afternoon against night</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#next">Next</a></li>
 </ul>
   </nav></div>

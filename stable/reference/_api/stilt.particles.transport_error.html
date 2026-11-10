@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.particles.transport_error &#8212; PYSTILT 0.1.0a27</title>
+    <title>stilt.particles.transport_error &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -503,6 +503,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.particles_hash.html">stilt.config.Variant.particles_hash</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.realization_numbers.html">stilt.config.Variant.realization_numbers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings.html">stilt.config.Variant.run_settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings_without_met.html">stilt.config.Variant.run_settings_without_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.transport_for.html">stilt.config.Variant.transport_for</a></li>
 </ul>
 </details></li>
@@ -607,9 +608,15 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.to_yaml.html">stilt.ProjectConfig.to_yaml</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.FootprintConfig.html">stilt.FootprintConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.FootprintConfig.html">stilt.FootprintConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.tres_minutes.html">stilt.FootprintConfig.tres_minutes</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.ExecutionConfig.html">stilt.ExecutionConfig</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.Bounds.html">stilt.Bounds</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Bounds.html">stilt.Bounds</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Bounds.contains.html">stilt.Bounds.contains</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Grid.html">stilt.Grid</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Grid.axes.html">stilt.Grid.axes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Grid.cells.html">stilt.Grid.cells</a></li>
@@ -639,7 +646,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.fetch.html">stilt.transport.hysplit.Met.fetch</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing_hours.html">stilt.transport.hysplit.Met.missing_hours</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing.html">stilt.transport.hysplit.Met.missing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -809,6 +816,7 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.StiltError.html">stilt.StiltError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.SimulationError.html">stilt.exceptions.SimulationError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.MeteorologyError.html">stilt.exceptions.MeteorologyError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.WorkerDied.html">stilt.exceptions.WorkerDied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.HYSPLITNotFoundError.html">stilt.exceptions.HYSPLITNotFoundError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.EmptyFootprint.html">stilt.exceptions.EmptyFootprint</a></li>
 </ul>
@@ -880,7 +888,7 @@
 <h1>stilt.particles.transport_error<a class="headerlink" href="#stilt-particles-transport-error" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="stilt.particles.transport_error">
-<span class="sig-prename descclassname"><span class="pre">stilt.particles.</span></span><span class="sig-name descname"><span class="pre">transport_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error_particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flux</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">transforms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receptor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">levels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">356.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">percentile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_splits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/particles/transport_error.html#transport_error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.particles.transport_error" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">stilt.particles.</span></span><span class="sig-name descname"><span class="pre">transport_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error_particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flux</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">transforms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receptor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">levels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">356.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">percentile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/particles/transport_error.html#transport_error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.particles.transport_error" title="Link to this definition">#</a></dt>
 <dd><p>Return the transport-error variance of a modeled enhancement (Lin and Gerbig, 2005).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -902,13 +910,11 @@ release heights than <code class="docutils literal notranslate"><span class="pre
 is a level. A point receptor is one level.</p></li>
 <li><p><strong>length_scale</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – Vertical e-folding length of the error correlation between levels,
 in meters (X-STILT’s value). <code class="docutils literal notranslate"><span class="pre">None</span></code> treats the levels as
-uncorrelated. It has no effect for a point receptor.</p></li>
+independent. It has no effect for a point receptor.</p></li>
 <li><p><strong>percentile</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – In each level, drop particles above this quantile of the enhancement
 before taking the variance. 1.0 keeps every particle, as Lin and
 Gerbig do. X-STILT uses 0.99 to limit the few particles that cross a
 point source. Means always use every particle.</p></li>
-<li><p><strong>noise_splits</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – Number of random half-splits of the unperturbed particles used to
-estimate <code class="docutils literal notranslate"><span class="pre">noise</span></code>. Fewer than 2 skips it and gives NaN.</p></li>
 <li><p><strong>background</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataArray</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – Background field sampled at each particle’s endpoint (see
 <a class="reference internal" href="stilt.particles.background.html#stilt.particles.background" title="stilt.particles.background"><code class="xref py py-func docutils literal notranslate"><span class="pre">background()</span></code></a>). Wind errors move the
 endpoints as well as the surface contact, so with a field the
@@ -922,27 +928,41 @@ computes them.</p></li>
 </dl>
 <p class="rubric">Notes</p>
 <p>Per level <code class="docutils literal notranslate"><span class="pre">l</span></code> with <code class="docutils literal notranslate"><span class="pre">n_l</span></code> of <code class="docutils literal notranslate"><span class="pre">N</span></code> particles, <code class="docutils literal notranslate"><span class="pre">dvar_l</span></code> is the change
-in the variance of the per-particle enhancement under the perturbation,
-<code class="docutils literal notranslate"><span class="pre">s_l</span> <span class="pre">=</span> <span class="pre">sign(dvar_l)</span> <span class="pre">sqrt(|dvar_l|)</span></code>, and the column variance is
-<code class="docutils literal notranslate"><span class="pre">Σ_ij</span> <span class="pre">w_i</span> <span class="pre">w_j</span> <span class="pre">s_i</span> <span class="pre">s_j</span> <span class="pre">exp(-|h_i</span> <span class="pre">-</span> <span class="pre">h_j|</span> <span class="pre">/</span> <span class="pre">L)</span></code> with <code class="docutils literal notranslate"><span class="pre">w_l</span> <span class="pre">=</span> <span class="pre">n_l</span> <span class="pre">/</span> <span class="pre">N</span></code> and
-<code class="docutils literal notranslate"><span class="pre">h</span></code> the level heights. For one level it is <code class="docutils literal notranslate"><span class="pre">dvar</span></code> itself. The
-transforms are applied to the particles first, so the level statistics
-are already column-weighted and the level weights are particle counts.</p>
+in the variance of the per-particle enhancement under the perturbation.
+Two particles’ transport errors correlate as <code class="docutils literal notranslate"><span class="pre">exp(-|h_p</span> <span class="pre">-</span> <span class="pre">h_q|</span> <span class="pre">/</span> <span class="pre">L)</span></code>,
+with <code class="docutils literal notranslate"><span class="pre">h</span></code> their release heights, and the column variance is
+<code class="docutils literal notranslate"><span class="pre">Σ_l</span> <span class="pre">factor_l</span> <span class="pre">dvar_l</span></code>. <code class="docutils literal notranslate"><span class="pre">factor_l</span></code> is the sum of that correlation over
+the particles of level <code class="docutils literal notranslate"><span class="pre">l</span></code> and every particle, divided by <code class="docutils literal notranslate"><span class="pre">N²</span></code>, which
+is <code class="docutils literal notranslate"><span class="pre">w_l</span> <span class="pre">Σ_m</span> <span class="pre">w_m</span> <span class="pre">R_lm</span></code> with <code class="docutils literal notranslate"><span class="pre">w_l</span> <span class="pre">=</span> <span class="pre">n_l</span> <span class="pre">/</span> <span class="pre">N</span></code> and <code class="docutils literal notranslate"><span class="pre">R_lm</span></code> the mean
+correlation between the particles of two levels. A pair of levels
+therefore counts with the mean of their two <code class="docutils literal notranslate"><span class="pre">dvar</span></code>. For one level the
+variance is <code class="docutils literal notranslate"><span class="pre">dvar</span></code> itself, and with <code class="docutils literal notranslate"><span class="pre">length_scale=None</span></code> it is
+<code class="docutils literal notranslate"><span class="pre">Σ_l</span> <span class="pre">w_l²</span> <span class="pre">dvar_l</span></code>. The transforms are applied to the particles first,
+so the level statistics are already column-weighted and the level
+weights are particle counts.</p>
+<p>The sum is linear in <code class="docutils literal notranslate"><span class="pre">dvar</span></code>, so the sampling noise in each level’s
+<code class="docutils literal notranslate"><span class="pre">dvar</span></code> averages out over many receptors. Where the error changes
+sharply with height within a correlation length, the mean of two levels’
+<code class="docutils literal notranslate"><span class="pre">dvar</span></code> is above the product of their standard deviations, and the
+column variance is high by up to about 20 %.</p>
+<p><code class="docutils literal notranslate"><span class="pre">noise</span></code> is the standard error of <code class="docutils literal notranslate"><span class="pre">variance</span></code>. A variance of <code class="docutils literal notranslate"><span class="pre">n</span></code>
+values with fourth central moment <code class="docutils literal notranslate"><span class="pre">m4</span></code> has the sampling variance
+<code class="docutils literal notranslate"><span class="pre">(m4</span> <span class="pre">-</span> <span class="pre">var²)</span> <span class="pre">/</span> <span class="pre">n</span></code>. Each level’s <code class="docutils literal notranslate"><span class="pre">noise</span></code> adds that of the unperturbed
+run and of the perturbed run, and the column’s is
+<code class="docutils literal notranslate"><span class="pre">sqrt(Σ_l</span> <span class="pre">(factor_l</span> <span class="pre">noise_l)²)</span></code>.</p>
 <p>With several error realizations, each level’s <code class="docutils literal notranslate"><span class="pre">mean_err</span></code> and
 <code class="docutils literal notranslate"><span class="pre">var_err</span></code> are averaged over them before <code class="docutils literal notranslate"><span class="pre">dvar</span></code> is formed, so the
-perturbed side’s sampling noise falls as <code class="docutils literal notranslate"><span class="pre">1/sqrt(N)</span></code>. The unperturbed
-side is the same particles in every realization, so its noise does not
-fall: with <code class="docutils literal notranslate"><span class="pre">N</span></code> realizations the null spread of <code class="docutils literal notranslate"><span class="pre">variance</span></code> is
-<code class="docutils literal notranslate"><span class="pre">sqrt((1</span> <span class="pre">+</span> <span class="pre">1/N)</span> <span class="pre">/</span> <span class="pre">2)</span></code> times the single-realization <code class="docutils literal notranslate"><span class="pre">noise</span></code>, which
-tends to <code class="docutils literal notranslate"><span class="pre">1/sqrt(2)</span></code>. <code class="docutils literal notranslate"><span class="pre">noise</span></code> includes that factor. More
-realizations therefore give at most a <code class="docutils literal notranslate"><span class="pre">sqrt(2)</span></code> tighter estimate and
-cannot resolve a case that one realization leaves unresolved.</p>
+perturbed side’s sampling variance falls as <code class="docutils literal notranslate"><span class="pre">1/N</span></code>. The unperturbed
+side is the same particles in every realization, so its part does not
+fall. More realizations therefore tighten the estimate by about
+<code class="docutils literal notranslate"><span class="pre">sqrt(2)</span></code> at most and cannot resolve a case that one realization
+leaves far from resolved.</p>
 <p>The signal is the extra spread the perturbation adds. It is small when
 the wind error decorrelates quickly (HYSPLIT decorrelates it with the
 distance a particle travels as well as with time), and when turbulence
 already spreads the particles widely, as on a convective afternoon.
 Compare a single value with <code class="docutils literal notranslate"><span class="pre">noise</span></code>. Over many receptors, combine the
-signed <code class="docutils literal notranslate"><span class="pre">variance</span></code> values with a median instead of clipping each at
+signed <code class="docutils literal notranslate"><span class="pre">variance</span></code> values with a mean instead of clipping each at
 zero.</p>
 <p class="rubric">Examples</p>
 <p>For the variant <code class="docutils literal notranslate"><span class="pre">hrrr-err</span></code> with <code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">4</span></code>, select one

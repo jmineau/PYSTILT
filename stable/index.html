@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>PYSTILT &#8212; PYSTILT 0.1.0a27</title>
+    <title>PYSTILT &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=d8142605"></script>
+    <script src="_static/documentation_options.js?v=300e85c7"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -63,7 +63,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -134,7 +134,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -434,7 +434,18 @@ tells you where the air in a trace-gas measurement came from. Give PYSTILT the
 place and time of your measurement and some meteorology, and it computes a
 footprint. The footprint is a map of the upwind surface areas that influenced
 the measurement, and by how much.</p>
-<p>PYSTILT works for towers, aircraft, mobile platforms, and satellite or
+<figure class="home-animation">
+  <video autoplay loop muted playsinline poster="_static/home-animation-poster.jpg"
+         aria-label="Particles travel backward in time from a tower in northern Wisconsin, north into Canada, while a footprint map fills in behind them.">
+    <source src="_static/home-animation.mp4" type="video/mp4">
+  </video>
+  <figcaption>
+    The WLEF tall tower in Park Falls, Wisconsin, at 2 pm on 8 February 2019.
+    Left: PYSTILT's particles traveling back in time from the 396 m inlet.
+    Right: the footprint they make. Particles that reach the northern edge of
+    the HRRR meteorology stop there.
+  </figcaption>
+</figure><p>PYSTILT works for towers, aircraft, mobile platforms, and satellite or
 ground-based column measurements. The same project can run one simulation on a
 laptop or tens of thousands on an HPC cluster.</p>
 <div class="admonition note">
@@ -448,27 +459,27 @@ releases. The <a class="reference internal" href="development/roadmap.html"><spa
 <div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
 <div class="sd-card-body docutils">
 <div class="sd-card-title sd-font-weight-bold docutils">
-<span class="fas fa-wind"></span> New to STILT?</div>
-<p class="sd-card-text">What a footprint is, how STILT makes one, and what you need to get
-started.</p>
+<span class="fas fa-play"></span> Getting Started</div>
+<p class="sd-card-text">What a footprint is, how to install PYSTILT, and your first footprint
+map in a few steps.</p>
 </div>
-<a class="sd-stretched-link sd-hide-link-text reference internal" href="getting_started/what_is_stilt.html"><span class="doc">What Is STILT?</span></a></div>
-</div>
-<div class="sd-col sd-d-flex-row docutils">
-<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
-<div class="sd-card-body docutils">
-<div class="sd-card-title sd-font-weight-bold docutils">
-<span class="fas fa-play"></span> Your first footprint</div>
-<p class="sd-card-text">Install PYSTILT and go from one measurement to a footprint map in a
-few steps.</p>
-</div>
-<a class="sd-stretched-link sd-hide-link-text reference internal" href="getting_started/quickstart.html"><span class="doc">Your First Footprint</span></a></div>
+<a class="sd-stretched-link sd-hide-link-text reference internal" href="getting_started/index.html"><span class="doc">Getting Started</span></a></div>
 </div>
 <div class="sd-col sd-d-flex-row docutils">
 <div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
 <div class="sd-card-body docutils">
 <div class="sd-card-title sd-font-weight-bold docutils">
-<span class="fas fa-book"></span> User guide</div>
+<span class="fas fa-graduation-cap"></span> Tutorials</div>
+<p class="sd-card-text">Complete studies. A day of tower footprints, modeled concentrations
+from an inventory, and footprints of a satellite column.</p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference internal" href="tutorials/index.html"><span class="doc">Tutorials</span></a></div>
+</div>
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
+<div class="sd-card-body docutils">
+<div class="sd-card-title sd-font-weight-bold docutils">
+<span class="fas fa-book"></span> User Guide</div>
 <p class="sd-card-text">How to describe your measurements, set up meteorology, run on a
 cluster, and load and plot results.</p>
 </div>
@@ -478,33 +489,16 @@ cluster, and load and plot results.</p>
 <div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
 <div class="sd-card-body docutils">
 <div class="sd-card-title sd-font-weight-bold docutils">
-<span class="fas fa-graduation-cap"></span> Tutorials</div>
-<p class="sd-card-text">Complete examples. Run a week of tower footprints, turn footprints
-into modeled concentrations, and scale up on a Slurm cluster.</p>
-</div>
-<a class="sd-stretched-link sd-hide-link-text reference internal" href="tutorials/index.html"><span class="doc">Tutorials</span></a></div>
-</div>
-<div class="sd-col sd-d-flex-row docutils">
-<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
-<div class="sd-card-body docutils">
-<div class="sd-card-title sd-font-weight-bold docutils">
-<span class="fas fa-right-left"></span> Coming from another STILT?</div>
-<p class="sd-card-text">Where the settings and steps of STILT-R, X-STILT, stiltctl, and Jena
-STILT are in PYSTILT.</p>
-</div>
-<a class="sd-stretched-link sd-hide-link-text reference internal" href="guides/index.html#coming-from-another-stilt"><span class="std std-ref">Coming from another STILT</span></a></div>
-</div>
-<div class="sd-col sd-d-flex-row docutils">
-<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
-<div class="sd-card-body docutils">
-<div class="sd-card-title sd-font-weight-bold docutils">
-<span class="fas fa-code"></span> API reference</div>
+<span class="fas fa-code"></span> API Reference</div>
 <p class="sd-card-text">Every class, function, and configuration option.</p>
 </div>
 <a class="sd-stretched-link sd-hide-link-text reference internal" href="reference/index.html"><span class="doc">API Reference</span></a></div>
 </div>
 </div>
 </div>
+<p>Used STILT-R, X-STILT, stiltctl or Jena STILT before?
+<a class="reference internal" href="guides/index.html#coming-from-another-stilt"><span class="std std-ref">Coming from another STILT</span></a> says where
+their settings and steps are in PYSTILT.</p>
 <div class="toctree-wrapper compound">
 </div>
 </section>

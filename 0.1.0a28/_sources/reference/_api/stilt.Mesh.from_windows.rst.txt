@@ -1,0 +1,6 @@
+stilt.Mesh.from\_windows
+========================
+
+.. currentmodule:: stilt
+
+.. automethod:: Mesh.from_windows

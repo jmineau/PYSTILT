@@ -18,5 +18,13 @@ Parameters
 
 
 
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~Bounds.contains
+
 
 

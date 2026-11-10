@@ -33,7 +33,7 @@ Methods
    ~Met.check_receptors
    ~Met.fetch
    ~Met.files_for
-   ~Met.missing_hours
+   ~Met.missing
    ~Met.readable
 
 

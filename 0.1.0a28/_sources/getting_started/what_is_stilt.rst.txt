@@ -1,0 +1,161 @@
+.. _what_is_stilt:
+
+What Is STILT?
+==============
+
+Suppose a tower in Salt Lake City measures a methane spike at 2 pm. Where did
+that methane come from? A landfill to the south, a refinery to the north, or
+the valley's gas pipes? STILT answers that by working backward from the
+measurement. It follows the air that arrived at the tower back in time, and
+records where that air was close enough to the ground to pick up emissions.
+
+Atmospheric scientists use STILT (Stochastic Time-Inverted Lagrangian
+Transport) to link trace-gas measurements from towers, aircraft, vehicles,
+and satellites to the surface areas that influenced them. PYSTILT is a Python
+version of STILT.
+
+How STILT works, in three steps
+-------------------------------
+
+1. **Say where and when you measured.** STILT calls this location and time a
+   :term:`receptor`. It can be a single point (a tower inlet), a vertical
+   column (a ground-based spectrometer), or a set of points along a slanted
+   line of sight (a satellite sounding).
+2. **Release particles and run them backward.** STILT releases a cloud of
+   imaginary air parcels, called :term:`particles <particle>`, at the receptor
+   and moves them backward in time using gridded wind fields from a weather
+   model (the :term:`meteorology`). Each particle also gets random turbulent
+   motion, so the cloud spreads out the way real air mixes. The particle
+   paths are the :term:`trajectories <trajectory>`.
+3. **Turn the particle paths into a footprint.** Wherever particles spend time
+   near the ground, the surface there can influence the measurement. STILT
+   counts this up on a map grid. The result is a :term:`footprint`, and
+   each grid cell's value says how much a unit of emissions there would
+   change the measurement.
+
+.. ipython:: python
+   :suppress:
+
+   import os
+
+   import docs_examples
+   import stilt
+
+   docs_cwd = docs_examples.temp_workdir()
+   receptor = stilt.PointReceptor(
+       time="2021-01-14 19:00", longitude=-111.848, latitude=40.766, altitude=10
+   )
+   particles = stilt.run_trajectories(
+       receptor, docs_examples.met(), n_hours=-12, numpar=200, krand=2, seed=42
+   )
+   grid = stilt.Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01)
+   foot = stilt.calc_footprint(particles, receptor, grid)
+
+   @savefig what_is_stilt_footprint.png width=5in
+   foot.stilt.plot.map();
+
+   os.chdir(docs_cwd)
+
+The map above is a footprint PYSTILT made for a sensor on the University of
+Utah campus at noon on 14 January 2021, from 200 particles followed 12 hours
+back. The air came from the north-northwest, so the footprint stretches that
+way from the sensor, and the cells nearest the sensor influenced the
+measurement most. The colors are on a log scale, because a footprint spans
+many orders of magnitude.
+
+A study goes on from the footprint. Multiply it by a map of surface fluxes and
+you get the enhancement, the part of the measured concentration those fluxes
+explain. Add the background, the concentration of the air before it reached
+the region, and you have a modeled value to compare with the measurement:
+
+.. figure:: ../_static/workflow.svg
+   :alt: A measurement and meteorology give particles, the particles give a
+         footprint, the footprint times a flux inventory gives the
+         enhancement, and the enhancement plus the background is the modeled
+         concentration.
+   :align: center
+   :width: 100%
+
+   The inputs (tan) are yours. PYSTILT makes the particles and the footprint,
+   and computes the enhancement from a flux you give it.
+
+What you can do with a footprint
+--------------------------------
+
+Do the comparison above for many measurements and you can test an emissions
+inventory, or correct it in an inversion. The :doc:`../tutorials/flux_inversion`
+tutorial takes the first step, from footprints to modeled concentrations.
+
+What you need
+-------------
+
+- Python 3.11 or newer, and PYSTILT (:doc:`installation`).
+- Meteorology in ARL format. STILT needs gridded winds, temperature, and
+  turbulence fields from a weather model such as HRRR, NAM, or GDAS, in the
+  format used by NOAA's Air Resources Laboratory (:term:`ARL`). Many research
+  groups keep an archive of these files. If you don't have one, PYSTILT can
+  download them from NOAA for you (see :doc:`../guides/meteorology`).
+- The times and locations of your measurements.
+
+You do not need to install HYSPLIT, the Fortran program STILT uses to move
+particles. PYSTILT includes it for Linux and macOS (Intel).
+
+Why PYSTILT?
+------------
+
+PYSTILT gives the same footprints as STILT-R on longitude/latitude grids,
+checked cell by cell (:ref:`stilt-r-parity` lists the few cases
+that differ). It also makes a few things easier.
+
+* You work in Python only. There is no R to install, and results load
+  straight into pandas and xarray.
+* Settings are checked before anything runs, so most typos in
+  ``config.yaml`` are reported at once instead of an hour into a cluster job.
+* Reruns pick up where they left off. PYSTILT runs only the simulations whose
+  outputs are missing.
+* The same project runs on your computer or on a Slurm cluster. Switching
+  takes a few lines of configuration.
+* Column and slanted receptors, averaging kernels, and pressure weighting are
+  built in for column and satellite measurements.
+* Particles and footprints are saved as Parquet files, which pandas, R, and
+  DuckDB can read. A footprint can also be written as NetCDF.
+
+Where PYSTILT comes from
+------------------------
+
+PYSTILT builds on a line of open-source transport models:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 42 40
+
+   * - Model
+     - What it is
+     - Reference / link
+   * - **HYSPLIT**
+     - NOAA ARL's particle transport model. PYSTILT runs HYSPLIT to move the
+       particles.
+     - `NOAA READY <https://www.ready.noaa.gov/HYSPLIT.php>`_
+   * - **STILT**
+     - Adds improved boundary-layer mixing, near-field dilution corrections,
+       and footprint calculation on top of HYSPLIT.
+     - `Lin et al. 2003 <https://doi.org/10.1029/2002JD003161>`_
+   * - **STILT-R v2**
+     - The R version of STILT. PYSTILT's project layout and settings follow
+       it closely.
+     - `uataq/stilt <https://github.com/uataq/stilt>`_ ·
+       `Fasoli et al. 2018 <https://doi.org/10.5194/gmd-11-2813-2018>`_
+   * - **X-STILT**
+     - STILT-R extensions for column and satellite measurements, including
+       averaging kernels and transport-error analysis.
+     - `uataq/X-STILT <https://github.com/uataq/X-STILT>`_ ·
+       `Wu et al. 2018 <https://doi.org/10.5194/gmd-11-4843-2018>`_
+   * - **stiltctl**
+     - Tools for running large STILT workloads in the cloud.
+     - `uataq/stiltctl <https://github.com/uataq/stiltctl>`_
+
+If you use STILT in published work, please cite Lin et al. (2003) and
+Fasoli et al. (2018), plus Wu et al. (2018) for column work, and PYSTILT
+itself through its `Zenodo DOI <https://doi.org/10.5281/zenodo.22211796>`_.
+
+Next: :doc:`installation`.

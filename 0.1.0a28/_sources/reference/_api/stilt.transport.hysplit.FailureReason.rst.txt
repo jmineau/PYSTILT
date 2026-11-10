@@ -1,0 +1,12 @@
+﻿stilt.transport.hysplit.FailureReason
+=====================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+
+
+
+.. autoclass:: stilt.transport.hysplit.FailureReason
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,6 @@
+stilt.footprint.FootprintAccessor.plot
+======================================
+
+.. currentmodule:: stilt.footprint
+
+.. autoproperty:: FootprintAccessor.plot

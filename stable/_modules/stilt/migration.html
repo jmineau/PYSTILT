@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.migration &#8212; PYSTILT 0.1.0a27</title>
+    <title>stilt.migration &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -33,7 +33,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -571,9 +571,11 @@
 
 <span class="sd">    The footprint is ``&lt;id&gt;_foot.nc``, on the grid its file gives, with</span>
 <span class="sd">    layers stamped at the receptor time plus whole hours, as STILT-R stamps</span>
-<span class="sd">    them. Its settings hold that grid, ``time_integrate`` (true for a</span>
-<span class="sd">    backward run with one layer at the receptor time), and</span>
-<span class="sd">    ``smooth_factor``. The footprint file does not record ``smooth_factor``.</span>
+<span class="sd">    them. Its settings hold that grid, ``tres``, and ``smooth_factor``.</span>
+<span class="sd">    ``tres`` is ``1h``, except for a backward run whose footprint STILT-R</span>
+<span class="sd">    summed over time (``time_integrate = T``, one layer at the receptor</span>
+<span class="sd">    time): that is one layer as long as the run, ``tres`` the run's</span>
+<span class="sd">    ``n_hours``, stamped at the start of the run. The footprint file does not record ``smooth_factor``.</span>
 <span class="sd">    It comes from ``params.RDS``, which STILT-R's Slurm runs (rslurm) leave</span>
 <span class="sd">    in ``_rslurm_&lt;project&gt;/`` beside ``out/``, or else from the</span>
 <span class="sd">    *smooth_factor* argument. ``params.RDS`` is used only when its</span>
@@ -890,7 +892,11 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_footprint</span><span class="p">(</span>
-    <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">backward</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">backward</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return a STILT-R ``_foot.nc`` as a PYSTILT footprint.</span>
@@ -898,7 +904,10 @@
 <span class="sd">    STILT-R writes ``foot`` with dimensions ``lon``, ``lat``, and ``time``</span>
 <span class="sd">    (seconds since 1970-01-01 UTC), at cell centers. The grid is rebuilt from</span>
 <span class="sd">    the centers and checked against them, so the footprint has the</span>
-<span class="sd">    coordinates of a PYSTILT footprint on the same grid.</span>
+<span class="sd">    coordinates of a PYSTILT footprint on the same grid. A backward</span>
+<span class="sd">    footprint STILT-R summed over time has one layer, at the receptor time;</span>
+<span class="sd">    it becomes one layer of *n_hours*, layer -1, which starts where the run</span>
+<span class="sd">    ends.</span>
 <span class="sd">    """</span>
     <span class="k">with</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">decode_times</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">ds</span><span class="p">:</span>
         <span class="n">foot</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">]</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
@@ -931,10 +940,10 @@
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: the footprint's layers are not whole hours from the "</span>
             <span class="sa">f</span><span class="s2">"receptor time </span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="si">}</span><span class="s2">."</span>
         <span class="p">)</span>
-    <span class="n">integrated</span> <span class="o">=</span> <span class="n">backward</span> <span class="ow">and</span> <span class="n">hours</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">hours</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span>
-    <span class="n">config</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="p">(</span>
-        <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="n">smooth_factor</span><span class="p">,</span> <span class="n">time_integrate</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">integrated</span><span class="p">)</span>
-    <span class="p">)</span>
+    <span class="n">tres</span> <span class="o">=</span> <span class="s2">"1h"</span>
+    <span class="k">if</span> <span class="n">backward</span> <span class="ow">and</span> <span class="n">hours</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">hours</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">tres</span><span class="p">,</span> <span class="n">hours</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">n_hours</span><span class="p">)</span><span class="si">}</span><span class="s2">h"</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mf">1.0</span><span class="p">])</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="p">(</span><span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="n">smooth_factor</span><span class="p">,</span> <span class="n">tres</span><span class="o">=</span><span class="n">tres</span><span class="p">)</span>
     <span class="n">values</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"float64"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">_footprint_array</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">hours</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
 
@@ -991,7 +1000,7 @@
     <span class="p">)</span>
     <span class="c1"># STILT-R reads the run's direction the same way (calc_footprint).</span>
     <span class="n">backward</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">_footprint</span><span class="p">(</span><span class="n">foot_path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">backward</span><span class="p">,</span> <span class="n">smooth</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_footprint</span><span class="p">(</span><span class="n">foot_path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">backward</span><span class="p">,</span> <span class="n">smooth</span><span class="p">,</span> <span class="n">control</span><span class="o">.</span><span class="n">n_hours</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="import_stilt_r">
@@ -1029,7 +1038,7 @@
 <span class="sd">    - The met: the directory the ``CONTROL`` files name, as they name it.</span>
 <span class="sd">      Each run's met files are recorded in its particle file, and need not</span>
 <span class="sd">      exist any more.</span>
-<span class="sd">    - The footprint's grid and ``time_integrate`` from ``&lt;id&gt;_foot.nc``, and</span>
+<span class="sd">    - The footprint's grid and ``tres`` from ``&lt;id&gt;_foot.nc``, and</span>
 <span class="sd">      its ``smooth_factor`` from ``params.RDS`` or *smooth_factor*, as</span>
 <span class="sd">      :func:`read_stilt_r` reads them.</span>
 <span class="sd">    - The STILT-R version, which no file records: *version*.</span>

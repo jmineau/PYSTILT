@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.execution.worker &#8212; PYSTILT 0.1.0a27</title>
+    <title>stilt.execution.worker &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -33,7 +33,7 @@
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../../../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -469,20 +469,23 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">multiprocessing</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">FIRST_COMPLETED</span><span class="p">,</span> <span class="n">Future</span><span class="p">,</span> <span class="n">ProcessPoolExecutor</span><span class="p">,</span> <span class="n">wait</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures.process</span><span class="w"> </span><span class="kn">import</span> <span class="n">BrokenProcessPool</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt._exit_codes</span><span class="w"> </span><span class="kn">import</span> <span class="n">EXIT_INTERRUPTED</span><span class="p">,</span> <span class="n">error_exit_code</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyFootprint</span><span class="p">,</span> <span class="n">SimulationError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt._transient</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_transient</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyFootprint</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">,</span> <span class="n">WorkerDied</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint</span><span class="w"> </span><span class="kn">import</span> <span class="n">calc_footprint</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.output</span><span class="w"> </span><span class="kn">import</span> <span class="n">Kind</span>
@@ -557,14 +560,11 @@
 <span class="sd">    error logs, and records, its traceback.</span>
 
 <span class="sd">    A connection or I/O error that a retry may get past</span>
-<span class="sd">    (:func:`stilt._exit_codes.error_exit_code` says 3: a bucket that stopped answering</span>
+<span class="sd">    (:func:`stilt._transient.is_transient` says so: a bucket that stopped answering</span>
 <span class="sd">    while the result was written) is not a failure of the simulation, so</span>
 <span class="sd">    nothing is recorded (:func:`_unfinished`). A ``SimulationError`` always is one.</span>
 <span class="sd">    """</span>
-    <span class="k">if</span> <span class="p">(</span>
-        <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">)</span>
-        <span class="ow">and</span> <span class="n">error_exit_code</span><span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="o">==</span> <span class="n">EXIT_INTERRUPTED</span>
-    <span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">)</span> <span class="ow">and</span> <span class="n">is_transient</span><span class="p">(</span><span class="n">error</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">_unfinished</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
     <span class="n">expected</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">)</span>
     <span class="n">reason</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">"reason"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
@@ -819,7 +819,7 @@
             <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span>
             <span class="n">config</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span>
             <span class="n">smooth_factor</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">smooth_factor</span><span class="p">,</span>
-            <span class="n">time_integrate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">time_integrate</span><span class="p">,</span>
+            <span class="n">tres</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">tres</span><span class="p">,</span>
             <span class="n">transforms</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">,</span>
             <span class="n">name</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
             <span class="n">directory</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span>
@@ -1058,7 +1058,7 @@
 
 <span class="sd">    The parent stops its workers with SIGTERM (:func:`run_receptors`). A</span>
 <span class="sd">    worker that gets it ends the transport model run it is in the middle</span>
-<span class="sd">    of and exits, so it never goes back to the pool's queue. It ignores</span>
+<span class="sd">    of and exits (:func:`_pool_run`). It ignores</span>
 <span class="sd">    Ctrl-C, which the terminal also sends to it: the parent answers that.</span>
 
 <span class="sd">    *rows* are the receptor rows the parent took in place of</span>
@@ -1081,14 +1081,21 @@
 <span class="w">    </span><span class="sd">"""Run one receptor in a pool worker, returning its index and problems."""</span>
     <span class="n">idx</span><span class="p">,</span> <span class="n">receptor_id</span> <span class="o">=</span> <span class="n">item</span>
     <span class="k">assert</span> <span class="n">_POOL_PROJECT</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">_POOL_COMPUTE_ROOT</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-    <span class="k">return</span> <span class="n">idx</span><span class="p">,</span> <span class="n">run_receptor</span><span class="p">(</span>
-        <span class="n">_POOL_PROJECT</span><span class="p">,</span>
-        <span class="n">receptor_id</span><span class="p">,</span>
-        <span class="n">compute_root</span><span class="o">=</span><span class="n">_POOL_COMPUTE_ROOT</span><span class="p">,</span>
-        <span class="n">execution</span><span class="o">=</span><span class="n">_POOL_EXECUTION</span><span class="p">,</span>
-        <span class="n">skip_existing</span><span class="o">=</span><span class="n">_POOL_SKIP</span><span class="p">,</span>
-        <span class="n">batched</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># run_receptors ran those first</span>
-    <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">idx</span><span class="p">,</span> <span class="n">run_receptor</span><span class="p">(</span>
+            <span class="n">_POOL_PROJECT</span><span class="p">,</span>
+            <span class="n">receptor_id</span><span class="p">,</span>
+            <span class="n">compute_root</span><span class="o">=</span><span class="n">_POOL_COMPUTE_ROOT</span><span class="p">,</span>
+            <span class="n">execution</span><span class="o">=</span><span class="n">_POOL_EXECUTION</span><span class="p">,</span>
+            <span class="n">skip_existing</span><span class="o">=</span><span class="n">_POOL_SKIP</span><span class="p">,</span>
+            <span class="n">batched</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># run_receptors ran those first</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">SystemExit</span><span class="p">:</span>
+        <span class="c1"># SIGTERM (:func:`_exit_worker`), after the run's `finally` blocks</span>
+        <span class="c1"># have cleaned up. The executor's worker loop catches every</span>
+        <span class="c1"># BaseException and waits for more work, so the process would</span>
+        <span class="c1"># outlive the stop; end it here.</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">_exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_check_workers_can_start</span><span class="p">(</span><span class="n">cpus</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -1098,9 +1105,11 @@
 <span class="sd">    Python 3.14 on Linux, and macOS and Windows, start a worker by running</span>
 <span class="sd">    the calling script again, as ``__mp_main__``. A script that runs the</span>
 <span class="sd">    project at the top level, without ``if __name__ == "__main__":``, fails</span>
-<span class="sd">    in every worker, and a pool starts a new worker for each one that</span>
-<span class="sd">    died, for ever. Starting one worker first turns that into an error that</span>
-<span class="sd">    shows the fix. ``fork`` runs no script again, so it skips the check.</span>
+<span class="sd">    in every worker. The pool would then stop with</span>
+<span class="sd">    :class:`~stilt.exceptions.WorkerDied`, which blames memory, or with a</span>
+<span class="sd">    bare connection error (``forkserver``). Starting one worker first turns</span>
+<span class="sd">    that into an error that shows the fix. ``fork`` runs no script again,</span>
+<span class="sd">    so it skips the check.</span>
 <span class="sd">    """</span>
     <span class="n">method</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">get_start_method</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"fork"</span><span class="p">:</span>
@@ -1128,6 +1137,132 @@
     <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">failure</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_stop_workers</span><span class="p">(</span><span class="n">executor</span><span class="p">:</span> <span class="n">ProcessPoolExecutor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    End the pool's workers now: cancel what has not started, SIGTERM the rest.</span>
+
+<span class="sd">    A worker that gets SIGTERM ends its transport model run and exits</span>
+<span class="sd">    (:func:`_init_pool_worker`). The executor has no call for this before</span>
+<span class="sd">    Python 3.14, so the workers are read from ``_processes``.</span>
+<span class="sd">    """</span>
+    <span class="n">workers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">executor</span><span class="o">.</span><span class="n">_processes</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="n">executor</span><span class="o">.</span><span class="n">shutdown</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cancel_futures</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">process</span> <span class="ow">in</span> <span class="n">workers</span><span class="p">:</span>
+        <span class="n">process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">process</span> <span class="ow">in</span> <span class="n">workers</span><span class="p">:</span>
+        <span class="n">process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+
+<span class="c1">#: Seconds the pool loop waits for a receptor to finish before it looks at the workers.</span>
+<span class="n">_WORKER_CHECK_SECONDS</span> <span class="o">=</span> <span class="mf">2.0</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_a_worker_died</span><span class="p">(</span><span class="n">executor</span><span class="p">:</span> <span class="n">ProcessPoolExecutor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Say whether a pool worker has exited, which it does only if it was killed.</span>
+
+<span class="sd">    The pool reports a worker killed outright (SIGKILL, as the out-of-memory</span>
+<span class="sd">    killer sends) by itself, but not always at once. On Python 3.14 it starts</span>
+<span class="sd">    the second worker after waking the thread that watches the workers, which</span>
+<span class="sd">    may already have made its list. If that worker is the one killed, the pool</span>
+<span class="sd">    learns of it only when another receptor finishes, which can be hours later</span>
+<span class="sd">    (#400). Workers stay alive until the loop in :func:`_run_in_pool` ends, so</span>
+<span class="sd">    one that is not alive has died.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="ow">not</span> <span class="n">process</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span> <span class="k">for</span> <span class="n">process</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">executor</span><span class="o">.</span><span class="n">_processes</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_run_in_pool</span><span class="p">(</span>
+    <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span>
+    <span class="n">receptor_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">earlier</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">compute_root</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">execution</span><span class="p">:</span> <span class="n">ExecutionConfig</span><span class="p">,</span>
+    <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Run *receptor_ids* in ``execution.cpus`` worker processes, one receptor in each at a time.</span>
+
+<span class="sd">    Only as many receptors are given to the pool as there are workers, so a</span>
+<span class="sd">    receptor given to it is a receptor in progress. If a worker dies without</span>
+<span class="sd">    Python's say (SIGKILL, as the out-of-memory killer sends), the pool cannot say which</span>
+<span class="sd">    receptor it held, and it cannot be used again: the run stops with</span>
+<span class="sd">    :class:`~stilt.exceptions.WorkerDied`, naming every receptor in progress.</span>
+<span class="sd">    """</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">)</span>
+    <span class="n">_check_workers_can_start</span><span class="p">(</span><span class="n">execution</span><span class="o">.</span><span class="n">cpus</span><span class="p">)</span>
+    <span class="n">executor</span> <span class="o">=</span> <span class="n">ProcessPoolExecutor</span><span class="p">(</span>
+        <span class="n">execution</span><span class="o">.</span><span class="n">cpus</span><span class="p">,</span>
+        <span class="n">initializer</span><span class="o">=</span><span class="n">_init_pool_worker</span><span class="p">,</span>
+        <span class="n">initargs</span><span class="o">=</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="p">),</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">directory</span><span class="p">),</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">compute_root</span><span class="p">),</span>
+            <span class="n">execution</span><span class="p">,</span>
+            <span class="n">skip_existing</span><span class="p">,</span>
+            <span class="n">project</span><span class="o">.</span><span class="n">_taken_rows</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">waiting</span> <span class="o">=</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">)</span>
+    <span class="n">running</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Future</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]],</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># each one's index</span>
+    <span class="n">done</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">with</span> <span class="n">_sigterm_as_interrupt</span><span class="p">():</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">running</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">execution</span><span class="o">.</span><span class="n">cpus</span><span class="p">:</span>
+                    <span class="n">item</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">waiting</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">break</span>
+                    <span class="n">running</span><span class="p">[</span><span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">_pool_run</span><span class="p">,</span> <span class="n">item</span><span class="p">)]</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">running</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="n">finished</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">wait</span><span class="p">(</span>
+                    <span class="n">running</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">_WORKER_CHECK_SECONDS</span><span class="p">,</span> <span class="n">return_when</span><span class="o">=</span><span class="n">FIRST_COMPLETED</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">finished</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">_a_worker_died</span><span class="p">(</span><span class="n">executor</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="n">BrokenProcessPool</span><span class="p">(</span><span class="s2">"a worker process died"</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">finished</span><span class="p">:</span>
+                    <span class="n">idx</span><span class="p">,</span> <span class="n">problems</span> <span class="o">=</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+                    <span class="k">del</span> <span class="n">running</span><span class="p">[</span><span class="n">future</span><span class="p">]</span>
+                    <span class="n">done</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">rid</span> <span class="o">=</span> <span class="n">receptor_ids</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+                    <span class="n">_log_progress</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="n">earlier</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="p">[])</span> <span class="o">+</span> <span class="n">problems</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+            <span class="c1"># Normal completion: let the workers exit on their own.</span>
+            <span class="n">executor</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+            <span class="c1"># Preempted or Ctrl-C: SIGTERM the workers, which end their runs</span>
+            <span class="c1"># and exit; what finished is written.</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">"stopped after </span><span class="si">%d</span><span class="s2"> of </span><span class="si">%d</span><span class="s2"> receptors; the rest did not run"</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">total</span>
+            <span class="p">)</span>
+            <span class="n">_stop_workers</span><span class="p">(</span><span class="n">executor</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">BrokenProcessPool</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="c1"># A receptor that finished in the same moment is not lost.</span>
+            <span class="n">lost</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">receptor_ids</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">future</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">running</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">future</span><span class="o">.</span><span class="n">done</span><span class="p">()</span> <span class="ow">or</span> <span class="n">future</span><span class="o">.</span><span class="n">exception</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="p">]</span>
+            <span class="n">_stop_workers</span><span class="p">(</span><span class="n">executor</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">WorkerDied</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"A worker process died after </span><span class="si">{</span><span class="n">done</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2"> receptors finished, "</span>
+                <span class="sa">f</span><span class="s2">"most likely killed for using too much memory. These were in progress, "</span>
+                <span class="sa">f</span><span class="s2">"and the pool cannot say which one it held: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lost</span><span class="p">)</span><span class="si">}</span><span class="s2">. "</span>
+                <span class="s2">"The run stopped. What finished is kept; run it again to continue "</span>
+                <span class="s2">"with what is missing, with fewer cpus or more memory per task if "</span>
+                <span class="s2">"workers keep dying."</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+        <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
+            <span class="c1"># A requeued Slurm task exits here (SystemExit), or a worker's</span>
+            <span class="c1"># own error re-raised by result(): the workers must not outlive</span>
+            <span class="c1"># the run, and the error reaches the caller.</span>
+            <span class="n">_stop_workers</span><span class="p">(</span><span class="n">executor</span><span class="p">)</span>
+            <span class="k">raise</span>
+
+
 <div class="viewcode-block" id="run_receptors">
 <a class="viewcode-back" href="../../../reference/_api/stilt.execution.worker.run_receptors.html#stilt.execution.worker.run_receptors">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">run_receptors</span><span class="p">(</span>
@@ -1149,6 +1284,10 @@
 <span class="sd">    how many receptors had finished and returns. What finished is in the output directory, with a failure</span>
 <span class="sd">    record for each simulation that failed; a run that was cut off leaves only its log line, so it is</span>
 <span class="sd">    ``interrupted`` in :meth:`stilt.Project.status`.</span>
+
+<span class="sd">    An error that escapes a receptor's own handling (:func:`run_receptor` records a failure</span>
+<span class="sd">    for one and goes on; this is anything outside that, such as a shared resource that stops</span>
+<span class="sd">    answering) stops the batch too: the pool is terminated and the error raised to the caller.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1203,43 +1342,14 @@
                 <span class="n">_log_progress</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">,</span> <span class="n">problems</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
         <span class="k">return</span>
 
-    <span class="n">_check_workers_can_start</span><span class="p">(</span><span class="n">execution</span><span class="o">.</span><span class="n">cpus</span><span class="p">)</span>
-    <span class="n">pool</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span>
-        <span class="n">execution</span><span class="o">.</span><span class="n">cpus</span><span class="p">,</span>
-        <span class="n">initializer</span><span class="o">=</span><span class="n">_init_pool_worker</span><span class="p">,</span>
-        <span class="n">initargs</span><span class="o">=</span><span class="p">(</span>
-            <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="p">),</span>
-            <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">directory</span><span class="p">),</span>
-            <span class="nb">str</span><span class="p">(</span><span class="n">compute_root</span><span class="p">),</span>
-            <span class="n">execution</span><span class="p">,</span>
-            <span class="n">skip_existing</span><span class="p">,</span>
-            <span class="n">project</span><span class="o">.</span><span class="n">_taken_rows</span><span class="p">,</span>
-        <span class="p">),</span>
-    <span class="p">)</span>
-    <span class="n">done</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="k">with</span> <span class="n">_sigterm_as_interrupt</span><span class="p">():</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">problems</span> <span class="ow">in</span> <span class="n">pool</span><span class="o">.</span><span class="n">imap_unordered</span><span class="p">(</span>
-                <span class="n">_pool_run</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">))</span>
-            <span class="p">):</span>
-                <span class="n">done</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="n">rid</span> <span class="o">=</span> <span class="n">receptor_ids</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
-                <span class="n">_log_progress</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="n">earlier</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="p">[])</span> <span class="o">+</span> <span class="n">problems</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
-            <span class="c1"># Normal completion: let the workers exit on their own.</span>
-            <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
-            <span class="c1"># Preempted or Ctrl-C: SIGTERM the workers, which end their runs</span>
-            <span class="c1"># and exit; what finished is written.</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                <span class="s2">"stopped after </span><span class="si">%d</span><span class="s2"> of </span><span class="si">%d</span><span class="s2"> receptors; the rest did not run"</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">total</span>
-            <span class="p">)</span>
-            <span class="n">pool</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
-        <span class="k">except</span> <span class="ne">SystemExit</span><span class="p">:</span>
-            <span class="c1"># A requeued Slurm task exits here; its workers must not outlive it.</span>
-            <span class="n">pool</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
-            <span class="k">raise</span>
-        <span class="k">finally</span><span class="p">:</span>
-            <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span></div>
+    <span class="n">_run_in_pool</span><span class="p">(</span>
+        <span class="n">project</span><span class="p">,</span>
+        <span class="n">receptor_ids</span><span class="p">,</span>
+        <span class="n">earlier</span><span class="p">,</span>
+        <span class="n">compute_root</span><span class="o">=</span><span class="n">compute_root</span><span class="p">,</span>
+        <span class="n">execution</span><span class="o">=</span><span class="n">execution</span><span class="p">,</span>
+        <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">,</span>
+    <span class="p">)</span></div>
 
 
 

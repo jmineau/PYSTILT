@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Output Layout &#8212; PYSTILT 0.1.0a27</title>
+    <title>Output Layout &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -503,6 +503,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.particles_hash.html">stilt.config.Variant.particles_hash</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.realization_numbers.html">stilt.config.Variant.realization_numbers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.run_settings.html">stilt.config.Variant.run_settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.run_settings_without_met.html">stilt.config.Variant.run_settings_without_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.transport_for.html">stilt.config.Variant.transport_for</a></li>
 </ul>
 </details></li>
@@ -607,9 +608,15 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.ProjectConfig.to_yaml.html">stilt.ProjectConfig.to_yaml</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.FootprintConfig.html">stilt.FootprintConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.FootprintConfig.html">stilt.FootprintConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.FootprintConfig.tres_minutes.html">stilt.FootprintConfig.tres_minutes</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.ExecutionConfig.html">stilt.ExecutionConfig</a></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.Bounds.html">stilt.Bounds</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Bounds.html">stilt.Bounds</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Bounds.contains.html">stilt.Bounds.contains</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Grid.html">stilt.Grid</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Grid.axes.html">stilt.Grid.axes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Grid.cells.html">stilt.Grid.cells</a></li>
@@ -639,7 +646,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.fetch.html">stilt.transport.hysplit.Met.fetch</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.missing_hours.html">stilt.transport.hysplit.Met.missing_hours</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.missing.html">stilt.transport.hysplit.Met.missing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -809,6 +816,7 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.StiltError.html">stilt.StiltError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.SimulationError.html">stilt.exceptions.SimulationError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.MeteorologyError.html">stilt.exceptions.MeteorologyError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.WorkerDied.html">stilt.exceptions.WorkerDied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.HYSPLITNotFoundError.html">stilt.exceptions.HYSPLITNotFoundError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.EmptyFootprint.html">stilt.exceptions.EmptyFootprint</a></li>
 </ul>
@@ -963,8 +971,8 @@ reads as one dataset.</p>
 <span class="w">    </span><span class="nt">ymax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">41.25</span>
 <span class="w">    </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
 <span class="w">  </span><span class="nt">smooth_factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<span class="w">  </span><span class="nt">time_integrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 <span class="w">  </span><span class="nt">transforms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+<span class="w">  </span><span class="nt">tres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1h</span>
 </pre></div>
 </div>
 <dl class="simple">
@@ -1087,7 +1095,8 @@ for a column or multipoint receptor.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hour</span></code></p></td>
 <td><p>int16</p></td>
-<td><p>The layer, in hours after the receptor time (below).</p></td>
+<td><p>The layer, counted from the receptor time in layers of <code class="docutils literal notranslate"><span class="pre">tres</span></code>:
+hours, by default (below).</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">y</span></code></p></td>
 <td><p>int16</p></td>
@@ -1156,10 +1165,12 @@ complete: the run worked, and nothing reached the grid. Treat it as
 missing, not as a footprint of zeros.</p>
 <section id="the-hour">
 <h3>The hour<a class="headerlink" href="#the-hour" title="Link to this heading">#</a></h3>
-<p>Layer <code class="docutils literal notranslate"><span class="pre">k</span></code> holds the particles’ influence from <code class="docutils literal notranslate"><span class="pre">k</span></code> hours to <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">+</span> <span class="pre">1</span></code>
-hours after the receptor time, and is stamped at its start. A particle
-row at <code class="docutils literal notranslate"><span class="pre">age</span></code> minutes falls in layer <code class="docutils literal notranslate"><span class="pre">floor(age</span> <span class="pre">/</span> <span class="pre">60)</span></code>. For a receptor
-at 18:30 on a backward run:</p>
+<p>Layer <code class="docutils literal notranslate"><span class="pre">k</span></code> holds the particles’ influence from <code class="docutils literal notranslate"><span class="pre">k</span></code> to <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">+</span> <span class="pre">1</span></code> layers
+after the receptor time, and is stamped at its start. A layer is
+<code class="docutils literal notranslate"><span class="pre">tres</span></code> long, an hour by default, so the stored <code class="docutils literal notranslate"><span class="pre">hour</span></code> is the hour
+unless the settings give another length. A particle row at <code class="docutils literal notranslate"><span class="pre">age</span></code> minutes
+falls in layer <code class="docutils literal notranslate"><span class="pre">floor(age</span> <span class="pre">/</span> <span class="pre">m)</span></code>, where <code class="docutils literal notranslate"><span class="pre">m</span></code> is <code class="docutils literal notranslate"><span class="pre">tres</span></code> in minutes. For a receptor at
+18:30 on a backward run with hourly layers:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
 <col style="width: 30.0%" />
@@ -1185,8 +1196,10 @@ at 18:30 on a backward run:</p>
 </table>
 </div>
 <p>The layers keep the receptor’s minute, so a receptor at 18:30 has layers
-starting at half past. A footprint made with <code class="docutils literal notranslate"><span class="pre">time_integrate:</span> <span class="pre">true</span></code> has
-one layer, hour 0, stamped at the receptor time, which holds the whole run.</p>
+starting at half past. With <code class="docutils literal notranslate"><span class="pre">tres:</span> <span class="pre">15min</span></code> its layer -1 covers 18:15
+to 18:30 and layer -2 covers 18:00 to 18:15. With <code class="docutils literal notranslate"><span class="pre">tres</span></code> as long as the
+run (<code class="docutils literal notranslate"><span class="pre">1D</span></code> for a 24-hour run) there is one layer, -1, stamped at the
+start of the run, which holds the whole run.</p>
 </section>
 <section id="the-grid">
 <h3>The grid<a class="headerlink" href="#the-grid" title="Link to this heading">#</a></h3>
@@ -1222,7 +1235,10 @@ projection, and the cells are laid out between them.</p></li>
 </pre></div>
 </div>
 <p>The small tolerance keeps the last whole cell when the bounds are decimals
-that binary floats store a little short.</p>
+that binary floats store a little short. Layer <code class="docutils literal notranslate"><span class="pre">h</span></code> starts
+<code class="docutils literal notranslate"><span class="pre">h</span></code> times <code class="docutils literal notranslate"><span class="pre">tres</span></code> after the receptor time. <code class="docutils literal notranslate"><span class="pre">tres</span></code> is in
+<code class="docutils literal notranslate"><span class="pre">stilt:footprint</span></code>, written as minutes (<code class="docutils literal notranslate"><span class="pre">15min</span></code>), hours (<code class="docutils literal notranslate"><span class="pre">1h</span></code>) or days
+(<code class="docutils literal notranslate"><span class="pre">1D</span></code>); a file that does not record it has hourly layers.</p>
 </section>
 <section id="units">
 <h3>Units<a class="headerlink" href="#units" title="Link to this heading">#</a></h3>
@@ -1283,6 +1299,15 @@ are Parquet files in settings folders, and an empty footprint is marked
 <code class="docutils literal notranslate"><span class="pre">stilt:empty</span></code>. Files from development builds before it carry a
 version ending in <code class="docutils literal notranslate"><span class="pre">.dev...</span></code>, and may differ.</p></li>
 </ul>
+</section>
+<section id="why-the-output-has-separate-trees">
+<h2>Why the output has separate trees<a class="headerlink" href="#why-the-output-has-separate-trees" title="Link to this heading">#</a></h2>
+<p>The output directory keeps results, logs, and kept workdirs in separate
+trees (<code class="docutils literal notranslate"><span class="pre">particles/</span></code>, <code class="docutils literal notranslate"><span class="pre">footprints/</span></code>, <code class="docutils literal notranslate"><span class="pre">logs/</span></code>, <code class="docutils literal notranslate"><span class="pre">scratch/</span></code>). Each
+results tree holds Parquet files only, so pyarrow, DuckDB, polars, and R
+read it as one table, and a log or a failure record beside a result would
+break that. Whether a simulation is complete is read from the results
+trees alone; the logs tree only explains the ones that are not.</p>
 </section>
 </section>
 
@@ -1346,6 +1371,7 @@ version ending in <code class="docutils literal notranslate"><span class="pre">.
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-many-files">Reading many files</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#keys-you-do-not-know">Keys you do not know</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#which-rules-a-file-follows">Which rules a file follows</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-the-output-has-separate-trees">Why the output has separate trees</a></li>
 </ul>
   </nav></div>
 

@@ -1,0 +1,6 @@
+stilt.transforms.PressureWeighting.apply
+========================================
+
+.. currentmodule:: stilt.transforms
+
+.. automethod:: PressureWeighting.apply

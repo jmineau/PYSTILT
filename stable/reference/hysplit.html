@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>HYSPLIT Integration &#8212; PYSTILT 0.1.0a27</title>
+    <title>HYSPLIT Integration &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -503,6 +503,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.particles_hash.html">stilt.config.Variant.particles_hash</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.realization_numbers.html">stilt.config.Variant.realization_numbers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.run_settings.html">stilt.config.Variant.run_settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.run_settings_without_met.html">stilt.config.Variant.run_settings_without_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.transport_for.html">stilt.config.Variant.transport_for</a></li>
 </ul>
 </details></li>
@@ -607,9 +608,15 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.ProjectConfig.to_yaml.html">stilt.ProjectConfig.to_yaml</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.FootprintConfig.html">stilt.FootprintConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.FootprintConfig.html">stilt.FootprintConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.FootprintConfig.tres_minutes.html">stilt.FootprintConfig.tres_minutes</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.ExecutionConfig.html">stilt.ExecutionConfig</a></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.Bounds.html">stilt.Bounds</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Bounds.html">stilt.Bounds</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Bounds.contains.html">stilt.Bounds.contains</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Grid.html">stilt.Grid</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Grid.axes.html">stilt.Grid.axes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Grid.cells.html">stilt.Grid.cells</a></li>
@@ -639,7 +646,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.fetch.html">stilt.transport.hysplit.Met.fetch</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.missing_hours.html">stilt.transport.hysplit.Met.missing_hours</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.missing.html">stilt.transport.hysplit.Met.missing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -809,6 +816,7 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.StiltError.html">stilt.StiltError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.SimulationError.html">stilt.exceptions.SimulationError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.MeteorologyError.html">stilt.exceptions.MeteorologyError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.WorkerDied.html">stilt.exceptions.WorkerDied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.HYSPLITNotFoundError.html">stilt.exceptions.HYSPLITNotFoundError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.EmptyFootprint.html">stilt.exceptions.EmptyFootprint</a></li>
 </ul>
@@ -934,11 +942,101 @@ near-field correction are PYSTILT’s steps, the same for any model
 When the particles stopped before <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, it also checks where: a
 particle more than 5 grid cells inside the met’s domain means the met ran
 out (<code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>), since particles that leave the domain end at its
-edge (<a class="reference internal" href="../guides/checking.html"><span class="doc">Checking A Run</span></a>). A known failure, a timeout, or a run
+edge (<a class="reference internal" href="../development/validation.html"><span class="doc">Validation</span></a>). A known failure, a timeout, or a run
 without particle output raises a
 <a class="reference internal" href="_api/stilt.exceptions.SimulationError.html#stilt.exceptions.SimulationError" title="stilt.exceptions.SimulationError"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimulationError</span></code></a> whose <code class="docutils literal notranslate"><span class="pre">reason</span></code> is a
 <a class="reference internal" href="_api/stilt.transport.hysplit.FailureReason.html#stilt.transport.hysplit.FailureReason" title="stilt.transport.hysplit.FailureReason"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transport.hysplit.FailureReason</span></code></a>. The worker records it, and
 <a class="reference internal" href="_api/stilt.Simulation.failure.html#stilt.Simulation.failure" title="stilt.Simulation.failure"><code class="xref py py-attr docutils literal notranslate"><span class="pre">stilt.Simulation.failure</span></code></a> and <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> report it.</p>
+<p>Each reason, what happened, and what to do:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Reason</p></th>
+<th class="head"><p>What happened, and what to do</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code></p></td>
+<td><p>The meteorology does not cover the run. The message says which:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">No</span> <span class="pre">met</span> <span class="pre">file</span> <span class="pre">...</span> <span class="pre">for</span> <span class="pre">&lt;hours&gt;</span></code>: a file the run needs is missing.
+Check the met’s <code class="docutils literal notranslate"><span class="pre">directory</span></code> against the files on disk. A backward run needs files from <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> before
+the receptor time to just after it, a forward run from the
+receptor time to just after <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> later (<a class="reference internal" href="../guides/meteorology.html"><span class="doc">Meteorology</span></a>).
+<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> finds these before a run.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">met</span> <span class="pre">file</span> <span class="pre">...</span> <span class="pre">is</span> <span class="pre">damaged</span></code> or <code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">met</span> <span class="pre">files</span> <span class="pre">hold</span> <span class="pre">no</span> <span class="pre">time</span>
+<span class="pre">step</span> <span class="pre">between</span> <span class="pre">...</span></code>: a file is there but cut short, written
+partway, or has records lost to null bytes, so it lacks hours the
+run needs. Download or crop it again. PYSTILT checks each file
+before HYSPLIT runs (<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.File.check.html#arlmet.File.check" title="(in arl-met v0.1.0b9)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">arlmet.File.check()</span></code></a>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">met</span> <span class="pre">file</span> <span class="pre">...</span> <span class="pre">holds</span> <span class="pre">one</span> <span class="pre">time</span> <span class="pre">period</span></code>: HYSPLIT cannot read a
+file with one time period. Use files that each hold at least two
+(<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> finds this before a run).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">no</span> <span class="pre">more</span> <span class="pre">meteorology</span></code>: the particles reached a time that no met
+file holds. HYSPLIT says so in the <code class="docutils literal notranslate"><span class="pre">WARNING</span></code> file of the kept
+workdir.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">particles</span> <span class="pre">stopped</span> <span class="pre">...</span> <span class="pre">h</span> <span class="pre">into</span> <span class="pre">the</span> <span class="pre">...</span> <span class="pre">h</span> <span class="pre">run,</span> <span class="pre">up</span> <span class="pre">to</span> <span class="pre">...</span> <span class="pre">grid</span>
+<span class="pre">cells</span> <span class="pre">inside</span> <span class="pre">the</span> <span class="pre">met's</span> <span class="pre">domain</span></code>: the particles stopped before
+<code class="docutils literal notranslate"><span class="pre">n_hours</span></code> and at least one was more than 5 grid cells from
+every side of the met grid.
+Particles that leave the domain end within 2 cells of its edge,
+so the met ran out, though HYSPLIT may have written no warning
+and <code class="docutils literal notranslate"><span class="pre">Complete</span> <span class="pre">Hysplit</span></code>. Look for a met file with fewer hours
+than its name says, and download or crop it again. PYSTILT
+checks this only when <code class="docutils literal notranslate"><span class="pre">outdt</span></code> is 0, the default: with fewer
+rows, a particle’s last row can be far from where it left.</p></li>
+<li><p>A HYSPLIT message, such as <code class="docutils literal notranslate"><span class="pre">start</span> <span class="pre">point</span> <span class="pre">not</span> <span class="pre">within</span> <span class="pre">(x,y,t)</span> <span class="pre">any</span>
+<span class="pre">data</span> <span class="pre">file</span></code>: the receptor is outside the files, in time or in
+space. <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">point</span> <span class="pre">off</span> <span class="pre">grid</span></code> says the receptor is outside the
+met’s grid (check the sign of its longitude), and <code class="docutils literal notranslate"><span class="pre">Start</span> <span class="pre">height</span>
+<span class="pre">above</span> <span class="pre">mdl</span> <span class="pre">domain</span></code> that it is above the met’s top; the line gives the
+height and the top.</p></li>
+</ul>
+</td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">VARYING_MET_INTERVAL</span></code></p></td>
+<td><p>The met files do not all have the same time step, such as hourly
+and 3-hourly files mixed in one directory. Keep one product per
+met.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">NO_PARTICLE_DATA</span></code></p></td>
+<td><p>The transport model ran but wrote no particles. Read the log
+(<code class="docutils literal notranslate"><span class="pre">sim.log</span></code>): it usually says why.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">FORTRAN_RUNTIME_ERROR</span></code></p></td>
+<td><p>HYSPLIT stopped with a Fortran error, which the message names. Read
+the log and the kept workdir’s <code class="docutils literal notranslate"><span class="pre">MESSAGE</span></code> file.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PARTICLE_LIMIT</span></code></p></td>
+<td><p>HYSPLIT reached <code class="docutils literal notranslate"><span class="pre">maxpar</span></code> before every location of a multipoint
+receptor got its particles, so the last ones would have fewer or
+none. Leave <code class="docutils literal notranslate"><span class="pre">maxpar</span></code> unset, or raise it (<a class="reference internal" href="../guides/receptors.html"><span class="doc">Receptors</span></a>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">EXIT_STATUS</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> was killed by a signal, or exited with a non-zero
+status, and its log holds no other known message. The message names
+the signal or the status, and the log ends with the last lines of
+HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">MESSAGE</span></code> file. A <code class="docutils literal notranslate"><span class="pre">SIGKILL</span></code> that nothing in PYSTILT
+sent is often the kernel’s out-of-memory killer: ask for more
+memory per task, or run fewer receptors at once. The particles
+HYSPLIT had written are not kept, and running again runs the
+simulation again.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TIMEOUT</span></code></p></td>
+<td><p>The run took longer than <code class="docutils literal notranslate"><span class="pre">timeout</span></code> under <code class="docutils literal notranslate"><span class="pre">execution:</span></code>. Raise it,
+or look for a slow node or a met file read over a slow filesystem.</p></td>
+</tr>
+<tr class="row-odd"><td><p>an error’s name</p></td>
+<td><p>Any other error is recorded by its class, such as <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>,
+with its traceback. That is usually a bug or a setup problem worth
+reporting.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.transport.hysplit.FailureReason.html#stilt.transport.hysplit.FailureReason" title="stilt.transport.hysplit.FailureReason"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stilt.transport.hysplit.FailureReason</span></code></a></p></td>

@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Summing Footprints: Areas And The Jacobian &#8212; PYSTILT 0.1.0a27</title>
+    <title>Summing Footprints: Areas And The Jacobian &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -414,6 +414,7 @@
 <li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
+<li class="toctree-l1"><a class="reference internal" href="choosing_settings.html">Choosing Settings</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Running</span></p>
 <ul class="nav bd-sidenav">
@@ -429,7 +430,6 @@
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Footprints And Particles</a></li>
 <li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Summing Footprints: Areas And The Jacobian</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transport_error.html">Transport Error</a></li>
-<li class="toctree-l1"><a class="reference internal" href="wind_errors.html">Wind Error Statistics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
 <li class="toctree-l1"><a class="reference internal" href="trajectory_analyses.html">Trajectory-Style Analyses</a></li>
 </ul>
@@ -438,7 +438,6 @@
 <li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
 <li class="toctree-l1"><a class="reference internal" href="slant_columns.html">Slant Columns</a></li>
 <li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="plume_background.html">Plume Background</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
 <ul class="nav bd-sidenav">
@@ -515,8 +514,11 @@
 <p>Footprints are calculated on the regular grid in your config, as in
 STILT-R. An inversion or an emissions comparison needs the influence of
 other areas: counties, hexagons, sectors, or small windows around point
-sources. This page sums a footprint over such areas, and many footprints
-at once into a Jacobian.</p>
+sources. <code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> sums a footprint over such areas, and
+<code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> sums many footprints at once into the matrix an
+inversion solves with. We keep the footprint grid fine and aggregate after
+the run, because one fine footprint serves every set of areas you try
+later.</p>
 <section id="one-footprint-over-areas">
 <h2>One footprint over areas<a class="headerlink" href="#one-footprint-over-areas" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> adds up the footprint cells in each area, and the
@@ -608,6 +610,13 @@ memory stays at a few footprints whatever the selection’s size. <code class="d
 from the optional <code class="docutils literal notranslate"><span class="pre">sparse</span></code> package (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pystilt[sparse]</span></code>), or
 a NumPy array with <code class="docutils literal notranslate"><span class="pre">dense=True</span></code>. Receptors whose footprint is empty are
 in <code class="docutils literal notranslate"><span class="pre">H.empty</span></code>, and those not run yet in <code class="docutils literal notranslate"><span class="pre">H.missing</span></code>.</p>
+<p id="jacobian-rows"><code class="docutils literal notranslate"><span class="pre">H</span></code> has a row only for each selected receptor with a non-empty footprint,
+so it can have fewer rows than the selection. Build the observations <code class="docutils literal notranslate"><span class="pre">y</span></code>,
+and their errors, in the rows of <code class="docutils literal notranslate"><span class="pre">H</span></code>, not of the selection: with
+<code class="docutils literal notranslate"><span class="pre">observed</span></code> a Series of observations indexed by receptor id,
+<code class="docutils literal notranslate"><span class="pre">y</span> <span class="pre">=</span> <span class="pre">observed.loc[H.receptors]</span></code>. Matching them by position instead
+shifts every observation after the first dropped receptor onto the wrong
+row of <code class="docutils literal notranslate"><span class="pre">H</span></code>.</p>
 <p>The columns are the time bin and then the target’s cells, as named levels:
 <code class="docutils literal notranslate"><span class="pre">time,</span> <span class="pre">cell</span></code> for zones or a mesh, and <code class="docutils literal notranslate"><span class="pre">time,</span> <span class="pre">lon,</span> <span class="pre">lat</span></code> for a grid
 (<code class="docutils literal notranslate"><span class="pre">time,</span> <span class="pre">x,</span> <span class="pre">y</span></code> when it is projected). For a grid,
@@ -631,6 +640,93 @@ column of <code class="docutils literal notranslate"><span class="pre">project.s
 one realization is missing from that matrix alone. The dict holds every
 matrix at once. When each is large, loop with <code class="docutils literal notranslate"><span class="pre">for</span></code> instead and keep
 only what you compute from each one, such as a posterior.</p>
+</section>
+</section>
+<section id="footprints-times-a-flux">
+<h2>Footprints times a flux<a class="headerlink" href="#footprints-times-a-flux" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement(flux)</span></code> multiplies a footprint by a flux and
+gives the enhancement, the rise in concentration at the receptor that the
+flux explains, for each hour of the footprint. Sum it over the hours for
+the receptor’s total. The flux is an <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> in
+µmol m⁻² s⁻¹ with <code class="docutils literal notranslate"><span class="pre">lat</span></code> and <code class="docutils literal notranslate"><span class="pre">lon</span></code> dimensions.
+<a class="reference internal" href="../tutorials/flux_inversion.html"><span class="doc">Tutorial: From Footprints To Concentrations</span></a> uses it step by step. Two things decide
+whether the numbers are right: which flux step each footprint hour takes,
+and how the two grids line up.</p>
+<section id="time-steps">
+<h3>Time steps<a class="headerlink" href="#time-steps" title="Link to this heading">#</a></h3>
+<p>PYSTILT reads a flux’s <code class="docutils literal notranslate"><span class="pre">time</span></code> labels as the start of each step, as CF
+time bounds do, and each footprint hour takes the last step that starts at
+or before it. A monthly inventory labeled on the 1st gives 20 July the July
+flux, and a 3-hourly inventory labeled 09:00 gives 09:00 to 11:59 its 09:00
+step. <code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> and <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> use the same rule,
+so an enhancement and a Jacobian built on one inventory agree. An hour
+before the first label gets zero flux, and an hour after the last takes the
+last step, because the labels do not say where it ends. Add a step of zeros
+after the last to end it.</p>
+<p>A footprint layer takes the flux of the one step where it starts, so the
+layers (<code class="docutils literal notranslate"><span class="pre">tres</span></code>) must be no longer than the flux’s steps. A 1-day layer
+over an hourly flux would take the flux of its first hour for the whole
+day, which can be far from the day’s mean, so <code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>
+raises, and so do <code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> and <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> for a
+time bin shorter than the layers. Make the footprints with a shorter
+<code class="docutils literal notranslate"><span class="pre">tres</span></code>, or average the flux onto the layers first. A flux with steps as
+long as the layers or longer passes, and so does a flux with one time (a
+static flux), but a layer that crosses a step boundary still takes only the
+step where it starts. Layers are counted back from the receptor’s time, not
+from the clock, so receptors on the hour with hourly or longer flux steps
+line up, and a receptor at 18:30 does not: its hourly layers run from :30 to
+:30, and each takes the flux of the step where it starts, half an hour
+early. The steps of a flux with CF time bounds are the bounds; without them,
+the gaps between the labels.</p>
+<section id="when-the-labels-are-not-the-starts">
+<span id="flux-step-labels"></span><h4>When the labels are not the starts<a class="headerlink" href="#when-the-labels-are-not-the-starts" title="Link to this heading">#</a></h4>
+<p>If your file has CF time bounds (a <code class="docutils literal notranslate"><span class="pre">time_bnds</span></code> variable), use them, so
+that every step has an exact start and end. Make <code class="docutils literal notranslate"><span class="pre">time</span></code> an interval index
+of the bounds. <code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> and <code class="docutils literal notranslate"><span class="pre">particles.stilt.enhancement</span></code>
+then give each hour the step whose bounds hold it, and zero outside every
+step:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="n">bounds</span> <span class="o">=</span> <span class="n">inventory</span><span class="p">[</span><span class="s2">"time_bnds"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>  <span class="c1"># (n_steps, 2): start, end</span>
+<span class="n">inventory</span> <span class="o">=</span> <span class="n">inventory</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span>
+    <span class="n">time</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">bounds</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">bounds</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">closed</span><span class="o">=</span><span class="s2">"left"</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> takes its time bins as an argument, so give it the
+same intervals as <code class="docutils literal notranslate"><span class="pre">time_bins</span></code>.</p>
+<p>Without bounds, shift the labels to the starts yourself. A mean labeled at
+the middle of its step (a monthly mean dated the 15th, a 3-hourly mean
+dated 10:30) would be read half a step late, and an accumulation labeled at
+its end (as ERA5’s accumulated fields are) a full step late:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">step</span> <span class="o">=</span> <span class="n">inventory</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">inventory</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>   <span class="c1"># for equal steps</span>
+<span class="n">inventory</span> <span class="o">=</span> <span class="n">inventory</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">inventory</span><span class="o">.</span><span class="n">time</span> <span class="o">-</span> <span class="n">step</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>   <span class="c1"># or - step</span>
+</pre></div>
+</div>
+<p>For steps of unequal length, such as calendar months, set the starts
+directly with <code class="docutils literal notranslate"><span class="pre">inventory.assign_coords(time=month_starts)</span></code>. The labels
+must strictly increase, so the overlap of two concatenated files is an
+error.</p>
+</section>
+</section>
+<section id="grids">
+<h3>Grids<a class="headerlink" href="#grids" title="Link to this heading">#</a></h3>
+<p>Each footprint cell takes the flux of the inventory cell nearest its
+center, which is right when the inventory’s cells are as large as the
+footprint’s or larger. So make the footprint grid as fine as the finest
+inventory you will use. For a coarser inventory, or to solve for fluxes on
+coarse cells, sum the footprints onto its cells with <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code>
+or <code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> (above). For a finer inventory, average it onto
+the footprint grid with a conservative regridder such as
+<a class="reference external" href="https://xesmf.readthedocs.io">xESMF</a>, or make the footprints on the
+inventory’s grid with <code class="docutils literal notranslate"><span class="pre">sim.calc_footprint(grid=...)</span></code>.
+<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> refuses an inventory with finer cells than the
+footprint’s, and warns when grids of one cell size are offset by more than
+a tenth of a cell.</p>
+<p>A flux is averaged onto larger cells because it is per unit area, and a
+footprint is summed because each value belongs to its whole cell. A
+conservative (averaging) regridder would make a footprint too small by the
+ratio of the cell areas.</p>
 </section>
 </section>
 </section>
@@ -685,6 +781,14 @@ only what you compute from each one, such as a posterior.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-footprint-over-areas">One footprint over areas</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#many-footprints-the-jacobian">Many footprints: the Jacobian</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#one-jacobian-per-realization">One Jacobian per realization</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#footprints-times-a-flux">Footprints times a flux</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#time-steps">Time steps</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#when-the-labels-are-not-the-starts">When the labels are not the starts</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#grids">Grids</a></li>
 </ul>
 </li>
 </ul>

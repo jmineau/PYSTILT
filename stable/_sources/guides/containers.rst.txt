@@ -155,14 +155,17 @@ Exit codes
    * - 2
      - The command line was wrong: an unknown option, a bad value, or a
        directory that is not a project. Or a met directory does not exist
-       or holds no ARL file (``stilt check`` lists it). Nothing ran. Do not
-       retry.
+       or holds no ARL file (``stilt check`` lists it; ``stilt status`` exits
+       with 2 for it only when the output may hold results). Nothing ran. Do
+       not retry.
    * - 3
      - Retry it. Some simulations did not finish, because the run was
-       stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), or a
-       connection or I/O error, such as an output bucket that could not be
-       reached, stopped an unfinished simulation or ended the run. A retry
-       continues where it stopped.
+       stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), a worker
+       process was killed (``--cpus`` above 1; the error names the receptors
+       that were in progress, and it is usually the out-of-memory killer, so a
+       retry may need fewer ``--cpus``), or a connection or I/O error, such as
+       an output bucket that could not be reached, stopped an unfinished
+       simulation or ended the run. A retry continues where it stopped.
    * - 4
      - A bug: any other error the command did not expect. Its traceback is
        printed. Do not retry; a retry meets the same error.
@@ -173,8 +176,9 @@ permanent answers of a bucket into a plain ``OSError``. It is 3 when it is a
 refused, reset or timed-out connection or a name-resolution failure, an error of
 the cloud libraries that is not an ``OSError`` (such as botocore's
 ``EndpointConnectionError`` and ``ReadTimeoutError``), an FTP 4xx reply ("421
-too many users"), or has the status of a busy or briefly unavailable service
-(408, 429, 500, 502, 503, 504, and the throttling codes such as ``SlowDown``).
+too many users") or an FTP server that closed the connection (``ftplib``'s
+``EOFError``), or has the status of a busy or briefly unavailable service
+(408, 429, 500, 502, 503, 504, or the errno s3fs gives such an answer).
 When an error hides its cause, as fsspec's HTTP filesystem does by raising
 ``FileNotFoundError`` for every failure, the cause decides. An ``OSError`` that nothing explains is
 3 when its errno is input/output trouble that goes away (``EIO``, a stale

@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.footprint.FootprintAccessor.enhancement &#8212; PYSTILT 0.1.0a27</title>
+    <title>stilt.footprint.FootprintAccessor.enhancement &#8212; PYSTILT 0.1.0a28</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=a2d71c7f" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d8142605"></script>
+    <script src="../../_static/documentation_options.js?v=300e85c7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a27';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a27" />
+  <meta name="docsearch:version" content="0.1.0a28" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a27</p>
+    <p class="title logo__title">PYSTILT 0.1.0a28</p>
   
 </a></div>
     
@@ -503,6 +503,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.particles_hash.html">stilt.config.Variant.particles_hash</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.realization_numbers.html">stilt.config.Variant.realization_numbers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings.html">stilt.config.Variant.run_settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings_without_met.html">stilt.config.Variant.run_settings_without_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.transport_for.html">stilt.config.Variant.transport_for</a></li>
 </ul>
 </details></li>
@@ -607,9 +608,15 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.to_yaml.html">stilt.ProjectConfig.to_yaml</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.FootprintConfig.html">stilt.FootprintConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.FootprintConfig.html">stilt.FootprintConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.tres_minutes.html">stilt.FootprintConfig.tres_minutes</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.ExecutionConfig.html">stilt.ExecutionConfig</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.Bounds.html">stilt.Bounds</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Bounds.html">stilt.Bounds</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Bounds.contains.html">stilt.Bounds.contains</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Grid.html">stilt.Grid</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Grid.axes.html">stilt.Grid.axes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Grid.cells.html">stilt.Grid.cells</a></li>
@@ -639,7 +646,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.fetch.html">stilt.transport.hysplit.Met.fetch</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing_hours.html">stilt.transport.hysplit.Met.missing_hours</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing.html">stilt.transport.hysplit.Met.missing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
@@ -809,6 +816,7 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.StiltError.html">stilt.StiltError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.SimulationError.html">stilt.exceptions.SimulationError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.MeteorologyError.html">stilt.exceptions.MeteorologyError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.WorkerDied.html">stilt.exceptions.WorkerDied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.HYSPLITNotFoundError.html">stilt.exceptions.HYSPLITNotFoundError</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.EmptyFootprint.html">stilt.exceptions.EmptyFootprint</a></li>
 </ul>
@@ -900,17 +908,36 @@ cell then straddles two flux cells.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>flux</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataArray</span></code></a></span>) – Surface flux on a <code class="docutils literal notranslate"><span class="pre">lat</span></code>/<code class="docutils literal notranslate"><span class="pre">lon</span></code> grid (<code class="docutils literal notranslate"><span class="pre">y</span></code>/<code class="docutils literal notranslate"><span class="pre">x</span></code> for a
 projected footprint), in µmol m⁻² s⁻¹ for an enhancement in
-ppm. A flux with a <code class="docutils literal notranslate"><span class="pre">time</span></code> dimension is read as steps that start
-at their labels, as <code class="docutils literal notranslate"><span class="pre">aggregate</span></code> and <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> read
-them: each footprint hour takes the last flux step that starts at
-or before the hour’s start. A monthly flux labeled on the 1st
-gives every hour of July 20 July’s flux. An hour before the first
-label gets zero flux, and an hour after the last label takes the
-last step, since the labels do not say where it ends (add a step
-of zeros to end it). A flux labeled at the middle of its steps
-must be relabeled first: shift its labels back by half a step,
-<code class="docutils literal notranslate"><span class="pre">flux.assign_coords(time=flux.time</span> <span class="pre">-</span> <span class="pre">half_step)</span></code>. The labels
-must strictly increase.</p>
+ppm. When the flux’s <code class="docutils literal notranslate"><span class="pre">time</span></code> coordinate carries CF time bounds
+(<a class="reference internal" href="stilt.sampling.sample_field.html#stilt.sampling.sample_field" title="stilt.sampling.sample_field"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.sample_field()</span></code></a>’s <code class="docutils literal notranslate"><span class="pre">step_starts</span></code>: its
+<code class="docutils literal notranslate"><span class="pre">time</span></code> is a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.IntervalIndex.html#pandas.IntervalIndex" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.IntervalIndex</span></code></a>), each footprint
+layer takes the step whose bounds hold its start; a layer before
+the first bound, after the last, or in a gap between bounds gets
+zero flux, since the bounds say where every step starts and
+ends. Without bounds, a flux with a <code class="docutils literal notranslate"><span class="pre">time</span></code> dimension is read
+as steps that start at their labels, as <code class="docutils literal notranslate"><span class="pre">aggregate</span></code> and
+<code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> read them: each footprint layer takes the
+last flux step that starts at or before the layer’s start. A
+monthly flux labeled on the 1st gives every hour of July 20
+July’s flux. A layer before the first label gets zero flux, and
+a layer after the last label takes the last step, since the
+labels do not say where it ends (add a step of zeros to end
+it). A flux not labeled at the start of its steps and with no
+bounds must be relabeled first. A flux labeled at the middle of
+its steps: shift its labels back by half a step,
+<code class="docutils literal notranslate"><span class="pre">flux.assign_coords(time=flux.time</span> <span class="pre">-</span> <span class="pre">half_step)</span></code>. One labeled
+at the end of its steps, as an accumulation stamped when it
+ends (ERA5’s hourly accumulated fields, for example), is read a
+full step late: shift its labels back by a full step instead.
+See <a class="reference internal" href="../../guides/aggregation.html#flux-step-labels"><span class="std std-ref">When the labels are not the starts</span></a> for both shifts worked out, and for
+how to give a flux its bounds as an interval index. The labels
+must strictly increase; the bounds must not overlap. A layer
+takes the flux of the one step where it starts, so the steps
+must be as long as the footprint’s layers (<code class="docutils literal notranslate"><span class="pre">tres</span></code>) or longer:
+a flux with a shorter step is an error. A flux with one time
+(a static flux) is not checked. Layers start at the receptor’s
+time, so a layer that crosses a step boundary still takes the
+step where it starts.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Enhancement for each footprint time step. <code class="docutils literal notranslate"><span class="pre">.sum()</span></code> gives the
@@ -923,9 +950,11 @@ alone.</p>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the flux has a <code class="docutils literal notranslate"><span class="pre">time</span></code> dimension and the footprint has none,
     since a time-summed footprint cannot say which flux step each
-    hour meets, if the flux cells are finer than the footprint’s, or
-    if the flux’s time labels do not strictly increase (a repeated
-    label is an error).</p>
+    layer meets, if the flux cells are finer than the footprint’s, if
+    a step of the flux is shorter than the footprint’s layers (use a
+    shorter <code class="docutils literal notranslate"><span class="pre">tres</span></code>, or average the flux onto the layers first), if
+    the flux’s time labels do not strictly increase (a repeated
+    label is an error), or if its CF time bounds overlap.</p>
 </dd>
 </dl>
 </dd></dl>

@@ -1,19 +1,10 @@
 Your First Footprint
 ====================
 
-This page takes you from one measurement to a footprint map. It uses Python.
-The first part makes one footprint with two function calls. The second
-part runs the same thing as a project, which is how you run many
-receptors and keep the results. The same project from the command line is
-at the end.
-
-You will:
-
-1. describe one measurement (a :term:`receptor`)
-2. point PYSTILT at :term:`meteorology`
-3. follow particles back in time from the receptor
-4. calculate and plot the footprint
-5. run the same receptor as a project
+You will make the footprint of one measurement, a map of where its air came
+from, with two function calls in Python. Then you will run the same
+measurement as a project, which is how you run thousands of them and keep
+the results. The command-line version of the project is at the end.
 
 Before you start
 ----------------
@@ -25,16 +16,12 @@ before the measurement to just after it. A simulation with a file missing
 fails, naming the hours.
 
 If you already have ARL files, for example in a group archive, tell PYSTILT
-the folder they are in, a pattern for their names, and how many hours each
-file covers. For files named like ``20210115_06``, each holding six hours:
+the folder they are in. Each file's header says which times it holds, so their
+names do not matter:
 
 .. code-block:: python
 
-   met = {
-       "directory": "/path/to/arl/hrrr",
-       "file_format": "%Y%m%d_%H",   # date codes: %Y year, %m month, %d day, %H hour
-       "file_tres": "6h",            # each file covers 6 hours
-   }
+   met = "/path/to/arl/hrrr"
 
 If you don't have ARL files, PYSTILT can download them from NOAA's archive
 into a folder you choose. This needs ``pip install "pystilt[download]"``.
@@ -112,8 +99,9 @@ follows them back in time through the meteorology:
 
 ``numpar``
    How many particles to release. More particles give a smoother footprint
-   but take longer. 200 is fine for a first try. Research runs often use
-   500 to 1000.
+   but take longer. 200 is enough to see the shape. For results you will
+   publish we use 1000, STILT-R's default, because a footprint from fewer
+   particles is noisy far from the receptor.
 
 ``krand`` and ``seed``
    HYSPLIT draws random numbers for the turbulence that moves each particle.
@@ -238,35 +226,27 @@ the variant name:
    sim.footprint.stilt.plot.map();
 
 This is the same footprint as in Step 3, because the settings and the seed
-are the same. The seed belongs to the variant, so every receptor of a variant
-runs with it. Without ``krand: 2`` and a ``seed``, each run draws its own
-random numbers for the turbulence, and 200 particles are few, so a second
-run's footprint looks a little different.
+are the same.
 
 What PYSTILT wrote
 ------------------
 
 Your inputs are in the project folder, and the results in its ``output``
-folder.
+folder:
 
 .. code-block:: text
 
    my_first_project/
-     config.yaml                 # your settings
-     receptors.csv               # your receptors
+     config.yaml        # your settings
+     receptors.csv      # your receptors
      output/
-       particles/settings=hrrr-c05088/_settings.yaml     # the settings, written out in full
-       particles/settings=hrrr-c05088/date=2021-01-14/202101141900_-111.848_40.766_10.parquet
-       footprints/settings=hrrr-5b2b7e/_settings.yaml
-       footprints/settings=hrrr-5b2b7e/date=2021-01-14/202101141900_-111.848_40.766_10.parquet
-       logs/settings=hrrr-c05088/date=2021-01-14/202101141900_-111.848_40.766_10.log
+       particles/       # where each particle went, one file per simulation
+       footprints/      # the footprints, one file per simulation
+       logs/            # HYSPLIT's log of each run
 
-Each folder under ``particles``, ``footprints``, and ``logs`` is a
-:term:`settings folder <settings folder>`: the variant's name, ``hrrr``,
-plus a short code made from its settings. The ``_settings.yaml`` in a
-particles or footprints folder lists them. Change a setting and the next run
-writes to a new folder, so nothing is overwritten. The file name is the
-:term:`receptor id`: the time, longitude, latitude, and altitude.
+Each result is kept under the settings it was made with. Change a setting and
+the next run writes new files beside the old ones, so nothing is
+overwritten. :doc:`../reference/layout` has the full layout.
 
 Your settings and receptors are saved in the folder, so you can open the
 project again later without repeating them:
@@ -292,17 +272,14 @@ Create a project folder with a starter ``config.yaml`` and ``receptors.csv``:
 
    stilt init ./my_first_project
 
-Open ``my_first_project/config.yaml`` and set the meteorology folder, file
-pattern, and footprint grid. The keys are the same as in the Python example
+Open ``my_first_project/config.yaml`` and set the meteorology folder and the
+footprint grid. The keys are the same as in the Python example
 above:
 
 .. code-block:: yaml
 
    mets:
-     hrrr:
-       directory: /path/to/arl/hrrr
-       file_format: "%Y%m%d_%H"
-       file_tres: 6h
+     hrrr: /path/to/arl/hrrr
 
    variants:
      hrrr: {}
