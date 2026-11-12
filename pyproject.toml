@@ -73,6 +73,7 @@ complete = [
 # Dev tooling and docs together; `uv sync` installs it by default.
 dev = [
     "pystilt[complete]",
+    "cf-xarray>=0.10",  # the CF trajectory export is read back with it
     "docstr-coverage>=2.3",
     "git-cliff>=2.10",  # `just changelog`
     "import-linter>=2.0",
@@ -93,6 +94,7 @@ dev = [
     "sphinx-autodoc-typehints>=3.0",
     "sphinx-copybutton>=0.5",
     "sphinx-design>=0.5",
+    "trajan>=0.12",  # the CF trajectory export is opened with it
     "twine>=6.0",  # `just dist`
     # The object-store tests run against a moto server.
     "flask>=3.0",

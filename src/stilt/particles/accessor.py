@@ -1,5 +1,5 @@
 """
-The ``.stilt`` accessor on a particle table: endpoints, grid exits, enhancement, plots.
+The ``.stilt`` accessor on a particle table: endpoints, grid exits, enhancement, export, plots.
 """
 
 from __future__ import annotations
@@ -10,10 +10,13 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from stilt.particles._cf import to_cf_trajectories
 from stilt.sampling import sample_field
 from stilt.spatial import _grid_cell_starts
 
 if TYPE_CHECKING:
+    import datetime as dt
+
     from stilt.spatial import Grid
     from stilt.visualization import ParticlesPlotAccessor
 
@@ -69,6 +72,7 @@ class ParticlesAccessor:
     >>> particles.stilt.endpoints()  # doctest: +SKIP
     >>> particles.stilt.grid_exits(grid)  # doctest: +SKIP
     >>> particles.stilt.enhancement(flux).mean()  # doctest: +SKIP
+    >>> particles.stilt.to_cf_trajectories()  # doctest: +SKIP
     >>> particles.stilt.plot.map()  # doctest: +SKIP
     """
 
@@ -260,6 +264,78 @@ class ParticlesAccessor:
             time_after = p["time"].iloc[rows].reset_index(drop=True)
             exits["time"] = time_before + (time_after - time_before) * fraction
         return exits
+
+    def to_cf_trajectories(
+        self, receptor_time: dt.datetime | None = None
+    ) -> xr.Dataset:
+        """
+        Return the particles as a CF-1.10 trajectory dataset, one trajectory per particle.
+
+        The dataset is what trajan, cf-xarray and other tools that read CF
+        trajectories open. Write it to NetCDF with
+        :meth:`xarray.Dataset.to_netcdf`. Each particle is one trajectory
+        along the ``trajectory`` dimension, and its rows, from its release
+        onward, run along ``obs``. A particle with fewer rows than the
+        longest (one that left the meteorology domain early) is padded with
+        missing values at the end. ``time`` is UTC, and ``age``, in minutes
+        since release, is kept as a variable. ``obs`` counts output steps
+        from the release, so in a backward run ``time`` decreases along
+        ``obs``.
+
+        This is CF's "incomplete multidimensional array" representation of
+        trajectories (CF-1.10, appendix H.4.1).
+
+        Parameters
+        ----------
+        receptor_time : datetime, optional
+            Release time of the particles, in UTC. Needed only when the table
+            has no ``time`` column. A table from ``sim.particles`` or
+            :func:`~stilt.read_particles` has one; the table
+            :func:`~stilt.run_trajectories` returns does not.
+
+        Returns
+        -------
+        xarray.Dataset
+            Dimensions ``(trajectory, obs)``. The coordinates are
+            ``trajectory`` (the particle number), ``time``, ``lon``, ``lat``
+            and ``zagl``. ``age`` and every other numeric column of the table
+            are data variables, with units for the columns PYSTILT and
+            HYSPLIT write.
+
+        Raises
+        ------
+        ValueError
+            If the table lacks one of ``particle``, ``age``, ``lon``, ``lat``
+            or ``zagl``, if it has neither a ``time`` column nor
+            *receptor_time*, if a particle has two rows at the same age, or if
+            it holds more than one realization (select one:
+            ``particles[particles.realization == k]``).
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> particles = pd.DataFrame(
+        ...     {
+        ...         "particle": [1, 1, 1, 2, 2],
+        ...         "age": [-1.0, -2.0, -3.0, -1.0, -2.0],
+        ...         "lon": [-111.85, -111.86, -111.88, -111.84, -111.83],
+        ...         "lat": [40.77, 40.78, 40.80, 40.76, 40.75],
+        ...         "zagl": [5.0, 40.0, 120.0, 8.0, 60.0],
+        ...     }
+        ... )
+        >>> ds = particles.stilt.to_cf_trajectories(
+        ...     receptor_time=pd.Timestamp("2024-01-15 18:00")
+        ... )
+        >>> dict(ds.sizes)
+        {'trajectory': 2, 'obs': 3}
+        >>> ds.attrs["featureType"]
+        'trajectory'
+        >>> ds.age.sel(trajectory=2).values
+        array([-1., -2., nan])
+        >>> str(ds.time.sel(trajectory=1).values[-1])
+        '2024-01-15T17:57:00.000000000'
+        """
+        return to_cf_trajectories(self._particles, receptor_time)
 
     def enhancement(self, flux: xr.DataArray) -> pd.Series:
         """
