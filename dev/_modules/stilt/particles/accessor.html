@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=4c3cbb42"></script>
+    <script src="../../../_static/documentation_options.js?v=7218a86b"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev1+g059a14b1f" />
+  <meta name="docsearch:version" content="0.1.0a29.dev2+gc066c51a9" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -448,7 +448,7 @@
                   
   <h1>Source code for stilt.particles.accessor</h1><div class="highlight"><pre>
 <span></span><span class="sd">"""</span>
-<span class="sd">The ``.stilt`` accessor on a particle table: endpoints, enhancement, plots.</span>
+<span class="sd">The ``.stilt`` accessor on a particle table: endpoints, grid exits, enhancement, plots.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -460,9 +460,51 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample_field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">_grid_cell_starts</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.visualization</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParticlesPlotAccessor</span>
+
+<span class="c1">#: The edges of a grid, in the order of the columns of ``_edge_crossings``.</span>
+<span class="n">_EDGES</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s2">"n"</span><span class="p">,</span> <span class="s2">"e"</span><span class="p">,</span> <span class="s2">"s"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">])</span>
+
+<span class="c1">#: Rounding allowed when a point lies on a grid edge, in the grid's units.</span>
+<span class="n">_EDGE_TOLERANCE</span> <span class="o">=</span> <span class="mf">1e-9</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_grid_extent</span><span class="p">(</span><span class="n">grid</span><span class="p">:</span> <span class="n">Grid</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the outer edges of the grid's cells, ``(west, east, south, north)``, in the grid's units.</span>
+
+<span class="sd">    Longitudes are not wrapped: a grid across the dateline has ``east`` above</span>
+<span class="sd">    ``west`` (``170, 190`` for a grid from 170 to -170). The edges are those of</span>
+<span class="sd">    the cells, which stop short of ``xmax`` and ``ymax`` when a whole number of</span>
+<span class="sd">    cells does not fit.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmax</span> <span class="o">-</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmin</span>
+        <span class="n">xmax</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmin</span> <span class="o">+</span> <span class="p">(</span><span class="n">span</span> <span class="k">if</span> <span class="n">span</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">span</span> <span class="o">+</span> <span class="mf">360.0</span><span class="p">)</span>
+        <span class="n">x_starts</span> <span class="o">=</span> <span class="n">_grid_cell_starts</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span><span class="p">)</span>
+        <span class="n">y_starts</span> <span class="o">=</span> <span class="n">_grid_cell_starts</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span>
+            <span class="nb">float</span><span class="p">(</span><span class="n">x_starts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span><span class="p">),</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span>
+            <span class="nb">float</span><span class="p">(</span><span class="n">y_starts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="n">x_centers</span><span class="p">,</span> <span class="n">y_centers</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">axes</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">x_centers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">x_centers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">y_centers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">y_centers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_wrap_degrees</span><span class="p">(</span><span class="n">difference</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a difference of longitudes as the equivalent one in [-180, 180)."""</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">difference</span> <span class="o">+</span> <span class="mf">180.0</span><span class="p">)</span> <span class="o">%</span> <span class="mf">360.0</span> <span class="o">-</span> <span class="mf">180.0</span>
 
 
 <div class="viewcode-block" id="ParticlesAccessor">
@@ -476,6 +518,7 @@
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; particles = sim.particles  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; particles.stilt.endpoints()  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; particles.stilt.grid_exits(grid)  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; particles.stilt.enhancement(flux).mean()  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; particles.stilt.plot.map()  # doctest: +SKIP</span>
 <span class="sd">    """</span>
@@ -506,6 +549,173 @@
         <span class="n">reach</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span>
         <span class="n">last</span> <span class="o">=</span> <span class="n">reach</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">],</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">idxmax</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">p</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">last</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="ParticlesAccessor.grid_exits">
+<a class="viewcode-back" href="../../../reference/_api/stilt.particles.ParticlesAccessor.grid_exits.html#stilt.particles.ParticlesAccessor.grid_exits">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">grid_exits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grid</span><span class="p">:</span> <span class="n">Grid</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return where each particle first left a footprint grid.</span>
+
+<span class="sd">        For a backward run these are the points where the air entered the</span>
+<span class="sd">        footprint's domain, which the export of a footprint to a regional</span>
+<span class="sd">        model needs, and where to sample a background at the domain's edge.</span>
+<span class="sd">        Unlike :meth:`endpoints`, which gives where a particle ended, this</span>
+<span class="sd">        gives where it first crossed the edge of the grid, even if it came</span>
+<span class="sd">        back later or stayed in the meteorology domain long after.</span>
+
+<span class="sd">        A particle is outside when it is beyond the outer edge of the grid's</span>
+<span class="sd">        cells, in the grid's own coordinates: a projected grid is a</span>
+<span class="sd">        rectangle in its projection, not in longitude and latitude. A grid</span>
+<span class="sd">        across the dateline or past 180 degrees is read modulo 360, and a</span>
+<span class="sd">        grid that goes all the way around the earth has no west or east edge.</span>
+<span class="sd">        Rows are read in order of ``abs(age)``, whatever their order in the</span>
+<span class="sd">        table, so this works for a backward and a forward run.</span>
+
+<span class="sd">        The point is on the edge: the exit is the straight line between the</span>
+<span class="sd">        particle's last row inside the grid and its first row outside,</span>
+<span class="sd">        and ``lon``, ``lat``, ``zagl``, ``age`` and ``time`` are interpolated</span>
+<span class="sd">        along it to where it crosses. If the line crosses two edges at a</span>
+<span class="sd">        corner, ``edge`` is the first it crosses. A particle whose first row is</span>
+<span class="sd">        already outside has no row inside to interpolate from (the</span>
+<span class="sd">        meteorology HYSPLIT builds bundled with PYSTILT writes no row at</span>
+<span class="sd">        the release), so it is reported at that row, on the edge it is</span>
+<span class="sd">        farthest beyond, in cells.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        grid : stilt.Grid</span>
+<span class="sd">            The footprint grid, such as ``project.config.footprint.grid``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pandas.DataFrame</span>
+<span class="sd">            One row per particle that left the grid, ordered by ``particle``;</span>
+<span class="sd">            a particle that stayed inside is not in it. The columns are</span>
+<span class="sd">            ``particle``, ``edge`` (``"n"``, ``"e"``, ``"s"`` or ``"w"``,</span>
+<span class="sd">            the side of the grid it left by), ``lon`` and ``lat`` (degrees),</span>
+<span class="sd">            ``zagl`` (meters), ``age`` (minutes since release) and, when the</span>
+<span class="sd">            table has a ``time`` column, ``time`` (UTC). Longitudes are</span>
+<span class="sd">            wrapped to -180 to 180 where the interpolation crosses 180.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        One particle that leaves a grid by its east edge, between two rows:</span>
+
+<span class="sd">        &gt;&gt;&gt; import pandas as pd</span>
+<span class="sd">        &gt;&gt;&gt; import stilt</span>
+<span class="sd">        &gt;&gt;&gt; grid = stilt.Grid(</span>
+<span class="sd">        ...     xmin=-112, xmax=-110, ymin=40, ymax=42, xres=0.5, yres=0.5</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; particles = pd.DataFrame(</span>
+<span class="sd">        ...     {</span>
+<span class="sd">        ...         "particle": [1, 1, 1],</span>
+<span class="sd">        ...         "age": [0.0, -60.0, -120.0],</span>
+<span class="sd">        ...         "lon": [-111.0, -110.5, -109.5],</span>
+<span class="sd">        ...         "lat": [41.0, 41.0, 41.0],</span>
+<span class="sd">        ...         "zagl": [10.0, 20.0, 30.0],</span>
+<span class="sd">        ...     }</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; particles.stilt.grid_exits(grid)</span>
+<span class="sd">           particle edge    lon   lat  zagl   age</span>
+<span class="sd">        0         1    e -110.0  41.0  25.0 -90.0</span>
+<span class="sd">        """</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_particles</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">lexsort</span><span class="p">((</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()))]</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">particle</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="c1"># Positions in the grid's units, measured from the grid's center.</span>
+        <span class="n">west</span><span class="p">,</span> <span class="n">east</span><span class="p">,</span> <span class="n">south</span><span class="p">,</span> <span class="n">north</span> <span class="o">=</span> <span class="n">_grid_extent</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
+
+            <span class="n">to_grid</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">to_grid</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">west</span> <span class="o">+</span> <span class="n">east</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">south</span> <span class="o">+</span> <span class="n">north</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">half_width</span><span class="p">,</span> <span class="n">half_height</span> <span class="o">=</span> <span class="p">(</span><span class="n">east</span> <span class="o">-</span> <span class="n">west</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">north</span> <span class="o">-</span> <span class="n">south</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">_wrap_degrees</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">east</span> <span class="o">-</span> <span class="n">west</span> <span class="o">&gt;=</span> <span class="mf">360.0</span> <span class="o">-</span> <span class="n">_EDGE_TOLERANCE</span><span class="p">:</span>
+                <span class="n">half_width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>  <span class="c1"># all the way around: no west or east edge</span>
+
+        <span class="c1"># The first row of each particle that is beyond the edge of the grid.</span>
+        <span class="n">outside</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">half_width</span> <span class="o">+</span> <span class="n">_EDGE_TOLERANCE</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">half_height</span> <span class="o">+</span> <span class="n">_EDGE_TOLERANCE</span>
+        <span class="p">)</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">outside</span><span class="p">)</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">particle</span><span class="p">[</span><span class="n">rows</span><span class="p">],</span> <span class="n">return_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]]</span>
+
+        <span class="c1"># The row before it, inside the grid; a particle that starts outside has none.</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">rows</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">has_before</span> <span class="o">=</span> <span class="p">(</span><span class="n">rows</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">particle</span><span class="p">[</span><span class="n">before</span><span class="p">]</span> <span class="o">==</span> <span class="n">particle</span><span class="p">[</span><span class="n">rows</span><span class="p">])</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">has_before</span><span class="p">,</span> <span class="n">before</span><span class="p">,</span> <span class="n">rows</span><span class="p">)</span>
+
+        <span class="c1"># Where the step from `before` to `rows` crosses each edge, as a fraction of it.</span>
+        <span class="n">step_x</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">rows</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="n">before</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
+            <span class="n">step_x</span> <span class="o">=</span> <span class="n">_wrap_degrees</span><span class="p">(</span><span class="n">step_x</span><span class="p">)</span>
+        <span class="n">step_y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">rows</span><span class="p">]</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="n">before</span><span class="p">]</span>
+        <span class="n">end_x</span><span class="p">,</span> <span class="n">end_y</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">before</span><span class="p">]</span> <span class="o">+</span> <span class="n">step_x</span><span class="p">,</span> <span class="n">y</span><span class="p">[</span><span class="n">before</span><span class="p">]</span> <span class="o">+</span> <span class="n">step_y</span>
+        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">):</span>
+            <span class="n">crossings</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                        <span class="n">end_y</span> <span class="o">&gt;</span> <span class="n">half_height</span><span class="p">,</span> <span class="p">(</span><span class="n">half_height</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="n">before</span><span class="p">])</span> <span class="o">/</span> <span class="n">step_y</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+                    <span class="p">),</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                        <span class="n">end_x</span> <span class="o">&gt;</span> <span class="n">half_width</span><span class="p">,</span> <span class="p">(</span><span class="n">half_width</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="n">before</span><span class="p">])</span> <span class="o">/</span> <span class="n">step_x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+                    <span class="p">),</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                        <span class="n">end_y</span> <span class="o">&lt;</span> <span class="o">-</span><span class="n">half_height</span><span class="p">,</span>
+                        <span class="p">(</span><span class="o">-</span><span class="n">half_height</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="n">before</span><span class="p">])</span> <span class="o">/</span> <span class="n">step_y</span><span class="p">,</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
+                    <span class="p">),</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                        <span class="n">end_x</span> <span class="o">&lt;</span> <span class="o">-</span><span class="n">half_width</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="n">half_width</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="n">before</span><span class="p">])</span> <span class="o">/</span> <span class="n">step_x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+                    <span class="p">),</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">beyond</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span>  <span class="c1"># how far past each edge, in cells</span>
+                <span class="p">[</span>
+                    <span class="p">(</span><span class="n">end_y</span> <span class="o">-</span> <span class="n">half_height</span><span class="p">)</span> <span class="o">/</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span><span class="p">,</span>
+                    <span class="p">(</span><span class="n">end_x</span> <span class="o">-</span> <span class="n">half_width</span><span class="p">)</span> <span class="o">/</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span><span class="p">,</span>
+                    <span class="p">(</span><span class="o">-</span><span class="n">half_height</span> <span class="o">-</span> <span class="n">end_y</span><span class="p">)</span> <span class="o">/</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span><span class="p">,</span>
+                    <span class="p">(</span><span class="o">-</span><span class="n">half_width</span> <span class="o">-</span> <span class="n">end_x</span><span class="p">)</span> <span class="o">/</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span><span class="p">,</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">crossings</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">farthest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">beyond</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">edge</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">has_before</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">farthest</span><span class="p">)</span>
+        <span class="n">fraction</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">has_before</span><span class="p">,</span> <span class="n">crossings</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">rows</span><span class="o">.</span><span class="n">size</span><span class="p">),</span> <span class="n">first</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">fraction</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">fraction</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">at_edge</span><span class="p">(</span><span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">values</span><span class="p">[</span><span class="n">before</span><span class="p">]</span> <span class="o">+</span> <span class="n">fraction</span> <span class="o">*</span> <span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="n">rows</span><span class="p">]</span> <span class="o">-</span> <span class="n">values</span><span class="p">[</span><span class="n">before</span><span class="p">])</span>
+
+        <span class="n">step_lon</span> <span class="o">=</span> <span class="n">_wrap_degrees</span><span class="p">(</span><span class="n">lon</span><span class="p">[</span><span class="n">rows</span><span class="p">]</span> <span class="o">-</span> <span class="n">lon</span><span class="p">[</span><span class="n">before</span><span class="p">])</span>
+        <span class="n">exit_lon</span> <span class="o">=</span> <span class="n">lon</span><span class="p">[</span><span class="n">before</span><span class="p">]</span> <span class="o">+</span> <span class="n">fraction</span> <span class="o">*</span> <span class="n">step_lon</span>
+        <span class="n">exit_lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">exit_lon</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">180.0</span><span class="p">,</span> <span class="n">_wrap_degrees</span><span class="p">(</span><span class="n">exit_lon</span><span class="p">),</span> <span class="n">exit_lon</span><span class="p">)</span>
+        <span class="n">exits</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">"particle"</span><span class="p">:</span> <span class="n">particle</span><span class="p">[</span><span class="n">rows</span><span class="p">],</span>
+                <span class="s2">"edge"</span><span class="p">:</span> <span class="n">_EDGES</span><span class="p">[</span><span class="n">edge</span><span class="p">],</span>
+                <span class="s2">"lon"</span><span class="p">:</span> <span class="n">exit_lon</span><span class="p">,</span>
+                <span class="s2">"lat"</span><span class="p">:</span> <span class="n">at_edge</span><span class="p">(</span><span class="s2">"lat"</span><span class="p">),</span>
+                <span class="s2">"zagl"</span><span class="p">:</span> <span class="n">at_edge</span><span class="p">(</span><span class="s2">"zagl"</span><span class="p">),</span>
+                <span class="s2">"age"</span><span class="p">:</span> <span class="n">at_edge</span><span class="p">(</span><span class="s2">"age"</span><span class="p">),</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="s2">"time"</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">time_before</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">before</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">time_after</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">rows</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">exits</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">time_before</span> <span class="o">+</span> <span class="p">(</span><span class="n">time_after</span> <span class="o">-</span> <span class="n">time_before</span><span class="p">)</span> <span class="o">*</span> <span class="n">fraction</span>
+        <span class="k">return</span> <span class="n">exits</span></div>
 
 
 <div class="viewcode-block" id="ParticlesAccessor.enhancement">

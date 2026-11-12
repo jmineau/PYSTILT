@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=4c3cbb42"></script>
+    <script src="../_static/documentation_options.js?v=7218a86b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev1+g059a14b1f" />
+  <meta name="docsearch:version" content="0.1.0a29.dev2+gc066c51a9" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -580,6 +580,81 @@ air above the receptor top saw no fluxes, so its share is the field alone.
 Take it from the same model with the same pressure weights and averaging
 kernel, and add it in your own code.</p>
 </section>
+<section id="at-the-edge-of-the-footprint-grid">
+<h2>At the edge of the footprint grid<a class="headerlink" href="#at-the-edge-of-the-footprint-grid" title="Link to this heading">#</a></h2>
+<p>A footprint is zero outside its grid, so the air that entered the grid
+carried its background with it. <code class="docutils literal notranslate"><span class="pre">particles.stilt.grid_exits(grid)</span></code> gives
+where each particle first crossed the grid’s edge, to sample a field there
+instead of at the endpoint, or to count the particles that came in by each
+side. The example is 200 particles that drift out of a 2 by 2 degree grid
+in a random walk:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="gp">In [2]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="gp">In [3]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+
+<span class="gp">In [4]: </span><span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="gp">In [5]: </span><span class="n">n_particles</span><span class="p">,</span> <span class="n">n_steps</span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">20</span>
+
+<span class="gp">In [6]: </span><span class="n">steps</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">([</span><span class="o">-</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">],</span> <span class="mf">0.15</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n_steps</span><span class="p">,</span> <span class="n">n_particles</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+<span class="gp">In [7]: </span><span class="n">path</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="gp">In [8]: </span><span class="n">particles</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+<span class="gp">   ...: </span>    <span class="p">{</span>
+<span class="gp">   ...: </span>        <span class="s2">"particle"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_particles</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">n_steps</span><span class="p">),</span>
+<span class="gp">   ...: </span>        <span class="s2">"age"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="o">-</span><span class="mf">60.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">n_particles</span><span class="p">),</span>
+<span class="gp">   ...: </span>        <span class="s2">"lon"</span><span class="p">:</span> <span class="o">-</span><span class="mf">111.0</span> <span class="o">+</span> <span class="n">path</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span>
+<span class="gp">   ...: </span>        <span class="s2">"lat"</span><span class="p">:</span> <span class="mf">41.0</span> <span class="o">+</span> <span class="n">path</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span>
+<span class="gp">   ...: </span>        <span class="s2">"zagl"</span><span class="p">:</span> <span class="mf">100.0</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="p">}</span>
+<span class="gp">   ...: </span><span class="p">)</span>
+<span class="gp">   ...: </span>
+
+<span class="gp">In [9]: </span><span class="n">grid</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span><span class="n">xmin</span><span class="o">=-</span><span class="mi">112</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=-</span><span class="mi">110</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">xres</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">yres</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+
+<span class="gp">In [10]: </span><span class="n">exits</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">grid_exits</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+
+<span class="gp">In [11]: </span><span class="n">exits</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<span class="gh">Out[11]: </span>
+<span class="go">   particle edge         lon        lat   zagl         age</span>
+<span class="go">0         2    w -112.000000  40.888997  100.0 -597.908498</span>
+<span class="go">1         3    w -112.000000  40.919744  100.0 -308.567511</span>
+<span class="go">2         5    w -112.000000  41.408509  100.0 -868.070148</span>
+<span class="go">3         7    s -111.244403  40.000000  100.0 -471.156723</span>
+<span class="go">4         8    w -112.000000  41.531929  100.0 -371.156034</span>
+
+<span class="gp">In [12]: </span><span class="n">exits</span><span class="o">.</span><span class="n">edge</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+<span class="gh">Out[12]: </span>
+<span class="go">edge</span>
+<span class="go">w    103</span>
+<span class="go">n     29</span>
+<span class="go">s      3</span>
+<span class="go">e      1</span>
+<span class="go">Name: count, dtype: int64</span>
+</pre></div>
+</div>
+<p>There is one row per particle that left, and none for a particle that
+stayed inside. The <code class="docutils literal notranslate"><span class="pre">edge</span></code> is <code class="docutils literal notranslate"><span class="pre">n</span></code>, <code class="docutils literal notranslate"><span class="pre">e</span></code>, <code class="docutils literal notranslate"><span class="pre">s</span></code> or <code class="docutils literal notranslate"><span class="pre">w</span></code>. The position,
+height and age are on the edge, interpolated in a straight line between the
+particle’s last row inside the grid and its first row outside. <code class="docutils literal notranslate"><span class="pre">time</span></code> is
+there too when the table has it.</p>
+<ul class="simple">
+<li><p>The exit is the first time the particle crossed the edge. A particle that
+came back in, or ended long after at the edge of the meteorology, has the
+same exit; <a class="reference internal" href="../reference/_api/stilt.particles.ParticlesAccessor.endpoints.html#stilt.particles.ParticlesAccessor.endpoints" title="stilt.particles.ParticlesAccessor.endpoints"><code class="xref py py-meth docutils literal notranslate"><span class="pre">endpoints()</span></code></a> gives
+where it ended.</p></li>
+<li><p>The edge is the outer edge of the grid’s cells. A projected grid is a
+rectangle in its projection, and a grid across the dateline is read
+modulo 360.</p></li>
+<li><p>A particle whose first row is already outside the grid has no row inside
+to interpolate from. It is reported at that row, on the edge it is
+farthest beyond. The HYSPLIT build bundled with PYSTILT writes no row at
+the release, so a receptor next to the edge can give such a particle.</p></li>
+</ul>
+</section>
 <section id="with-transport-error">
 <h2>With transport error<a class="headerlink" href="#with-transport-error" title="Link to this heading">#</a></h2>
 <p>Wind errors move the endpoints as well as the path near the surface. Where
@@ -809,6 +884,7 @@ outline counts as inside or outside by where its center falls.</p></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-field">The field</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-background-at-a-receptor">The background at a receptor</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-column-s-weights-cover">What a column’s weights cover</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#at-the-edge-of-the-footprint-grid">At the edge of the footprint grid</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#with-transport-error">With transport error</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#choices-made-here">Choices made here</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-background-from-a-satellite-swath">A background from a satellite swath</a><ul class="pst-show_toc_level nav section-nav flex-column">
