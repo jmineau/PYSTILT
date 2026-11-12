@@ -117,8 +117,12 @@ These footprint settings sit next to ``grid`` at the top level:
    Use ``15min`` for 15-minute observations such as EM27/SUN columns, or
    ``1D`` for daily layers in a coarse inversion. Layers are counted from
    the receptor time, so a receptor at 18:30 with ``tres: 15min`` has
-   layers starting at 18:15, 18:00, and so on. For one map of the whole
-   run, sum the layers (``foot.sum("time")``).
+   layers starting at 18:15, 18:00, and so on. In
+   :meth:`~stilt.Project.footprints` the layer dimension is named for the
+   unit ``tres`` is written in and counts in it: ``hour`` -1, -2, ... for
+   ``1h``, ``day`` -1, -2, ... for ``1D``, ``minute`` -15, -30, ... for
+   ``15min``. For one map of the whole run, sum the layers
+   (``foot.sum("time")``).
 
 ``transforms``
    Steps that weight the particles before the footprint is made, mainly for

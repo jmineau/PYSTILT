@@ -288,7 +288,7 @@ def open_footprints(
 
     Footprints of many receptors are stacked by their layer offset rather
     than by absolute time, so receptors at different times share one
-    ``hour`` axis. Only the files' metadata is read here. The values are
+    layer axis (``hour`` for hourly layers). Only the files' metadata is read here. The values are
     read with dask when they are used, a block of receptors from one date
     folder at a time. :meth:`stilt.Project.footprints` opens a selection
     of a project's footprints this way.
@@ -306,12 +306,13 @@ def open_footprints(
     -------
     xarray.Dataset
         ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and ``x``
-        on a projected grid), as ``float32`` like the stored values. ``hour``
-        numbers the layers from the receptor time, so a backward run's first
-        layer is -1. Layer ``k`` starts ``k`` times ``tres`` after the
-        receptor time: ``k`` hours with the default ``tres`` of ``1h``.
-        The ``time`` coordinate, with dims ``(receptor, hour)``, is that
-        start as a date and time. A receptor whose footprint is empty has no
+        on a projected grid), as ``float32`` like the stored values. The
+        layer dimension is named for the unit ``tres`` is written in and
+        counts each layer's start from the receptor time in it: ``hour``
+        -1, -2, ... for ``1h``; ``hour`` -6, -12, ... for ``6h``; ``day`` -1,
+        -2, ... for ``1D``; ``minute`` -15, -30, ... for ``15min``. The
+        ``time`` coordinate, with dims ``(receptor, <unit>)``, is that start
+        as a date and time. A receptor whose footprint is empty has no
         row; ``attrs["empty"]`` lists them.
 
     Raises
@@ -385,15 +386,17 @@ def open_footprints(
     start_times = _naive_utc([receptors[i].time for i in kept])
     offsets = (hours * config.tres_minutes).astype("timedelta64[m]")
     times = start_times.to_numpy()[:, None] + offsets[None, :]
+    # The layer dimension is named for tres's unit and counts in it.
+    unit, unit_minutes = config.layer_unit
     foot = xr.DataArray(
         values,
-        dims=("receptor", "hour", y_dim, x_dim),
+        dims=("receptor", unit, y_dim, x_dim),
         coords={
             "receptor": [str(receptors[i].id) for i in kept],
-            "hour": hours,
+            unit: hours * (config.tres_minutes // unit_minutes),
             y_dim: y_axis,
             x_dim: x_axis,
-            "time": (("receptor", "hour"), times),
+            "time": (("receptor", unit), times),
         },
         name="foot",
         attrs={"units": UNITS, "long_name": "footprint"},
