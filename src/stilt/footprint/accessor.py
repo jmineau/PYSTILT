@@ -19,6 +19,7 @@ from stilt.identity import read_footprint_settings
 from stilt.receptors import Receptor
 from stilt.spatial import Grid, horizontal_dims
 
+from ._paris import to_paris
 from .aggregation import _check_steps_hold_layers, aggregate
 from .io import _naive_utc, _with_cf_metadata
 from .targets import Geometry
@@ -92,6 +93,7 @@ class FootprintAccessor:
     >>> foot.stilt.receptor  # doctest: +SKIP
     >>> foot.stilt.enhancement(flux).sum()  # doctest: +SKIP
     >>> foot.stilt.aggregate(counties, time_bins=bins)  # doctest: +SKIP
+    >>> foot.stilt.to_paris(sim.particles)  # doctest: +SKIP
     """
 
     def __init__(self, foot: xr.DataArray) -> None:
@@ -180,6 +182,100 @@ class FootprintAccessor:
         with atomic_path(path) as tmp:
             ds.to_netcdf(tmp, encoding={"foot": {"zlib": True, "complevel": 4}})
         return path
+
+    def to_paris(
+        self,
+        particles: pd.DataFrame | None = None,
+        *,
+        exits: pd.DataFrame | None = None,
+        n_particles: int | None = None,
+    ) -> xr.Dataset:
+        """
+        Return the footprint as a PARIS-format dataset, which openghg reads.
+
+        The footprint's hourly layers go to ``srr_time_resolved`` by hours
+        back from the receptor time, ``H_back``. The layer from one hour
+        before the receptor time to the receptor time is ``H_back = 1``,
+        because openghg pairs ``H_back = k`` with the flux hour that starts
+        ``k`` hours before the footprint's time. ``H_back = 0``, the hour
+        after the receptor time, stays zero. Only ``H_back`` 0 to 23 are
+        resolved, since openghg reads the axis as a time span and a 24th
+        hour would wrap to 0. Layers 24 or more hours back are summed into
+        ``srr_residual``, and ``srr`` is the sum of all layers. The values
+        are PYSTILT's: ppm per (µmol m⁻² s⁻¹) is the same quantity as the
+        PARIS unit, (mol/mol)/(mol/m2/s).
+
+        ``particle_locations_n``, ``_e``, ``_s`` and ``_w`` are the fraction
+        of the particles that first left the footprint grid through that
+        edge, by grid cell along the edge and by 1 km height layer from the
+        ground to 20 km. A particle that stayed inside counts nowhere. They
+        need the particles or a table of where they left the grid; without
+        either they are left out, and openghg refuses the file unless it is
+        told not to expect them.
+
+        The layers are found from each layer's ``time`` coordinate, not from
+        the name of the layer dimension, so one receptor of
+        ``project.footprints().foot`` works as well as ``sim.footprint``.
+
+        Parameters
+        ----------
+        particles : pandas.DataFrame, optional
+            The particles the footprint was made from, such as
+            ``sim.particles``. The exits are found with
+            :meth:`~stilt.particles.ParticlesAccessor.grid_exits` on the
+            footprint's grid, and the number of particles is counted from the
+            table.
+        exits : pandas.DataFrame, optional
+            Where particles first left the footprint grid, one row per
+            particle that left, with columns ``particle``, ``edge`` (``"n"``,
+            ``"e"``, ``"s"`` or ``"w"``), ``lon``, ``lat`` and ``zagl``, as
+            :meth:`~stilt.particles.ParticlesAccessor.grid_exits` returns
+            them. Give it instead of *particles*, together with
+            *n_particles*.
+        n_particles : int, optional
+            Number of particles released, the denominator of the fractions.
+            Needed with *exits*; counted from *particles* otherwise.
+
+        Returns
+        -------
+        xarray.Dataset
+            Dimensions ``time`` (one entry, the receptor time), ``latitude``,
+            ``longitude``, ``resolution`` (``H_back``, 0 to 23 hours) and,
+            with exits, ``height``. A PARIS file holds one site with one
+            entry along ``time`` per receptor: concatenate the datasets of
+            many receptors along ``time`` with :func:`xarray.concat` before
+            writing them with :meth:`xarray.Dataset.to_netcdf`.
+
+        Raises
+        ------
+        ValueError
+            If the footprint's layers are not one hour long (make it with
+            ``tres: 1h``), if a layer ends after the receptor time (a
+            forward run), if the grid is not in longitude and latitude (a
+            projected grid), if the footprint holds several receptors or has
+            no receptor id, or if *exits* is given without *n_particles*.
+
+        Examples
+        --------
+        A footprint of three hourly layers before 18:00, each cell worth 1:
+
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> import xarray as xr
+        >>> receptor_time = pd.Timestamp("2024-01-15 18:00")
+        >>> layers = receptor_time - pd.to_timedelta([3, 2, 1], unit="h")
+        >>> foot = xr.DataArray(
+        ...     np.ones((3, 2, 2)),
+        ...     dims=("time", "lat", "lon"),
+        ...     coords={"time": layers, "lat": [40.5, 41.5], "lon": [-112.5, -111.5]},
+        ... ).assign_coords(receptor="202401151800_-111.85_40.77_5")
+        >>> ds = foot.stilt.to_paris()
+        >>> ds.srr_time_resolved.sum(["latitude", "longitude"]).values.ravel()[:5]
+        array([0., 4., 4., 4., 0.])
+        >>> float(ds.srr.sum())
+        12.0
+        """
+        return to_paris(self._foot, particles, exits=exits, n_particles=n_particles)
 
     def enhancement(self, flux: xr.DataArray) -> xr.DataArray:
         """

@@ -23,6 +23,9 @@ These parts are stable and covered by the test suite:
   and footprints (:func:`stilt.migration.read_stilt_r`), and importing it
   into an output directory, where a ``stilt-r`` variant reads it
   (:func:`stilt.migration.import_stilt_r`)
+- Exports to other tools: the particles as CF-1.10 trajectories for trajan
+  and cf-xarray (``particles.stilt.to_cf_trajectories``), and a footprint in
+  openghg's PARIS format (``foot.stilt.to_paris``)
 
 Footprints can also be summed onto other geometries. A footprint is computed
 on a rectangular grid and then summed onto a :class:`stilt.Grid`, a

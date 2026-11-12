@@ -415,6 +415,115 @@ trajan reads the file through its ``traj`` accessor:
 releases before 2026 read a variable in minutes as a duration and warn that
 this will change.
 
+Footprints for openghg
+----------------------
+
+``sim.footprint.stilt.to_paris(sim.particles)`` returns the footprint in the
+PARIS format, the NetCDF layout openghg reads with ``source_format="paris"``.
+openghg can then combine it with its fluxes and boundary conditions as it
+does footprints from NAME and FLEXPART. The footprint must have hourly layers
+(``tres: 1h``, the default) on a longitude and latitude grid and be backward.
+
+.. ipython:: python
+
+   paris = sim.footprint.stilt.to_paris(sim.particles)
+   paris
+
+openghg stores a time-resolved footprint along ``H_back``, hours back from
+the footprint's time, and pairs ``H_back = k`` with the flux hour that
+*starts* ``k`` hours before it. The footprint's time is the receptor time.
+The first layer of a backward run, layer -1, covers the hour before the
+receptor time, so it goes to ``H_back = 1``. With the receptor at 18:00:
+
+.. list-table::
+   :header-rows: 1
+
+   * - ``H_back``
+     - Flux hour openghg pairs it with
+     - PYSTILT layer
+   * - 0
+     - 18:00 to 19:00
+     - none, after the observation; always zero
+   * - 1
+     - 17:00 to 18:00
+     - -1
+   * - 2
+     - 16:00 to 17:00
+     - -2
+   * - 23
+     - 19:00 to 20:00 the day before
+     - -23
+
+Layers -24 and earlier are summed into ``srr_residual``, which openghg
+multiplies by a monthly mean flux, and ``srr`` is the sum of all layers. Only
+23 hours are resolved, not 24: openghg reads the ``resolution`` axis as a
+time span and keeps only its hours within a day, so a 24th hour would read as
+0. The numbers are PYSTILT's: ppm per (µmol m⁻² s⁻¹) is the same quantity as
+the PARIS units, (mol/mol)/(mol/m2/s).
+
+.. ipython:: python
+
+   per_hour = paris.srr_time_resolved.sum(["latitude", "longitude"])
+   per_hour.isel(time=0).values[:4]      # H_back 0 is empty; 1 is layer -1
+   float(paris.srr.sum() - paris.srr_time_resolved.sum() - paris.srr_residual.sum())
+
+The layers are found from each layer's ``time``, its start, and not from the
+name of the layer dimension, so one receptor of ``project.footprints().foot``
+works as well as ``sim.footprint``: select it with
+``footprints.foot.sel(receptor=rid)``.
+
+openghg also expects ``particle_locations_n``, ``_e``, ``_s`` and ``_w``: the
+fraction of particles that first left the footprint grid through each edge, by
+grid cell along the edge and by 1 km height layer from the ground to 20 km.
+Giving the particles adds them, found with
+:meth:`~stilt.particles.ParticlesAccessor.grid_exits`. A particle that never
+left the grid counts nowhere, so the four fractions add up to the share that
+left. Without particles, ``to_paris`` leaves the four variables out, and
+openghg refuses the file unless it is told not to expect them. To give the
+exits yourself, pass a table with one row per particle that left, with
+columns ``particle``, ``edge``, ``lon``, ``lat`` and ``zagl``, and the number
+of particles released:
+
+.. ipython:: python
+
+   exits = sim.particles.stilt.grid_exits(sim.footprint.stilt.grid)
+   same = sim.footprint.stilt.to_paris(exits=exits, n_particles=200)
+   float(same.particle_locations_n.sum() - paris.particle_locations_n.sum())
+   float(sum(paris[f"particle_locations_{e}"].sum() for e in "nesw"))
+
+A PARIS file holds one site, with one entry along ``time`` for each receptor
+time. Convert each receptor, concatenate along ``time``, write the file, and
+add it to openghg's object store:
+
+.. code-block:: python
+
+   import xarray as xr
+
+   ds = xr.concat(
+       [sim.footprint.stilt.to_paris(sim.particles) for sim in sims],
+       dim="time",
+       combine_attrs="drop_conflicts",
+   )
+   ds.to_netcdf("WBB-10magl_STILT_HRRR_SLV_co2_202401.nc")
+
+   from openghg.standardise import standardise_footprint
+
+   standardise_footprint(
+       filepath="WBB-10magl_STILT_HRRR_SLV_co2_202401.nc",
+       source_format="paris",
+       site="wbb",
+       domain="slv",
+       model="STILT",
+       inlet="10m",
+       met_model="hrrr",
+       species="co2",
+       time_resolved=True,
+   )
+
+openghg is not a dependency of PYSTILT: it needs Python 3.13 or older and
+older versions of pandas and numpy. Install it into its own environment with
+``pip install openghg``.
+
 Without PYSTILT
 ---------------
 
