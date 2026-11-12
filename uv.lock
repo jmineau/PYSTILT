@@ -490,6 +490,18 @@ wheels = [
 ]
 
 [[package]]
+name = "cf-xarray"
+version = "0.11.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "xarray" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cb/13/07f02aa2abb9204caa31f713ef5b3402f8344e0c962d28ca17d1ca9587c8/cf_xarray-0.11.3.tar.gz", hash = "sha256:0a896112fca0b09e449a45133d1ce1509c0e525606f41206aab8bddb17b4c7fa", size = 693996, upload-time = "2026-06-12T18:21:19.251Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/71/50/20a143566e20ecaf4f28302a92cc04252c224ab69200e254a282f7feb79a/cf_xarray-0.11.3-py3-none-any.whl", hash = "sha256:d5bff6bbba04de04f1a700a4395d379e1db4f767864fde82b30f874f208484e2", size = 80825, upload-time = "2026-06-12T18:21:17.869Z" },
+]
+
+[[package]]
 name = "cffi"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3843,6 +3855,7 @@ visualization = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "cf-xarray" },
     { name = "docstr-coverage" },
     { name = "flask" },
     { name = "flask-cors" },
@@ -3871,6 +3884,7 @@ dev = [
     { name = "sphinx-autodoc-typehints", version = "3.17.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "sphinx-copybutton" },
     { name = "sphinx-design" },
+    { name = "trajan" },
     { name = "twine" },
 ]
 
@@ -3908,6 +3922,7 @@ provides-extras = ["geometry", "visualization", "download", "sparse", "stilt-r",
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "cf-xarray", specifier = ">=0.10" },
     { name = "docstr-coverage", specifier = ">=2.3" },
     { name = "flask", specifier = ">=3.0" },
     { name = "flask-cors", specifier = ">=4.0" },
@@ -3933,6 +3948,7 @@ dev = [
     { name = "sphinx-autodoc-typehints", specifier = ">=3.0" },
     { name = "sphinx-copybutton", specifier = ">=0.5" },
     { name = "sphinx-design", specifier = ">=0.5" },
+    { name = "trajan", specifier = ">=0.12" },
     { name = "twine", specifier = ">=6.0" },
 ]
 
@@ -4923,6 +4939,30 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/2c/2e/a7fbfe268c8a3b32546930c0297c101d65a4a14c304ad5790a9f478f0e4e/traitlets-5.16.1.tar.gz", hash = "sha256:ed900c2b631aa3a112811139fa97b8d2c3bad5e989656bba4b7e52c7852c18c1", size = 166137, upload-time = "2026-08-03T08:32:36.848Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ad/66/0d785f0bc5e4315a96c989bb476d0fc07ea4f85132550c7b156ca2035d52/traitlets-5.16.1-py3-none-any.whl", hash = "sha256:f775618166caa0396c8e337099240f2bd3e5e917d203b2e6fbe21a58d3cb1f6b", size = 86211, upload-time = "2026-08-03T08:32:34.48Z" },
+]
+
+[[package]]
+name = "trajan"
+version = "0.12.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cartopy" },
+    { name = "cf-xarray" },
+    { name = "click" },
+    { name = "matplotlib" },
+    { name = "netcdf4" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "pandas" },
+    { name = "pyproj", version = "3.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "pyproj", version = "3.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "xarray" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/eb/e1/868fda1fc60f2ee873e8ed1076023391601f2b1887bd91b22e7cd5a59acc/trajan-0.12.1.tar.gz", hash = "sha256:88c7097449da48681b11aa6535cd148f1282de70224947616db330f5dbe049e7", size = 4335510, upload-time = "2026-08-24T11:19:59.108Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/96/77/f2882e0b97efc3e625b8dbd5220581fe09f1fad8c0119df8d464b903934e/trajan-0.12.1-py3-none-any.whl", hash = "sha256:89d0f98bb915ad419380164676a74c84f2efab13534631b59defa996e6ff90bc", size = 65639, upload-time = "2026-08-24T11:19:57.601Z" },
 ]
 
 [[package]]
