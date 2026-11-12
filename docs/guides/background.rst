@@ -80,6 +80,58 @@ air above the receptor top saw no fluxes, so its share is the field alone.
 Take it from the same model with the same pressure weights and averaging
 kernel, and add it in your own code.
 
+At the edge of the footprint grid
+---------------------------------
+
+A footprint is zero outside its grid, so the air that entered the grid
+carried its background with it. ``particles.stilt.grid_exits(grid)`` gives
+where each particle first crossed the grid's edge, to sample a field there
+instead of at the endpoint, or to count the particles that came in by each
+side. The example is 200 particles that drift out of a 2 by 2 degree grid
+in a random walk:
+
+.. ipython:: python
+
+   import numpy as np
+   import pandas as pd
+   import stilt
+
+   rng = np.random.default_rng(0)
+   n_particles, n_steps = 200, 20
+   steps = rng.normal([-0.05, 0.02], 0.15, size=(n_steps, n_particles, 2))
+   path = np.cumsum(steps, axis=0)
+   particles = pd.DataFrame(
+       {
+           "particle": np.tile(np.arange(1, n_particles + 1), n_steps),
+           "age": np.repeat(-60.0 * np.arange(1, n_steps + 1), n_particles),
+           "lon": -111.0 + path[:, :, 0].ravel(),
+           "lat": 41.0 + path[:, :, 1].ravel(),
+           "zagl": 100.0,
+       }
+   )
+   grid = stilt.Grid(xmin=-112, xmax=-110, ymin=40, ymax=42, xres=0.1, yres=0.1)
+   exits = particles.stilt.grid_exits(grid)
+   exits.head()
+   exits.edge.value_counts()
+
+There is one row per particle that left, and none for a particle that
+stayed inside. The ``edge`` is ``n``, ``e``, ``s`` or ``w``. The position,
+height and age are on the edge, interpolated in a straight line between the
+particle's last row inside the grid and its first row outside. ``time`` is
+there too when the table has it.
+
+- The exit is the first time the particle crossed the edge. A particle that
+  came back in, or ended long after at the edge of the meteorology, has the
+  same exit; :meth:`~stilt.particles.ParticlesAccessor.endpoints` gives
+  where it ended.
+- The edge is the outer edge of the grid's cells. A projected grid is a
+  rectangle in its projection, and a grid across the dateline is read
+  modulo 360.
+- A particle whose first row is already outside the grid has no row inside
+  to interpolate from. It is reported at that row, on the edge it is
+  farthest beyond. The HYSPLIT build bundled with PYSTILT writes no row at
+  the release, so a receptor next to the edge can give such a particle.
+
 With transport error
 --------------------
 
