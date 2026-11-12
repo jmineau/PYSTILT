@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=3997b866"></script>
+    <script src="../../../_static/documentation_options.js?v=4c3cbb42"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev57+g2fc39eed4" />
+  <meta name="docsearch:version" content="0.1.0a29.dev1+g059a14b1f" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -742,7 +742,7 @@
 
 <span class="sd">    Footprints of many receptors are stacked by their layer offset rather</span>
 <span class="sd">    than by absolute time, so receptors at different times share one</span>
-<span class="sd">    ``hour`` axis. Only the files' metadata is read here. The values are</span>
+<span class="sd">    layer axis (``hour`` for hourly layers). Only the files' metadata is read here. The values are</span>
 <span class="sd">    read with dask when they are used, a block of receptors from one date</span>
 <span class="sd">    folder at a time. :meth:`stilt.Project.footprints` opens a selection</span>
 <span class="sd">    of a project's footprints this way.</span>
@@ -760,12 +760,13 @@
 <span class="sd">    -------</span>
 <span class="sd">    xarray.Dataset</span>
 <span class="sd">        ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and ``x``</span>
-<span class="sd">        on a projected grid), as ``float32`` like the stored values. ``hour``</span>
-<span class="sd">        numbers the layers from the receptor time, so a backward run's first</span>
-<span class="sd">        layer is -1. Layer ``k`` starts ``k`` times ``tres`` after the</span>
-<span class="sd">        receptor time: ``k`` hours with the default ``tres`` of ``1h``.</span>
-<span class="sd">        The ``time`` coordinate, with dims ``(receptor, hour)``, is that</span>
-<span class="sd">        start as a date and time. A receptor whose footprint is empty has no</span>
+<span class="sd">        on a projected grid), as ``float32`` like the stored values. The</span>
+<span class="sd">        layer dimension is named for the unit ``tres`` is written in and</span>
+<span class="sd">        counts each layer's start from the receptor time in it: ``hour``</span>
+<span class="sd">        -1, -2, ... for ``1h``; ``hour`` -6, -12, ... for ``6h``; ``day`` -1,</span>
+<span class="sd">        -2, ... for ``1D``; ``minute`` -15, -30, ... for ``15min``. The</span>
+<span class="sd">        ``time`` coordinate, with dims ``(receptor, &lt;unit&gt;)``, is that start</span>
+<span class="sd">        as a date and time. A receptor whose footprint is empty has no</span>
 <span class="sd">        row; ``attrs["empty"]`` lists them.</span>
 
 <span class="sd">    Raises</span>
@@ -839,15 +840,17 @@
     <span class="n">start_times</span> <span class="o">=</span> <span class="n">_naive_utc</span><span class="p">([</span><span class="n">receptors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">time</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">])</span>
     <span class="n">offsets</span> <span class="o">=</span> <span class="p">(</span><span class="n">hours</span> <span class="o">*</span> <span class="n">config</span><span class="o">.</span><span class="n">tres_minutes</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"timedelta64[m]"</span><span class="p">)</span>
     <span class="n">times</span> <span class="o">=</span> <span class="n">start_times</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">+</span> <span class="n">offsets</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="c1"># The layer dimension is named for tres's unit and counts in it.</span>
+    <span class="n">unit</span><span class="p">,</span> <span class="n">unit_minutes</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">layer_unit</span>
     <span class="n">foot</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
         <span class="n">values</span><span class="p">,</span>
-        <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"hour"</span><span class="p">,</span> <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span><span class="p">),</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="n">unit</span><span class="p">,</span> <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span><span class="p">),</span>
         <span class="n">coords</span><span class="o">=</span><span class="p">{</span>
             <span class="s2">"receptor"</span><span class="p">:</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">receptors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">],</span>
-            <span class="s2">"hour"</span><span class="p">:</span> <span class="n">hours</span><span class="p">,</span>
+            <span class="n">unit</span><span class="p">:</span> <span class="n">hours</span> <span class="o">*</span> <span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">tres_minutes</span> <span class="o">//</span> <span class="n">unit_minutes</span><span class="p">),</span>
             <span class="n">y_dim</span><span class="p">:</span> <span class="n">y_axis</span><span class="p">,</span>
             <span class="n">x_dim</span><span class="p">:</span> <span class="n">x_axis</span><span class="p">,</span>
-            <span class="s2">"time"</span><span class="p">:</span> <span class="p">((</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"hour"</span><span class="p">),</span> <span class="n">times</span><span class="p">),</span>
+            <span class="s2">"time"</span><span class="p">:</span> <span class="p">((</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="n">unit</span><span class="p">),</span> <span class="n">times</span><span class="p">),</span>
         <span class="p">},</span>
         <span class="n">name</span><span class="o">=</span><span class="s2">"foot"</span><span class="p">,</span>
         <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"units"</span><span class="p">:</span> <span class="n">UNITS</span><span class="p">,</span> <span class="s2">"long_name"</span><span class="p">:</span> <span class="s2">"footprint"</span><span class="p">},</span>

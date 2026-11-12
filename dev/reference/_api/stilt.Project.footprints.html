@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=3997b866"></script>
+    <script src="../../_static/documentation_options.js?v=4c3cbb42"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev57+g2fc39eed4" />
+  <meta name="docsearch:version" content="0.1.0a29.dev1+g059a14b1f" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -609,6 +609,7 @@
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.FootprintConfig.html">stilt.FootprintConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.layer_unit.html">stilt.FootprintConfig.layer_unit</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.tres_minutes.html">stilt.FootprintConfig.tres_minutes</a></li>
 </ul>
 </details></li>
@@ -894,8 +895,9 @@
 <span class="sig-prename descclassname"><span class="pre">Project.</span></span><span class="sig-name descname"><span class="pre">footprints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/project.html#Project.footprints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.Project.footprints" title="Link to this definition">#</a></dt>
 <dd><p>Open the footprints of the selected simulations as one dataset.</p>
 <p>Footprints are stacked by their layer from the receptor time, so
-receptors at any time share one <code class="docutils literal notranslate"><span class="pre">hour</span></code> axis, which numbers the
-layers (hours, with the default <code class="docutils literal notranslate"><span class="pre">tres</span></code> of <code class="docutils literal notranslate"><span class="pre">1h</span></code>); the
+receptors at any time share one layer axis, named for the unit
+<code class="docutils literal notranslate"><span class="pre">tres</span></code> is written in and counted in it: <code class="docutils literal notranslate"><span class="pre">hour</span></code> with the default
+<code class="docutils literal notranslate"><span class="pre">tres</span></code> of <code class="docutils literal notranslate"><span class="pre">1h</span></code>, <code class="docutils literal notranslate"><span class="pre">day</span></code> for <code class="docutils literal notranslate"><span class="pre">1D</span></code>, <code class="docutils literal notranslate"><span class="pre">minute</span></code> for <code class="docutils literal notranslate"><span class="pre">15min</span></code>. The
 <code class="docutils literal notranslate"><span class="pre">time</span></code> coordinate says when each layer starts. Only the files’ metadata is
 read here. The values load with dask when they are used, in blocks
 of receptors from one date folder. The selection must hold one
@@ -907,7 +909,9 @@ one realization of an ensemble). All of them by default.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">foot</span></code> with dims <code class="docutils literal notranslate"><span class="pre">(receptor,</span> <span class="pre">hour,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code> (<code class="docutils literal notranslate"><span class="pre">y</span></code> and
-<code class="docutils literal notranslate"><span class="pre">x</span></code> on a projected grid), in selection order. A receptor with
+<code class="docutils literal notranslate"><span class="pre">x</span></code> on a projected grid, and <code class="docutils literal notranslate"><span class="pre">day</span></code> or <code class="docutils literal notranslate"><span class="pre">minute</span></code> in place
+of <code class="docutils literal notranslate"><span class="pre">hour</span></code> when <code class="docutils literal notranslate"><span class="pre">tres</span></code> is written in them), in selection
+order. A receptor with
 an empty footprint has no row and is listed in
 <code class="docutils literal notranslate"><span class="pre">attrs[&quot;empty&quot;]</span></code>; one not run yet is listed in
 <code class="docutils literal notranslate"><span class="pre">attrs[&quot;missing&quot;]</span></code>.</p>

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=3997b866"></script>
+    <script src="../_static/documentation_options.js?v=4c3cbb42"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev57+g2fc39eed4" />
+  <meta name="docsearch:version" content="0.1.0a29.dev1+g059a14b1f" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -794,7 +794,9 @@ does a boolean mask over <code class="docutils literal notranslate"><span class=
 <p>The footprints of one variant come back as one <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a>
 with dimensions <code class="docutils literal notranslate"><span class="pre">(receptor,</span> <span class="pre">hour,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>. Receptors at different
 times cannot share a time axis, so they line up on <code class="docutils literal notranslate"><span class="pre">hour</span></code>: the hours
-after each receptor’s time, where a backward run’s first hour is -1. The
+after each receptor’s time, where a backward run’s first hour is -1. With
+other layers the dimension is named for the unit <code class="docutils literal notranslate"><span class="pre">tres</span></code> is written in
+(<code class="docutils literal notranslate"><span class="pre">day</span></code> for <code class="docutils literal notranslate"><span class="pre">1D</span></code>, <code class="docutils literal notranslate"><span class="pre">minute</span></code> for <code class="docutils literal notranslate"><span class="pre">15min</span></code>) and counts in it. The
 <code class="docutils literal notranslate"><span class="pre">time</span></code> coordinate gives the clock time each receptor’s hours start:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [28]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 

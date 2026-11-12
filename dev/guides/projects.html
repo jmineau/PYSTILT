@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=3997b866"></script>
+    <script src="../_static/documentation_options.js?v=4c3cbb42"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28.dev57+g2fc39eed4" />
+  <meta name="docsearch:version" content="0.1.0a29.dev1+g059a14b1f" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -633,8 +633,12 @@ gives one layer per hour back from the receptor time, as STILT-R does.
 Use <code class="docutils literal notranslate"><span class="pre">15min</span></code> for 15-minute observations such as EM27/SUN columns, or
 <code class="docutils literal notranslate"><span class="pre">1D</span></code> for daily layers in a coarse inversion. Layers are counted from
 the receptor time, so a receptor at 18:30 with <code class="docutils literal notranslate"><span class="pre">tres:</span> <span class="pre">15min</span></code> has
-layers starting at 18:15, 18:00, and so on. For one map of the whole
-run, sum the layers (<code class="docutils literal notranslate"><span class="pre">foot.sum(&quot;time&quot;)</span></code>).</p>
+layers starting at 18:15, 18:00, and so on. In
+<a class="reference internal" href="../reference/_api/stilt.Project.footprints.html#stilt.Project.footprints" title="stilt.Project.footprints"><code class="xref py py-meth docutils literal notranslate"><span class="pre">footprints()</span></code></a> the layer dimension is named for the
+unit <code class="docutils literal notranslate"><span class="pre">tres</span></code> is written in and counts in it: <code class="docutils literal notranslate"><span class="pre">hour</span></code> -1, -2, … for
+<code class="docutils literal notranslate"><span class="pre">1h</span></code>, <code class="docutils literal notranslate"><span class="pre">day</span></code> -1, -2, … for <code class="docutils literal notranslate"><span class="pre">1D</span></code>, <code class="docutils literal notranslate"><span class="pre">minute</span></code> -15, -30, … for
+<code class="docutils literal notranslate"><span class="pre">15min</span></code>. For one map of the whole run, sum the layers
+(<code class="docutils literal notranslate"><span class="pre">foot.sum(&quot;time&quot;)</span></code>).</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">transforms</span></code></dt><dd><p>Steps that weight the particles before the footprint is made, mainly for
 column measurements. See <a class="reference internal" href="transforms.html"><span class="doc">Particle Weighting (Transforms)</span></a>.</p>
