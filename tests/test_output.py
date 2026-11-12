@@ -702,13 +702,40 @@ def test_open_footprints_times_fifteen_minute_layers(tmp_path):
 
     ds = open_footprints([out.path("footprints", QUARTERS, receptor.id)])
 
-    assert list(ds.hour.values) == [-3, -2, -1]
+    assert ds.foot.dims == ("receptor", "minute", "lat", "lon")
+    assert list(ds.minute.values) == [-45, -30, -15]
     np.testing.assert_array_equal(
         ds.time.sel(receptor=receptor.id).values,
         pd.DatetimeIndex(["2024-07-15 11:15", "2024-07-15 11:30", "2024-07-15 11:45"]),
     )
-    one = ds.sel(receptor=receptor.id, hour=[-3, -1])
+    one = ds.sel(receptor=receptor.id, minute=[-45, -15])
     np.testing.assert_allclose(one.foot.values, foot.values, rtol=1e-6)
+
+
+#: FEET with 1-day and 6-hour footprint layers.
+DAYS = output_variant(footprint=FootprintConfig(grid=GRID, tres="1D"))
+SIX_HOURS = output_variant(footprint=FootprintConfig(grid=GRID, tres="6h"))
+
+
+@pytest.mark.parametrize(
+    ("variant", "tres", "dim", "values", "first"),
+    [
+        (DAYS, "1D", "day", [-2, -1], "2024-07-13 12:00"),
+        (SIX_HOURS, "6h", "hour", [-12, -6], "2024-07-15 00:00"),
+    ],
+)
+def test_open_footprints_counts_layers_in_the_unit_of_tres(
+    tmp_path, variant, tres, dim, values, first
+):
+    out = Output(tmp_path / "output")
+    receptor = receptor_at(hour=12)
+    out.write_footprint(variant, fake_footprint(receptor, hours=(-2, -1), tres=tres))
+
+    ds = open_footprints([out.path("footprints", variant, receptor.id)])
+
+    assert ds.foot.dims == ("receptor", dim, "lat", "lon")
+    assert list(ds[dim].values) == values
+    assert ds.time.sel(receptor=receptor.id).values[0] == np.datetime64(first)
 
 
 def test_open_footprints_reads_in_blocks_by_date_folder(tmp_path):

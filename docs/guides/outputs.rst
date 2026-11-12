@@ -273,7 +273,9 @@ does a boolean mask over ``project.simulations``.
 The footprints of one variant come back as one :class:`xarray.Dataset`
 with dimensions ``(receptor, hour, lat, lon)``. Receptors at different
 times cannot share a time axis, so they line up on ``hour``: the hours
-after each receptor's time, where a backward run's first hour is -1. The
+after each receptor's time, where a backward run's first hour is -1. With
+other layers the dimension is named for the unit ``tres`` is written in
+(``day`` for ``1D``, ``minute`` for ``15min``) and counts in it. The
 ``time`` coordinate gives the clock time each receptor's hours start:
 
 .. ipython:: python

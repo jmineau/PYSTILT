@@ -101,7 +101,7 @@ GeometrySpec = Annotated[
 #: What to do instead of ``time_integrate``, which was removed.
 TIME_INTEGRATE_REMOVED = (
     "time_integrate was removed. Sum the layers instead: foot.sum('time'), "
-    "or project.footprints().foot.sum('hour'). For one layer as long as the "
+    "or project.footprints().foot.sum('hour') (the layer dimension is named for tres's unit). For one layer as long as the "
     "run, set tres to the run's length (tres: 1D for a 24-hour run)."
 )
 
@@ -201,6 +201,28 @@ class FootprintConfig(BaseModel):
     def tres_minutes(self) -> int:
         """Length of each time layer of the footprint, in minutes."""
         return _minutes(self.tres)
+
+    @property
+    def layer_unit(self) -> tuple[str, int]:
+        """
+        Name and length in minutes of the unit ``tres`` is written in.
+
+        It names the layer dimension of :meth:`stilt.Project.footprints`, which
+        counts in it: ``hour`` for ``1h``, ``day`` for ``1D``, ``minute`` for
+        ``15min``.
+
+        Examples
+        --------
+        >>> FootprintConfig(tres="6h").layer_unit
+        ('hour', 60)
+        >>> FootprintConfig(tres="90min").layer_unit
+        ('minute', 1)
+        """
+        if self.tres.endswith("D"):
+            return "day", 1440
+        if self.tres.endswith("h"):
+            return "hour", 60
+        return "minute", 1
 
     @field_validator("tres", mode="before")
     @classmethod

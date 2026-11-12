@@ -931,8 +931,9 @@ class Project:
         Open the footprints of the selected simulations as one dataset.
 
         Footprints are stacked by their layer from the receptor time, so
-        receptors at any time share one ``hour`` axis, which numbers the
-        layers (hours, with the default ``tres`` of ``1h``); the
+        receptors at any time share one layer axis, named for the unit
+        ``tres`` is written in and counted in it: ``hour`` with the default
+        ``tres`` of ``1h``, ``day`` for ``1D``, ``minute`` for ``15min``. The
         ``time`` coordinate says when each layer starts. Only the files' metadata is
         read here. The values load with dask when they are used, in blocks
         of receptors from one date folder. The selection must hold one
@@ -948,7 +949,9 @@ class Project:
         -------
         xarray.Dataset
             ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and
-            ``x`` on a projected grid), in selection order. A receptor with
+            ``x`` on a projected grid, and ``day`` or ``minute`` in place
+            of ``hour`` when ``tres`` is written in them), in selection
+            order. A receptor with
             an empty footprint has no row and is listed in
             ``attrs["empty"]``; one not run yet is listed in
             ``attrs["missing"]``.

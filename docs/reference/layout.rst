@@ -250,7 +250,10 @@ The hour
 Layer ``k`` holds the particles' influence from ``k`` to ``k + 1`` layers
 after the receptor time, and is stamped at its start. A layer is
 ``tres`` long, an hour by default, so the stored ``hour`` is the hour
-unless the settings give another length. A particle row at ``age`` minutes
+unless the settings give another length; it is always the layer number.
+:meth:`stilt.Project.footprints` turns it into the unit ``tres`` is written
+in, and names its dimension for it: layer -1 of ``15min`` layers is
+``minute`` -15 there. A particle row at ``age`` minutes
 falls in layer ``floor(age / m)``, where ``m`` is ``tres`` in minutes. For a receptor at
 18:30 on a backward run with hourly layers:
 
