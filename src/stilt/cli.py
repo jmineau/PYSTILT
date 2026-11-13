@@ -192,7 +192,7 @@ def _require_met(project: Project) -> None:
     try:
         for variant in project.variants.values():
             _ = variant.met_settings
-    except FileNotFoundError as error:
+    except (FileNotFoundError, ValueError) as error:
         _fail(str(error))
 
 

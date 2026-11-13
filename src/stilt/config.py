@@ -570,8 +570,19 @@ class ProjectConfig(BaseModel):
     def from_yaml(cls, path: str | Path) -> Self:
         """Load a project config from a YAML file."""
         path = Path(path)
-        with path.open() as f:
-            raw: dict = yaml.safe_load(f) or {}
+        try:
+            with path.open() as f:
+                raw: dict = yaml.safe_load(f) or {}
+        except yaml.YAMLError as error:
+            mark = getattr(error, "problem_mark", None)
+            location = (
+                f" line {mark.line + 1}, column {mark.column + 1}"
+                if mark is not None
+                else ""
+            )
+            raise ValueError(
+                f"{path.name} is not valid YAML: {getattr(error, 'problem', error)}.{location}"
+            ) from None
         return cls.model_validate(raw)
 
 
