@@ -563,7 +563,9 @@ def run_trajectories(
     Returns
     -------
     pandas.DataFrame
-        The particle table, one row per particle per output step.
+        The particle table, one row per particle per output step, with
+        ``time`` (UTC), the receptor time plus ``age``, as a table read from
+        a particle file has.
 
     Raises
     ------
@@ -595,7 +597,13 @@ def run_trajectories(
                 "another run; give an empty or new directory."
             )
         workdir.mkdir(parents=True, exist_ok=True)
-    return run_model(model, receptor, config, met_config, workdir, timeout).particles
+    particles = run_model(
+        model, receptor, config, met_config, workdir, timeout
+    ).particles
+    particles["time"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
+        particles["age"].to_numpy(), unit="min"
+    )
+    return particles
 
 
 __all__ = [

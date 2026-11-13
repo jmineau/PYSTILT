@@ -243,6 +243,11 @@ def test_run_trajectories_returns_the_particles_and_removes_its_workdir(
     assert "foot_no_hnf_dilution" not in particles.columns
 
     assert particles["particle"].unique().tolist() == [1]
+    # time is the receptor time plus age, as a table read from a file has.
+    expected = pd.Timestamp(point_receptor.time) + pd.to_timedelta(
+        particles["age"], unit="min"
+    )
+    pd.testing.assert_series_equal(particles["time"], expected, check_names=False)
     assert echo.seen["config"].numpar == 50
     assert echo.seen["timeout"] == 9
     assert echo.seen["met"].directory == tmp_path.resolve()
