@@ -41,9 +41,6 @@ _EDGE_NAMES = {"n": "north", "e": "east", "s": "south", "w": "west"}
 def to_paris(
     foot: xr.DataArray,
     particles: pd.DataFrame | None = None,
-    *,
-    exits: pd.DataFrame | None = None,
-    n_particles: int | None = None,
 ) -> xr.Dataset:
     """Build the PARIS dataset; see ``FootprintAccessor.to_paris``."""
     layer_dim, layer_start = _layer_starts(foot)
@@ -128,8 +125,9 @@ def to_paris(
         },
     )
 
-    exits, n_particles = _exits(foot, particles, exits, n_particles)
-    if exits is not None and n_particles is not None:
+    if particles is not None:
+        exits = particles.stilt.grid_exits(foot.stilt.grid)
+        n_particles = int(particles["particle"].nunique())
         ds = ds.assign(_particle_locations(exits, n_particles, lat, lon))
 
     ds.attrs = {
@@ -204,25 +202,6 @@ def _check_hourly(foot: xr.DataArray, layer_start: pd.DatetimeIndex) -> None:
         )
 
 
-def _exits(
-    foot: xr.DataArray,
-    particles: pd.DataFrame | None,
-    exits: pd.DataFrame | None,
-    n_particles: int | None,
-) -> tuple[pd.DataFrame | None, int | None]:
-    """Return the grid exits and the number of particles, from what the caller gave."""
-    if particles is not None:
-        if n_particles is None:
-            n_particles = int(particles["particle"].nunique())
-        if exits is None:
-            exits = particles.stilt.grid_exits(foot.stilt.grid)
-    if exits is not None and n_particles is None:
-        raise ValueError(
-            "Give n_particles, the number of particles released, with exits."
-        )
-    return exits, n_particles
-
-
 def _particle_locations(
     exits: pd.DataFrame, n_particles: int, lat: np.ndarray, lon: np.ndarray
 ) -> dict[str, Any]:
@@ -234,21 +213,6 @@ def _particle_locations(
     west edges) and in the height layer of its ``zagl``. A particle above
     the top layer counts in the top layer.
     """
-    missing = {"particle", "edge", "lon", "lat", "zagl"} - set(exits.columns)
-    if missing:
-        raise ValueError(f"The grid exits have no column {', '.join(sorted(missing))}.")
-    if exits["particle"].duplicated().any():
-        raise ValueError(
-            "The grid exits list a particle twice; give each particle's first exit."
-        )
-    unknown = set(exits["edge"]) - set(_EDGES)
-    if unknown:
-        raise ValueError(
-            f"Unknown grid edges {sorted(unknown)}; use 'n', 'e', 's' or 'w'."
-        )
-    if n_particles < 1:
-        raise ValueError("n_particles must be at least 1.")
-
     heights = (_HEIGHT_EDGES[:-1] + _HEIGHT_EDGES[1:]) / 2
     layer = (
         np.searchsorted(

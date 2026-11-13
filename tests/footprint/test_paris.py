@@ -6,6 +6,7 @@ import pytest
 import xarray as xr
 
 import stilt
+from stilt.footprint._paris import _particle_locations
 from tests.fixtures.particles import random_walk
 
 RECEPTOR_TIME = pd.Timestamp("2024-01-15 18:00")
@@ -162,6 +163,12 @@ def exits_table(rows):
     return pd.DataFrame(rows, columns=["particle", "edge", "lon", "lat", "zagl"])
 
 
+def locations(exits, n_particles, lat=LAT, lon=LON):
+    """The particle_locations variables of *exits* on a grid of *lat* by *lon* centers, as a dataset."""
+    variables = _particle_locations(exits, n_particles, np.array(lat), np.array(lon))
+    return xr.Dataset(variables, coords={"latitude": list(lat), "longitude": list(lon)})
+
+
 def test_particle_locations_count_each_exit_by_cell_and_height():
     exits = exits_table(
         [
@@ -172,7 +179,7 @@ def test_particle_locations_count_each_exit_by_cell_and_height():
             (5, "w", -113.0, 42.9, 25000.0),  # lat cell 2, above the top: top layer
         ]
     )
-    ds = layered([1, 2], lat=LAT, lon=LON).stilt.to_paris(exits=exits, n_particles=10)
+    ds = locations(exits, 10)
 
     n = ds.particle_locations_n.isel(time=0)
     assert n.dims == ("height", "longitude")
@@ -203,7 +210,7 @@ def test_an_exit_just_outside_the_grid_counts_in_the_nearest_cell():
             (3, "e", -109.0, 43.02, 10.0),  # just north of the north edge
         ]
     )
-    ds = layered([1, 2], lat=LAT, lon=LON).stilt.to_paris(exits=exits, n_particles=3)
+    ds = locations(exits, 3)
     n = ds.particle_locations_n.isel(time=0, height=0).values
     assert n.tolist() == pytest.approx([1 / 3, 0, 0, 1 / 3])
     assert ds.particle_locations_e.isel(time=0, height=0).values[-1] == pytest.approx(
@@ -220,7 +227,7 @@ def test_exits_on_a_grid_across_180_degrees():
             (3, "n", -178.0, 43.0, 10.0),  # 182, just past the east edge: cell 2
         ]
     )
-    ds = layered([1, 2], lat=LAT, lon=lon).stilt.to_paris(exits=exits, n_particles=4)
+    ds = locations(exits, 4, lon=lon)
     assert ds.particle_locations_n.isel(time=0, height=0).values.tolist() == [
         0,
         0.25,
@@ -231,31 +238,6 @@ def test_exits_on_a_grid_across_180_degrees():
         0,
         0,
     ]
-
-
-def test_exits_need_n_particles():
-    with pytest.raises(ValueError, match="n_particles"):
-        layered([1, 2]).stilt.to_paris(
-            exits=exits_table([(1, "n", -112.0, 42.0, 10.0)])
-        )
-
-
-def test_a_particle_listed_twice_is_refused():
-    exits = exits_table([(1, "n", -112.0, 42.0, 10.0), (1, "e", -111.0, 41.0, 10.0)])
-    with pytest.raises(ValueError, match="twice"):
-        layered([1, 2]).stilt.to_paris(exits=exits, n_particles=2)
-
-
-def test_an_unknown_edge_is_refused():
-    exits = exits_table([(1, "north", -112.0, 42.0, 10.0)])
-    with pytest.raises(ValueError, match="Unknown grid edges"):
-        layered([1, 2]).stilt.to_paris(exits=exits, n_particles=2)
-
-
-def test_exits_with_particles_count_the_particles(footprint, particles):
-    exits = exits_table([(1, "w", -113.0, 41.0, 10.0)])
-    ds = footprint.stilt.to_paris(particles, exits=exits)
-    assert float(ds.particle_locations_w.sum()) == pytest.approx(1 / 20)
 
 
 def straight_lines():
@@ -287,8 +269,6 @@ def test_particles_alone_use_their_grid_exits(footprint):
     # The method used is the one on the particles accessor, on the footprint's grid.
     exits = lines.stilt.grid_exits(footprint.stilt.grid)
     assert exits.edge.tolist() == ["n", "e", "s", "w"]
-    same = footprint.stilt.to_paris(exits=exits, n_particles=4)
-    xr.testing.assert_identical(ds, same)
 
     for edge, height, axis, at in [
         ("n", 500, "longitude", -111.85),
@@ -312,34 +292,15 @@ def test_particles_that_stay_inside_are_not_counted(footprint, particles):
     assert float(ds.particle_locations_e.sum() + ds.particle_locations_w.sum()) == 0
 
 
-def test_n_particles_given_with_particles_is_the_denominator(footprint):
-    ds = footprint.stilt.to_paris(straight_lines(), n_particles=8)
-    assert float(ds.particle_locations_n.sum()) == pytest.approx(1 / 8)
-
-
 def test_a_footprint_without_a_layer_time_is_refused():
     with pytest.raises(ValueError, match="time coordinate"):
         layered([1, 2]).drop_vars("time").stilt.to_paris()
 
 
-def test_exits_without_a_needed_column_are_refused():
-    exits = exits_table([(1, "n", -112.0, 42.0, 10.0)]).drop(columns="zagl")
-    with pytest.raises(ValueError, match="no column zagl"):
-        layered([1, 2]).stilt.to_paris(exits=exits, n_particles=2)
-
-
-def test_n_particles_must_be_positive():
-    exits = exits_table([(1, "n", -112.0, 42.0, 10.0)])
-    with pytest.raises(ValueError, match="at least 1"):
-        layered([1, 2]).stilt.to_paris(exits=exits, n_particles=0)
-
-
 def test_a_grid_of_one_cell_has_no_cell_size_to_count_exits_in():
     exits = exits_table([(1, "n", -112.0, 42.0, 10.0)])
     with pytest.raises(ValueError, match="two or more cells"):
-        layered([1, 2], lat=(40.5,), lon=(-112.5,)).stilt.to_paris(
-            exits=exits, n_particles=2
-        )
+        locations(exits, 2, lat=(40.5,), lon=(-112.5,))
 
 
 def test_a_footprint_without_settings_cannot_find_exits(particles):
