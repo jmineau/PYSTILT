@@ -133,6 +133,18 @@ feature.
    * - Inventory readers
      - Out of scope; a flux field is an xarray array
 
+Mobile measurements
+-------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 60 20
+
+   * - Feature
+     - Status
+   * - Receptors along the track of a car, train, aircraft, or ship, and each measurement's receptor (``receptors_from_track``)
+     - Implemented (see the *Mobile Measurements* guide)
+
 Future plans
 ------------
 

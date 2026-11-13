@@ -8,6 +8,8 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 
 - :doc:`receptors`: where and when you measured (towers, columns,
   satellites)
+- :doc:`tracks`: receptors along the track of a car, train, aircraft, or
+  ship, and the link from each measurement to its receptor
 - :doc:`meteorology`: use your own ARL files or download them from NOAA
 - :doc:`projects`: what goes in ``config.yaml``, variants, and how reruns
   and changed settings work
@@ -74,6 +76,7 @@ steps are in PYSTILT.
    :caption: Setting up a project
 
    receptors
+   tracks
    meteorology
    projects
    choosing_settings

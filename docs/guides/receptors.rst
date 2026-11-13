@@ -16,7 +16,7 @@ that matches how your instrument samples the air.
      - You give it
    * - :class:`PointReceptor`
      - An instrument sampling at one point, such as a tower inlet, a flask,
-       or an aircraft or vehicle measurement
+       or an aircraft or vehicle measurement (:doc:`tracks`)
      - ``longitude``, ``latitude``, ``altitude``
    * - :class:`ColumnReceptor`
      - An instrument measuring the vertical column above one spot, such as a
@@ -36,7 +36,8 @@ PointReceptor
 -------------
 
 This is the most common type. Use it for a fixed surface site or an airborne
-sample at one height.
+sample at one height. For an analyzer that measures as it moves,
+:doc:`tracks` makes these receptors from its track.
 
 .. ipython:: python
 

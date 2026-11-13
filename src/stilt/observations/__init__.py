@@ -1,8 +1,8 @@
 """
-Tools for column and satellite observations, ported from X-STILT.
+Tools for column, satellite, and mobile observations.
 
-The functions take and return plain arrays and tables, so they work with
-any product reader.
+The column and satellite tools are ported from X-STILT. The functions take
+and return plain arrays and tables, so they work with any product reader.
 
 Before a run:
 
@@ -17,6 +17,10 @@ Before a run:
   of sight (:func:`slant_points`) at the retrieval's pressure levels
   (:func:`pressure_altitudes`). Every reader's table has the columns in
   :data:`SOUNDING_SCHEMA` (:func:`check_soundings`).
+- Group the measurements of a vehicle, train, aircraft, or ship into
+  receptors along its track, and link each measurement to its receptor,
+  with :func:`receptors_from_track`. A track has the columns in
+  :data:`TRACK_SCHEMA` (:func:`check_track`).
 
 After a run:
 
@@ -50,12 +54,16 @@ from .readers import (
 )
 from .readers.schema import SOUNDING_SCHEMA, check_soundings
 from .selection import group_by_overpass, select_observations_spatial
+from .tracks import TRACK_SCHEMA, check_track, receptors_from_track
 
 __all__ = [
     "SOUNDING_SCHEMA",
+    "TRACK_SCHEMA",
     "check_soundings",
+    "check_track",
     "modelled_column",
     "receptors_from_soundings",
+    "receptors_from_track",
     "Plume",
     "PlumeBackground",
     "group_by_overpass",
