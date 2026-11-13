@@ -1,10 +1,10 @@
 Observations
 ============
 
-Functions for column and satellite workflows. They group soundings into
-overpasses, choose which soundings to run, spread receptors across a pixel,
-lay out slant lines of sight, and turn a retrieval's pressure levels into
-altitudes (:doc:`/tutorials/satellite_column`,
+Functions for column and satellite workflows, and for mobile measurements
+(below). They group soundings into overpasses, choose which soundings to
+run, spread receptors across a pixel, lay out slant lines of sight, and
+turn a retrieval's pressure levels into altitudes (:doc:`/tutorials/satellite_column`,
 :doc:`/guides/slant_columns`). They take plain arrays and tables and return
 the inputs for :class:`~stilt.Receptor` objects. Particle weighting,
 including per-receptor averaging-kernel tables, is in :doc:`transforms`.
@@ -40,6 +40,23 @@ Each reader returns a table of soundings with the columns in
    stilt.observations.read_tccon
    stilt.observations.read_ggg_oof
    stilt.observations.read_ggg_netcdf
+
+Tracks
+------
+
+Receptors along the track of a moving platform, and the link from each
+measurement to its receptor (:doc:`/guides/tracks`). A track has the columns
+in ``TRACK_SCHEMA``.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.observations.receptors_from_track
+   stilt.observations.check_track
+
+.. autodata:: stilt.observations.TRACK_SCHEMA
+   :no-value:
 
 Plume background
 ----------------

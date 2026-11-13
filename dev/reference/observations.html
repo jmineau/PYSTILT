@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=ca4aaaf5"></script>
+    <script src="../_static/documentation_options.js?v=da33f9d5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev6+ge705d720b" />
+  <meta name="docsearch:version" content="0.1.0a29.dev7+ga2716ab36" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -761,6 +761,8 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.read_tccon.html">stilt.observations.read_tccon</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.read_ggg_oof.html">stilt.observations.read_ggg_oof</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.read_ggg_netcdf.html">stilt.observations.read_ggg_netcdf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.receptors_from_track.html">stilt.observations.receptors_from_track</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.check_track.html">stilt.observations.check_track</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.plume_polygon.html">stilt.observations.plume_polygon</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.Plume.html">stilt.observations.Plume</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.plume_background.html">stilt.observations.plume_background</a></li>
@@ -887,10 +889,10 @@
                   
   <section id="observations">
 <h1>Observations<a class="headerlink" href="#observations" title="Link to this heading">#</a></h1>
-<p>Functions for column and satellite workflows. They group soundings into
-overpasses, choose which soundings to run, spread receptors across a pixel,
-lay out slant lines of sight, and turn a retrieval’s pressure levels into
-altitudes (<a class="reference internal" href="../tutorials/satellite_column.html"><span class="doc">Tutorial: A Satellite Column, Start To Finish</span></a>,
+<p>Functions for column and satellite workflows, and for mobile measurements
+(below). They group soundings into overpasses, choose which soundings to
+run, spread receptors across a pixel, lay out slant lines of sight, and
+turn a retrieval’s pressure levels into altitudes (<a class="reference internal" href="../tutorials/satellite_column.html"><span class="doc">Tutorial: A Satellite Column, Start To Finish</span></a>,
 <a class="reference internal" href="../guides/slant_columns.html"><span class="doc">Slant Columns</span></a>). They take plain arrays and tables and return
 the inputs for <a class="reference internal" href="_api/stilt.Receptor.html#stilt.Receptor" title="stilt.Receptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Receptor</span></code></a> objects. Particle weighting,
 including per-receptor averaging-kernel tables, is in <a class="reference internal" href="transforms.html"><span class="doc">Transforms</span></a>.</p>
@@ -955,6 +957,31 @@ clockwise from north toward the instrument or the sun.</p>
 </tbody>
 </table>
 </div>
+</section>
+<section id="tracks">
+<h2>Tracks<a class="headerlink" href="#tracks" title="Link to this heading">#</a></h2>
+<p>Receptors along the track of a moving platform, and the link from each
+measurement to its receptor (<a class="reference internal" href="../guides/tracks.html"><span class="doc">Mobile Measurements</span></a>). A track has the columns
+in <code class="docutils literal notranslate"><span class="pre">TRACK_SCHEMA</span></code>.</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.observations.receptors_from_track.html#stilt.observations.receptors_from_track" title="stilt.observations.receptors_from_track"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stilt.observations.receptors_from_track</span></code></a></p></td>
+<td><p>Return a receptor for each group of measurements along a track, and their table.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.observations.check_track.html#stilt.observations.check_track" title="stilt.observations.check_track"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stilt.observations.check_track</span></code></a></p></td>
+<td><p>Raise unless a track has the columns in <code class="xref py py-data docutils literal notranslate"><span class="pre">TRACK_SCHEMA</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py data">
+<dt class="sig sig-object py" id="stilt.observations.TRACK_SCHEMA">
+<span class="sig-prename descclassname"><span class="pre">stilt.observations.</span></span><span class="sig-name descname"><span class="pre">TRACK_SCHEMA</span></span><a class="headerlink" href="#stilt.observations.TRACK_SCHEMA" title="Link to this definition">#</a></dt>
+<dd><p>The columns a track needs, as <code class="docutils literal notranslate"><span class="pre">{name:</span> <span class="pre">meaning}</span></code>. A track may have any
+other columns, such as the measured mole fractions, and
+<a class="reference internal" href="_api/stilt.observations.receptors_from_track.html#stilt.observations.receptors_from_track" title="stilt.observations.receptors_from_track"><code class="xref py py-func docutils literal notranslate"><span class="pre">receptors_from_track()</span></code></a> keeps them in its table.</p>
+</dd></dl>
+
 </section>
 <section id="plume-background">
 <h2>Plume background<a class="headerlink" href="#plume-background" title="Link to this heading">#</a></h2>
@@ -1048,6 +1075,10 @@ the background, and the retrieval’s prior where it is not sensitive.</p>
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#product-readers">Product readers</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.observations.SOUNDING_SCHEMA"><code class="docutils literal notranslate"><span class="pre">SOUNDING_SCHEMA</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tracks">Tracks</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.observations.TRACK_SCHEMA"><code class="docutils literal notranslate"><span class="pre">TRACK_SCHEMA</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#plume-background">Plume background</a></li>

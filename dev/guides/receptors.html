@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=ca4aaaf5"></script>
+    <script src="../_static/documentation_options.js?v=da33f9d5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,12 +59,12 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Meteorology" href="meteorology.html" />
+    <link rel="next" title="Mobile Measurements" href="tracks.html" />
     <link rel="prev" title="User Guide" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev6+ge705d720b" />
+  <meta name="docsearch:version" content="0.1.0a29.dev7+ga2716ab36" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -412,6 +412,7 @@
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
 <li class="toctree-l1"><a class="reference internal" href="choosing_settings.html">Choosing Settings</a></li>
@@ -529,7 +530,7 @@ that matches how your instrument samples the air.</p>
 <tbody>
 <tr class="row-even"><td><p><a class="reference internal" href="../reference/_api/stilt.PointReceptor.html#stilt.PointReceptor" title="stilt.PointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointReceptor</span></code></a></p></td>
 <td><p>An instrument sampling at one point, such as a tower inlet, a flask,
-or an aircraft or vehicle measurement</p></td>
+or an aircraft or vehicle measurement (<a class="reference internal" href="tracks.html"><span class="doc">Mobile Measurements</span></a>)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">longitude</span></code>, <code class="docutils literal notranslate"><span class="pre">latitude</span></code>, <code class="docutils literal notranslate"><span class="pre">altitude</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="../reference/_api/stilt.ColumnReceptor.html#stilt.ColumnReceptor" title="stilt.ColumnReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnReceptor</span></code></a></p></td>
@@ -552,7 +553,8 @@ converted to UTC. Altitudes are in meters above ground level. Pass
 <section id="pointreceptor">
 <h2>PointReceptor<a class="headerlink" href="#pointreceptor" title="Link to this heading">#</a></h2>
 <p>This is the most common type. Use it for a fixed surface site or an airborne
-sample at one height.</p>
+sample at one height. For an analyzer that measures as it moves,
+<a class="reference internal" href="tracks.html"><span class="doc">Mobile Measurements</span></a> makes these receptors from its track.</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
 <span class="gp">In [2]: </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
@@ -828,11 +830,11 @@ name, so a longitude cannot be passed as a latitude by mistake.</p>
       </div>
     </a>
     <a class="right-next"
-       href="meteorology.html"
+       href="tracks.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Meteorology</p>
+        <p class="prev-next-title">Mobile Measurements</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
