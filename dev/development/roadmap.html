@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=7218a86b"></script>
+    <script src="../_static/documentation_options.js?v=ca4aaaf5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -63,7 +63,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev2+gc066c51a9" />
+  <meta name="docsearch:version" content="0.1.0a29.dev6+ge705d720b" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -496,6 +496,9 @@ project. Transport-error ensembles and extra footprints are variants too.</p></l
 and footprints (<a class="reference internal" href="../reference/_api/stilt.migration.read_stilt_r.html#stilt.migration.read_stilt_r" title="stilt.migration.read_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.migration.read_stilt_r()</span></code></a>), and importing it
 into an output directory, where a <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> variant reads it
 (<a class="reference internal" href="../reference/_api/stilt.migration.import_stilt_r.html#stilt.migration.import_stilt_r" title="stilt.migration.import_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.migration.import_stilt_r()</span></code></a>)</p></li>
+<li><p>Exports to other tools: the particles as CF-1.10 trajectories for trajan
+and cf-xarray (<code class="docutils literal notranslate"><span class="pre">particles.stilt.to_cf_trajectories</span></code>), and a footprint in
+openghg’s PARIS format (<code class="docutils literal notranslate"><span class="pre">foot.stilt.to_paris</span></code>)</p></li>
 </ul>
 <p>Footprints can also be summed onto other geometries. A footprint is computed
 on a rectangular grid and then summed onto a <a class="reference internal" href="../reference/_api/stilt.Grid.html#stilt.Grid" title="stilt.Grid"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Grid</span></code></a>, a

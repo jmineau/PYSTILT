@@ -32,6 +32,7 @@ Methods
    ~ParticlesAccessor.endpoints
    ~ParticlesAccessor.enhancement
    ~ParticlesAccessor.grid_exits
+   ~ParticlesAccessor.to_cf_trajectories
 
 
 

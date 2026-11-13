@@ -136,9 +136,9 @@ Columns PYSTILT adds
    when ``hnf_plume`` is on.
 
 ``time``
-   The time of each row, in UTC: the receptor time plus ``age``, added
-   when the table is read from a file. STILT-R's ``time`` is ``age``
-   here.
+   The time of each row, in UTC: the receptor time plus ``age``. It is
+   not stored; reading a particle file adds it, and so does
+   :func:`stilt.run_trajectories`. STILT-R's ``time`` is ``age`` here.
 
 Checking a table
 ----------------

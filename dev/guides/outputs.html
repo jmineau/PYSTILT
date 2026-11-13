@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=7218a86b"></script>
+    <script src="../_static/documentation_options.js?v=ca4aaaf5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev2+gc066c51a9" />
+  <meta name="docsearch:version" content="0.1.0a29.dev6+ge705d720b" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -926,6 +926,215 @@ whether each result exists, and a <code class="docutils literal notranslate"><sp
 each state and reason. <code class="docutils literal notranslate"><span class="pre">status()</span></code> opens no result file, so it is quick
 on a large project.</p>
 </section>
+<section id="particles-in-trajan-and-other-cf-tools">
+<h2>Particles in trajan and other CF tools<a class="headerlink" href="#particles-in-trajan-and-other-cf-tools" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">sim.particles.stilt.to_cf_trajectories()</span></code> returns the particles as an
+<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a> that follows the CF-1.10 conventions for
+trajectories, which <a class="reference external" href="https://opendrift.github.io/trajan/">trajan</a>,
+cf-xarray, and other tools that read CF trajectory files open:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [41]: </span><span class="n">ds</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">to_cf_trajectories</span><span class="p">()</span>
+
+<span class="gp">In [42]: </span><span class="n">ds</span>
+<span class="gh">Out[42]: </span>
+<span class="go">&lt;xarray.Dataset&gt; Size: 17MB</span>
+<span class="go">Dimensions:               (trajectory: 200, obs: 806)</span>
+<span class="go">Coordinates:</span>
+<span class="go">  * trajectory            (trajectory) int32 800B 1 2 3 4 5 ... 197 198 199 200</span>
+<span class="go">    time                  (trajectory, obs) datetime64[ns] 1MB 2021-01-15T08:...</span>
+<span class="go">    lon                   (trajectory, obs) float64 1MB -111.8 -111.8 ... nan</span>
+<span class="go">    lat                   (trajectory, obs) float64 1MB 40.77 40.77 ... nan nan</span>
+<span class="go">    zagl                  (trajectory, obs) float64 1MB 13.15 16.08 ... nan nan</span>
+<span class="go">Dimensions without coordinates: obs</span>
+<span class="go">Data variables:</span>
+<span class="go">    age                   (trajectory, obs) float64 1MB -1.0 -2.0 ... nan nan</span>
+<span class="go">    foot                  (trajectory, obs) float64 1MB 0.05546 0.03384 ... nan</span>
+<span class="go">    mlht                  (trajectory, obs) float64 1MB 150.0 150.0 ... nan nan</span>
+<span class="go">    pres                  (trajectory, obs) float64 1MB 860.8 860.3 ... nan nan</span>
+<span class="go">    dens                  (trajectory, obs) float64 1MB 1.093 1.092 ... nan nan</span>
+<span class="go">    samt                  (trajectory, obs) float64 1MB 1.0 1.0 1.0 ... nan nan</span>
+<span class="go">    sigw                  (trajectory, obs) float64 1MB 0.001 0.001 ... nan nan</span>
+<span class="go">    tlgr                  (trajectory, obs) float64 1MB 1.321e+04 ... nan</span>
+<span class="go">    foot_no_hnf_dilution  (trajectory, obs) float64 1MB 0.02121 0.02121 ... nan</span>
+<span class="go">Attributes:</span>
+<span class="go">    Conventions:  CF-1.10</span>
+<span class="go">    featureType:  trajectory</span>
+<span class="go">    title:        PYSTILT particle trajectories</span>
+<span class="go">    source:       PYSTILT particle table</span>
+<span class="go">    history:      Converted from a PYSTILT particle table</span>
+</pre></div>
+</div>
+<p>Write it with <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.to_netcdf.html#xarray.Dataset.to_netcdf" title="(in xarray v2026.9.0)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">xarray.Dataset.to_netcdf()</span></code></a>. A table from
+<a class="reference internal" href="../reference/_api/stilt.run_trajectories.html#stilt.run_trajectories" title="stilt.run_trajectories"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.run_trajectories()</span></code></a> works the same way: it has the <code class="docutils literal notranslate"><span class="pre">time</span></code> column
+too.</p>
+<p>Each particle is one trajectory. The coordinates are:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">trajectory</span></code></dt><dd><p>The particle number, marked <code class="docutils literal notranslate"><span class="pre">cf_role:</span> <span class="pre">trajectory_id</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">time</span></code></dt><dd><p>The particle table’s <code class="docutils literal notranslate"><span class="pre">time</span></code>, in UTC.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code></dt><dd><p>Longitude and latitude in degrees.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">zagl</span></code></dt><dd><p>Height above ground in meters (<code class="docutils literal notranslate"><span class="pre">standard_name:</span> <span class="pre">height</span></code>).</p>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">age</span></code>, the minutes since release, is a data variable, and so is every other
+numeric column of the table (<code class="docutils literal notranslate"><span class="pre">foot</span></code>, <code class="docutils literal notranslate"><span class="pre">mlht</span></code>, …). The columns PYSTILT
+and HYSPLIT write have units and long names; another column is kept without
+units. A table with several realizations is refused: select one first,
+<code class="docutils literal notranslate"><span class="pre">particles[particles.realization</span> <span class="pre">==</span> <span class="pre">k]</span></code>.</p>
+<p>CF stores trajectories in several ways (CF-1.10, appendix H.4). This is the
+incomplete multidimensional array: every variable has dimensions
+<code class="docutils literal notranslate"><span class="pre">(trajectory,</span> <span class="pre">obs)</span></code>, and <code class="docutils literal notranslate"><span class="pre">time</span></code> is a variable of its own along both.
+It fits a run because every particle is written at the same output steps,
+so <code class="docutils literal notranslate"><span class="pre">obs</span></code> counts steps from the release. A particle that leaves the
+meteorology domain stops early, and its row ends with missing values. <code class="docutils literal notranslate"><span class="pre">obs</span></code>
+runs from the release onward, so in a backward run <code class="docutils literal notranslate"><span class="pre">time</span></code> decreases along
+<code class="docutils literal notranslate"><span class="pre">obs</span></code>. In the NetCDF file <code class="docutils literal notranslate"><span class="pre">time</span></code> is stored as minutes since the earliest
+time, with <code class="docutils literal notranslate"><span class="pre">NaN</span></code> where a trajectory has ended.</p>
+<p>trajan reads the file through its <code class="docutils literal notranslate"><span class="pre">traj</span></code> accessor:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">trajan</span>  <span class="c1"># registers ds.traj</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+
+<span class="n">ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s2">"trajectories.nc"</span><span class="p">)</span>
+<span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="s2">"trajectories.nc"</span><span class="p">,</span> <span class="n">decode_timedelta</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">decode_timedelta=False</span></code> keeps <code class="docutils literal notranslate"><span class="pre">age</span></code> in minutes. Without it, xarray
+releases before 2026 read a variable in minutes as a duration and warn that
+this will change.</p>
+</section>
+<section id="footprints-for-openghg">
+<h2>Footprints for openghg<a class="headerlink" href="#footprints-for-openghg" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">sim.footprint.stilt.to_paris(sim.particles)</span></code> returns the footprint in the
+PARIS format, the NetCDF layout openghg reads with <code class="docutils literal notranslate"><span class="pre">source_format=&quot;paris&quot;</span></code>.
+openghg can then combine it with its fluxes and boundary conditions as it
+does footprints from NAME and FLEXPART. The footprint must have hourly layers
+(<code class="docutils literal notranslate"><span class="pre">tres:</span> <span class="pre">1h</span></code>, the default) on a longitude and latitude grid and be backward.</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [43]: </span><span class="n">paris</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">to_paris</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="p">)</span>
+
+<span class="gp">In [44]: </span><span class="n">paris</span>
+<span class="gh">Out[44]: </span>
+<span class="go">&lt;xarray.Dataset&gt; Size: 11MB</span>
+<span class="go">Dimensions:               (time: 1, latitude: 200, longitude: 250,</span>
+<span class="go">                           resolution: 24, height: 20)</span>
+<span class="go">Coordinates:</span>
+<span class="go">  * time                  (time) datetime64[ns] 8B 2021-01-15T09:00:00</span>
+<span class="go">  * latitude              (latitude) float64 2kB 40.01 40.02 ... 41.98 41.99</span>
+<span class="go">  * longitude             (longitude) float64 2kB -113.0 -113.0 ... -110.5</span>
+<span class="go">  * resolution            (resolution) float32 96B 0.0 1.0 2.0 ... 22.0 23.0</span>
+<span class="go">  * height                (height) float64 160B 500.0 1.5e+03 ... 1.95e+04</span>
+<span class="go">Data variables:</span>
+<span class="go">    srr                   (time, latitude, longitude) float64 400kB 0.0 ... 0.0</span>
+<span class="go">    srr_time_resolved     (time, latitude, longitude, resolution) float64 10MB ...</span>
+<span class="go">    srr_residual          (time, latitude, longitude) float64 400kB 0.0 ... 0.0</span>
+<span class="go">    particle_locations_n  (time, height, longitude) float64 40kB 0.0 0.0 ... 0.0</span>
+<span class="go">    particle_locations_e  (time, height, latitude) float64 32kB 0.0 0.0 ... 0.0</span>
+<span class="go">    particle_locations_s  (time, height, longitude) float64 40kB 0.0 0.0 ... 0.0</span>
+<span class="go">    particle_locations_w  (time, height, latitude) float64 32kB 0.0 0.0 ... 0.0</span>
+<span class="go">Attributes:</span>
+<span class="go">    Conventions:  CF-1.8</span>
+<span class="go">    model:        STILT</span>
+<span class="go">    source:       PYSTILT footprint</span>
+<span class="go">    receptor:     202101150900_-111.848_40.766_10</span>
+<span class="go">    history:      Converted from a PYSTILT footprint</span>
+</pre></div>
+</div>
+<p>openghg stores a time-resolved footprint along <code class="docutils literal notranslate"><span class="pre">H_back</span></code>, hours back from
+the footprint’s time, and pairs <code class="docutils literal notranslate"><span class="pre">H_back</span> <span class="pre">=</span> <span class="pre">k</span></code> with the flux hour that
+<em>starts</em> <code class="docutils literal notranslate"><span class="pre">k</span></code> hours before it. The footprint’s time is the receptor time.
+The first layer of a backward run, layer -1, covers the hour before the
+receptor time, so it goes to <code class="docutils literal notranslate"><span class="pre">H_back</span> <span class="pre">=</span> <span class="pre">1</span></code>. With the receptor at 18:00:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">H_back</span></code></p></th>
+<th class="head"><p>Flux hour openghg pairs it with</p></th>
+<th class="head"><p>PYSTILT layer</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>18:00 to 19:00</p></td>
+<td><p>none, after the observation; always zero</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>17:00 to 18:00</p></td>
+<td><p>-1</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>16:00 to 17:00</p></td>
+<td><p>-2</p></td>
+</tr>
+<tr class="row-odd"><td><p>23</p></td>
+<td><p>19:00 to 20:00 the day before</p></td>
+<td><p>-23</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Layers -24 and earlier are summed into <code class="docutils literal notranslate"><span class="pre">srr_residual</span></code>, which openghg
+multiplies by a monthly mean flux, and <code class="docutils literal notranslate"><span class="pre">srr</span></code> is the sum of all layers. Only
+23 hours are resolved, not 24: openghg reads the <code class="docutils literal notranslate"><span class="pre">resolution</span></code> axis as a
+time span and keeps only its hours within a day, so a 24th hour would read as
+0. The numbers are PYSTILT’s: ppm per (µmol m⁻² s⁻¹) is the same quantity as
+the PARIS units, (mol/mol)/(mol/m2/s).</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [45]: </span><span class="n">per_hour</span> <span class="o">=</span> <span class="n">paris</span><span class="o">.</span><span class="n">srr_time_resolved</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="s2">"latitude"</span><span class="p">,</span> <span class="s2">"longitude"</span><span class="p">])</span>
+
+<span class="gp">In [46]: </span><span class="n">per_hour</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span>      <span class="c1"># H_back 0 is empty; 1 is layer -1</span>
+<span class="gh">Out[46]: </span><span class="go">array([0.        , 1.08723988, 0.01245038, 0.        ])</span>
+
+<span class="gp">In [47]: </span><span class="nb">float</span><span class="p">(</span><span class="n">paris</span><span class="o">.</span><span class="n">srr</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">-</span> <span class="n">paris</span><span class="o">.</span><span class="n">srr_time_resolved</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">-</span> <span class="n">paris</span><span class="o">.</span><span class="n">srr_residual</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+<span class="gh">Out[47]: </span><span class="go">0.0</span>
+</pre></div>
+</div>
+<p>The layers are found from each layer’s <code class="docutils literal notranslate"><span class="pre">time</span></code>, its start, and not from the
+name of the layer dimension, so one receptor of <code class="docutils literal notranslate"><span class="pre">project.footprints().foot</span></code>
+works as well as <code class="docutils literal notranslate"><span class="pre">sim.footprint</span></code>: select it with
+<code class="docutils literal notranslate"><span class="pre">footprints.foot.sel(receptor=rid)</span></code>.</p>
+<p>openghg also expects <code class="docutils literal notranslate"><span class="pre">particle_locations_n</span></code>, <code class="docutils literal notranslate"><span class="pre">_e</span></code>, <code class="docutils literal notranslate"><span class="pre">_s</span></code> and <code class="docutils literal notranslate"><span class="pre">_w</span></code>: the
+fraction of particles that first left the footprint grid through each edge, by
+grid cell along the edge and by 1 km height layer from the ground to 20 km.
+Giving the particles adds them, found with
+<a class="reference internal" href="../reference/_api/stilt.particles.ParticlesAccessor.grid_exits.html#stilt.particles.ParticlesAccessor.grid_exits" title="stilt.particles.ParticlesAccessor.grid_exits"><code class="xref py py-meth docutils literal notranslate"><span class="pre">grid_exits()</span></code></a>. A particle that never
+left the grid counts nowhere, so the four fractions add up to the share that
+left. Without particles, <code class="docutils literal notranslate"><span class="pre">to_paris</span></code> leaves the four variables out, and
+openghg refuses the file unless it is told not to expect them. The share of
+particles that left the grid:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [48]: </span><span class="nb">float</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">paris</span><span class="p">[</span><span class="sa">f</span><span class="s2">"particle_locations_</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="s2">"nesw"</span><span class="p">))</span>
+<span class="gh">Out[48]: </span><span class="go">0.0</span>
+</pre></div>
+</div>
+<p>A PARIS file holds one site, with one entry along <code class="docutils literal notranslate"><span class="pre">time</span></code> for each receptor
+time. Convert each receptor, concatenate along <code class="docutils literal notranslate"><span class="pre">time</span></code>, write the file, and
+add it to openghg’s object store:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+
+<span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">to_paris</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="p">)</span> <span class="k">for</span> <span class="n">sim</span> <span class="ow">in</span> <span class="n">sims</span><span class="p">],</span>
+    <span class="n">dim</span><span class="o">=</span><span class="s2">"time"</span><span class="p">,</span>
+    <span class="n">combine_attrs</span><span class="o">=</span><span class="s2">"drop_conflicts"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="s2">"WBB-10magl_STILT_HRRR_SLV_co2_202401.nc"</span><span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">openghg.standardise</span><span class="w"> </span><span class="kn">import</span> <span class="n">standardise_footprint</span>
+
+<span class="n">standardise_footprint</span><span class="p">(</span>
+    <span class="n">filepath</span><span class="o">=</span><span class="s2">"WBB-10magl_STILT_HRRR_SLV_co2_202401.nc"</span><span class="p">,</span>
+    <span class="n">source_format</span><span class="o">=</span><span class="s2">"paris"</span><span class="p">,</span>
+    <span class="n">site</span><span class="o">=</span><span class="s2">"wbb"</span><span class="p">,</span>
+    <span class="n">domain</span><span class="o">=</span><span class="s2">"slv"</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">"STILT"</span><span class="p">,</span>
+    <span class="n">inlet</span><span class="o">=</span><span class="s2">"10m"</span><span class="p">,</span>
+    <span class="n">met_model</span><span class="o">=</span><span class="s2">"hrrr"</span><span class="p">,</span>
+    <span class="n">species</span><span class="o">=</span><span class="s2">"co2"</span><span class="p">,</span>
+    <span class="n">time_resolved</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>openghg is not a dependency of PYSTILT: it needs Python 3.13 or older and
+older versions of pandas and numpy. Install it into its own environment with
+<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">openghg</span></code>.</p>
+</section>
 <section id="without-pystilt">
 <h2>Without PYSTILT<a class="headerlink" href="#without-pystilt" title="Link to this heading">#</a></h2>
 <p><a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a> describes every file and metadata key, for a
@@ -1015,6 +1224,8 @@ no rows, so a count of rows leaves it out. An ensemble’s folders have a
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#empty-footprints">Empty footprints</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#many-simulations-at-once">Many simulations at once</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#particles-in-trajan-and-other-cf-tools">Particles in trajan and other CF tools</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#footprints-for-openghg">Footprints for openghg</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#without-pystilt">Without PYSTILT</a></li>
 </ul>
   </nav></div>

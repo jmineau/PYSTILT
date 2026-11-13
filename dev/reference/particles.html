@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=7218a86b"></script>
+    <script src="../_static/documentation_options.js?v=ca4aaaf5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev2+gc066c51a9" />
+  <meta name="docsearch:version" content="0.1.0a29.dev6+ge705d720b" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -526,6 +526,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.particles.ParticlesAccessor.endpoints.html">stilt.particles.ParticlesAccessor.endpoints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.particles.ParticlesAccessor.enhancement.html">stilt.particles.ParticlesAccessor.enhancement</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.particles.ParticlesAccessor.grid_exits.html">stilt.particles.ParticlesAccessor.grid_exits</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.particles.ParticlesAccessor.to_cf_trajectories.html">stilt.particles.ParticlesAccessor.to_cf_trajectories</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.footprint.FootprintAccessor.html">stilt.footprint.FootprintAccessor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -538,6 +539,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.FootprintAccessor.aggregate.html">stilt.footprint.FootprintAccessor.aggregate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.FootprintAccessor.enhancement.html">stilt.footprint.FootprintAccessor.enhancement</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.FootprintAccessor.to_netcdf.html">stilt.footprint.FootprintAccessor.to_netcdf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.FootprintAccessor.to_paris.html">stilt.footprint.FootprintAccessor.to_paris</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.migration.read_stilt_r.html">stilt.migration.read_stilt_r</a></li>
@@ -1038,9 +1040,9 @@ X-STILT call it <code class="docutils literal notranslate"><span class="pre">xhg
 <dt><code class="docutils literal notranslate"><span class="pre">foot_no_hnf_dilution</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">foot</span></code> before the near-field correction (<a class="reference internal" href="_api/stilt.particles.correct_near_field.html#stilt.particles.correct_near_field" title="stilt.particles.correct_near_field"><code class="xref py py-func docutils literal notranslate"><span class="pre">correct_near_field()</span></code></a>),
 when <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is on.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">time</span></code></dt><dd><p>The time of each row, in UTC: the receptor time plus <code class="docutils literal notranslate"><span class="pre">age</span></code>, added
-when the table is read from a file. STILT-R’s <code class="docutils literal notranslate"><span class="pre">time</span></code> is <code class="docutils literal notranslate"><span class="pre">age</span></code>
-here.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">time</span></code></dt><dd><p>The time of each row, in UTC: the receptor time plus <code class="docutils literal notranslate"><span class="pre">age</span></code>. It is
+not stored; reading a particle file adds it, and so does
+<a class="reference internal" href="_api/stilt.run_trajectories.html#stilt.run_trajectories" title="stilt.run_trajectories"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.run_trajectories()</span></code></a>. STILT-R’s <code class="docutils literal notranslate"><span class="pre">time</span></code> is <code class="docutils literal notranslate"><span class="pre">age</span></code> here.</p>
 </dd>
 </dl>
 </section>

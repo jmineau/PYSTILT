@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=7218a86b"></script>
+    <script src="../../_static/documentation_options.js?v=ca4aaaf5"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev2+gc066c51a9" />
+  <meta name="docsearch:version" content="0.1.0a29.dev6+ge705d720b" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -1056,7 +1056,9 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    pandas.DataFrame</span>
-<span class="sd">        The particle table, one row per particle per output step.</span>
+<span class="sd">        The particle table, one row per particle per output step, with</span>
+<span class="sd">        ``time`` (UTC), the receptor time plus ``age``, as a table read from</span>
+<span class="sd">        a particle file has.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -1088,7 +1090,13 @@
                 <span class="s2">"another run; give an empty or new directory."</span>
             <span class="p">)</span>
         <span class="n">workdir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">run_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met_config</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span><span class="o">.</span><span class="n">particles</span></div>
+    <span class="n">particles</span> <span class="o">=</span> <span class="n">run_model</span><span class="p">(</span>
+        <span class="n">model</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met_config</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">timeout</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">particles</span>
+    <span class="n">particles</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">)</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span>
+        <span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"min"</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">particles</span></div>
 
 
 

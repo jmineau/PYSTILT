@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=7218a86b"></script>
+    <script src="../../../_static/documentation_options.js?v=ca4aaaf5"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev2+gc066c51a9" />
+  <meta name="docsearch:version" content="0.1.0a29.dev6+ge705d720b" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -468,6 +468,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">horizontal_dims</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">._paris</span><span class="w"> </span><span class="kn">import</span> <span class="n">to_paris</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.aggregation</span><span class="w"> </span><span class="kn">import</span> <span class="n">_check_steps_hold_layers</span><span class="p">,</span> <span class="n">aggregate</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">_naive_utc</span><span class="p">,</span> <span class="n">_with_cf_metadata</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.targets</span><span class="w"> </span><span class="kn">import</span> <span class="n">Geometry</span>
@@ -543,6 +544,7 @@
 <span class="sd">    &gt;&gt;&gt; foot.stilt.receptor  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; foot.stilt.enhancement(flux).sum()  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; foot.stilt.aggregate(counties, time_bins=bins)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; foot.stilt.to_paris(sim.particles)  # doctest: +SKIP</span>
 <span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">foot</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -636,6 +638,86 @@
         <span class="k">with</span> <span class="n">atomic_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
             <span class="n">ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="p">{</span><span class="s2">"foot"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"zlib"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"complevel"</span><span class="p">:</span> <span class="mi">4</span><span class="p">}})</span>
         <span class="k">return</span> <span class="n">path</span></div>
+
+
+<div class="viewcode-block" id="FootprintAccessor.to_paris">
+<a class="viewcode-back" href="../../../reference/_api/stilt.footprint.FootprintAccessor.to_paris.html#stilt.footprint.FootprintAccessor.to_paris">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_paris</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the footprint as a PARIS-format dataset, which openghg reads.</span>
+
+<span class="sd">        The footprint's hourly layers go to ``srr_time_resolved`` by hours</span>
+<span class="sd">        back from the receptor time, ``H_back``. The layer from one hour</span>
+<span class="sd">        before the receptor time to the receptor time is ``H_back = 1``,</span>
+<span class="sd">        because openghg pairs ``H_back = k`` with the flux hour that starts</span>
+<span class="sd">        ``k`` hours before the footprint's time. ``H_back = 0``, the hour</span>
+<span class="sd">        after the receptor time, stays zero. Only ``H_back`` 0 to 23 are</span>
+<span class="sd">        resolved, since openghg reads the axis as a time span and a 24th</span>
+<span class="sd">        hour would wrap to 0. Layers 24 or more hours back are summed into</span>
+<span class="sd">        ``srr_residual``, and ``srr`` is the sum of all layers. The values</span>
+<span class="sd">        are PYSTILT's: ppm per (µmol m⁻² s⁻¹) is the same quantity as the</span>
+<span class="sd">        PARIS unit, (mol/mol)/(mol/m2/s).</span>
+
+<span class="sd">        ``particle_locations_n``, ``_e``, ``_s`` and ``_w`` are the fraction</span>
+<span class="sd">        of the particles that first left the footprint grid through that</span>
+<span class="sd">        edge, by grid cell along the edge and by 1 km height layer from the</span>
+<span class="sd">        ground to 20 km. A particle that stayed inside counts nowhere. They</span>
+<span class="sd">        need the particles; without them they are left out, and openghg</span>
+<span class="sd">        refuses the file unless it is told not to expect them.</span>
+
+<span class="sd">        The layers are found from each layer's ``time`` coordinate, not from</span>
+<span class="sd">        the name of the layer dimension, so one receptor of</span>
+<span class="sd">        ``project.footprints().foot`` works as well as ``sim.footprint``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        particles : pandas.DataFrame, optional</span>
+<span class="sd">            The particles the footprint was made from, such as</span>
+<span class="sd">            ``sim.particles``. Where they left the grid comes from</span>
+<span class="sd">            :meth:`~stilt.particles.ParticlesAccessor.grid_exits` on the</span>
+<span class="sd">            footprint's grid, and the fractions are of the particles in the</span>
+<span class="sd">            table.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xarray.Dataset</span>
+<span class="sd">            Dimensions ``time`` (one entry, the receptor time), ``latitude``,</span>
+<span class="sd">            ``longitude``, ``resolution`` (``H_back``, 0 to 23 hours) and,</span>
+<span class="sd">            with exits, ``height``. A PARIS file holds one site with one</span>
+<span class="sd">            entry along ``time`` per receptor: concatenate the datasets of</span>
+<span class="sd">            many receptors along ``time`` with :func:`xarray.concat` before</span>
+<span class="sd">            writing them with :meth:`xarray.Dataset.to_netcdf`.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the footprint's layers are not one hour long (make it with</span>
+<span class="sd">            ``tres: 1h``), if a layer ends after the receptor time (a</span>
+<span class="sd">            forward run), if the grid is not in longitude and latitude (a</span>
+<span class="sd">            projected grid), if the footprint holds several receptors or has</span>
+<span class="sd">            no receptor id.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        A footprint of three hourly layers before 18:00, each cell worth 1:</span>
+
+<span class="sd">        &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">        &gt;&gt;&gt; import pandas as pd</span>
+<span class="sd">        &gt;&gt;&gt; import xarray as xr</span>
+<span class="sd">        &gt;&gt;&gt; receptor_time = pd.Timestamp("2024-01-15 18:00")</span>
+<span class="sd">        &gt;&gt;&gt; layers = receptor_time - pd.to_timedelta([3, 2, 1], unit="h")</span>
+<span class="sd">        &gt;&gt;&gt; foot = xr.DataArray(</span>
+<span class="sd">        ...     np.ones((3, 2, 2)),</span>
+<span class="sd">        ...     dims=("time", "lat", "lon"),</span>
+<span class="sd">        ...     coords={"time": layers, "lat": [40.5, 41.5], "lon": [-112.5, -111.5]},</span>
+<span class="sd">        ... ).assign_coords(receptor="202401151800_-111.85_40.77_5")</span>
+<span class="sd">        &gt;&gt;&gt; ds = foot.stilt.to_paris()</span>
+<span class="sd">        &gt;&gt;&gt; ds.srr_time_resolved.sum(["latitude", "longitude"]).values.ravel()[:5]</span>
+<span class="sd">        array([0., 4., 4., 4., 0.])</span>
+<span class="sd">        &gt;&gt;&gt; float(ds.srr.sum())</span>
+<span class="sd">        12.0</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">to_paris</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_foot</span><span class="p">,</span> <span class="n">particles</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="FootprintAccessor.enhancement">

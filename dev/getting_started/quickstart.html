@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=7218a86b"></script>
+    <script src="../_static/documentation_options.js?v=ca4aaaf5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev2+gc066c51a9" />
+  <meta name="docsearch:version" content="0.1.0a29.dev6+ge705d720b" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -565,14 +565,14 @@ The particles are a <a class="reference external" href="https://pandas.pydata.or
 time step:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [4]: </span><span class="n">particles</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 <span class="gh">Out[4]: </span>
-<span class="go">   age  particle       lon  ...   sigw    tlgr  foot_no_hnf_dilution</span>
-<span class="go">0 -1.0       1.0 -111.8497  ...  0.912  1.9972              0.003236</span>
-<span class="go">1 -1.0       2.0 -111.8501  ...  0.912  1.9972              0.003236</span>
-<span class="go">2 -1.0       3.0 -111.8497  ...  0.912  1.9972              0.003236</span>
-<span class="go">3 -1.0       4.0 -111.8494  ...  0.912  1.9972              0.003236</span>
-<span class="go">4 -1.0       5.0 -111.8490  ...  0.912  1.9972              0.003236</span>
+<span class="go">   age  particle  ...  foot_no_hnf_dilution                time</span>
+<span class="go">0 -1.0       1.0  ...              0.003236 2021-01-14 18:59:00</span>
+<span class="go">1 -1.0       2.0  ...              0.003236 2021-01-14 18:59:00</span>
+<span class="go">2 -1.0       3.0  ...              0.003236 2021-01-14 18:59:00</span>
+<span class="go">3 -1.0       4.0  ...              0.003236 2021-01-14 18:59:00</span>
+<span class="go">4 -1.0       5.0  ...              0.003236 2021-01-14 18:59:00</span>
 
-<span class="go">[5 rows x 13 columns]</span>
+<span class="go">[5 rows x 14 columns]</span>
 
 <span class="gp">In [5]: </span><span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
 </pre></div>
