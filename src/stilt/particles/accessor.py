@@ -15,8 +15,6 @@ from stilt.sampling import sample_field
 from stilt.spatial import _grid_cell_starts
 
 if TYPE_CHECKING:
-    import datetime as dt
-
     from stilt.spatial import Grid
     from stilt.visualization import ParticlesPlotAccessor
 
@@ -265,9 +263,7 @@ class ParticlesAccessor:
             exits["time"] = time_before + (time_after - time_before) * fraction
         return exits
 
-    def to_cf_trajectories(
-        self, receptor_time: dt.datetime | None = None
-    ) -> xr.Dataset:
+    def to_cf_trajectories(self) -> xr.Dataset:
         """
         Return the particles as a CF-1.10 trajectory dataset, one trajectory per particle.
 
@@ -285,14 +281,6 @@ class ParticlesAccessor:
         This is CF's "incomplete multidimensional array" representation of
         trajectories (CF-1.10, appendix H.4.1).
 
-        Parameters
-        ----------
-        receptor_time : datetime, optional
-            Release time of the particles, in UTC. Needed only when the table
-            has no ``time`` column. A table from ``sim.particles`` or
-            :func:`~stilt.read_particles` has one; the table
-            :func:`~stilt.run_trajectories` returns does not.
-
         Returns
         -------
         xarray.Dataset
@@ -306,8 +294,7 @@ class ParticlesAccessor:
         ------
         ValueError
             If the table lacks one of ``particle``, ``age``, ``lon``, ``lat``
-            or ``zagl``, if it has neither a ``time`` column nor
-            *receptor_time*, if a particle has two rows at the same age, or if
+            ``zagl`` or ``time``, if a particle has two rows at the same age, or if
             it holds more than one realization (select one:
             ``particles[particles.realization == k]``).
 
@@ -323,9 +310,10 @@ class ParticlesAccessor:
         ...         "zagl": [5.0, 40.0, 120.0, 8.0, 60.0],
         ...     }
         ... )
-        >>> ds = particles.stilt.to_cf_trajectories(
-        ...     receptor_time=pd.Timestamp("2024-01-15 18:00")
+        >>> particles["time"] = pd.Timestamp("2024-01-15 18:00") + pd.to_timedelta(
+        ...     particles["age"], unit="min"
         ... )
+        >>> ds = particles.stilt.to_cf_trajectories()
         >>> dict(ds.sizes)
         {'trajectory': 2, 'obs': 3}
         >>> ds.attrs["featureType"]
@@ -335,7 +323,7 @@ class ParticlesAccessor:
         >>> str(ds.time.sel(trajectory=1).values[-1])
         '2024-01-15T17:57:00.000000000'
         """
-        return to_cf_trajectories(self._particles, receptor_time)
+        return to_cf_trajectories(self._particles)
 
     def enhancement(self, flux: xr.DataArray) -> pd.Series:
         """

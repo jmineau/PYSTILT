@@ -9,14 +9,12 @@ other CF tools read.
 
 from __future__ import annotations
 
-import datetime as dt
-
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 # Columns every particle table has (``stilt.particles.PARTICLE_SCHEMA``).
-_REQUIRED_COLUMNS = ("particle", "age", "lon", "lat", "zagl")
+_REQUIRED_COLUMNS = ("particle", "age", "time", "lon", "lat", "zagl")
 
 # Units and long names of the columns PYSTILT and HYSPLIT write, for the
 # variables of the trajectory dataset. A column not listed here is exported
@@ -42,9 +40,7 @@ _COLUMN_ATTRS: dict[str, dict[str, str]] = {
 }
 
 
-def to_cf_trajectories(
-    particles: pd.DataFrame, receptor_time: dt.datetime | None = None
-) -> xr.Dataset:
+def to_cf_trajectories(particles: pd.DataFrame) -> xr.Dataset:
     """Build the trajectory dataset; see ``ParticlesAccessor.to_cf_trajectories``."""
     missing = [c for c in _REQUIRED_COLUMNS if c not in particles.columns]
     if missing:
@@ -56,16 +52,6 @@ def to_cf_trajectories(
         )
 
     table = particles.copy()
-    if "time" not in table.columns:
-        if receptor_time is None:
-            raise ValueError(
-                "The particle table has no time column; give receptor_time, "
-                "the release time of the particles in UTC."
-            )
-        start = pd.Timestamp(receptor_time)
-        if start.tz is not None:
-            start = start.tz_convert("UTC").tz_localize(None)
-        table["time"] = start + pd.to_timedelta(table["age"], unit="min")
     table["time"] = _naive_utc(table["time"])
     if table.duplicated(["particle", "age"]).any():
         raise ValueError("A particle has two rows at the same age.")

@@ -370,8 +370,8 @@ cf-xarray, and other tools that read CF trajectory files open:
    ds
 
 Write it with :meth:`xarray.Dataset.to_netcdf`. A table from
-:func:`stilt.run_trajectories` has no ``time`` column, so give it the release
-time: ``particles.stilt.to_cf_trajectories(receptor_time=receptor.time)``.
+:func:`stilt.run_trajectories` works the same way: it has the ``time`` column
+too.
 
 Each particle is one trajectory. The coordinates are:
 

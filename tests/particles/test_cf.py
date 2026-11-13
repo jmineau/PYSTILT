@@ -50,7 +50,8 @@ def test_obs_counts_steps_from_the_release():
             "zagl": [1.0, 1.0, 1.0],
         }
     )
-    ds = table.stilt.to_cf_trajectories(receptor_time=RECEPTOR_TIME)
+    table["time"] = RECEPTOR_TIME + pd.to_timedelta(table["age"], unit="min")
+    ds = table.stilt.to_cf_trajectories()
     assert ds.lon.values.tolist() == [[1.0, 2.0, 3.0]]
     # A backward run's time decreases along obs.
     assert (np.diff(ds.time.values[0]) < np.timedelta64(0, "ns")).all()
@@ -66,19 +67,12 @@ def test_a_forward_run_runs_forward_in_time():
             "zagl": [1.0, 1.0],
         }
     )
-    ds = table.stilt.to_cf_trajectories(receptor_time=RECEPTOR_TIME)
+    table["time"] = RECEPTOR_TIME + pd.to_timedelta(table["age"], unit="min")
+    ds = table.stilt.to_cf_trajectories()
     expected = np.array(
         ["2024-01-15T18:10", "2024-01-15T18:20"], dtype="datetime64[ns]"
     )
     np.testing.assert_array_equal(ds.time.values[0], expected)
-
-
-def test_time_comes_from_the_receptor_time_without_a_time_column(particles):
-    from_column = particles.stilt.to_cf_trajectories()
-    from_receptor = particles.drop(columns="time").stilt.to_cf_trajectories(
-        receptor_time=RECEPTOR_TIME
-    )
-    xr.testing.assert_identical(from_column.time, from_receptor.time)
 
 
 def test_times_with_a_time_zone_become_utc(particles):
@@ -89,12 +83,6 @@ def test_times_with_a_time_zone_become_utc(particles):
     assert (
         denver.stilt.to_cf_trajectories().time.values[:, 0] == utc.time.values[:, 0]
     ).all()
-
-    local_start = RECEPTOR_TIME.tz_localize("UTC").tz_convert("America/Denver")
-    from_receptor = particles.drop(columns="time").stilt.to_cf_trajectories(
-        receptor_time=local_start
-    )
-    xr.testing.assert_identical(from_receptor.time, utc.time)
 
 
 def test_cf_metadata(particles):
@@ -165,15 +153,10 @@ def test_trajan_opens_the_file(particles, tmp_path):
         np.testing.assert_array_equal(traj.ty.values, ds.lat.values)
 
 
-@pytest.mark.parametrize("column", ["particle", "age", "lon", "lat", "zagl"])
+@pytest.mark.parametrize("column", ["particle", "age", "time", "lon", "lat", "zagl"])
 def test_a_missing_column_is_refused(particles, column):
     with pytest.raises(ValueError, match=f"no column {column}"):
         particles.drop(columns=column).stilt.to_cf_trajectories()
-
-
-def test_no_time_and_no_receptor_time_is_refused(particles):
-    with pytest.raises(ValueError, match="receptor_time"):
-        particles.drop(columns="time").stilt.to_cf_trajectories()
 
 
 def test_several_realizations_are_refused(particles):
