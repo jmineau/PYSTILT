@@ -81,7 +81,8 @@ src/stilt/
                   stilt_r.py, the stilt-r model of imported runs (runs nothing)
     hysplit/      config, met, catalog, driver, CONTROL and SETUP.CFG writers, failures, bin/, data/
   execution/      ExecutionConfig, runner (plan, local run, Slurm submit), worker
-  observations/   the X-STILT port: readers, sounding selection, slant receptors, columns
+  observations/   the X-STILT port (readers, sounding selection, slant receptors, columns);
+                  receptors along a moving platform's track (tracks.py)
   meteorology.py, sampling.py, spatial.py, visualization.py, exceptions.py, _paths.py
 ```
 

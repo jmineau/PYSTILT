@@ -138,7 +138,9 @@ Module map
      observations/      the X-STILT port: product readers and SOUNDING_SCHEMA,
                         overpass grouping and sounding selection, slant
                         geometry and receptors_from_soundings, modelled_column,
-                        plume backgrounds; arrays in, plain values out
+                        plume backgrounds; receptors_from_track for the
+                        track of a moving platform; arrays in, plain
+                        values out
      transport/         the TransportModel and TransportConfig protocols,
                         ModelRun, ModelInfo, get_model and its MODELS table,
                         run_model and run_trajectories (__init__.py); one
