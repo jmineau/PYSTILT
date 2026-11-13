@@ -479,16 +479,11 @@ Giving the particles adds them, found with
 :meth:`~stilt.particles.ParticlesAccessor.grid_exits`. A particle that never
 left the grid counts nowhere, so the four fractions add up to the share that
 left. Without particles, ``to_paris`` leaves the four variables out, and
-openghg refuses the file unless it is told not to expect them. To give the
-exits yourself, pass a table with one row per particle that left, with
-columns ``particle``, ``edge``, ``lon``, ``lat`` and ``zagl``, and the number
-of particles released:
+openghg refuses the file unless it is told not to expect them. The share of
+particles that left the grid:
 
 .. ipython:: python
 
-   exits = sim.particles.stilt.grid_exits(sim.footprint.stilt.grid)
-   same = sim.footprint.stilt.to_paris(exits=exits, n_particles=200)
-   float(same.particle_locations_n.sum() - paris.particle_locations_n.sum())
    float(sum(paris[f"particle_locations_{e}"].sum() for e in "nesw"))
 
 A PARIS file holds one site, with one entry along ``time`` for each receptor

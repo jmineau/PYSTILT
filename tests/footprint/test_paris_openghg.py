@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from .test_paris import LAT, LON, RECEPTOR_TIME, exits_table, layered
+from .test_paris import LAT, LON, RECEPTOR_TIME, exits_table, layered, locations
 
 pytest.importorskip("openghg")
 
@@ -34,7 +34,7 @@ def paris_file(tmp_path):
             time=foot.time + shift,
             receptor=f"{RECEPTOR_TIME + shift:%Y%m%d%H%M}_-111.85_40.77_10",
         )
-        datasets.append(foot.stilt.to_paris(exits=exits, n_particles=4))
+        datasets.append(foot.stilt.to_paris().merge(locations(exits, 4)))
     ds = xr.concat(datasets, dim="time", combine_attrs="drop_conflicts")
     path = tmp_path / "WBB-10magl_STILT_HRRR_TEST_co2_202401.nc"
     ds.to_netcdf(path)

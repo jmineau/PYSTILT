@@ -183,13 +183,7 @@ class FootprintAccessor:
             ds.to_netcdf(tmp, encoding={"foot": {"zlib": True, "complevel": 4}})
         return path
 
-    def to_paris(
-        self,
-        particles: pd.DataFrame | None = None,
-        *,
-        exits: pd.DataFrame | None = None,
-        n_particles: int | None = None,
-    ) -> xr.Dataset:
+    def to_paris(self, particles: pd.DataFrame | None = None) -> xr.Dataset:
         """
         Return the footprint as a PARIS-format dataset, which openghg reads.
 
@@ -209,9 +203,8 @@ class FootprintAccessor:
         of the particles that first left the footprint grid through that
         edge, by grid cell along the edge and by 1 km height layer from the
         ground to 20 km. A particle that stayed inside counts nowhere. They
-        need the particles or a table of where they left the grid; without
-        either they are left out, and openghg refuses the file unless it is
-        told not to expect them.
+        need the particles; without them they are left out, and openghg
+        refuses the file unless it is told not to expect them.
 
         The layers are found from each layer's ``time`` coordinate, not from
         the name of the layer dimension, so one receptor of
@@ -221,20 +214,10 @@ class FootprintAccessor:
         ----------
         particles : pandas.DataFrame, optional
             The particles the footprint was made from, such as
-            ``sim.particles``. The exits are found with
+            ``sim.particles``. Where they left the grid comes from
             :meth:`~stilt.particles.ParticlesAccessor.grid_exits` on the
-            footprint's grid, and the number of particles is counted from the
+            footprint's grid, and the fractions are of the particles in the
             table.
-        exits : pandas.DataFrame, optional
-            Where particles first left the footprint grid, one row per
-            particle that left, with columns ``particle``, ``edge`` (``"n"``,
-            ``"e"``, ``"s"`` or ``"w"``), ``lon``, ``lat`` and ``zagl``, as
-            :meth:`~stilt.particles.ParticlesAccessor.grid_exits` returns
-            them. Give it instead of *particles*, together with
-            *n_particles*.
-        n_particles : int, optional
-            Number of particles released, the denominator of the fractions.
-            Needed with *exits*; counted from *particles* otherwise.
 
         Returns
         -------
@@ -253,7 +236,7 @@ class FootprintAccessor:
             ``tres: 1h``), if a layer ends after the receptor time (a
             forward run), if the grid is not in longitude and latitude (a
             projected grid), if the footprint holds several receptors or has
-            no receptor id, or if *exits* is given without *n_particles*.
+            no receptor id.
 
         Examples
         --------
@@ -275,7 +258,7 @@ class FootprintAccessor:
         >>> float(ds.srr.sum())
         12.0
         """
-        return to_paris(self._foot, particles, exits=exits, n_particles=n_particles)
+        return to_paris(self._foot, particles)
 
     def enhancement(self, flux: xr.DataArray) -> xr.DataArray:
         """
