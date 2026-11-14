@@ -1,4 +1,4 @@
-"""Tests for stilt.particles.table: particle files, release heights, the near-field correction."""
+"""Tests for stilt.particles.table: particle files, release heights, foot, the near-field correction."""
 
 import datetime as dt
 import json
@@ -12,6 +12,7 @@ import pytest
 
 from stilt.identity import run_settings, transport_from_settings
 from stilt.particles import (
+    add_foot,
     correct_near_field,
     particles_from_table,
     particles_metadata,
@@ -990,3 +991,120 @@ def test_msl_multipoint_release_heights_do_not_read_zsfc_when_it_is_not_needed(
         "release_height"
     ]
     assert without.tolist() == with_zsfc.tolist()
+
+
+#: foot of one minute below a 500 m layer of air of mean density 1 kg/m3.
+_ONE_MINUTE_IN_500_M = 0.02897 * 60 / 500
+
+
+def _positions(**columns) -> pd.DataFrame:
+    """A table of positions, two particles of two rows each, with *columns* added."""
+    base = pd.DataFrame(
+        {
+            "particle": [1, 1, 2, 2],
+            "age": [-1, -2, -1, -2],
+            "lon": -112.0,
+            "lat": 40.5,
+            "zagl": [50.0, 80.0, 50.0, 900.0],
+            "time": pd.Timestamp("2023-01-01 12:00"),
+            "mlht": 1000.0,
+        }
+    )
+    return base.assign(**columns)
+
+
+@pytest.fixture
+def met(monkeypatch):
+    """
+    Stand in for the met files: air of density ``met["density"]`` kg/m3 and a 1000 m PBLH.
+
+    The pressure falls ρ g / 100 hPa per meter, so the air below a depth is
+    ρ times the depth. A row at longitude 0 is off the grid.
+    """
+    from stilt.particles import table
+
+    met = {"density": 1.0, "calls": []}
+
+    def sample_met(particles, files, columns, *, z_top):
+        met["calls"].append((list(columns), z_top, list(files)))
+        off = particles["lon"] == 0
+        if columns == ["mlht"]:
+            return particles.assign(mlht=np.where(off, np.nan, 1000.0))
+        pres = 1000.0 - met["density"] * 9.80665 / 100 * particles["zagl"]
+        return particles.assign(pres=np.where(off, np.nan, pres))
+
+    monkeypatch.setattr(table, "sample_met", sample_met)
+    return met
+
+
+def test_add_foot_counts_a_whole_step_below_the_mixing_depth_and_none_above(met):
+    foot = add_foot(_positions(), ["met"], veght=0.5)["foot"]
+
+    np.testing.assert_allclose(foot, [_ONE_MINUTE_IN_500_M] * 3 + [0.0])
+    # The pressure at the ground and at the depth, on the met's own levels.
+    assert met["calls"] == [(["pres"], None, ["met"])]
+
+
+def test_add_foot_reads_veght_above_1_as_meters(met):
+    foot = add_foot(_positions(), ["met"], veght=800.0)["foot"]
+
+    np.testing.assert_allclose(foot, [0.02897 * 60 / 800] * 3 + [0.0])
+
+
+def test_add_foot_divides_by_the_air_below_the_depth(met):
+    met["density"] = 2.0
+    foot = add_foot(_positions(mlht=[1000.0, 2000.0, 500.0, 1e4]), ["met"], veght=0.5)[
+        "foot"
+    ]
+
+    np.testing.assert_allclose(
+        foot,
+        np.array([1.0, 1 / 2, 2.0, 1 / 10]) * _ONE_MINUTE_IN_500_M / 2,
+    )
+
+
+def test_add_foot_samples_the_mets_mlht_when_the_table_has_none(met):
+    out = add_foot(_positions().drop(columns="mlht"), ["met"], veght=0.5)
+
+    assert out["mlht"].tolist() == [1000.0] * 4
+    np.testing.assert_allclose(out["foot"], [_ONE_MINUTE_IN_500_M] * 3 + [0.0])
+    assert [call[0] for call in met["calls"]] == [["mlht"], ["pres"]]
+
+
+def test_add_foot_takes_each_step_from_the_particle_s_own_rows(met):
+    """Steps follow each particle in time, whatever the row order, and a release row gets none."""
+    particles = pd.DataFrame(
+        {
+            "particle": [2, 1, 1, 2, 1, 2],
+            "age": [10, 5, 0, 0, 15, 30],
+            "lon": -112.0,
+            "lat": 40.5,
+            "zagl": 10.0,
+            "time": pd.Timestamp("2023-01-01 12:00"),
+            "mlht": 1000.0,
+        }
+    )
+
+    foot = add_foot(particles, ["met"], veght=0.5)["foot"] / _ONE_MINUTE_IN_500_M
+
+    np.testing.assert_allclose(foot, [10.0, 5.0, 0.0, 0.0, 10.0, 20.0])
+
+
+def test_add_foot_uses_the_time_below_the_layer_a_model_writes(met):
+    foot = add_foot(_positions(samt=[0.5, 1.0, 0.0, 0.25]), ["met"], veght=0.5)["foot"]
+
+    np.testing.assert_allclose(
+        foot, np.array([0.5, 1.0, 0.0, 0.25]) * _ONE_MINUTE_IN_500_M
+    )
+
+
+def test_add_foot_gives_nan_off_the_mets_grid(met):
+    foot = add_foot(_positions(lon=[0.0, -112.0, -112.0, -112.0]), ["met"], 0.5)["foot"]
+
+    assert np.isnan(foot[0])
+    assert np.isfinite(foot[1:]).all()
+
+
+def test_add_foot_refuses_a_table_that_has_foot(met):
+    with pytest.raises(ValueError, match="foot column already"):
+        add_foot(_positions(foot=1.0), ["met"], veght=0.5)

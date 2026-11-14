@@ -5,6 +5,7 @@ The particle table: its columns, particle files, release heights, and the near-f
 from __future__ import annotations
 
 import json
+import os
 import warnings
 from collections.abc import Iterable, Mapping
 from pathlib import Path
@@ -23,6 +24,7 @@ from stilt.receptors import (
     Receptor,
     parse_receptor_id,
 )
+from stilt.sampling import sample_met
 
 if TYPE_CHECKING:
     from upath import UPath
@@ -58,6 +60,9 @@ HNF_PLUME_COLUMNS: tuple[str, ...] = ("dens", "samt", "sigw", "tlgr", "foot", "m
 
 #: Molar mass of dry air, kg/mol.
 _MOLAR_MASS_DRY_AIR = 0.02897
+
+#: Standard gravity, m/s².
+_GRAVITY = 9.80665
 
 
 class ParticleMetadata(NamedTuple):
@@ -489,6 +494,121 @@ def _above_ground(p: pd.DataFrame, start: pd.Series) -> pd.Series:
     return (start - start.map(terrain)).clip(lower=0.0)
 
 
+def _mixing_depth(mlht: pd.Series, veght: float) -> pd.Series | float:
+    """Return the depth surface fluxes are mixed through: ``veght`` of *mlht*, or ``veght`` meters above 1."""
+    return veght * mlht if veght <= 1 else veght
+
+
+def add_foot(
+    particles: pd.DataFrame,
+    met_files: Iterable[str | os.PathLike[str]],
+    veght: float,
+) -> pd.DataFrame:
+    """
+    Add ``foot``, each particle's sensitivity to surface fluxes, for a transport model that writes only positions.
+
+    A particle below the depth surface fluxes are mixed through, ``veght``
+    times ``mlht`` (or ``veght`` meters when it is above 1), takes up the
+    flux for the time it spends there. Its ``foot`` for one output step is
+    that time divided by the air in the layer, STILT's footprint (Lin et
+    al., 2003)::
+
+        foot = M · t / (ρ̄ · depth)
+
+    in ppm per (µmol m⁻² s⁻¹), with M = 0.02897 kg mol⁻¹, the molar mass of
+    dry air, t the time in seconds, and ρ̄ the mean air density below the
+    depth. ρ̄ · depth, the mass of air in the layer, is the drop in pressure
+    from the ground to the depth over g, from the met files under the
+    particle. The time is ``samt`` when the table has it. Otherwise the
+    particle counts for the whole step when it is below the depth at the
+    end of the step, and not at all when it is above. A step is the time
+    since the particle's previous row, or since its release for its first
+    row, so a release row at ``age = 0`` gets zero.
+
+    HYSPLIT computes ``foot`` itself in STILT mode, the same way in its
+    turbulence steps. :doc:`/development/validation` says how far a
+    footprint made from this ``foot`` is from one made from HYSPLIT's. The
+    worker adds it after a run whose particles have none
+    (:func:`stilt.transport.run_model`).
+
+    Parameters
+    ----------
+    particles : pandas.DataFrame
+        Particle table with ``time``, the receptor time plus ``age``
+        minutes. A ``mlht`` column (m above ground) is used as it is;
+        without one, the met's boundary-layer height is sampled at each
+        particle (:func:`stilt.sampling.sample_met`).
+    met_files : iterable of path-like
+        ARL met files that cover the particles' times, such as the files
+        the run read. They are read on their own levels, which start at the
+        ground.
+    veght : float
+        Height that surface fluxes are mixed through (STILT's ``veght``): a
+        fraction of the mixed-layer height when 1 or less, else meters
+        above ground.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A copy of *particles* with ``foot``, and ``mlht`` when it was
+        sampled. A row off the met's grid gets NaN, which no footprint
+        counts.
+
+    Raises
+    ------
+    ValueError
+        If *particles* has a ``foot`` column already, has no ``time``
+        column, or has a row outside the files' times.
+
+    Examples
+    --------
+    >>> particles = sim.particles.drop(columns="foot")  # doctest: +SKIP
+    >>> meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP
+    >>> stilt.particles.add_foot(particles, meta.met_files, veght=0.5)  # doctest: +SKIP
+    """
+    if "foot" in particles.columns:
+        raise ValueError(
+            "The particles have a foot column already. Drop it first to compute it."
+        )
+    files = list(met_files)
+    out = particles
+    if "mlht" not in out.columns:
+        out = sample_met(out, files, ["mlht"], z_top=None)
+    else:
+        out = out.copy()
+    depth = np.broadcast_to(
+        np.asarray(_mixing_depth(out["mlht"], veght), dtype=float), len(out)
+    )
+    # The pressure at the ground and at the depth, in one call.
+    where = out[["lon", "lat", "time"]]
+    ends = pd.concat(
+        [where.assign(zagl=0.0), where.assign(zagl=depth)], ignore_index=True
+    )
+    pres = sample_met(ends, files, ["pres"], z_top=None)["pres"].to_numpy()
+    air = 100.0 * (pres[: len(out)] - pres[len(out) :]) / _GRAVITY  # kg m⁻²
+    if "samt" in out.columns:
+        minutes = out["samt"].to_numpy(dtype=float)
+    else:
+        below = out["zagl"].to_numpy(dtype=float) < depth
+        minutes = np.where(below, _step_minutes(out), 0.0)
+    out["foot"] = _MOLAR_MASS_DRY_AIR * minutes * 60 / air
+    return out
+
+
+def _step_minutes(particles: pd.DataFrame) -> np.ndarray:
+    """Return each row's minutes since the particle's previous row, or since its release for its first."""
+    elapsed = np.abs(particles["age"].to_numpy(dtype=float))
+    number = particles["particle"].to_numpy()
+    order = np.lexsort((elapsed, number))
+    walked = elapsed[order]
+    step = np.diff(walked, prepend=0.0)
+    first = np.r_[True, number[order][1:] != number[order][:-1]]
+    step[first] = walked[first]
+    minutes = np.empty_like(step)
+    minutes[order] = step
+    return minutes
+
+
 def correct_near_field(
     particles: pd.DataFrame, receptor: Receptor, veght: float
 ) -> pd.DataFrame:
@@ -558,7 +678,7 @@ def correct_near_field(
             - 1
         )
     )
-    p["pbl_mixing"] = veght * p["mlht"] if veght <= 1 else veght
+    p["pbl_mixing"] = _mixing_depth(p["mlht"], veght)
 
     start_h = p["release_height"] if "release_height" in p.columns else r_zagl
     if start_h is None:

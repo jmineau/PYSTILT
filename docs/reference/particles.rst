@@ -164,4 +164,5 @@ lack the columns the correction reads gets none, and a warning says so.
    :nosignatures:
 
    add_release_heights
+   add_foot
    correct_near_field
