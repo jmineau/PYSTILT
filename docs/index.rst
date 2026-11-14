@@ -69,7 +69,9 @@ laptop or tens of thousands on an HPC cluster.
 
 Used STILT-R, X-STILT, stiltctl or Jena STILT before?
 :ref:`Coming from another STILT <coming-from-another-stilt>` says where
-their settings and steps are in PYSTILT.
+their settings and steps are in PYSTILT. Run HYSPLIT on its own?
+:doc:`guides/hysplit_users` maps ``CONTROL`` and ``SETUP.CFG`` to PYSTILT's
+settings.
 
 .. toctree::
    :hidden:
