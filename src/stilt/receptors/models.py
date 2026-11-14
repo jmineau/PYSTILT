@@ -56,7 +56,8 @@ def parse_time(time: TimeLike) -> dt.datetime:
     Return *time* as a naive UTC datetime.
 
     Accepts datetimes (aware ones are converted to UTC), pandas and numpy
-    times, ISO strings, and the compact ``"YYYYMMDDHHMM"`` form.
+    times, ISO strings, and the compact ``"YYYYMMDDHHMM"`` form. A time finer
+    than a microsecond is cut to the microsecond.
     """
     if time is None:
         raise ValueError("'time' must be provided for all receptor types.")
@@ -77,6 +78,9 @@ def parse_time(time: TimeLike) -> dt.datetime:
         raise ValueError("Receptor time cannot be NaT.")
     if parsed.tzinfo is not None:
         parsed = parsed.tz_convert("UTC").tz_localize(None)
+    # A datetime holds microseconds; satellite times (OCO-2 seconds since an
+    # epoch) carry nanoseconds, which to_pydatetime would drop with a warning.
+    parsed = parsed.floor("us")
     return cast(dt.datetime, parsed.to_pydatetime()).replace(tzinfo=None)
 
 
