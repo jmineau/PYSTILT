@@ -2,7 +2,7 @@
 
 import datetime as dt
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import MagicMock
 
 import pandas as pd
@@ -923,3 +923,35 @@ def test_a_project_whose_files_are_invalid_cannot_be_checked(tmp_path):
 
     with pytest.raises(ValueError, match="nonsense"):
         Project(project.directory).check()
+
+
+class _SelfChecking(BaseModel):
+    """A user's transform that checks its own inputs and reads zsfc, named by import path."""
+
+    reads_zsfc: ClassVar[bool] = True
+
+    def apply(self, particles, receptor=None, directory=None):
+        return particles.copy()
+
+    def check(self, receptors, directory):
+        return [
+            ("my_input", rid, f"no input for this receptor in {directory}")
+            for rid in receptors
+        ]
+
+
+def test_a_transform_checks_its_own_inputs_and_says_it_reads_zsfc(tmp_path):
+    project = _project(
+        tmp_path,
+        [_column("msl")],
+        hnf_plume=False,
+        variants={"hrrr": {"transforms": [{"kind": "tests.test_check._SelfChecking"}]}},
+    )
+
+    found = project.check()
+
+    mine = _found(found, "my_input")
+    assert list(mine["receptor"]) == [str(project.receptors["receptor"].iloc[0])]
+    assert str(project.directory) in mine["message"].iloc[0]
+    zsfc = _found(found, "zsfc")["message"].iloc[0]
+    assert "the tests.test_check._SelfChecking transform fails their footprints" in zsfc

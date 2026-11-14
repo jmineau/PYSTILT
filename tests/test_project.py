@@ -11,11 +11,11 @@ import pandas as pd
 import pytest
 import xarray as xr
 
+from stilt import transport_error
 from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
 from stilt.output import Output
-from stilt.particles import transport_error
 from stilt.project import Project
 from stilt.receptors import ColumnReceptor, PointReceptor
 from stilt.spatial import Grid

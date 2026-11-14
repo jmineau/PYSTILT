@@ -4,7 +4,12 @@ Particle transforms that reweight ``foot`` before the footprint is computed.
 A transform is any object with
 ``apply(particles, receptor=None, directory=None) -> DataFrame``: the
 particle table, the receptor they were released from, and the directory a
-relative file name in its settings starts from (the project's). The
+relative file name in its settings starts from (the project's). Two
+optional parts let ``stilt check`` look at a project before it runs: a
+``check(receptors, directory)`` method that returns what is wrong with the
+transform's inputs for those receptor ids, as ``(check, receptor id or
+None, message)`` tuples, and ``reads_zsfc = True`` for a transform that
+reads ``zsfc`` for a receptor above sea level. The
 built-in ones are pydantic models whose fields are their ``config.yaml``
 keys::
 

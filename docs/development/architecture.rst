@@ -88,6 +88,10 @@ Module map
                         with the settings its files record
      simulation.py      Simulation: a frozen value (receptor, variant, output)
                         that knows where its results are and whether they exist
+     background.py      background: the mole fraction at a receptor from a
+                        field sampled where the particles end (sim.background)
+     transport_error.py transport_error: the transport error of the
+                        enhancement, one receptor or a selection in threads
      config.py          ProjectConfig: reads config.yaml, splits the flat keys
                         into the model's config and the footprint's, rejects
                         unknown keys naming the nearest setting, checks each
@@ -108,9 +112,6 @@ Module map
                         a model that writes none, the near-field plume correction
                         (which calc_footprint applies)
        accessor.py      the .stilt pandas accessor
-       background.py    the background at a receptor (sim.background)
-       transport_error.py  the transport error of the enhancement, one
-                           receptor or a selection in threads
      footprint/         the footprint (a DataArray)
        config.py        FootprintConfig and the geometry specs
        gridding.py      calc_footprint, as STILT-R's (fidelity-guarded)
@@ -330,8 +331,8 @@ the STILT-R model. Outside those modules nothing imports them, except where
 the contract's ``ignore_imports`` lists it, each with its reason: the
 variant's footprint settings, the output and ``Simulation`` code that writes
 and reads footprint files, the worker's footprint step, ``Project``'s bulk
-reads, the background and transport-error modules that live in the particles
-package, and ``add_foot``'s use of ``sample_met``. The list is the work a code
+reads, ``check``'s look at a variant's transforms, and ``add_foot``'s use of
+``sample_met``. The list is the work a code
 boundary would leave; a new crossing fails ``just imports``. Two crossings
 are not imports between modules, so the contract cannot see them: the
 near-field correction (which only the footprint side calls) and

@@ -150,6 +150,8 @@ layers = [
     "project : execution : config",
     "check | fetch",
     "simulation",
+    "transport_error",
+    "background",
     "output",
     "footprint : identity : meteorology : transport",
     "particles",
@@ -205,10 +207,11 @@ allow_indirect_imports = true
 # background, transport error, and the STILT-R model. Nothing is moved here:
 # the crossings below are the work a code boundary would leave, and a new one
 # fails this contract. Not seen: a package's __init__ importing its own module
-# (stilt.particles re-exports background and transport error; the transport
-# registry imports the STILT-R model), and the near-field correction (which
-# the footprint step calls) and add_foot, functions in stilt.particles.table. The package's
-# __init__ re-exports the public names, so it is not a source. Imports used
+# (the transport registry imports the STILT-R model), and the near-field
+# correction (which the footprint step calls) and add_foot, functions in
+# stilt.particles.table. The package's __init__ re-exports the public names,
+# so it is not a source. stilt.check asks a variant's transforms to check
+# themselves (a check method, reads_zsfc) without importing them. Imports used
 # only for type hints do not count.
 [[tool.importlinter.contracts]]
 name = "The particle-run core does not import what STILT adds on top"
@@ -220,28 +223,26 @@ forbidden_modules = [
     "stilt.observations",
     "stilt.sampling",
     "stilt.transport.stilt_r",
-    "stilt.particles.background",
-    "stilt.particles.transport_error",
+    "stilt.background",
+    "stilt.transport_error",
 ]
 ignore_imports = [
     # Imports within STILT's side. The observation layer sits above
     # everything (the layers contract holds that); the STILT-R reader reads
-    # imported runs' footprints and records them under the STILT-R model.
+    # imported runs' footprints and records them under the STILT-R model;
+    # background and transport error weight particles as the footprint does.
     "stilt.footprint.** -> stilt.footprint.**",
     "stilt.footprint.** -> stilt.transforms",
     "stilt.footprint.** -> stilt.sampling",
     "stilt.transforms.** -> stilt.transforms.**",
     "stilt.observations.** -> stilt.**",
-    "stilt.particles.background -> stilt.sampling",
+    "stilt.background -> stilt.sampling",
+    "stilt.background -> stilt.transforms",
+    "stilt.transport_error -> stilt.background",
+    "stilt.transport_error -> stilt.transforms",
     "stilt.migration -> stilt.footprint.config",
     "stilt.migration -> stilt.footprint.io",
     "stilt.migration -> stilt.transport.stilt_r",
-    # Background and transport error live in the particles package, and the
-    # transform checks in stilt.check; moving them cuts these.
-    "stilt.particles.background -> stilt.transforms",
-    "stilt.particles.transport_error -> stilt.transforms",
-    "stilt.check -> stilt.transforms.averaging_kernel",
-    "stilt.check -> stilt.transforms.pressure_weighting",
     # Sampling fields at particles: add_foot reads the met with sample_met,
     # and the particle accessor samples a field.
     "stilt.particles.table -> stilt.sampling",
@@ -258,8 +259,8 @@ ignore_imports = [
     "stilt.simulation -> stilt.footprint.config",
     "stilt.simulation -> stilt.footprint.gridding",
     "stilt.simulation -> stilt.footprint.io",
-    "stilt.simulation -> stilt.particles.background",
-    "stilt.simulation -> stilt.particles.transport_error",
+    "stilt.simulation -> stilt.background",
+    "stilt.simulation -> stilt.transport_error",
     # The footprint step after the particles.
     "stilt.execution.worker -> stilt.footprint",
     # Project.footprints(), Project.jacobian() and Project.transport_error().
@@ -267,7 +268,7 @@ ignore_imports = [
     "stilt.project -> stilt.footprint.aggregation",
     "stilt.project -> stilt.footprint.config",
     "stilt.project -> stilt.footprint.io",
-    "stilt.project -> stilt.particles.transport_error",
+    "stilt.project -> stilt.transport_error",
 ]
 allow_indirect_imports = true
 

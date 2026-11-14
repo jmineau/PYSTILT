@@ -8,7 +8,7 @@ pressures; it is public so your own transforms can use it.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 import numpy as np
 import pandas as pd
@@ -157,6 +157,10 @@ class PressureWeighting(BaseModel):
     """
 
     model_config = ConfigDict(frozen=True)
+
+    #: It reads ``zsfc`` for a receptor above sea level, so ``stilt check``
+    #: says when ``varsiwant`` lacks it.
+    reads_zsfc: ClassVar[bool] = True
 
     kind: Literal["pressure_weighting"] = "pressure_weighting"
     surface_pressure: float | None = Field(

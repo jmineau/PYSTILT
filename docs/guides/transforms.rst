@@ -224,6 +224,15 @@ A few rules keep custom transforms working everywhere:
   is read. Both can be ``None`` when a transform is applied to particles
   alone, so raise a clear error if yours needs them.
 
+- **Let** ``stilt check`` **see its inputs** (optional). A ``check(self,
+  receptors, directory)`` method gets the project's receptor ids and
+  directory and returns what is wrong, as ``(check, receptor id or None,
+  message)`` tuples, so a missing input file shows up before any run. The
+  ``averaging_kernel`` checks its table this way. Set ``reads_zsfc = True``
+  on the class if it reads ``zsfc`` for a receptor above sea level, as
+  ``pressure_weighting`` does, and ``stilt check`` says when ``varsiwant``
+  lacks it.
+
 A transform named in ``config.yaml`` must be a pydantic model, because
 PYSTILT writes it back out to the footprint folder's ``_settings.yaml``
 and to each footprint file. A config that names a plain class fails to
