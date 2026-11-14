@@ -1,4 +1,4 @@
-name: STILT-R
+name: STILT-R parity
 
 # The STILT-R comparisons (markers fidelity and r_only): PYSTILT against a pinned
 # uataq/stilt commit. The job takes about 25 minutes, so it runs only when a change

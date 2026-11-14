@@ -249,7 +249,7 @@ after the pin. When one touches a file the comparison runs (anything in
 ``r/src/``, which the R helpers source whole, ``bin/linux_x64/hycs_std``, or
 ``exe/``), it opens the ``chore/stilt-r-upgrade`` pull request, which moves
 the pin to the newest commit, sets "Last verified", lists the upstream
-commits, and starts the STILT-R workflow on its branch. Commits that touch
+commits, and starts the STILT-R parity workflow on its branch. Commits that touch
 only other files open nothing. Merge the pull request when STILT-R passes;
 when a fidelity test fails, work through the steps below on its branch.
 
