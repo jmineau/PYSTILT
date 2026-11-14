@@ -13,6 +13,8 @@
 PYSTILT is a Python version of the [STILT](https://uataq.github.io/stilt/) atmospheric transport model.
 It follows air backward in time from a measurement with [HYSPLIT](https://www.ready.noaa.gov/HYSPLIT.php)
 and computes a footprint, a map of which upwind surface areas influenced the measurement and by how much.
+If you run HYSPLIT on its own, PYSTILT also runs it from Python for particles alone; see
+[PYSTILT for HYSPLIT users](https://jmineau.github.io/PYSTILT/stable/guides/hysplit_users.html).
 
 ## Status
 
