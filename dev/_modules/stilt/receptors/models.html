@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=96acfa17"></script>
+    <script src="../../../_static/documentation_options.js?v=edfb7103"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev25+g2e4e835be" />
+  <meta name="docsearch:version" content="0.1.0a29.dev27+g31329bc82" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -505,7 +505,8 @@
 <span class="sd">    Return *time* as a naive UTC datetime.</span>
 
 <span class="sd">    Accepts datetimes (aware ones are converted to UTC), pandas and numpy</span>
-<span class="sd">    times, ISO strings, and the compact ``"YYYYMMDDHHMM"`` form.</span>
+<span class="sd">    times, ISO strings, and the compact ``"YYYYMMDDHHMM"`` form. A time finer</span>
+<span class="sd">    than a microsecond is cut to the microsecond.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="n">time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"'time' must be provided for all receptor types."</span><span class="p">)</span>
@@ -526,6 +527,9 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Receptor time cannot be NaT."</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">parsed</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="s2">"UTC"</span><span class="p">)</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+    <span class="c1"># A datetime holds microseconds; satellite times (OCO-2 seconds since an</span>
+    <span class="c1"># epoch) carry nanoseconds, which to_pydatetime would drop with a warning.</span>
+    <span class="n">parsed</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="s2">"us"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">parsed</span><span class="o">.</span><span class="n">to_pydatetime</span><span class="p">())</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 
 
