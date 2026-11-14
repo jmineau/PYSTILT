@@ -285,8 +285,9 @@ The number of particles
 The near-field correction
    ``hnf_plume`` (on by default) corrects the footprint close to the
    receptor, where particles have not yet mixed through the boundary
-   layer. A run with it off shows how much of the footprint is near the
-   receptor.
+   layer. It is a footprint setting, so a variant with ``hnf_plume: false``
+   shares your variant's particles and runs no transport model; its
+   footprint shows how much of yours is near the receptor.
 
 The units
    Footprints are in ppm per (µmol m⁻² s⁻¹), per time layer (an hour unless

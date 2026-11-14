@@ -1330,7 +1330,6 @@ def test_a_run_on_two_cpus_writes_to_the_output_it_was_given(tmp_path):
     (project / "config.yaml").write_text(
         "model: toypool.ToyModel\n"
         "n_hours: -1\n"
-        "hnf_plume: false\n"
         "mets:\n  toy:\n    weather: hrrr\n"
         "variants:\n  toy: {}\n"
     )
@@ -1387,7 +1386,6 @@ def test_a_worker_killed_outright_stops_the_run_and_a_rerun_finishes_it(tmp_path
     (project / "config.yaml").write_text(
         "model: toykill.KillingToy\n"
         "n_hours: -1\n"
-        "hnf_plume: false\n"
         "mets:\n  toy:\n    weather: hrrr\n"
         "variants:\n  toy: {}\n"
     )

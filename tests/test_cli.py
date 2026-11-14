@@ -307,6 +307,11 @@ def test_check_lists_what_would_stop_a_run_and_exits_1(tmp_path, calls):
 
 def test_check_tells_a_receptor_above_sea_level_to_add_zsfc_and_exits_1(tmp_path):
     _write_checkable_config(tmp_path)
+    # A footprint, whose near-field correction reads zsfc for this receptor.
+    with (tmp_path / "config.yaml").open("a") as config:
+        config.write(
+            "grid: {xmin: -113, xmax: -110, ymin: 40, ymax: 42, xres: 0.1, yres: 0.1}\n"
+        )
     (tmp_path / "receptors.csv").write_text(
         "time,longitude,latitude,altitude,altitude_ref\n"
         "2023-01-01 12:00:00,-111.85,40.77,1500.0,msl\n"
@@ -1367,11 +1372,11 @@ def test_init_writes_science_first_commented_config(tmp_path):
     assert list(parsed) == [
         "mets",
         "grid",
+        "hnf_plume",
         "variants",
         "n_hours",
         "numpar",
         "varsiwant",
-        "hnf_plume",
         "output",
     ]
     assert parsed["output"] == "./output"
@@ -1521,7 +1526,6 @@ def test_status_lists_folders_and_what_differs(tmp_path):
             mets={"hrrr": met},
             variants={"hrrr": {}},
             numpar=500,
-            hnf_plume=False,
             output=str(tmp_path / "out"),
         ),
         receptors=[receptor],
@@ -1537,16 +1541,13 @@ def test_status_lists_folders_and_what_differs(tmp_path):
             "foot": [1e-5],
         }
     )
-    sim.output.write_particles(
-        sim.variant, receptor, finished(particles, receptor, sim.transport), []
-    )
+    sim.output.write_particles(sim.variant, receptor, finished(particles, receptor), [])
     new = Project.init(
         tmp_path / "new",
         config=ProjectConfig(
             mets={"hrrr": met},
             variants={"hrrr": {}},
             numpar=1000,
-            hnf_plume=False,
             output=str(tmp_path / "out"),
         ),
         receptors=[receptor],

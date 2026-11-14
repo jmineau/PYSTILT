@@ -89,7 +89,7 @@ def _write_trajectory(
 ) -> Path:
     """Write a small particle file for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant, realization)
-    particles = finished(_particles(), sim.receptor, sim.transport)
+    particles = finished(_particles(), sim.receptor)
     return sim.output.write_particles(
         sim.variant, sim.receptor, particles, [], realization
     )
@@ -557,7 +557,7 @@ def test_status_without_a_readable_met_raises_when_a_folder_may_hold_results(
     """Same settings but the met's: the folder, whatever it is named, may be this variant's."""
     project = _project(tmp_path, [point_receptor])
     sim = project.simulation(point_receptor.id, "hrrr")
-    particles = finished(_particles(), sim.receptor, sim.transport)
+    particles = finished(_particles(), sim.receptor)
     renamed = replace(sim.variant, name="renamed")
     sim.output.write_particles(renamed, sim.receptor, particles, [])
 
@@ -919,7 +919,7 @@ def _write_spread_particles(
             "foot": np.full(n, 1e-3),
         }
     )
-    particles = finished(particles, sim.receptor, sim.transport)
+    particles = finished(particles, sim.receptor)
     sim.output.write_particles(sim.variant, sim.receptor, particles, [], realization)
 
 
@@ -944,7 +944,6 @@ def test_transport_error_docstring_recipe_gives_the_realizations_of_sim_transpor
         tmp_path,
         [a, b],
         grid=None,
-        hnf_plume=False,
         krand=4,
         variants={"hrrr": {}, "hrrr-err": {**_XYERR, "realizations": 4}},
     )
@@ -987,6 +986,7 @@ def test_transport_error_docstring_recipe_gives_the_realizations_of_sim_transpor
             sim.particles,
             [rows for _, rows in project.particles(ensemble).groupby("variant")],
             flux,
+            receptor=sim.receptor,
         )
         assert merged.realizations == 1
         assert merged.variance != pytest.approx(expected.variance, rel=0.2)
@@ -1009,7 +1009,7 @@ def _write_aged_particles(
             "foot": np.full(n, 1e-3),
         }
     )
-    particles = finished(particles, sim.receptor, sim.transport)
+    particles = finished(particles, sim.receptor)
     sim.output.write_particles(sim.variant, sim.receptor, particles, [], realization)
 
 

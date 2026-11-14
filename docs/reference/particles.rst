@@ -189,8 +189,9 @@ Columns PYSTILT adds
    When the model wrote none (:func:`add_foot`), as above.
 
 ``foot_no_hnf_dilution``
-   ``foot`` before the near-field correction (:func:`correct_near_field`),
-   when ``hnf_plume`` is on.
+   ``foot`` before the near-field correction, added by
+   :func:`correct_near_field`. A stored particle file has none: it holds
+   ``foot`` uncorrected, and the footprint applies the correction.
 
 ``time``
    The time of each row, in UTC: the receptor time plus ``age``. It is
@@ -212,12 +213,20 @@ Checking a table
 After a run
 -----------
 
-PYSTILT adds the release heights to any model's particles, ``foot`` to
-particles that have none, and applies the near-field correction when
-``hnf_plume`` is set. A model whose particles lack the columns the
-correction reads gets none, and a warning says so. The correction reads
-``samt``, ``sigw`` and ``tlgr``, which only HYSPLIT writes, so particles
-that got their ``foot`` from PYSTILT are not corrected.
+PYSTILT adds the release heights to any model's particles, and ``foot`` to
+particles that have none. That is what a particle file stores and
+``sim.particles`` returns.
+
+The near-field correction is applied when a footprint is made, by
+:func:`stilt.calc_footprint` when ``hnf_plume`` is set (the default), with
+the run's ``footprint_depth``. The transport error does the same, so its
+enhancement is the footprint's. Anything else that reads ``foot`` from the
+stored particles, such as ``particles.stilt.enhancement``, reads it
+uncorrected: call :func:`correct_near_field` first to match the footprint.
+Particles that lack the columns the correction reads get none, and a
+warning says so. The correction reads ``samt``, ``sigw`` and ``tlgr``,
+which only HYSPLIT writes, so particles that got their ``foot`` from
+PYSTILT are not corrected.
 
 .. autosummary::
    :toctree: _api

@@ -244,6 +244,7 @@ def _py_footprint(
         grid,
         smooth_factor=smooth_factor,
         tres=tres,
+        hnf_plume=False,  # STILT-R's calc_footprint grids foot as given
         name="test",
     )
     nc_path = tmp_path / "py_foot.nc"

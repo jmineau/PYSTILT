@@ -137,7 +137,7 @@ def _minutes(tres: str | timedelta) -> int:
 
 class FootprintConfig(BaseModel):
     """
-    Footprint settings: the grid, smoothing, and particle transforms.
+    Footprint settings: the grid, smoothing, the near-field correction, and particle transforms.
 
     The config and each variant hold these as their defaults and overrides,
     and every footprint keeps the settings it was calculated with.
@@ -185,6 +185,19 @@ class FootprintConfig(BaseModel):
             "Length of each time layer of the footprint, counted from the "
             "receptor time, as a duration in whole minutes: ``1h`` for hourly "
             "layers, ``15min`` for 15-minute data, ``1D`` for days."
+        ),
+    )
+    hnf_plume: bool = Field(
+        True,
+        description=(
+            "Correct ``foot`` near the receptor with a vertical Gaussian plume "
+            "model before the footprint is computed "
+            "(:func:`stilt.particles.correct_near_field`). Close to the "
+            "receptor the plume is thinner than the layer surface fluxes are "
+            "mixed through, so this raises the influence of nearby fluxes. "
+            "Needs the particle columns ``dens``, ``tlgr``, ``sigw``, ``foot``, "
+            "``mlht``, and ``samt``, and ``zsfc`` for a receptor above sea "
+            "level; particles without them get no correction."
         ),
     )
     transforms: list[Any] = Field(

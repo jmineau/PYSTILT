@@ -10,6 +10,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from stilt.particles import correct_near_field
 from stilt.project import Project
 
 from ..fixtures.r_stilt_reference import (
@@ -36,6 +37,22 @@ def _csv(values: float | tuple[float, ...]) -> str:
     if isinstance(values, tuple):
         return ",".join(f"{v:g}" for v in values)
     return f"{values:g}"
+
+
+def _with_near_field(
+    path: Path, receptor, scenario: ReferenceScenario, out: Path
+) -> Path:
+    """
+    Write PYSTILT's stored particles with the near-field correction, as STILT-R's calc_trajectory leaves its own.
+
+    PYSTILT stores particles uncorrected and applies the correction when it
+    makes a footprint; STILT-R applies it to the particles it returns.
+    """
+    particles = pd.read_parquet(path)
+    if scenario.hnf_plume:
+        particles = correct_near_field(particles, receptor, scenario.veght)
+    particles.to_parquet(out)
+    return out
 
 
 @pytest.fixture(
@@ -68,6 +85,9 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
         pytest.fail(f"[{scenario.name}] No footprint written for {sim.id}")
     traj_file = sim.particles_path
     assert traj_file is not None
+    traj_hnf = _with_near_field(
+        traj_file, receptor, scenario, project_dir / "py_traj_hnf.parquet"
+    )
     # The footprint is stored sparse in float32; compare the footprint as
     # computed, in float64, by remaking it from the stored particles.
     foot = sim.calc_footprint()
@@ -81,6 +101,13 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     if scenario.error_variant is not None:
         err = project.simulation(*scenario.py_sim_id(scenario.error_variant))
         error_traj_path = err.particles_path if err.has_particles else None
+    error_traj_hnf = (
+        None
+        if error_traj_path is None
+        else _with_near_field(
+            error_traj_path, receptor, scenario, project_dir / "py_error_hnf.parquet"
+        )
+    )
 
     # Skip R trajectory run for scenarios whose transport is identical to another.
     # test_trajectory_matches_r will pytest.skip() when r_traj is None.
@@ -92,11 +119,13 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
         return {
             "scenario": scenario,
             "traj": traj_file,
+            "traj_hnf": traj_hnf,
             "foot": foot_file,
             "setup": setup_file,
             "r_traj": None,
             "r_error_traj": None,
             "error_traj": None,
+            "error_traj_hnf": None,
         }
 
     # Run R trajectory once here so test_trajectory_matches_r can reuse it
@@ -168,9 +197,11 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     return {
         "scenario": scenario,
         "traj": traj_file,
+        "traj_hnf": traj_hnf,
         "foot": foot_file,
         "setup": setup_file,
         "r_traj": r_traj,
         "r_error_traj": r_error_traj,
         "error_traj": error_traj_path,
+        "error_traj_hnf": error_traj_hnf,
     }

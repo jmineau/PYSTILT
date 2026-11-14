@@ -5,8 +5,17 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.particles import TransportError, transport_error
+from stilt.particles import TransportError, correct_near_field
+from stilt.particles import transport_error as _transport_error
+from stilt.receptors import PointReceptor
 from stilt.transforms import AveragingKernel
+
+
+def transport_error(*args, **kwargs):
+    """The estimate without the near-field correction, which these synthetic tables have no columns for."""
+    kwargs.setdefault("hnf_plume", False)
+    return _transport_error(*args, **kwargs)
+
 
 FLUX = xr.DataArray(
     np.ones((3, 3)),
@@ -427,3 +436,39 @@ def test_realizations_must_not_be_empty():
     p = _column()
     with pytest.raises(ValueError, match="at least one realization"):
         transport_error(p, [], FLUX)
+
+
+def test_the_near_field_correction_needs_the_receptor():
+    p = _column(n_levels=1, per_level=10)
+    with pytest.raises(ValueError, match="needs the receptor"):
+        _transport_error(p, p.copy(), FLUX)
+
+
+def test_the_near_field_correction_is_applied_to_both_tables():
+    """With hnf_plume, the error is of the enhancement the footprint gives."""
+    receptor = PointReceptor(
+        time="2023-01-01", longitude=-111.0, latitude=41.0, altitude=5.0
+    )
+    rng = np.random.default_rng(0)
+    near = {"dens": 1.2, "samt": 1.0, "sigw": 0.1, "tlgr": 10.0, "mlht": 500.0}
+    main = _particles(np.full(40, 5.0), rng.uniform(0, 1e-3, 40)).assign(
+        age=-1.0, **near
+    )
+    err = _particles(np.full(40, 5.0), rng.uniform(0, 2e-3, 40)).assign(
+        age=-1.0, **near
+    )
+
+    corrected = _transport_error(main, err, FLUX, receptor=receptor)
+    by_hand = _transport_error(
+        correct_near_field(main, receptor, 0.5),
+        correct_near_field(err, receptor, 0.5),
+        FLUX,
+        receptor=receptor,
+        hnf_plume=False,
+    )
+
+    assert corrected.enhancement == pytest.approx(by_hand.enhancement)
+    assert corrected.variance == pytest.approx(by_hand.variance)
+    assert corrected.enhancement != pytest.approx(
+        transport_error(main, err, FLUX).enhancement
+    )

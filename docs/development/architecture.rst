@@ -106,6 +106,7 @@ Module map
      particles/         the particle table (a DataFrame)
        table.py         its columns, particle files, release heights, foot for
                         a model that writes none, the near-field plume correction
+                        (which calc_footprint applies)
        accessor.py      the .stilt pandas accessor
        background.py    the background at a receptor (sim.background)
        transport_error.py  the transport error of the enhancement, one
@@ -333,8 +334,8 @@ reads, the background and transport-error modules that live in the particles
 package, and ``add_foot``'s use of ``sample_met``. The list is the work a code
 boundary would leave; a new crossing fails ``just imports``. Two crossings
 are not imports between modules, so the contract cannot see them: the
-near-field correction and ``add_foot`` are functions in
-``stilt.particles.table``, and a package's ``__init__`` importing its own
+near-field correction (which only the footprint side calls) and
+``add_foot`` are functions in ``stilt.particles.table``, and a package's ``__init__`` importing its own
 module (the transport registry and the STILT-R model) is not checked.
 
 Configuration
@@ -352,8 +353,10 @@ Configuration
 - A model is a variant axis, like a met. A variant that names another
   ``model`` gives that model's own parameters itself, and inherits the met,
   the footprint fields, and the parameters PYSTILT's own code reads (the base
-  ``TransportConfig``: ``n_hours``, ``seed``, ``hnf_plume``, ``footprint_depth``,
-  ``pbl_height``, ``pbl_height_min``). A
+  ``TransportConfig``: ``n_hours``, ``seed``, ``footprint_depth``,
+  ``pbl_height``, ``pbl_height_min``). ``hnf_plume`` is a footprint field:
+  the near-field correction is applied when a footprint is made, so a stored
+  particle file holds the model's ``foot``. A
   parameter goes on the base only when the core reads it; ``numpar`` and
   every ``SETUP.CFG`` setting are HYSPLIT's.
 - When it loads, ``ProjectConfig`` checks each declared variant against the

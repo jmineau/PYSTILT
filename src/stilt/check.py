@@ -167,7 +167,7 @@ def _zsfc_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
     n_msl = above_sea_level["receptor"].nunique()
     if n_msl == 0:
         return
-    near_field = variant.transport.hnf_plume
+    near_field = variant.footprint is not None and variant.footprint.hnf_plume
     weighting = variant.footprint is not None and any(
         isinstance(t, PressureWeighting) for t in variant.footprint.transforms
     )

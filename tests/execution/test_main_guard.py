@@ -34,7 +34,6 @@ project = stilt.Project.init(
     mets={"toy": {"weather": "hrrr"}},
     variants={"toy": {}},
     n_hours=-1,
-    hnf_plume=False,
     execution={"backend": "local", "cpus": 2},
 )
 project.run()

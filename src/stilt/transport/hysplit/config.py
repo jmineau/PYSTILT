@@ -13,7 +13,6 @@ from typing import Any, ClassVar, Literal, Self
 
 from pydantic import ConfigDict, Field, field_validator, model_validator
 
-from stilt.particles import HNF_PLUME_COLUMNS
 from stilt.transport import TransportConfig
 
 #: Most hourly ZICONTROL factors HYSPLIT can hold (``ZIPRESC(150)`` in
@@ -496,17 +495,6 @@ class HysplitConfig(TransportConfig):
                 "10-13 and uses it only for the initial turbulent velocity under "
                 "krand=1. Set krand=2, or drop the seed."
             )
-        return self
-
-    @model_validator(mode="after")
-    def _validate_hnf_plume(self) -> Self:
-        """Require the variables the near-field plume model reads when ``hnf_plume`` is on."""
-        if self.hnf_plume:
-            missing = set(HNF_PLUME_COLUMNS) - set(self.varsiwant)
-            if missing:
-                raise ValueError(
-                    f"hnf_plume=True requires varsiwant to include: {sorted(missing)}"
-                )
         return self
 
     def maxpar_for(self, locations: int) -> int:

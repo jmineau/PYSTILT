@@ -24,6 +24,7 @@ from stilt.footprint.gridding import (
     _unwrap_around_cloud,
 )
 from stilt.footprint.io import read_footprint, write_footprint
+from stilt.particles import correct_near_field
 from stilt.receptors import PointReceptor
 from stilt.spatial import Grid
 
@@ -1925,3 +1926,96 @@ def test_calculated_coordinates_match_the_grid_axes():
     x, y = grid.axes
     np.testing.assert_array_equal(foot["lon"].values, x)
     np.testing.assert_array_equal(foot["lat"].values, y)
+
+
+def _near_field_particles() -> pd.DataFrame:
+    """Two particles below 50 m near the receptor, with the columns the near-field correction reads."""
+    return pd.DataFrame(
+        {
+            "particle": [1, 1, 2, 2],
+            "age": [-1.0, -2.0, -1.0, -2.0],
+            "lon": [-111.85, -111.86, -111.85, -111.84],
+            "lat": [40.77, 40.77, 40.77, 40.78],
+            "zagl": [5.0, 20.0, 5.0, 30.0],
+            "foot": [1e-3, 1e-3, 1e-3, 1e-3],
+            "dens": 1.2,
+            "samt": 1.0,
+            "sigw": 0.1,
+            "tlgr": 10.0,
+            "mlht": 500.0,
+        }
+    )
+
+
+_NEAR_GRID = Grid(xmin=-112.0, xmax=-111.7, ymin=40.7, ymax=40.9, xres=0.01, yres=0.01)
+
+
+def test_calc_footprint_applies_the_near_field_correction_with_hnf_plume():
+    receptor = PointReceptor(
+        time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
+    particles = _near_field_particles()
+    corrected = calc_footprint(particles, receptor, _NEAR_GRID, smooth_factor=0)
+    plain = calc_footprint(
+        particles, receptor, _NEAR_GRID, smooth_factor=0, hnf_plume=False
+    )
+    expected = calc_footprint(
+        correct_near_field(particles, receptor, 0.5),
+        receptor,
+        _NEAR_GRID,
+        smooth_factor=0,
+        hnf_plume=False,
+    )
+
+    np.testing.assert_allclose(corrected.to_numpy(), expected.to_numpy())
+    assert float(corrected.sum()) != pytest.approx(float(plain.sum()))
+    assert corrected.stilt.config.hnf_plume is True
+    assert plain.stilt.config.hnf_plume is False
+    # The particles given are not changed.
+    assert "foot_no_hnf_dilution" not in particles.columns
+
+
+def test_calc_footprint_reads_footprint_depth_for_the_near_field_correction():
+    receptor = PointReceptor(
+        time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
+    particles = _near_field_particles()
+    deep = calc_footprint(particles, receptor, _NEAR_GRID, smooth_factor=0)
+    shallow = calc_footprint(
+        particles, receptor, _NEAR_GRID, smooth_factor=0, footprint_depth=6.0
+    )
+    expected = calc_footprint(
+        correct_near_field(particles, receptor, 6.0),
+        receptor,
+        _NEAR_GRID,
+        smooth_factor=0,
+        hnf_plume=False,
+    )
+
+    np.testing.assert_allclose(shallow.to_numpy(), expected.to_numpy())
+    assert float(shallow.sum()) != pytest.approx(float(deep.sum()))
+
+
+def test_calc_footprint_skips_the_near_field_correction_without_its_columns(caplog):
+    """An MSL receptor's plume starts at the ground, which needs zsfc (#287)."""
+    receptor = PointReceptor(
+        time="2023-01-01 12:00",
+        longitude=-111.85,
+        latitude=40.77,
+        altitude=1305.0,
+        altitude_ref="msl",
+    )
+    particles = _near_field_particles()
+
+    with caplog.at_level("WARNING", logger="stilt.particles.table"):
+        skipped = calc_footprint(particles, receptor, _NEAR_GRID, smooth_factor=0)
+    plain = calc_footprint(
+        particles, receptor, _NEAR_GRID, smooth_factor=0, hnf_plume=False
+    )
+    corrected = calc_footprint(
+        particles.assign(zsfc=1300.0), receptor, _NEAR_GRID, smooth_factor=0
+    )
+
+    assert "near-field correction skipped: no zsfc" in caplog.text
+    np.testing.assert_array_equal(skipped.to_numpy(), plain.to_numpy())
+    assert float(corrected.sum()) != pytest.approx(float(plain.sum()))

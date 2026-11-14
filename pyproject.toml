@@ -206,8 +206,8 @@ allow_indirect_imports = true
 # the crossings below are the work a code boundary would leave, and a new one
 # fails this contract. Not seen: a package's __init__ importing its own module
 # (stilt.particles re-exports background and transport error; the transport
-# registry imports the STILT-R model), and the near-field correction and
-# add_foot, which are functions in stilt.particles.table. The package's
+# registry imports the STILT-R model), and the near-field correction (which
+# the footprint step calls) and add_foot, functions in stilt.particles.table. The package's
 # __init__ re-exports the public names, so it is not a source. Imports used
 # only for type hints do not count.
 [[tool.importlinter.contracts]]
@@ -265,6 +265,7 @@ ignore_imports = [
     # Project.footprints(), Project.jacobian() and Project.transport_error().
     "stilt.project -> stilt.footprint",
     "stilt.project -> stilt.footprint.aggregation",
+    "stilt.project -> stilt.footprint.config",
     "stilt.project -> stilt.footprint.io",
     "stilt.project -> stilt.particles.transport_error",
 ]

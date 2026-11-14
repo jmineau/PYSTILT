@@ -30,7 +30,7 @@ def test_hycs_std_writes_a_column_for_every_name_varsiwant_accepts(tmp_path, met
         latitude=40.77,
         altitude=30.0,
     )
-    config = HysplitConfig(n_hours=-2, numpar=20, hnf_plume=False, varsiwant=NAMES)
+    config = HysplitConfig(n_hours=-2, numpar=20, varsiwant=NAMES)
 
     run = run_model("hysplit", receptor, config, reference_met(met_dir), tmp_path, 600)
 

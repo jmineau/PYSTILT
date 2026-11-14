@@ -33,7 +33,7 @@ def _variant(
         name,
         met_config=_met_config(tmp_path),
         footprint=footprint,
-        **{"numpar": 10, "hnf_plume": False, **overrides},
+        **{"numpar": 10, **overrides},
     )
 
 
@@ -60,7 +60,7 @@ def _trajectories(receptor, params, foot: float = 1e-5) -> pd.DataFrame:
             "foot": [foot],
         }
     )
-    return finished(particles, receptor, params)
+    return finished(particles, receptor)
 
 
 def _write_particles(sim: Simulation) -> pd.DataFrame:

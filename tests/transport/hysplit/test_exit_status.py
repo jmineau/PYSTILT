@@ -45,7 +45,6 @@ def _model_run(tmp_path: Path, build: Path, outdt: int):
     config = HysplitConfig(
         n_hours=N_HOURS,
         numpar=10,
-        hnf_plume=False,
         varsiwant=VARS,
         outdt=outdt,
         exe_dir=build,
@@ -144,7 +143,6 @@ def test_a_killed_simulation_stores_no_particles_and_a_rerun_runs_it_again(tmp_p
         mets={"hrrr": make_met_config(tmp_path / "met")},
         n_hours=N_HOURS,
         numpar=10,
-        hnf_plume=False,
         varsiwant=VARS,
         outdt=30,
         exe_dir=build,

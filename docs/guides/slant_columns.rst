@@ -94,7 +94,8 @@ among the points, so raise ``numpar`` when you add points.
 Also add ``zsfc`` to ``varsiwant`` in ``config.yaml``. PYSTILT needs it to
 work out which point each particle started from (see `How the release
 heights come back`_), and to start the near-field correction at the ground:
-without it the correction is skipped and the run's log says so.
+without it the footprint is made without the correction, and a warning
+says so.
 ``stilt check`` lists a missing ``zsfc`` before the run, with this line
 to add (:doc:`checking`).
 

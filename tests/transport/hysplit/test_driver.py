@@ -199,8 +199,7 @@ VARS = ["time", "indx", "long", "lati", "zagl", "foot"]
 def _config(**overrides) -> HysplitConfig:
     """A small config whose particle rows are the six columns of VARS."""
     return HysplitConfig(
-        **{"n_hours": -24, "numpar": 10, "hnf_plume": False, "varsiwant": VARS}
-        | overrides
+        **{"n_hours": -24, "numpar": 10, "varsiwant": VARS} | overrides
     )
 
 

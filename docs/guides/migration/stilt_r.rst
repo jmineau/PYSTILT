@@ -252,7 +252,8 @@ become ``particle``, ``age``, ``lon``, ``lat``, and ``release_height``) and a
 footprint, or ``None`` when the folder has none. Both are kept as STILT-R
 made them: the near-field correction STILT-R applied stays in ``foot``, and
 the footprint's values are the file's. To make a footprint on another grid,
-pass the particles to :func:`stilt.calc_footprint`.
+pass the particles to :func:`stilt.calc_footprint` with
+``hnf_plume=False``, since their ``foot`` is corrected already.
 
 Some of what STILT-R saved is not read:
 
@@ -348,9 +349,10 @@ STILT-R projects that differ only in ``n_hours`` land in two folders.
    * - ``ziscale``
      - the ``ZICONTROL`` file, when ``SETUP.CFG`` says STILT-R wrote one; else
        1, no scaling
-   * - ``hnf_plume``
+   * - the footprint's ``hnf_plume``
      - the particles: STILT-R's near-field correction adds
-       ``foot_no_hnf_dilution``
+       ``foot_no_hnf_dilution``. The particles are stored with it as
+       ``foot``, uncorrected, as PYSTILT stores its own
    * - ``seed``
      - none: STILT-R sets no seed
    * - the met

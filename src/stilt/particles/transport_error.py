@@ -33,6 +33,7 @@ import pandas as pd
 import xarray as xr
 
 from stilt.particles.background import _background, _fill_missing
+from stilt.particles.table import _near_field
 from stilt.receptors import Receptor
 from stilt.transforms import apply_transforms, release_coordinate
 
@@ -292,6 +293,8 @@ def transport_error(
     transforms: Sequence[Any] = (),
     receptor: Receptor | None = None,
     directory: str | Path | None = None,
+    hnf_plume: bool = True,
+    footprint_depth: float = 0.5,
     levels: int | Sequence[float] = 20,
     length_scale: float | None = DEFAULT_LENGTH_SCALE,
     percentile: float = 1.0,
@@ -315,9 +318,17 @@ def transport_error(
         The footprint's particle transforms (``sim.variant.footprint.transforms``),
         applied to both tables so the error is weighted like the footprint.
     receptor : Receptor, optional
-        The receptor (``sim.receptor``), for the transforms.
+        The receptor (``sim.receptor``), for the near-field correction and
+        the transforms. Needed when *hnf_plume* is set.
     directory : str or Path, optional
         Where a kernel table's relative path starts (``project.directory``).
+    hnf_plume : bool, default True
+        Apply the near-field correction to both tables first, as
+        :func:`stilt.calc_footprint` does
+        (``sim.variant.footprint.hnf_plume``), so the error is of the same
+        enhancement the footprint gives.
+    footprint_depth : float, default 0.5
+        The run's ``footprint_depth``, which the near-field correction reads.
     levels : int or sequence of float, default 20
         Release-height levels to compute statistics on: a number of
         equal-width bins between the lowest and highest release height, or
@@ -406,15 +417,22 @@ def transport_error(
     ...     "realization"
     ... )  # doctest: +SKIP
     >>> error_particles = [rows for _, rows in by_realization]  # doctest: +SKIP
-    >>> result = transport_error(sim.particles, error_particles, flux)  # doctest: +SKIP
+    >>> result = transport_error(
+    ...     sim.particles, error_particles, flux, receptor=sim.receptor
+    ... )  # doctest: +SKIP
     >>> result.realizations  # doctest: +SKIP
     4
 
     ``sim.transport_error(realizations, flux)`` builds this list from the
-    realizations' simulations. It also passes ``transforms``, ``receptor``,
-    and ``directory``, which a variant with footprint transforms needs and
-    this call leaves out.
+    realizations' simulations. It also passes ``transforms``,
+    ``directory``, and the variant's ``hnf_plume`` and
+    ``footprint_depth``, which this call leaves at their defaults.
     """
+    if hnf_plume and receptor is None:
+        raise ValueError(
+            "The near-field correction (hnf_plume) needs the receptor: give "
+            "receptor=sim.receptor, or hnf_plume=False."
+        )
     if not 0 < percentile <= 1:
         raise ValueError("percentile must be in (0, 1].")
     if length_scale is not None and length_scale <= 0:
@@ -432,6 +450,9 @@ def transport_error(
         table: pd.DataFrame,
     ) -> tuple[pd.Series, pd.Series, float]:
         """Return the modeled value and release height per particle, and the background."""
+        if hnf_plume:
+            assert receptor is not None  # checked above
+            table = _near_field(table, receptor, footprint_depth)
         weighted = (
             apply_transforms(table, transforms, receptor, directory)
             if transforms

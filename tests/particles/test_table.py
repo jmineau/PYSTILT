@@ -74,12 +74,8 @@ def _particles_release_rows(
     )
 
 
-def _params(tmp_path, hnf_plume=False) -> HysplitConfig:
-    return HysplitConfig(
-        n_hours=-24,
-        numpar=10,
-        hnf_plume=hnf_plume,
-    )
+def _params(tmp_path) -> HysplitConfig:
+    return HysplitConfig(n_hours=-24, numpar=10)
 
 
 def _settings(params: HysplitConfig) -> dict:
@@ -104,12 +100,10 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
     # Receptor normalizes tz-aware input to naive UTC.
     assert aware_receptor.time.tzinfo is None
 
-    traj = finished(
-        _particles_basic(), aware_receptor, _params(tmp_path, hnf_plume=False)
-    )
+    traj = finished(_particles_basic(), aware_receptor)
 
     path = tmp_path / "traj.parquet"
-    params = _params(tmp_path, hnf_plume=False)
+    params = _params(tmp_path)
     write_particles(path, traj, aware_receptor, _settings(params), [Path("/tmp/met1")])
     loaded = read_particles(path)
 
@@ -127,8 +121,8 @@ def test_read_particles_builds_time_when_only_time_is_asked_for(
     point_receptor, tmp_path
 ):
     """``time`` is not stored; asking for it reads ``age`` to build it."""
-    params = _params(tmp_path, hnf_plume=False)
-    traj = finished(_particles_basic(), point_receptor, params)
+    params = _params(tmp_path)
+    traj = finished(_particles_basic(), point_receptor)
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, _settings(params), [])
     loaded = read_particles(path, columns=["time"])
@@ -213,8 +207,8 @@ def test_particles_from_table_rejects_an_id_it_cannot_time():
 
 def test_write_and_read_particles_round_trip(point_receptor, tmp_path):
     """A particle file holds everything needed to read it back."""
-    params = _params(tmp_path, hnf_plume=False)
-    traj = finished(_particles_basic(), point_receptor, params)
+    params = _params(tmp_path)
+    traj = finished(_particles_basic(), point_receptor)
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, _settings(params), [Path("/tmp/met1")])
 
@@ -232,8 +226,8 @@ def test_write_and_read_particles_round_trip(point_receptor, tmp_path):
 
 def test_a_file_without_settings_is_refused_for_its_metadata(point_receptor, tmp_path):
     """A particle file written before files recorded settings still reads, but has no metadata."""
-    params = _params(tmp_path, hnf_plume=False)
-    traj = finished(_particles_basic(), point_receptor, params)
+    params = _params(tmp_path)
+    traj = finished(_particles_basic(), point_receptor)
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, _settings(params), [])
     table = pq.ParquetFile(path).read()
@@ -247,8 +241,8 @@ def test_a_file_without_settings_is_refused_for_its_metadata(point_receptor, tmp
 
 
 def test_write_particles_is_atomic_on_failure(point_receptor, tmp_path, monkeypatch):
-    params = _params(tmp_path, hnf_plume=False)
-    traj = finished(_particles_basic(), point_receptor, params)
+    params = _params(tmp_path)
+    traj = finished(_particles_basic(), point_receptor)
     path = tmp_path / "traj.parquet"
     tmp = path.with_suffix(".parquet.tmp")
 
@@ -362,7 +356,7 @@ def test_finished_particles_column_receptor_assigns_release_height(
     column_receptor, tmp_path
 ):
     particles = _particles_basic().assign(particle=[1, 2])
-    traj = finished(particles, column_receptor, _params(tmp_path, hnf_plume=False))
+    traj = finished(particles, column_receptor)
     assert "release_height" in traj.columns
     assert traj["release_height"].tolist() == pytest.approx([16.25, 38.75])
 
@@ -380,9 +374,7 @@ def test_finished_particles_column_receptor_spans_column_monotonically(tmp_path)
         longs=[-111.85] * 12,
         lats=[40.77] * 12,
     )
-    traj = finished(
-        particles, receptor, HysplitConfig(n_hours=-24, numpar=12, hnf_plume=False)
-    )
+    traj = finished(particles, receptor)
 
     expected = [
         ((i - 0.5) * (receptor.top - receptor.bottom) / 12) + receptor.bottom
@@ -446,9 +438,7 @@ def test_finished_particles_multipoint_receptor_assigns_release_height_from_rele
             893.0,
         ],
     )
-    traj = finished(
-        particles, receptor, HysplitConfig(n_hours=-24, numpar=12, hnf_plume=False)
-    )
+    traj = finished(particles, receptor)
 
     assert "release_height" in traj.columns
     assert traj["release_height"].tolist() == pytest.approx(
@@ -506,9 +496,7 @@ def test_finished_particles_multipoint_nondivisible_particle_blocks_follow_relea
         ],
         zagl=[98.0, 104.0, 91.0, 110.0, 512.0, 489.0, 503.0, 497.0, 880.0, 905.0],
     )
-    traj = finished(
-        particles, receptor, HysplitConfig(n_hours=-24, numpar=10, hnf_plume=False)
-    )
+    traj = finished(particles, receptor)
 
     assert traj["release_height"].tolist() == pytest.approx(
         [100.0, 100.0, 100.0, 100.0, 500.0, 500.0, 500.0, 500.0, 900.0, 900.0]
@@ -538,8 +526,7 @@ def _slant(spacing_deg: float = 0.002, n: int = 4, **kwargs) -> MultiPointRecept
 
 
 def _finish(particles, receptor):
-    config = HysplitConfig(n_hours=-24, numpar=len(particles), hnf_plume=False)
-    return finished(particles, receptor, config)
+    return finished(particles, receptor)
 
 
 def test_multipoint_close_points_are_matched_on_height_not_position():
@@ -683,12 +670,11 @@ def test_multipoint_release_time_rows_silence_the_warning(recwarn):
     assert not [w for w in recwarn if "reliably matched" in str(w.message)]
 
 
-def test_finished_particles_with_hnf_plume(point_receptor, tmp_path):
-    """hnf_plume=True runs plume-dilution correction and adds reference column."""
-    traj = finished(
-        _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=True)
-    )
-    assert "foot_no_hnf_dilution" in traj.columns
+def test_finished_particles_keep_the_uncorrected_foot(point_receptor):
+    """A run's particles are stored as the model left them; the footprint applies the correction."""
+    traj = finished(_particles_basic(), point_receptor)
+    assert "foot_no_hnf_dilution" not in traj.columns
+    assert traj["foot"].tolist() == _particles_basic()["foot"].tolist()
 
 
 def test_correct_near_field_raises_without_a_release_height():
@@ -704,9 +690,7 @@ def test_footprint_calculate_from_trajectory(point_receptor, tmp_path):
     from stilt.footprint import calc_footprint
     from stilt.spatial import Grid
 
-    traj = finished(
-        _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=False)
-    )
+    traj = finished(_particles_basic(), point_receptor)
     grid = Grid(xmin=-115.0, xmax=-110.0, ymin=38.0, ymax=43.0, xres=0.1, yres=0.1)
     # particles are at [-111.9, -112.0] x [40.7, 40.6] - inside the grid
     result = calc_footprint(traj, point_receptor, grid)
@@ -739,7 +723,7 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
     There is no duration filtering: a particle that left the domain early is
     a real endpoint.
     """
-    particles = finished(_particles_two_lengths(), point_receptor, _params(tmp_path))
+    particles = finished(_particles_two_lengths(), point_receptor)
     # As read_particles gives them.
     particles["time"] = point_receptor.time + pd.to_timedelta(
         particles["age"], unit="min"
@@ -778,9 +762,7 @@ def test_calc_footprint_regenerates_a_footprint_on_a_new_grid(tmp_path):
     receptor = PointReceptor(
         time="2023-01-01 12:00:00", longitude=-113.5, latitude=39.5, altitude=5.0
     )
-    traj = finished(
-        particles, receptor, HysplitConfig(n_hours=-2, numpar=n, hnf_plume=False)
-    )
+    traj = finished(particles, receptor)
     grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
     from stilt.transforms import FirstOrderLifetime
 
@@ -802,7 +784,7 @@ def test_stored_settings_this_version_does_not_have_are_dropped(
 ):
     """Files written before a setting was removed still load (#44)."""
     params = _params(tmp_path)
-    traj = finished(_particles_basic(), point_receptor, params)
+    traj = finished(_particles_basic(), point_receptor)
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, _settings(params), [])
     table = pq.ParquetFile(path).read()

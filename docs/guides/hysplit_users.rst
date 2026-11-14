@@ -59,7 +59,7 @@ hour and are followed 6 hours forward:
    )
    cloud = stilt.run_trajectories(
        start, met_dir, n_hours=6, numpar=1000, emisshrs=1.0,
-       krand=2, seed=42, hnf_plume=False,
+       krand=2, seed=42,
    )
    cloud[["time", "particle", "lon", "lat", "zagl"]].tail()
 
@@ -67,10 +67,8 @@ hour and are followed 6 hours forward:
 backward. ``emisshrs`` is the hours of emission, and ``zagl`` the height
 above ground in meters. The other columns are the met at each particle that
 ``varsiwant`` asks for, by HYSPLIT's names (``mlht``, ``pres``, ``dens``,
-...). We set ``hnf_plume=False`` whenever you want positions and no
-footprint, because PYSTILT's near-field correction rewrites the ``foot``
-column for STILT's footprints. ``krand=2`` with a ``seed`` makes the run
-repeatable.
+...), and ``foot`` is HYSPLIT's own: PYSTILT changes it only when it
+makes a footprint. ``krand=2`` with a ``seed`` makes the run repeatable.
 
 The met is the folder of your ARL files. PYSTILT reads which times each
 file holds from its header, and gives HYSPLIT the ones the run needs.
@@ -88,7 +86,7 @@ particle with turbulence off follows the same path, so ``numpar=1`` and
 .. ipython:: python
 
    path = stilt.run_trajectories(
-       start, met_dir, n_hours=6, numpar=1, nturb=1, hnf_plume=False
+       start, met_dir, n_hours=6, numpar=1, nturb=1
    )
    path[["time", "lon", "lat", "zagl"]].iloc[[0, 59, 179, 359]]
 
@@ -144,7 +142,6 @@ options, each kept in its own folder:
    n_hours: 24
    numpar: 1000
    emisshrs: 1.0
-   hnf_plume: false
 
 The starting points go in ``receptors.csv``, one row each:
 

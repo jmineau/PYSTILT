@@ -61,7 +61,6 @@ def _run(
         footprint_depth=VEGHT,
         kmixd=kmixd,
         kmix0=KMIX0,
-        hnf_plume=False,
         varsiwant=[
             "time",
             "indx",
@@ -87,7 +86,9 @@ def _timed(particles: pd.DataFrame, receptor: PointReceptor) -> pd.DataFrame:
 
 def _total(particles: pd.DataFrame, receptor: PointReceptor) -> xr.DataArray:
     """Return the footprint of *particles*, summed over time."""
-    return calc_footprint(particles, receptor, reference_grid()).sum("time")
+    return calc_footprint(particles, receptor, reference_grid(), hnf_plume=False).sum(
+        "time"
+    )
 
 
 def _moved(foot: xr.DataArray, hysplit: xr.DataArray) -> tuple[float, float]:
@@ -141,7 +142,7 @@ def test_a_positions_only_run_gets_a_foot_that_makes_a_footprint_near_hysplits(
     finished = _finish(
         ModelRun(positions, met_files=run.met_files),
         receptor,
-        TransportConfig(footprint_depth=VEGHT, hnf_plume=False),
+        TransportConfig(footprint_depth=VEGHT),
     )
     assert "from the met's PBLH" in finished.log
     assert finished.particles["foot"].notna().all()
@@ -241,7 +242,6 @@ def test_each_pbl_height_moves_a_positions_only_footprint_from_hysplits(hysplit_
             receptor,
             TransportConfig(
                 footprint_depth=VEGHT,
-                hnf_plume=False,
                 pbl_height=pbl_height,
                 pbl_height_min=pbl_height_min,
             ),
@@ -266,7 +266,6 @@ def test_pbl_height_set_replaces_hysplits_own_foot(hysplit_run):
         receptor,
         TransportConfig(
             footprint_depth=VEGHT,
-            hnf_plume=False,
             pbl_height="richardson",
             pbl_height_min=KMIX0,
         ),

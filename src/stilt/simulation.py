@@ -291,14 +291,16 @@ class Simulation:
         grid: Grid | None = None,
         smooth_factor: float | None = None,
         tres: str | timedelta | None = None,
+        hnf_plume: bool | None = None,
         transforms: Sequence[Any] | None = None,
     ) -> xr.DataArray | None:
         """
         Calculate a footprint from the stored particles, without writing it.
 
         This is :func:`stilt.calc_footprint` with this simulation's
-        particles, receptor, and settings filled in. Each setting given
-        replaces the variant's own. Use it to try other settings; the
+        particles, receptor, and settings filled in, the run's
+        ``footprint_depth`` among them. Each setting given replaces the
+        variant's own. Use it to try other settings; the
         workers write the variant's own footprint. A relative file name in
         a transform's settings starts from the project directory.
 
@@ -340,6 +342,8 @@ class Simulation:
                 if smooth_factor is None
                 else smooth_factor,
                 tres=own.tres if tres is None else tres,
+                hnf_plume=own.hnf_plume if hnf_plume is None else hnf_plume,
+                footprint_depth=self.variant.transport.footprint_depth,
                 transforms=own.transforms if transforms is None else transforms,
                 name=self.variant.name,
                 directory=self.directory,
@@ -354,6 +358,15 @@ class Simulation:
         return (
             () if self.variant.footprint is None else self.variant.footprint.transforms
         )
+
+    @property
+    def _near_field_settings(self) -> dict[str, Any]:
+        """The near-field correction a footprint of this simulation gets: ``hnf_plume`` and the run's ``footprint_depth``."""
+        footprint = self.variant.footprint or FootprintConfig.model_validate({})
+        return {
+            "hnf_plume": footprint.hnf_plume,
+            "footprint_depth": self.variant.transport.footprint_depth,
+        }
 
     def background(self, field: xr.DataArray | pd.Series) -> Background:
         """
@@ -423,7 +436,7 @@ class Simulation:
             transforms=self._transforms,
             receptor=self.receptor,
             directory=self.directory,
-            **options,
+            **{**self._near_field_settings, **options},
         )
 
 

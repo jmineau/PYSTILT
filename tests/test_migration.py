@@ -468,10 +468,16 @@ def test_imported_runs_are_the_results_of_the_printed_variants(tmp_path, capsys)
     ((receptor, particles, foot),) = list(read_stilt_r(by_id))
     sim = project.simulation(POINT, "stilt-r")
     assert sim.receptor == receptor
-    for column in ("particle", "age", "lon", "lat", "zagl", "foot"):
+    for column in ("particle", "age", "lon", "lat", "zagl"):
         np.testing.assert_array_equal(
             sim.particles[column].to_numpy(), particles[column].to_numpy()
         )
+    # Stored before STILT-R's near-field correction, as PYSTILT stores its own.
+    np.testing.assert_array_equal(
+        sim.particles["foot"].to_numpy(), particles["foot_no_hnf_dilution"].to_numpy()
+    )
+    assert "foot_no_hnf_dilution" not in sim.particles.columns
+    assert sim.variant.footprint is not None and sim.variant.footprint.hnf_plume
     assert foot is not None
     np.testing.assert_allclose(sim.footprint.to_numpy(), foot.to_numpy(), rtol=1e-6)
     ((_, perturbed, _),) = list(read_stilt_r(by_id, error=True))
@@ -515,8 +521,8 @@ def test_the_settings_are_what_the_files_record(tmp_path, capsys):
     assert run["n_hours"] == -2
     assert run["emisshrs"] == 0.01
     assert run["z_top"] == 25000
-    # The particles have STILT-R's near-field correction.
-    assert run["hnf_plume"] is True
+    # The near-field correction is the footprint's, not the run's.
+    assert "hnf_plume" not in run
     # What no file holds is unset: no seed, no error, no mixed-layer factor.
     assert run["seed"] is None
     assert run["siguverr"] is None

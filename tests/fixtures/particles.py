@@ -2,26 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import numpy as np
 import pandas as pd
 
-from stilt.particles import add_release_heights, correct_near_field
+from stilt.particles import add_release_heights
 from stilt.receptors import PointReceptor, Receptor
 
 
-def finished(particles: pd.DataFrame, receptor: Receptor, config: Any) -> pd.DataFrame:
+def finished(particles: pd.DataFrame, receptor: Receptor) -> pd.DataFrame:
     """
-    Return raw particles with the steps PYSTILT applies after any model run.
+    Return raw particles with the release heights PYSTILT adds after any model run.
 
-    The release heights, then the near-field correction when
-    ``config.hnf_plume`` is set, as :func:`stilt.transport.run_model` does.
+    The near-field correction is not applied: the footprint applies it, as
+    :func:`stilt.calc_footprint` does.
     """
-    particles = add_release_heights(particles, receptor)
-    if config.hnf_plume:
-        particles = correct_near_field(particles, receptor, config.footprint_depth)
-    return particles
+    return add_release_heights(particles, receptor)
 
 
 def point_at(altitude: float) -> PointReceptor:

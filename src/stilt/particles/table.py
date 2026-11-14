@@ -5,6 +5,7 @@ The particle table: its columns, particle files, release heights, and the near-f
 from __future__ import annotations
 
 import json
+import logging
 import os
 import warnings
 from collections.abc import Iterable, Mapping
@@ -54,6 +55,8 @@ _INT_COLUMNS = ("age", "particle")
 #: The column a footprint is made from. It is each particle's sensitivity to
 #: surface fluxes over one output step.
 FOOTPRINT_COLUMNS: tuple[str, ...] = ("foot",)
+
+logger = logging.getLogger(__name__)
 
 #: Particle columns the near-field plume correction reads (``varsiwant`` must include them).
 HNF_PLUME_COLUMNS: tuple[str, ...] = ("dens", "samt", "sigw", "tlgr", "foot", "mlht")
@@ -672,8 +675,10 @@ def correct_near_field(
     thinner than that. Following STILT-R, the plume depth grows from the
     release height with the turbulence each particle meets. While it is
     below that height, ``foot`` is recalculated with the plume
-    depth in its place. The worker applies it to any model's particles when
-    ``hnf_plume`` is set.
+    depth in its place. :func:`stilt.calc_footprint` applies it to any
+    model's particles when ``hnf_plume`` is set, so a stored particle file
+    holds the uncorrected ``foot``; call it yourself before gridding the
+    particles another way, or before ``particles.stilt.enhancement``.
 
     Needs the columns :data:`HNF_PLUME_COLUMNS`, and the release height:
     ``release_height`` (:func:`add_release_heights`) or the altitude of a point
@@ -755,3 +760,27 @@ def correct_near_field(
         p["foot"],
     )
     return p.drop(columns=["sigma", "pbl_mixing", "plume", "elapsed"])
+
+
+def _near_field(
+    particles: pd.DataFrame, receptor: Receptor, footprint_depth: float
+) -> pd.DataFrame:
+    """
+    Return *particles* with the near-field correction, or as they are when they lack its columns.
+
+    A transport model that writes no ``dens``, ``samt``, ``sigw``,
+    ``tlgr``, or ``mlht`` (or no ``zsfc``, for a receptor above sea level)
+    gets no correction, and a warning says so.
+    """
+    needed = set(HNF_PLUME_COLUMNS) | (
+        {"zsfc"} if receptor.altitude_ref == "msl" else set()
+    )
+    missing = sorted(needed - set(particles.columns))
+    if missing:
+        logger.warning(
+            "%s: near-field correction skipped: no %s columns",
+            receptor.id,
+            ", ".join(missing),
+        )
+        return particles
+    return correct_near_field(particles, receptor, footprint_depth)
