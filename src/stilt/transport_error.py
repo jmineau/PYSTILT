@@ -32,7 +32,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from stilt.particles.background import _background, _fill_missing
+from stilt.background import _background, _fill_missing
 from stilt.particles.table import _near_field
 from stilt.receptors import Receptor
 from stilt.transforms import apply_transforms, release_coordinate
@@ -407,7 +407,7 @@ def transport_error(
     a wrong variance. Without the receptor, each realization's table holds
     every receptor's particles.
 
-    >>> from stilt.particles import transport_error  # doctest: +SKIP
+    >>> from stilt import transport_error  # doctest: +SKIP
     >>> sim = project.simulation(rid, "hrrr")  # doctest: +SKIP
     >>> sims = project.simulations  # doctest: +SKIP
     >>> ensemble = sims[

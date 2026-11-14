@@ -347,7 +347,7 @@ def test_background_and_transport_error_weight_the_particles_like_the_footprint(
 ):
     import numpy as np
 
-    from stilt.particles import background, transport_error
+    from stilt import background, transport_error
 
     lifetime = [FirstOrderLifetime(lifetime_hours=1.0)]
     footprint = FOOT.model_copy(update={"transforms": lifetime})

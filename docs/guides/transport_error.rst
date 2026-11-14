@@ -218,7 +218,7 @@ keeps the per-level table described below:
 particles are weighted the way the unperturbed variant's footprint weights
 them, with its transforms: the averaging kernel (including one from a
 per-receptor table), pressure weighting, and lifetime decay.
-:func:`stilt.particles.transport_error` does the same for particle tables
+:func:`stilt.transport_error` does the same for particle tables
 you have without a project.
 
 Is the estimate meaningful?

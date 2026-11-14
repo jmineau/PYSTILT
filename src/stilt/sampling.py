@@ -8,7 +8,7 @@ the cell it falls in. ``foot.stilt.enhancement`` and
 ``particles.stilt.enhancement`` sample a surface flux this way, taking the
 flux step that starts at or before each time, or, when the flux's ``time``
 coordinate carries CF time bounds, the step whose bounds hold the time, and
-:func:`stilt.particles.background` a mole-fraction field, taking the
+:func:`stilt.background` a mole-fraction field, taking the
 nearest time. PYSTILT does
 not convert units. A flux in µmol m⁻² s⁻¹ times a footprint in ppm per
 (µmol m⁻² s⁻¹) gives ppm.

@@ -38,7 +38,6 @@ from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _threads, open_footprints
 from stilt.output import Kind, Output, completed
 from stilt.particles import particles_from_table, read_particles
-from stilt.particles.transport_error import _transport_errors
 from stilt.receptors import Receptor, read_receptors
 from stilt.receptors.table import (
     COLUMNS,
@@ -51,6 +50,7 @@ from stilt.receptors.table import (
     receptors_to_csv,
 )
 from stilt.simulation import Simulation
+from stilt.transport_error import _transport_errors
 
 if TYPE_CHECKING:
     from stilt.visualization import ProjectPlotAccessor
@@ -1126,7 +1126,7 @@ class Project:
             Threads that read and estimate receptors. Defaults to the CPUs
             this process may use (in a Slurm job, the job's), at most 8.
         **options
-            Passed to :func:`stilt.particles.transport_error`: ``levels``,
+            Passed to :func:`stilt.transport_error`: ``levels``,
             ``length_scale``, ``percentile``, and ``background``.
 
         Returns

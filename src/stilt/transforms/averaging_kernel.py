@@ -264,6 +264,50 @@ class AveragingKernel(BaseModel):
             raise ValueError("averaging_kernel has levels and values, not a table.")
         return frozenset(self._kernels(directory))
 
+    def check(
+        self, receptors: Sequence[str], directory: str | Path | None = None
+    ) -> list[tuple[str, str | None, str]]:
+        """
+        Return what is wrong with the ``table`` for a project's *receptors*, which ``stilt check`` reports.
+
+        Each finding is ``(check, receptor id or None, message)``: the table
+        does not exist or cannot be read (``kernel_table``), has no kernel
+        for a receptor (``kernel_missing``), or holds one for a receptor the
+        project lacks (``kernel_unused``). A kernel given as ``levels`` and
+        ``values`` has nothing to check. A relative ``table`` path starts
+        from *directory*.
+        """
+        if self.table is None:
+            return []
+        try:
+            held = self.table_receptors(directory)
+        except FileNotFoundError as error:
+            return [
+                (
+                    "kernel_table",
+                    None,
+                    f"table {self.table!r} does not exist: {error.filename}",
+                )
+            ]
+        except ValueError as error:
+            return [("kernel_table", None, str(error))]
+        return [
+            (
+                "kernel_missing",
+                rid,
+                f"table {self.table!r} has no kernel for this receptor",
+            )
+            for rid in receptors
+            if rid not in held
+        ] + [
+            (
+                "kernel_unused",
+                rid,
+                f"table {self.table!r} has a kernel for a receptor the project does not have",
+            )
+            for rid in sorted(held - set(receptors))
+        ]
+
     def kernel(
         self, receptor: Receptor | None = None, directory: str | Path | None = None
     ) -> tuple[list[float], list[float]]:

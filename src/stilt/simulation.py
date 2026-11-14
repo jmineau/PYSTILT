@@ -13,20 +13,16 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 import xarray as xr
 
+from stilt.background import Background, background
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import gridding
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import read_footprint
 from stilt.output import Output, completed
-from stilt.particles import (
-    Background,
-    TransportError,
-    background,
-    read_particles,
-    transport_error,
-)
+from stilt.particles import read_particles
 from stilt.receptors import Receptor
 from stilt.spatial import Grid
+from stilt.transport_error import TransportError, transport_error
 
 if TYPE_CHECKING:
     from stilt._paths import Location
@@ -374,7 +370,7 @@ class Simulation:
 
         The background is the field where each particle ends, averaged over
         the particles with the footprint's weights (its transforms), so it
-        adds to the enhancement. See :func:`stilt.particles.background`.
+        adds to the enhancement. See :func:`stilt.background`.
 
         Parameters
         ----------
@@ -407,7 +403,7 @@ class Simulation:
 
         It is the extra spread in the per-particle enhancement that a
         wind-error variant of the same receptor adds (Lin and Gerbig, 2005).
-        See :func:`stilt.particles.transport_error`, which documents the
+        See :func:`stilt.transport_error`, which documents the
         options (``levels``, ``length_scale``, ``percentile``,
         ``background``).
 

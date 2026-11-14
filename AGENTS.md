@@ -83,7 +83,7 @@ src/stilt/
   execution/      ExecutionConfig, runner (plan, local run, Slurm submit), worker
   observations/   the X-STILT port (readers, sounding selection, slant receptors, columns);
                   receptors along a moving platform's track (tracks.py)
-  meteorology.py, sampling.py, spatial.py, visualization.py, exceptions.py, _paths.py
+  background.py, transport_error.py, meteorology.py, sampling.py, spatial.py, visualization.py, exceptions.py, _paths.py
 ```
 
 **A run** (`stilt run`, `Project.run()`, `submit()`) happens in this process

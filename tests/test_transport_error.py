@@ -1,12 +1,13 @@
-"""Tests for stilt.particles.transport_error and sim.transport_error."""
+"""Tests for stilt.transport_error and sim.transport_error."""
 
 import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.particles import TransportError, correct_near_field
-from stilt.particles import transport_error as _transport_error
+from stilt import TransportError
+from stilt import transport_error as _transport_error
+from stilt.particles import correct_near_field
 from stilt.receptors import PointReceptor
 from stilt.transforms import AveragingKernel
 
@@ -349,7 +350,7 @@ def test_noise_is_the_standard_error_from_both_runs():
 
 
 def test_background_field_adds_the_endpoint_spread_to_the_error():
-    from stilt.particles import background
+    from stilt import background
 
     field = xr.DataArray(
         np.tile([0.0, 1.0, 2.0], (3, 1)),

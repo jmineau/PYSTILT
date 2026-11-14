@@ -16,8 +16,6 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 
 from stilt.particles.table import needs_height_to_match
-from stilt.transforms.averaging_kernel import AveragingKernel
-from stilt.transforms.pressure_weighting import PressureWeighting
 from stilt.transport import get_model
 
 if TYPE_CHECKING:
@@ -57,7 +55,7 @@ def check_project(project: Project) -> pd.DataFrame:
         checks = (
             *_met_checks(variant, rows),
             *_grid_checks(variant, rows),
-            *_kernel_checks(variant, project, ids),
+            *_transform_checks(variant, project, ids),
             *_zsfc_checks(variant, rows),
         )
         for key, make in checks:
@@ -117,45 +115,29 @@ def _outside(rows: pd.DataFrame, grid: Grid) -> list[_Finding]:
     ]
 
 
-def _kernel_checks(
+def _transform_checks(
     variant: Variant, project: Project, ids: list[str]
 ) -> Iterator[_Check]:
-    """Yield, for each averaging-kernel table the variant names, the receptors with no kernel in it and the kernels with no receptor."""
+    """
+    Yield what each of the variant's transforms finds wrong for the project's receptors.
+
+    A transform with a ``check(receptors, directory)`` method checks its own
+    inputs, such as an averaging kernel's table; the others have nothing to
+    check. Variants with an equal transform share its findings.
+    """
     if variant.footprint is None:
         return
     for transform in variant.footprint.transforms:
-        if isinstance(transform, AveragingKernel) and transform.table is not None:
-            yield (
-                ("kernel", transform.table),
-                lambda t=transform: _compare_kernel_table(t, project, ids),
-            )
-
-
-def _compare_kernel_table(
-    transform: AveragingKernel, project: Project, ids: list[str]
-) -> list[_Finding]:
-    """Compare the receptor ids of a kernel table with the project's."""
-    table = transform.table
-    try:
-        held = transform.table_receptors(project.directory)
-    except FileNotFoundError as error:
-        return [
-            ("kernel_table", None, f"table {table!r} does not exist: {error.filename}")
-        ]
-    except ValueError as error:
-        return [("kernel_table", None, str(error))]
-    return [
-        ("kernel_missing", rid, f"table {table!r} has no kernel for this receptor")
-        for rid in ids
-        if rid not in held
-    ] + [
-        (
-            "kernel_unused",
-            rid,
-            f"table {table!r} has a kernel for a receptor the project does not have",
+        check = getattr(transform, "check", None)
+        if check is None:
+            continue
+        yield (
+            ("transform", repr(transform)),
+            lambda check=check: [
+                (str(name), None if receptor is None else str(receptor), str(message))
+                for name, receptor, message in check(ids, project.directory)
+            ],
         )
-        for rid in sorted(held - set(ids))
-    ]
 
 
 def _zsfc_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
@@ -168,8 +150,10 @@ def _zsfc_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
     if n_msl == 0:
         return
     near_field = variant.footprint is not None and variant.footprint.hnf_plume
-    weighting = variant.footprint is not None and any(
-        isinstance(t, PressureWeighting) for t in variant.footprint.transforms
+    zsfc_transforms = tuple(
+        _kind(t)
+        for t in (() if variant.footprint is None else variant.footprint.transforms)
+        if getattr(t, "reads_zsfc", False)
     )
     n_by_height = sum(
         needs_height_to_match(g["longitude"], g["latitude"], g["altitude"])
@@ -177,11 +161,20 @@ def _zsfc_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
             "receptor"
         )
     )
-    if not (near_field or n_by_height or weighting):
+    if not (near_field or n_by_height or zsfc_transforms):
         return
-    key = ("zsfc", tuple(varsiwant), n_msl, n_by_height, near_field, weighting)
-    message = _zsfc_message(varsiwant, n_msl, n_by_height, near_field, weighting)
+    key = ("zsfc", tuple(varsiwant), n_msl, n_by_height, near_field, zsfc_transforms)
+    message = _zsfc_message(varsiwant, n_msl, n_by_height, near_field, zsfc_transforms)
     yield key, lambda: [("zsfc", None, message)]
+
+
+def _kind(transform: Any) -> str:
+    """Return the ``kind`` a config names *transform* by, as :func:`stilt.transforms.transform_kind` does."""
+    kind = getattr(transform, "kind", None)
+    if isinstance(kind, str):
+        return kind
+    cls = type(transform)
+    return f"{cls.__module__}.{cls.__qualname__}"
 
 
 def _zsfc_message(
@@ -189,7 +182,7 @@ def _zsfc_message(
     n_msl: int,
     n_by_height: int,
     near_field: bool,
-    weighting: bool,
+    zsfc_transforms: tuple[str, ...],
 ) -> str:
     """Say what needs ``zsfc`` and the line that adds it to ``varsiwant``."""
     reasons = []
@@ -202,8 +195,12 @@ def _zsfc_message(
             "so the release heights of the particles are matched by position "
             "and can come out wrong"
         )
-    if weighting:
-        reasons.append("the pressure_weighting transform fails their footprints")
+    if zsfc_transforms:
+        kinds = " and ".join(dict.fromkeys(zsfc_transforms))
+        noun = (
+            "transform fails" if len(set(zsfc_transforms)) == 1 else "transforms fail"
+        )
+        reasons.append(f"the {kinds} {noun} their footprints")
     receptors = f"{n_msl} receptor is" if n_msl == 1 else f"{n_msl} receptors are"
     fix = ", ".join([*varsiwant, "zsfc"])
     return (

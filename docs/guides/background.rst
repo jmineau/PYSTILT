@@ -10,7 +10,7 @@ background from observations for an inversion, you need both.
 Each back-trajectory ends where its air came from. Sample a mole-fraction
 field at every particle's endpoint, average over the particles, and you
 have the background the receptor saw. ``sim.background(field)`` does this
-with any field you give it (:func:`stilt.particles.background` without a
+with any field you give it (:func:`stilt.background` without a
 project). X-STILT does the same with
 CarbonTracker in ``endpts.trajfoot``. For a satellite swath you can also
 take the background from the soundings that a city's plume did not reach
