@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=65e25506"></script>
+    <script src="../../../_static/documentation_options.js?v=ec8eefed"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev8+ga232c5b36" />
+  <meta name="docsearch:version" content="0.1.0a29.dev11+g7faf506df" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -454,6 +454,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -472,6 +473,7 @@
     <span class="n">Receptor</span><span class="p">,</span>
     <span class="n">parse_receptor_id</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample_met</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">upath</span><span class="w"> </span><span class="kn">import</span> <span class="n">UPath</span>
@@ -507,6 +509,9 @@
 
 <span class="c1">#: Molar mass of dry air, kg/mol.</span>
 <span class="n">_MOLAR_MASS_DRY_AIR</span> <span class="o">=</span> <span class="mf">0.02897</span>
+
+<span class="c1">#: Standard gravity, m/s².</span>
+<span class="n">_GRAVITY</span> <span class="o">=</span> <span class="mf">9.80665</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">ParticleMetadata</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
@@ -953,6 +958,124 @@
     <span class="k">return</span> <span class="p">(</span><span class="n">start</span> <span class="o">-</span> <span class="n">start</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">terrain</span><span class="p">))</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">lower</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_mixing_depth</span><span class="p">(</span><span class="n">mlht</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">veght</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span> <span class="o">|</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the depth surface fluxes are mixed through: ``veght`` of *mlht*, or ``veght`` meters above 1."""</span>
+    <span class="k">return</span> <span class="n">veght</span> <span class="o">*</span> <span class="n">mlht</span> <span class="k">if</span> <span class="n">veght</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">veght</span>
+
+
+<div class="viewcode-block" id="add_foot">
+<a class="viewcode-back" href="../../../reference/_api/stilt.particles.add_foot.html#stilt.particles.add_foot">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">add_foot</span><span class="p">(</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">met_files</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+    <span class="n">veght</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Add ``foot``, each particle's sensitivity to surface fluxes, for a transport model that writes only positions.</span>
+
+<span class="sd">    A particle below the depth surface fluxes are mixed through, ``veght``</span>
+<span class="sd">    times ``mlht`` (or ``veght`` meters when it is above 1), takes up the</span>
+<span class="sd">    flux for the time it spends there. Its ``foot`` for one output step is</span>
+<span class="sd">    that time divided by the air in the layer, STILT's footprint (Lin et</span>
+<span class="sd">    al., 2003)::</span>
+
+<span class="sd">        foot = M · t / (ρ̄ · depth)</span>
+
+<span class="sd">    in ppm per (µmol m⁻² s⁻¹), with M = 0.02897 kg mol⁻¹, the molar mass of</span>
+<span class="sd">    dry air, t the time in seconds, and ρ̄ the mean air density below the</span>
+<span class="sd">    depth. ρ̄ · depth, the mass of air in the layer, is the drop in pressure</span>
+<span class="sd">    from the ground to the depth over g, from the met files under the</span>
+<span class="sd">    particle. The time is ``samt`` when the table has it. Otherwise the</span>
+<span class="sd">    particle counts for the whole step when it is below the depth at the</span>
+<span class="sd">    end of the step, and not at all when it is above. A step is the time</span>
+<span class="sd">    since the particle's previous row, or since its release for its first</span>
+<span class="sd">    row, so a release row at ``age = 0`` gets zero.</span>
+
+<span class="sd">    HYSPLIT computes ``foot`` itself in STILT mode, the same way in its</span>
+<span class="sd">    turbulence steps. :doc:`/development/validation` says how far a</span>
+<span class="sd">    footprint made from this ``foot`` is from one made from HYSPLIT's. The</span>
+<span class="sd">    worker adds it after a run whose particles have none</span>
+<span class="sd">    (:func:`stilt.transport.run_model`).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    particles : pandas.DataFrame</span>
+<span class="sd">        Particle table with ``time``, the receptor time plus ``age``</span>
+<span class="sd">        minutes. A ``mlht`` column (m above ground) is used as it is;</span>
+<span class="sd">        without one, the met's boundary-layer height is sampled at each</span>
+<span class="sd">        particle (:func:`stilt.sampling.sample_met`).</span>
+<span class="sd">    met_files : iterable of path-like</span>
+<span class="sd">        ARL met files that cover the particles' times, such as the files</span>
+<span class="sd">        the run read. They are read on their own levels, which start at the</span>
+<span class="sd">        ground.</span>
+<span class="sd">    veght : float</span>
+<span class="sd">        Height that surface fluxes are mixed through (STILT's ``veght``): a</span>
+<span class="sd">        fraction of the mixed-layer height when 1 or less, else meters</span>
+<span class="sd">        above ground.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        A copy of *particles* with ``foot``, and ``mlht`` when it was</span>
+<span class="sd">        sampled. A row off the met's grid gets NaN, which no footprint</span>
+<span class="sd">        counts.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If *particles* has a ``foot`` column already, has no ``time``</span>
+<span class="sd">        column, or has a row outside the files' times.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; particles = sim.particles.drop(columns="foot")  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; stilt.particles.add_foot(particles, meta.met_files, veght=0.5)  # doctest: +SKIP</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="s2">"foot"</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"The particles have a foot column already. Drop it first to compute it."</span>
+        <span class="p">)</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">met_files</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">particles</span>
+    <span class="k">if</span> <span class="s2">"mlht"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">sample_met</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">files</span><span class="p">,</span> <span class="p">[</span><span class="s2">"mlht"</span><span class="p">],</span> <span class="n">z_top</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">_mixing_depth</span><span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="s2">"mlht"</span><span class="p">],</span> <span class="n">veght</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="c1"># The pressure at the ground and at the depth, in one call.</span>
+    <span class="n">where</span> <span class="o">=</span> <span class="n">out</span><span class="p">[[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">]]</span>
+    <span class="n">ends</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">where</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">zagl</span><span class="o">=</span><span class="mf">0.0</span><span class="p">),</span> <span class="n">where</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">zagl</span><span class="o">=</span><span class="n">depth</span><span class="p">)],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+    <span class="n">pres</span> <span class="o">=</span> <span class="n">sample_met</span><span class="p">(</span><span class="n">ends</span><span class="p">,</span> <span class="n">files</span><span class="p">,</span> <span class="p">[</span><span class="s2">"pres"</span><span class="p">],</span> <span class="n">z_top</span><span class="o">=</span><span class="kc">None</span><span class="p">)[</span><span class="s2">"pres"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">air</span> <span class="o">=</span> <span class="mf">100.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">pres</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">)]</span> <span class="o">-</span> <span class="n">pres</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">)</span> <span class="p">:])</span> <span class="o">/</span> <span class="n">_GRAVITY</span>  <span class="c1"># kg m⁻²</span>
+    <span class="k">if</span> <span class="s2">"samt"</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">minutes</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">"samt"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">below</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">"zagl"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">depth</span>
+        <span class="n">minutes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">below</span><span class="p">,</span> <span class="n">_step_minutes</span><span class="p">(</span><span class="n">out</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_MOLAR_MASS_DRY_AIR</span> <span class="o">*</span> <span class="n">minutes</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">/</span> <span class="n">air</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_step_minutes</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return each row's minutes since the particle's previous row, or since its release for its first."""</span>
+    <span class="n">elapsed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+    <span class="n">number</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">lexsort</span><span class="p">((</span><span class="n">elapsed</span><span class="p">,</span> <span class="n">number</span><span class="p">))</span>
+    <span class="n">walked</span> <span class="o">=</span> <span class="n">elapsed</span><span class="p">[</span><span class="n">order</span><span class="p">]</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">walked</span><span class="p">,</span> <span class="n">prepend</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+    <span class="n">first</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="n">number</span><span class="p">[</span><span class="n">order</span><span class="p">][</span><span class="mi">1</span><span class="p">:]</span> <span class="o">!=</span> <span class="n">number</span><span class="p">[</span><span class="n">order</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+    <span class="n">step</span><span class="p">[</span><span class="n">first</span><span class="p">]</span> <span class="o">=</span> <span class="n">walked</span><span class="p">[</span><span class="n">first</span><span class="p">]</span>
+    <span class="n">minutes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+    <span class="n">minutes</span><span class="p">[</span><span class="n">order</span><span class="p">]</span> <span class="o">=</span> <span class="n">step</span>
+    <span class="k">return</span> <span class="n">minutes</span>
+
+
 <div class="viewcode-block" id="correct_near_field">
 <a class="viewcode-back" href="../../../reference/_api/stilt.particles.correct_near_field.html#stilt.particles.correct_near_field">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">correct_near_field</span><span class="p">(</span>
@@ -1024,7 +1147,7 @@
             <span class="o">-</span> <span class="mi">1</span>
         <span class="p">)</span>
     <span class="p">)</span>
-    <span class="n">p</span><span class="p">[</span><span class="s2">"pbl_mixing"</span><span class="p">]</span> <span class="o">=</span> <span class="n">veght</span> <span class="o">*</span> <span class="n">p</span><span class="p">[</span><span class="s2">"mlht"</span><span class="p">]</span> <span class="k">if</span> <span class="n">veght</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">veght</span>
+    <span class="n">p</span><span class="p">[</span><span class="s2">"pbl_mixing"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_mixing_depth</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"mlht"</span><span class="p">],</span> <span class="n">veght</span><span class="p">)</span>
 
     <span class="n">start_h</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"release_height"</span><span class="p">]</span> <span class="k">if</span> <span class="s2">"release_height"</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span> <span class="k">else</span> <span class="n">r_zagl</span>
     <span class="k">if</span> <span class="n">start_h</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>

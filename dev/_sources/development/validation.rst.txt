@@ -63,6 +63,60 @@ about 0.29 hPa at the 95th percentile with either. Terrain-following files
 (flag 3) are read on their own levels rather than HYSPLIT's internal ones,
 so their values differ more, by an amount not measured.
 
+``foot`` for a model that writes only positions
+------------------------------------------------
+
+PYSTILT computes ``foot`` for particles that have none
+(:func:`stilt.particles.add_foot`): the time below ``veght`` of the mixed
+layer over the air below that depth, which it takes from the drop in
+pressure between the ground and the depth in the met files. HYSPLIT
+computes its own the same way in its turbulence steps, adding up the dry
+air over its levels, with 28.84 g/mol where PYSTILT has 28.97. Three
+6-hour HRRR runs from Salt Lake City, a winter afternoon and night and a
+summer evening, compare the two, with HYSPLIT's footprint as the reference
+(``tests/integration/test_foot.py``; runs of 200 and 1,000 particles gave
+the ranges below). "Cells" is the sum of the absolute cell differences over
+the reference's total.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30 30
+
+   * - ``foot`` from
+     - Footprint total
+     - Cells
+   * - HYSPLIT's ``samt`` and ``mlht``
+     - within 0.4 %
+     - 0.2 to 0.4 %
+   * - The whole step below the layer, in place of ``samt``
+     - within 0.6 %
+     - 0.6 to 1.3 %
+   * - Then the met's ``mlht``, against HYSPLIT's default ``kmixd: 3``
+     - 0.3 to 25 % higher
+     - 9 to 61 %
+   * - The same, against a HYSPLIT run with ``kmixd: 0`` (the met's ``PBLH``)
+     - 0.3 % lower to 10 % higher
+     - 1.5 to 20 %
+   * - The same, with the met's ``mlht`` kept at least ``kmix0``, as HYSPLIT keeps its own
+     - within 1.5 %
+     - 1.5 to 6.0 %
+
+Row by row, with HYSPLIT's ``samt`` and ``mlht``, ``foot`` agrees to a
+median of 0.4 % and within 0.8 % on nine rows in ten. Counting the whole
+step changes little because HYSPLIT's ``samt`` is almost always 0 or the
+whole minute.
+
+What is left comes from the mixed-layer height. HYSPLIT's default finds
+the mixed layer from the met's profile, by a bulk Richardson number, and
+keeps it at least ``kmix0`` (150 m), while the met's ``mlht`` is the met
+model's ``PBLH``: at night it was 1.5 to 1.8 times HYSPLIT's, and in the
+afternoon 0.84 times. Against a HYSPLIT run that reads the met's ``PBLH``
+(``kmixd: 0``) the two heights match to a few percent, and what still moves
+the night footprints is the ``kmix0`` floor: below 150 m HYSPLIT mixes the
+flux through more air than the met's boundary layer holds. A transport
+model that writes only positions has no such floor, so its footprint
+follows the met's own boundary layer.
+
 Pressure weighting
 ------------------
 

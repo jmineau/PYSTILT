@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=65e25506"></script>
+    <script src="../_static/documentation_options.js?v=ec8eefed"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev8+ga232c5b36" />
+  <meta name="docsearch:version" content="0.1.0a29.dev11+g7faf506df" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -595,6 +595,7 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.HNF_PLUME_COLUMNS.html">stilt.particles.HNF_PLUME_COLUMNS</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.check_particles.html">stilt.particles.check_particles</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.add_release_heights.html">stilt.particles.add_release_heights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.add_foot.html">stilt.particles.add_foot</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.correct_near_field.html">stilt.particles.correct_near_field</a></li>
 </ul>
 </details></li>
@@ -940,13 +941,28 @@ minutes, int32, and read back as float64.</p></td>
 <dt><code class="docutils literal notranslate"><span class="pre">foot</span></code></dt><dd><p>The particle’s sensitivity to surface fluxes accumulated over the output
 step, in ppm per (µmol m⁻² s⁻¹). It is zero while the particle is above
 <code class="docutils literal notranslate"><span class="pre">veght</span></code> of the mixed layer (or <code class="docutils literal notranslate"><span class="pre">veght</span></code> meters when that is more than
-1). HYSPLIT computes it as STILT-R does: the time the particle spent
-in that surface layer, divided by the air density and the depth the
-flux is mixed through. <a class="reference internal" href="_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a> adds each
-particle’s <code class="docutils literal notranslate"><span class="pre">foot</span></code> into its grid cell and divides by the number of
-particles.</p>
+1). It is the time the particle spent in that surface layer, divided by
+the depth the flux is mixed through times the mean air density below it
+(Lin et al., 2003).
+<a class="reference internal" href="_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a> adds each particle’s <code class="docutils literal notranslate"><span class="pre">foot</span></code> into its grid
+cell and divides by the number of particles.</p>
 </dd>
 </dl>
+<p>Which models write <code class="docutils literal notranslate"><span class="pre">foot</span></code>:</p>
+<ul class="simple">
+<li><p><strong>HYSPLIT</strong> computes it in STILT mode, as STILT-R’s runs do, when
+<code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> has <code class="docutils literal notranslate"><span class="pre">foot</span></code> (the default). PYSTILT keeps it as written.</p></li>
+<li><p><strong>A transport model that writes only positions</strong>, or any model whose
+particles have no <code class="docutils literal notranslate"><span class="pre">foot</span></code>, gets it from PYSTILT after the run, from the
+met files the run read: <a class="reference internal" href="_api/stilt.particles.add_foot.html#stilt.particles.add_foot" title="stilt.particles.add_foot"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_foot()</span></code></a> computes it from <code class="docutils literal notranslate"><span class="pre">zagl</span></code>,
+<code class="docutils literal notranslate"><span class="pre">mlht</span></code>, the air below the depth (the drop in pressure from the ground
+to the depth) and the output step. The run’s log says so. A particle
+counts for the whole step when it ends the step below the layer, where
+HYSPLIT counts the minutes it spent there. Without the model’s own
+<code class="docutils literal notranslate"><span class="pre">mlht</span></code>, the met’s boundary-layer height is used, not the one HYSPLIT
+finds from the profile. <a class="reference internal" href="../development/validation.html"><span class="doc">Validation</span></a> says how far a
+footprint moves.</p></li>
+</ul>
 <section id="the-release-row">
 <h2>The release row<a class="headerlink" href="#the-release-row" title="Link to this heading">#</a></h2>
 <p>A model should write each particle’s release as a row at <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>, with
@@ -1039,6 +1055,8 @@ vertical reference, for column and multipoint receptors
 particle’s slab, the part of the column the particle stands for. STILT-R and
 X-STILT call it <code class="docutils literal notranslate"><span class="pre">xhgt</span></code>.</p>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">foot</span></code></dt><dd><p>When the model wrote none (<a class="reference internal" href="_api/stilt.particles.add_foot.html#stilt.particles.add_foot" title="stilt.particles.add_foot"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_foot()</span></code></a>), as above.</p>
+</dd>
 <dt><code class="docutils literal notranslate"><span class="pre">foot_no_hnf_dilution</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">foot</span></code> before the near-field correction (<a class="reference internal" href="_api/stilt.particles.correct_near_field.html#stilt.particles.correct_near_field" title="stilt.particles.correct_near_field"><code class="xref py py-func docutils literal notranslate"><span class="pre">correct_near_field()</span></code></a>),
 when <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is on.</p>
 </dd>
@@ -1070,15 +1088,21 @@ not stored; reading a particle file adds it, and so does
 </section>
 <section id="after-a-run">
 <h2>After a run<a class="headerlink" href="#after-a-run" title="Link to this heading">#</a></h2>
-<p>PYSTILT adds the release heights to any model’s particles, and applies the
-near-field correction when <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is set. A model whose particles
-lack the columns the correction reads gets none, and a warning says so.</p>
+<p>PYSTILT adds the release heights to any model’s particles, <code class="docutils literal notranslate"><span class="pre">foot</span></code> to
+particles that have none, and applies the near-field correction when
+<code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is set. A model whose particles lack the columns the
+correction reads gets none, and a warning says so. The correction reads
+<code class="docutils literal notranslate"><span class="pre">samt</span></code>, <code class="docutils literal notranslate"><span class="pre">sigw</span></code> and <code class="docutils literal notranslate"><span class="pre">tlgr</span></code>, which only HYSPLIT writes, so particles
+that got their <code class="docutils literal notranslate"><span class="pre">foot</span></code> from PYSTILT are not corrected.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.particles.add_release_heights.html#stilt.particles.add_release_heights" title="stilt.particles.add_release_heights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_release_heights</span></code></a></p></td>
 <td><p>Return <em>particles</em> with each particle's <code class="docutils literal notranslate"><span class="pre">release_height</span></code>, for a column or multipoint receptor.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.particles.correct_near_field.html#stilt.particles.correct_near_field" title="stilt.particles.correct_near_field"><code class="xref py py-obj docutils literal notranslate"><span class="pre">correct_near_field</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.particles.add_foot.html#stilt.particles.add_foot" title="stilt.particles.add_foot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_foot</span></code></a></p></td>
+<td><p>Add <code class="docutils literal notranslate"><span class="pre">foot</span></code>, each particle's sensitivity to surface fluxes, for a transport model that writes only positions.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.particles.correct_near_field.html#stilt.particles.correct_near_field" title="stilt.particles.correct_near_field"><code class="xref py py-obj docutils literal notranslate"><span class="pre">correct_near_field</span></code></a></p></td>
 <td><p>Correct <code class="docutils literal notranslate"><span class="pre">foot</span></code> for plume dilution in the hyper-near field, as STILT-R's <code class="docutils literal notranslate"><span class="pre">calc_plume_dilution</span></code> does.</p></td>
 </tr>
 </tbody>

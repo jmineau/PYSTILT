@@ -104,8 +104,8 @@ Module map
        validation.py    the checks a receptor must pass, written once for many
                         points and shared by the models and the table
      particles/         the particle table (a DataFrame)
-       table.py         its columns, particle files, release heights, and the
-                        near-field plume correction
+       table.py         its columns, particle files, release heights, foot for
+                        a model that writes none, the near-field plume correction
        accessor.py      the .stilt pandas accessor
        background.py    the background at a receptor (sim.background)
        transport_error.py  the transport error of the enhancement, one
