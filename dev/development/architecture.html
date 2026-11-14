@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=66e15165"></script>
+    <script src="../_static/documentation_options.js?v=e1570597"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev12+gdb5f05cb8" />
+  <meta name="docsearch:version" content="0.1.0a29.dev13+g203ac3ebe" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -767,6 +767,20 @@ short contracts hold what a layer cannot: only <code class="docutils literal not
 results and runs nothing. STILT-R ran HYSPLIT, so the STILT-R reader and the
 <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> model are the named exceptions: they read HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>
 and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> files and record HYSPLIT’s settings.</p>
+<p>A third short contract holds the line between the core that makes particle
+runs and what STILT adds on top of the particles: footprints, transforms,
+observations, sampling fields at particles, background, transport error and
+the STILT-R model. Outside those modules nothing imports them, except where
+the contract’s <code class="docutils literal notranslate"><span class="pre">ignore_imports</span></code> lists it, each with its reason: the
+variant’s footprint settings, the output and <code class="docutils literal notranslate"><span class="pre">Simulation</span></code> code that writes
+and reads footprint files, the worker’s footprint step, <code class="docutils literal notranslate"><span class="pre">Project</span></code>’s bulk
+reads, the background and transport-error modules that live in the particles
+package, and <code class="docutils literal notranslate"><span class="pre">add_foot</span></code>’s use of <code class="docutils literal notranslate"><span class="pre">sample_met</span></code>. The list is the work a code
+boundary would leave; a new crossing fails <code class="docutils literal notranslate"><span class="pre">just</span> <span class="pre">imports</span></code>. Two crossings
+are not imports between modules, so the contract cannot see them: the
+near-field correction and <code class="docutils literal notranslate"><span class="pre">add_foot</span></code> are functions in
+<code class="docutils literal notranslate"><span class="pre">stilt.particles.table</span></code>, and a package’s <code class="docutils literal notranslate"><span class="pre">__init__</span></code> importing its own
+module (the transport registry and the STILT-R model) is not checked.</p>
 </section>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">#</a></h2>
