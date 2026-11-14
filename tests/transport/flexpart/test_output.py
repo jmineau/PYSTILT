@@ -1,6 +1,7 @@
 """Tests for reading FLEXPART 11's particle output."""
 
 import datetime as dt
+from pathlib import Path
 
 import netCDF4
 import numpy as np
@@ -11,13 +12,17 @@ from stilt.transport.flexpart import read_partoutput
 
 RECEPTOR_TIME = dt.datetime(2023, 6, 1, 18)
 
+#: Five particles of a real FLEXPART 11 run on GFS (data/make_sample.py says how it was made).
+SAMPLE = Path(__file__).parent / "data" / "partoutput_20230601180000_init.nc"
+
 
 def write_partoutput(path, times, fields, start="2023-06-01 18:00", grid=None):
     """
     Write a file as FLEXPART 11 does (``writeheader_partoutput``, ``write_to_file``).
 
     *times* are seconds from *start*; *fields* maps a variable to a
-    (time, particle) array with -1 where FLEXPART fills.
+    (time, particle) array with -1 where FLEXPART fills. FLEXPART's Fortran
+    (time, particle) is (particle, time) in the file, as here.
     """
     n_particles = next(iter(fields.values())).shape[1]
     with netCDF4.Dataset(path, "w", format="NETCDF4") as nc:
@@ -34,19 +39,36 @@ def write_partoutput(path, times, fields, start="2023-06-01 18:00", grid=None):
             var = nc.createVariable(
                 name,
                 "f4",
-                ("time", "particle"),
+                ("particle", "time"),
                 fill_value=-1.0,
                 zlib=True,
                 complevel=1,
-                chunksizes=(1, n_particles),
+                chunksizes=(n_particles, 1),
             )
             var.units = "meters"
-            var[:] = values
+            var[:] = np.asarray(values).T
         if grid is not None:
             nc.createDimension("longitude", 2)
             nc.createDimension("latitude", 2)
-            var = nc.createVariable(grid, "f4", ("time", "longitude", "latitude"))
-            var[:] = np.ones((len(times), 2, 2))
+            var = nc.createVariable(grid, "f4", ("latitude", "longitude", "time"))
+            var[:] = np.ones((2, 2, len(times)))
+
+
+def test_reads_flexpart_output(tmp_path):
+    particles = read_partoutput(SAMPLE, RECEPTOR_TIME)
+
+    check_particles(particles)
+    assert len(particles) == 5 * 24
+    assert particles["age"].iloc[0] == -60
+    assert particles["age"].iloc[-1] == -1440
+    assert particles["particle"].iloc[:5].tolist() == [1, 2, 3, 4, 5]
+    first = particles.iloc[0]
+    # Released at 40.766 N, 111.848 W, 25 m above ground, an hour before.
+    assert first["lon"] == pytest.approx(-111.88, abs=0.05)
+    assert first["lat"] == pytest.approx(40.74, abs=0.05)
+    assert 0 < first["zagl"] < 100
+    assert first["pres"] == pytest.approx(806, abs=5)
+    assert {"mlht", "dens", "temp", "sphu", "zsfc", "pv"} <= set(particles.columns)
 
 
 def backward_fields():

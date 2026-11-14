@@ -2,8 +2,9 @@
 Read FLEXPART 11's particle output (``partoutput_*.nc``) as a particle table.
 
 FLEXPART 11 writes its particles to NetCDF when ``IPOUT`` is 1 (every
-output step) or 2 (the end only) in ``COMMAND``. Each variable on (time,
-particle) is one field that PARTOPTIONS turned on. The file is
+output step) or 2 (the end only) in ``COMMAND``. Each variable on
+(particle, time) is one field that PARTOPTIONS turned on: FLEXPART writes
+(time, particle) in Fortran's order, which NetCDF stores reversed. The file is
 ``partoutput_<YYYYMMDDHHMMSS>_init.nc``, and a long run starts another,
 ``partoutput_<YYYYMMDDHHMMSS>.nc``, when the first one grows past FLEXPART's
 size limit or at a restart, so a run can leave several.
@@ -134,8 +135,8 @@ def _read_one(path: str, receptor_time: dt.datetime) -> pd.DataFrame:
         fields: dict[str, np.ndarray] = {}
         for key, var in ds.data_vars.items():
             name = str(key)
-            if var.dims == ("time", "particle"):
-                fields[name] = var.values
+            if var.dims == ("particle", "time"):
+                fields[name] = var.values.T
             elif {"longitude", "latitude"} & set(var.dims):
                 raise ValueError(
                     f"{os.path.basename(path)} has {name!r} on FLEXPART's grid, "
