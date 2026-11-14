@@ -1,17 +1,17 @@
 name: STILT-R
 
-# The integration tests (PYSTILT end to end with real met files and HYSPLIT) and
-# the STILT-R comparisons (markers integration, fidelity and r_only). The job takes
-# about 30 minutes, so it runs only when a change touches what it checks:
+# The STILT-R comparisons (markers fidelity and r_only): PYSTILT against a pinned
+# uataq/stilt commit. The job takes about 25 minutes, so it runs only when a change
+# touches what it checks (the integration tests, a few minutes, run in tests.yml):
 #
 #   src/stilt/      everything but observations/ and visualization.py, which no
-#                   integration or STILT-R test reaches. The tests run a project end
+#                   STILT-R test reaches. The fidelity scenarios run a project end
 #                   to end (config, project, execution, transport/hysplit and its
-#                   bundled binaries, particles, footprint, transforms, sampling,
-#                   receptors, output, identity, migration, the CLI).
-#   tests/          the integration and STILT-R tests, the shared conftest.py (its
-#                   _MET_BLOCKS name the met cache), the fixtures and R helpers, and
-#                   the release-assignment test that prewarms the met cache.
+#                   bundled binaries, particles, footprint, receptors, output);
+#                   the r_only tests also read STILT-R output (migration.py).
+#   tests/          the STILT-R tests, the shared conftest.py (its _MET_BLOCKS name
+#                   the met cache), the fixtures and R helpers, and the
+#                   release-assignment test whose setup prewarms the met cache.
 #   uv.lock, pyproject.toml
 #                   the dependencies and the pytest settings (warnings are errors).
 #   this file       so a STILT_R_SHA bump runs it.
@@ -28,7 +28,6 @@ on:
       - "!src/stilt/visualization.py"
       - "tests/conftest.py"
       - "tests/fixtures/**"
-      - "tests/integration/**"
       - "tests/r_stilt/**"
       - "tests/transport/hysplit/test_release_assignment.py"
       - "uv.lock"
@@ -47,8 +46,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  integration:
-    name: Integration + STILT-R tests
+  stilt-r:
+    name: STILT-R tests
     runs-on: ubuntu-latest  # HYSPLIT binary is linux_x64 only
     env:
       UV_NO_SYNC: "1"
@@ -97,6 +96,7 @@ jobs:
         with:
           path: tests/met_cache
           # Bump the version suffix when _MET_BLOCKS changes in conftest.py
+          # (the same key in tests.yml and docs.yml)
           key: met-hrrr-2021-v1
 
       - name: Prewarm HRRR met cache
@@ -140,11 +140,11 @@ jobs:
           cd stilt-r-src/r/src
           R CMD SHLIB permute.f90
 
-      - name: Run integration and STILT-R fidelity tests
+      - name: Run STILT-R fidelity tests
         env:
           STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
           STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
-        run: uv run pytest tests/ -v -m "integration or fidelity"
+        run: uv run pytest tests/ -v -m fidelity
 
       - name: Run STILT-R synthetic footprint tests
         env:
