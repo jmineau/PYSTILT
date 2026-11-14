@@ -74,7 +74,7 @@ src/stilt/
   simulation.py   Simulation: a frozen (receptor, variant, output) value
   config.py       ProjectConfig and Variant;  identity.py  settings records, hashes
   receptors/      receptor models, receptors.csv, shared validation
-  particles/      the particle table and files, release heights, near-field correction
+  particles/      the particle table and files, release heights, foot, near-field correction
   footprint/      FootprintConfig, calc_footprint (gridding.py), aggregation, io, targets
   transforms/     pre-footprint particle transforms, one module each
   transport/      TransportModel/TransportConfig protocols, MODELS, get_model, run_model;
