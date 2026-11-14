@@ -119,9 +119,25 @@ jobs:
         uses: r-lib/actions/setup-r@v2
         with:
           r-version: 'release'
+          use-public-rspm: true  # prebuilt Linux binaries of CRAN packages
 
       - name: Install system dependencies for R packages
         run: sudo apt-get install -y libnetcdf-dev libgdal-dev libgeos-dev libproj-dev libssl-dev libxml2-dev
+
+      # The packages the R helpers load (load_libs in tests/fixtures/r_helpers/).
+      # STILT-R's load_libs installs a missing one from source at the first Rscript
+      # call, which took about 10 minutes; here they come as cached binaries.
+      - name: Install R packages
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::arrow
+            any::dplyr
+            any::lubridate
+            any::ncdf4
+            any::proj4
+            any::raster
+            any::R.utils
 
       - name: Clone uataq/stilt R source at pinned commit
         run: |
