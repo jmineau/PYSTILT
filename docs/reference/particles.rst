@@ -44,11 +44,26 @@ A footprint also needs ``foot``:
    The particle's sensitivity to surface fluxes accumulated over the output
    step, in ppm per (µmol m⁻² s⁻¹). It is zero while the particle is above
    ``veght`` of the mixed layer (or ``veght`` meters when that is more than
-   1). HYSPLIT computes it as STILT-R does: the time the particle spent
-   in that surface layer, divided by the air density and the depth the
-   flux is mixed through. :func:`stilt.calc_footprint` adds each
-   particle's ``foot`` into its grid cell and divides by the number of
-   particles.
+   1). It is the time the particle spent in that surface layer, divided by
+   the depth the flux is mixed through times the mean air density below it
+   (Lin et al., 2003).
+   :func:`stilt.calc_footprint` adds each particle's ``foot`` into its grid
+   cell and divides by the number of particles.
+
+Which models write ``foot``:
+
+- **HYSPLIT** computes it in STILT mode, as STILT-R's runs do, when
+  ``varsiwant`` has ``foot`` (the default). PYSTILT keeps it as written.
+- **A transport model that writes only positions**, or any model whose
+  particles have no ``foot``, gets it from PYSTILT after the run, from the
+  met files the run read: :func:`add_foot` computes it from ``zagl``,
+  ``mlht``, the air below the depth (the drop in pressure from the ground
+  to the depth) and the output step. The run's log says so. A particle
+  counts for the whole step when it ends the step below the layer, where
+  HYSPLIT counts the minutes it spent there. Without the model's own
+  ``mlht``, the met's boundary-layer height is used, not the one HYSPLIT
+  finds from the profile. :doc:`/development/validation` says how far a
+  footprint moves.
 
 The release row
 ---------------
@@ -131,6 +146,9 @@ Columns PYSTILT adds
    particle's slab, the part of the column the particle stands for. STILT-R and
    X-STILT call it ``xhgt``.
 
+``foot``
+   When the model wrote none (:func:`add_foot`), as above.
+
 ``foot_no_hnf_dilution``
    ``foot`` before the near-field correction (:func:`correct_near_field`),
    when ``hnf_plume`` is on.
@@ -155,9 +173,12 @@ Checking a table
 After a run
 -----------
 
-PYSTILT adds the release heights to any model's particles, and applies the
-near-field correction when ``hnf_plume`` is set. A model whose particles
-lack the columns the correction reads gets none, and a warning says so.
+PYSTILT adds the release heights to any model's particles, ``foot`` to
+particles that have none, and applies the near-field correction when
+``hnf_plume`` is set. A model whose particles lack the columns the
+correction reads gets none, and a warning says so. The correction reads
+``samt``, ``sigw`` and ``tlgr``, which only HYSPLIT writes, so particles
+that got their ``foot`` from PYSTILT are not corrected.
 
 .. autosummary::
    :toctree: _api

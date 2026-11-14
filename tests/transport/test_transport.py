@@ -316,3 +316,107 @@ def test_finish_skips_the_near_field_correction_of_an_msl_receptor_without_zsfc(
         ModelRun(particles.assign(zsfc=1300.0), met_files=[]), receptor, config
     )
     assert corrected.particles["foot"].iloc[0] != pytest.approx(1e-5)
+
+
+def _positions_only() -> pd.DataFrame:
+    """Particles of a transport model that writes only positions."""
+    return pd.DataFrame(
+        {
+            "particle": [1, 1],
+            "age": [-1.0, -2.0],
+            "lon": [-111.9, -112.0],
+            "lat": [40.7, 40.6],
+            "zagl": [5.0, 900.0],
+        }
+    )
+
+
+def test_finish_computes_foot_from_the_met_files_the_run_read(
+    monkeypatch, tmp_path, caplog
+):
+    from stilt import transport
+    from stilt.transport import TransportConfig, _finish
+
+    seen = {}
+
+    def add_foot(particles, met_files, veght):
+        seen.update(met_files=met_files, veght=veght, time=particles["time"])
+        return particles.assign(foot=1.0)
+
+    monkeypatch.setattr(transport, "add_foot", add_foot)
+    met_files = [tmp_path / "met"]
+    with caplog.at_level("INFO", logger="stilt.transport"):
+        run = _finish(
+            ModelRun(_positions_only(), log="model log\n", met_files=met_files),
+            _receptor(),
+            TransportConfig(veght=0.3),
+        )
+
+    assert seen["met_files"] == met_files
+    assert seen["veght"] == 0.3
+    assert seen["time"].tolist() == [
+        pd.Timestamp("2023-01-01 11:59"),
+        pd.Timestamp("2023-01-01 11:58"),
+    ]
+    assert "time" not in run.particles.columns
+    assert run.particles["foot"].tolist() == [1.0, 1.0]
+    assert run.log.startswith("model log\nfoot computed by PYSTILT from the met's mlht")
+    # foot is there, but not what the near-field correction reads besides it.
+    assert "near-field correction skipped: no dens, mlht, samt, sigw, tlgr" in run.log
+    assert "foot computed" in caplog.text
+
+
+def test_finish_keeps_the_time_and_mlht_a_model_wrote(monkeypatch, tmp_path):
+    from stilt import transport
+    from stilt.transport import TransportConfig, _finish
+
+    monkeypatch.setattr(
+        transport, "add_foot", lambda p, files, veght: p.assign(foot=1.0)
+    )
+    time = pd.Timestamp("2023-01-01 11:00")
+    particles = _positions_only().assign(time=time, mlht=800.0)
+    run = _finish(
+        ModelRun(particles, met_files=[tmp_path / "met"]),
+        _receptor(),
+        TransportConfig(hnf_plume=False),
+    )
+
+    assert run.particles["time"].tolist() == [time, time]
+    assert "foot computed by PYSTILT from the model's mlht" in run.log
+
+
+def test_finish_says_why_there_is_no_foot_without_met_files():
+    from stilt.transport import TransportConfig, _finish
+
+    run = _finish(
+        ModelRun(_positions_only(), met_files=[]),
+        _receptor(),
+        TransportConfig(hnf_plume=False),
+    )
+
+    assert "foot" not in run.particles.columns
+    assert "no foot: the transport model wrote none, and named no met files" in run.log
+
+
+def test_finish_keeps_the_foot_a_model_wrote(monkeypatch):
+    from stilt import transport
+    from stilt.transport import TransportConfig, _finish
+
+    monkeypatch.setattr(
+        transport, "add_foot", lambda *a, **k: pytest.fail("computed foot")
+    )
+    particles = _positions_only().assign(foot=[1e-3, 2e-3])
+    run = _finish(
+        ModelRun(particles, met_files=[]), _receptor(), TransportConfig(hnf_plume=False)
+    )
+
+    assert run.particles["foot"].tolist() == [1e-3, 2e-3]
+    assert run.log == ""
+
+
+def _receptor():
+    from stilt.receptors import PointReceptor
+
+    return PointReceptor(
+        time="2023-01-01 12:00", longitude=-111.9, latitude=40.7, altitude=5.0
+    )
