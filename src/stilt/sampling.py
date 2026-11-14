@@ -730,7 +730,8 @@ def sample_grib_pressure(
     Returns
     -------
     numpy.ndarray
-        Pressure in hPa, one per row. A row above the highest level is NaN.
+        Pressure in hPa, one per row. A row above the highest level, or
+        with no height, is NaN.
 
     Raises
     ------
@@ -854,7 +855,7 @@ def _grib_ln_pressure(
     p0, p1 = ln_p[rows, upper - 1], ln_p[rows, upper]
     frac = np.where(h1 > h0, (z - h0) / np.where(h1 > h0, h1 - h0, 1.0), 0.0)
     result = p0 + np.clip(frac, 0.0, 1.0) * (p1 - p0)
-    return np.where(top, np.nan, result)
+    return np.where(top | np.isnan(z), np.nan, result)
 
 
 def _bilinear_corners(

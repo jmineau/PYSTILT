@@ -31,10 +31,8 @@ def test_get_model_imports_a_model_by_its_path():
 
 
 def test_get_model_names_the_models_it_knows():
-    with pytest.raises(
-        ValueError, match=r"Unknown transport model 'flexpart'.*hysplit"
-    ):
-        get_model("flexpart")
+    with pytest.raises(ValueError, match=r"Unknown transport model 'name'.*flexpart"):
+        get_model("name")
 
 
 def test_stilt_r_is_a_built_in_model_that_cannot_run(point_receptor):

@@ -378,6 +378,13 @@ def _hysplit() -> TransportModel:
     return HysplitModel()
 
 
+def _flexpart() -> TransportModel:
+    """Return FLEXPART, importing its package only when it is asked for."""
+    from stilt.transport.flexpart import FlexpartModel
+
+    return FlexpartModel()
+
+
 def _stilt_r() -> TransportModel:
     """Return the model of imported STILT-R runs, importing it only when it is asked for."""
     from stilt.transport.stilt_r import StiltRModel
@@ -386,12 +393,14 @@ def _stilt_r() -> TransportModel:
 
 
 #: The transport models built into PYSTILT, by the name ``model:`` takes in
-#: ``config.yaml``: ``hysplit``, and ``stilt-r`` for runs imported from
+#: ``config.yaml``: ``hysplit``; ``flexpart``, which runs a FLEXPART 11
+#: checkout you built; and ``stilt-r`` for runs imported from
 #: STILT-R (:func:`stilt.migration.import_stilt_r`), which cannot run. A model
 #: in its own package is named by its import path instead, as a transform's
 #: ``kind:`` is.
 MODELS: dict[str, Callable[[], TransportModel]] = {
     "hysplit": _hysplit,
+    "flexpart": _flexpart,
     "stilt-r": _stilt_r,
 }
 

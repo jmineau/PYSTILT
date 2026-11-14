@@ -20,6 +20,12 @@ which the reader relies on:
   released, released in that same step, or gone for more than one output
   step has -1 in every field at that time.
 - ``z`` is height above ground in meters, ``prs`` pressure in Pa.
+- In a run without gridded output (``IOUT`` 0), as PYSTILT runs it,
+  FLEXPART writes the positions at the last output time but the fill value
+  in every field it interpolates from the met (``hmix``, ``rho``, ``prs``,
+  ``T``, ``sh``), so those are NaN there and a ``foot`` computed from
+  ``mlht`` is NaN in that step. With gridded output on they are written
+  (seen with FLEXPART 11 at git bb09a19 on GFS).
 - On GFS, FLEXPART gives its lowest level, the ground, the pressure,
   density, temperature, and wind of the lowest GFS pressure level above
   the terrain (``verttransform_mod.f90``), so ``prs`` and ``rho`` near the
