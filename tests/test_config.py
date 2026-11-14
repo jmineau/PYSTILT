@@ -247,6 +247,25 @@ def test_time_integrate_is_refused_saying_what_to_do_instead(tmp_path, grid, whe
         )
 
 
+@pytest.mark.parametrize("where", ["top", "variant"])
+def test_veght_is_refused_naming_footprint_depth(tmp_path, where):
+    top = {"veght": 0.3} if where == "top" else {}
+    variant = {} if where == "top" else {"veght": 0.3}
+    with pytest.raises(ValueError, match="veght was renamed footprint_depth"):
+        ProjectConfig(mets=_met_config(tmp_path), variants={"hrrr": variant}, **top)
+
+
+def test_footprint_depth_goes_to_hysplit_as_veght(tmp_path):
+    from stilt.transport.hysplit.driver import setup_entries
+
+    config = ProjectConfig(
+        mets=_met_config(tmp_path), footprint_depth=0.3, variants={"hrrr": {}}
+    )
+    entries = setup_entries(config.transport)
+    assert entries["veght"] == 0.3
+    assert "footprint_depth" not in entries
+
+
 def test_a_stored_record_with_time_integrate_true_is_refused():
     """A footprint summed over time is not read back as an hourly one."""
     with pytest.raises(ValueError, match="time_integrate was removed"):

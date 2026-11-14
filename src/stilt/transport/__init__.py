@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, Self
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from stilt.exceptions import SimulationError
 from stilt.meteorology import run_window
@@ -37,6 +37,12 @@ if TYPE_CHECKING:
     from stilt.receptors import Receptor
 
 logger = logging.getLogger(__name__)
+
+#: What to say to a config that sets ``veght``, which was renamed.
+VEGHT_RENAMED = (
+    "veght was renamed footprint_depth: the same value, the depth surface "
+    "fluxes are mixed through for the footprint. HYSPLIT still gets it as VEGHT."
+)
 
 
 @dataclass(frozen=True)
@@ -135,14 +141,24 @@ class TransportConfig(BaseModel):
             "``samt``, and ``zsfc`` for a receptor above sea level."
         ),
     )
-    veght: float = Field(
+    footprint_depth: float = Field(
         0.5,
         description=(
-            "Height below which a particle's time counts toward the footprint. "
-            "A value of 1 or less is a fraction of the mixed-layer height; a "
-            "larger value is meters above ground."
+            "Height below which a particle's time counts toward the footprint: "
+            "the depth surface fluxes are mixed through. A value of 1 or less "
+            "is a fraction of the mixed-layer height; a larger value is meters "
+            "above ground. HYSPLIT and STILT-R call it ``veght``."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_veght(cls, data: Any) -> Any:
+        """Refuse ``veght``, which was renamed ``footprint_depth``."""
+        if isinstance(data, dict) and "veght" in data:
+            raise ValueError(VEGHT_RENAMED)
+        return data
+
     seed: int | None = Field(
         None,
         description=(
@@ -578,7 +594,7 @@ def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> Model
             note = f"near-field correction skipped: no {', '.join(missing)} columns"
             logger.warning("%s: %s", receptor.id, note)
             return replace(run, particles=particles, log=f"{log}{note}\n")
-        particles = correct_near_field(particles, receptor, config.veght)
+        particles = correct_near_field(particles, receptor, config.footprint_depth)
     return replace(run, particles=particles, log=log)
 
 
@@ -633,7 +649,7 @@ def _computed_foot(
     particles = add_foot(
         particles,
         met_files,
-        config.veght,
+        config.footprint_depth,
         pbl_height=pbl_height,
         pbl_height_min=config.pbl_height_min,
         z_top=getattr(config, "z_top", None),

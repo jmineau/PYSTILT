@@ -1,7 +1,7 @@
 """
 ``foot`` computed by PYSTILT (:func:`stilt.particles.add_foot`) against the ``foot`` HYSPLIT wrote.
 
-Both compute STILT's footprint: the minutes a particle spends below ``veght``
+Both compute STILT's footprint: the minutes a particle spends below ``footprint_depth``
 of the mixed layer, over the air below that height. HYSPLIT adds up the dry
 air over its levels in each turbulence step, with 28.84 g/mol; ``add_foot``
 takes the air from the drop in pressure between the ground and the depth in
@@ -58,7 +58,7 @@ def _run(
         numpar=200,
         krand=2,
         seed=42,
-        veght=VEGHT,
+        footprint_depth=VEGHT,
         kmixd=kmixd,
         kmix0=KMIX0,
         hnf_plume=False,
@@ -141,7 +141,7 @@ def test_a_positions_only_run_gets_a_foot_that_makes_a_footprint_near_hysplits(
     finished = _finish(
         ModelRun(positions, met_files=run.met_files),
         receptor,
-        TransportConfig(veght=VEGHT, hnf_plume=False),
+        TransportConfig(footprint_depth=VEGHT, hnf_plume=False),
     )
     assert "from the met's PBLH" in finished.log
     assert finished.particles["foot"].notna().all()
@@ -240,7 +240,7 @@ def test_each_pbl_height_moves_a_positions_only_footprint_from_hysplits(hysplit_
             ModelRun(positions, met_files=run.met_files),
             receptor,
             TransportConfig(
-                veght=VEGHT,
+                footprint_depth=VEGHT,
                 hnf_plume=False,
                 pbl_height=pbl_height,
                 pbl_height_min=pbl_height_min,
@@ -265,7 +265,10 @@ def test_pbl_height_set_replaces_hysplits_own_foot(hysplit_run):
         ModelRun(run.particles, met_files=run.met_files),
         receptor,
         TransportConfig(
-            veght=VEGHT, hnf_plume=False, pbl_height="richardson", pbl_height_min=KMIX0
+            footprint_depth=VEGHT,
+            hnf_plume=False,
+            pbl_height="richardson",
+            pbl_height_min=KMIX0,
         ),
     )
     total, cells = _moved(

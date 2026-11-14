@@ -20,7 +20,7 @@ def finished(particles: pd.DataFrame, receptor: Receptor, config: Any) -> pd.Dat
     """
     particles = add_release_heights(particles, receptor)
     if config.hnf_plume:
-        particles = correct_near_field(particles, receptor, config.veght)
+        particles = correct_near_field(particles, receptor, config.footprint_depth)
     return particles
 
 

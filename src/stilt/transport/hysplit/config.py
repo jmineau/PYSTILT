@@ -35,6 +35,11 @@ ZI_ERROR_SETTINGS = ("sigzierr", "tlzierr", "horcorzierr")
 #: mode overrides them (``DELT`` to ``IDSP``). Some break a run when changed:
 #: ``ICHEM=0`` and ``IDSP=1`` write no particle file, and ``INITD`` 1 or 4
 #: releases puffs.
+#: Settings whose ``SETUP.CFG`` entry has another name: PYSTILT's name to
+#: HYSPLIT's. ``footprint_depth`` is read by PYSTILT's own code too, so it
+#: has a name that says what it does.
+SETUP_NAMES: dict[str, str] = {"footprint_depth": "veght"}
+
 FIXED_SETUP: dict[str, Any] = {
     "cmass": 0,
     "cpack": 1,
@@ -563,6 +568,7 @@ class HysplitConfig(TransportConfig):
 
 __all__ = [
     "FIXED_SETUP",
+    "SETUP_NAMES",
     "MAX_ZISCALE_HOURS",
     "WIND_ERROR_SETTINGS",
     "ZI_ERROR_SETTINGS",

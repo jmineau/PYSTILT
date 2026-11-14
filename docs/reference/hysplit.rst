@@ -62,7 +62,7 @@ near-field correction are PYSTILT's steps, the same for any model
    run_hycs_std(Path("run"))
    particles = read_particle_dat("run/PARTICLE_STILT.DAT", config.varsiwant)
    particles = add_release_heights(particles, receptor)
-   particles = correct_near_field(particles, receptor, config.veght)
+   particles = correct_near_field(particles, receptor, config.footprint_depth)
 
 .. autosummary::
    :toctree: _api

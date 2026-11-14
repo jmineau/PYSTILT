@@ -11,7 +11,7 @@ from stilt.meteorology import run_window
 from stilt.output import Output
 from stilt.particles import particles_metadata
 from stilt.simulation import Simulation
-from stilt.transport import ModelRun, get_model
+from stilt.transport import ModelRun, TransportConfig, get_model
 from stilt.transport.hysplit import HysplitConfig, HysplitModel, Met, MetConfig
 
 from ..fixtures.factories import make_met_config, make_met_files, make_variant
@@ -339,9 +339,12 @@ def test_finish_computes_foot_from_the_met_files_the_run_read(
 
     seen = {}
 
-    def add_foot(particles, met_files, veght, **mixed_layer):
+    def add_foot(particles, met_files, footprint_depth, **mixed_layer):
         seen.update(
-            met_files=met_files, veght=veght, time=particles["time"], **mixed_layer
+            met_files=met_files,
+            footprint_depth=footprint_depth,
+            time=particles["time"],
+            **mixed_layer,
         )
         return particles.assign(foot=1.0)
 
@@ -351,11 +354,11 @@ def test_finish_computes_foot_from_the_met_files_the_run_read(
         run = _finish(
             ModelRun(_positions_only(), log="model log\n", met_files=met_files),
             _receptor(),
-            TransportConfig(veght=0.3),
+            TransportConfig(footprint_depth=0.3),
         )
 
     assert seen["met_files"] == met_files
-    assert seen["veght"] == 0.3
+    assert seen["footprint_depth"] == 0.3
     assert seen["pbl_height"] is None
     assert seen["pbl_height_min"] == 0.0
     # The base config has no domain top: the default internal levels.
@@ -377,7 +380,7 @@ def test_finish_keeps_the_time_and_mlht_a_model_wrote(monkeypatch, tmp_path):
     from stilt.transport import TransportConfig, _finish
 
     monkeypatch.setattr(
-        transport, "add_foot", lambda p, files, veght, **k: p.assign(foot=1.0)
+        transport, "add_foot", lambda p, files, footprint_depth, **k: p.assign(foot=1.0)
     )
     time = pd.Timestamp("2023-01-01 11:00")
     particles = _positions_only().assign(time=time, mlht=800.0)
@@ -428,7 +431,7 @@ def test_finish_with_pbl_height_set_replaces_the_foot_and_mlht_a_model_wrote(
 
     seen = {}
 
-    def add_foot(particles, met_files, veght, **mixed_layer):
+    def add_foot(particles, met_files, footprint_depth, **mixed_layer):
         seen.update(columns=list(particles.columns), **mixed_layer)
         return particles.assign(foot=5.0, mlht=300.0)
 
@@ -458,7 +461,7 @@ def test_finish_gives_add_foot_the_top_of_a_hysplit_runs_domain(monkeypatch, tmp
 
     seen = {}
 
-    def add_foot(particles, met_files, veght, **mixed_layer):
+    def add_foot(particles, met_files, footprint_depth, **mixed_layer):
         seen.update(mixed_layer)
         return particles.assign(foot=5.0, mlht=300.0)
 
@@ -527,3 +530,8 @@ def _receptor():
     return PointReceptor(
         time="2023-01-01 12:00", longitude=-111.9, latitude=40.7, altitude=5.0
     )
+
+
+def test_a_transport_config_refuses_veght_naming_footprint_depth():
+    with pytest.raises(ValueError, match="veght was renamed footprint_depth"):
+        TransportConfig(veght=0.5)
