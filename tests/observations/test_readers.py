@@ -11,6 +11,7 @@ import stilt
 from stilt.observations import (
     check_soundings,
     pressure_altitudes,
+    read_coccon,
     read_ggg_netcdf,
     read_ggg_oof,
     read_oco2,
@@ -35,6 +36,10 @@ OCO2 = DATA / "oco2_LtCO2_260208_B11300Ar_260529230202s.nc4"
 OCO3 = DATA / "oco3_LtCO2_260208_B11077Ar_260327001412s.nc4"
 OOF = DATA / "zz20230715.vav.ada.aia.oof"
 GGG_PRIVATE = DATA / "zz20230715_20230715.private.nc"
+COCCON = (
+    DATA
+    / "groundbased_ftir.coccon_zz000_synthetic_20230715t160000z_20230715t161200z_001.h5"
+)
 
 REQUIRED = [
     "sounding_id",
@@ -416,3 +421,59 @@ def test_read_tccon_is_the_public_ggg_layout():
     row = a.iloc[0]
     # the public prior_ch4 is in ppb; apriori is in the species' ppm
     assert 1.5 < row.apriori[0] < 2.1
+
+
+# -- COCCON GEOMS (PROFFAST; synthetic layout) ---------------------------------
+
+
+def test_coccon_geoms_columns_units_and_time():
+    df = read_coccon(COCCON, "xch4")
+    _check_common(df)
+    assert len(df) == 5 and df.good.all()  # the file holds only filtered data
+    assert (df.species == "xch4").all() and (df.units == "ppm").all()
+    # MJD2K days to five decimals, rounded to the second
+    assert df.time.tolist() == list(
+        pd.date_range("2023-07-15 16:00:00", periods=5, freq="3min")
+    )
+    assert df.sounding_id.iloc[0] == "synthetic_20230715T160000"
+    assert np.isnan(df.value.iloc[2])  # the GEOMS fill value
+    row = df.iloc[0]
+    assert row.value == pytest.approx(1.8698) and row.uncertainty > 0
+    assert row.latitude == pytest.approx(40.77) and row.longitude == pytest.approx(
+        -111.85
+    )
+    assert row.surface_altitude == pytest.approx(1450.0)  # km -> m
+    assert row.surface_pressure == pytest.approx(853.3)
+    assert row.zenith == pytest.approx(40.0) and row.azimuth == pytest.approx(110.0)
+    assert row.solar_zenith == row.zenith and row.solar_azimuth == row.azimuth
+    # levels from the surface up, the kernel on them
+    assert row.pressure_levels[0] == pytest.approx(853.3)
+    assert np.all(np.diff(row.pressure_levels) < 0)
+    assert np.array_equal(row.ak_pressure, row.pressure_levels)
+    assert row.altitude_levels[0] == pytest.approx(1450.0)
+    assert len(row.ak) == len(row.pressure_levels) == 10
+    # the CH4 prior is in ppbv in the file, the column in ppmv
+    assert row.apriori[0] == pytest.approx(1.990)
+
+
+def test_coccon_geoms_other_species_and_errors():
+    co = read_coccon(COCCON, "XCO")
+    assert (co.units == "ppb").all() and co.value.iloc[0] == pytest.approx(87.8)
+    assert co.iloc[0].apriori[0] == pytest.approx(110.0)
+    co2 = read_coccon(COCCON, "xco2")
+    assert (co2.units == "ppm").all() and co2.iloc[0].apriori[0] == pytest.approx(421.0)
+    with pytest.raises(ValueError, match="column variable"):
+        read_coccon(COCCON, "ch4")
+    with pytest.raises(ValueError, match="N2O"):
+        read_coccon(COCCON, "xn2o")
+
+
+def test_coccon_geoms_to_slant_receptors():
+    df = read_coccon(COCCON, "xch4")
+    df = df[np.isfinite(df.value)]
+    # the synthetic levels are 3 km apart, so go high enough for a line
+    receptors, kernels = receptors_from_soundings(df, "slant", top=8000)
+    assert len(receptors) == 4 and kernels is not None
+    assert all(len(r.altitudes) > 1 for r in receptors)
+    assert all(r.altitudes[0] == pytest.approx(1450.0) for r in receptors)
+    assert kernels.receptor.nunique() == 4

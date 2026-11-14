@@ -7,8 +7,8 @@ and return plain arrays and tables, so they work with any product reader.
 Before a run:
 
 - Read a product into a table of soundings with :func:`read_tropomi_ch4`,
-  :func:`read_oco2`, :func:`read_tccon`, :func:`read_ggg_oof`, or
-  :func:`read_ggg_netcdf`.
+  :func:`read_oco2`, :func:`read_tccon`, :func:`read_ggg_oof`,
+  :func:`read_ggg_netcdf`, or :func:`read_coccon`.
 - Group soundings into overpasses (:func:`group_by_overpass`) and choose
   which to run (:func:`select_observations_spatial`).
 - Make a receptor for each sounding, and their averaging-kernel table, with
@@ -46,6 +46,7 @@ from .placement import (
 )
 from .plumes import Plume, PlumeBackground, plume_background, plume_polygon
 from .readers import (
+    read_coccon,
     read_ggg_netcdf,
     read_ggg_oof,
     read_oco2,
@@ -71,6 +72,7 @@ __all__ = [
     "plume_background",
     "plume_polygon",
     "pressure_altitudes",
+    "read_coccon",
     "read_ggg_netcdf",
     "read_ggg_oof",
     "read_oco2",

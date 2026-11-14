@@ -12,11 +12,13 @@ degrees clockwise from north toward the instrument or the sun, pressures
 are in hPa, and altitudes are in meters above sea level.
 """
 
+from .geoms import read_coccon
 from .ggg import read_ggg_netcdf, read_ggg_oof, read_tccon
 from .oco import read_oco2
 from .tropomi import read_tropomi_ch4
 
 __all__ = [
+    "read_coccon",
     "read_ggg_netcdf",
     "read_ggg_oof",
     "read_oco2",

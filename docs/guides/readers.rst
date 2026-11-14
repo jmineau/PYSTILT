@@ -2,7 +2,8 @@ Reading Retrieval Products
 ==========================
 
 A column retrieval comes as a product file, such as a TROPOMI orbit, an
-OCO-2 Lite file, a TCCON site file, or a day of EM27/SUN spectra from GGG.
+OCO-2 Lite file, a TCCON site file, or a day of EM27/SUN measurements from
+GGG or PROFFAST.
 The readers in :mod:`stilt.observations` turn each of these into a table
 with one row per sounding. The columns are the same for every instrument
 (:data:`~stilt.observations.readers.schema.SOUNDING_SCHEMA`), so the rest
@@ -50,9 +51,15 @@ The readers
        public files (``read_tccon`` calls this reader)
      - The public layout on a real TCCON file. The private layout only on
        a synthetic file.
+   * - :func:`~stilt.observations.read_coccon`
+     - COCCON GEOMS HDF5 files (``groundbased_ftir.coccon_*.h5``), one
+       site-day each: EM27/SUN retrievals from PROFFAST, as COCCON releases
+       them and as PROFFASTpylot writes them
+     - Files PROFFASTpylot wrote for KIT's example data. The committed test
+       file is synthetic.
 
 The satellite readers take ``lon_range`` and ``lat_range`` to keep only the
-pixels inside a box. Use them on a whole orbit. The GGG readers take a
+pixels inside a box. Use them on a whole orbit. The GGG and COCCON readers take a
 ``species`` (``xco2``, ``xch4``, ``xco``, ...), and the netCDF readers also
 take a ``time_range`` for multi-year site files. The readers do not filter
 anything else. Quality flags become the ``good`` column, and you decide
@@ -81,8 +88,22 @@ To read a campaign as one table:
    df = pd.concat([read_ggg_oof(p, "xch4") for p in days], ignore_index=True)
    df = df[df.good]
 
-There is no reader yet for EM27/SUN data processed with PROFFAST (the
-COCCON pipeline).
+PROFFAST, the retrieval COCCON uses, gives the kernel in its GEOMS files
+already interpolated to each measurement's solar zenith angle, so
+:func:`~stilt.observations.read_coccon` returns ``ak`` per row like the
+satellite readers. The files hold only measurements that passed COCCON's
+quality filter, so ``good`` is True everywhere. If you run PROFFASTpylot
+yourself, its GEOMS writer makes these files from your results; the reader
+does not read its ``comb_invparms`` CSV.
+
+.. code-block:: python
+
+   from pathlib import Path
+   import pandas as pd
+   from stilt.observations import read_coccon
+
+   days = sorted(Path("coccon").glob("groundbased_ftir.coccon_*.h5"))
+   df = pd.concat([read_coccon(p, "xch4") for p in days], ignore_index=True)
 
 The columns
 -----------
@@ -228,6 +249,6 @@ Add a small slice of a real file under ``tests/observations/data/products``,
 and a test that calls :func:`~stilt.observations.check_soundings` on the
 table and checks the units and that the vertical arrays start at the
 surface. ``tests/observations/data/products/make_samples.py`` shows how
-the existing slices were cut. Readers for PROFFAST EM27/SUN output, MethaneAIR, and
-MethaneSAT are welcome. The maintainers have no files to write them
+the existing slices were cut. Readers for MethaneAIR and MethaneSAT are
+welcome. The maintainers have no files to write them
 against.

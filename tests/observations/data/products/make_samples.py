@@ -19,7 +19,8 @@ OCO-3 L2 Lite FP v11r, doi:10.5067/8U0VGVQC7HZG. Each slice keeps the
 granule's global attributes, the DOI among them.
 
 The GGG samples are synthetic too, on the GGG2020 ``.oof`` and
-``*.private.nc`` layouts, so no instrument team's retrievals are
+``*.private.nc`` layouts, and so is the COCCON GEOMS sample (the layout of
+PROFFASTpylot's GEOMS writer), so no instrument team's retrievals are
 redistributed here. They keep the format's quirks, including the .oof header
 count that exceeds the number of columns written.
 """
@@ -485,6 +486,106 @@ def oco(
     )
 
 
+#: The synthetic COCCON GEOMS file, named the way COCCON names its files.
+GEOMS_NAME = (
+    "groundbased_ftir.coccon_zz000_synthetic_20230715t160000z_20230715t161200z_001.h5"
+)
+
+
+def geoms_synthetic() -> None:
+    """
+    A made-up COCCON GEOMS file: the real layout, invented values.
+
+    Five EM27/SUN measurements three minutes apart on 2023-07-15 on the
+    GEOMS-TE-FTIR-COCCON-001 template that PROFFASTpylot writes: dotted
+    variable names, ``VAR_*`` attributes, unnamed dimensions, and a CH4
+    prior in ppbv against a column in ppmv. The third XCH4 is the fill
+    value. Ten levels stand in for the real 49.
+    """
+    nt, nlev = 5, 10
+    fill = np.float32(-900000.0)
+    alt_km = np.linspace(OOF_ZOBS_KM, 30.0, nlev)
+    pres = 853.3 * np.exp(-(alt_km - OOF_ZOBS_KM) / 8.0)
+    sza = 40.0 - 0.5 * np.arange(nt)
+    with Dataset(HERE / GEOMS_NAME, "w", format="NETCDF4") as d:
+        d.setncattr("DATA_LOCATION", "SYNTHETIC")
+        d.setncattr("DATA_SOURCE", "FTIR.COCCON_ZZ000")
+        d.setncattr("DATA_TEMPLATE", "GEOMS-TE-FTIR-COCCON-001")
+        d.setncattr("DATA_PROCESSOR", "PROFFAST Version 2.4")
+        d.setncattr(
+            "stilt_sample_note",
+            "Invented values on the COCCON GEOMS layout, made by "
+            "tests/observations/data/products/make_samples.py. Not measurements.",
+        )
+        d.createDimension("phony_dim_0", nt)
+        d.createDimension("phony_dim_1", nlev)
+        dims1, dims2 = ("phony_dim_0",), ("phony_dim_0", "phony_dim_1")
+
+        def var(name, values, units, dtype="f4"):
+            v = d.createVariable(
+                name,
+                dtype,
+                dims2 if np.ndim(values) == 2 else dims1,
+                fill_value=np.array(fill, dtype=dtype),
+            )
+            v.setncattr("VAR_NAME", name)
+            v.setncattr("VAR_UNITS", units)
+            v.setncattr("units", units)
+            v.setncattr("VAR_FILL_VALUE", np.array(fill, dtype=dtype))
+            v.setncattr(
+                "VAR_DEPEND",
+                "DATETIME;ALTITUDE" if np.ndim(values) == 2 else "DATETIME",
+            )
+            v[:] = values
+            return v
+
+        def per_level(profile):
+            return np.tile(np.asarray(profile, dtype="f4"), (nt, 1))
+
+        mjd2k = (
+            np.datetime64("2023-07-15T16:00:00") - np.datetime64("2000-01-01")
+        ) / np.timedelta64(1, "D")
+        var(
+            "DATETIME",
+            np.round(mjd2k + np.arange(nt) * 180.0 / 86400.0, 5),
+            "MJD2K",
+            "f8",
+        )
+        var("LATITUDE.INSTRUMENT", np.full(nt, OOF_LAT), "deg")
+        var("LONGITUDE.INSTRUMENT", np.full(nt, OOF_LON), "deg")
+        var("ALTITUDE.INSTRUMENT", np.full(nt, OOF_ZOBS_KM), "km")
+        var("ANGLE.SOLAR_ZENITH.ASTRONOMICAL", sza, "deg")
+        var("ANGLE.SOLAR_AZIMUTH", 110.0 + 0.8 * np.arange(nt), "deg")
+        var("SURFACE.PRESSURE_INDEPENDENT", np.full(nt, 853.3), "hPa")
+        var("ALTITUDE", per_level(alt_km), "km")
+        var("PRESSURE_INDEPENDENT", per_level(pres), "hPa")
+        var("TEMPERATURE_INDEPENDENT", per_level(np.linspace(300.0, 220.0, nlev)), "K")
+        for gas, column, col_units, prior_units, prior_surface in (
+            ("CH4", 1.8698, "ppmv", "ppbv", 1990.0),
+            ("CO2", 419.38, "ppmv", "ppmv", 421.0),
+            ("CO", 87.8, "ppbv", "ppbv", 110.0),
+            ("H2O", 1920.0, "ppmv", "ppmv", 8000.0),
+        ):
+            name = f"{gas}.COLUMN.MIXING.RATIO.VOLUME.DRY_ABSORPTION.SOLAR"
+            values = column + 1e-3 * column * np.arange(nt)
+            if gas == "CH4":
+                values[2] = fill
+            var(name, values, col_units)
+            var(
+                f"{name}_UNCERTAINTY.RANDOM.STANDARD",
+                np.full(nt, 0.001 * column),
+                col_units,
+            )
+            # the kernel falls with height and grows near the surface at high sun
+            ak = np.outer(1.0 + 0.002 * sza, np.linspace(1.05, 0.6, nlev))
+            var(f"{gas}.COLUMN_ABSORPTION.SOLAR_AVK", ak, "1")
+            var(
+                f"{gas}.MIXING.RATIO.VOLUME.DRY_APRIORI",
+                per_level(prior_surface * np.linspace(1.0, 0.8, nlev)),
+                prior_units,
+            )
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tropomi", type=Path)
@@ -506,6 +607,7 @@ def main() -> None:
     # The GGG samples need no source file: they are synthetic by construction.
     oof_synthetic()
     ggg_private_synthetic()
+    geoms_synthetic()
 
 
 if __name__ == "__main__":
