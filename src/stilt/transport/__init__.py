@@ -25,13 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from stilt.exceptions import SimulationError
 from stilt.meteorology import run_window
-from stilt.particles import (
-    HNF_PLUME_COLUMNS,
-    add_foot,
-    add_release_heights,
-    check_particles,
-    correct_near_field,
-)
+from stilt.particles import add_foot, add_release_heights, check_particles
 
 if TYPE_CHECKING:
     from stilt.receptors import Receptor
@@ -99,8 +93,8 @@ class TransportConfig(BaseModel):
 
     It holds the parameters PYSTILT's own code reads, whatever the model:
     the run length and the seed, which set the run window and the
-    realizations, and the near-field settings PYSTILT applies to any
-    model's particles. Everything else, the particle count included, is the
+    realizations, and the settings PYSTILT uses when it computes ``foot``
+    for any model's particles. Everything else, the particle count included, is the
     model's own. A model's config subclasses it with its own
     parameters and is the model's ``config_class``. In ``config.yaml`` the
     parameters are flat, top-level keys for the project's model, and a
@@ -131,16 +125,6 @@ class TransportConfig(BaseModel):
             )
         return n_hours
 
-    hnf_plume: bool = Field(
-        True,
-        description=(
-            "Apply a vertical Gaussian plume model to particles in the hyper "
-            "near-field. This shrinks their effective dilution depth and raises "
-            "the influence of fluxes close to the receptor. Needs the particle "
-            "columns ``dens``, ``tlgr``, ``sigw``, ``foot``, ``mlht``, and "
-            "``samt``, and ``zsfc`` for a receptor above sea level."
-        ),
-    )
     footprint_depth: float = Field(
         0.5,
         description=(
@@ -322,7 +306,7 @@ class TransportModel(Protocol):
         Run one receptor and return its particles.
 
         The particles are the model's own: PYSTILT checks them and adds the
-        release heights and the near-field correction afterwards
+        release heights, and ``foot`` when the model wrote none, afterwards
         (:func:`run_model`).
 
         Parameters
@@ -463,13 +447,12 @@ def run_model(
 
     The particles are checked against the particle table
     (:func:`stilt.particles.check_particles`), get their release heights
-    (:func:`stilt.particles.add_release_heights`), ``foot`` when the model
-    wrote none (:func:`stilt.particles.add_foot`), and, when
-    ``config.hnf_plume`` is set, the near-field correction
-    (:func:`stilt.particles.correct_near_field`). These steps are PYSTILT's,
-    the same for any model. ``foot`` is computed from the met files the run
-    read, and the run's log says so. A model whose particles lack the
-    columns the correction reads gets none, and the run's log says so too.
+    (:func:`stilt.particles.add_release_heights`), and ``foot`` when the
+    model wrote none (:func:`stilt.particles.add_foot`). These steps are
+    PYSTILT's, the same for any model. ``foot`` is computed from the met
+    files the run read, and the run's log says so. The near-field
+    correction is not applied here: :func:`stilt.calc_footprint` applies it
+    when it makes a footprint (``hnf_plume``).
 
     Parameters
     ----------
@@ -559,7 +542,7 @@ def run_model_many(
 
 def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> ModelRun:
     """
-    Return *run* with its particles checked, their release heights, ``foot``, and the near-field correction.
+    Return *run* with its particles checked, their release heights, and ``foot``.
 
     Particles that stop before the end of the run are kept: the transport
     model fails a run cut short by its meteorology itself, and particles
@@ -583,18 +566,6 @@ def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> Model
         particles, note = _computed_foot(particles, receptor, config, run.met_files)
         logger.info("%s: %s", receptor.id, note)
         log = f"{log}{note}\n"
-    if config.hnf_plume:
-        # A receptor above sea level also needs the terrain, to start the plume
-        # at the ground (correct_near_field).
-        needed = set(HNF_PLUME_COLUMNS) | (
-            {"zsfc"} if receptor.altitude_ref == "msl" else set()
-        )
-        missing = sorted(needed - set(particles.columns))
-        if missing:
-            note = f"near-field correction skipped: no {', '.join(missing)} columns"
-            logger.warning("%s: %s", receptor.id, note)
-            return replace(run, particles=particles, log=f"{log}{note}\n")
-        particles = correct_near_field(particles, receptor, config.footprint_depth)
     return replace(run, particles=particles, log=log)
 
 
@@ -706,7 +677,10 @@ def run_trajectories(
     pandas.DataFrame
         The particle table, one row per particle per output step, with
         ``time`` (UTC), the receptor time plus ``age``, as a table read from
-        a particle file has.
+        a particle file has. Its ``foot`` has no near-field correction:
+        :func:`stilt.calc_footprint` applies it (``hnf_plume``), given the
+        same ``footprint_depth``. STILT-R's ``calc_trajectory`` applies it
+        here.
 
     Raises
     ------

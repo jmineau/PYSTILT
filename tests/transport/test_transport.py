@@ -118,7 +118,7 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     tmp_path, point_receptor, monkeypatch
 ):
     seen = _fake_hysplit(monkeypatch)
-    params = HysplitConfig(n_hours=-1, hnf_plume=False)
+    params = HysplitConfig(n_hours=-1)
     make_met_files(tmp_path / "archive", point_receptor.time, params.n_hours)
     met = make_met_config(tmp_path / "archive")
     window = run_window(point_receptor.time, params.n_hours)
@@ -168,7 +168,7 @@ def test_run_particles_goes_through_the_model_the_settings_name(
         "stilt.transport.get_model", lambda name: asked.append(name) or _Model()
     )
     met_config = make_met_config(tmp_path)
-    variant = make_variant(met_config=met_config, n_hours=-1, numpar=1, hnf_plume=False)
+    variant = make_variant(met_config=met_config, n_hours=-1, numpar=1)
     sim = Simulation(point_receptor, variant, Output(tmp_path / "output"))
 
     traj = run_particles(sim, workdir=tmp_path / "work", timeout=45)
@@ -230,16 +230,14 @@ def _met(tmp_path) -> dict:
 
 
 def test_run_trajectories_returns_the_particles_and_removes_its_workdir(
-    tmp_path, point_receptor, echo, caplog
+    tmp_path, point_receptor, echo
 ):
     from stilt import run_trajectories
 
-    with caplog.at_level("WARNING", logger="stilt.transport"):
-        particles = run_trajectories(
-            point_receptor, _met(tmp_path), model="echo", numpar=50, timeout=9
-        )
-    # The echo model writes none of the columns the near-field correction reads.
-    assert "near-field correction skipped" in caplog.text
+    particles = run_trajectories(
+        point_receptor, _met(tmp_path), model="echo", numpar=50, timeout=9
+    )
+    # The footprint applies the near-field correction, not the run.
     assert "foot_no_hnf_dilution" not in particles.columns
 
     assert particles["particle"].unique().tolist() == [1]
@@ -276,46 +274,17 @@ def test_run_trajectories_checks_the_models_parameters(tmp_path, point_receptor,
         run_trajectories(point_receptor, _met(tmp_path), model="echo", nparticles=5)
 
 
-def test_finish_skips_the_near_field_correction_of_an_msl_receptor_without_zsfc(
-    caplog,
-):
-    """An MSL receptor's plume starts at the ground, which needs zsfc (#287)."""
-    from stilt.receptors import PointReceptor
-    from stilt.transport import _finish
+def test_finish_leaves_foot_for_the_footprint_to_correct():
+    """The near-field correction is the footprint's: a run's particles keep the model's foot."""
+    from stilt.transport import TransportConfig, _finish
 
-    particles = pd.DataFrame(
-        {
-            "particle": [1.0, 1.0],
-            "age": [-1.0, -2.0],
-            "lon": [-111.9, -112.0],
-            "lat": [40.7, 40.6],
-            "zagl": [5.0, 20.0],
-            "foot": [1e-5, 2e-5],
-            "dens": 1.2,
-            "samt": 1.0,
-            "sigw": 0.1,
-            "tlgr": 10.0,
-            "mlht": 500.0,
-        }
+    particles = _positions_only().assign(
+        foot=[1e-5, 2e-5], dens=1.2, samt=1.0, sigw=0.1, tlgr=10.0, mlht=500.0
     )
-    receptor = PointReceptor(
-        time="2023-01-01 12:00",
-        longitude=-111.9,
-        latitude=40.7,
-        altitude=1305.0,
-        altitude_ref="msl",
-    )
-    config = HysplitConfig(n_hours=-1, numpar=1, hnf_plume=True)
+    run = _finish(ModelRun(particles, met_files=[]), _receptor(), TransportConfig())
 
-    with caplog.at_level("WARNING", logger="stilt.transport"):
-        run = _finish(ModelRun(particles, met_files=[]), receptor, config)
-
-    assert "near-field correction skipped: no zsfc" in caplog.text
+    assert run.particles["foot"].tolist() == [1e-5, 2e-5]
     assert "foot_no_hnf_dilution" not in run.particles.columns
-    corrected = _finish(
-        ModelRun(particles.assign(zsfc=1300.0), met_files=[]), receptor, config
-    )
-    assert corrected.particles["foot"].iloc[0] != pytest.approx(1e-5)
 
 
 def _positions_only() -> pd.DataFrame:
@@ -370,8 +339,7 @@ def test_finish_computes_foot_from_the_met_files_the_run_read(
     assert "time" not in run.particles.columns
     assert run.particles["foot"].tolist() == [1.0, 1.0]
     assert run.log.startswith("model log\nfoot computed by PYSTILT from the met's PBLH")
-    # foot is there, but not what the near-field correction reads besides it.
-    assert "near-field correction skipped: no dens, mlht, samt, sigw, tlgr" in run.log
+    assert "near-field" not in run.log  # the footprint's step, not the run's
     assert "foot computed" in caplog.text
 
 
@@ -387,7 +355,7 @@ def test_finish_keeps_the_time_and_mlht_a_model_wrote(monkeypatch, tmp_path):
     run = _finish(
         ModelRun(particles, met_files=[tmp_path / "met"]),
         _receptor(),
-        TransportConfig(hnf_plume=False),
+        TransportConfig(),
     )
 
     assert run.particles["time"].tolist() == [time, time]
@@ -400,7 +368,7 @@ def test_finish_says_why_there_is_no_foot_without_met_files():
     run = _finish(
         ModelRun(_positions_only(), met_files=[]),
         _receptor(),
-        TransportConfig(hnf_plume=False),
+        TransportConfig(),
     )
 
     assert "foot" not in run.particles.columns
@@ -415,9 +383,7 @@ def test_finish_keeps_the_foot_a_model_wrote(monkeypatch):
         transport, "add_foot", lambda *a, **k: pytest.fail("computed foot")
     )
     particles = _positions_only().assign(foot=[1e-3, 2e-3])
-    run = _finish(
-        ModelRun(particles, met_files=[]), _receptor(), TransportConfig(hnf_plume=False)
-    )
+    run = _finish(ModelRun(particles, met_files=[]), _receptor(), TransportConfig())
 
     assert run.particles["foot"].tolist() == [1e-3, 2e-3]
     assert run.log == ""
@@ -440,7 +406,7 @@ def test_finish_with_pbl_height_set_replaces_the_foot_and_mlht_a_model_wrote(
     run = _finish(
         ModelRun(particles, met_files=[tmp_path / "met"]),
         _receptor(),
-        TransportConfig(hnf_plume=False, pbl_height="richardson", pbl_height_min=150),
+        TransportConfig(pbl_height="richardson", pbl_height_min=150),
     )
 
     assert "foot" not in seen["columns"]
@@ -469,7 +435,7 @@ def test_finish_gives_add_foot_the_top_of_a_hysplit_runs_domain(monkeypatch, tmp
     _finish(
         ModelRun(_positions_only().assign(foot=1e-3), met_files=[tmp_path / "met"]),
         _receptor(),
-        HysplitConfig(hnf_plume=False, pbl_height="richardson", z_top=10000.0),
+        HysplitConfig(pbl_height="richardson", z_top=10000.0),
     )
 
     assert seen["z_top"] == 10000.0
@@ -488,7 +454,7 @@ def test_finish_with_pbl_height_set_keeps_the_models_foot_without_met_files(
     run = _finish(
         ModelRun(particles, met_files=[]),
         _receptor(),
-        TransportConfig(hnf_plume=False, pbl_height=500),
+        TransportConfig(pbl_height=500),
     )
 
     assert run.particles["foot"].tolist() == [1e-3, 2e-3]

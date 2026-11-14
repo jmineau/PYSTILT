@@ -344,7 +344,8 @@ def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | N
     """
     Calculate a simulation's footprint from *particles* and write it to its folder.
 
-    The settings are the variant's own. A relative file name in a
+    The settings are the variant's own, and the near-field correction
+    reads the run's ``footprint_depth``. A relative file name in a
     transform's settings starts from the project directory
     (``sim.directory``). When no particle reaches the grid,
     an empty footprint is recorded, marked empty, and ``None`` is returned.
@@ -366,6 +367,8 @@ def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | N
             config.grid,
             smooth_factor=config.smooth_factor,
             tres=config.tres,
+            hnf_plume=config.hnf_plume,
+            footprint_depth=sim.variant.transport.footprint_depth,
             transforms=config.transforms,
             name=sim.variant.name,
             directory=sim.directory,

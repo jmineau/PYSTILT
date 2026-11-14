@@ -229,6 +229,7 @@ class ReferenceScenario:
             grid=self.make_grid(),
             smooth_factor=self.smooth_factor,
             tres=f"{abs(self.n_hours)}h" if self.time_integrate else "1h",
+            hnf_plume=self.hnf_plume,
         )
 
     @property
@@ -250,8 +251,7 @@ class ReferenceScenario:
             "numpar": self.numpar,
             "krand": self.krand,
             "seed": self.seed,
-            "hnf_plume": self.hnf_plume,
-            "veght": self.veght,
+            "footprint_depth": self.veght,
             "varsiwant": [*REFERENCE_VARSIWANT, *self.extra_varsiwant],
             # The fidelity tests read SETUP.CFG afterwards.
             "execution": {"keep_workdir": True},

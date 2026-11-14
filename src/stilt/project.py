@@ -34,6 +34,7 @@ from stilt.execution.config import ExecutionConfig
 from stilt.fetch import fetch_project
 from stilt.footprint import Geometry, Jacobian
 from stilt.footprint.aggregation import _jacobian
+from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _threads, open_footprints
 from stilt.output import Kind, Output, completed
 from stilt.particles import particles_from_table, read_particles
@@ -1206,16 +1207,19 @@ class Project:
                 [particles(perturbed, rid, k) for k in runs[rid]],
             )
 
+        footprint = variant.footprint or FootprintConfig.model_validate({})
         found = _transport_errors(
             read,
             list(self._receptors(runs).values()),
             flux,
-            transforms=()
-            if variant.footprint is None
-            else variant.footprint.transforms,
+            transforms=footprint.transforms,
             directory=self.directory,
             workers=_threads(workers),
-            **options,
+            **{
+                "hnf_plume": footprint.hnf_plume,
+                "footprint_depth": variant.transport.footprint_depth,
+                **options,
+            },
         )
         result = found.reindex(frame["receptor"].to_numpy())
         result["realizations"] = result["realizations"].fillna(0).astype("int64")
@@ -1244,7 +1248,7 @@ class Project:
           a receptor the project lacks (``kernel_unused``);
         - ``varsiwant`` holds ``zsfc`` when a receptor is above sea level
           (``altitude_ref="msl"``) and a run reads it: the near-field
-          correction, the release heights of a multipoint receptor whose
+          correction of a footprint, the release heights of a multipoint receptor whose
           points are less than 1 km apart and at different altitudes, or the
           ``pressure_weighting`` transform (``zsfc``).
 

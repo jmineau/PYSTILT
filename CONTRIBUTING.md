@@ -254,7 +254,7 @@ driver; a test fails if it would land in `SETUP.CFG` unknown to HYSPLIT.
 A transport model owns its config: a subclass of
 `stilt.transport.TransportConfig` with the model's own parameters. The base
 gives the parameters PYSTILT's own code reads whatever the model
-(`n_hours`, `seed`, `hnf_plume`, `footprint_depth`, `pbl_height`, `pbl_height_min`);
+(`n_hours`, `seed`, `footprint_depth`, `pbl_height`, `pbl_height_min`);
 a parameter goes there only when the core reads it, so another model is
 never handed a setting it would ignore. It also gives an `UNRECORDED` set
 of the fields that change no particle (empty unless the subclass names
@@ -279,8 +279,8 @@ columns of `stilt.particles.PARTICLE_SCHEMA`, `foot`, and what the
 transforms read, with a release row at `age = 0` when the model can write
 one; see `docs/reference/particles.rst`), its log as text, and the met
 files it read. A failed run raises `SimulationError` with its log. PYSTILT
-adds the release heights and the near-field correction itself
-(`stilt.transport.run_model`). A model that writes no files sets
+adds the release heights itself (`stilt.transport.run_model`), and the
+footprint applies the near-field correction (`stilt.calc_footprint`). A model that writes no files sets
 `needs_workdir = False` and is handed `workdir=None`. A model that runs
 many receptors in one call, such as an emulator on a GPU, sets
 `batched = True` and gives `run_many(receptors, config, met, windows,

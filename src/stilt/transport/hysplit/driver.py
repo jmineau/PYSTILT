@@ -60,7 +60,7 @@ MESSAGE_TAIL_LINES = 20
 CONTROL_SETTINGS = ("n_hours", "emisshrs", "w_option", "z_top")
 
 #: Settings PYSTILT uses itself, in no HYSPLIT input file.
-PYSTILT_SETTINGS = ("hnf_plume", "pbl_height", "pbl_height_min", "exe_dir", "data_dir")
+PYSTILT_SETTINGS = ("pbl_height", "pbl_height_min", "exe_dir", "data_dir")
 
 #: Every setting that is not a ``SETUP.CFG`` entry. All other settings are.
 NOT_IN_SETUP = frozenset(
@@ -130,8 +130,9 @@ def read_particle_dat(path: str | Path, columns: Sequence[str]) -> pd.DataFrame:
     -------
     pandas.DataFrame
         One row per particle per output step, as HYSPLIT wrote them. The
-        release heights and the near-field correction are added after the
-        run (:func:`stilt.transport.run_model`).
+        release heights are added after the run
+        (:func:`stilt.transport.run_model`), and the near-field correction
+        when a footprint is made (:func:`stilt.calc_footprint`).
 
     Raises
     ------

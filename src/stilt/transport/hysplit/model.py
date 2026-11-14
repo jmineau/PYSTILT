@@ -181,8 +181,9 @@ class HysplitModel:
         or after its end, which HYSPLIT interpolates, cropped when the met
         is. Its output is ``stilt.log`` in *workdir*, returned as the run's
         log. Without *workdir* it runs in a temporary directory. The release
-        heights and the near-field correction are added by the caller, as
-        for any model (:func:`stilt.transport.run_model`).
+        heights are added by the caller, as for any model
+        (:func:`stilt.transport.run_model`), and the near-field correction
+        when a footprint is made (:func:`stilt.calc_footprint`).
 
         Raises
         ------

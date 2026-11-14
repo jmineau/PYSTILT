@@ -74,9 +74,7 @@ def test_krand_rejects_undocumented_values(krand):
 
 
 def test_varsiwant_takes_zcfx_the_name_hysplit_reads():
-    config = HysplitConfig(
-        hnf_plume=False, varsiwant=["time", "indx", "long", "lati", "zcfx"]
-    )
+    config = HysplitConfig(varsiwant=["time", "indx", "long", "lati", "zcfx"])
     assert config.varsiwant[-1] == "zcfx"
 
 

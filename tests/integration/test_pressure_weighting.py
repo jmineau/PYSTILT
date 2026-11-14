@@ -48,7 +48,7 @@ def _column_trajectory(
     receptor = ColumnReceptor(
         time=time, longitude=WBB_LON, latitude=WBB_LAT, bottom=0.0, top=top
     )
-    params = HysplitConfig(n_hours=-2, numpar=numpar, hnf_plume=False)
+    params = HysplitConfig(n_hours=-2, numpar=numpar)
     met = reference_met(met_dir)
     # run_model adds the release heights that the pressure weighting reads.
     run = run_model("hysplit", receptor, params, met, Path(tmp_path) / label, 900)

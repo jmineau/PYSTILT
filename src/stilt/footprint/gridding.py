@@ -29,6 +29,7 @@ import xarray as xr
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.particles import FOOTPRINT_COLUMNS, check_particles
+from stilt.particles.table import _near_field
 from stilt.receptors import Receptor
 from stilt.spatial import Grid, _east_edge, _grid_cell_starts, is_longlat
 from stilt.transforms import apply_transforms
@@ -677,6 +678,8 @@ def calc_footprint(
     *,
     smooth_factor: float = 1.0,
     tres: str | timedelta = "1h",
+    hnf_plume: bool = True,
+    footprint_depth: float = 0.5,
     transforms: Sequence[Any] = (),
     name: str = "",
     directory: str | Path | None = None,
@@ -685,8 +688,9 @@ def calc_footprint(
     """
     Calculate a footprint from particles, as STILT-R's ``calc_footprint`` does.
 
-    The particle *transforms* are applied first, in order, so the footprint
-    records exactly the transforms it was made with. Near the receptor,
+    The near-field correction is applied first (*hnf_plume*), then the
+    particle *transforms*, in order, so the footprint records exactly what
+    it was made with. Near the receptor,
     particle tracks are interpolated to finer times when particles cross
     more than a grid cell per step. Each particle's ``foot`` is added to the
     cell it is in, and each time step is smoothed with a Gaussian kernel
@@ -744,6 +748,14 @@ def calc_footprint(
         Length of each time layer from the receptor time, a duration in
         whole minutes such as ``"15min"``, ``"1h"`` or ``"1D"``. A particle
         row at ``age`` minutes falls in layer ``floor(age / minutes)``.
+    hnf_plume : bool, default True
+        Correct ``foot`` for the thin plume near the receptor first
+        (:func:`stilt.particles.correct_near_field`), as STILT-R does by
+        default. Particles without the columns it reads get no correction,
+        and a warning is logged.
+    footprint_depth : float, default 0.5
+        The depth surface fluxes are mixed through, which the near-field
+        correction reads: the run's own ``footprint_depth``.
     transforms : sequence, optional
         Particle transforms applied before the footprint is calculated, as
         objects or as the mappings ``config.yaml`` takes
@@ -798,11 +810,14 @@ def calc_footprint(
             "grid": grid,
             "smooth_factor": smooth_factor,
             "tres": tres,
+            "hnf_plume": hnf_plume,
             "transforms": list(transforms),
         }
     )
     if not particles.empty:
         check_particles(particles, need=FOOTPRINT_COLUMNS)
+        if config.hnf_plume:
+            particles = _near_field(particles, receptor, footprint_depth)
     if config.transforms:
         particles = apply_transforms(particles, config.transforms, receptor, directory)
     crs = grid.crs

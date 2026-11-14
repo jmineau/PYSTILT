@@ -34,9 +34,9 @@ release points (``receptor.coords()``) and ``altitude_ref``. Use it to look
 at the input files of a run, and
 :func:`~stilt.transport.hysplit.run_hycs_std` to run ``hycs_std`` on them.
 :func:`~stilt.transport.hysplit.read_particle_dat` reads a
-``PARTICLE_STILT.DAT`` as a particle table. The release heights and the
-near-field correction are PYSTILT's steps, the same for any model
-(:doc:`particles`):
+``PARTICLE_STILT.DAT`` as a particle table. The release heights are
+PYSTILT's step after any model's run, and the near-field correction the
+footprint's (:doc:`particles`); this is both, by hand:
 
 .. code-block:: python
 

@@ -326,7 +326,7 @@ def test_msl_hnf_foot_intentionally_differs_from_r(
     _assert_hysplit_binary_matches_r(r_stilt_dir)
 
     cols = ("particle", "age", "foot", "foot_no_hnf_dilution")
-    py = _sorted_trajectory(pd.read_parquet(scenario_outputs["traj"]), cols)
+    py = _sorted_trajectory(pd.read_parquet(scenario_outputs["traj_hnf"]), cols)
     r = _sorted_trajectory(scenario_outputs["r_traj"], cols)
 
     np.testing.assert_allclose(
@@ -377,10 +377,12 @@ def test_projected_smoothing_intentionally_differs_from_r(
         s.make_grid(),
         smooth_factor=1.0,
         tres=s.make_footprint_config().tres,
+        hnf_plume=s.hnf_plume,
+        footprint_depth=s.veght,
     )
     py = py_foot.fillna(0).to_numpy().astype(np.float64)
     r_ds = _r_footprint_from_traj(
-        tmp_path / s.name, rscript, r_stilt_dir, scenario_outputs["traj"], smoothed
+        tmp_path / s.name, rscript, r_stilt_dir, scenario_outputs["traj_hnf"], smoothed
     )
     r_unsmoothed = _normalize_footprint_dims(xr.open_dataset(scenario_outputs["foot"]))
     r_unsmoothed.load()
@@ -419,7 +421,8 @@ def test_trajectory_matches_r(
     _assert_hysplit_binary_matches_r(r_stilt_dir)
     compare_columns = _trajectory_compare_columns(s)
 
-    py_traj = pd.read_parquet(scenario_outputs["traj"])
+    # PYSTILT's particles with the near-field correction its footprint applies.
+    py_traj = pd.read_parquet(scenario_outputs["traj_hnf"])
     r_traj = scenario_outputs["r_traj"]
 
     assert len(py_traj) == len(r_traj), (
@@ -466,8 +469,8 @@ def test_footprint_matches_r(
     """
     PYSTILT footprint matches STILT-R output when given the same particles.
 
-    Feeds the PYSTILT trajectory parquet (HNF-corrected foot column) directly
-    to R's calc_footprint helper.  Uses a deep comparison that checks coordinate
+    Feeds PYSTILT's particles, with the near-field correction its footprint
+    applies (HNF-corrected foot column), directly to R's calc_footprint helper.  Uses a deep comparison that checks coordinate
     exactness, total-mass conservation, peak agreement, nonzero cell count, and
     per-cell values — catching failures that a single all-close might miss.
     """
@@ -480,7 +483,7 @@ def test_footprint_matches_r(
         tmp_path / s.name,
         rscript,
         r_stilt_dir,
-        scenario_outputs["traj"],
+        scenario_outputs["traj_hnf"],
         s,
     )
 
@@ -505,7 +508,7 @@ def test_error_trajectory_matches_r(
 
     _assert_hysplit_binary_matches_r(r_stilt_dir)
 
-    error_traj_path = scenario_outputs.get("error_traj")
+    error_traj_path = scenario_outputs.get("error_traj_hnf")
     if error_traj_path is None:
         pytest.fail(f"[{s.name}] PYSTILT produced no trajectory for the error variant")
 

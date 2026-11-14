@@ -60,7 +60,6 @@ def _run(
     config = HysplitConfig(
         n_hours=-6,
         numpar=200,
-        hnf_plume=False,
         kmixd=0,  # the met's PBLH, so HYSPLIT's mlht can be compared
         kmix0=KMIX0,
         z_top=z_top,
