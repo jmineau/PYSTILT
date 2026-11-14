@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=edfb7103"></script>
+    <script src="../../_static/documentation_options.js?v=88c4ce6d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev27+g31329bc82" />
+  <meta name="docsearch:version" content="0.1.0a29.dev29+gafc7b19ca" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -913,8 +913,10 @@ record, never a default standing in for a value they do not give:</p>
 <code class="docutils literal notranslate"><span class="pre">w_option</span></code>, <code class="docutils literal notranslate"><span class="pre">z_top</span></code>, and <code class="docutils literal notranslate"><span class="pre">emisshrs</span></code> from its <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>; and
 <code class="docutils literal notranslate"><span class="pre">ziscale</span></code> from its <code class="docutils literal notranslate"><span class="pre">ZICONTROL</span></code> file when <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> says
 STILT-R wrote one (<code class="docutils literal notranslate"><span class="pre">ZICONTROLTF</span></code>), else 1 (no scaling).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> from the particles: STILT-R’s near-field correction adds
-the <code class="docutils literal notranslate"><span class="pre">foot_no_hnf_dilution</span></code> column.</p></li>
+<li><p>The footprint’s <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> from the particles: STILT-R’s near-field
+correction adds the <code class="docutils literal notranslate"><span class="pre">foot_no_hnf_dilution</span></code> column. The particles are
+stored with that column as <code class="docutils literal notranslate"><span class="pre">foot</span></code>, uncorrected, as PYSTILT stores
+its own runs; the footprint applies the correction.</p></li>
 <li><p>The met: the directory the <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> files name, as they name it.
 Each run’s met files are recorded in its particle file, and need not
 exist any more.</p></li>

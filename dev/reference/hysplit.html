@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=edfb7103"></script>
+    <script src="../_static/documentation_options.js?v=88c4ce6d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev27+g31329bc82" />
+  <meta name="docsearch:version" content="0.1.0a29.dev29+gafc7b19ca" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -923,9 +923,9 @@ release points (<code class="docutils literal notranslate"><span class="pre">rec
 at the input files of a run, and
 <a class="reference internal" href="_api/stilt.transport.hysplit.run_hycs_std.html#stilt.transport.hysplit.run_hycs_std" title="stilt.transport.hysplit.run_hycs_std"><code class="xref py py-func docutils literal notranslate"><span class="pre">run_hycs_std()</span></code></a> to run <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> on them.
 <a class="reference internal" href="_api/stilt.transport.hysplit.read_particle_dat.html#stilt.transport.hysplit.read_particle_dat" title="stilt.transport.hysplit.read_particle_dat"><code class="xref py py-func docutils literal notranslate"><span class="pre">read_particle_dat()</span></code></a> reads a
-<code class="docutils literal notranslate"><span class="pre">PARTICLE_STILT.DAT</span></code> as a particle table. The release heights and the
-near-field correction are PYSTILT’s steps, the same for any model
-(<a class="reference internal" href="particles.html"><span class="doc">The Particle Table</span></a>):</p>
+<code class="docutils literal notranslate"><span class="pre">PARTICLE_STILT.DAT</span></code> as a particle table. The release heights are
+PYSTILT’s step after any model’s run, and the near-field correction the
+footprint’s (<a class="reference internal" href="particles.html"><span class="doc">The Particle Table</span></a>); this is both, by hand:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_release_heights</span><span class="p">,</span> <span class="n">correct_near_field</span>
@@ -948,7 +948,7 @@ near-field correction are PYSTILT’s steps, the same for any model
 <span class="n">run_hycs_std</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">"run"</span><span class="p">))</span>
 <span class="n">particles</span> <span class="o">=</span> <span class="n">read_particle_dat</span><span class="p">(</span><span class="s2">"run/PARTICLE_STILT.DAT"</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">varsiwant</span><span class="p">)</span>
 <span class="n">particles</span> <span class="o">=</span> <span class="n">add_release_heights</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">)</span>
-<span class="n">particles</span> <span class="o">=</span> <span class="n">correct_near_field</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">veght</span><span class="p">)</span>
+<span class="n">particles</span> <span class="o">=</span> <span class="n">correct_near_field</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">

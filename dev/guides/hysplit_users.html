@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=edfb7103"></script>
+    <script src="../_static/documentation_options.js?v=88c4ce6d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev27+g31329bc82" />
+  <meta name="docsearch:version" content="0.1.0a29.dev29+gafc7b19ca" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -573,7 +573,7 @@ hour and are followed 6 hours forward:</p>
 
 <span class="gp">In [3]: </span><span class="n">cloud</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">run_trajectories</span><span class="p">(</span>
 <span class="gp">   ...: </span>    <span class="n">start</span><span class="p">,</span> <span class="n">met_dir</span><span class="p">,</span> <span class="n">n_hours</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">numpar</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">emisshrs</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-<span class="gp">   ...: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">hnf_plume</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
 <span class="gp">   ...: </span><span class="p">)</span>
 <span class="gp">   ...: </span>
 
@@ -591,10 +591,8 @@ hour and are followed 6 hours forward:</p>
 backward. <code class="docutils literal notranslate"><span class="pre">emisshrs</span></code> is the hours of emission, and <code class="docutils literal notranslate"><span class="pre">zagl</span></code> the height
 above ground in meters. The other columns are the met at each particle that
 <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> asks for, by HYSPLIT’s names (<code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code>, <code class="docutils literal notranslate"><span class="pre">dens</span></code>,
-…). We set <code class="docutils literal notranslate"><span class="pre">hnf_plume=False</span></code> whenever you want positions and no
-footprint, because PYSTILT’s near-field correction rewrites the <code class="docutils literal notranslate"><span class="pre">foot</span></code>
-column for STILT’s footprints. <code class="docutils literal notranslate"><span class="pre">krand=2</span></code> with a <code class="docutils literal notranslate"><span class="pre">seed</span></code> makes the run
-repeatable.</p>
+…), and <code class="docutils literal notranslate"><span class="pre">foot</span></code> is HYSPLIT’s own: PYSTILT changes it only when it
+makes a footprint. <code class="docutils literal notranslate"><span class="pre">krand=2</span></code> with a <code class="docutils literal notranslate"><span class="pre">seed</span></code> makes the run repeatable.</p>
 <p>The met is the folder of your ARL files. PYSTILT reads which times each
 file holds from its header, and gives HYSPLIT the ones the run needs.
 <a class="reference internal" href="meteorology.html"><span class="doc">Meteorology</span></a> shows how to download them from NOAA instead.</p>
@@ -605,7 +603,7 @@ file holds from its header, and gives HYSPLIT the ones the run needs.
 particle with turbulence off follows the same path, so <code class="docutils literal notranslate"><span class="pre">numpar=1</span></code> and
 <code class="docutils literal notranslate"><span class="pre">nturb=1</span></code> give you a trajectory:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [5]: </span><span class="n">path</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">run_trajectories</span><span class="p">(</span>
-<span class="gp">   ...: </span>    <span class="n">start</span><span class="p">,</span> <span class="n">met_dir</span><span class="p">,</span> <span class="n">n_hours</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">numpar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nturb</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">hnf_plume</span><span class="o">=</span><span class="kc">False</span>
+<span class="gp">   ...: </span>    <span class="n">start</span><span class="p">,</span> <span class="n">met_dir</span><span class="p">,</span> <span class="n">n_hours</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">numpar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nturb</span><span class="o">=</span><span class="mi">1</span>
 <span class="gp">   ...: </span><span class="p">)</span>
 <span class="gp">   ...: </span>
 
@@ -677,7 +675,6 @@ options, each kept in its own folder:</p>
 <span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24</span>
 <span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
 <span class="nt">emisshrs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
-<span class="nt">hnf_plume</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 </pre></div>
 </div>
 <p>The starting points go in <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>, one row each:</p>

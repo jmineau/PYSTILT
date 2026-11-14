@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=edfb7103"></script>
+    <script src="../_static/documentation_options.js?v=88c4ce6d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev27+g31329bc82" />
+  <meta name="docsearch:version" content="0.1.0a29.dev29+gafc7b19ca" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -623,7 +623,7 @@ whole run. Use xarray as you would on any other array:</p>
 <span class="gh">Out[16]: </span><span class="go">Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat')</span>
 
 <span class="gp">In [17]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">config</span>        <span class="c1"># all the footprint settings</span>
-<span class="gh">Out[17]: </span><span class="go">FootprintConfig(grid=Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat'), geometry=None, cells_per_target=4.0, smooth_factor=1.0, tres='1h', transforms=[])</span>
+<span class="gh">Out[17]: </span><span class="go">FootprintConfig(grid=Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat'), geometry=None, cells_per_target=4.0, smooth_factor=1.0, tres='1h', hnf_plume=True, transforms=[])</span>
 </pre></div>
 </div>
 <p>The receptor id is also a coordinate, <code class="docutils literal notranslate"><span class="pre">foot.receptor</span></code>. It stays on the
@@ -698,20 +698,20 @@ what a transport model must write.</p>
 <p>PYSTILT’s methods for the particle table are under <code class="docutils literal notranslate"><span class="pre">particles.stilt</span></code>:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [22]: </span><span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">endpoints</span><span class="p">()</span>    <span class="c1"># where each particle ends, one row each</span>
 <span class="gh">Out[22]: </span>
-<span class="go">         age  particle  ...  foot_no_hnf_dilution                time</span>
-<span class="go">63040 -334.0       1.0  ...                   0.0 2021-01-15 02:26:00</span>
-<span class="go">74674 -547.0       2.0  ...                   0.0 2021-01-14 22:53:00</span>
-<span class="go">65550 -359.0       3.0  ...                   0.0 2021-01-15 02:01:00</span>
-<span class="go">55455 -282.0       4.0  ...                   0.0 2021-01-15 03:18:00</span>
-<span class="go">59587 -308.0       5.0  ...                   0.0 2021-01-15 02:52:00</span>
-<span class="go">...      ...       ...  ...                   ...                 ...</span>
-<span class="go">49317 -247.0     196.0  ...                   0.0 2021-01-15 03:53:00</span>
-<span class="go">50840 -255.0     197.0  ...                   0.0 2021-01-15 03:45:00</span>
-<span class="go">63617 -338.0     198.0  ...                   0.0 2021-01-15 02:22:00</span>
-<span class="go">69517 -421.0     199.0  ...                   0.0 2021-01-15 00:59:00</span>
-<span class="go">64255 -344.0     200.0  ...                   0.0 2021-01-15 02:16:00</span>
+<span class="go">         age  particle       lon  ...   sigw   tlgr                time</span>
+<span class="go">63040 -334.0       1.0 -112.1365  ...  0.776  100.0 2021-01-15 02:26:00</span>
+<span class="go">74674 -547.0       2.0 -112.3070  ...  0.071  100.0 2021-01-14 22:53:00</span>
+<span class="go">65550 -359.0       3.0 -112.2374  ...  0.949  100.0 2021-01-15 02:01:00</span>
+<span class="go">55455 -282.0       4.0 -112.1046  ...  0.237  100.0 2021-01-15 03:18:00</span>
+<span class="go">59587 -308.0       5.0 -112.1333  ...  0.283  100.0 2021-01-15 02:52:00</span>
+<span class="go">...      ...       ...       ...  ...    ...    ...                 ...</span>
+<span class="go">49317 -247.0     196.0 -112.2293  ...  0.205  100.0 2021-01-15 03:53:00</span>
+<span class="go">50840 -255.0     197.0 -112.1957  ...  0.185  100.0 2021-01-15 03:45:00</span>
+<span class="go">63617 -338.0     198.0 -112.1395  ...  0.791  100.0 2021-01-15 02:22:00</span>
+<span class="go">69517 -421.0     199.0 -112.2789  ...  0.356  100.0 2021-01-15 00:59:00</span>
+<span class="go">64255 -344.0     200.0 -112.1801  ...  0.628  100.0 2021-01-15 02:16:00</span>
 
-<span class="go">[200 rows x 14 columns]</span>
+<span class="go">[200 rows x 13 columns]</span>
 
 <span class="gp">In [23]: </span><span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>    <span class="c1"># map of every particle position</span>
 </pre></div>
@@ -866,10 +866,10 @@ footprint as a <a class="reference external" href="https://docs.xarray.dev/en/st
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [34]: </span><span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)[</span><span class="s2">"foot"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
 <span class="gh">Out[34]: </span>
 <span class="go">receptor</span>
-<span class="go">202101150600_-111.848_40.766_10    151.455553</span>
-<span class="go">202101150700_-111.848_40.766_10    169.614410</span>
-<span class="go">202101150800_-111.848_40.766_10    233.348457</span>
-<span class="go">202101150900_-111.848_40.766_10    289.342312</span>
+<span class="go">202101150600_-111.848_40.766_10     88.836758</span>
+<span class="go">202101150700_-111.848_40.766_10     95.820162</span>
+<span class="go">202101150800_-111.848_40.766_10    165.770876</span>
+<span class="go">202101150900_-111.848_40.766_10    279.965419</span>
 <span class="go">Name: foot, dtype: float64</span>
 </pre></div>
 </div>
@@ -943,25 +943,24 @@ cf-xarray, and other tools that read CF trajectory files open:</p>
 
 <span class="gp">In [42]: </span><span class="n">ds</span>
 <span class="gh">Out[42]: </span>
-<span class="go">&lt;xarray.Dataset&gt; Size: 17MB</span>
-<span class="go">Dimensions:               (trajectory: 200, obs: 806)</span>
+<span class="go">&lt;xarray.Dataset&gt; Size: 15MB</span>
+<span class="go">Dimensions:     (trajectory: 200, obs: 806)</span>
 <span class="go">Coordinates:</span>
-<span class="go">  * trajectory            (trajectory) int32 800B 1 2 3 4 5 ... 197 198 199 200</span>
-<span class="go">    time                  (trajectory, obs) datetime64[ns] 1MB 2021-01-15T08:...</span>
-<span class="go">    lon                   (trajectory, obs) float64 1MB -111.8 -111.8 ... nan</span>
-<span class="go">    lat                   (trajectory, obs) float64 1MB 40.77 40.77 ... nan nan</span>
-<span class="go">    zagl                  (trajectory, obs) float64 1MB 13.15 16.08 ... nan nan</span>
+<span class="go">  * trajectory  (trajectory) int32 800B 1 2 3 4 5 6 ... 195 196 197 198 199 200</span>
+<span class="go">    time        (trajectory, obs) datetime64[ns] 1MB 2021-01-15T08:59:00 ... NaT</span>
+<span class="go">    lon         (trajectory, obs) float64 1MB -111.8 -111.8 -111.8 ... nan nan</span>
+<span class="go">    lat         (trajectory, obs) float64 1MB 40.77 40.77 40.77 ... nan nan nan</span>
+<span class="go">    zagl        (trajectory, obs) float64 1MB 13.15 16.08 18.86 ... nan nan nan</span>
 <span class="go">Dimensions without coordinates: obs</span>
 <span class="go">Data variables:</span>
-<span class="go">    age                   (trajectory, obs) float64 1MB -1.0 -2.0 ... nan nan</span>
-<span class="go">    foot                  (trajectory, obs) float64 1MB 0.05546 0.03384 ... nan</span>
-<span class="go">    mlht                  (trajectory, obs) float64 1MB 150.0 150.0 ... nan nan</span>
-<span class="go">    pres                  (trajectory, obs) float64 1MB 860.8 860.3 ... nan nan</span>
-<span class="go">    dens                  (trajectory, obs) float64 1MB 1.093 1.092 ... nan nan</span>
-<span class="go">    samt                  (trajectory, obs) float64 1MB 1.0 1.0 1.0 ... nan nan</span>
-<span class="go">    sigw                  (trajectory, obs) float64 1MB 0.001 0.001 ... nan nan</span>
-<span class="go">    tlgr                  (trajectory, obs) float64 1MB 1.321e+04 ... nan</span>
-<span class="go">    foot_no_hnf_dilution  (trajectory, obs) float64 1MB 0.02121 0.02121 ... nan</span>
+<span class="go">    age         (trajectory, obs) float64 1MB -1.0 -2.0 -3.0 ... nan nan nan</span>
+<span class="go">    foot        (trajectory, obs) float64 1MB 0.02121 0.02121 ... nan nan</span>
+<span class="go">    mlht        (trajectory, obs) float64 1MB 150.0 150.0 150.0 ... nan nan nan</span>
+<span class="go">    pres        (trajectory, obs) float64 1MB 860.8 860.3 859.8 ... nan nan nan</span>
+<span class="go">    dens        (trajectory, obs) float64 1MB 1.093 1.092 1.091 ... nan nan nan</span>
+<span class="go">    samt        (trajectory, obs) float64 1MB 1.0 1.0 1.0 1.0 ... nan nan nan</span>
+<span class="go">    sigw        (trajectory, obs) float64 1MB 0.001 0.001 0.002 ... nan nan nan</span>
+<span class="go">    tlgr        (trajectory, obs) float64 1MB 1.321e+04 1.298e+04 ... nan nan</span>
 <span class="go">Attributes:</span>
 <span class="go">    Conventions:  CF-1.10</span>
 <span class="go">    featureType:  trajectory</span>

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=edfb7103"></script>
+    <script src="../../../_static/documentation_options.js?v=88c4ce6d"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev27+g31329bc82" />
+  <meta name="docsearch:version" content="0.1.0a29.dev29+gafc7b19ca" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -482,6 +482,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles.background</span><span class="w"> </span><span class="kn">import</span> <span class="n">_background</span><span class="p">,</span> <span class="n">_fill_missing</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles.table</span><span class="w"> </span><span class="kn">import</span> <span class="n">_near_field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_transforms</span><span class="p">,</span> <span class="n">release_coordinate</span>
 
@@ -746,6 +747,8 @@
     <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
     <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">hnf_plume</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">footprint_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
     <span class="n">levels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
     <span class="n">length_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_LENGTH_SCALE</span><span class="p">,</span>
     <span class="n">percentile</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
@@ -769,9 +772,17 @@
 <span class="sd">        The footprint's particle transforms (``sim.variant.footprint.transforms``),</span>
 <span class="sd">        applied to both tables so the error is weighted like the footprint.</span>
 <span class="sd">    receptor : Receptor, optional</span>
-<span class="sd">        The receptor (``sim.receptor``), for the transforms.</span>
+<span class="sd">        The receptor (``sim.receptor``), for the near-field correction and</span>
+<span class="sd">        the transforms. Needed when *hnf_plume* is set.</span>
 <span class="sd">    directory : str or Path, optional</span>
 <span class="sd">        Where a kernel table's relative path starts (``project.directory``).</span>
+<span class="sd">    hnf_plume : bool, default True</span>
+<span class="sd">        Apply the near-field correction to both tables first, as</span>
+<span class="sd">        :func:`stilt.calc_footprint` does</span>
+<span class="sd">        (``sim.variant.footprint.hnf_plume``), so the error is of the same</span>
+<span class="sd">        enhancement the footprint gives.</span>
+<span class="sd">    footprint_depth : float, default 0.5</span>
+<span class="sd">        The run's ``footprint_depth``, which the near-field correction reads.</span>
 <span class="sd">    levels : int or sequence of float, default 20</span>
 <span class="sd">        Release-height levels to compute statistics on: a number of</span>
 <span class="sd">        equal-width bins between the lowest and highest release height, or</span>
@@ -860,15 +871,22 @@
 <span class="sd">    ...     "realization"</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; error_particles = [rows for _, rows in by_realization]  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; result = transport_error(sim.particles, error_particles, flux)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; result = transport_error(</span>
+<span class="sd">    ...     sim.particles, error_particles, flux, receptor=sim.receptor</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; result.realizations  # doctest: +SKIP</span>
 <span class="sd">    4</span>
 
 <span class="sd">    ``sim.transport_error(realizations, flux)`` builds this list from the</span>
-<span class="sd">    realizations' simulations. It also passes ``transforms``, ``receptor``,</span>
-<span class="sd">    and ``directory``, which a variant with footprint transforms needs and</span>
-<span class="sd">    this call leaves out.</span>
+<span class="sd">    realizations' simulations. It also passes ``transforms``,</span>
+<span class="sd">    ``directory``, and the variant's ``hnf_plume`` and</span>
+<span class="sd">    ``footprint_depth``, which this call leaves at their defaults.</span>
 <span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">hnf_plume</span> <span class="ow">and</span> <span class="n">receptor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"The near-field correction (hnf_plume) needs the receptor: give "</span>
+            <span class="s2">"receptor=sim.receptor, or hnf_plume=False."</span>
+        <span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">percentile</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"percentile must be in (0, 1]."</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">length_scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">length_scale</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
@@ -886,6 +904,9 @@
         <span class="n">table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Return the modeled value and release height per particle, and the background."""</span>
+        <span class="k">if</span> <span class="n">hnf_plume</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">receptor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># checked above</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">_near_field</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">)</span>
         <span class="n">weighted</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">apply_transforms</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">transforms</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">transforms</span>

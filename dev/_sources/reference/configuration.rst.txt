@@ -132,8 +132,11 @@ They are flat, top-level keys. HYSPLIT's are in
 :class:`stilt.transport.hysplit.HysplitConfig`, under HYSPLIT's names (see
 :doc:`hysplit`). A variant that names another ``model`` gives that model's
 parameters itself, and inherits the met, the footprint settings, and the
-parameters PYSTILT reads itself (``n_hours``, ``seed``, ``hnf_plume``,
-``veght``, ``pbl_height``, and ``pbl_height_min``).
+parameters PYSTILT reads itself (``n_hours``, ``seed``,
+``footprint_depth``, ``pbl_height``, and ``pbl_height_min``). ``hnf_plume``,
+the near-field correction, is a footprint setting: it is applied when the
+footprint is made, so it does not change the particles or their settings
+folder.
 
 
 Geometry specifications

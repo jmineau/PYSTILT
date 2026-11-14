@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=edfb7103"></script>
+    <script src="../../../_static/documentation_options.js?v=88c4ce6d"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev27+g31329bc82" />
+  <meta name="docsearch:version" content="0.1.0a29.dev29+gafc7b19ca" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -597,7 +597,7 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.FootprintConfig.html#stilt.FootprintConfig">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">FootprintConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Footprint settings: the grid, smoothing, and particle transforms.</span>
+<span class="sd">    Footprint settings: the grid, smoothing, the near-field correction, and particle transforms.</span>
 
 <span class="sd">    The config and each variant hold these as their defaults and overrides,</span>
 <span class="sd">    and every footprint keeps the settings it was calculated with.</span>
@@ -645,6 +645,19 @@
             <span class="s2">"Length of each time layer of the footprint, counted from the "</span>
             <span class="s2">"receptor time, as a duration in whole minutes: ``1h`` for hourly "</span>
             <span class="s2">"layers, ``15min`` for 15-minute data, ``1D`` for days."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">hnf_plume</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">True</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Correct ``foot`` near the receptor with a vertical Gaussian plume "</span>
+            <span class="s2">"model before the footprint is computed "</span>
+            <span class="s2">"(:func:`stilt.particles.correct_near_field`). Close to the "</span>
+            <span class="s2">"receptor the plume is thinner than the layer surface fluxes are "</span>
+            <span class="s2">"mixed through, so this raises the influence of nearby fluxes. "</span>
+            <span class="s2">"Needs the particle columns ``dens``, ``tlgr``, ``sigw``, ``foot``, "</span>
+            <span class="s2">"``mlht``, and ``samt``, and ``zsfc`` for a receptor above sea "</span>
+            <span class="s2">"level; particles without them get no correction."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">transforms</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>

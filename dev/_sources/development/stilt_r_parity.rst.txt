@@ -61,7 +61,7 @@ The scenarios cover:
 - point, column, and three-location multipoint receptors
 - 6 h and 24 h backward runs, and a 6 h forward run
 - the hyper-near-field (HNF) plume correction on (every scenario but one) and
-  off, with ``veght`` at its default of 0.5 (a fraction of the mixed-layer
+  off, with ``footprint_depth`` (STILT-R's ``veght``) at its default of 0.5 (a fraction of the mixed-layer
   height) and at 100 (meters above ground)
 - ``smooth_factor`` of 0, 0.5, 1, and 2
 - 0.01° and 0.05° longitude/latitude grids and an unsmoothed UTM grid

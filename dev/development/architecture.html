@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=edfb7103"></script>
+    <script src="../_static/documentation_options.js?v=88c4ce6d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev27+g31329bc82" />
+  <meta name="docsearch:version" content="0.1.0a29.dev29+gafc7b19ca" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -571,6 +571,7 @@ surface. Everything else is internal and can change.</p>
   particles/         the particle table (a DataFrame)
     table.py         its columns, particle files, release heights, foot for
                      a model that writes none, the near-field plume correction
+                     (which calc_footprint applies)
     accessor.py      the .stilt pandas accessor
     background.py    the background at a receptor (sim.background)
     transport_error.py  the transport error of the enhancement, one
@@ -778,8 +779,8 @@ reads, the background and transport-error modules that live in the particles
 package, and <code class="docutils literal notranslate"><span class="pre">add_foot</span></code>’s use of <code class="docutils literal notranslate"><span class="pre">sample_met</span></code>. The list is the work a code
 boundary would leave; a new crossing fails <code class="docutils literal notranslate"><span class="pre">just</span> <span class="pre">imports</span></code>. Two crossings
 are not imports between modules, so the contract cannot see them: the
-near-field correction and <code class="docutils literal notranslate"><span class="pre">add_foot</span></code> are functions in
-<code class="docutils literal notranslate"><span class="pre">stilt.particles.table</span></code>, and a package’s <code class="docutils literal notranslate"><span class="pre">__init__</span></code> importing its own
+near-field correction (which only the footprint side calls) and
+<code class="docutils literal notranslate"><span class="pre">add_foot</span></code> are functions in <code class="docutils literal notranslate"><span class="pre">stilt.particles.table</span></code>, and a package’s <code class="docutils literal notranslate"><span class="pre">__init__</span></code> importing its own
 module (the transport registry and the STILT-R model) is not checked.</p>
 </section>
 <section id="configuration">
@@ -796,8 +797,10 @@ through <code class="docutils literal notranslate"><span class="pre">stilt.trans
 <li><p>A model is a variant axis, like a met. A variant that names another
 <code class="docutils literal notranslate"><span class="pre">model</span></code> gives that model’s own parameters itself, and inherits the met,
 the footprint fields, and the parameters PYSTILT’s own code reads (the base
-<code class="docutils literal notranslate"><span class="pre">TransportConfig</span></code>: <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">seed</span></code>, <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>, <code class="docutils literal notranslate"><span class="pre">veght</span></code>,
-<code class="docutils literal notranslate"><span class="pre">pbl_height</span></code>, <code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code>). A
+<code class="docutils literal notranslate"><span class="pre">TransportConfig</span></code>: <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">seed</span></code>, <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code>,
+<code class="docutils literal notranslate"><span class="pre">pbl_height</span></code>, <code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code>). <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is a footprint field:
+the near-field correction is applied when a footprint is made, so a stored
+particle file holds the model’s <code class="docutils literal notranslate"><span class="pre">foot</span></code>. A
 parameter goes on the base only when the core reads it; <code class="docutils literal notranslate"><span class="pre">numpar</span></code> and
 every <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> setting are HYSPLIT’s.</p></li>
 <li><p>When it loads, <code class="docutils literal notranslate"><span class="pre">ProjectConfig</span></code> checks each declared variant against the

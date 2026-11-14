@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=edfb7103"></script>
+    <script src="../../_static/documentation_options.js?v=88c4ce6d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev27+g31329bc82" />
+  <meta name="docsearch:version" content="0.1.0a29.dev29+gafc7b19ca" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -753,14 +753,16 @@
         <span class="n">grid</span><span class="p">:</span> <span class="n">Grid</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">tres</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">timedelta</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">hnf_plume</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Calculate a footprint from the stored particles, without writing it.</span>
 
 <span class="sd">        This is :func:`stilt.calc_footprint` with this simulation's</span>
-<span class="sd">        particles, receptor, and settings filled in. Each setting given</span>
-<span class="sd">        replaces the variant's own. Use it to try other settings; the</span>
+<span class="sd">        particles, receptor, and settings filled in, the run's</span>
+<span class="sd">        ``footprint_depth`` among them. Each setting given replaces the</span>
+<span class="sd">        variant's own. Use it to try other settings; the</span>
 <span class="sd">        workers write the variant's own footprint. A relative file name in</span>
 <span class="sd">        a transform's settings starts from the project directory.</span>
 
@@ -802,6 +804,8 @@
                 <span class="k">if</span> <span class="n">smooth_factor</span> <span class="ow">is</span> <span class="kc">None</span>
                 <span class="k">else</span> <span class="n">smooth_factor</span><span class="p">,</span>
                 <span class="n">tres</span><span class="o">=</span><span class="n">own</span><span class="o">.</span><span class="n">tres</span> <span class="k">if</span> <span class="n">tres</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">tres</span><span class="p">,</span>
+                <span class="n">hnf_plume</span><span class="o">=</span><span class="n">own</span><span class="o">.</span><span class="n">hnf_plume</span> <span class="k">if</span> <span class="n">hnf_plume</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">hnf_plume</span><span class="p">,</span>
+                <span class="n">footprint_depth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">,</span>
                 <span class="n">transforms</span><span class="o">=</span><span class="n">own</span><span class="o">.</span><span class="n">transforms</span> <span class="k">if</span> <span class="n">transforms</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">transforms</span><span class="p">,</span>
                 <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
                 <span class="n">directory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span>
@@ -817,6 +821,15 @@
         <span class="k">return</span> <span class="p">(</span>
             <span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">transforms</span>
         <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_near_field_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""The near-field correction a footprint of this simulation gets: ``hnf_plume`` and the run's ``footprint_depth``."""</span>
+        <span class="n">footprint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">or</span> <span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">({})</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">"hnf_plume"</span><span class="p">:</span> <span class="n">footprint</span><span class="o">.</span><span class="n">hnf_plume</span><span class="p">,</span>
+            <span class="s2">"footprint_depth"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">,</span>
+        <span class="p">}</span>
 
 <div class="viewcode-block" id="Simulation.background">
 <a class="viewcode-back" href="../../reference/_api/stilt.Simulation.background.html#stilt.Simulation.background">[docs]</a>
@@ -891,7 +904,7 @@
             <span class="n">transforms</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">,</span>
             <span class="n">receptor</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span>
             <span class="n">directory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span>
-            <span class="o">**</span><span class="n">options</span><span class="p">,</span>
+            <span class="o">**</span><span class="p">{</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_near_field_settings</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">},</span>
         <span class="p">)</span></div>
 </div>
 

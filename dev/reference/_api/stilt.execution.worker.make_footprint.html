@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=edfb7103"></script>
+    <script src="../../_static/documentation_options.js?v=88c4ce6d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev27+g31329bc82" />
+  <meta name="docsearch:version" content="0.1.0a29.dev29+gafc7b19ca" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -898,7 +898,8 @@
 <dt class="sig sig-object py" id="stilt.execution.worker.make_footprint">
 <span class="sig-prename descclassname"><span class="pre">stilt.execution.worker.</span></span><span class="sig-name descname"><span class="pre">make_footprint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">particles</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/execution/worker.html#make_footprint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.execution.worker.make_footprint" title="Link to this definition">#</a></dt>
 <dd><p>Calculate a simulation’s footprint from <em>particles</em> and write it to its folder.</p>
-<p>The settings are the variant’s own. A relative file name in a
+<p>The settings are the variant’s own, and the near-field correction
+reads the run’s <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code>. A relative file name in a
 transform’s settings starts from the project directory
 (<code class="docutils literal notranslate"><span class="pre">sim.directory</span></code>). When no particle reaches the grid,
 an empty footprint is recorded, marked empty, and <code class="docutils literal notranslate"><span class="pre">None</span></code> is returned.
