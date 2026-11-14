@@ -292,7 +292,7 @@ filterwarnings = [
 ]
 markers = [
     # Disjoint: a test has at most one of these. `just test` runs none of them;
-    # CI runs -m "integration or fidelity", then -m r_only.
+    # CI runs -m integration (tests.yml), -m fidelity and -m r_only (stilt-r.yml).
     "integration: PYSTILT end to end, with real met files and HYSPLIT (slow)",
     "fidelity: PYSTILT against STILT-R, both running HYSPLIT on real met files (slow; require STILT_R_DIR and Rscript)",
     "r_only: PYSTILT against STILT-R without met files or HYSPLIT (fast; require STILT_R_DIR and Rscript)",

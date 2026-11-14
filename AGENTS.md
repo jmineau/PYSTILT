@@ -156,8 +156,8 @@ Driven by [`just`](https://github.com/casey/just) and
 ### Tests
 
 `just test` runs every test without one of three disjoint markers. Warnings
-are errors (a test that expects one uses `pytest.warns`). `stilt-r.yml` (30 min,
-only for the paths at its top) runs `-m "integration or fidelity"` and `-m r_only`:
+are errors (a test that expects one uses `pytest.warns`). CI runs `-m integration`
+in `tests.yml`, `-m fidelity` and `-m r_only` in `stilt-r.yml` (the paths at its top):
 
 - `integration`: end to end with real met files and HYSPLIT. Needs
   `STILT_TEST_MET_DIR` (HRRR ARL files) or `STILT_TEST_FETCH_MET=1` (downloads
