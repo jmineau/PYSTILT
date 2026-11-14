@@ -41,6 +41,7 @@ Each reader returns a table of soundings with the columns in
    stilt.observations.read_ggg_oof
    stilt.observations.read_ggg_netcdf
    stilt.observations.read_coccon
+   stilt.observations.read_proffast
 
 Tracks
 ------

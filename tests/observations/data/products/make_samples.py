@@ -19,8 +19,8 @@ OCO-3 L2 Lite FP v11r, doi:10.5067/8U0VGVQC7HZG. Each slice keeps the
 granule's global attributes, the DOI among them.
 
 The GGG samples are synthetic too, on the GGG2020 ``.oof`` and
-``*.private.nc`` layouts, and so is the COCCON GEOMS sample (the layout of
-PROFFASTpylot's GEOMS writer), so no instrument team's retrievals are
+``*.private.nc`` layouts, and so are the COCCON GEOMS sample (the layout of
+PROFFASTpylot's GEOMS writer) and the PROFFASTpylot run folder, so no instrument team's retrievals are
 redistributed here. They keep the format's quirks, including the .oof header
 count that exceeds the number of columns written.
 """
@@ -31,6 +31,7 @@ import argparse
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from netCDF4 import Dataset
 
 HERE = Path(__file__).parent
@@ -586,6 +587,154 @@ def geoms_synthetic() -> None:
             )
 
 
+#: The synthetic PROFFASTpylot results folder, named the way PROFFASTpylot names it.
+PROFFAST_RUN = "ZZsynthetic_SN000_230715-230716"
+#: The angles (radians) of a real colsens.dat table.
+COLSENS_SZA = [
+    0.0,
+    0.3965,
+    0.5607,
+    0.6867,
+    0.7930,
+    0.8866,
+    0.9712,
+    1.049,
+    1.121,
+    1.189,
+    1.254,
+    1.315,
+    1.373,
+    1.430,
+    1.484,
+]
+
+
+def proffast_synthetic() -> None:
+    """
+    A made-up PROFFASTpylot run: the real file layouts, invented values.
+
+    Two days, three spectra each, on ten levels (a real run has 49): the
+    ``comb_invparms`` CSV with its comma-and-space columns, and each day's
+    ``colsens.dat`` (gas names in quotes, the long ones without the closing
+    quote), ``pT_fast_out.dat`` (spaces inside the header's names) and
+    ``VMR_fast_out.dat`` (no header). One spectrum is past the table's last
+    angle, and one has an XAIR outside COCCON's screen.
+    """
+    run = HERE / PROFFAST_RUN
+    raw = run / "raw_output_proffast"
+    raw.mkdir(parents=True, exist_ok=True)
+    nlev = 10
+    alt_m = np.linspace(OOF_ZOBS_KM * 1000.0, 30000.0, nlev)
+    pres_pa = 85330.0 * np.exp(-(alt_m - alt_m[0]) / 8000.0)
+    gases = ["H2O", "HDO", "CO2", "CO2_STR", "CH4", "CH4_S5P", "N2O", "CO", "O2", "HF"]
+    for day in ("230715", "230716"):
+        lines = []
+        for k, gas in enumerate(gases):
+            name = f"'{gas}'" if len(gas) < 7 else f"'{gas}"
+            lines += [
+                " ",
+                f"{name:<8s}",
+                "$",
+                "          SZA[rad] ->   " + "".join(f"{a:13.3E}" for a in COLSENS_SZA),
+                " ",
+                " alt [km]     p [mbar]",
+            ]
+            for z, p in zip(alt_m, pres_pa, strict=True):
+                # falls with height, grows with the sun's angle; gas k offsets it
+                sens = (1.05 - 0.45 * (z - alt_m[0]) / (alt_m[-1] - alt_m[0])) * (
+                    1.0 + 0.2 * np.asarray(COLSENS_SZA)
+                ) + 0.01 * k
+                lines.append(
+                    f"{z / 1000:11.3E}{p / 100:13.3E}"
+                    + "".join(f"{v:13.3E}" for v in sens)
+                )
+        (raw / f"ZZsynthetic{day}-colsens.dat").write_text("\n".join(lines) + "\n")
+        pt = [
+            "Level index    Altitude(m)       Temperature(K)    Pressure(Pa)      dry air column    H2O[ppmv]         HDO[ppmv]"
+        ]
+        vmr = []
+        for i, (z, p) in enumerate(zip(alt_m, pres_pa, strict=True)):
+            t = 300.0 - 6.5 * (z - alt_m[0]) / 1000.0
+            h2o = 8000.0 * np.exp(-(z - alt_m[0]) / 2000.0)
+            pt.append(
+                f"{i + 1:8d}{z:18.5E}{t:18.5E}{p:18.5E}{3e27:18.5E}{h2o:18.5E}{0.8 * h2o:18.5E}"
+            )
+            frac = i / (nlev - 1)
+            vmr.append(
+                f"{i + 1:4d}{z:18.5E}{h2o:18.5E}{0.8 * h2o:18.5E}{421.0 - 5 * frac:18.5E}"
+                f"{1.99 - 0.4 * frac:18.5E}{0.33:18.5E}{0.11 - 0.05 * frac:18.5E}{2.0946e5:18.5E}{1e-7:18.5E}"
+            )
+        (raw / f"ZZsynthetic{day}-pT_fast_out.dat").write_text("\n".join(pt) + "\n")
+        (raw / f"ZZsynthetic{day}-VMR_fast_out.dat").write_text("\n".join(vmr) + "\n")
+
+    columns = [
+        "UTC",
+        "LocalTime",
+        "JulianDate",
+        "YYMMDD",
+        "UTtimeh",
+        "spectrum",
+        "gndPmap",
+        "gndP",
+        "gndTmap",
+        "gndT",
+        "latdeg",
+        "londeg",
+        "altim",
+        "appSZA",
+        "azimuth",
+        "XH2O",
+        "XAIR",
+        "XCO2",
+        "XCH4",
+        "XCO2_STR",
+        "XCH4_S5P",
+        "XCO",
+        "job01_rms",
+    ]
+    rows = []
+    #: (day, hour, minute, apparent SZA, PROFFAST azimuth from south, XAIR)
+    spectra = [
+        ("230715", 16, 0, 40.0, -70.0, 1.0001),
+        ("230715", 16, 3, 39.5, -69.2, 0.9700),  # fails the XAIR screen
+        ("230715", 16, 6, 39.0, -68.4, 1.0003),
+        ("230716", 1, 30, 86.0, 115.0, 1.0002),  # past the table's last angle
+        ("230716", 16, 0, 40.2, -70.1, 0.9999),
+        ("230716", 16, 3, 39.7, -69.3, 1.0000),
+    ]
+    for i, (day, hh, mm, sza, azi, xair) in enumerate(spectra):
+        t = pd.Timestamp(f"20{day[:2]}-{day[2:4]}-{day[4:]} {hh:02d}:{mm:02d}:00")
+        rows.append(
+            [
+                str(t),
+                str(t - pd.Timedelta(hours=6)),
+                f"{t.to_julian_date():.5f}",
+                day,
+                f"{hh + mm / 60:6.1f}",
+                f"{day}_{hh:02d}{mm:02d}00SN.BIN",
+                "853.30",
+                "853.30",
+                "300.00",
+                "300.00",
+                f"{OOF_LAT:.5f}",
+                f"{OOF_LON:.5f}",
+                f"{OOF_ZOBS_KM * 1000:.3f}",
+                f"{sza:.2f}",
+                f"{azi:.2f}",
+                f"{1920.0 + i:.5e}",
+                f"{xair:.5e}",
+                f"{419.38 + 0.1 * i:.5e}",
+                f"{1.8698 + 1e-4 * i:.5e}",
+                f"{419.10 + 0.1 * i:.5e}",
+                f"{1.8710 + 1e-4 * i:.5e}",
+                f"{0.0878 + 1e-4 * i:.5e}",
+                f"{1.8e-3:.5e}",
+            ]
+        )
+    text = ", ".join(columns) + "\n" + "\n".join(", ".join(r) for r in rows) + "\n"
+    (run / f"comb_invparms_{PROFFAST_RUN}.csv").write_text(text)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tropomi", type=Path)
@@ -608,6 +757,7 @@ def main() -> None:
     oof_synthetic()
     ggg_private_synthetic()
     geoms_synthetic()
+    proffast_synthetic()
 
 
 if __name__ == "__main__":
