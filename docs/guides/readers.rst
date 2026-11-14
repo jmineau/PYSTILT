@@ -35,8 +35,8 @@ The readers
    * - :func:`~stilt.observations.read_oco2`
      - OCO-2 and OCO-3 L2 Lite XCO2 files (``oco2_LtCO2_*.nc4``,
        ``oco3_LtCO2_*.nc4``, Lite FP v10/v11)
-     - A synthetic file with the documented v11 layout. No real granule
-       has been read yet.
+     - OCO-2 Lite FP v11.2r and OCO-3 Lite FP v11r files of 2026-02-08
+       (nadir and target-mode soundings).
    * - :func:`~stilt.observations.read_tccon`
      - TCCON GGG2020 public site files from CaltechDATA
        (``*.public.nc``, ``*.public.qc.nc``)
