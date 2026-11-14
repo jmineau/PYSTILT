@@ -26,6 +26,8 @@ integration = pytest.mark.integration
 _SHARED_RUNS = ("scenario_outputs", "hysplit_run")
 
 
+# tryfirst: xdist reads the groups in its own pytest_collection_modifyitems.
+@pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(items):
     """Put the tests that share one run of a ``_SHARED_RUNS`` fixture in one xdist group."""
     for item in items:
