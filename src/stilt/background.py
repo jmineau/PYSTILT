@@ -179,9 +179,10 @@ def background(
         The simulation's particle table (``sim.particles``).
     field : xarray.DataArray or pandas.Series
         The background field, or one value per particle that you sampled
-        yourself, as a Series indexed by ``particle``. For example, lair's
-        ``CarbonTracker.sample`` on ``sim.particles.stilt.endpoints()``. A
-        field is sampled at each particle's endpoint, the row farthest in
+        yourself, as a Series indexed by ``particle``: for a model whose
+        levels vary in space, such as CarbonTracker, sample it at the
+        endpoints in ``sim.particles.stilt.endpoints()`` with your own
+        reader. A field is sampled at each particle's endpoint, the row farthest in
         time from release (``particles.stilt.endpoints()``). Its vertical
         dimension must be named after the particle column it is matched
         against: ``pres`` for pressure in hPa, ``zagl`` for height above
