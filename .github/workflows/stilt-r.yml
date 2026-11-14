@@ -160,10 +160,12 @@ jobs:
         env:
           STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
           STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
-        run: uv run pytest tests/ -v -m fidelity
+        # One worker per core; conftest.py keeps each scenario's tests on one
+        # worker, so its PYSTILT and STILT-R runs happen once.
+        run: uv run pytest tests/ -v -m fidelity -n auto --dist loadgroup
 
       - name: Run STILT-R synthetic footprint tests
         env:
           STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
           STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
-        run: uv run pytest tests/r_stilt -v -m r_only
+        run: uv run pytest tests/r_stilt -v -m r_only -n auto --dist loadgroup

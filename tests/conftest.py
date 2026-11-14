@@ -19,6 +19,26 @@ from .fixtures.factories import make_met_config
 
 integration = pytest.mark.integration
 
+# Parametrized fixtures that run HYSPLIT (and STILT-R) once per parameter for
+# several tests. CI runs the integration and STILT-R tests on several workers
+# (pytest-xdist, ``--dist loadgroup``); grouping keeps the tests of one parameter
+# on one worker, so each run still happens once.
+_SHARED_RUNS = ("scenario_outputs", "hysplit_run")
+
+
+def pytest_collection_modifyitems(items):
+    """Put the tests that share one run of a ``_SHARED_RUNS`` fixture in one xdist group."""
+    for item in items:
+        callspec = getattr(item, "callspec", None)
+        if callspec is None:
+            continue
+        for name in _SHARED_RUNS:
+            if name in callspec.params:
+                value = callspec.params[name]
+                group = f"{name}-{getattr(value, 'name', value)}"
+                item.add_marker(pytest.mark.xdist_group(group))
+
+
 # ---------------------------------------------------------------------------
 # Met directory
 # ---------------------------------------------------------------------------

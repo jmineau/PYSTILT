@@ -107,7 +107,9 @@ jobs:
       - name: Run integration tests
         env:
           STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
-        run: uv run pytest tests/ -v -m integration
+        # One worker per core (4 on ubuntu-latest); conftest.py groups the tests
+        # that share a HYSPLIT run.
+        run: uv run pytest tests/ -v -m integration -n auto --dist loadgroup
 
   package:
     name: Package smoke test
