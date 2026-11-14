@@ -12,8 +12,8 @@ name: Upgrade lock
 # GitHub Actions to create and approve pull requests".
 #
 # A pull request opened with the workflow's own token does not start the other
-# workflows, so this one starts Tests, Code Quality and Documentation on the
-# branch itself (workflow_dispatch is the one event the token may trigger); their
+# workflows, so this one starts Tests, Code Quality, Documentation and STILT-R
+# on the branch itself (workflow_dispatch is the one event the token may trigger); their
 # results show on the pull request.
 on:
   schedule:
@@ -65,7 +65,7 @@ jobs:
             grep -E '^(Added|Removed|Updated) ' "$RUNNER_TEMP/lock.log" || true
             echo '```'
             echo
-            echo "Tests, Code Quality and Documentation were started on this branch by the workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "Tests, Code Quality, Documentation and STILT-R were started on this branch by the workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo "Merge it when they pass."
           } > "$RUNNER_TEMP/body.md"
           echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -89,6 +89,6 @@ jobs:
             gh pr create --base main --head "$BRANCH" --title "chore(deps): upgrade uv.lock" \
               --body-file "$RUNNER_TEMP/body.md"
           fi
-          for workflow in tests.yml quality.yml docs.yml; do
+          for workflow in tests.yml quality.yml docs.yml stilt-r.yml; do
             gh workflow run "$workflow" --ref "$BRANCH"
           done

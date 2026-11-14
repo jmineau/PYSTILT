@@ -156,15 +156,17 @@ Driven by [`just`](https://github.com/casey/just) and
 ### Tests
 
 `just test` runs every test without one of three disjoint markers. Warnings
-are errors (a test that expects one uses `pytest.warns`). CI also runs
-`-m "integration or fidelity"` and `-m r_only`:
+are errors (a test that expects one uses `pytest.warns`). The STILT-R workflow
+(`stilt-r.yml`, about 30 minutes) runs `-m "integration or fidelity"` and
+`-m r_only`, only for changes to the paths listed at its top (most of
+`src/stilt/`, those tests, `uv.lock`, `pyproject.toml`, the workflow), and by hand:
 
 - `integration`: end to end with real met files and HYSPLIT. Needs
   `STILT_TEST_MET_DIR` (HRRR ARL files) or `STILT_TEST_FETCH_MET=1` (downloads
   seven 6 h blocks, 23.9 GB in all, and keeps 211 MB in the ignored
   `tests/met_cache/`); otherwise they skip.
 - `fidelity`: PYSTILT against STILT-R, both running HYSPLIT. Needs the met,
-  `STILT_R_DIR` (a STILT-R checkout built as `tests.yml` builds it), `Rscript`.
+  `STILT_R_DIR` (a STILT-R checkout built as `stilt-r.yml` builds it), `Rscript`.
 - `r_only`: STILT-R comparisons with no met or HYSPLIT (`STILT_R_DIR`, `Rscript`).
 
 Docstring examples (`>>>` lines under `src/`) run as tests too
