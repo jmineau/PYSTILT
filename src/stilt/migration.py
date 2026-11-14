@@ -45,7 +45,11 @@ from stilt.particles import check_particles
 from stilt.receptors import Receptor
 from stilt.spatial import Grid
 from stilt.transport import ModelInfo
-from stilt.transport.hysplit.config import WIND_ERROR_SETTINGS, ZI_ERROR_SETTINGS
+from stilt.transport.hysplit.config import (
+    FIXED_SETUP,
+    WIND_ERROR_SETTINGS,
+    ZI_ERROR_SETTINGS,
+)
 from stilt.transport.hysplit.namelist import read_namelist
 from stilt.transport.stilt_r import StiltRConfig, StiltRMetConfig, StiltRModel
 
@@ -767,7 +771,9 @@ def _hysplit_settings(folder: Path, control: ControlFile) -> tuple[dict[str, Any
     STILT-R writes ``SETUP.CFG`` again for its transport-error run, the same
     but for ``WINDERRTF``, so that flag is returned on its own. STILT-R
     writes no ``SEED``: HYSPLIT seeded its random numbers itself, which is
-    ``seed: null``.
+    ``seed: null``. The entries of
+    :data:`~stilt.transport.hysplit.config.FIXED_SETUP` are left out: they
+    cannot change the particles, and PYSTILT has no setting for them.
     """
     path = folder / _SETUP
     if not path.is_file():
@@ -775,6 +781,7 @@ def _hysplit_settings(folder: Path, control: ControlFile) -> tuple[dict[str, Any
             f"{folder} has no {_SETUP}, which holds the HYSPLIT settings of its run."
         )
     setup = read_namelist(path)
+    setup = {k: v for k, v in setup.items() if k not in FIXED_SETUP}
     unknown = sorted(set(setup) - set(StiltRConfig.model_fields) - set(_SETUP_ONLY))
     if unknown:
         raise ValueError(

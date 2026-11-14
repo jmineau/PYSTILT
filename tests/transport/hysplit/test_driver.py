@@ -16,6 +16,7 @@ from stilt.transport.hysplit import (
     read_particle_dat,
     write_inputs,
 )
+from stilt.transport.hysplit.config import FIXED_SETUP
 from stilt.transport.hysplit.control import ControlFile
 from stilt.transport.hysplit.driver import (
     MET_STOP_CELLS,
@@ -889,7 +890,7 @@ def test_setup_cfg_takes_kmsl_from_an_msl_receptor(tmp_path, point_receptor):
 def test_read_namelist_reads_the_setup_cfg_written(tmp_path, point_receptor):
     from stilt.transport.hysplit.namelist import read_namelist
 
-    config = HysplitConfig(numpar=150, dzf=0.01, wvert=True, efile="")
+    config = HysplitConfig(numpar=150, wvert=True)
     entries = read_namelist(_inputs(tmp_path, point_receptor, config) / "SETUP.CFG")
     assert entries["numpar"] == 150
     assert entries["dzf"] == 0.01
@@ -1233,7 +1234,12 @@ def test_hysplit_setup_types_cover_every_setup_entry():
 
 
 @pytest.mark.parametrize(
-    "name", [n for n, t in HYSPLIT_SETUP_TYPES.items() if t == "REAL"]
+    "name",
+    [
+        n
+        for n, t in HYSPLIT_SETUP_TYPES.items()
+        if t == "REAL" and n in HysplitConfig.model_fields
+    ],
 )
 def test_real_setup_fields_accept_fractions(name):
     # HYSPLIT reads these as REAL, so a fractional value is valid.
@@ -1252,6 +1258,43 @@ def test_integer_setup_fields_reject_fractions(name):
     # HYSPLIT stops with a namelist read error on a fractional INTEGER.
     with pytest.raises(ValidationError):
         HysplitConfig(**{name: 0.5})
+
+
+def test_fixed_setup_entries_are_written_and_are_no_settings():
+    entries = setup_entries(HysplitConfig())
+    for name, value in FIXED_SETUP.items():
+        assert name not in HysplitConfig.model_fields
+        assert entries[name] == value
+
+
+@pytest.mark.parametrize("name", ["delt", "ichem", "cmass", "khinp"])
+def test_a_fixed_setup_entry_is_refused_as_a_setting(name):
+    with pytest.raises(ValidationError, match=name):
+        HysplitConfig(**{name: FIXED_SETUP[name]})
+
+
+def test_setup_cfg_holds_the_entries_it_held_when_they_were_settings():
+    # Every SETUP.CFG entry and value from before the fixed ones stopped
+    # being settings: the default config, with a seed and maxpar.
+    before = {
+        "veght": 0.5, "numpar": 200, "capemin": -1, "cmass": 0, "conage": 48,
+        "cpack": 1, "delt": 1, "dxf": 1, "dyf": 1, "dzf": 0.01, "efile": "",
+        "frhmax": 3, "frhs": 1, "frme": 0.1, "frmr": 0, "frts": 0.1,
+        "frvs": 0.01, "hscale": 10800, "ichem": 8, "idsp": 2, "initd": 0,
+        "k10m": 1, "kagl": 1, "kbls": 1, "kblt": 5, "kdef": 0, "khinp": 0,
+        "khmax": 9999, "kmix0": 150, "kmixd": 3, "kpuff": 0, "krand": 2,
+        "krnd": 6, "kspl": 1, "kwet": 1, "kzmix": 0, "maxdim": 1,
+        "maxpar": 1000, "mgmin": 10, "mhrs": 9999, "nbptyp": 1, "ncycl": 0,
+        "ndump": 0, "ninit": 1, "nstr": 0, "nturb": 0, "nver": 0, "outdt": 0,
+        "p10f": 1, "pinbc": "", "pinpf": "", "poutf": "", "qcycle": 0,
+        "rhb": 80, "rht": 60, "seed": -4, "splitf": 1, "tkerd": 0.18,
+        "tkern": 0.18, "tlfrac": 0.1, "tout": 0, "tratio": 0.75, "tvmix": 1,
+        "vscale": 200, "vscaleu": 200, "vscales": -1, "wbbh": 0, "wbwf": 0,
+        "wbwr": 0, "wvert": False, "zicontroltf": 0,
+    }  # fmt: skip
+    entries = setup_entries(HysplitConfig(seed=3, krand=2, maxpar=1000))
+    entries.pop("varsiwant")
+    assert entries == before
 
 
 def test_setup_entries_map_seed_to_negative_namelist_value():
