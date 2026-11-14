@@ -339,8 +339,10 @@ def test_finish_computes_foot_from_the_met_files_the_run_read(
 
     seen = {}
 
-    def add_foot(particles, met_files, veght):
-        seen.update(met_files=met_files, veght=veght, time=particles["time"])
+    def add_foot(particles, met_files, veght, **mixed_layer):
+        seen.update(
+            met_files=met_files, veght=veght, time=particles["time"], **mixed_layer
+        )
         return particles.assign(foot=1.0)
 
     monkeypatch.setattr(transport, "add_foot", add_foot)
@@ -354,13 +356,15 @@ def test_finish_computes_foot_from_the_met_files_the_run_read(
 
     assert seen["met_files"] == met_files
     assert seen["veght"] == 0.3
+    assert seen["pbl_height"] is None
+    assert seen["pbl_height_min"] == 0.0
     assert seen["time"].tolist() == [
         pd.Timestamp("2023-01-01 11:59"),
         pd.Timestamp("2023-01-01 11:58"),
     ]
     assert "time" not in run.particles.columns
     assert run.particles["foot"].tolist() == [1.0, 1.0]
-    assert run.log.startswith("model log\nfoot computed by PYSTILT from the met's mlht")
+    assert run.log.startswith("model log\nfoot computed by PYSTILT from the met's PBLH")
     # foot is there, but not what the near-field correction reads besides it.
     assert "near-field correction skipped: no dens, mlht, samt, sigw, tlgr" in run.log
     assert "foot computed" in caplog.text
@@ -371,7 +375,7 @@ def test_finish_keeps_the_time_and_mlht_a_model_wrote(monkeypatch, tmp_path):
     from stilt.transport import TransportConfig, _finish
 
     monkeypatch.setattr(
-        transport, "add_foot", lambda p, files, veght: p.assign(foot=1.0)
+        transport, "add_foot", lambda p, files, veght, **k: p.assign(foot=1.0)
     )
     time = pd.Timestamp("2023-01-01 11:00")
     particles = _positions_only().assign(time=time, mlht=800.0)
@@ -412,6 +416,86 @@ def test_finish_keeps_the_foot_a_model_wrote(monkeypatch):
 
     assert run.particles["foot"].tolist() == [1e-3, 2e-3]
     assert run.log == ""
+
+
+def test_finish_with_pbl_height_set_replaces_the_foot_and_mlht_a_model_wrote(
+    monkeypatch, tmp_path
+):
+    from stilt import transport
+    from stilt.transport import TransportConfig, _finish
+
+    seen = {}
+
+    def add_foot(particles, met_files, veght, **mixed_layer):
+        seen.update(columns=list(particles.columns), **mixed_layer)
+        return particles.assign(foot=5.0, mlht=300.0)
+
+    monkeypatch.setattr(transport, "add_foot", add_foot)
+    particles = _positions_only().assign(foot=[1e-3, 2e-3], mlht=800.0)
+    run = _finish(
+        ModelRun(particles, met_files=[tmp_path / "met"]),
+        _receptor(),
+        TransportConfig(hnf_plume=False, pbl_height="richardson", pbl_height_min=150),
+    )
+
+    assert "foot" not in seen["columns"]
+    assert seen["pbl_height"] == "richardson"
+    assert seen["pbl_height_min"] == 150
+    assert run.particles["foot"].tolist() == [5.0, 5.0]
+    assert (
+        "foot computed by PYSTILT from the mixed layer found from the met's "
+        "profile (HYSPLIT's kmixd 3), at least 150 m, and the air below it"
+    ) in run.log
+    assert run.log.rstrip().endswith("in place of the model's foot and mlht")
+
+
+def test_finish_with_pbl_height_set_keeps_the_models_foot_without_met_files(
+    monkeypatch,
+):
+    from stilt import transport
+    from stilt.transport import TransportConfig, _finish
+
+    monkeypatch.setattr(
+        transport, "add_foot", lambda *a, **k: pytest.fail("computed foot")
+    )
+    particles = _positions_only().assign(foot=[1e-3, 2e-3])
+    run = _finish(
+        ModelRun(particles, met_files=[]),
+        _receptor(),
+        TransportConfig(hnf_plume=False, pbl_height=500),
+    )
+
+    assert run.particles["foot"].tolist() == [1e-3, 2e-3]
+    assert "pbl_height not applied" in run.log
+
+
+@pytest.mark.parametrize("value", [0, -10.0, "pblh"])
+def test_pbl_height_refuses_a_height_that_is_not_above_the_ground(value):
+    from pydantic import ValidationError
+
+    from stilt.transport import TransportConfig
+
+    with pytest.raises(ValidationError, match="pbl_height"):
+        TransportConfig(pbl_height=value)
+
+
+def test_pbl_height_min_refuses_a_negative_height():
+    from pydantic import ValidationError
+
+    from stilt.transport import TransportConfig
+
+    with pytest.raises(ValidationError, match="pbl_height_min"):
+        TransportConfig(pbl_height_min=-1)
+
+
+def test_pbl_height_is_recorded_only_when_set():
+    from stilt.transport import TransportConfig
+
+    unset = TransportConfig().settings()
+    assert "pbl_height" not in unset
+    assert "pbl_height_min" not in unset
+    assert TransportConfig(pbl_height="met").settings()["pbl_height"] == "met"
+    assert TransportConfig(pbl_height_min=150).settings()["pbl_height_min"] == 150
 
 
 def _receptor():

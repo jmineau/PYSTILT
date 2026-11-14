@@ -61,9 +61,47 @@ Which models write ``foot``:
   to the depth) and the output step. The run's log says so. A particle
   counts for the whole step when it ends the step below the layer, where
   HYSPLIT counts the minutes it spent there. Without the model's own
-  ``mlht``, the met's boundary-layer height is used, not the one HYSPLIT
-  finds from the profile. :doc:`/development/validation` says how far a
-  footprint moves.
+  ``mlht``, the met's boundary-layer height (``PBLH``) is used, not the one
+  HYSPLIT finds from the profile, unless ``pbl_height`` says otherwise.
+  :doc:`/development/validation` says how far a footprint moves.
+
+The mixed-layer height
+~~~~~~~~~~~~~~~~~~~~~~
+
+``foot`` depends on the mixed-layer height, the ``mlht`` column, through the
+depth surface fluxes are mixed through (``veght`` of it). The
+``pbl_height`` setting says where PYSTILT takes that height from when it
+computes ``foot``; ``pbl_height`` and ``mlht`` name the same quantity.
+
+.. code-block:: yaml
+
+   pbl_height: richardson   # or met, or a height in meters
+   pbl_height_min: 150      # the lowest height, in meters
+
+- **Unset** (the default), PYSTILT stays as close to the model as its
+  output allows: it keeps the model's ``foot`` (HYSPLIT's, which STILT-R
+  parity covers); for a model that writes no ``foot`` it uses the model's
+  ``mlht``, or the met's ``PBLH`` when the model wrote none.
+- **Set**, PYSTILT computes ``foot`` itself, with that height, for any
+  model's particles, HYSPLIT's included, and replaces the model's ``foot``
+  and ``mlht``. The run's log says which height it used. ``met`` is the
+  met's ``PBLH``; ``richardson`` finds the height from the met's profile
+  with a bulk Richardson number, as HYSPLIT's default ``kmixd: 3`` does
+  (:func:`stilt.sampling.calc_pbl_height`); a number is a fixed height in
+  meters above ground.
+
+``pbl_height_min`` keeps a height PYSTILT finds at least that many meters,
+as ``kmix0`` does for HYSPLIT, which keeps its own at least 150 m by
+default. It does not change a model's own ``mlht``.
+
+Every model moved its particles with its own mixed layer: HYSPLIT mixes
+them through the layer ``kmixd`` and ``kmix0`` choose. When PYSTILT
+computes ``foot``, the mixed layer it uses can differ from that one. To grid
+a model that writes only positions and HYSPLIT with the same mixed layer,
+so that only their transport differs, set both: ``pbl_height: richardson``
+and ``pbl_height_min: 150`` match HYSPLIT's defaults, and ``pbl_height:
+met`` with the same minimum matches a HYSPLIT run with ``kmixd: 0``.
+:doc:`/development/validation` gives how far each choice moves a footprint.
 
 The release row
 ---------------

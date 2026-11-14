@@ -114,8 +114,47 @@ afternoon 0.84 times. Against a HYSPLIT run that reads the met's ``PBLH``
 (``kmixd: 0``) the two heights match to a few percent, and what still moves
 the night footprints is the ``kmix0`` floor: below 150 m HYSPLIT mixes the
 flux through more air than the met's boundary layer holds. A transport
-model that writes only positions has no such floor, so its footprint
-follows the met's own boundary layer.
+model that writes only positions has no such floor unless
+``pbl_height_min`` sets one, so by default its footprint follows the met's
+own boundary layer.
+
+Choosing the mixed layer
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``pbl_height`` setting chooses the mixed-layer height PYSTILT computes
+``foot`` with (:doc:`/reference/particles`). On the same three runs, the
+footprint of the particles' positions alone moves this far from HYSPLIT's
+with its default mixed layer (``kmixd: 3``, ``kmix0: 150``), for 200
+particles (``tests/integration/test_foot.py``):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30 30
+
+   * - ``pbl_height``
+     - Footprint total
+     - Cells
+   * - ``met`` (the default for such a model)
+     - 0.5 to 25 % higher
+     - 11 to 61 %
+   * - ``met``, ``pbl_height_min: 150``
+     - 8 % lower to 13 % higher
+     - 11 to 43 %
+   * - ``richardson``, ``pbl_height_min: 150``
+     - within 1.0 %
+     - 1.7 to 2.4 %
+   * - ``1000`` (a fixed height in meters)
+     - 48 % lower to 2 % higher
+     - 14 to 106 %
+
+``richardson`` is HYSPLIT's own method ported
+(:func:`stilt.sampling.calc_pbl_height`): the height it finds, kept at
+least 150 m, has a median ratio of 0.999 to 1.000 to the ``mlht`` HYSPLIT
+wrote, and 73 to 94 % of rows are within 2 %; the lowest 5 % of ratios
+are 0.77 to 0.94, for reasons not yet looked into. With it, what is left of the
+difference is the whole-step counting above. The same setting applied to
+HYSPLIT's own particles replaces HYSPLIT's ``foot`` and gives the same
+footprint, since PYSTILT then ignores ``samt``.
 
 Pressure weighting
 ------------------

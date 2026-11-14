@@ -230,8 +230,10 @@ stored run records:
 How closely the sampled values match HYSPLIT's own is on
 :doc:`../development/validation`. A project run does this itself for a
 model whose particles have no ``foot``: it adds ``foot`` from the met
-files (:func:`stilt.particles.add_foot`), with the met's ``mlht`` when the
-model wrote none, so their footprints can be made.
+files (:func:`stilt.particles.add_foot`), with the model's ``mlht``, or the
+met's ``PBLH`` when the model wrote none, so their footprints can be made.
+The ``pbl_height`` setting chooses another mixed-layer height
+(:doc:`../reference/particles`).
 
 Empty footprints
 ----------------

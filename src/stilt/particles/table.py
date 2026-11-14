@@ -24,7 +24,7 @@ from stilt.receptors import (
     Receptor,
     parse_receptor_id,
 )
-from stilt.sampling import sample_met
+from stilt.sampling import calc_pbl_height, sample_met
 
 if TYPE_CHECKING:
     from upath import UPath
@@ -503,6 +503,8 @@ def add_foot(
     particles: pd.DataFrame,
     met_files: Iterable[str | os.PathLike[str]],
     veght: float,
+    pbl_height: str | float | None = None,
+    pbl_height_min: float = 0.0,
 ) -> pd.DataFrame:
     """
     Add ``foot``, each particle's sensitivity to surface fluxes, for a transport model that writes only positions.
@@ -525,6 +527,14 @@ def add_foot(
     since the particle's previous row, or since its release for its first
     row, so a release row at ``age = 0`` gets zero.
 
+    The mixed-layer height comes from *pbl_height*. Unset, a ``mlht``
+    column is used as it is, with ``samt``; without one, the met's
+    boundary-layer height is sampled. Set, ``mlht`` is replaced with the
+    height it names, and ``samt``, which counts the minutes below the
+    model's own layer, is not used. Every model moved its particles with
+    its own mixed layer, so a height found here can differ from the one the
+    particles were moved with.
+
     HYSPLIT computes ``foot`` itself in STILT mode, the same way in its
     turbulence steps. :doc:`/development/validation` says how far a
     footprint made from this ``foot`` is from one made from HYSPLIT's. The
@@ -535,9 +545,8 @@ def add_foot(
     ----------
     particles : pandas.DataFrame
         Particle table with ``time``, the receptor time plus ``age``
-        minutes. A ``mlht`` column (m above ground) is used as it is;
-        without one, the met's boundary-layer height is sampled at each
-        particle (:func:`stilt.sampling.sample_met`).
+        minutes. A ``mlht`` column (m above ground) is used as it is
+        unless *pbl_height* is set.
     met_files : iterable of path-like
         ARL met files that cover the particles' times, such as the files
         the run read. They are read on their own levels, which start at the
@@ -546,12 +555,22 @@ def add_foot(
         Height that surface fluxes are mixed through (STILT's ``veght``): a
         fraction of the mixed-layer height when 1 or less, else meters
         above ground.
+    pbl_height : {"met", "richardson"}, float, or None, default None
+        The mixed-layer height: ``"met"`` samples the met's ``PBLH``
+        (:func:`stilt.sampling.sample_met`), ``"richardson"`` finds it from
+        the met's profile as HYSPLIT's ``kmixd: 3`` does
+        (:func:`stilt.sampling.calc_pbl_height`), and a number is a fixed
+        height in meters. ``None`` uses the particles' ``mlht``, or the
+        met's ``PBLH`` when they have none.
+    pbl_height_min : float, default 0
+        Lowest mixed-layer height in meters, for a height found here rather
+        than the particles' own, as ``kmix0`` is for HYSPLIT.
 
     Returns
     -------
     pandas.DataFrame
         A copy of *particles* with ``foot``, and ``mlht`` when it was
-        sampled. A row off the met's grid gets NaN, which no footprint
+        found here. A row off the met's grid gets NaN, which no footprint
         counts.
 
     Raises
@@ -571,11 +590,13 @@ def add_foot(
             "The particles have a foot column already. Drop it first to compute it."
         )
     files = list(met_files)
-    out = particles
-    if "mlht" not in out.columns:
-        out = sample_met(out, files, ["mlht"], z_top=None)
-    else:
-        out = out.copy()
+    own_mlht = pbl_height is None and "mlht" in particles.columns
+    out = particles.copy()
+    if not own_mlht:
+        found = _pbl_height(
+            out.drop(columns="mlht", errors="ignore"), files, pbl_height
+        )
+        out["mlht"] = np.maximum(found, pbl_height_min)
     depth = np.broadcast_to(
         np.asarray(_mixing_depth(out["mlht"], veght), dtype=float), len(out)
     )
@@ -586,13 +607,29 @@ def add_foot(
     )
     pres = sample_met(ends, files, ["pres"], z_top=None)["pres"].to_numpy()
     air = 100.0 * (pres[: len(out)] - pres[len(out) :]) / _GRAVITY  # kg m⁻²
-    if "samt" in out.columns:
+    if own_mlht and "samt" in out.columns:
         minutes = out["samt"].to_numpy(dtype=float)
     else:
         below = out["zagl"].to_numpy(dtype=float) < depth
         minutes = np.where(below, _step_minutes(out), 0.0)
     out["foot"] = _MOLAR_MASS_DRY_AIR * minutes * 60 / air
     return out
+
+
+def _pbl_height(
+    particles: pd.DataFrame, files: list[Any], pbl_height: str | float | None
+) -> np.ndarray:
+    """Return the mixed-layer height at each row that *pbl_height* names, the met's ``PBLH`` for ``None``."""
+    if pbl_height is None or pbl_height == "met":
+        return sample_met(particles, files, ["mlht"], z_top=None)["mlht"].to_numpy()
+    if pbl_height == "richardson":
+        return calc_pbl_height(particles, files)
+    if isinstance(pbl_height, str):
+        raise ValueError(
+            "pbl_height must be met, richardson, or a height in meters; "
+            f"got {pbl_height!r}."
+        )
+    return np.full(len(particles), float(pbl_height))
 
 
 def _step_minutes(particles: pd.DataFrame) -> np.ndarray:

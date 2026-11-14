@@ -494,3 +494,49 @@ def test_sample_met_rejects_a_column_it_cannot_sample(tmp_path):
 
     with pytest.raises(ValueError, match="cannot sample"):
         sample_met(_particles_at([_T0], [100.0]), [met], columns=["foot"])
+
+
+def _richardson_column(heat: float, theta_top: float | None = None):
+    """
+    One column on 10 m levels: neutral air to 1000 m, stable above, and 5 m/s of shear above the lowest level.
+
+    Without the temperature excess, the bulk Richardson number from the
+    lowest level (10 m) is g (θ − θ₁)(z − 10) / (θ₁ · 25), which passes 0.25
+    at about 1019 m.
+    """
+    from stilt.sampling import _richardson_mixed_layer
+
+    zz = np.arange(10.0, 3001.0, 10.0)[None, :]
+    theta = 300.0 + 0.01 * np.clip(zz - 1000.0, 0.0, None)
+    if theta_top is not None:
+        theta = np.full_like(zz, theta_top)
+    uu = np.where(zz > 10.0, 5.0, 0.0)
+    return _richardson_mixed_layer(
+        zz,
+        theta,
+        uu,
+        np.zeros_like(zz),
+        np.ones_like(zz),
+        np.array([0.3]),
+        np.array([heat]),
+        ks=6,
+    )
+
+
+def test_richardson_mixed_layer_ends_where_the_bulk_richardson_number_passes_a_quarter():
+    stable = _richardson_column(heat=-20.0)
+
+    g = 9.80616
+    expected = (
+        1010 + np.sqrt(1010**2 + 4 * (0.25 * 300 * 25 / (g * 0.01) - 10000))
+    ) / 2
+    assert stable[0] == pytest.approx(expected, rel=0.005)
+
+
+def test_richardson_mixed_layer_is_deeper_in_unstable_air():
+    # Upward heat flux gives the rising air a temperature excess.
+    assert _richardson_column(heat=200.0)[0] > _richardson_column(heat=-20.0)[0] + 20
+
+
+def test_richardson_mixed_layer_without_a_crossing_is_the_second_highest_level():
+    assert _richardson_column(heat=-20.0, theta_top=300.0)[0] == pytest.approx(2990.0)
