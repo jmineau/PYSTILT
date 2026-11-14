@@ -20,6 +20,13 @@ which the reader relies on:
   released, released in that same step, or gone for more than one output
   step has -1 in every field at that time.
 - ``z`` is height above ground in meters, ``prs`` pressure in Pa.
+- On GFS, FLEXPART gives its lowest level, the ground, the pressure,
+  density, temperature, and wind of the lowest GFS pressure level above
+  the terrain (``verttransform_mod.f90``), so ``prs`` and ``rho`` near the
+  ground are those of that level. At 1767 m, where GFS's surface pressure
+  was 817 hPa, FLEXPART's ``prs`` at the ground was about 792 hPa. A
+  ``foot`` from GFS's own columns (:func:`stilt.sampling.sample_grib_pressure`)
+  avoids it.
 """
 
 from __future__ import annotations

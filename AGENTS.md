@@ -124,7 +124,7 @@ only when the core reads it. Config classes do no I/O when they validate;
   see `stilt._paths`. A local output must stay as fast: time a large listing.
 - **Identity is content.** PYSTILT never deletes or overwrites a results folder.
 - **The CLI stays thin.** Orchestration does not belong in `cli.py`.
-- **Meteorology I/O goes through [arlmet](https://github.com/jmineau/arl-met).**
+- **ARL met I/O goes through [arlmet](https://github.com/jmineau/arl-met)**; GRIB (GFS, for FLEXPART) through cfgrib.
 - **Bundled HYSPLIT is package data** (Linux and macOS x86-64), reached via
   `importlib.resources`, never a repo path. Each wheel carries only its
   platform's `hycs_std`, the sdist none. A new platform needs a case in

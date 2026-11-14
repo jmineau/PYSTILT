@@ -24,7 +24,12 @@ from stilt.receptors import (
     Receptor,
     parse_receptor_id,
 )
-from stilt.sampling import calc_pbl_height, sample_met
+from stilt.sampling import (
+    calc_pbl_height,
+    is_grib,
+    sample_grib_pressure,
+    sample_met,
+)
 
 if TYPE_CHECKING:
     from upath import UPath
@@ -522,9 +527,9 @@ def add_foot(
     dry air, t the time in seconds, and ρ̄ the mean air density below the
     depth. ρ̄ · depth, the mass of air in the layer, is the drop in pressure
     from the ground to the depth over g, from the met files under the
-    particle. Without met files, as for a transport model whose met PYSTILT
-    cannot read (FLEXPART's GRIB), it is the particle's own ``dens`` times
-    the depth. That density is at the particle, not the mean below the
+    particle: ARL files through arlmet, or GFS GRIB files, which FLEXPART
+    reads, through cfgrib (:func:`stilt.sampling.sample_grib_pressure`).
+    Without met files it is the particle's own ``dens`` times the depth. That density is at the particle, not the mean below the
     depth. Air thins by about 10 % per kilometer, so a particle near the
     depth of a deep mixed layer gets a ``foot`` a few percent too large, and
     one near the ground a little too small. The time is
@@ -556,9 +561,11 @@ def add_foot(
         unless *pbl_height* is set. Without met files it needs ``dens``
         (kg m⁻³), and ``mlht`` unless *pbl_height* is a height.
     met_files : iterable of path-like
-        ARL met files that cover the particles' times, such as the files
-        the run read. They are read on their own levels, which start at the
-        ground. Empty to use the particles' own ``dens``.
+        ARL or GFS GRIB met files that cover the particles' times, such as
+        the files the run read. ARL files are read on their own levels,
+        which start at the ground. Empty to use the particles' own ``dens``.
+        With GRIB files the mixed layer must be the particles' ``mlht`` or
+        *pbl_height* in meters.
     veght : float
         Height that surface fluxes are mixed through (STILT's ``veght``): a
         fraction of the mixed-layer height when 1 or less, else meters
@@ -590,7 +597,8 @@ def add_foot(
     ValueError
         If *particles* has a ``foot`` column already, has no ``time``
         column, or has a row outside the files' times; or, without met
-        files, if it has no ``dens``, or *pbl_height* asks for the met.
+        files, if it has no ``dens``; or, without met files or with GRIB
+        files, if *pbl_height* asks for the met.
 
     Examples
     --------
@@ -604,17 +612,18 @@ def add_foot(
         )
     files = list(met_files)
     own_mlht = pbl_height is None and "mlht" in particles.columns
-    if not files:
-        if isinstance(pbl_height, str) or (pbl_height is None and not own_mlht):
-            raise ValueError(
-                "Without met files, foot needs the particles' own mlht or "
-                "pbl_height in meters."
-            )
-        if "dens" not in particles.columns:
-            raise ValueError(
-                "Without met files, foot needs the particles' dens column, "
-                "the air density at each particle."
-            )
+    grib = bool(files) and is_grib(files[0])
+    needs_met = isinstance(pbl_height, str) or (pbl_height is None and not own_mlht)
+    if (not files or grib) and needs_met:
+        raise ValueError(
+            f"{'With GRIB' if grib else 'Without'} met files, foot needs the "
+            "particles' own mlht or pbl_height in meters."
+        )
+    if not files and "dens" not in particles.columns:
+        raise ValueError(
+            "Without met files, foot needs the particles' dens column, "
+            "the air density at each particle."
+        )
     out = particles.copy()
     if not own_mlht:
         found = _pbl_height(
@@ -630,7 +639,10 @@ def add_foot(
         ends = pd.concat(
             [where.assign(zagl=0.0), where.assign(zagl=depth)], ignore_index=True
         )
-        pres = sample_met(ends, files, ["pres"], z_top=None)["pres"].to_numpy()
+        if grib:
+            pres = sample_grib_pressure(ends, files)
+        else:
+            pres = sample_met(ends, files, ["pres"], z_top=None)["pres"].to_numpy()
         air = 100.0 * (pres[: len(out)] - pres[len(out) :]) / _GRAVITY  # kg m⁻²
     else:
         air = out["dens"].to_numpy(dtype=float) * depth  # kg m⁻²
