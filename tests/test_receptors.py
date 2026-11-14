@@ -324,6 +324,17 @@ def test_receptor_time_aware_input_normalizes_to_naive_utc():
     assert r.time.tzinfo is None
 
 
+def test_receptor_time_with_nanoseconds_is_cut_to_microseconds():
+    # satellite readers give nanosecond times (OCO-2: float seconds since 1970)
+    r = PointReceptor(
+        time=pd.Timestamp("2026-02-08T19:37:37.282009602"),
+        longitude=-94.91,
+        latitude=29.22,
+        altitude=5.0,
+    )
+    assert r.time == dt.datetime(2026, 2, 8, 19, 37, 37, 282009)
+
+
 def test_receptor_equality():
     r1 = PointReceptor(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
