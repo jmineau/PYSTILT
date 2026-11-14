@@ -20,7 +20,7 @@ Pinned upstream commit
    * - Pinned SHA
      - ``278b1ef6d542efd21c6ccab2a85b796acd9812a6``
    * - Pin location
-     - ``.github/workflows/tests.yml`` (env ``STILT_R_SHA``)
+     - ``.github/workflows/stilt-r.yml`` (env ``STILT_R_SHA``)
    * - Last verified
      - 2026-11-08
 
@@ -196,9 +196,9 @@ What does not match
   ``test_msl_hnf_foot_intentionally_differs_from_r`` guards the difference.
 - **Untested inputs.** Runs longer than 24 h backward, latitudes above 80°,
   and grids finer than 0.001° have not been compared.
-- **Other STILT-R commits.** Nothing detects upstream changes to
-  ``calc_footprint.r``, ``permute.f90``, ``calc_trajectory.r``, or
-  ``calc_plume_dilution.r``. Bump the pinned SHA by hand (below).
+- **Other STILT-R commits.** The fidelity tests run only against the pinned
+  commit. Once a month a workflow looks for newer upstream commits and opens
+  a pull request that moves the pin (below).
 
 Large-scale comparison
 ----------------------
@@ -243,7 +243,19 @@ lists the next met file for a run that ends partway through a file
 Moving to a newer STILT-R commit
 --------------------------------
 
-#. Change ``STILT_R_SHA`` in ``.github/workflows/tests.yml``.
+On the 2nd of each month the Upgrade STILT-R workflow
+(``.github/workflows/stilt-r-upgrade.yml``) looks for ``uataq/stilt`` commits
+after the pin. When one touches a file the comparison runs (anything in
+``r/src/``, which the R helpers source whole, ``bin/linux_x64/hycs_std``, or
+``exe/``), it opens the ``chore/stilt-r-upgrade`` pull request, which moves
+the pin to the newest commit, sets "Last verified", lists the upstream
+commits, and starts the STILT-R workflow on its branch. Commits that touch
+only other files open nothing. Merge the pull request when STILT-R passes;
+when a fidelity test fails, work through the steps below on its branch.
+
+To move the pin by hand:
+
+#. Change ``STILT_R_SHA`` in ``.github/workflows/stilt-r.yml``.
 #. Run the fidelity tests locally:
 
    .. code-block:: bash
