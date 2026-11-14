@@ -198,6 +198,78 @@ forbidden_modules = [
 ]
 allow_indirect_imports = true
 
+# The core that makes particle runs (receptors and variants, settings
+# folders, completion by file, run and submit, the met catalog, the transport
+# models) is kept apart from what STILT adds on top of the particles:
+# footprints, transforms, observations, sampling fields at particles,
+# background, transport error, and the STILT-R model. Nothing is moved here:
+# the crossings below are the work a code boundary would leave, and a new one
+# fails this contract. Not seen: a package's __init__ importing its own module
+# (stilt.particles re-exports background and transport error; the transport
+# registry imports the STILT-R model), and the near-field correction and
+# add_foot, which are functions in stilt.particles.table. The package's
+# __init__ re-exports the public names, so it is not a source. Imports used
+# only for type hints do not count.
+[[tool.importlinter.contracts]]
+name = "The particle-run core does not import what STILT adds on top"
+type = "forbidden"
+source_modules = ["stilt.*"]
+forbidden_modules = [
+    "stilt.footprint",
+    "stilt.transforms",
+    "stilt.observations",
+    "stilt.sampling",
+    "stilt.transport.stilt_r",
+    "stilt.particles.background",
+    "stilt.particles.transport_error",
+]
+ignore_imports = [
+    # Imports within STILT's side. The observation layer sits above
+    # everything (the layers contract holds that); the STILT-R reader reads
+    # imported runs' footprints and records them under the STILT-R model.
+    "stilt.footprint.** -> stilt.footprint.**",
+    "stilt.footprint.** -> stilt.transforms",
+    "stilt.footprint.** -> stilt.sampling",
+    "stilt.transforms.** -> stilt.transforms.**",
+    "stilt.observations.** -> stilt.**",
+    "stilt.particles.background -> stilt.sampling",
+    "stilt.migration -> stilt.footprint.config",
+    "stilt.migration -> stilt.footprint.io",
+    "stilt.migration -> stilt.transport.stilt_r",
+    # Background and transport error live in the particles package, and the
+    # transform checks in stilt.check; moving them cuts these.
+    "stilt.particles.background -> stilt.transforms",
+    "stilt.particles.transport_error -> stilt.transforms",
+    "stilt.check -> stilt.transforms.averaging_kernel",
+    "stilt.check -> stilt.transforms.pressure_weighting",
+    # Sampling fields at particles: add_foot reads the met with sample_met,
+    # and the particle accessor samples a field.
+    "stilt.particles.table -> stilt.sampling",
+    "stilt.particles.accessor -> stilt.sampling",
+    # A variant's optional footprint settings and its footprint targets.
+    "stilt.config -> stilt.footprint.config",
+    "stilt.config -> stilt.footprint.targets",
+    # The footprint settings and the transform records name a settings folder.
+    "stilt.identity -> stilt.footprint.config",
+    "stilt.identity -> stilt.transforms",
+    # Writing and listing footprint files; completion counts them.
+    "stilt.output -> stilt.footprint",
+    # sim.footprint, sim.background and sim.transport_error.
+    "stilt.simulation -> stilt.footprint.config",
+    "stilt.simulation -> stilt.footprint.gridding",
+    "stilt.simulation -> stilt.footprint.io",
+    "stilt.simulation -> stilt.particles.background",
+    "stilt.simulation -> stilt.particles.transport_error",
+    # The footprint step after the particles.
+    "stilt.execution.worker -> stilt.footprint",
+    # Project.footprints(), Project.jacobian() and Project.transport_error().
+    "stilt.project -> stilt.footprint",
+    "stilt.project -> stilt.footprint.aggregation",
+    "stilt.project -> stilt.footprint.io",
+    "stilt.project -> stilt.particles.transport_error",
+]
+allow_indirect_imports = true
+
 [tool.pyrefly]
 project-includes = ["src"]
 python-version = "3.11"  # as CI checks, against the oldest supported Python

@@ -322,6 +322,21 @@ results and runs nothing. STILT-R ran HYSPLIT, so the STILT-R reader and the
 ``stilt-r`` model are the named exceptions: they read HYSPLIT's ``CONTROL``
 and ``SETUP.CFG`` files and record HYSPLIT's settings.
 
+A third short contract holds the line between the core that makes particle
+runs and what STILT adds on top of the particles: footprints, transforms,
+observations, sampling fields at particles, background, transport error and
+the STILT-R model. Outside those modules nothing imports them, except where
+the contract's ``ignore_imports`` lists it, each with its reason: the
+variant's footprint settings, the output and ``Simulation`` code that writes
+and reads footprint files, the worker's footprint step, ``Project``'s bulk
+reads, the background and transport-error modules that live in the particles
+package, and ``add_foot``'s use of ``sample_met``. The list is the work a code
+boundary would leave; a new crossing fails ``just imports``. Two crossings
+are not imports between modules, so the contract cannot see them: the
+near-field correction and ``add_foot`` are functions in
+``stilt.particles.table``, and a package's ``__init__`` importing its own
+module (the transport registry and the STILT-R model) is not checked.
+
 Configuration
 -------------
 
