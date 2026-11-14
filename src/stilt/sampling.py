@@ -303,9 +303,7 @@ def sample_met(
         internal levels depend on it. A stored run records it:
         ``particles_metadata(path).settings["z_top"]``. ``None`` reads the
         met's own levels, for a transport model that is not HYSPLIT; a row
-        below their lowest or above their top is then NaN. Terrain-following
-        (flag 3) files are read on their own levels, not on the internal levels
-        HYSPLIT puts them on, and take only the default or ``None``.
+        below their lowest or above their top is then NaN.
 
     Returns
     -------
@@ -318,8 +316,7 @@ def sample_met(
     ValueError
         If a column is not one of the four or is in *particles* already
         (drop it first), *particles* has no ``time`` column, a row is outside
-        the files' times, or *z_top* is not positive or, on a terrain-following
-        file, is not the default or ``None``.
+        the files' times, or *z_top* is not positive.
     KeyError
         If the files lack a variable a column needs.
 
@@ -367,15 +364,9 @@ def sample_met(
             np.concatenate([position, position[later]]), columns=["lon", "lat", "z"]
         )
         points["time"] = np.concatenate([before, after[later]])
-        # arlmet ignores its own default on a terrain-following file, where a
-        # value it is passed raises (jmineau/arl-met#153), so the default is not
-        # passed.
-        if z_top == _DEFAULT_Z_TOP:
-            sampled = arlmet.sample_points(handles, points, variables, z_kind="agl")
-        else:
-            sampled = arlmet.sample_points(
-                handles, points, variables, z_kind="agl", model_top=z_top
-            )
+        sampled = arlmet.sample_points(
+            handles, points, variables, z_kind="agl", model_top=z_top
+        )
     finally:
         for handle in handles:
             handle.close()
@@ -505,10 +496,6 @@ def calc_pbl_height(
     """
     import arlmet
 
-    # arlmet does not make HYSPLIT's internal levels public yet; the sampling
-    # below uses the same ones (jmineau/arl-met: a public internal_levels).
-    from arlmet.ops.sample import _InternalLevels
-
     if "time" not in particles.columns:
         raise ValueError(
             "calc_pbl_height needs a 'time' column: the receptor time plus 'age' minutes."
@@ -551,8 +538,8 @@ def calc_pbl_height(
         columns = both.dropna(subset=["i", "j"]).drop_duplicates(subset=key)
         columns = columns.reset_index(drop=True)
 
-        levels = _InternalLevels.for_axis(first.vertical_axis, z_top)
-        heights = np.asarray(levels.heights, dtype=float)
+        levels = arlmet.internal_levels(first, model_top=z_top)
+        heights = levels.heights
         ground = arlmet.sample_points(
             handles,
             columns[["lon", "lat", "time"]].assign(z=0.0),
@@ -562,10 +549,7 @@ def calc_pbl_height(
             model_top=z_top,
         )
         # The internal levels above each column's ground, (columns, levels).
-        zz = (
-            heights[None, :]
-            * levels.scale(ground["SHGT"].to_numpy(dtype=float))[:, None]
-        )
+        zz = levels.heights_at(ground["SHGT"].to_numpy(dtype=float))
         n_col, n_lev = zz.shape
         at_levels = pd.DataFrame(
             {

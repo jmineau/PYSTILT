@@ -59,9 +59,7 @@ HYSPLIT's own columns:
 
 On one of those runs with a 10 km top, ``z_top=10000`` gives a median
 ``pres`` difference of 0.024 hPa against 0.032 for the default 25 km, and
-about 0.29 hPa at the 95th percentile with either. Terrain-following files
-(flag 3) are read on their own levels rather than HYSPLIT's internal ones,
-so their values differ more, by an amount not measured.
+about 0.29 hPa at the 95th percentile with either.
 
 ``foot`` for a model that writes only positions
 ------------------------------------------------
