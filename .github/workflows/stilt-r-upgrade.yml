@@ -7,7 +7,7 @@ name: Upgrade STILT-R
 # Dockerfile) open nothing: the pin moves past them with the next real change.
 #
 # The pull request also moves the pin in docs/development/stilt_r_parity.rst and
-# sets its "Last verified" date. Merge it when the STILT-R workflow passes; when it
+# sets its "Last verified" date. Merge it when the STILT-R parity workflow passes; when it
 # fails, follow "Moving to a newer STILT-R commit" in that page.
 #
 # A pull request opened with the workflow's own token does not start the other
@@ -119,7 +119,7 @@ jobs:
             echo
             cat "$RUNNER_TEMP/commits.md"
             echo
-            echo "STILT-R and Documentation were started on this branch by the workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "STILT-R parity and Documentation were started on this branch by the workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo "Merge it when they pass. If a fidelity test fails, follow \"Moving to a newer STILT-R commit\" in \`docs/development/stilt_r_parity.rst\`."
           } > "$RUNNER_TEMP/body.md"
           echo "new=$new" >> "$GITHUB_OUTPUT"
