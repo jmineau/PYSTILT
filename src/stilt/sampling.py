@@ -15,7 +15,8 @@ not convert units. A flux in µmol m⁻² s⁻¹ times a footprint in ppm per
 
 :func:`sample_met` samples ARL met files at particle positions, for the
 particle columns a transport model can write from the met (``mlht``,
-``dens``, ``pres``, ``zsfc``).
+``dens``, ``pres``, ``zsfc``), and :func:`calc_pbl_height` finds the
+mixed-layer height from the met's profile, as HYSPLIT does by default.
 """
 
 from __future__ import annotations
@@ -281,7 +282,8 @@ def sample_met(
     ``pres`` and ``dens`` follow what HYSPLIT reads, to the differences
     :doc:`/development/validation` gives. ``mlht`` is the met's: HYSPLIT's is the
     met's ``PBLH`` only with ``kmixd: 0``, and then it is at least ``kmix0``;
-    the default, ``kmixd: 3``, finds the mixed layer from the profile.
+    the default, ``kmixd: 3``, finds the mixed layer from the profile, as
+    :func:`calc_pbl_height` does.
 
     Parameters
     ----------
@@ -424,7 +426,270 @@ def _bracket(
     return t0.to_numpy(), t1.to_numpy(), weight.astype(float)
 
 
+#: HYSPLIT's constants for the mixed layer (``stbcon.f``): gravity in m s⁻²,
+#: von Kármán's constant, and the heat capacity of air in J kg⁻¹ K⁻¹.
+_HYSPLIT_GRAV = 9.80616
+_VON_KARMAN = 0.4
+_CP = 1005.0
+#: The top of HYSPLIT's surface layer, in m above ground (``metlvl.f``).
+_SURFACE_LAYER_TOP = 75.0
+#: The bulk Richardson number at the top of the mixed layer (``stbanl.f``).
+_CRITICAL_RICHARDSON = 0.25
+
+
+def calc_pbl_height(
+    particles: pd.DataFrame,
+    files: Iterable[str | os.PathLike[str]],
+    *,
+    z_top: float = _DEFAULT_Z_TOP,
+) -> np.ndarray:
+    """
+    Return the mixed-layer height at each particle, found from the met's profile as HYSPLIT's ``kmixd: 3`` finds it.
+
+    This is HYSPLIT's default way to find the mixed layer, ported from its
+    source (``stbanl.f``, Holtslag and Boville, 1993). Going up the column,
+    the mixed layer ends where the bulk Richardson number between the
+    lowest level and the level reached passes 0.25::
+
+        Ri = g · (θ(z) − θ₁ − θₑ) · (z − z₁) / ((θ₁ + θₑ) · |V(z) − V₁|²)
+
+    with θ the potential temperature, V the horizontal wind, and level 1
+    HYSPLIT's lowest internal level. θₑ, the temperature excess of rising
+    air, is ``8.5 u* θ* / (u*³ + 0.6 w*³)^(1/3)`` in unstable air and 0
+    otherwise, with the friction velocity ``u*`` (``USTR``) and the
+    friction temperature ``θ*`` from the sensible heat flux (``SHTF``) at
+    the ground. The height is interpolated to where Ri is 0.25.
+
+    HYSPLIT computes the height at each met grid point and met time; a
+    particle takes the nearest grid point's height at the met times before
+    and after it, linear in time. So does this function, on HYSPLIT's
+    internal levels for a run with the top *z_top*. It applies no minimum:
+    HYSPLIT's ``kmix0`` is ``pbl_height_min`` in PYSTILT. A column with no
+    height where Ri reaches 0.25 gets the second-highest internal level,
+    as in HYSPLIT. :doc:`/development/validation` says how close it comes
+    to the ``mlht`` HYSPLIT writes.
+
+    Parameters
+    ----------
+    particles : pandas.DataFrame
+        A particle table with ``lon``, ``lat``, and ``time``.
+    files : iterable of path-like
+        ARL met files that cover the particles' times, with ``TEMP``,
+        ``PRES``, ``UWND``, ``VWND`` and ``SHGT``, the sensible heat flux
+        ``SHTF``, and the friction velocity ``USTR`` or the momentum fluxes
+        ``UMOF`` and ``VMOF``.
+    z_top : float, default 25000
+        The top of the domain in meters, which sets HYSPLIT's internal
+        levels (``z_top`` of :class:`stilt.transport.hysplit.HysplitConfig`).
+
+    Returns
+    -------
+    numpy.ndarray
+        The mixed-layer height at each row, in m above ground. A row off
+        the met's grid is NaN.
+
+    Raises
+    ------
+    ValueError
+        If *particles* has no ``time`` column or a row is outside the
+        files' times.
+    KeyError
+        If the files lack a variable it needs.
+
+    Examples
+    --------
+    >>> meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP
+    >>> mlht = stilt.sampling.calc_pbl_height(
+    ...     sim.particles, meta.met_files
+    ... )  # doctest: +SKIP
+    """
+    import arlmet
+
+    # arlmet does not make HYSPLIT's internal levels public yet; the sampling
+    # below uses the same ones (jmineau/arl-met: a public internal_levels).
+    from arlmet.ops.sample import _InternalLevels
+
+    if "time" not in particles.columns:
+        raise ValueError(
+            "calc_pbl_height needs a 'time' column: the receptor time plus 'age' minutes."
+        )
+    handles = [arlmet.File(path) for path in files]
+    try:
+        first = handles[0]
+        names = {r.variable for h in handles for r in h.records}
+        momentum = ["USTR"] if "USTR" in names else ["UMOF", "VMOF"]
+        missing = sorted(
+            {"TEMP", "PRES", "UWND", "VWND", "SHGT", "SHTF", *momentum} - names
+        )
+        if missing:
+            raise KeyError(
+                f"calc_pbl_height needs the met variables {missing}, which the "
+                "files lack."
+            )
+        met_times = pd.DatetimeIndex(sorted({t for h in handles for t in h.times}))
+        before, after, weight = _bracket(met_times, pd.DatetimeIndex(particles["time"]))
+
+        # One column per met grid point and met time, at the nearest grid point.
+        x, y = first.grid.fractional_indices(
+            particles["lon"].to_numpy(dtype=float),
+            particles["lat"].to_numpy(dtype=float),
+        )
+        rows = pd.DataFrame(
+            {
+                "i": np.rint(x),
+                "j": np.rint(y),
+                "lon": particles["lon"].to_numpy(dtype=float),
+                "lat": particles["lat"].to_numpy(dtype=float),
+            }
+        )
+        later = weight > 0
+        both = pd.concat(
+            [rows.assign(time=before), rows[later].assign(time=after[later])],
+            ignore_index=True,
+        )
+        key = ["i", "j", "time"]
+        columns = both.dropna(subset=["i", "j"]).drop_duplicates(subset=key)
+        columns = columns.reset_index(drop=True)
+
+        levels = _InternalLevels.for_axis(first.vertical_axis, z_top)
+        heights = np.asarray(levels.heights, dtype=float)
+        ground = arlmet.sample_points(
+            handles,
+            columns[["lon", "lat", "time"]].assign(z=0.0),
+            ["SHGT", "SHTF", *momentum],
+            z_kind="agl",
+            method="nearest",
+            model_top=z_top,
+        )
+        # The internal levels above each column's ground, (columns, levels).
+        zz = (
+            heights[None, :]
+            * levels.scale(ground["SHGT"].to_numpy(dtype=float))[:, None]
+        )
+        n_col, n_lev = zz.shape
+        at_levels = pd.DataFrame(
+            {
+                "lon": np.repeat(columns["lon"].to_numpy(), n_lev),
+                "lat": np.repeat(columns["lat"].to_numpy(), n_lev),
+                "time": np.repeat(columns["time"].to_numpy(), n_lev),
+                "z": zz.ravel(),
+            }
+        )
+        profile_variables = ["TEMP", "PRES", "UWND", "VWND"]
+        if "SPHU" in names:
+            profile_variables.append("SPHU")
+        profile = arlmet.sample_points(
+            handles,
+            at_levels,
+            profile_variables,
+            z_kind="agl",
+            method="nearest",
+            model_top=z_top,
+        )
+    finally:
+        for handle in handles:
+            handle.close()
+
+    def grid(name: str) -> np.ndarray:
+        return profile[name].to_numpy(dtype=float).reshape(n_col, n_lev)
+
+    temp, pres, uu, vv = grid("TEMP"), grid("PRES"), grid("UWND"), grid("VWND")
+    sphu = grid("SPHU") if "SPHU" in profile_variables else np.zeros_like(temp)
+    theta = temp * (1000.0 / pres) ** 0.286
+    density = 100.0 * pres / (_R_DRY * temp * (1.0 + 0.61 * sphu))
+    ks = max(int(np.sum(heights <= _SURFACE_LAYER_TOP)), 1) - 1
+    if "USTR" in momentum:
+        ustar = np.maximum(ground["USTR"].to_numpy(dtype=float), 0.0001)
+    else:
+        # u* from the momentum fluxes, as stbanl does without USTR, with the
+        # density of its lowest level above the first.
+        def component(flux: str) -> np.ndarray:
+            f = ground[flux].to_numpy(dtype=float)
+            rho = density[:, min(max(1, ks), n_lev - 1)]
+            return np.sign(f) * np.maximum(0.01, np.sqrt(np.abs(f) / rho))
+
+        ustar = np.hypot(component("UMOF"), component("VMOF"))
+    heat = ground["SHTF"].to_numpy(dtype=float)
+    if first.source.strip() == "ETA":
+        heat = -heat  # NAM's (ETA's) flux is positive downward (prfcom.f)
+    zmix = _richardson_mixed_layer(zz, theta, uu, vv, density, ustar, heat, ks)
+
+    # Each row takes its grid point's height at the met times around it.
+    columns["zmix"] = zmix
+    found = both.merge(columns[[*key, "zmix"]], on=key, how="left")["zmix"]
+    value = found.to_numpy(dtype=float)
+    n = len(particles)
+    out = value[:n].copy()
+    w = weight[later]
+    out[later] = (1.0 - w) * out[later] + w * value[n:]
+    return out
+
+
+def _richardson_mixed_layer(
+    zz: np.ndarray,
+    theta: np.ndarray,
+    uu: np.ndarray,
+    vv: np.ndarray,
+    density: np.ndarray,
+    ustar: np.ndarray,
+    heat: np.ndarray,
+    ks: int,
+) -> np.ndarray:
+    """
+    Return the mixed-layer height of each column, as ``stbanl.f`` finds it for ``kmixd: 3``.
+
+    *zz* (m above ground), *theta* (potential temperature, K), *uu* and
+    *vv* (m s⁻¹) and *density* (kg m⁻³) are ``(columns, levels)`` on the
+    internal levels; *ustar* (m s⁻¹) and *heat*, the sensible heat flux
+    (W m⁻², positive upward), are per column; *ks* is the index of the top
+    of the surface layer. The stability at the top of the surface layer
+    comes from the fluxes, and the temperature excess from it in unstable
+    air.
+    """
+    n_col, n_lev = zz.shape
+    heat = np.maximum(-25.0, heat)
+    tstar = np.sign(-heat) * np.maximum(
+        0.0001, np.abs(heat / (density[:, ks] * _CP * ustar))
+    )
+    zl = zz[:, ks] * _VON_KARMAN * _HYSPLIT_GRAV * tstar / (ustar**2 * theta[:, ks])
+    unstable = np.clip(zl, -2.0, 15.0) < 0
+
+    # Up the column until Ri passes 0.25, interpolating to where it is 0.25.
+    zmix = zz[:, 0].copy()
+    ri = np.zeros(n_col)
+    done = np.zeros(n_col, dtype=bool)
+    for k in range(1, n_lev):
+        go = ~done & (ri < _CRITICAL_RICHARDSON)
+        done |= ~go
+        if not go.any():
+            break
+        tstk = tstar * density[:, ks] / density[:, k]
+        wstar = np.abs(_HYSPLIT_GRAV * ustar * tstk * zz[:, k] / theta[:, 0]) ** (1 / 3)
+        excess = np.where(
+            unstable,
+            np.abs(8.5 * ustar * tstk / (ustar**3 + 0.6 * wstar**3) ** (1 / 3)),
+            0.0,
+        )
+        t1 = theta[:, 0] + excess
+        du = np.maximum(0.0001, (uu[:, k] - uu[:, 0]) ** 2 + (vv[:, k] - vv[:, 0]) ** 2)
+        old = ri
+        new = _HYSPLIT_GRAV * (theta[:, k] - t1) * (zz[:, k] - zz[:, 0]) / t1 / du
+        with np.errstate(divide="ignore", invalid="ignore"):
+            crossed = (zz[:, k] - zz[:, k - 1]) / (new - old) * (
+                _CRITICAL_RICHARDSON - old
+            ) + zz[:, k - 1]
+        zmix = np.where(go, np.where(new == old, zz[:, k], crossed), zmix)
+        ri = np.where(go, new, ri)
+    if n_lev >= 2:
+        # No crossing below the top: the second-highest level, as in HYSPLIT;
+        # and always a little above the lowest level.
+        zmix = np.minimum(zmix, zz[:, -2])
+        zmix = np.maximum(zmix, zz[:, 0] + (zz[:, 1] - zz[:, 0]) / 1000.0)
+    return zmix
+
+
 __all__ = [
+    "calc_pbl_height",
     "nearest_cell",
     "sample_field",
     "sample_met",

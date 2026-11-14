@@ -1108,3 +1108,53 @@ def test_add_foot_gives_nan_off_the_mets_grid(met):
 def test_add_foot_refuses_a_table_that_has_foot(met):
     with pytest.raises(ValueError, match="foot column already"):
         add_foot(_positions(foot=1.0), ["met"], veght=0.5)
+
+
+def test_add_foot_with_a_fixed_pbl_height_replaces_mlht_and_ignores_samt(met):
+    particles = _positions(samt=[0.5, 1.0, 0.0, 0.25])
+    out = add_foot(particles, ["met"], veght=1.0, pbl_height=500.0)
+
+    assert out["mlht"].tolist() == [500.0] * 4
+    # samt counts the minutes below the model's own layer, so it is not used.
+    np.testing.assert_allclose(out["foot"], [_ONE_MINUTE_IN_500_M] * 3 + [0.0])
+    assert [call[0] for call in met["calls"]] == [["pres"]]
+
+
+def test_add_foot_with_pbl_height_met_samples_pblh_over_the_models_mlht(met):
+    out = add_foot(_positions(mlht=300.0), ["met"], veght=0.5, pbl_height="met")
+
+    assert out["mlht"].tolist() == [1000.0] * 4
+    assert [call[0] for call in met["calls"]] == [["mlht"], ["pres"]]
+
+
+def test_add_foot_keeps_a_height_it_finds_at_least_pbl_height_min(met):
+    out = add_foot(
+        _positions().drop(columns="mlht"), ["met"], veght=0.5, pbl_height_min=1200.0
+    )
+
+    assert out["mlht"].tolist() == [1200.0] * 4
+
+
+def test_add_foot_applies_no_minimum_to_the_models_own_mlht(met):
+    out = add_foot(_positions(mlht=300.0), ["met"], veght=0.5, pbl_height_min=1200.0)
+
+    assert out["mlht"].tolist() == [300.0] * 4
+
+
+def test_add_foot_with_pbl_height_richardson_finds_it_from_the_profile(
+    met, monkeypatch
+):
+    from stilt.particles import table
+
+    seen = {}
+
+    def calc_pbl_height(particles, files):
+        seen.update(columns=list(particles.columns), files=files)
+        return np.full(len(particles), 400.0)
+
+    monkeypatch.setattr(table, "calc_pbl_height", calc_pbl_height)
+    out = add_foot(_positions(), ["met"], veght=0.5, pbl_height="richardson")
+
+    assert "mlht" not in seen["columns"]
+    assert seen["files"] == ["met"]
+    assert out["mlht"].tolist() == [400.0] * 4

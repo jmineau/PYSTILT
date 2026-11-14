@@ -58,7 +58,7 @@ MESSAGE_TAIL_LINES = 20
 CONTROL_SETTINGS = ("n_hours", "emisshrs", "w_option", "z_top")
 
 #: Settings PYSTILT uses itself, in no HYSPLIT input file.
-PYSTILT_SETTINGS = ("hnf_plume", "exe_dir", "data_dir")
+PYSTILT_SETTINGS = ("hnf_plume", "pbl_height", "pbl_height_min", "exe_dir", "data_dir")
 
 #: Every setting that is not a ``SETUP.CFG`` entry. All other settings are.
 NOT_IN_SETUP = frozenset(

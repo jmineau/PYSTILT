@@ -18,7 +18,7 @@ import logging
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, Self
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -150,10 +150,62 @@ class TransportConfig(BaseModel):
             "Realization ``k`` of a variant runs with ``seed + k``."
         ),
     )
+    pbl_height: Literal["met", "richardson"] | float | None = Field(
+        None,
+        description=(
+            "How PYSTILT finds the mixed-layer height (``mlht``) when it "
+            "computes ``foot``: ``met`` reads the met's ``PBLH``, ``richardson`` "
+            "finds it from the met's profile as HYSPLIT's default ``kmixd: 3`` "
+            "does, and a number is a fixed height in meters above ground. Set, "
+            "PYSTILT computes ``foot`` for any model's particles, HYSPLIT's "
+            "included. Unset, it keeps the model's ``foot``; for a model that "
+            "writes none it uses the model's ``mlht``, or else the met's "
+            "``PBLH``."
+        ),
+    )
+    pbl_height_min: float = Field(
+        0.0,
+        description=(
+            "Lowest mixed-layer height, in meters, for a height PYSTILT finds "
+            "itself (``pbl_height``, or the met's ``PBLH`` when unset), as "
+            "``kmix0`` is for HYSPLIT. 0 sets no minimum."
+        ),
+    )
+
+    #: PYSTILT's own settings that a run records only when they are not at
+    #: their defaults, so that adding them moved no stored run to a new
+    #: settings folder.
+    RECORDED_WHEN_SET: ClassVar[frozenset[str]] = frozenset(
+        {"pbl_height", "pbl_height_min"}
+    )
+
+    @field_validator("pbl_height")
+    @classmethod
+    def _pbl_height_is_positive(
+        cls, pbl_height: str | float | None
+    ) -> str | float | None:
+        """Refuse a fixed mixed-layer height that is not above the ground."""
+        if isinstance(pbl_height, float) and not pbl_height > 0:
+            raise ValueError(
+                "pbl_height must be met, richardson, or a height above 0 m."
+            )
+        return pbl_height
+
+    @field_validator("pbl_height_min")
+    @classmethod
+    def _pbl_height_min_is_not_negative(cls, pbl_height_min: float) -> float:
+        """Refuse a negative minimum mixed-layer height."""
+        if pbl_height_min < 0:
+            raise ValueError("pbl_height_min must be 0 m or more.")
+        return pbl_height_min
 
     def settings(self) -> dict[str, Any]:
-        """Return what a run records of this config: every field but the :attr:`UNRECORDED` ones."""
-        return self.model_dump(mode="json", exclude=set(self.UNRECORDED))
+        """Return what a run records of this config: every field but the :attr:`UNRECORDED` ones, and those of :attr:`RECORDED_WHEN_SET` only when set."""
+        data = self.model_dump(mode="json", exclude=set(self.UNRECORDED))
+        for name in self.RECORDED_WHEN_SET:
+            if getattr(self, name) == type(self).model_fields[name].default:
+                data.pop(name, None)
+        return data
 
     def realizations(self, n: int) -> list[Self]:
         """
@@ -511,7 +563,7 @@ def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> Model
     check_particles(run.particles)
     particles = add_release_heights(run.particles, receptor)
     log = run.log
-    if "foot" not in particles.columns:
+    if "foot" not in particles.columns or config.pbl_height is not None:
         particles, note = _computed_foot(particles, receptor, config, run.met_files)
         logger.info("%s: %s", receptor.id, note)
         log = f"{log}{note}\n"
@@ -540,29 +592,55 @@ def _computed_foot(
     Return *particles* with ``foot`` (:func:`stilt.particles.add_foot`), and a log line saying how it was made.
 
     ``foot`` needs the met files the run read, for the air below the mixing
-    depth, and for ``mlht`` when the model did not write it. Without them,
-    the particles are returned as they are and the line says so: a
-    footprint from them then fails for want of ``foot``.
+    depth, and for ``mlht`` when PYSTILT finds it. Without them, the
+    particles are returned as they are and the line says so: a footprint
+    from them then fails for want of ``foot``, or, with ``pbl_height`` set,
+    uses the model's own. With ``pbl_height`` set, the model's ``foot`` and
+    ``mlht`` are replaced.
     """
+    replaced = "foot" in particles.columns
     if not met_files:
+        if replaced:
+            return particles, (
+                "pbl_height not applied: the transport model named no met files "
+                "to compute foot from, so its own foot is kept"
+            )
         return particles, (
             "no foot: the transport model wrote none, and named no met files "
             "to compute it from"
         )
-    sampled_mlht = "mlht" not in particles.columns
+    if replaced:
+        particles = particles.drop(columns="foot")
+    pbl_height = config.pbl_height
+    if pbl_height is None and "mlht" in particles.columns:
+        mlht = "the model's mlht"
+    elif pbl_height is None or pbl_height == "met":
+        mlht = "the met's PBLH"
+    elif pbl_height == "richardson":
+        mlht = "the mixed layer found from the met's profile (HYSPLIT's kmixd 3)"
+    else:
+        mlht = f"a mixed layer of {pbl_height:g} m"
+    if config.pbl_height_min > 0 and mlht != "the model's mlht":
+        mlht += f", at least {config.pbl_height_min:g} m,"
     added_time = "time" not in particles.columns
     if added_time:
         particles = particles.assign(
             time=pd.Timestamp(receptor.time)
             + pd.to_timedelta(particles["age"].to_numpy(), unit="min")
         )
-    particles = add_foot(particles, met_files, config.veght)
+    particles = add_foot(
+        particles,
+        met_files,
+        config.veght,
+        pbl_height=pbl_height,
+        pbl_height_min=config.pbl_height_min,
+    )
     if added_time:
         particles = particles.drop(columns="time")
-    mlht = "the met's mlht" if sampled_mlht else "the model's mlht"
+    instead = " in place of the model's foot and mlht" if replaced else ""
     return particles, (
         f"foot computed by PYSTILT from {mlht} and the air below it in the met "
-        "files (stilt.particles.add_foot)"
+        f"files (stilt.particles.add_foot){instead}"
     )
 
 

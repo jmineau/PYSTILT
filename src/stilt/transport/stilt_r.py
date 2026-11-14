@@ -54,9 +54,14 @@ class StiltRConfig(HysplitConfig):
     @model_validator(mode="before")
     @classmethod
     def _every_setting_given(cls, data: Any) -> Any:
-        """Require every recorded setting: an imported run has no defaults."""
+        """Require every recorded setting: an imported run has no defaults, but those recorded only when set may be left out."""
         if isinstance(data, dict):
-            missing = sorted(set(cls.model_fields) - cls.UNRECORDED - set(data))
+            missing = sorted(
+                set(cls.model_fields)
+                - cls.UNRECORDED
+                - cls.RECORDED_WHEN_SET
+                - set(data)
+            )
             if missing:
                 raise ValueError(
                     f"An imported STILT-R run gives every setting, and these are "
