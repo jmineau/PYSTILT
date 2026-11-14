@@ -228,7 +228,10 @@ stored run records:
    )
 
 How closely the sampled values match HYSPLIT's own is on
-:doc:`../development/validation`.
+:doc:`../development/validation`. A project run does this itself for a
+model whose particles have no ``foot``: it adds ``foot`` from the met
+files (:func:`stilt.particles.add_foot`), with the met's ``mlht`` when the
+model wrote none, so their footprints can be made.
 
 Empty footprints
 ----------------

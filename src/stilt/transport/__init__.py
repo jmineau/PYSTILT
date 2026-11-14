@@ -27,6 +27,7 @@ from stilt.exceptions import SimulationError
 from stilt.meteorology import run_window
 from stilt.particles import (
     HNF_PLUME_COLUMNS,
+    add_foot,
     add_release_heights,
     check_particles,
     correct_near_field,
@@ -394,11 +395,13 @@ def run_model(
 
     The particles are checked against the particle table
     (:func:`stilt.particles.check_particles`), get their release heights
-    (:func:`stilt.particles.add_release_heights`), and, when
+    (:func:`stilt.particles.add_release_heights`), ``foot`` when the model
+    wrote none (:func:`stilt.particles.add_foot`), and, when
     ``config.hnf_plume`` is set, the near-field correction
     (:func:`stilt.particles.correct_near_field`). These steps are PYSTILT's,
-    the same for any model. A model whose particles lack the columns the
-    correction reads gets none, and the run's log says so.
+    the same for any model. ``foot`` is computed from the met files the run
+    read, and the run's log says so. A model whose particles lack the
+    columns the correction reads gets none, and the run's log says so too.
 
     Parameters
     ----------
@@ -488,7 +491,7 @@ def run_model_many(
 
 def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> ModelRun:
     """
-    Return *run* with its particles checked, their release heights, and the near-field correction.
+    Return *run* with its particles checked, their release heights, ``foot``, and the near-field correction.
 
     Particles that stop before the end of the run are kept: the transport
     model fails a run cut short by its meteorology itself, and particles
@@ -507,6 +510,11 @@ def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> Model
         )
     check_particles(run.particles)
     particles = add_release_heights(run.particles, receptor)
+    log = run.log
+    if "foot" not in particles.columns:
+        particles, note = _computed_foot(particles, receptor, config, run.met_files)
+        logger.info("%s: %s", receptor.id, note)
+        log = f"{log}{note}\n"
     if config.hnf_plume:
         # A receptor above sea level also needs the terrain, to start the plume
         # at the ground (correct_near_field).
@@ -517,9 +525,45 @@ def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> Model
         if missing:
             note = f"near-field correction skipped: no {', '.join(missing)} columns"
             logger.warning("%s: %s", receptor.id, note)
-            return replace(run, particles=particles, log=f"{run.log}{note}\n")
+            return replace(run, particles=particles, log=f"{log}{note}\n")
         particles = correct_near_field(particles, receptor, config.veght)
-    return replace(run, particles=particles)
+    return replace(run, particles=particles, log=log)
+
+
+def _computed_foot(
+    particles: pd.DataFrame,
+    receptor: Receptor,
+    config: TransportConfig,
+    met_files: list[Path],
+) -> tuple[pd.DataFrame, str]:
+    """
+    Return *particles* with ``foot`` (:func:`stilt.particles.add_foot`), and a log line saying how it was made.
+
+    ``foot`` needs the met files the run read, for the air below the mixing
+    depth, and for ``mlht`` when the model did not write it. Without them,
+    the particles are returned as they are and the line says so: a
+    footprint from them then fails for want of ``foot``.
+    """
+    if not met_files:
+        return particles, (
+            "no foot: the transport model wrote none, and named no met files "
+            "to compute it from"
+        )
+    sampled_mlht = "mlht" not in particles.columns
+    added_time = "time" not in particles.columns
+    if added_time:
+        particles = particles.assign(
+            time=pd.Timestamp(receptor.time)
+            + pd.to_timedelta(particles["age"].to_numpy(), unit="min")
+        )
+    particles = add_foot(particles, met_files, config.veght)
+    if added_time:
+        particles = particles.drop(columns="time")
+    mlht = "the met's mlht" if sampled_mlht else "the model's mlht"
+    return particles, (
+        f"foot computed by PYSTILT from {mlht} and the air below it in the met "
+        "files (stilt.particles.add_foot)"
+    )
 
 
 def run_trajectories(
