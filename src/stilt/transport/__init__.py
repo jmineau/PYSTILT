@@ -592,16 +592,25 @@ def _computed_foot(
     Return *particles* with ``foot`` (:func:`stilt.particles.add_foot`), and a log line saying how it was made.
 
     ``foot`` needs the met files the run read, for the air below the mixing
-    depth, and for ``mlht`` when PYSTILT finds it. Without them, the
-    particles are returned as they are and the line says so: a footprint
-    from them then fails for want of ``foot``, or, with ``pbl_height`` set,
-    uses the model's own. With ``pbl_height`` set, the model's ``foot`` and
+    depth, and for ``mlht`` when PYSTILT finds it. Without them, it is made
+    from the model's own ``dens`` and ``mlht`` (or ``pbl_height`` in
+    meters), as for FLEXPART, whose met files PYSTILT does not read. With
+    neither, the particles are returned as they are and the line says so: a
+    footprint from them then fails for want of ``foot``, or, with
+    ``pbl_height`` set, uses the model's own. With ``pbl_height`` set, the model's ``foot`` and
     ``mlht`` are replaced. ``pbl_height: richardson`` works on HYSPLIT's
     internal levels, for the run's own ``z_top`` when the model has one
     (HYSPLIT's), else for HYSPLIT's default top.
     """
     replaced = "foot" in particles.columns
-    if not met_files:
+    pbl_height = config.pbl_height
+    own_air = (
+        not met_files
+        and "dens" in particles.columns
+        and not isinstance(pbl_height, str)
+        and (pbl_height is not None or "mlht" in particles.columns)
+    )
+    if not met_files and not own_air:
         if replaced:
             return particles, (
                 "pbl_height not applied: the transport model named no met files "
@@ -613,7 +622,6 @@ def _computed_foot(
         )
     if replaced:
         particles = particles.drop(columns="foot")
-    pbl_height = config.pbl_height
     if pbl_height is None and "mlht" in particles.columns:
         mlht = "the model's mlht"
     elif pbl_height is None or pbl_height == "met":
@@ -641,9 +649,10 @@ def _computed_foot(
     if added_time:
         particles = particles.drop(columns="time")
     instead = " in place of the model's foot and mlht" if replaced else ""
+    air = "the model's dens" if own_air else "the air below it in the met files"
     return particles, (
-        f"foot computed by PYSTILT from {mlht} and the air below it in the met "
-        f"files (stilt.particles.add_foot){instead}"
+        f"foot computed by PYSTILT from {mlht} and {air} "
+        f"(stilt.particles.add_foot){instead}"
     )
 
 

@@ -7,7 +7,7 @@ import netCDF4
 import numpy as np
 import pytest
 
-from stilt.particles import check_particles
+from stilt.particles import add_foot, check_particles
 from stilt.transport.flexpart import read_partoutput
 
 RECEPTOR_TIME = dt.datetime(2023, 6, 1, 18)
@@ -69,6 +69,19 @@ def test_reads_flexpart_output(tmp_path):
     assert 0 < first["zagl"] < 100
     assert first["pres"] == pytest.approx(806, abs=5)
     assert {"mlht", "dens", "temp", "sphu", "zsfc", "pv"} <= set(particles.columns)
+
+
+def test_foot_from_flexpart_output():
+    particles = read_partoutput(SAMPLE, RECEPTOR_TIME)
+
+    foot = add_foot(particles, [], veght=0.5)["foot"]
+
+    below = particles["zagl"] < 0.5 * particles["mlht"]
+    assert below.any() and (~below).any()
+    assert (foot[~below] == 0).all()
+    # A whole hour below half the mixed layer, divided by the air in it.
+    expected = 0.02897 * 3600 / (particles["dens"] * 0.5 * particles["mlht"])
+    np.testing.assert_allclose(foot[below], expected[below])
 
 
 def backward_fields():

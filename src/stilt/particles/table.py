@@ -522,7 +522,13 @@ def add_foot(
     dry air, t the time in seconds, and ρ̄ the mean air density below the
     depth. ρ̄ · depth, the mass of air in the layer, is the drop in pressure
     from the ground to the depth over g, from the met files under the
-    particle. The time is ``samt`` when the table has it. Otherwise the
+    particle. Without met files, as for a transport model whose met PYSTILT
+    cannot read (FLEXPART's GRIB), it is the particle's own ``dens`` times
+    the depth. That density is at the particle, not the mean below the
+    depth. Air thins by about 10 % per kilometer, so a particle near the
+    depth of a deep mixed layer gets a ``foot`` a few percent too large, and
+    one near the ground a little too small. The time is
+    ``samt`` when the table has it. Otherwise the
     particle counts for the whole step when it is below the depth at the
     end of the step, and not at all when it is above. A step is the time
     since the particle's previous row, or since its release for its first
@@ -547,11 +553,12 @@ def add_foot(
     particles : pandas.DataFrame
         Particle table with ``time``, the receptor time plus ``age``
         minutes. A ``mlht`` column (m above ground) is used as it is
-        unless *pbl_height* is set.
+        unless *pbl_height* is set. Without met files it needs ``dens``
+        (kg m⁻³), and ``mlht`` unless *pbl_height* is a height.
     met_files : iterable of path-like
         ARL met files that cover the particles' times, such as the files
         the run read. They are read on their own levels, which start at the
-        ground.
+        ground. Empty to use the particles' own ``dens``.
     veght : float
         Height that surface fluxes are mixed through (STILT's ``veght``): a
         fraction of the mixed-layer height when 1 or less, else meters
@@ -582,7 +589,8 @@ def add_foot(
     ------
     ValueError
         If *particles* has a ``foot`` column already, has no ``time``
-        column, or has a row outside the files' times.
+        column, or has a row outside the files' times; or, without met
+        files, if it has no ``dens``, or *pbl_height* asks for the met.
 
     Examples
     --------
@@ -596,6 +604,17 @@ def add_foot(
         )
     files = list(met_files)
     own_mlht = pbl_height is None and "mlht" in particles.columns
+    if not files:
+        if isinstance(pbl_height, str) or (pbl_height is None and not own_mlht):
+            raise ValueError(
+                "Without met files, foot needs the particles' own mlht or "
+                "pbl_height in meters."
+            )
+        if "dens" not in particles.columns:
+            raise ValueError(
+                "Without met files, foot needs the particles' dens column, "
+                "the air density at each particle."
+            )
     out = particles.copy()
     if not own_mlht:
         found = _pbl_height(
@@ -605,13 +624,16 @@ def add_foot(
     depth = np.broadcast_to(
         np.asarray(_mixing_depth(out["mlht"], veght), dtype=float), len(out)
     )
-    # The pressure at the ground and at the depth, in one call.
-    where = out[["lon", "lat", "time"]]
-    ends = pd.concat(
-        [where.assign(zagl=0.0), where.assign(zagl=depth)], ignore_index=True
-    )
-    pres = sample_met(ends, files, ["pres"], z_top=None)["pres"].to_numpy()
-    air = 100.0 * (pres[: len(out)] - pres[len(out) :]) / _GRAVITY  # kg m⁻²
+    if files:
+        # The pressure at the ground and at the depth, in one call.
+        where = out[["lon", "lat", "time"]]
+        ends = pd.concat(
+            [where.assign(zagl=0.0), where.assign(zagl=depth)], ignore_index=True
+        )
+        pres = sample_met(ends, files, ["pres"], z_top=None)["pres"].to_numpy()
+        air = 100.0 * (pres[: len(out)] - pres[len(out) :]) / _GRAVITY  # kg m⁻²
+    else:
+        air = out["dens"].to_numpy(dtype=float) * depth  # kg m⁻²
     if own_mlht and "samt" in out.columns:
         minutes = out["samt"].to_numpy(dtype=float)
     else:

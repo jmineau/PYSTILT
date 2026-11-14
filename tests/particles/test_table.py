@@ -1110,6 +1110,39 @@ def test_add_foot_refuses_a_table_that_has_foot(met):
         add_foot(_positions(foot=1.0), ["met"], veght=0.5)
 
 
+def test_add_foot_without_met_files_uses_the_particles_own_density(met):
+    # Density 2 halves the foot of density 1, with no met read.
+    foot = add_foot(_positions(dens=2.0), [], veght=0.5)["foot"]
+
+    np.testing.assert_allclose(foot, [_ONE_MINUTE_IN_500_M / 2] * 3 + [0.0])
+    assert met["calls"] == []
+
+
+def test_add_foot_without_met_files_takes_a_fixed_pbl_height(met):
+    particles = _positions(dens=1.0).drop(columns="mlht")
+    out = add_foot(particles, [], veght=1.0, pbl_height=500.0)
+
+    assert out["mlht"].tolist() == [500.0] * 4
+    np.testing.assert_allclose(out["foot"], [_ONE_MINUTE_IN_500_M] * 3 + [0.0])
+    assert met["calls"] == []
+
+
+def test_add_foot_without_met_files_needs_dens(met):
+    with pytest.raises(ValueError, match="dens column"):
+        add_foot(_positions(), [], veght=0.5)
+
+
+@pytest.mark.parametrize("pbl_height", ["met", "richardson"])
+def test_add_foot_without_met_files_refuses_a_mixed_layer_from_the_met(met, pbl_height):
+    with pytest.raises(ValueError, match="own mlht or pbl_height in meters"):
+        add_foot(_positions(dens=1.0), [], veght=0.5, pbl_height=pbl_height)
+
+
+def test_add_foot_without_met_files_needs_a_mixed_layer(met):
+    with pytest.raises(ValueError, match="own mlht or pbl_height in meters"):
+        add_foot(_positions(dens=1.0).drop(columns="mlht"), [], veght=0.5)
+
+
 def test_add_foot_with_a_fixed_pbl_height_replaces_mlht_and_ignores_samt(met):
     particles = _positions(samt=[0.5, 1.0, 0.0, 0.25])
     out = add_foot(particles, ["met"], veght=1.0, pbl_height=500.0)

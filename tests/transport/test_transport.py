@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -402,6 +403,24 @@ def test_finish_says_why_there_is_no_foot_without_met_files():
 
     assert "foot" not in run.particles.columns
     assert "no foot: the transport model wrote none, and named no met files" in run.log
+
+
+def test_finish_computes_foot_from_the_models_own_air_without_met_files():
+    from stilt.transport import TransportConfig, _finish
+
+    particles = _positions_only().assign(dens=1.0, mlht=1000.0)
+    run = _finish(
+        ModelRun(particles, met_files=[]),
+        _receptor(),
+        TransportConfig(hnf_plume=False, veght=0.5),
+    )
+
+    # One minute below 500 m of air of density 1; the second row is above.
+    np.testing.assert_allclose(run.particles["foot"], [0.02897 * 60 / 500, 0.0])
+    assert "time" not in run.particles.columns
+    assert "foot computed by PYSTILT from the model's mlht and the model's dens" in (
+        run.log
+    )
 
 
 def test_finish_keeps_the_foot_a_model_wrote(monkeypatch):
