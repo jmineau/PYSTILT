@@ -40,7 +40,7 @@ _SLV_BBOX = (-114.0, 39.0, -110.0, 42.0)  # (west, south, east, north)
 # Individual 6h HRRR blocks needed by all 12 fidelity scenarios.
 # Each entry is a (block_start, block_end) pair that maps to exactly one file.
 # Winter blocks cover day_backward (24h), which needs blocks from the previous day.
-# Bump the GHA cache key in tests.yml when you add blocks here.
+# Bump the GHA cache key in stilt-r.yml (and docs.yml) when you add blocks here.
 _MET_BLOCKS: list[tuple[str, str]] = [
     # Winter 2021-01-15 (includes day_backward 24h)
     ("2021-01-14 06:00", "2021-01-14 11:59"),

@@ -49,7 +49,7 @@ jobs:
         run: uv sync --locked
 
       # The Getting Started page runs a real simulation on the met files the
-      # tests cache: the same cache and key as tests.yml.
+      # tests cache: the same cache and key as stilt-r.yml.
       - name: Restore HRRR met cache
         id: met-cache
         uses: actions/cache/restore@v6

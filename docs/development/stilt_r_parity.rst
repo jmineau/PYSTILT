@@ -20,7 +20,7 @@ Pinned upstream commit
    * - Pinned SHA
      - ``278b1ef6d542efd21c6ccab2a85b796acd9812a6``
    * - Pin location
-     - ``.github/workflows/tests.yml`` (env ``STILT_R_SHA``)
+     - ``.github/workflows/stilt-r.yml`` (env ``STILT_R_SHA``)
    * - Last verified
      - 2026-11-08
 
@@ -243,7 +243,7 @@ lists the next met file for a run that ends partway through a file
 Moving to a newer STILT-R commit
 --------------------------------
 
-#. Change ``STILT_R_SHA`` in ``.github/workflows/tests.yml``.
+#. Change ``STILT_R_SHA`` in ``.github/workflows/stilt-r.yml``.
 #. Run the fidelity tests locally:
 
    .. code-block:: bash
