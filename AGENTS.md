@@ -96,9 +96,10 @@ soundings into receptors, then a run goes as usual. Keep it out of `project.py`.
 
 The import contracts in `pyproject.toml` (`just imports`) hold this shape: an
 exhaustive `layers` contract (a new top-level module fails until placed), only
-`stilt.transport` imports HYSPLIT's package, and the project config reads no
-results and runs nothing. Slurm tasks rebuild the project in another process,
-so anything a worker needs must be in the project or the output directory.
+`stilt.transport` imports HYSPLIT's package, the project config reads no results
+and runs nothing, and the core imports STILT's side only where the contract
+lists it. Slurm tasks rebuild the project in another process, so anything a worker
+needs must be in the project or the output directory.
 
 `ProjectConfig` holds the transport model (`hysplit` unless set), its
 parameters and the footprint fields as flat defaults, `mets`, and `variants`.
