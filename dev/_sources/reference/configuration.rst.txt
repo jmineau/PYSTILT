@@ -132,8 +132,8 @@ They are flat, top-level keys. HYSPLIT's are in
 :class:`stilt.transport.hysplit.HysplitConfig`, under HYSPLIT's names (see
 :doc:`hysplit`). A variant that names another ``model`` gives that model's
 parameters itself, and inherits the met, the footprint settings, and the
-parameters PYSTILT reads itself (``n_hours``, ``seed``, ``hnf_plume``, and
-``veght``).
+parameters PYSTILT reads itself (``n_hours``, ``seed``, ``hnf_plume``,
+``veght``, ``pbl_height``, and ``pbl_height_min``).
 
 
 Geometry specifications

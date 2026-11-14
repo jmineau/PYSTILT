@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=84aa85af"></script>
+    <script src="../../_static/documentation_options.js?v=485db8e3"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev20+g721d91684" />
+  <meta name="docsearch:version" content="0.1.0a29.dev24+g16c64dc56" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -467,7 +467,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">replace</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Protocol</span><span class="p">,</span> <span class="n">Self</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Protocol</span><span class="p">,</span> <span class="n">Self</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">field_validator</span>
@@ -607,12 +607,64 @@
             <span class="s2">"Realization ``k`` of a variant runs with ``seed + k``."</span>
         <span class="p">),</span>
     <span class="p">)</span>
+    <span class="n">pbl_height</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"met"</span><span class="p">,</span> <span class="s2">"richardson"</span><span class="p">]</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"How PYSTILT finds the mixed-layer height (``mlht``) when it "</span>
+            <span class="s2">"computes ``foot``: ``met`` reads the met's ``PBLH``, ``richardson`` "</span>
+            <span class="s2">"finds it from the met's profile as HYSPLIT's default ``kmixd: 3`` "</span>
+            <span class="s2">"does, and a number is a fixed height in meters above ground. Set, "</span>
+            <span class="s2">"PYSTILT computes ``foot`` for any model's particles, HYSPLIT's "</span>
+            <span class="s2">"included. Unset, it keeps the model's ``foot``; for a model that "</span>
+            <span class="s2">"writes none it uses the model's ``mlht``, or else the met's "</span>
+            <span class="s2">"``PBLH``."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">pbl_height_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Lowest mixed-layer height, in meters, for a height PYSTILT finds "</span>
+            <span class="s2">"itself (``pbl_height``, or the met's ``PBLH`` when unset), as "</span>
+            <span class="s2">"``kmix0`` is for HYSPLIT. 0 sets no minimum."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="c1">#: PYSTILT's own settings that a run records only when they are not at</span>
+    <span class="c1">#: their defaults, so that adding them moved no stored run to a new</span>
+    <span class="c1">#: settings folder.</span>
+    <span class="n">RECORDED_WHEN_SET</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+        <span class="p">{</span><span class="s2">"pbl_height"</span><span class="p">,</span> <span class="s2">"pbl_height_min"</span><span class="p">}</span>
+    <span class="p">)</span>
+
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"pbl_height"</span><span class="p">)</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pbl_height_is_positive</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">pbl_height</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse a fixed mixed-layer height that is not above the ground."""</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pbl_height</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">pbl_height</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"pbl_height must be met, richardson, or a height above 0 m."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">pbl_height</span>
+
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"pbl_height_min"</span><span class="p">)</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pbl_height_min_is_not_negative</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">pbl_height_min</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse a negative minimum mixed-layer height."""</span>
+        <span class="k">if</span> <span class="n">pbl_height_min</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"pbl_height_min must be 0 m or more."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pbl_height_min</span>
 
 <div class="viewcode-block" id="TransportConfig.settings">
 <a class="viewcode-back" href="../../reference/_api/stilt.transport.TransportConfig.settings.html#stilt.TransportConfig.settings">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""Return what a run records of this config: every field but the :attr:`UNRECORDED` ones."""</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">UNRECORDED</span><span class="p">))</span></div>
+<span class="w">        </span><span class="sd">"""Return what a run records of this config: every field but the :attr:`UNRECORDED` ones, and those of :attr:`RECORDED_WHEN_SET` only when set."""</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">UNRECORDED</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">RECORDED_WHEN_SET</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">model_fields</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">default</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
 
 
 <div class="viewcode-block" id="TransportConfig.realizations">
@@ -1002,7 +1054,7 @@
     <span class="n">check_particles</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="p">)</span>
     <span class="n">particles</span> <span class="o">=</span> <span class="n">add_release_heights</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">)</span>
     <span class="n">log</span> <span class="o">=</span> <span class="n">run</span><span class="o">.</span><span class="n">log</span>
-    <span class="k">if</span> <span class="s2">"foot"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+    <span class="k">if</span> <span class="s2">"foot"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">pbl_height</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">particles</span><span class="p">,</span> <span class="n">note</span> <span class="o">=</span> <span class="n">_computed_foot</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">run</span><span class="o">.</span><span class="n">met_files</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">note</span><span class="p">)</span>
         <span class="n">log</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">log</span><span class="si">}{</span><span class="n">note</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
@@ -1031,29 +1083,58 @@
 <span class="sd">    Return *particles* with ``foot`` (:func:`stilt.particles.add_foot`), and a log line saying how it was made.</span>
 
 <span class="sd">    ``foot`` needs the met files the run read, for the air below the mixing</span>
-<span class="sd">    depth, and for ``mlht`` when the model did not write it. Without them,</span>
-<span class="sd">    the particles are returned as they are and the line says so: a</span>
-<span class="sd">    footprint from them then fails for want of ``foot``.</span>
+<span class="sd">    depth, and for ``mlht`` when PYSTILT finds it. Without them, the</span>
+<span class="sd">    particles are returned as they are and the line says so: a footprint</span>
+<span class="sd">    from them then fails for want of ``foot``, or, with ``pbl_height`` set,</span>
+<span class="sd">    uses the model's own. With ``pbl_height`` set, the model's ``foot`` and</span>
+<span class="sd">    ``mlht`` are replaced. ``pbl_height: richardson`` works on HYSPLIT's</span>
+<span class="sd">    internal levels, for the run's own ``z_top`` when the model has one</span>
+<span class="sd">    (HYSPLIT's), else for HYSPLIT's default top.</span>
 <span class="sd">    """</span>
+    <span class="n">replaced</span> <span class="o">=</span> <span class="s2">"foot"</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">met_files</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">replaced</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">particles</span><span class="p">,</span> <span class="p">(</span>
+                <span class="s2">"pbl_height not applied: the transport model named no met files "</span>
+                <span class="s2">"to compute foot from, so its own foot is kept"</span>
+            <span class="p">)</span>
         <span class="k">return</span> <span class="n">particles</span><span class="p">,</span> <span class="p">(</span>
             <span class="s2">"no foot: the transport model wrote none, and named no met files "</span>
             <span class="s2">"to compute it from"</span>
         <span class="p">)</span>
-    <span class="n">sampled_mlht</span> <span class="o">=</span> <span class="s2">"mlht"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span>
+    <span class="k">if</span> <span class="n">replaced</span><span class="p">:</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">"foot"</span><span class="p">)</span>
+    <span class="n">pbl_height</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">pbl_height</span>
+    <span class="k">if</span> <span class="n">pbl_height</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">"mlht"</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">mlht</span> <span class="o">=</span> <span class="s2">"the model's mlht"</span>
+    <span class="k">elif</span> <span class="n">pbl_height</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">pbl_height</span> <span class="o">==</span> <span class="s2">"met"</span><span class="p">:</span>
+        <span class="n">mlht</span> <span class="o">=</span> <span class="s2">"the met's PBLH"</span>
+    <span class="k">elif</span> <span class="n">pbl_height</span> <span class="o">==</span> <span class="s2">"richardson"</span><span class="p">:</span>
+        <span class="n">mlht</span> <span class="o">=</span> <span class="s2">"the mixed layer found from the met's profile (HYSPLIT's kmixd 3)"</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mlht</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"a mixed layer of </span><span class="si">{</span><span class="n">pbl_height</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> m"</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">pbl_height_min</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">mlht</span> <span class="o">!=</span> <span class="s2">"the model's mlht"</span><span class="p">:</span>
+        <span class="n">mlht</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">", at least </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">pbl_height_min</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> m,"</span>
     <span class="n">added_time</span> <span class="o">=</span> <span class="s2">"time"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span>
     <span class="k">if</span> <span class="n">added_time</span><span class="p">:</span>
         <span class="n">particles</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span>
             <span class="n">time</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
             <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"min"</span><span class="p">)</span>
         <span class="p">)</span>
-    <span class="n">particles</span> <span class="o">=</span> <span class="n">add_foot</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">met_files</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">veght</span><span class="p">)</span>
+    <span class="n">particles</span> <span class="o">=</span> <span class="n">add_foot</span><span class="p">(</span>
+        <span class="n">particles</span><span class="p">,</span>
+        <span class="n">met_files</span><span class="p">,</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">veght</span><span class="p">,</span>
+        <span class="n">pbl_height</span><span class="o">=</span><span class="n">pbl_height</span><span class="p">,</span>
+        <span class="n">pbl_height_min</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pbl_height_min</span><span class="p">,</span>
+        <span class="n">z_top</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">"z_top"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+    <span class="p">)</span>
     <span class="k">if</span> <span class="n">added_time</span><span class="p">:</span>
         <span class="n">particles</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">"time"</span><span class="p">)</span>
-    <span class="n">mlht</span> <span class="o">=</span> <span class="s2">"the met's mlht"</span> <span class="k">if</span> <span class="n">sampled_mlht</span> <span class="k">else</span> <span class="s2">"the model's mlht"</span>
+    <span class="n">instead</span> <span class="o">=</span> <span class="s2">" in place of the model's foot and mlht"</span> <span class="k">if</span> <span class="n">replaced</span> <span class="k">else</span> <span class="s2">""</span>
     <span class="k">return</span> <span class="n">particles</span><span class="p">,</span> <span class="p">(</span>
         <span class="sa">f</span><span class="s2">"foot computed by PYSTILT from </span><span class="si">{</span><span class="n">mlht</span><span class="si">}</span><span class="s2"> and the air below it in the met "</span>
-        <span class="s2">"files (stilt.particles.add_foot)"</span>
+        <span class="sa">f</span><span class="s2">"files (stilt.particles.add_foot)</span><span class="si">{</span><span class="n">instead</span><span class="si">}</span><span class="s2">"</span>
     <span class="p">)</span>
 
 

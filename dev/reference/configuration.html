@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=84aa85af"></script>
+    <script src="../_static/documentation_options.js?v=485db8e3"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev20+g721d91684" />
+  <meta name="docsearch:version" content="0.1.0a29.dev24+g16c64dc56" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -689,6 +689,7 @@
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transport.TransportConfig.html">stilt.transport.TransportConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportConfig.RECORDED_WHEN_SET.html">stilt.transport.TransportConfig.RECORDED_WHEN_SET</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportConfig.UNRECORDED.html">stilt.transport.TransportConfig.UNRECORDED</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportConfig.realizations.html">stilt.transport.TransportConfig.realizations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportConfig.settings.html">stilt.transport.TransportConfig.settings</a></li>
@@ -983,6 +984,14 @@ from, and a variant may override any of them.</p>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code></p></td>
 <td><p>Random seed for a reproducible run. Different seeds give different runs. Requires <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code>. The bundled <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> ignores the seed under <code class="docutils literal notranslate"><span class="pre">krand</span></code> 4 and 10 to 13, and under 1 uses it only for the initial turbulent velocity. PYSTILT writes it to <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> as <code class="docutils literal notranslate"><span class="pre">-(abs(seed)</span> <span class="pre">+</span> <span class="pre">1)</span></code>, because HYSPLIT reseeds its generator only from a negative value and gives every <code class="docutils literal notranslate"><span class="pre">SEED</span></code> of 0 or more the same stream. Realization <code class="docutils literal notranslate"><span class="pre">k</span></code> of a variant runs with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>, so realization 0 shares the unperturbed run’s seed, as STILT-R’s error run does.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pbl_height</span></code></p></td>
+<td><p>How PYSTILT finds the mixed-layer height (<code class="docutils literal notranslate"><span class="pre">mlht</span></code>) when it computes <code class="docutils literal notranslate"><span class="pre">foot</span></code>: <code class="docutils literal notranslate"><span class="pre">met</span></code> reads the met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code>, <code class="docutils literal notranslate"><span class="pre">richardson</span></code> finds it from the met’s profile as HYSPLIT’s default <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code> does, and a number is a fixed height in meters above ground. Set, PYSTILT computes <code class="docutils literal notranslate"><span class="pre">foot</span></code> for any model’s particles, HYSPLIT’s included. Unset, it keeps the model’s <code class="docutils literal notranslate"><span class="pre">foot</span></code>; for a model that writes none it uses the model’s <code class="docutils literal notranslate"><span class="pre">mlht</span></code>, or else the met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code>.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code></p></td>
+<td><p>Lowest mixed-layer height, in meters, for a height PYSTILT finds itself (<code class="docutils literal notranslate"><span class="pre">pbl_height</span></code>, or the met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code> when unset), as <code class="docutils literal notranslate"><span class="pre">kmix0</span></code> is for HYSPLIT. 0 sets no minimum.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0.0</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">numpar</span></code></p></td>
 <td><p>Number of particles released per simulation. More particles give a less noisy footprint and take longer to run.</p></td>
@@ -1553,8 +1562,8 @@ They are flat, top-level keys. HYSPLIT’s are in
 <a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.html#stilt.transport.hysplit.HysplitConfig" title="stilt.transport.hysplit.HysplitConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transport.hysplit.HysplitConfig</span></code></a>, under HYSPLIT’s names (see
 <a class="reference internal" href="hysplit.html"><span class="doc">HYSPLIT Integration</span></a>). A variant that names another <code class="docutils literal notranslate"><span class="pre">model</span></code> gives that model’s
 parameters itself, and inherits the met, the footprint settings, and the
-parameters PYSTILT reads itself (<code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">seed</span></code>, <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>, and
-<code class="docutils literal notranslate"><span class="pre">veght</span></code>).</p>
+parameters PYSTILT reads itself (<code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">seed</span></code>, <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>,
+<code class="docutils literal notranslate"><span class="pre">veght</span></code>, <code class="docutils literal notranslate"><span class="pre">pbl_height</span></code>, and <code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code>).</p>
 </section>
 <section id="geometry-specifications">
 <h2>Geometry specifications<a class="headerlink" href="#geometry-specifications" title="Link to this heading">#</a></h2>

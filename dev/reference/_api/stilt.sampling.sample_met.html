@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=84aa85af"></script>
+    <script src="../../_static/documentation_options.js?v=485db8e3"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev20+g721d91684" />
+  <meta name="docsearch:version" content="0.1.0a29.dev24+g16c64dc56" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -689,6 +689,7 @@
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.TransportConfig.html">stilt.transport.TransportConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.RECORDED_WHEN_SET.html">stilt.transport.TransportConfig.RECORDED_WHEN_SET</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.UNRECORDED.html">stilt.transport.TransportConfig.UNRECORDED</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.realizations.html">stilt.transport.TransportConfig.realizations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.settings.html">stilt.transport.TransportConfig.settings</a></li>
@@ -915,7 +916,8 @@ density of moist air in kg m⁻³, with R = 287.04 J kg⁻¹ K⁻¹.</p></li>
 <p><code class="docutils literal notranslate"><span class="pre">pres</span></code> and <code class="docutils literal notranslate"><span class="pre">dens</span></code> follow what HYSPLIT reads, to the differences
 <a class="reference internal" href="../../development/validation.html"><span class="doc">Validation</span></a> gives. <code class="docutils literal notranslate"><span class="pre">mlht</span></code> is the met’s: HYSPLIT’s is the
 met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code> only with <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">0</span></code>, and then it is at least <code class="docutils literal notranslate"><span class="pre">kmix0</span></code>;
-the default, <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code>, finds the mixed layer from the profile.</p>
+the default, <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code>, finds the mixed layer from the profile, as
+<code class="xref py py-func docutils literal notranslate"><span class="pre">calc_pbl_height()</span></code> does.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -931,9 +933,7 @@ run read (<code class="docutils literal notranslate"><span class="pre">met_files
 internal levels depend on it. A stored run records it:
 <code class="docutils literal notranslate"><span class="pre">particles_metadata(path).settings[&quot;z_top&quot;]</span></code>. <code class="docutils literal notranslate"><span class="pre">None</span></code> reads the
 met’s own levels, for a transport model that is not HYSPLIT; a row
-below their lowest or above their top is then NaN. Terrain-following
-(flag 3) files are read on their own levels, not on the internal levels
-HYSPLIT puts them on, and take only the default or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+below their lowest or above their top is then NaN.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -947,8 +947,7 @@ grid is NaN.</p>
 <dd class="field-even"><ul class="simple">
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If a column is not one of the four or is in <em>particles</em> already
     (drop it first), <em>particles</em> has no <code class="docutils literal notranslate"><span class="pre">time</span></code> column, a row is outside
-    the files’ times, or <em>z_top</em> is not positive or, on a terrain-following
-    file, is not the default or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+    the files’ times, or <em>z_top</em> is not positive.</p></li>
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><strong>KeyError</strong></a> – If the files lack a variable a column needs.</p></li>
 </ul>
 </dd>

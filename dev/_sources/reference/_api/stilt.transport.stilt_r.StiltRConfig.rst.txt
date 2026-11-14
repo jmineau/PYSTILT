@@ -37,6 +37,6 @@ From :class:`~.HysplitConfig`: :py:obj:`~.HysplitConfig.hourly_ziscale`, :py:obj
 
 
 
-From :class:`~.TransportConfig`: :py:obj:`~.TransportConfig.settings`
+From :class:`~.TransportConfig`: :py:obj:`~.TransportConfig.RECORDED_WHEN_SET`, :py:obj:`~.TransportConfig.settings`
 
 

@@ -352,7 +352,8 @@ Configuration
 - A model is a variant axis, like a met. A variant that names another
   ``model`` gives that model's own parameters itself, and inherits the met,
   the footprint fields, and the parameters PYSTILT's own code reads (the base
-  ``TransportConfig``: ``n_hours``, ``seed``, ``hnf_plume``, ``veght``). A
+  ``TransportConfig``: ``n_hours``, ``seed``, ``hnf_plume``, ``veght``,
+  ``pbl_height``, ``pbl_height_min``). A
   parameter goes on the base only when the core reads it; ``numpar`` and
   every ``SETUP.CFG`` setting are HYSPLIT's.
 - When it loads, ``ProjectConfig`` checks each declared variant against the

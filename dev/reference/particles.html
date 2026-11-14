@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=84aa85af"></script>
+    <script src="../_static/documentation_options.js?v=485db8e3"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev20+g721d91684" />
+  <meta name="docsearch:version" content="0.1.0a29.dev24+g16c64dc56" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -689,6 +689,7 @@
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transport.TransportConfig.html">stilt.transport.TransportConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportConfig.RECORDED_WHEN_SET.html">stilt.transport.TransportConfig.RECORDED_WHEN_SET</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportConfig.UNRECORDED.html">stilt.transport.TransportConfig.UNRECORDED</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportConfig.realizations.html">stilt.transport.TransportConfig.realizations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportConfig.settings.html">stilt.transport.TransportConfig.settings</a></li>
@@ -959,12 +960,47 @@ met files the run read: <a class="reference internal" href="_api/stilt.particles
 to the depth) and the output step. The run’s log says so. A particle
 counts for the whole step when it ends the step below the layer, where
 HYSPLIT counts the minutes it spent there. Without the model’s own
-<code class="docutils literal notranslate"><span class="pre">mlht</span></code>, the met’s boundary-layer height is used, not the one HYSPLIT
-finds from the profile. <a class="reference internal" href="../development/validation.html"><span class="doc">Validation</span></a> says how far a
-footprint moves.</p></li>
+<code class="docutils literal notranslate"><span class="pre">mlht</span></code>, the met’s boundary-layer height (<code class="docutils literal notranslate"><span class="pre">PBLH</span></code>) is used, not the one
+HYSPLIT finds from the profile, unless <code class="docutils literal notranslate"><span class="pre">pbl_height</span></code> says otherwise.
+<a class="reference internal" href="../development/validation.html"><span class="doc">Validation</span></a> says how far a footprint moves.</p></li>
 </ul>
+<section id="the-mixed-layer-height">
+<h2>The mixed-layer height<a class="headerlink" href="#the-mixed-layer-height" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">foot</span></code> depends on the mixed-layer height, the <code class="docutils literal notranslate"><span class="pre">mlht</span></code> column, through the
+depth surface fluxes are mixed through (<code class="docutils literal notranslate"><span class="pre">veght</span></code> of it). The
+<code class="docutils literal notranslate"><span class="pre">pbl_height</span></code> setting says where PYSTILT takes that height from when it
+computes <code class="docutils literal notranslate"><span class="pre">foot</span></code>; <code class="docutils literal notranslate"><span class="pre">pbl_height</span></code> and <code class="docutils literal notranslate"><span class="pre">mlht</span></code> name the same quantity.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">pbl_height</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">richardson</span><span class="w">   </span><span class="c1"># or met, or a height in meters</span>
+<span class="nt">pbl_height_min</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">150</span><span class="w">      </span><span class="c1"># the lowest height, in meters</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><strong>Unset</strong> (the default), PYSTILT stays as close to the model as its
+output allows: it keeps the model’s <code class="docutils literal notranslate"><span class="pre">foot</span></code> (HYSPLIT’s, which STILT-R
+parity covers); for a model that writes no <code class="docutils literal notranslate"><span class="pre">foot</span></code> it uses the model’s
+<code class="docutils literal notranslate"><span class="pre">mlht</span></code>, or the met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code> when the model wrote none.</p></li>
+<li><p><strong>Set</strong>, PYSTILT computes <code class="docutils literal notranslate"><span class="pre">foot</span></code> itself, with that height, for any
+model’s particles, HYSPLIT’s included, and replaces the model’s <code class="docutils literal notranslate"><span class="pre">foot</span></code>
+and <code class="docutils literal notranslate"><span class="pre">mlht</span></code>. The run’s log says which height it used. <code class="docutils literal notranslate"><span class="pre">met</span></code> is the
+met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code>; <code class="docutils literal notranslate"><span class="pre">richardson</span></code> finds the height from the met’s profile
+with a bulk Richardson number, as HYSPLIT’s default <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code> does
+(<code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.calc_pbl_height()</span></code>), on HYSPLIT’s internal levels for
+a HYSPLIT run’s own <code class="docutils literal notranslate"><span class="pre">z_top</span></code> (for another model, HYSPLIT’s default top);
+a number is a fixed height in meters above ground.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code> keeps a height PYSTILT finds at least that many meters,
+as <code class="docutils literal notranslate"><span class="pre">kmix0</span></code> does for HYSPLIT, which keeps its own at least 150 m by
+default. It does not change a model’s own <code class="docutils literal notranslate"><span class="pre">mlht</span></code>.</p>
+<p>Every model moved its particles with its own mixed layer: HYSPLIT mixes
+them through the layer <code class="docutils literal notranslate"><span class="pre">kmixd</span></code> and <code class="docutils literal notranslate"><span class="pre">kmix0</span></code> choose. When PYSTILT
+computes <code class="docutils literal notranslate"><span class="pre">foot</span></code>, the mixed layer it uses can differ from that one. To grid
+a model that writes only positions and HYSPLIT with the same mixed layer,
+so that only their transport differs, set both: <code class="docutils literal notranslate"><span class="pre">pbl_height:</span> <span class="pre">richardson</span></code>
+and <code class="docutils literal notranslate"><span class="pre">pbl_height_min:</span> <span class="pre">150</span></code> match HYSPLIT’s defaults, and <code class="docutils literal notranslate"><span class="pre">pbl_height:</span>
+<span class="pre">met</span></code> with the same minimum matches a HYSPLIT run with <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">0</span></code>.
+<a class="reference internal" href="../development/validation.html"><span class="doc">Validation</span></a> gives how far each choice moves a footprint.</p>
 <section id="the-release-row">
-<h2>The release row<a class="headerlink" href="#the-release-row" title="Link to this heading">#</a></h2>
+<h3>The release row<a class="headerlink" href="#the-release-row" title="Link to this heading">#</a></h3>
 <p>A model should write each particle’s release as a row at <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>, with
 <code class="docutils literal notranslate"><span class="pre">foot</span> <span class="pre">=</span> <span class="pre">0</span></code>: a positive <code class="docutils literal notranslate"><span class="pre">foot</span></code> there would add a layer at hour 0 to the
 footprint. That row is where the particle started, so it says which release point of a
@@ -977,7 +1013,7 @@ position, and takes a column’s particles to be released bottom to top in
 (<code class="docutils literal notranslate"><span class="pre">exe_dir</span></code>) makes the matching exact.</p>
 </section>
 <section id="columns-the-model-adds">
-<h2>Columns the model adds<a class="headerlink" href="#columns-the-model-adds" title="Link to this heading">#</a></h2>
+<h3>Columns the model adds<a class="headerlink" href="#columns-the-model-adds" title="Link to this heading">#</a></h3>
 <p>HYSPLIT writes the variables in <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> under HYSPLIT’s lowercase
 four-letter names, except <code class="docutils literal notranslate"><span class="pre">indx</span></code>, <code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">long</span></code>, and <code class="docutils literal notranslate"><span class="pre">lati</span></code>, which
 become the columns above. The allowed names are listed under <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> in
@@ -1047,7 +1083,7 @@ files at each particle’s position, for a model that writes only positions:
 columns; <a class="reference internal" href="../development/validation.html"><span class="doc">Validation</span></a> says by how much.</p>
 </section>
 <section id="columns-pystilt-adds">
-<h2>Columns PYSTILT adds<a class="headerlink" href="#columns-pystilt-adds" title="Link to this heading">#</a></h2>
+<h3>Columns PYSTILT adds<a class="headerlink" href="#columns-pystilt-adds" title="Link to this heading">#</a></h3>
 <dl class="simple">
 <dt><code class="docutils literal notranslate"><span class="pre">release_height</span></code></dt><dd><p>Release height of each particle, in meters in the receptor’s own
 vertical reference, for column and multipoint receptors
@@ -1067,7 +1103,7 @@ not stored; reading a particle file adds it, and so does
 </dl>
 </section>
 <section id="checking-a-table">
-<h2>Checking a table<a class="headerlink" href="#checking-a-table" title="Link to this heading">#</a></h2>
+<h3>Checking a table<a class="headerlink" href="#checking-a-table" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.particles.PARTICLE_SCHEMA.html#stilt.particles.PARTICLE_SCHEMA" title="stilt.particles.PARTICLE_SCHEMA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PARTICLE_SCHEMA</span></code></a></p></td>
@@ -1087,7 +1123,7 @@ not stored; reading a particle file adds it, and so does
 </div>
 </section>
 <section id="after-a-run">
-<h2>After a run<a class="headerlink" href="#after-a-run" title="Link to this heading">#</a></h2>
+<h3>After a run<a class="headerlink" href="#after-a-run" title="Link to this heading">#</a></h3>
 <p>PYSTILT adds the release heights to any model’s particles, <code class="docutils literal notranslate"><span class="pre">foot</span></code> to
 particles that have none, and applies the near-field correction when
 <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is set. A model whose particles lack the columns the
@@ -1108,6 +1144,7 @@ that got their <code class="docutils literal notranslate"><span class="pre">foot
 </tbody>
 </table>
 </div>
+</section>
 </section>
 </section>
 
@@ -1158,11 +1195,14 @@ that got their <code class="docutils literal notranslate"><span class="pre">foot
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-release-row">The release row</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#columns-the-model-adds">Columns the model adds</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#columns-pystilt-adds">Columns PYSTILT adds</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#checking-a-table">Checking a table</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#after-a-run">After a run</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-mixed-layer-height">The mixed-layer height</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-release-row">The release row</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#columns-the-model-adds">Columns the model adds</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#columns-pystilt-adds">Columns PYSTILT adds</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#checking-a-table">Checking a table</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#after-a-run">After a run</a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 
