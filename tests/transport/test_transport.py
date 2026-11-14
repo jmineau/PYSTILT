@@ -358,6 +358,8 @@ def test_finish_computes_foot_from_the_met_files_the_run_read(
     assert seen["veght"] == 0.3
     assert seen["pbl_height"] is None
     assert seen["pbl_height_min"] == 0.0
+    # The base config has no domain top: the default internal levels.
+    assert seen["z_top"] is None
     assert seen["time"].tolist() == [
         pd.Timestamp("2023-01-01 11:59"),
         pd.Timestamp("2023-01-01 11:58"),
@@ -447,6 +449,27 @@ def test_finish_with_pbl_height_set_replaces_the_foot_and_mlht_a_model_wrote(
         "profile (HYSPLIT's kmixd 3), at least 150 m, and the air below it"
     ) in run.log
     assert run.log.rstrip().endswith("in place of the model's foot and mlht")
+
+
+def test_finish_gives_add_foot_the_top_of_a_hysplit_runs_domain(monkeypatch, tmp_path):
+    from stilt import transport
+    from stilt.transport import _finish
+    from stilt.transport.hysplit import HysplitConfig
+
+    seen = {}
+
+    def add_foot(particles, met_files, veght, **mixed_layer):
+        seen.update(mixed_layer)
+        return particles.assign(foot=5.0, mlht=300.0)
+
+    monkeypatch.setattr(transport, "add_foot", add_foot)
+    _finish(
+        ModelRun(_positions_only().assign(foot=1e-3), met_files=[tmp_path / "met"]),
+        _receptor(),
+        HysplitConfig(hnf_plume=False, pbl_height="richardson", z_top=10000.0),
+    )
+
+    assert seen["z_top"] == 10000.0
 
 
 def test_finish_with_pbl_height_set_keeps_the_models_foot_without_met_files(

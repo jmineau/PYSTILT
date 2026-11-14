@@ -505,6 +505,7 @@ def add_foot(
     veght: float,
     pbl_height: str | float | None = None,
     pbl_height_min: float = 0.0,
+    z_top: float | None = None,
 ) -> pd.DataFrame:
     """
     Add ``foot``, each particle's sensitivity to surface fluxes, for a transport model that writes only positions.
@@ -565,6 +566,10 @@ def add_foot(
     pbl_height_min : float, default 0
         Lowest mixed-layer height in meters, for a height found here rather
         than the particles' own, as ``kmix0`` is for HYSPLIT.
+    z_top : float, optional
+        The top of a HYSPLIT run's domain in meters, which sets the internal
+        levels ``"richardson"`` works on, as in that run. ``None`` uses
+        HYSPLIT's default, 25000 m. Only ``"richardson"`` reads it.
 
     Returns
     -------
@@ -594,7 +599,7 @@ def add_foot(
     out = particles.copy()
     if not own_mlht:
         found = _pbl_height(
-            out.drop(columns="mlht", errors="ignore"), files, pbl_height
+            out.drop(columns="mlht", errors="ignore"), files, pbl_height, z_top
         )
         out["mlht"] = np.maximum(found, pbl_height_min)
     depth = np.broadcast_to(
@@ -617,13 +622,18 @@ def add_foot(
 
 
 def _pbl_height(
-    particles: pd.DataFrame, files: list[Any], pbl_height: str | float | None
+    particles: pd.DataFrame,
+    files: list[Any],
+    pbl_height: str | float | None,
+    z_top: float | None = None,
 ) -> np.ndarray:
     """Return the mixed-layer height at each row that *pbl_height* names, the met's ``PBLH`` for ``None``."""
     if pbl_height is None or pbl_height == "met":
         return sample_met(particles, files, ["mlht"], z_top=None)["mlht"].to_numpy()
     if pbl_height == "richardson":
-        return calc_pbl_height(particles, files)
+        if z_top is None:
+            return calc_pbl_height(particles, files)
+        return calc_pbl_height(particles, files, z_top=z_top)
     if isinstance(pbl_height, str):
         raise ValueError(
             "pbl_height must be met, richardson, or a height in meters; "

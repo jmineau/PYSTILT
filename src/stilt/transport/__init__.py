@@ -596,7 +596,9 @@ def _computed_foot(
     particles are returned as they are and the line says so: a footprint
     from them then fails for want of ``foot``, or, with ``pbl_height`` set,
     uses the model's own. With ``pbl_height`` set, the model's ``foot`` and
-    ``mlht`` are replaced.
+    ``mlht`` are replaced. ``pbl_height: richardson`` works on HYSPLIT's
+    internal levels, for the run's own ``z_top`` when the model has one
+    (HYSPLIT's), else for HYSPLIT's default top.
     """
     replaced = "foot" in particles.columns
     if not met_files:
@@ -634,6 +636,7 @@ def _computed_foot(
         config.veght,
         pbl_height=pbl_height,
         pbl_height_min=config.pbl_height_min,
+        z_top=getattr(config, "z_top", None),
     )
     if added_time:
         particles = particles.drop(columns="time")

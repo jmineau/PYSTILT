@@ -87,8 +87,9 @@ computes ``foot``; ``pbl_height`` and ``mlht`` name the same quantity.
   and ``mlht``. The run's log says which height it used. ``met`` is the
   met's ``PBLH``; ``richardson`` finds the height from the met's profile
   with a bulk Richardson number, as HYSPLIT's default ``kmixd: 3`` does
-  (:func:`stilt.sampling.calc_pbl_height`); a number is a fixed height in
-  meters above ground.
+  (:func:`stilt.sampling.calc_pbl_height`), on HYSPLIT's internal levels for
+  a HYSPLIT run's own ``z_top`` (for another model, HYSPLIT's default top);
+  a number is a fixed height in meters above ground.
 
 ``pbl_height_min`` keeps a height PYSTILT finds at least that many meters,
 as ``kmix0`` does for HYSPLIT, which keeps its own at least 150 m by

@@ -1148,8 +1148,8 @@ def test_add_foot_with_pbl_height_richardson_finds_it_from_the_profile(
 
     seen = {}
 
-    def calc_pbl_height(particles, files):
-        seen.update(columns=list(particles.columns), files=files)
+    def calc_pbl_height(particles, files, **top):
+        seen.update(columns=list(particles.columns), files=files, **top)
         return np.full(len(particles), 400.0)
 
     monkeypatch.setattr(table, "calc_pbl_height", calc_pbl_height)
@@ -1157,4 +1157,8 @@ def test_add_foot_with_pbl_height_richardson_finds_it_from_the_profile(
 
     assert "mlht" not in seen["columns"]
     assert seen["files"] == ["met"]
+    assert "z_top" not in seen  # calc_pbl_height's default, HYSPLIT's 25 km
     assert out["mlht"].tolist() == [400.0] * 4
+
+    add_foot(_positions(), ["met"], veght=0.5, pbl_height="richardson", z_top=1e4)
+    assert seen["z_top"] == 1e4
