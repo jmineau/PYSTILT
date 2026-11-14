@@ -480,8 +480,7 @@ anemometer. Sample the 10 m wind, or the lowest model level:
        "v_err": met["V10M"] - stations["v"],
    })
 
-Reading the observations is up to you. The Salt Lake Valley numbers below
-used the sonde reader in `lair <https://github.com/jmineau/lair>`_.
+Reading the observations is up to you.
 
 For radiosondes anywhere in the world, the usual source is NOAA's
 Integrated Global Radiosonde Archive (IGRA2).
