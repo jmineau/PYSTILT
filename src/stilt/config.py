@@ -52,7 +52,13 @@ from stilt.identity import (
     run_settings,
     settings_hash,
 )
-from stilt.transport import MODELS, ModelInfo, TransportConfig, get_model
+from stilt.transport import (
+    MODELS,
+    VEGHT_RENAMED,
+    ModelInfo,
+    TransportConfig,
+    get_model,
+)
 
 #: Pattern for variant and met names, which become directory names.
 VARIANT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -754,6 +760,8 @@ def _check_keys(keys: Iterable[str], model: str, where: str, own: set[str]) -> N
             continue
         if key == "time_integrate":
             raise ValueError(f"{where}: {TIME_INTEGRATE_REMOVED}")
+        if key == "veght":
+            raise ValueError(f"{where}: {VEGHT_RENAMED}")
         close = difflib.get_close_matches(key, list(parts), n=1)
         hint = f" Did you mean {close[0]!r}, {parts[close[0]]}?" if close else ""
         raise ValueError(f"{where}: {key!r} is not a setting.{hint}")

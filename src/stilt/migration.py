@@ -47,6 +47,7 @@ from stilt.spatial import Grid
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit.config import (
     FIXED_SETUP,
+    SETUP_NAMES,
     WIND_ERROR_SETTINGS,
     ZI_ERROR_SETTINGS,
 )
@@ -782,6 +783,8 @@ def _hysplit_settings(folder: Path, control: ControlFile) -> tuple[dict[str, Any
         )
     setup = read_namelist(path)
     setup = {k: v for k, v in setup.items() if k not in FIXED_SETUP}
+    pystilt_names = {hysplit: ours for ours, hysplit in SETUP_NAMES.items()}
+    setup = {pystilt_names.get(k, k): v for k, v in setup.items()}
     unknown = sorted(set(setup) - set(StiltRConfig.model_fields) - set(_SETUP_ONLY))
     if unknown:
         raise ValueError(

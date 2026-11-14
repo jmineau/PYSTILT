@@ -25,6 +25,7 @@ import pandas as pd
 from stilt.exceptions import HYSPLITNotFoundError, SimulationError
 from stilt.transport.hysplit.config import (
     FIXED_SETUP,
+    SETUP_NAMES,
     WIND_ERROR_SETTINGS,
     ZI_ERROR_SETTINGS,
     HysplitConfig,
@@ -167,14 +168,15 @@ def setup_entries(params: HysplitConfig) -> dict[str, Any]:
     Return the ``SETUP.CFG`` namelist entries of *params*, leaving out unset ones.
 
     The entries of :data:`FIXED_SETUP` come first, then every setting not
-    in :data:`NOT_IN_SETUP`, in declaration order. The driver adds
+    in :data:`NOT_IN_SETUP`, in declaration order, by their
+    ``SETUP.CFG`` names (:data:`SETUP_NAMES`). The driver adds
     ``KMSL``, ``IVMAX``, and ``WINDERRTF``, and ``MAXPAR`` when ``maxpar``
     is unset, which depend on the release locations or follow from other
     settings.
     """
     entries = dict(FIXED_SETUP)
     entries.update(
-        (name, getattr(params, name))
+        (SETUP_NAMES.get(name, name), getattr(params, name))
         for name in HysplitConfig.model_fields
         if name not in NOT_IN_SETUP and getattr(params, name) is not None
     )

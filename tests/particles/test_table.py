@@ -282,8 +282,8 @@ def test_correct_near_field_adds_reference_column():
     assert out["foot_no_hnf_dilution"].iloc[0] == pytest.approx(1e-5)
 
 
-def test_correct_near_field_reads_veght_above_one_as_meters():
-    """A veght above 1 is meters above ground, as HYSPLIT reads it (#167)."""
+def test_correct_near_field_reads_footprint_depth_above_one_as_meters():
+    """A footprint_depth above 1 is meters above ground, as HYSPLIT reads it (#167)."""
     p = _particles_basic().drop(columns=["zagl"]).assign(release_height=[5.0, 5.0])
     # The plume is about 32 m deep after one hour and 70 m after two.
     as_fraction = correct_near_field(p, _NO_POINT, 0.5)  # below 250 m
@@ -1038,24 +1038,24 @@ def met(monkeypatch):
 
 
 def test_add_foot_counts_a_whole_step_below_the_mixing_depth_and_none_above(met):
-    foot = add_foot(_positions(), ["met"], veght=0.5)["foot"]
+    foot = add_foot(_positions(), ["met"], footprint_depth=0.5)["foot"]
 
     np.testing.assert_allclose(foot, [_ONE_MINUTE_IN_500_M] * 3 + [0.0])
     # The pressure at the ground and at the depth, on the met's own levels.
     assert met["calls"] == [(["pres"], None, ["met"])]
 
 
-def test_add_foot_reads_veght_above_1_as_meters(met):
-    foot = add_foot(_positions(), ["met"], veght=800.0)["foot"]
+def test_add_foot_reads_footprint_depth_above_1_as_meters(met):
+    foot = add_foot(_positions(), ["met"], footprint_depth=800.0)["foot"]
 
     np.testing.assert_allclose(foot, [0.02897 * 60 / 800] * 3 + [0.0])
 
 
 def test_add_foot_divides_by_the_air_below_the_depth(met):
     met["density"] = 2.0
-    foot = add_foot(_positions(mlht=[1000.0, 2000.0, 500.0, 1e4]), ["met"], veght=0.5)[
-        "foot"
-    ]
+    foot = add_foot(
+        _positions(mlht=[1000.0, 2000.0, 500.0, 1e4]), ["met"], footprint_depth=0.5
+    )["foot"]
 
     np.testing.assert_allclose(
         foot,
@@ -1064,7 +1064,7 @@ def test_add_foot_divides_by_the_air_below_the_depth(met):
 
 
 def test_add_foot_samples_the_mets_mlht_when_the_table_has_none(met):
-    out = add_foot(_positions().drop(columns="mlht"), ["met"], veght=0.5)
+    out = add_foot(_positions().drop(columns="mlht"), ["met"], footprint_depth=0.5)
 
     assert out["mlht"].tolist() == [1000.0] * 4
     np.testing.assert_allclose(out["foot"], [_ONE_MINUTE_IN_500_M] * 3 + [0.0])
@@ -1085,13 +1085,17 @@ def test_add_foot_takes_each_step_from_the_particle_s_own_rows(met):
         }
     )
 
-    foot = add_foot(particles, ["met"], veght=0.5)["foot"] / _ONE_MINUTE_IN_500_M
+    foot = (
+        add_foot(particles, ["met"], footprint_depth=0.5)["foot"] / _ONE_MINUTE_IN_500_M
+    )
 
     np.testing.assert_allclose(foot, [10.0, 5.0, 0.0, 0.0, 10.0, 20.0])
 
 
 def test_add_foot_uses_the_time_below_the_layer_a_model_writes(met):
-    foot = add_foot(_positions(samt=[0.5, 1.0, 0.0, 0.25]), ["met"], veght=0.5)["foot"]
+    foot = add_foot(
+        _positions(samt=[0.5, 1.0, 0.0, 0.25]), ["met"], footprint_depth=0.5
+    )["foot"]
 
     np.testing.assert_allclose(
         foot, np.array([0.5, 1.0, 0.0, 0.25]) * _ONE_MINUTE_IN_500_M
@@ -1107,12 +1111,12 @@ def test_add_foot_gives_nan_off_the_mets_grid(met):
 
 def test_add_foot_refuses_a_table_that_has_foot(met):
     with pytest.raises(ValueError, match="foot column already"):
-        add_foot(_positions(foot=1.0), ["met"], veght=0.5)
+        add_foot(_positions(foot=1.0), ["met"], footprint_depth=0.5)
 
 
 def test_add_foot_with_a_fixed_pbl_height_replaces_mlht_and_ignores_samt(met):
     particles = _positions(samt=[0.5, 1.0, 0.0, 0.25])
-    out = add_foot(particles, ["met"], veght=1.0, pbl_height=500.0)
+    out = add_foot(particles, ["met"], footprint_depth=1.0, pbl_height=500.0)
 
     assert out["mlht"].tolist() == [500.0] * 4
     # samt counts the minutes below the model's own layer, so it is not used.
@@ -1121,7 +1125,9 @@ def test_add_foot_with_a_fixed_pbl_height_replaces_mlht_and_ignores_samt(met):
 
 
 def test_add_foot_with_pbl_height_met_samples_pblh_over_the_models_mlht(met):
-    out = add_foot(_positions(mlht=300.0), ["met"], veght=0.5, pbl_height="met")
+    out = add_foot(
+        _positions(mlht=300.0), ["met"], footprint_depth=0.5, pbl_height="met"
+    )
 
     assert out["mlht"].tolist() == [1000.0] * 4
     assert [call[0] for call in met["calls"]] == [["mlht"], ["pres"]]
@@ -1129,14 +1135,19 @@ def test_add_foot_with_pbl_height_met_samples_pblh_over_the_models_mlht(met):
 
 def test_add_foot_keeps_a_height_it_finds_at_least_pbl_height_min(met):
     out = add_foot(
-        _positions().drop(columns="mlht"), ["met"], veght=0.5, pbl_height_min=1200.0
+        _positions().drop(columns="mlht"),
+        ["met"],
+        footprint_depth=0.5,
+        pbl_height_min=1200.0,
     )
 
     assert out["mlht"].tolist() == [1200.0] * 4
 
 
 def test_add_foot_applies_no_minimum_to_the_models_own_mlht(met):
-    out = add_foot(_positions(mlht=300.0), ["met"], veght=0.5, pbl_height_min=1200.0)
+    out = add_foot(
+        _positions(mlht=300.0), ["met"], footprint_depth=0.5, pbl_height_min=1200.0
+    )
 
     assert out["mlht"].tolist() == [300.0] * 4
 
@@ -1153,12 +1164,14 @@ def test_add_foot_with_pbl_height_richardson_finds_it_from_the_profile(
         return np.full(len(particles), 400.0)
 
     monkeypatch.setattr(table, "calc_pbl_height", calc_pbl_height)
-    out = add_foot(_positions(), ["met"], veght=0.5, pbl_height="richardson")
+    out = add_foot(_positions(), ["met"], footprint_depth=0.5, pbl_height="richardson")
 
     assert "mlht" not in seen["columns"]
     assert seen["files"] == ["met"]
     assert "z_top" not in seen  # calc_pbl_height's default, HYSPLIT's 25 km
     assert out["mlht"].tolist() == [400.0] * 4
 
-    add_foot(_positions(), ["met"], veght=0.5, pbl_height="richardson", z_top=1e4)
+    add_foot(
+        _positions(), ["met"], footprint_depth=0.5, pbl_height="richardson", z_top=1e4
+    )
     assert seen["z_top"] == 1e4

@@ -43,8 +43,8 @@ A footprint also needs ``foot``:
 ``foot``
    The particle's sensitivity to surface fluxes accumulated over the output
    step, in ppm per (µmol m⁻² s⁻¹). It is zero while the particle is above
-   ``veght`` of the mixed layer (or ``veght`` meters when that is more than
-   1). It is the time the particle spent in that surface layer, divided by
+   ``footprint_depth`` of the mixed layer (or ``footprint_depth`` meters
+   when that is more than 1). It is the time the particle spent in that surface layer, divided by
    the depth the flux is mixed through times the mean air density below it
    (Lin et al., 2003).
    :func:`stilt.calc_footprint` adds each particle's ``foot`` into its grid
@@ -69,7 +69,7 @@ The mixed-layer height
 ~~~~~~~~~~~~~~~~~~~~~~
 
 ``foot`` depends on the mixed-layer height, the ``mlht`` column, through the
-depth surface fluxes are mixed through (``veght`` of it). The
+depth surface fluxes are mixed through (``footprint_depth`` of it). The
 ``pbl_height`` setting says where PYSTILT takes that height from when it
 computes ``foot``; ``pbl_height`` and ``mlht`` name the same quantity.
 

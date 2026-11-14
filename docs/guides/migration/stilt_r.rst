@@ -96,8 +96,11 @@ The workflow side by side
    * - ``rm_dat``
      - no setting: a successful run's working directory is removed;
        ``execution: keep_workdir`` keeps it
-   * - HYSPLIT settings (``capemin``, ``kmix0``, ``tlfrac``, ``veght``, …)
+   * - HYSPLIT settings (``capemin``, ``kmix0``, ``tlfrac``, …)
      - same names, top level
+   * - ``veght``
+     - ``footprint_depth``, top level: the same value, still written to
+       ``SETUP.CFG`` as ``VEGHT``
    * - HYSPLIT settings that cannot change the particles (``delt``,
        ``cmass``, ``conage``, ``ichem``, ``kagl``, …)
      - no setting: PYSTILT writes STILT-R's values to ``SETUP.CFG`` in
@@ -337,7 +340,8 @@ STILT-R projects that differ only in ``n_hours`` land in two folders.
 
    * - Setting
      - Where it comes from
-   * - HYSPLIT's settings (``numpar``, ``kmix0``, ``veght``, ``varsiwant``, …)
+   * - HYSPLIT's settings (``numpar``, ``kmix0``, ``varsiwant``, …), and
+       ``footprint_depth`` from ``VEGHT``
      - each run's ``SETUP.CFG``
    * - ``n_hours``, ``w_option``, ``z_top``, ``emisshrs``
      - each run's ``CONTROL``

@@ -84,7 +84,7 @@ def test_a_variant_may_run_another_model(tmp_path, toy):
 
 
 def test_another_models_variant_inherits_the_shared_parameters_only(tmp_path, toy):
-    """n_hours, seed, hnf_plume, and veght are every model's; numpar and krand are HYSPLIT's."""
+    """n_hours, seed, hnf_plume, and footprint_depth are every model's; numpar and krand are HYSPLIT's."""
     config = ProjectConfig(
         mets=_mets(tmp_path),
         n_hours=-6,
@@ -152,7 +152,7 @@ def test_a_model_config_inherits_the_recorded_settings_and_realizations():
     assert config.settings() == {
         "n_hours": -6,
         "hnf_plume": True,
-        "veght": 0.5,
+        "footprint_depth": 0.5,
         "seed": 5,
         "nparticles": 10,
     }

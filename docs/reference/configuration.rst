@@ -133,7 +133,7 @@ They are flat, top-level keys. HYSPLIT's are in
 :doc:`hysplit`). A variant that names another ``model`` gives that model's
 parameters itself, and inherits the met, the footprint settings, and the
 parameters PYSTILT reads itself (``n_hours``, ``seed``, ``hnf_plume``,
-``veght``, ``pbl_height``, and ``pbl_height_min``).
+``footprint_depth``, ``pbl_height``, and ``pbl_height_min``).
 
 
 Geometry specifications

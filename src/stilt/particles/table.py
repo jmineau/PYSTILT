@@ -494,15 +494,15 @@ def _above_ground(p: pd.DataFrame, start: pd.Series) -> pd.Series:
     return (start - start.map(terrain)).clip(lower=0.0)
 
 
-def _mixing_depth(mlht: pd.Series, veght: float) -> pd.Series | float:
-    """Return the depth surface fluxes are mixed through: ``veght`` of *mlht*, or ``veght`` meters above 1."""
-    return veght * mlht if veght <= 1 else veght
+def _mixing_depth(mlht: pd.Series, footprint_depth: float) -> pd.Series | float:
+    """Return the depth surface fluxes are mixed through: *footprint_depth* of *mlht*, or *footprint_depth* meters above 1."""
+    return footprint_depth * mlht if footprint_depth <= 1 else footprint_depth
 
 
 def add_foot(
     particles: pd.DataFrame,
     met_files: Iterable[str | os.PathLike[str]],
-    veght: float,
+    footprint_depth: float,
     pbl_height: str | float | None = None,
     pbl_height_min: float = 0.0,
     z_top: float | None = None,
@@ -510,8 +510,9 @@ def add_foot(
     """
     Add ``foot``, each particle's sensitivity to surface fluxes, for a transport model that writes only positions.
 
-    A particle below the depth surface fluxes are mixed through, ``veght``
-    times ``mlht`` (or ``veght`` meters when it is above 1), takes up the
+    A particle below the depth surface fluxes are mixed through,
+    *footprint_depth* times ``mlht`` (or *footprint_depth* meters when it is
+    above 1), takes up the
     flux for the time it spends there. Its ``foot`` for one output step is
     that time divided by the air in the layer, STILT's footprint (Lin et
     al., 2003)::
@@ -552,10 +553,10 @@ def add_foot(
         ARL met files that cover the particles' times, such as the files
         the run read. They are read on their own levels, which start at the
         ground.
-    veght : float
-        Height that surface fluxes are mixed through (STILT's ``veght``): a
-        fraction of the mixed-layer height when 1 or less, else meters
-        above ground.
+    footprint_depth : float
+        Height that surface fluxes are mixed through (``VEGHT`` in HYSPLIT
+        and STILT-R): a fraction of the mixed-layer height when 1 or less,
+        else meters above ground.
     pbl_height : {"met", "richardson"}, float, or None, default None
         The mixed-layer height: ``"met"`` samples the met's ``PBLH``
         (:func:`stilt.sampling.sample_met`), ``"richardson"`` finds it from
@@ -588,7 +589,9 @@ def add_foot(
     --------
     >>> particles = sim.particles.drop(columns="foot")  # doctest: +SKIP
     >>> meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP
-    >>> stilt.particles.add_foot(particles, meta.met_files, veght=0.5)  # doctest: +SKIP
+    >>> stilt.particles.add_foot(
+    ...     particles, meta.met_files, footprint_depth=0.5
+    ... )  # doctest: +SKIP
     """
     if "foot" in particles.columns:
         raise ValueError(
@@ -603,7 +606,7 @@ def add_foot(
         )
         out["mlht"] = np.maximum(found, pbl_height_min)
     depth = np.broadcast_to(
-        np.asarray(_mixing_depth(out["mlht"], veght), dtype=float), len(out)
+        np.asarray(_mixing_depth(out["mlht"], footprint_depth), dtype=float), len(out)
     )
     # The pressure at the ground and at the depth, in one call.
     where = out[["lon", "lat", "time"]]
@@ -657,18 +660,18 @@ def _step_minutes(particles: pd.DataFrame) -> np.ndarray:
 
 
 def correct_near_field(
-    particles: pd.DataFrame, receptor: Receptor, veght: float
+    particles: pd.DataFrame, receptor: Receptor, footprint_depth: float
 ) -> pd.DataFrame:
     """
     Correct ``foot`` for plume dilution in the hyper-near field, as STILT-R's ``calc_plume_dilution`` does.
 
     ``foot`` assumes surface fluxes are mixed through the air below
-    ``veght``: a fraction of the mixed-layer height when ``veght`` is 1 or
+    *footprint_depth*: a fraction of the mixed-layer height when it is 1 or
     less, and a height in meters above ground when it is larger, as HYSPLIT
-    reads it. Close to the receptor, the plume from the release point is
+    reads ``VEGHT``. Close to the receptor, the plume from the release point is
     thinner than that. Following STILT-R, the plume depth grows from the
     release height with the turbulence each particle meets. While it is
-    below the ``veght`` height, ``foot`` is recalculated with the plume
+    below that height, ``foot`` is recalculated with the plume
     depth in its place. The worker applies it to any model's particles when
     ``hnf_plume`` is set.
 
@@ -685,10 +688,10 @@ def correct_near_field(
         Particle table.
     receptor : Receptor
         Receptor the particles were released from.
-    veght : float
-        Height that surface fluxes are mixed through (STILT's ``veght``): a
-        fraction of the mixed-layer height when 1 or less, else meters
-        above ground.
+    footprint_depth : float
+        Height that surface fluxes are mixed through (``VEGHT`` in HYSPLIT
+        and STILT-R): a fraction of the mixed-layer height when 1 or less,
+        else meters above ground.
 
     Returns
     -------
@@ -725,7 +728,7 @@ def correct_near_field(
             - 1
         )
     )
-    p["pbl_mixing"] = _mixing_depth(p["mlht"], veght)
+    p["pbl_mixing"] = _mixing_depth(p["mlht"], footprint_depth)
 
     start_h = p["release_height"] if "release_height" in p.columns else r_zagl
     if start_h is None:
@@ -734,7 +737,7 @@ def correct_near_field(
             "add release_height first (add_release_heights)."
         )
     if receptor.altitude_ref == "msl":
-        # mlht and veght are heights above ground, so the plume is too.
+        # mlht and footprint_depth are heights above ground, so the plume is too.
         start_h = _above_ground(p, pd.Series(start_h, index=p.index, dtype=float))
     # The plume grows outward from the release point, so the cumsum must walk
     # each particle track in order of elapsed time since release. That is
