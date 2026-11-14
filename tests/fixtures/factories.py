@@ -48,8 +48,7 @@ def write_arl_file(
 
         import numpy as np
         import pandas as pd
-        from arlmet import File
-        from arlmet.grid import Grid, Projection
+        from arlmet import File, Grid, Projection
         from arlmet.vertical import PressureAxis
 
         grid = Grid(

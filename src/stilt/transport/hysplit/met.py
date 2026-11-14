@@ -901,7 +901,7 @@ def _first_source(directory: Path) -> str:
     FileNotFoundError
         If *directory* does not exist, or no file under it is an ARL file.
     """
-    from arlmet import IndexRecord
+    from arlmet.record import IndexRecord
 
     if not directory.is_dir():
         raise FileNotFoundError(f"{directory} does not exist.")
