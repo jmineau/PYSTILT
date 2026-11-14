@@ -156,10 +156,8 @@ Driven by [`just`](https://github.com/casey/just) and
 ### Tests
 
 `just test` runs every test without one of three disjoint markers. Warnings
-are errors (a test that expects one uses `pytest.warns`). The STILT-R workflow
-(`stilt-r.yml`, about 30 minutes) runs `-m "integration or fidelity"` and
-`-m r_only`, only for changes to the paths listed at its top (most of
-`src/stilt/`, those tests, `uv.lock`, `pyproject.toml`, the workflow), and by hand:
+are errors (a test that expects one uses `pytest.warns`). `stilt-r.yml` (30 min,
+only for the paths at its top) runs `-m "integration or fidelity"` and `-m r_only`:
 
 - `integration`: end to end with real met files and HYSPLIT. Needs
   `STILT_TEST_MET_DIR` (HRRR ARL files) or `STILT_TEST_FETCH_MET=1` (downloads
@@ -237,10 +235,8 @@ machine-written, is "Writing documentation" in `CONTRIBUTING.md`. Words:
   message as the line a user would read. The version comes from git tags
   (setuptools-scm). Releases are cut by the maintainer (CONTRIBUTING.md).
 - `uv.lock` is updated by the Upgrade lock workflow (`lock-upgrade.yml`, monthly,
-  opens the `chore/lock-upgrade` pull request), not by Dependabot. The STILT-R
-  pin (`STILT_R_SHA` in `stilt-r.yml`) is moved by the Upgrade STILT-R workflow
-  (`stilt-r-upgrade.yml`, monthly, opens `chore/stilt-r-upgrade` when an upstream
-  commit touches a file the comparison runs).
+  opens the `chore/lock-upgrade` pull request), not by Dependabot; `STILT_R_SHA` by
+  `stilt-r-upgrade.yml` (monthly, opens `chore/stilt-r-upgrade`).
 - Open work is in [GitHub issues](https://github.com/jmineau/PYSTILT/issues);
   read one before working on it. Feature status lives in `docs/development/roadmap.rst`
   (update its row when a feature lands). Over-engineered code goes on the
