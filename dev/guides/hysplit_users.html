@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>PYSTILT For HYSPLIT Users &#8212; PYSTILT dev</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=a2d71c7f" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=65e25506"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'guides/hysplit_users';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Your Own HYSPLIT Build And Data Tables" href="hysplit_build.html" />
+    <link rel="prev" title="Particle Weighting (Transforms)" href="transforms.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a29.dev8+ga232c5b36" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT dev</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button type="button" id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
+<li class="toctree-l1"><a class="reference internal" href="choosing_settings.html">Choosing Settings</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Running</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="running.html">Running</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="slurm.html">On An HPC Cluster (Slurm)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers.html">In Containers (Kubernetes)</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="checking.html">Checking A Run</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Results</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Footprints And Particles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="aggregation.html">Summing Footprints: Areas And The Jacobian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transport_error.html">Transport Error</a></li>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trajectory_analyses.html">Trajectory-Style Analyses</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Column and satellite measurements</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slant_columns.html">Slant Columns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">PYSTILT For HYSPLIT Users</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hysplit_build.html">Your Own HYSPLIT Build And Data Tables</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="migration/stilt_r.html">Coming From STILT-R</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/x_stilt.html">Coming From X-STILT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/stiltctl.html">Coming From stiltctl</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration/jena_stilt.html">Coming From Jena STILT</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PYSTILT For HYSPLIT Users</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="pystilt-for-hysplit-users">
+<h1>PYSTILT For HYSPLIT Users<a class="headerlink" href="#pystilt-for-hysplit-users" title="Link to this heading">#</a></h1>
+<p>If you run HYSPLIT to find where air came from or where a release went,
+PYSTILT runs the same particle model, <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code>, from Python. It writes
+<code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> from a few settings, finds or downloads the
+ARL met files, and returns every particle’s position at every time step as
+a pandas table. For many starting times and places, and for the same runs
+under other settings, a project runs them all, on your computer or as a
+Slurm job array, and keeps the particles of each set of settings in a
+folder of its own.</p>
+<section id="hysplit-s-words-in-pystilt">
+<h2>HYSPLIT’s words in PYSTILT<a class="headerlink" href="#hysplit-s-words-in-pystilt" title="Link to this heading">#</a></h2>
+<p>PYSTILT comes from STILT, which follows air backward from a measurement and
+calls the time and place its particles start from a <em>receptor</em>. For you, a
+receptor is the starting time and starting locations of <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 45.0%" />
+<col style="width: 55.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>In HYSPLIT</p></th>
+<th class="head"><p>In PYSTILT</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>A starting time and one starting location</p></td>
+<td><p>A <a class="reference internal" href="../reference/_api/stilt.PointReceptor.html#stilt.PointReceptor" title="stilt.PointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointReceptor</span></code></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Several starting locations at one time</p></td>
+<td><p>A <a class="reference internal" href="../reference/_api/stilt.MultiPointReceptor.html#stilt.MultiPointReceptor" title="stilt.MultiPointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code></a></p></td>
+</tr>
+<tr class="row-even"><td><p>Two heights at one location, a line source</p></td>
+<td><p>A <a class="reference internal" href="../reference/_api/stilt.ColumnReceptor.html#stilt.ColumnReceptor" title="stilt.ColumnReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnReceptor</span></code></a></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">KMSL</span></code>, heights above ground or above sea level</p></td>
+<td><p>The receptor’s <code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;agl&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;msl&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>The settings of one <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code></p></td>
+<td><p>A variant, a named set of settings</p></td>
+</tr>
+<tr class="row-odd"><td><p>The particle positions you read after a run</p></td>
+<td><p>The particle table, one row per particle per time step</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="one-run">
+<h2>One run<a class="headerlink" href="#one-run" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../reference/_api/stilt.run_trajectories.html#stilt.run_trajectories" title="stilt.run_trajectories"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.run_trajectories()</span></code></a> runs HYSPLIT once and returns the particles.
+Here 1,000 particles leave Salt Lake City at 500 m above ground during one
+hour and are followed 6 hours forward:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+
+<span class="gp">In [2]: </span><span class="n">start</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
+<span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">"2021-07-15 01:00"</span><span class="p">,</span> <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.85</span><span class="p">,</span> <span class="n">latitude</span><span class="o">=</span><span class="mf">40.77</span><span class="p">,</span> <span class="n">altitude</span><span class="o">=</span><span class="mi">500</span>
+<span class="gp">   ...: </span><span class="p">)</span>
+<span class="gp">   ...: </span>
+
+<span class="gp">In [3]: </span><span class="n">cloud</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">run_trajectories</span><span class="p">(</span>
+<span class="gp">   ...: </span>    <span class="n">start</span><span class="p">,</span> <span class="n">met_dir</span><span class="p">,</span> <span class="n">n_hours</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">numpar</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">emisshrs</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">hnf_plume</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="gp">   ...: </span><span class="p">)</span>
+<span class="gp">   ...: </span>
+
+<span class="gp">In [4]: </span><span class="n">cloud</span><span class="p">[[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">]]</span><span class="o">.</span><span class="n">tail</span><span class="p">()</span>
+<span class="gh">Out[4]: </span>
+<span class="go">                      time  particle       lon      lat       zagl</span>
+<span class="go">331082 2021-07-15 07:00:00     996.0 -111.0122  40.7976  1610.7959</span>
+<span class="go">331083 2021-07-15 07:00:00     997.0 -111.2759  41.1045   575.8449</span>
+<span class="go">331084 2021-07-15 07:00:00     998.0 -111.0393  40.8823   704.2510</span>
+<span class="go">331085 2021-07-15 07:00:00     999.0 -111.2079  40.5842  2606.4297</span>
+<span class="go">331086 2021-07-15 07:00:00    1000.0 -111.2491  40.9135     7.1518</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">n_hours</span></code> is <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>’s total run time: positive runs forward, negative
+backward. <code class="docutils literal notranslate"><span class="pre">emisshrs</span></code> is the hours of emission, and <code class="docutils literal notranslate"><span class="pre">zagl</span></code> the height
+above ground in meters. The other columns are the met at each particle that
+<code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> asks for, by HYSPLIT’s names (<code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code>, <code class="docutils literal notranslate"><span class="pre">dens</span></code>,
+…). We set <code class="docutils literal notranslate"><span class="pre">hnf_plume=False</span></code> whenever you want positions and no
+footprint, because PYSTILT’s near-field correction rewrites the <code class="docutils literal notranslate"><span class="pre">foot</span></code>
+column for STILT’s footprints. <code class="docutils literal notranslate"><span class="pre">krand=2</span></code> with a <code class="docutils literal notranslate"><span class="pre">seed</span></code> makes the run
+repeatable.</p>
+<p>The met is the folder of your ARL files. PYSTILT reads which times each
+file holds from its header, and gives HYSPLIT the ones the run needs.
+<a class="reference internal" href="meteorology.html"><span class="doc">Meteorology</span></a> shows how to download them from NOAA instead.</p>
+</section>
+<section id="a-single-trajectory">
+<span id="single-trajectory"></span><h2>A single trajectory<a class="headerlink" href="#a-single-trajectory" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">hyts_std</span></code>, HYSPLIT’s trajectory model, follows the mean wind. One
+particle with turbulence off follows the same path, so <code class="docutils literal notranslate"><span class="pre">numpar=1</span></code> and
+<code class="docutils literal notranslate"><span class="pre">nturb=1</span></code> give you a trajectory:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [5]: </span><span class="n">path</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">run_trajectories</span><span class="p">(</span>
+<span class="gp">   ...: </span>    <span class="n">start</span><span class="p">,</span> <span class="n">met_dir</span><span class="p">,</span> <span class="n">n_hours</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">numpar</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nturb</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">hnf_plume</span><span class="o">=</span><span class="kc">False</span>
+<span class="gp">   ...: </span><span class="p">)</span>
+<span class="gp">   ...: </span>
+
+<span class="gp">In [6]: </span><span class="n">path</span><span class="p">[[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">]]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">59</span><span class="p">,</span> <span class="mi">179</span><span class="p">,</span> <span class="mi">359</span><span class="p">]]</span>
+<span class="gh">Out[6]: </span>
+<span class="go">                   time       lon      lat       zagl</span>
+<span class="go">0   2021-07-15 01:01:00 -111.8484  40.7694   509.8232</span>
+<span class="go">59  2021-07-15 02:00:00 -111.7095  40.7663   778.5793</span>
+<span class="go">179 2021-07-15 04:00:00 -111.2845  40.7416   329.5206</span>
+<span class="go">359 2021-07-15 07:00:00 -110.7134  40.5339  1548.1791</span>
+</pre></div>
+</div>
+<p>We compared this run with <code class="docutils literal notranslate"><span class="pre">hyts_std</span></code> on the same met. After 6 hours the two
+are 0.001 degrees apart. The mean position of 1,000 particles with
+turbulence on ended about 21 km away and 400 m lower:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 46.0%" />
+<col style="width: 18.0%" />
+<col style="width: 18.0%" />
+<col style="width: 18.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>After 6 hours</p></th>
+<th class="head"><p>Longitude</p></th>
+<th class="head"><p>Latitude</p></th>
+<th class="head"><p>Height (m)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">hyts_std</span></code></p></td>
+<td><p>-110.717</p></td>
+<td><p>40.534</p></td>
+<td><p>1585</p></td>
+</tr>
+<tr class="row-odd"><td><p>One particle, turbulence off</p></td>
+<td><p>-110.718</p></td>
+<td><p>40.533</p></td>
+<td><p>1644</p></td>
+</tr>
+<tr class="row-even"><td><p>Mean of 1,000 particles</p></td>
+<td><p>-110.961</p></td>
+<td><p>40.583</p></td>
+<td><p>1244</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>So the mean of many particles is the center of a cloud that spreads as it
+goes, which is a different thing from a trajectory. For a trajectory, run one
+particle.
+For several trajectories from one time, use a
+<a class="reference internal" href="../reference/_api/stilt.MultiPointReceptor.html#stilt.MultiPointReceptor" title="stilt.MultiPointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code></a> with <code class="docutils literal notranslate"><span class="pre">numpar</span></code> equal to its number of
+locations: HYSPLIT gives each location one particle.</p>
+</section>
+<section id="many-runs-a-project">
+<h2>Many runs: a project<a class="headerlink" href="#many-runs-a-project" title="Link to this heading">#</a></h2>
+<p>A project runs every starting point under every variant, and runs again
+only what is missing. A <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> with no <code class="docutils literal notranslate"><span class="pre">grid</span></code> makes particles
+and no footprints. Here every start runs on HRRR with two vertical motion
+options, each kept in its own folder:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/arl/hrrr</span>
+
+<span class="nt">variants</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                 </span><span class="c1"># the settings below</span>
+<span class="w">  </span><span class="nt">hrrr-w6</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">w_option</span><span class="p">:</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># the same runs with another vertical motion</span>
+
+<span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24</span>
+<span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
+<span class="nt">emisshrs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
+<span class="nt">hnf_plume</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</pre></div>
+</div>
+<p>The starting points go in <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>, one row each:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>time,longitude,latitude,altitude
+2021-07-15 01:00:00,-111.85,40.77,500
+2021-07-15 13:00:00,-111.85,40.77,500
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">./my_project</span></code> runs them here, and <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span>
+<span class="pre">./my_project</span></code> as a Slurm job array (<a class="reference internal" href="slurm.html"><span class="doc">On An HPC Cluster (Slurm)</span></a>). Then read the particles
+of any selection of runs as one table:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"my_project"</span><span class="p">)</span>
+<span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
+<span class="n">particles</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">particles</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr-w6"</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>For an ensemble of the same run with different turbulence, give a variant
+<code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">10</span></code> with <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code> and a <code class="docutils literal notranslate"><span class="pre">seed</span></code>
+(<a class="reference internal" href="projects.html"><span class="doc">Projects And Variants</span></a>).</p>
+</section>
+<section id="where-each-control-and-setup-cfg-line-comes-from">
+<h2>Where each <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> line comes from<a class="headerlink" href="#where-each-control-and-setup-cfg-line-comes-from" title="Link to this heading">#</a></h2>
+<p>Every <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> entry HYSPLIT reads is a setting of the same name in
+lowercase, such as <code class="docutils literal notranslate"><span class="pre">numpar</span></code>, <code class="docutils literal notranslate"><span class="pre">kmixd</span></code> or <code class="docutils literal notranslate"><span class="pre">tlfrac</span></code>
+(<a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a> lists them). PYSTILT writes the rest
+itself:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 40.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Line</p></th>
+<th class="head"><p>Comes from</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> starting time and locations</p></td>
+<td><p>The receptor, latitude, longitude and height</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> total run time</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">n_hours</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> vertical motion option, top of model domain</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">w_option</span></code>, <code class="docutils literal notranslate"><span class="pre">z_top</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> met grids and files</p></td>
+<td><p>The met’s files for the run’s hours, as one grid</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> hours of emission</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">emisshrs</span></code>; the release starts at the starting time</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> pollutant, concentration grid and deposition</p></td>
+<td><p>Fixed: one pollutant, a placeholder grid, no deposition</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> <code class="docutils literal notranslate"><span class="pre">KMSL</span></code></p></td>
+<td><p>The receptor’s <code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> <code class="docutils literal notranslate"><span class="pre">MAXPAR</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">maxpar</span></code>, or when unset enough for <code class="docutils literal notranslate"><span class="pre">numpar</span></code> shared over the locations</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> <code class="docutils literal notranslate"><span class="pre">IVMAX</span></code></p></td>
+<td><p>The number of <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> names</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> <code class="docutils literal notranslate"><span class="pre">SEED</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code>, written as <code class="docutils literal notranslate"><span class="pre">-(abs(seed)</span> <span class="pre">+</span> <span class="pre">1)</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> <code class="docutils literal notranslate"><span class="pre">WINDERRTF</span></code>, <code class="docutils literal notranslate"><span class="pre">ZICONTROLTF</span></code></p></td>
+<td><p>The wind and mixed-layer error settings, and <code class="docutils literal notranslate"><span class="pre">ziscale</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>To read the files of one run, pass <code class="docutils literal notranslate"><span class="pre">workdir=&quot;run&quot;</span></code> to
+<a class="reference internal" href="../reference/_api/stilt.run_trajectories.html#stilt.run_trajectories" title="stilt.run_trajectories"><code class="xref py py-func docutils literal notranslate"><span class="pre">run_trajectories()</span></code></a>: the folder keeps <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>,
+<code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code>, HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">MESSAGE</span></code> and the particle file.</p>
+</section>
+<section id="what-pystilt-leaves-to-other-tools">
+<h2>What PYSTILT leaves to other tools<a class="headerlink" href="#what-pystilt-leaves-to-other-tools" title="Link to this heading">#</a></h2>
+<p>PYSTILT runs <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> in its STILT mode (<code class="docutils literal notranslate"><span class="pre">ichem:</span> <span class="pre">8</span></code>), which writes
+particle positions and the met along them. Concentration grids
+(<code class="docutils literal notranslate"><span class="pre">cdump</span></code>), the deposition and decay of a pollutant’s mass, puffs and
+<code class="docutils literal notranslate"><span class="pre">tdump</span></code> trajectory files come from HYSPLIT run on its own, and NOAA’s
+<a class="reference external" href="https://github.com/noaa-oar-arl/monetio">monetio</a> reads those files in
+Python.</p>
+<p>When a run fails, <a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a> says how to find why.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="transforms.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Particle Weighting (Transforms)</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="hysplit_build.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Your Own HYSPLIT Build And Data Tables</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#hysplit-s-words-in-pystilt">HYSPLIT’s words in PYSTILT</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-run">One run</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-single-trajectory">A single trajectory</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#many-runs-a-project">Many runs: a project</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-each-control-and-setup-cfg-line-comes-from">Where each <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> line comes from</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-pystilt-leaves-to-other-tools">What PYSTILT leaves to other tools</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/guides/hysplit_users.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.2.0.
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

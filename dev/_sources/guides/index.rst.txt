@@ -51,6 +51,8 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 
 **HYSPLIT**
 
+- :doc:`hysplit_users`: HYSPLIT's starting points, settings and particle
+  output in PYSTILT, a single trajectory, and many runs as a project
 - :doc:`hysplit_build`: run another HYSPLIT build, or your own land-use
   and terrain tables
 
@@ -110,6 +112,7 @@ steps are in PYSTILT.
    :hidden:
    :caption: HYSPLIT
 
+   hysplit_users
    hysplit_build
 
 .. toctree::

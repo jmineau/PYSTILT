@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=da33f9d5"></script>
+    <script src="../_static/documentation_options.js?v=65e25506"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev7+ga2716ab36" />
+  <meta name="docsearch:version" content="0.1.0a29.dev8+ga232c5b36" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -442,6 +442,7 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="hysplit_users.html">PYSTILT For HYSPLIT Users</a></li>
 <li class="toctree-l1"><a class="reference internal" href="hysplit_build.html">Your Own HYSPLIT Build And Data Tables</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
@@ -588,14 +589,18 @@ receptor’s footprint, which counts only the time near the ground:</p>
 <section id="a-mean-path">
 <h2>A mean path<a class="headerlink" href="#a-mean-path" title="Link to this heading">#</a></h2>
 <p>The mean path of a receptor’s particles is their mean position at each
-output step:</p>
+output step, the center of the cloud as it spreads:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">particles</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">particles</span><span class="p">(</span><span class="n">july</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"age"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">])</span>
 <span class="n">path</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">])[[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 <span class="n">one</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rid</span><span class="p">]</span><span class="o">.</span><span class="n">sort_index</span><span class="p">(</span><span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>   <span class="c1"># from the release backwards</span>
 </pre></div>
 </div>
-<p>A mean path hides how the particles spread, which is what the footprint
-keeps. <code class="docutils literal notranslate"><span class="pre">sim.particles.stilt.plot.map()</span></code> draws them all.</p>
+<p>It is not the path of a mean-wind trajectory, such as <code class="docutils literal notranslate"><span class="pre">hyts_std</span></code> computes.
+In a 6-hour run from 500 m the mean of 1,000 particles ended about 21 km
+from that trajectory and 400 m lower. For the trajectory, run one particle
+with turbulence off (<a class="reference internal" href="hysplit_users.html#single-trajectory"><span class="std std-ref">A single trajectory</span></a>). A mean path also hides how
+the particles spread, which is what the footprint keeps.
+<code class="docutils literal notranslate"><span class="pre">sim.particles.stilt.plot.map()</span></code> draws them all.</p>
 </section>
 <section id="transit-time-from-a-source">
 <h2>Transit time from a source<a class="headerlink" href="#transit-time-from-a-source" title="Link to this heading">#</a></h2>
