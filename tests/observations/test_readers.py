@@ -31,7 +31,8 @@ BLENDED = (
     / "S5P_BLND_L2__CH4____20180430T001950_20180430T020120_02818_03_020400_20230613T235247.nc"
 )
 TCCON = DATA / "if20120823_20121201.public.qc.nc"
-OCO2 = DATA / "oco2_LtCO2_231019_B11210Ar_synthetic.nc4"
+OCO2 = DATA / "oco2_LtCO2_260208_B11300Ar_260529230202s.nc4"
+OCO3 = DATA / "oco3_LtCO2_260208_B11077Ar_260327001412s.nc4"
 OOF = DATA / "zz20230715.vav.ada.aia.oof"
 GGG_PRIVATE = DATA / "zz20230715_20230715.private.nc"
 
@@ -235,27 +236,45 @@ def test_tccon_slant_recipe():
         assert len(points) == len(alts) and points[0][2] == r.surface_altitude
 
 
-# -- OCO-2 (synthetic layout) --------------------------------------------------
+# -- OCO-2 and OCO-3 Lite (slices of real granules) ----------------------------
 
 
 def test_oco2_lite_layout():
     df = read_oco2(OCO2)
     _check_common(df)
-    assert len(df) == 6
+    assert len(df) == 12
     assert (df.species == "xco2").all() and (df.units == "ppm").all()
-    assert df.good.tolist() == [True, True, False, True, False, True]
-    assert np.isnan(df.value.iloc[2])  # the product's fill value
+    assert df.good.sum() == 8 and (df.good == (df.quality_flag == 0)).all()
+    assert (df.operation_mode == 0).all()  # nadir, near Houston
     row = df.iloc[0]
+    assert row.sounding_id == "2026020819373733"
+    assert row.time.floor("s") == pd.Timestamp("2026-02-08T19:37:37")
     assert len(row.pressure_levels) == 20
-    assert row.pressure_levels[0] == pytest.approx(
-        row.surface_pressure
-    )  # level 20 first
-    assert row.ak[0] == pytest.approx(1.1) and row.ak[-1] == pytest.approx(0.3)
-    assert len(row.pressure_weight) == 20 and row.apriori_column == pytest.approx(417.0)
-    assert row.sounding_id == "2023101919480000"
-    assert row.time == pd.Timestamp("2023-10-19T19:48:00")
-    sub = read_oco2(OCO2, lat_range=(40.75, 40.85))
-    assert len(sub) == 3
+    # level 20 is the surface; the reader puts it first
+    assert row.pressure_levels[0] == pytest.approx(row.surface_pressure)
+    assert np.all(np.diff(row.pressure_levels) < 0)
+    assert row.ak[0] > 0.9 and row.ak[-1] < 0.5  # most sensitive near the surface
+    assert len(row.pressure_weight) == 20
+    assert np.sum(row.pressure_weight) == pytest.approx(1.0, abs=1e-3)
+    assert 400 < row.value < 450 and 400 < row.apriori_column < 450
+    assert len(row.longitude_bounds) == 4 and len(row.latitude_bounds) == 4
+    sub = read_oco2(OCO2, lat_range=(29.25, 29.35))
+    assert len(sub) == 2
+
+
+def test_oco3_lite_target_mode():
+    """OCO-3 Lite files share the OCO-2 layout; this slice is a target over Lamont."""
+    df = read_oco2(OCO3)
+    _check_common(df)
+    assert len(df) == 12 and df.good.all()
+    assert (df.operation_mode == 2).all()  # target mode
+    assert df.longitude.between(-97.6, -97.4).all()
+    assert df.latitude.between(36.6, 36.65).all()
+    row = df.iloc[0]
+    assert row.sounding_id == "2026020821083103"
+    assert row.surface_altitude == pytest.approx(310.8, abs=0.1)
+    assert row.pressure_levels[0] == pytest.approx(row.surface_pressure)
+    assert 0 <= row.azimuth < 360 and 0 <= row.solar_azimuth < 360
 
 
 def test_oco2_recipe_with_pressure_altitudes():

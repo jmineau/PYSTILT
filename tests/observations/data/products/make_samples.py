@@ -9,11 +9,14 @@ source files at hand when a product changes::
     uv run python tests/observations/data/products/make_samples.py \
         --tropomi S5P_OFFL_L2__CH4____20231019T192749_....nc \
         --blended S5P_BLND_L2__CH4____20180430T001950_....nc \
-        --tccon if20120823_20121201.public.qc.nc
+        --tccon if20120823_20121201.public.qc.nc \
+        --oco2 oco2_LtCO2_260208_B11300Ar_260529230202s.nc4 \
+        --oco3 oco3_LtCO2_260208_B11077Ar_260327001412s.nc4
 
-The OCO-2 sample is synthetic: it follows the OCO-2 Lite v11 layout (variable
-names, groups, dimensions, units) with made-up values, because Lite files sit
-behind an Earthdata login. Replace it with a real slice when one is available.
+The OCO-2 and OCO-3 Lite files come from NASA GES DISC (an Earthdata login,
+free) and are open data: OCO-2 L2 Lite FP v11.2r, doi:10.5067/C4OENLFCYVSA;
+OCO-3 L2 Lite FP v11r, doi:10.5067/8U0VGVQC7HZG. Each slice keeps the
+granule's global attributes, the DOI among them.
 
 The GGG samples are synthetic too, on the GGG2020 ``.oof`` and
 ``*.private.nc`` layouts, so no instrument team's retrievals are
@@ -426,206 +429,60 @@ def ggg_private_synthetic() -> None:
         var("o2_7885_am_o2", ("time",), np.full(nt, 5.53, "f4"))
 
 
-def oco2_synthetic() -> None:
-    """A made-up OCO-2 Lite v11 file: the real layout, invented values."""
-    rng = np.random.default_rng(0)
-    n, nlev = 6, 20
-    dst = HERE / "oco2_LtCO2_231019_B11210Ar_synthetic.nc4"
-    with Dataset(dst, "w", format="NETCDF4") as d:
-        d.setncattr("title", "Synthetic OCO-2 Lite layout for PYSTILT tests")
-        d.setncattr(
-            "stilt_sample_note",
-            "Synthetic file following the OCO-2 L2 Lite FP v11 layout with invented "
-            "values, made by tests/observations/data/products/make_samples.py. Not a real granule.",
-        )
-        d.createDimension("sounding_id", n)
-        d.createDimension("levels", nlev)
-        d.createDimension("vertices", 4)
-        d.createDimension("epoch_dimension", 7)
+#: Every variable read_oco2 uses, by its path in a Lite file.
+OCO_KEEP = {
+    "sounding_id",
+    "levels",
+    "time",
+    "latitude",
+    "longitude",
+    "xco2",
+    "xco2_uncertainty",
+    "xco2_apriori",
+    "xco2_quality_flag",
+    "solar_zenith_angle",
+    "sensor_zenith_angle",
+    "pressure_levels",
+    "pressure_weight",
+    "xco2_averaging_kernel",
+    "co2_profile_apriori",
+    "vertex_latitude",
+    "vertex_longitude",
+    "Sounding/solar_azimuth_angle",
+    "Sounding/sensor_azimuth_angle",
+    "Sounding/altitude",
+    "Sounding/land_fraction",
+    "Sounding/operation_mode",
+    "Sounding/orbit",
+    "Retrieval/psurf",
+}
 
-        def var(group, name, dtype, dims, values, **attrs):
-            fill = attrs.pop("_FillValue", None)
-            v = group.createVariable(name, dtype, dims, fill_value=fill)
-            for k, a in attrs.items():
-                v.setncattr(k, a)
-            v[:] = values
-            return v
 
-        base = np.datetime64("2023-10-19T19:48:00")
-        secs = (base - np.datetime64("1970-01-01T00:00:00")) / np.timedelta64(1, "s")
-        var(
-            d,
-            "sounding_id",
-            "i8",
-            ("sounding_id",),
-            2023101919480000 + np.arange(n) * 10,
-            units="1",
-            long_name="sounding ID",
+def oco(
+    src: Path, box: tuple[float, float, float, float], mode: int, n: int = 12
+) -> None:
+    """
+    The first ``n`` consecutive soundings of an OCO-2 or OCO-3 Lite file in a box.
+
+    ``box`` is ``(lon_min, lon_max, lat_min, lat_max)``, and every sounding in
+    the slice must be in operation mode ``mode`` (0 nadir, 1 glint, 2 target,
+    3 transition, 4 SAM).
+    """
+    lon0, lon1, lat0, lat1 = box
+    with Dataset(src) as ds:
+        lon = ds["longitude"][:]
+        lat = ds["latitude"][:]
+        ok = (
+            (lon > lon0)
+            & (lon < lon1)
+            & (lat > lat0)
+            & (lat < lat1)
+            & (ds["Sounding/operation_mode"][:] == mode)
         )
-        var(d, "levels", "f4", ("levels",), np.arange(1, nlev + 1), units="1")
-        var(
-            d,
-            "time",
-            "f8",
-            ("sounding_id",),
-            secs + np.arange(n) * 0.333,
-            units="seconds since 1970-01-01 00:00:00",
-            long_name="time",
-        )
-        var(
-            d,
-            "latitude",
-            "f4",
-            ("sounding_id",),
-            40.70 + 0.02 * np.arange(n),
-            units="degrees_north",
-        )
-        var(
-            d,
-            "longitude",
-            "f4",
-            ("sounding_id",),
-            -111.90 + 0.01 * np.arange(n),
-            units="degrees_east",
-        )
-        xco2 = np.array([418.1, 418.4, -999999.0, 419.0, 418.8, 418.2], dtype="f4")
-        var(
-            d,
-            "xco2",
-            "f4",
-            ("sounding_id",),
-            xco2,
-            units="ppm",
-            _FillValue=np.float32(-999999.0),
-        )
-        var(
-            d,
-            "xco2_uncertainty",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 0.5, "f4"),
-            units="ppm",
-        )
-        var(
-            d,
-            "xco2_apriori",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 417.0, "f4"),
-            units="ppm",
-        )
-        var(
-            d,
-            "xco2_quality_flag",
-            "i1",
-            ("sounding_id",),
-            np.array([0, 0, 1, 0, 1, 0], "i1"),
-            comment="0=good, 1=bad",
-        )
-        var(
-            d,
-            "solar_zenith_angle",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 52.0, "f4"),
-            units="degrees",
-        )
-        var(
-            d,
-            "sensor_zenith_angle",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 20.0, "f4"),
-            units="degrees",
-        )
-        # levels 1..20 from space to the surface; level 20 pressure = psurf
-        psurf = np.array([868.0, 866.0, 870.0, 865.0, 869.0, 867.0], "f4")
-        sigma = np.linspace(0.0001, 1.0, nlev)
-        plev = psurf[:, None] * sigma[None, :]
-        var(
-            d,
-            "pressure_levels",
-            "f4",
-            ("sounding_id", "levels"),
-            plev,
-            units="hPa",
-            comment="level 20 is the surface",
-        )
-        ak = np.tile(np.linspace(0.3, 1.1, nlev), (n, 1)).astype("f4")
-        var(d, "xco2_averaging_kernel", "f4", ("sounding_id", "levels"), ak, units="1")
-        pw = np.gradient(sigma) / np.gradient(sigma).sum()
-        var(
-            d,
-            "pressure_weight",
-            "f4",
-            ("sounding_id", "levels"),
-            np.tile(pw, (n, 1)),
-            units="1",
-        )
-        var(
-            d,
-            "co2_profile_apriori",
-            "f4",
-            ("sounding_id", "levels"),
-            np.tile(np.linspace(405.0, 420.0, nlev), (n, 1)),
-            units="ppm",
-        )
-        var(
-            d,
-            "vertex_latitude",
-            "f4",
-            ("sounding_id", "vertices"),
-            40.70 + 0.02 * np.arange(n)[:, None] + np.array([-0.01, -0.01, 0.01, 0.01]),
-        )
-        var(
-            d,
-            "vertex_longitude",
-            "f4",
-            ("sounding_id", "vertices"),
-            -111.90
-            + 0.01 * np.arange(n)[:, None]
-            + np.array([-0.01, 0.01, 0.01, -0.01]),
-        )
-        s = d.createGroup("Sounding")
-        var(
-            s,
-            "solar_azimuth_angle",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 205.0, "f4"),
-            units="degrees",
-        )
-        var(
-            s,
-            "sensor_azimuth_angle",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 98.0, "f4"),
-            units="degrees",
-            comment="degrees East of North",
-        )
-        var(
-            s,
-            "altitude",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 1300.0, "f4") + rng.normal(0, 5, n).astype("f4"),
-            units="m",
-            long_name="surface altitude",
-        )
-        var(s, "land_fraction", "f4", ("sounding_id",), np.full(n, 100.0, "f4"))
-        var(
-            s,
-            "operation_mode",
-            "i1",
-            ("sounding_id",),
-            np.zeros(n, "i1"),
-            comment="0=Nadir,1=Glint,2=Target,3=Transition,4=SAM",
-        )
-        var(s, "orbit", "i4", ("sounding_id",), np.full(n, 49123, "i4"))
-        var(s, "footprint", "i1", ("sounding_id",), np.arange(1, n + 1, dtype="i1"))
-        r = d.createGroup("Retrieval")
-        var(r, "psurf", "f4", ("sounding_id",), psurf, units="hPa")
+    start = next(i for i in np.flatnonzero(ok) if ok[i : i + n].all())
+    copy_subset(
+        src, HERE / src.name, OCO_KEEP, {"sounding_id": slice(start, start + n)}
+    )
 
 
 def main() -> None:
@@ -633,7 +490,8 @@ def main() -> None:
     ap.add_argument("--tropomi", type=Path)
     ap.add_argument("--blended", type=Path)
     ap.add_argument("--tccon", type=Path)
-    ap.add_argument("--no-oco2", action="store_true")
+    ap.add_argument("--oco2", type=Path)
+    ap.add_argument("--oco3", type=Path)
     a = ap.parse_args()
     if a.tropomi:
         tropomi(a.tropomi)
@@ -641,8 +499,10 @@ def main() -> None:
         blended(a.blended)
     if a.tccon:
         tccon(a.tccon)
-    if not a.no_oco2:
-        oco2_synthetic()
+    if a.oco2:
+        oco(a.oco2, box=(-95.2, -94.7, 29.2, 29.6), mode=0)  # nadir, near Houston
+    if a.oco3:
+        oco(a.oco3, box=(-97.6, -97.0, 36.3, 36.9), mode=2)  # target, Lamont (SGP)
     # The GGG samples need no source file: they are synthetic by construction.
     oof_synthetic()
     ggg_private_synthetic()
