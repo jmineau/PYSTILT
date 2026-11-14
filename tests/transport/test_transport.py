@@ -95,7 +95,7 @@ def _fake_hysplit(monkeypatch) -> dict:
 
     seen: dict = {}
 
-    def write_inputs(workdir, receptor, config, met_files):
+    def write_inputs(workdir, release_time, locations, config, met_files, kmsl):
         workdir.mkdir(parents=True)
         seen.update(workdir=workdir, met_files=met_files)
 

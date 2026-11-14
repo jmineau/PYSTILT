@@ -24,9 +24,14 @@ Running HYSPLIT
 ---------------
 
 :func:`~stilt.transport.hysplit.write_inputs` writes everything
-``hycs_std`` reads for one receptor into a folder: ``CONTROL``,
-``SETUP.CFG``, and the error and mixed-layer files when the settings call
-for them. Use it to look at the input files of a run, and
+``hycs_std`` reads into a folder: ``CONTROL``, ``SETUP.CFG``, and the error
+and mixed-layer files when the settings call for them. It takes what
+HYSPLIT's ``CONTROL`` file holds a release time and release locations
+(latitude, longitude and height, in ``CONTROL``'s order), with ``kmsl`` 0
+for heights above ground and 1 above sea level, as ``SETUP.CFG``'s ``KMSL``.
+:class:`~stilt.transport.hysplit.HysplitModel` gives it a receptor's time,
+release points (``receptor.coords()``) and ``altitude_ref``. Use it to look
+at the input files of a run, and
 :func:`~stilt.transport.hysplit.run_hycs_std` to run ``hycs_std`` on them.
 :func:`~stilt.transport.hysplit.read_particle_dat` reads a
 ``PARTICLE_STILT.DAT`` as a particle table. The release heights and the
@@ -35,10 +40,27 @@ near-field correction are PYSTILT's steps, the same for any model
 
 .. code-block:: python
 
-   from stilt.particles import add_release_heights, correct_near_field
-   from stilt.transport.hysplit import read_particle_dat
+   from pathlib import Path
 
-   particles = read_particle_dat("PARTICLE_STILT.DAT", config.varsiwant)
+   from stilt.particles import add_release_heights, correct_near_field
+   from stilt.transport.hysplit import (
+       HysplitConfig,
+       read_particle_dat,
+       run_hycs_std,
+       write_inputs,
+   )
+
+   config = HysplitConfig(n_hours=-24, numpar=200)
+   write_inputs(
+       "run",
+       release_time=receptor.time,
+       locations=receptor.coords(),
+       config=config,
+       met_files=met_files,
+       kmsl=1 if receptor.altitude_ref == "msl" else 0,
+   )
+   run_hycs_std(Path("run"))
+   particles = read_particle_dat("run/PARTICLE_STILT.DAT", config.varsiwant)
    particles = add_release_heights(particles, receptor)
    particles = correct_near_field(particles, receptor, config.veght)
 

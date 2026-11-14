@@ -446,7 +446,7 @@ def test_every_multipoint_location_gets_the_same_particles(tmp_path, met_dir):
 def test_a_maxpar_that_cuts_a_multipoint_release_short_fails(tmp_path, met_dir):
     import stilt
 
-    with pytest.raises(SimulationError, match="40 locations") as caught:
+    with pytest.raises(SimulationError, match="40 release locations") as caught:
         stilt.run_trajectories(
             _forty_points(), reference_met(met_dir), workdir=tmp_path, n_hours=-1,
             numpar=1000, maxpar=1000, krand=2, seed=42, hnf_plume=False,

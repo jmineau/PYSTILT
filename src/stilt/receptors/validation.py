@@ -18,7 +18,7 @@ import pandas as pd
 #: Why a multipoint receptor's points may not share a horizontal location.
 REPEATED_LOCATION = (
     "MultiPointReceptor points must have distinct horizontal locations "
-    "(HYSPLIT collapses starting locations that share a lat/lon into a "
+    "(HYSPLIT collapses release locations that share a lat/lon into a "
     "single vertical line source and releases only between the last two "
     "heights). Use ColumnReceptor for a vertical column, or one "
     "PointReceptor per height (distinct r_idx) for discrete release "
@@ -62,7 +62,7 @@ def multipoint_errors(
     decimal places. *receptor* labels each point's receptor. A point is bad
     when an earlier point of its receptor is at the same location.
 
-    HYSPLIT joins consecutive starting locations at one latitude and
+    HYSPLIT joins consecutive release locations at one latitude and
     longitude into a vertical line source and releases only from the last
     pair, and PYSTILT matches particles to their release point by
     horizontal position.

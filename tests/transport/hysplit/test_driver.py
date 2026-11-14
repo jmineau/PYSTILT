@@ -1,12 +1,12 @@
 """Tests for HYSPLIT's input files, running hycs_std, and reading its particles."""
 
+import datetime as dt
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from stilt.exceptions import HYSPLITNotFoundError, SimulationError
-from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.transport.hysplit import (
     FailureReason,
     HysplitConfig,
@@ -41,7 +41,8 @@ def _make_control(
     if met_files is None:
         met_files = [Path("/met/hrrr_2023010100")]
     return ControlFile(
-        receptor=receptor,
+        release_time=receptor.time,
+        locations=receptor.coords(),
         emisshrs=emisshrs,
         n_hours=n_hours,
         w_option=w_option,
@@ -61,7 +62,8 @@ def test_control_file_roundtrip_single_point(point_receptor, tmp_path):
     cf.write(path)
     loaded = ControlFile.read(path)
 
-    assert loaded.receptor == point_receptor
+    assert loaded.release_time == point_receptor.time
+    assert loaded.locations == point_receptor.coords()
     assert loaded.n_hours == -24
     assert loaded.w_option == 0
     assert loaded.z_top == 25000.0
@@ -92,22 +94,37 @@ def test_control_file_roundtrip_n_hours_forward(point_receptor, tmp_path):
     assert loaded.n_hours == 24
 
 
-def test_control_file_roundtrip_receptor_time(point_receptor, tmp_path):
+def test_control_file_roundtrip_release_time(point_receptor, tmp_path):
     cf = _make_control(point_receptor)
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert loaded.receptor.time == point_receptor.time
+    assert loaded.release_time == point_receptor.time
 
 
-def test_control_file_roundtrip_receptor_coords(point_receptor, tmp_path):
-    cf = _make_control(point_receptor)
+def test_control_file_lists_a_location_as_latitude_longitude_height(tmp_path):
+    """CONTROL's order, which is not the (lon, lat, height) of a receptor's points."""
     path = tmp_path / "CONTROL"
-    cf.write(path)
-    loaded = ControlFile.read(path)
-    assert loaded.receptor.longitude == pytest.approx(point_receptor.longitude)
-    assert loaded.receptor.latitude == pytest.approx(point_receptor.latitude)
-    assert loaded.receptor.altitude == pytest.approx(point_receptor.altitude)
+    ControlFile(
+        release_time=dt.datetime(2023, 7, 15, 18, 5),
+        locations=[(40.766, -111.848, 10.0), (40.5, -112.0, 250.0)],
+        emisshrs=0.01,
+        n_hours=-24,
+        w_option=0,
+        z_top=25000.0,
+        met_files=[Path("/met/hrrr")],
+    ).write(path)
+
+    assert path.read_text().splitlines()[:4] == [
+        "23 07 15 18 05",
+        "2",
+        "40.766 -111.848 10.0",
+        "40.5 -112.0 250.0",
+    ]
+    assert ControlFile.read(path).locations == [
+        (40.766, -111.848, 10.0),
+        (40.5, -112.0, 250.0),
+    ]
 
 
 def test_control_file_roundtrip_multiple_met_files(point_receptor, tmp_path):
@@ -151,9 +168,11 @@ def test_control_file_roundtrip_column_receptor(column_receptor, tmp_path):
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert isinstance(loaded.receptor, ColumnReceptor)
-    assert loaded.receptor.bottom == pytest.approx(column_receptor.bottom)
-    assert loaded.receptor.top == pytest.approx(column_receptor.top)
+    assert loaded.locations == column_receptor.coords()
+    assert [height for _, _, height in loaded.locations] == [
+        column_receptor.bottom,
+        column_receptor.top,
+    ]
 
 
 def test_control_file_roundtrip_multipoint_receptor(multipoint_receptor, tmp_path):
@@ -161,8 +180,7 @@ def test_control_file_roundtrip_multipoint_receptor(multipoint_receptor, tmp_pat
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert isinstance(loaded.receptor, MultiPointReceptor)
-    assert loaded.receptor.coords() == multipoint_receptor.coords()
+    assert loaded.locations == multipoint_receptor.coords()
 
 
 def test_control_file_read_missing_raises(tmp_path):
@@ -193,9 +211,11 @@ def _fake_build(path: Path, marker: str = "fake binary") -> Path:
 
 
 def _inputs(tmp_path, receptor, config=None) -> Path:
-    """Write the input files for *receptor* and return the working directory."""
+    """Write the input files for *receptor*, as the model does, and return the working directory."""
     workdir = tmp_path / "run"
-    write_inputs(workdir, receptor, config or _config(), [tmp_path / "met" / "dummy"])
+    model._write_inputs(
+        workdir, receptor, config or _config(), [tmp_path / "met" / "dummy"]
+    )
     return workdir
 
 
@@ -610,7 +630,7 @@ def test_a_multipoint_release_cut_short_by_maxpar_fails(
     """HYSPLIT's puff-limit warning means the last locations got fewer particles (#237)."""
     _fake_hysplit(monkeypatch, log="", rows=_ending_at(24 * 60), warning=PUFF_LIMIT)
 
-    with pytest.raises(SimulationError, match="3 locations") as caught:
+    with pytest.raises(SimulationError, match="3 release locations") as caught:
         _run(tmp_path, multipoint_receptor, _config(maxpar=10))
     assert caught.value.reason == FailureReason.PARTICLE_LIMIT
     assert "Raise maxpar or leave it unset" in str(caught.value)
@@ -897,6 +917,40 @@ def test_kmsl_comes_only_from_the_receptor():
         HysplitConfig(kmsl=0)
 
 
+def test_write_inputs_takes_a_release_time_and_release_locations(tmp_path):
+    """HYSPLIT's own inputs, with no receptor: CONTROL's first lines, KMSL and MAXPAR."""
+    workdir = tmp_path / "run"
+    write_inputs(
+        workdir,
+        release_time=dt.datetime(2021, 1, 5, 7, 37),
+        locations=[(40.7, -111.9, 1500.0), (40.8, -111.8, 1600.0)],
+        config=_config(),
+        met_files=[tmp_path / "met" / "dummy"],
+        kmsl=1,
+    )
+
+    assert (workdir / "CONTROL").read_text().splitlines()[:4] == [
+        "21 01 05 07 37",
+        "2",
+        "40.7 -111.9 1500.0",
+        "40.8 -111.8 1600.0",
+    ]
+    setup = (workdir / "SETUP.CFG").read_text().lower()
+    assert "kmsl=1," in setup
+    assert "maxpar=12," in setup  # two locations: 2 * (10 // 2 + 1)
+
+
+def test_write_inputs_takes_heights_as_above_ground_unless_told(tmp_path):
+    write_inputs(
+        tmp_path / "run",
+        dt.datetime(2021, 1, 5, 7, 37),
+        [(40.7, -111.9, 10.0)],
+        _config(),
+        [tmp_path / "met" / "dummy"],
+    )
+    assert "kmsl=0," in (tmp_path / "run" / "SETUP.CFG").read_text().lower()
+
+
 # ---------------------------------------------------------------------------
 # write_inputs: CONTROL and the error and mixed-layer files
 # ---------------------------------------------------------------------------
@@ -1089,7 +1143,7 @@ def test_setup_cfg_maxpar_follows_the_receptors_locations(
         (column_receptor, 10),
         (multipoint_receptor, 12),
     ]:
-        assert driver.release_locations(receptor) == (3 if maxpar == 12 else 1)
+        assert driver.release_locations(receptor.coords()) == (3 if maxpar == 12 else 1)
         assert f"maxpar={maxpar}," in _setup_cfg(tmp_path / receptor.kind, receptor)
     set_maxpar = _config(maxpar=10)
     assert "maxpar=10," in _setup_cfg(tmp_path / "set", multipoint_receptor, set_maxpar)
