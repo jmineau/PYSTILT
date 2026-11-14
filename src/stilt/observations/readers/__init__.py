@@ -15,6 +15,7 @@ are in hPa, and altitudes are in meters above sea level.
 from .geoms import read_coccon
 from .ggg import read_ggg_netcdf, read_ggg_oof, read_tccon
 from .oco import read_oco2
+from .proffast import read_proffast
 from .tropomi import read_tropomi_ch4
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "read_ggg_netcdf",
     "read_ggg_oof",
     "read_oco2",
+    "read_proffast",
     "read_tccon",
     "read_tropomi_ch4",
 ]

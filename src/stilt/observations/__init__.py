@@ -8,7 +8,8 @@ Before a run:
 
 - Read a product into a table of soundings with :func:`read_tropomi_ch4`,
   :func:`read_oco2`, :func:`read_tccon`, :func:`read_ggg_oof`,
-  :func:`read_ggg_netcdf`, or :func:`read_coccon`.
+  :func:`read_ggg_netcdf`, :func:`read_coccon`, or
+  :func:`read_proffast`.
 - Group soundings into overpasses (:func:`group_by_overpass`) and choose
   which to run (:func:`select_observations_spatial`).
 - Make a receptor for each sounding, and their averaging-kernel table, with
@@ -50,6 +51,7 @@ from .readers import (
     read_ggg_netcdf,
     read_ggg_oof,
     read_oco2,
+    read_proffast,
     read_tccon,
     read_tropomi_ch4,
 )
@@ -76,6 +78,7 @@ __all__ = [
     "read_ggg_netcdf",
     "read_ggg_oof",
     "read_oco2",
+    "read_proffast",
     "read_tccon",
     "read_tropomi_ch4",
     "select_observations_spatial",

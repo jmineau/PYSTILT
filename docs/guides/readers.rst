@@ -57,9 +57,15 @@ The readers
        them and as PROFFASTpylot writes them
      - Files PROFFASTpylot wrote for KIT's example data. The committed test
        file is synthetic.
+   * - :func:`~stilt.observations.read_proffast`
+     - A PROFFASTpylot run: its ``comb_invparms_*.csv`` and the daily
+       ``colsens.dat``, ``pT_fast_out.dat`` and ``VMR_fast_out.dat`` in
+       ``raw_output_proffast/``
+     - A run on KIT's example data, whose kernels and priors match its
+       GEOMS files. The committed test run is synthetic.
 
 The satellite readers take ``lon_range`` and ``lat_range`` to keep only the
-pixels inside a box. Use them on a whole orbit. The GGG and COCCON readers take a
+pixels inside a box. Use them on a whole orbit. The GGG and EM27/SUN readers take a
 ``species`` (``xco2``, ``xch4``, ``xco``, ...), and the netCDF readers also
 take a ``time_range`` for multi-year site files. The readers do not filter
 anything else. Quality flags become the ``good`` column, and you decide
@@ -93,8 +99,15 @@ already interpolated to each measurement's solar zenith angle, so
 :func:`~stilt.observations.read_coccon` returns ``ak`` per row like the
 satellite readers. The files hold only measurements that passed COCCON's
 quality filter, so ``good`` is True everywhere. If you run PROFFASTpylot
-yourself, its GEOMS writer makes these files from your results; the reader
-does not read its ``comb_invparms`` CSV.
+yourself, read its results with :func:`~stilt.observations.read_proffast`
+instead. It takes the run's ``comb_invparms`` CSV and finds each day's
+kernel and prior files next to it. You get every spectrum, with
+``good`` set by COCCON's screen (solar zenith angle at most 75 degrees,
+``XAIR`` between 0.98 and 1.02), the values before any instrument
+calibration, and COCCON's alternative retrievals (``xco2_str``,
+``xch4_s5p``). PROFFAST reports no error for a single spectrum, so
+``uncertainty`` is NaN. Use the GEOMS files when you want COCCON's
+calibrated, screened release.
 
 .. code-block:: python
 
