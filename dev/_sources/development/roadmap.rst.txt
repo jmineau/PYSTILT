@@ -115,7 +115,7 @@ feature.
      - Implemented
    * - A receptor and a kernel for each sounding (``receptors_from_soundings``, ``project.add_table``)
      - Implemented
-   * - Product readers (OCO-2/3, TROPOMI, TCCON)
+   * - Product readers (OCO-2/3, TROPOMI, TCCON, EM27/SUN from GGG or PROFFAST)
      - Implemented (see *Reading Retrieval Products*); other instruments as one module each
    * - Transport error on the modeled enhancement (``sim.transport_error``)
      - Implemented
