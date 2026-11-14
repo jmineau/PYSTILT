@@ -96,9 +96,12 @@ The workflow side by side
    * - ``rm_dat``
      - no setting: a successful run's working directory is removed;
        ``execution: keep_workdir`` keeps it
-   * - HYSPLIT settings (``capemin``, ``delt``, ``kmix0``, ``tlfrac``,
-       ``veght``, …)
+   * - HYSPLIT settings (``capemin``, ``kmix0``, ``tlfrac``, ``veght``, …)
      - same names, top level
+   * - HYSPLIT settings that cannot change the particles (``delt``,
+       ``cmass``, ``conage``, ``ichem``, ``kagl``, …)
+     - no setting: PYSTILT writes STILT-R's values to ``SETUP.CFG`` in
+       every run
    * - wind and mixing-depth error settings (``siguverr``, ``tluverr``,
        ``sigzierr``, …)
      - same names, usually on a variant of their own
@@ -298,7 +301,7 @@ It prints the met and the variant that name the imported folders, for
        met: stilt-r
        version: 1d936c1
        capemin: -1.0
-       cmass: 0
+       hscale: 10800.0
        # ... every HYSPLIT setting, in name order
        ziscale: 1.0
        grid: {xmin: -112.5, xmax: -111.5, ymin: 40.25, ymax: 41.25, xres: 0.01,
