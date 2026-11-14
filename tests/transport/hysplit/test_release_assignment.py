@@ -26,7 +26,7 @@ def _raw_particles(receptor, config, met, workdir, timeout):
     """Run hycs_std and return its particles as HYSPLIT wrote them, before release heights are added."""
     window = run_window(receptor.time, config.n_hours)
     files = met.files_for(window)
-    write_inputs(workdir, receptor, config, files)
+    write_inputs(workdir, receptor.time, receptor.coords(), config, files)
     run_hycs_std(workdir, timeout)
     return read_particle_dat(workdir / "PARTICLE_STILT.DAT", config.varsiwant)
 

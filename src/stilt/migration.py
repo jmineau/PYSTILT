@@ -408,7 +408,7 @@ def _receptor(stored: Any, control: ControlFile, path: Path) -> Receptor:
     if "run_time" not in stored:
         raise ValueError(f"{path}: the receptor has no run_time.")
     time = pd.DatetimeIndex(stored["run_time"])[0]
-    points = [(lon, lat, alt) for lat, lon, alt in control.receptor.coords()]
+    points = [(lon, lat, alt) for lat, lon, alt in control.locations]
     return Receptor.from_points(time, points)
 
 

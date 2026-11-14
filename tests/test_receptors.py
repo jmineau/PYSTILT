@@ -637,7 +637,7 @@ def test_read_receptors_zmsl_infers_msl(tmp_path):
 
 
 def test_multipoint_rejects_stacked_heights_at_one_location():
-    # HYSPLIT chains same-lat/lon starting locations into one vertical line
+    # HYSPLIT chains same-lat/lon release locations into one vertical line
     # source and releases only between the last two heights.
     with pytest.raises(ValueError, match="distinct horizontal"):
         MultiPointReceptor(

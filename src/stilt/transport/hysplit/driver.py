@@ -8,6 +8,7 @@ around ``hycs_std`` in one directory; call them yourself to look at the
 input files of a run, or to read a ``PARTICLE_STILT.DAT`` from elsewhere.
 """
 
+import datetime as dt
 import os
 import platform
 import signal
@@ -22,7 +23,6 @@ import numpy as np
 import pandas as pd
 
 from stilt.exceptions import HYSPLITNotFoundError, SimulationError
-from stilt.receptors import Receptor
 from stilt.transport.hysplit.config import (
     WIND_ERROR_SETTINGS,
     ZI_ERROR_SETTINGS,
@@ -167,8 +167,8 @@ def setup_entries(params: HysplitConfig) -> dict[str, Any]:
 
     Every setting not in :data:`NOT_IN_SETUP` is an entry, in declaration
     order. The driver adds ``KMSL``, ``IVMAX``, and ``WINDERRTF``, and
-    ``MAXPAR`` when ``maxpar`` is unset, which depend on the receptor or
-    follow from other settings.
+    ``MAXPAR`` when ``maxpar`` is unset, which depend on the release
+    locations or follow from other settings.
     """
     entries = {
         name: getattr(params, name)
@@ -196,19 +196,24 @@ def setup_seed(seed: int) -> int:
     return -(abs(seed) + 1)
 
 
-def release_locations(receptor: Receptor) -> int:
+def release_locations(locations: Sequence[tuple[float, float, float]]) -> int:
     """
-    Return the number of horizontal locations *receptor* releases particles from.
+    Return the number of horizontal locations among the release *locations*.
 
-    HYSPLIT divides ``numpar`` among them. A :class:`~stilt.receptors.ColumnReceptor`
-    is one location: HYSPLIT joins its two heights into one line source.
+    HYSPLIT divides ``numpar`` among them. Two release locations at one
+    latitude and longitude are one: HYSPLIT joins their heights into one
+    line source.
     """
-    return len({(lat, lon) for lat, lon, _ in receptor.coords()})
+    return len({(lat, lon) for lat, lon, _ in locations})
 
 
-def check_release(workdir: Path, receptor: Receptor, config: HysplitConfig) -> None:
+def check_release(
+    workdir: Path,
+    locations: Sequence[tuple[float, float, float]],
+    config: HysplitConfig,
+) -> None:
     """
-    Raise when HYSPLIT stopped releasing before every location of *receptor* got its particles.
+    Raise when HYSPLIT stopped releasing before every one of *locations* got its particles.
 
     HYSPLIT fills the locations in order and stops at ``MAXPAR``, writing
     ``exceeding puff limit`` to its ``WARNING`` file, so the last
@@ -218,21 +223,21 @@ def check_release(workdir: Path, receptor: Receptor, config: HysplitConfig) -> N
     Raises
     ------
     SimulationError
-        With ``reason`` ``PARTICLE_LIMIT``, when *receptor* has several
-        locations and the ``WARNING`` file in *workdir* says HYSPLIT
-        reached ``MAXPAR``.
+        With ``reason`` ``PARTICLE_LIMIT``, when *locations* hold several
+        horizontal locations and the ``WARNING`` file in *workdir* says
+        HYSPLIT reached ``MAXPAR``.
     """
-    locations = release_locations(receptor)
+    count = release_locations(locations)
     warning = workdir / WARNING_FILE
-    if locations < 2 or not warning.exists():
+    if count < 2 or not warning.exists():
         return
     if PARTICLE_LIMIT_PHRASE in warning.read_text(encoding="utf-8", errors="replace"):
         fix = (
             "Raise maxpar or leave it unset." if config.maxpar else "Set maxpar higher."
         )
         raise SimulationError(
-            f"HYSPLIT stopped releasing at maxpar = {config.maxpar_for(locations)} "
-            f"before each of the receptor's {locations} locations got its share of "
+            f"HYSPLIT stopped releasing at maxpar = {config.maxpar_for(count)} "
+            f"before each of the {count} release locations got its share of "
             f"numpar = {config.numpar}. {fix}",
             reason=FailureReason.PARTICLE_LIMIT,
         )
@@ -374,12 +379,14 @@ def _write_values(path: Path, values: list[float] | None) -> None:
 
 def write_inputs(
     workdir: str | Path,
-    receptor: Receptor,
+    release_time: dt.datetime,
+    locations: Sequence[tuple[float, float, float]],
     config: HysplitConfig,
     met_files: Sequence[Path],
+    kmsl: int = 0,
 ) -> None:
     """
-    Write everything ``hycs_std`` reads for one receptor into *workdir*.
+    Write everything ``hycs_std`` reads for one run into *workdir*.
 
     Links ``hycs_std`` (from ``config.exe_dir``, or the bundled build) and
     HYSPLIT's data tables (the bundled ones, replaced by any in
@@ -391,13 +398,18 @@ def write_inputs(
     ----------
     workdir : str or Path
         Directory to write into.
-    receptor : Receptor
-        Where and when particles are released. Its ``altitude_ref`` sets
-        HYSPLIT's ``KMSL``.
+    release_time : datetime
+        The release time, in UTC.
+    locations : sequence of tuple of float
+        The release locations, each ``(latitude, longitude, height)`` in
+        degrees and meters, in the order ``CONTROL`` lists them.
     config : HysplitConfig
         Transport and error settings.
     met_files : sequence of Path
         Meteorology files, in the order HYSPLIT should read them.
+    kmsl : {0, 1}, default 0
+        HYSPLIT's ``KMSL``: 0 when the release heights are above ground, 1
+        when they are above sea level.
 
     Raises
     ------
@@ -426,7 +438,8 @@ def write_inputs(
         (workdir / name).symlink_to(target.resolve())
 
     ControlFile(
-        receptor=receptor,
+        release_time=release_time,
+        locations=list(locations),
         n_hours=config.n_hours,
         emisshrs=config.emisshrs,
         w_option=config.w_option,
@@ -435,9 +448,8 @@ def write_inputs(
     ).write(workdir / CONTROL_FILE)
 
     entries = setup_entries(config)
-    # HYSPLIT's KMSL: 0 for heights above ground, 1 above sea level.
-    entries["kmsl"] = 1 if receptor.altitude_ref == "msl" else 0
-    entries["maxpar"] = config.maxpar_for(release_locations(receptor))
+    entries["kmsl"] = kmsl
+    entries["maxpar"] = config.maxpar_for(release_locations(locations))
     entries["ivmax"] = len(config.varsiwant)  # number of output variables
     entries["winderrtf"] = winderrtf(config)
     setup = NameList("SETUP")

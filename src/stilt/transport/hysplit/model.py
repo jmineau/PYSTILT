@@ -213,10 +213,10 @@ class HysplitModel:
         source = files.files_for(window)
         readable = files.readable(source)
         files.check(readable, window)
-        write_inputs(workdir, receptor, config, readable)
+        _write_inputs(workdir, receptor, config, readable)
         try:
             run_hycs_std(workdir, timeout)
-            check_release(workdir, receptor, config)
+            check_release(workdir, receptor.coords(), config)
             path = workdir / PARTICLE_STILT_FILE
             if not path.exists():
                 raise SimulationError(
@@ -232,6 +232,27 @@ class HysplitModel:
         # The record names the files found for the run: the archive's, or a
         # crop that served it; the crop settings are in the run's settings.
         return ModelRun(particles=particles, log=_read_log(workdir), met_files=source)
+
+
+def _write_inputs(
+    workdir: Path, receptor: Receptor, config: HysplitConfig, met_files: list[Path]
+) -> None:
+    """
+    Write HYSPLIT's input files for *receptor* into *workdir*.
+
+    The one place a receptor becomes what HYSPLIT's ``CONTROL`` holds: its
+    time is the release time, its release points are the release
+    locations, and its ``altitude_ref`` is ``KMSL`` (0 above ground, 1
+    above sea level).
+    """
+    write_inputs(
+        workdir,
+        release_time=receptor.time,
+        locations=receptor.coords(),
+        config=config,
+        met_files=met_files,
+        kmsl=1 if receptor.altitude_ref == "msl" else 0,
+    )
 
 
 def _met_grid(path: Path) -> Grid:
