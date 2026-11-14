@@ -508,7 +508,9 @@ def test_the_settings_are_what_the_files_record(tmp_path, capsys):
     # SETUP.CFG
     assert run["numpar"] == 10
     assert run["kmix0"] == 150
-    assert run["frvs"] == 0.01
+    assert run["hscale"] == 10800
+    # SETUP.CFG entries that cannot change the particles are no settings.
+    assert "frvs" not in run
     # CONTROL
     assert run["n_hours"] == -2
     assert run["emisshrs"] == 0.01
