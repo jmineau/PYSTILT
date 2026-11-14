@@ -1,0 +1,149 @@
+name: Upgrade STILT-R
+
+# Once a month, look for uataq/stilt commits after the pinned STILT_R_SHA (in
+# stilt-r.yml) and open one pull request that moves the pin to uataq/stilt's newest
+# commit when any of them touches a file the STILT-R comparison runs (WATCH below).
+# Commits that touch only other files (run_stilt.r, stilt_cli.r, docs, tests, the
+# Dockerfile) open nothing: the pin moves past them with the next real change.
+#
+# The pull request also moves the pin in docs/development/stilt_r_parity.rst and
+# sets its "Last verified" date. Merge it when the STILT-R workflow passes; when it
+# fails, follow "Moving to a newer STILT-R commit" in that page.
+#
+# A pull request opened with the workflow's own token does not start the other
+# workflows, so this one starts STILT-R and Documentation on the branch itself
+# (workflow_dispatch is the one event the token may trigger); their results show
+# on the pull request. Needs the same setting as lock-upgrade.yml.
+on:
+  schedule:
+    - cron: "0 6 2 * *"  # 06:00 UTC on the 2nd of each month (the lock upgrade runs on the 1st)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stilt-r-upgrade
+  cancel-in-progress: false
+
+env:
+  BRANCH: chore/stilt-r-upgrade
+  UPSTREAM: uataq/stilt
+  # Path prefixes in uataq/stilt that the comparison runs: the R helpers in
+  # tests/fixtures/r_helpers/ source every file in r/src/, and STILT-R's HYSPLIT
+  # run uses bin/linux_x64/hycs_std with the files in exe/.
+  WATCH: "r/src/ bin/linux_x64/hycs_std exe/"
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # push the branch
+      pull-requests: write  # open or update the pull request
+      actions: write  # start the other workflows on the branch
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Look for upstream commits that touch the watched files
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          old="$(sed -nE 's/^ *STILT_R_SHA: *([0-9a-f]{40}).*/\1/p' .github/workflows/stilt-r.yml)"
+          if [ -z "$old" ]; then
+            echo "::error::No STILT_R_SHA in .github/workflows/stilt-r.yml."
+            exit 1
+          fi
+          default_branch="$(gh api "repos/$UPSTREAM" --jq .default_branch)"
+          new="$(gh api "repos/$UPSTREAM/commits/$default_branch" --jq .sha)"
+          gh api "repos/$UPSTREAM/compare/$old...$new" > "$RUNNER_TEMP/compare.json"
+          status="$(jq -r .status "$RUNNER_TEMP/compare.json")"
+          case "$status" in
+            identical)
+              echo "STILT_R_SHA ($old) is $UPSTREAM's newest commit."
+              exit 0 ;;
+            ahead) ;;
+            *)
+              echo "::error::$UPSTREAM/$default_branch ($new) is $status from STILT_R_SHA ($old): the pin is no longer on its history. Move the pin by hand."
+              exit 1 ;;
+          esac
+
+          read -ra watch <<< "$WATCH"
+          is_watched() {
+            local prefix
+            for prefix in "${watch[@]}"; do
+              case "$1" in "$prefix"*) return 0 ;; esac
+            done
+            return 1
+          }
+
+          # One line per upstream commit, oldest first, with the watched files it touches.
+          any_watched=false
+          : > "$RUNNER_TEMP/commits.md"
+          while IFS=$'\t' read -r sha url subject; do
+            touched=()
+            while IFS= read -r file; do
+              if is_watched "$file"; then touched+=("\`$file\`"); fi
+            done < <(gh api "repos/$UPSTREAM/commits/$sha" --jq '.files[].filename')
+            if [ "${#touched[@]}" -gt 0 ]; then
+              any_watched=true
+              printf -v files '%s, ' "${touched[@]}"
+              files="${files%, }"
+            else
+              files="no watched files"
+            fi
+            echo "- [\`${sha:0:8}\`]($url) $subject ($files)" >> "$RUNNER_TEMP/commits.md"
+          done < <(jq -r '.commits[] | [.sha, .html_url, (.commit.message | split("\n")[0])] | @tsv' "$RUNNER_TEMP/compare.json")
+
+          {
+            echo "## $UPSTREAM commits after ${old:0:8}"
+            echo
+            cat "$RUNNER_TEMP/commits.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$any_watched" != true ]; then
+            echo "No commit after STILT_R_SHA ($old) touches a watched file; the pin stays."
+            exit 0
+          fi
+
+          sed -i "s/$old/$new/" .github/workflows/stilt-r.yml docs/development/stilt_r_parity.rst
+          sed -i -E "/Last verified/{n;s/[0-9]{4}-[0-9]{2}-[0-9]{2}/$(date -u +%F)/}" docs/development/stilt_r_parity.rst
+          {
+            echo "Moves the STILT-R pin (\`STILT_R_SHA\` in \`.github/workflows/stilt-r.yml\`) from [\`${old:0:8}\`]($GITHUB_SERVER_URL/$UPSTREAM/commit/$old) to [\`${new:0:8}\`]($GITHUB_SERVER_URL/$UPSTREAM/commit/$new), $UPSTREAM's newest commit, and sets \"Last verified\" in \`docs/development/stilt_r_parity.rst\`."
+            echo
+            echo "The $UPSTREAM commits since the pin, with the watched files (\`$WATCH\`) each one touches:"
+            echo
+            cat "$RUNNER_TEMP/commits.md"
+            echo
+            echo "STILT-R and Documentation were started on this branch by the workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "Merge it when they pass. If a fidelity test fails, follow \"Moving to a newer STILT-R commit\" in \`docs/development/stilt_r_parity.rst\`."
+          } > "$RUNNER_TEMP/body.md"
+          echo "new=$new" >> "$GITHUB_OUTPUT"
+
+      - name: Push the branch, open or update the pull request, start the checks
+        if: steps.check.outputs.new != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW: ${{ steps.check.outputs.new }}
+        run: |
+          set -euo pipefail
+          title="chore(stilt-r): move the STILT-R pin to ${NEW:0:8}"
+          gh auth setup-git
+          git checkout --quiet -b "$BRANCH"
+          git add .github/workflows/stilt-r.yml docs/development/stilt_r_parity.rst
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet -m "$title"
+          git push --quiet --force origin "$BRANCH"  # the branch belongs to this workflow
+          number="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$number" ]; then
+            gh pr edit "$number" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh pr create --base main --head "$BRANCH" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          fi
+          for workflow in stilt-r.yml docs.yml; do
+            gh workflow run "$workflow" --ref "$BRANCH"
+          done

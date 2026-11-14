@@ -237,7 +237,10 @@ machine-written, is "Writing documentation" in `CONTRIBUTING.md`. Words:
   message as the line a user would read. The version comes from git tags
   (setuptools-scm). Releases are cut by the maintainer (CONTRIBUTING.md).
 - `uv.lock` is updated by the Upgrade lock workflow (`lock-upgrade.yml`, monthly,
-  opens the `chore/lock-upgrade` pull request), not by Dependabot.
+  opens the `chore/lock-upgrade` pull request), not by Dependabot. The STILT-R
+  pin (`STILT_R_SHA` in `stilt-r.yml`) is moved by the Upgrade STILT-R workflow
+  (`stilt-r-upgrade.yml`, monthly, opens `chore/stilt-r-upgrade` when an upstream
+  commit touches a file the comparison runs).
 - Open work is in [GitHub issues](https://github.com/jmineau/PYSTILT/issues);
   read one before working on it. Feature status lives in `docs/development/roadmap.rst`
   (update its row when a feature lands). Over-engineered code goes on the
