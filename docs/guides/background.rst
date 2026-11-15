@@ -60,8 +60,8 @@ The background at a receptor
 
 The background is weighted the way the footprint is, with the variant's
 transforms: the averaging kernel (including one from a per-receptor
-table), pressure weighting, and any lifetime decay. So the background and
-the enhancement add. For a tower receptor there are no transforms, and the
+table), pressure weighting, and any loss on the way (lifetime, deposition,
+oxidation). So the background and the enhancement add. For a tower receptor there are no transforms, and the
 value is the plain mean over the particles.
 
 ``bg.per_particle`` is the field at each endpoint, and ``bg.weights`` is
@@ -155,8 +155,9 @@ Choices made here
 - Values come from the nearest cell in every dimension, without
   interpolation. Before the first or after the last time or level, the end
   value is used. Outside the grid there is no value.
-- A lifetime transform decays the background by the endpoint's age, as it
-  decays the enhancement along the trajectory.
+- A loss transform (lifetime, deposition, oxidation) scales the background
+  by the fraction that survives from the endpoint to the receptor, as it
+  scales the enhancement along the trajectory.
 - Particles without a value are left out, and the others carry their
   weight. This assumes the missing particles have the same mean as the
   rest. Check ``bg.per_particle`` when a regional field might not cover

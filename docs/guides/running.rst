@@ -128,12 +128,12 @@ Commands
    ``receptors.csv``.
 
 ``stilt check <project>``
-   List what would stop the project's runs, before any run starts: a met
-   directory that does not exist, met files a receptor's run needs that
-   are not there, a receptor outside the met's crop or the footprint grid,
-   and an averaging-kernel table that does not match the receptors. Nothing
-   is run or downloaded. It exits with 0 when it finds nothing and 1 when
-   it lists anything (:doc:`checking`).
+   List what would stop the project's runs, before any run starts, such as
+   met files a receptor's run needs that are not there, a receptor outside
+   the met's crop or the footprint grid, or a transform's input that is
+   missing. Nothing is run or downloaded. It exits with 0 when it finds
+   nothing and 1 when it lists anything (:doc:`checking` lists every
+   check).
 
 ``stilt fetch <project>``
    Get the met files the unfinished simulations need, then exit. A met with

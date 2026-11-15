@@ -125,17 +125,9 @@ Methods that need the receptor or the grid are under ``foot.stilt``:
 The receptor id is also a coordinate, ``foot.receptor``. It stays on the
 array through sums and arithmetic.
 
-To write a footprint as a CF NetCDF file for other tools, and read one
-back:
-
-.. ipython:: python
-
-   foot.stilt.to_netcdf("footprint_2021-01-15_08.nc")
-   foot = stilt.read_footprint("footprint_2021-01-15_08.nc")
-
-The file records the receptor and the settings used to make it.
-``stilt.read_footprint`` also opens a footprint file from the output
-directory, such as ``sim.footprint_path``, with nothing else around it.
+``stilt.read_footprint`` opens a footprint file from the output directory,
+such as ``sim.footprint_path``, with nothing else around it. To write one as
+NetCDF for other tools, see `Results in other tools`_.
 
 Particles
 ---------
@@ -205,35 +197,6 @@ The file holds the receptor, the meteorology files the run read, and the
 settings it ran with, the same ones as its folder's ``_settings.yaml``.
 ``realization`` is which realization of an ensemble the file is, or
 ``None`` for a single run. :doc:`../reference/layout` lists every key.
-
-Met at particle positions
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-A transport model that writes only positions can still get the met columns
-HYSPLIT writes. :func:`stilt.sampling.sample_met` reads ``mlht``, ``dens``,
-``pres`` or ``zsfc`` from the met files at each particle's position and
-time. Give it the files the run read and the top of its domain, which a
-stored run records:
-
-.. code-block:: python
-
-   from stilt.sampling import sample_met
-
-   meta = stilt.particles.particles_metadata(sim.particles_path)
-   sampled = sample_met(
-       particles.drop(columns=["mlht", "dens"]),
-       meta.met_files,
-       columns=["mlht", "dens"],
-       z_top=meta.settings["z_top"],
-   )
-
-How closely the sampled values match HYSPLIT's own is on
-:doc:`../development/validation`. A project run does this itself for a
-model whose particles have no ``foot``: it adds ``foot`` from the met
-files (:func:`stilt.particles.add_foot`), with the model's ``mlht``, or the
-met's ``PBLH`` when the model wrote none, so their footprints can be made.
-The ``pbl_height`` setting chooses another mixed-layer height
-(:doc:`../reference/particles`).
 
 Empty footprints
 ----------------
@@ -349,11 +312,6 @@ To see what is left to do:
 
 None failed here, so the table of failed simulations is empty.
 
-.. ipython:: python
-   :suppress:
-
-   os.chdir(docs_cwd)
-
 ``status()`` adds a ``particles`` and a ``footprint`` column that say
 whether each result exists, and a ``state`` column: ``complete``,
 ``failed``, ``interrupted``, or ``pending``. For a failed simulation,
@@ -361,8 +319,25 @@ whether each result exists, and a ``state`` column: ``complete``,
 each state and reason. ``status()`` opens no result file, so it is quick
 on a large project.
 
+Results in other tools
+----------------------
+
+A footprint can be written as a CF NetCDF file, the particles as CF
+trajectories, and a footprint in the PARIS format that openghg reads.
+
+Footprints as NetCDF
+~~~~~~~~~~~~~~~~~~~~
+
+.. ipython:: python
+
+   foot.stilt.to_netcdf("footprint_2021-01-15_08.nc")
+   foot = stilt.read_footprint("footprint_2021-01-15_08.nc")
+
+The file follows the CF-1.8 conventions and records the receptor and the
+settings used to make it, so ``stilt.read_footprint`` reads it back whole.
+
 Particles in trajan and other CF tools
---------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``sim.particles.stilt.to_cf_trajectories()`` returns the particles as an
 :class:`xarray.Dataset` that follows the CF-1.10 conventions for
@@ -374,9 +349,8 @@ cf-xarray, and other tools that read CF trajectory files open:
    ds = sim.particles.stilt.to_cf_trajectories()
    ds
 
-Write it with :meth:`xarray.Dataset.to_netcdf`. A table from
-:func:`stilt.run_trajectories` works the same way: it has the ``time`` column
-too.
+Write it with :meth:`xarray.Dataset.to_netcdf`. A particle table from
+:func:`stilt.run_trajectories` converts the same way.
 
 Each particle is one trajectory. The coordinates are:
 
@@ -395,15 +369,11 @@ and HYSPLIT write have units and long names; another column is kept without
 units. A table with several realizations is refused: select one first,
 ``particles[particles.realization == k]``.
 
-CF stores trajectories in several ways (CF-1.10, appendix H.4). This is the
-incomplete multidimensional array: every variable has dimensions
-``(trajectory, obs)``, and ``time`` is a variable of its own along both.
-It fits a run because every particle is written at the same output steps,
-so ``obs`` counts steps from the release. A particle that leaves the
-meteorology domain stops early, and its row ends with missing values. ``obs``
-runs from the release onward, so in a backward run ``time`` decreases along
-``obs``. In the NetCDF file ``time`` is stored as minutes since the earliest
-time, with ``NaN`` where a trajectory has ended.
+Every variable has dimensions ``(trajectory, obs)``, CF's incomplete
+multidimensional array (CF-1.10, appendix H.4). ``obs`` counts output steps
+from the release, so in a backward run ``time`` decreases along it. A
+particle that leaves the meteorology domain stops early, and the rest of its
+row is missing values.
 
 trajan reads the file through its ``traj`` accessor:
 
@@ -416,12 +386,11 @@ trajan reads the file through its ``traj`` accessor:
    ds = xr.open_dataset("trajectories.nc", decode_timedelta=False)
    ds.traj.plot()
 
-``decode_timedelta=False`` keeps ``age`` in minutes. Without it, xarray
-releases before 2026 read a variable in minutes as a duration and warn that
-this will change.
+``decode_timedelta=False`` keeps ``age`` in minutes rather than reading it
+as a duration.
 
 Footprints for openghg
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 ``sim.footprint.stilt.to_paris(sim.particles)`` returns the footprint in the
 PARIS format, the NetCDF layout openghg reads with ``source_format="paris"``.
@@ -460,11 +429,10 @@ receptor time, so it goes to ``H_back = 1``. With the receptor at 18:00:
      - -23
 
 Layers -24 and earlier are summed into ``srr_residual``, which openghg
-multiplies by a monthly mean flux, and ``srr`` is the sum of all layers. Only
-23 hours are resolved, not 24: openghg reads the ``resolution`` axis as a
-time span and keeps only its hours within a day, so a 24th hour would read as
-0. The numbers are PYSTILT's: ppm per (µmol m⁻² s⁻¹) is the same quantity as
-the PARIS units, (mol/mol)/(mol/m2/s).
+multiplies by a monthly mean flux, and ``srr`` is the sum of all layers.
+openghg resolves hours within one day, so 23 layers are kept by hour, not
+24. The values are PYSTILT's unchanged: ppm per (µmol m⁻² s⁻¹) is the same
+quantity as the PARIS units, (mol/mol)/(mol/m2/s).
 
 .. ipython:: python
 
@@ -472,20 +440,16 @@ the PARIS units, (mol/mol)/(mol/m2/s).
    per_hour.isel(time=0).values[:4]      # H_back 0 is empty; 1 is layer -1
    float(paris.srr.sum() - paris.srr_time_resolved.sum() - paris.srr_residual.sum())
 
-The layers are found from each layer's ``time``, its start, and not from the
-name of the layer dimension, so one receptor of ``project.footprints().foot``
-works as well as ``sim.footprint``: select it with
-``footprints.foot.sel(receptor=rid)``.
+One receptor of ``project.footprints().foot``,
+``footprints.foot.sel(receptor=rid)``, converts as ``sim.footprint`` does.
 
-openghg also expects ``particle_locations_n``, ``_e``, ``_s`` and ``_w``: the
-fraction of particles that first left the footprint grid through each edge, by
-grid cell along the edge and by 1 km height layer from the ground to 20 km.
-Giving the particles adds them, found with
-:meth:`~stilt.particles.ParticlesAccessor.grid_exits`. A particle that never
-left the grid counts nowhere, so the four fractions add up to the share that
-left. Without particles, ``to_paris`` leaves the four variables out, and
-openghg refuses the file unless it is told not to expect them. The share of
-particles that left the grid:
+Pass the particles, as above: openghg also expects ``particle_locations_n``,
+``_e``, ``_s`` and ``_w``, the fraction of particles that first left the
+footprint grid through each edge, by cell along the edge and by 1 km height
+layer up to 20 km (:meth:`~stilt.particles.ParticlesAccessor.grid_exits`).
+Without the particles these are left out, and openghg refuses the file
+unless told not to expect them. A particle that never left the grid counts
+nowhere, so the four add up to the share that left:
 
 .. ipython:: python
 
@@ -499,8 +463,9 @@ add it to openghg's object store:
 
    import xarray as xr
 
+   site = [project.simulation(r, v) for r, v in morning[["receptor", "variant"]].itertuples(index=False)]
    ds = xr.concat(
-       [sim.footprint.stilt.to_paris(sim.particles) for sim in sims],
+       [s.footprint.stilt.to_paris(s.particles) for s in site],
        dim="time",
        combine_attrs="drop_conflicts",
    )
@@ -520,9 +485,15 @@ add it to openghg's object store:
        time_resolved=True,
    )
 
-openghg is not a dependency of PYSTILT: it needs Python 3.13 or older and
-older versions of pandas and numpy. Install it into its own environment with
-``pip install openghg``.
+openghg is not a dependency of PYSTILT, and the versions of Python, pandas
+and numpy it supports can differ from PYSTILT's. Write the files with
+PYSTILT and add them from an environment of their own
+(``pip install openghg``).
+
+.. ipython:: python
+   :suppress:
+
+   os.chdir(docs_cwd)
 
 Without PYSTILT
 ---------------

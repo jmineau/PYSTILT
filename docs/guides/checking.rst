@@ -88,6 +88,10 @@ stop on it.
      - Make the table with ``project.add_table("kernels", table)``
        (:func:`~stilt.transforms.averaging_kernel_table`). Ids that differ
        from the receptors' in a digit were made from other coordinates.
+   * - ``oxidant_file``
+     - The ``oxidation`` transform's ``oxidant`` file does not exist, cannot
+       be read, or lacks the variable it names.
+     - Correct the path (relative to the project folder) or ``variable``.
    * - ``zsfc``
      - ``varsiwant`` lacks ``zsfc``, the terrain height, and a receptor
        given above sea level (``altitude_ref="msl"``) needs it for the
@@ -96,8 +100,10 @@ stop on it.
      - Add ``zsfc`` to ``varsiwant`` before the runs. It is a run setting,
        so adding it later makes the particles again in a new folder.
 
-``stilt check`` reads the headers of the met files, not every record, so a
-file damaged in the middle passes and fails the run that opens it.
+A transform of your own can add rows of its own (:doc:`transforms`,
+"Writing your own transform"). ``stilt check`` reads the headers of the met
+files, not every record, so a file damaged in the middle passes and fails
+the run that opens it.
 
 In Python, ``project.check()`` returns the same table, one row for each
 thing found. It is empty for the sample project, which has everything its

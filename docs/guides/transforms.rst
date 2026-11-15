@@ -3,21 +3,25 @@ Particle Weighting (Transforms)
 
 A footprint is the mean surface influence of a simulation's particles. A
 *transform* changes how much each particle counts in that mean, by scaling
-the ``foot`` column of the particle table. Column instruments need an
-averaging kernel and a pressure weighting. A species that decays during
-transport needs a lifetime, one that reacts with OH a rate constant, and
-one that deposits to the ground a deposition velocity.
+the ``foot`` column of the particle table before the footprint is made. You
+need one in two cases:
 
-A transform is any object with an ``apply`` method::
+- **A column measurement** (satellite, TCCON, EM27/SUN). List
+  ``averaging_kernel`` and then ``pressure_weighting``, so the footprint
+  weights the air the way the retrieval does.
+- **A species lost on the way**, which decays, deposits to the ground, or
+  reacts with OH. A transform scales each particle by the fraction of the
+  tracer that survives to the receptor.
 
-   def apply(self, particles, receptor=None, directory=None) -> pd.DataFrame
+A tower measurement of CO2 or methane needs none: with no transforms every
+particle counts equally, which is the standard STILT footprint.
 
-It takes the particle table, the receptor the particles were released
-from, and the project directory, and returns a new table. List transforms in
-``config.yaml``, as a default or per variant, or pass them to
-:meth:`stilt.Simulation.calc_footprint`. They run once, in order,
-starting from the unweighted particles. Each footprint file records the
-transforms it was made with.
+List transforms in ``config.yaml``, as a default or per variant, or pass
+them to :meth:`stilt.Simulation.calc_footprint`. They run once, in order,
+starting from the unweighted particles. They are footprint settings, so a
+variant that adds one shares the particles of the variant without it, and
+no transport model runs again. Each footprint file records the transforms it
+was made with.
 
 Built-in transforms
 -------------------
@@ -100,19 +104,21 @@ Built-in transforms
    divided by that depth, HYSPLIT's own dry deposition rule. HYSPLIT does
    not deposit in a STILT run, so one run serves every species.
 
-   The depth is the one number to choose. HYSPLIT takes its lowest
-   internal level at or below 75 m, which is 50 m on HRRR. On a stable
-   night with particles released at 10 m, 30 m gave a surviving fraction
-   of 0.53 after 6 h and 75 m gave 0.62. With 50 m the transform came within
-   0.5 % of HYSPLIT's own mass loss in a forward and two backward runs.
+   The depth is the one number to choose, and we recommend the default.
+   HYSPLIT takes its lowest internal level at or below 75 m, which is 50 m
+   on HRRR, and with 50 m the transform came within 0.5 % of HYSPLIT's own
+   mass loss in a forward and two backward runs. The choice matters most
+   at night near the ground: with particles released at 10 m on a stable
+   night, 30 m gave a surviving fraction of 0.53 after 6 h and 75 m gave
+   0.62.
 
    The transform needs ``zagl`` at every one-minute time step, so keep
    ``outdt: 0``, the default. It refuses hourly particles, which do not say
-   how long a particle stayed near the ground.
+   how long a particle stayed near the ground. Wet removal and
+   gravitational settling are not included.
    :func:`~stilt.transforms.dry_deposition_survival` gives the surviving
    fraction for each row of the particle table, if you want the particles
-   rather than a footprint. Wet removal and
-   gravitational settling are not included.
+   rather than a footprint.
 
 ``oxidation`` (:class:`stilt.transforms.Oxidation`)
    Scales ``foot`` by the fraction of the tracer that survives a reaction
@@ -130,13 +136,15 @@ Built-in transforms
 
    The temperature is the particles' ``temz`` when ``varsiwant`` has it.
    Otherwise it comes from ``pres`` and ``dens``, which are there by
-   default, so particles you already ran need no rerun. That is within
-   about 1 K of HYSPLIT's ``temz`` in dry air, about 2 % in the rate for
-   methane and OH.
+   default, through the ideal gas law. That is within about 1 K of
+   HYSPLIT's ``temz`` in dry air, about 2 % in the rate for methane and OH.
 
    For methane at regional scales you do not need it: its lifetime
    against OH is about nine years, and over a few days of trajectory the
    footprint changes by less than 0.1 %.
+
+Other losses
+~~~~~~~~~~~~
 
 Any loss whose rate you can compute at every row works the same way, as
 long as the rate does not depend on how much tracer the particle carries.
@@ -147,10 +155,6 @@ own transform for rain-out, photolysis, or a lifetime from a chemistry
 model. A loss that depends on the tracer itself, as NOx's lifetime depends
 on NOx, has no footprint: it needs the emissions and a chemistry model
 along each trajectory.
-
-For satellite and TCCON columns, list ``averaging_kernel`` and then
-``pressure_weighting``. With no transforms every particle counts equally,
-which is the standard STILT footprint.
 
 One kernel per receptor
 -----------------------
@@ -205,10 +209,10 @@ The same classes work directly on a simulation:
        ],
    )
 
-These replace the transforms in the variant's own footprint settings, and
-the footprint records them. The other settings (``grid``,
-``smooth_factor``, ``tres``) are replaced the
-same way, and nothing in the project changes. Without a simulation,
+``transforms=`` takes the place of the variant's own transforms for this
+footprint, and the footprint records them. ``grid``, ``smooth_factor`` and
+``tres`` work the same way. The footprint is returned, not written, so
+nothing in the project changes. Without a simulation,
 :func:`stilt.calc_footprint` takes the same ``transforms``.
 
 To see what a transform did, apply it to the particle table yourself:
@@ -221,9 +225,14 @@ To see what a transform did, apply it to the particle table yourself:
 Writing your own transform
 --------------------------
 
-Write a pydantic model with an ``apply`` method. Its fields are the keys
-you set in YAML. Return a new table and leave the one you are given
-unchanged.
+A transform is any object with an ``apply`` method::
+
+   def apply(self, particles, receptor=None, directory=None) -> pd.DataFrame
+
+It takes the particle table, the receptor the particles were released
+from, and the project directory, and returns a new table. To name it in
+``config.yaml``, write it as a pydantic model: its fields are the keys you
+set in YAML. Return a new table and leave the one you are given unchanged.
 
 .. code-block:: python
 

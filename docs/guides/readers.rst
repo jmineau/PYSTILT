@@ -74,46 +74,43 @@ what to keep.
 EM27/SUN
 ~~~~~~~~
 
-GGG (through EGI) writes one ``.oof`` file per instrument-day and, from the
-same run, one ``*.private.nc``. The ``.oof`` has the soundings but no
-averaging kernel or prior, so :func:`~stilt.observations.read_ggg_oof`
-leaves out the ``ak``, ``ak_pressure`` and ``pressure_levels`` columns. Take
-the kernels from the private file with
-:func:`~stilt.observations.read_ggg_netcdf`, or from a site kernel table
-keyed by solar zenith angle. The :doc:`slant_columns` guide shows both.
+Which reader to use depends on how the retrievals were made:
 
-To read a campaign as one table:
+- **GGG, as EGI delivers it.** :func:`~stilt.observations.read_ggg_oof`
+  reads the soundings of one ``.oof`` file. That file has no averaging
+  kernel or prior, so the ``ak``, ``ak_pressure`` and ``pressure_levels``
+  columns are left out. Take the kernels from the same run's
+  ``*.private.nc`` with :func:`~stilt.observations.read_ggg_netcdf`, or from
+  a site kernel table keyed by solar zenith angle; :doc:`slant_columns`
+  shows both.
+- **COCCON's GEOMS files, from PROFFAST.**
+  :func:`~stilt.observations.read_coccon` reads one site-day. The kernel is
+  already interpolated to each measurement's solar zenith angle, so ``ak``
+  is per row, as for the satellites. The files hold only measurements that
+  passed COCCON's quality filter, so ``good`` is True everywhere.
+- **Your own PROFFASTpylot run.** :func:`~stilt.observations.read_proffast`
+  takes the run's ``comb_invparms`` CSV and finds each day's kernel and
+  prior files next to it. You get every spectrum, with ``good`` set by
+  COCCON's screen (solar zenith angle at most 75 degrees, ``XAIR`` between
+  0.98 and 1.02), the values before any instrument calibration, and
+  COCCON's alternative retrievals (``xco2_str``, ``xch4_s5p``). PROFFAST
+  reports no error for a single spectrum, so ``uncertainty`` is NaN.
+
+Use COCCON's release when it has your site's data, because it is
+calibrated and screened, and a PROFFASTpylot run when you need what it
+leaves out.
+
+To read a campaign as one table, read each day and concatenate:
 
 .. code-block:: python
 
    from pathlib import Path
    import pandas as pd
-   from stilt.observations import read_ggg_oof
+   from stilt.observations import read_coccon, read_ggg_oof
 
    days = sorted(Path("EM27_oof/ha").glob("ha*.vav.ada.aia.oof"))
    df = pd.concat([read_ggg_oof(p, "xch4") for p in days], ignore_index=True)
    df = df[df.good]
-
-PROFFAST, the retrieval COCCON uses, gives the kernel in its GEOMS files
-already interpolated to each measurement's solar zenith angle, so
-:func:`~stilt.observations.read_coccon` returns ``ak`` per row like the
-satellite readers. The files hold only measurements that passed COCCON's
-quality filter, so ``good`` is True everywhere. If you run PROFFASTpylot
-yourself, read its results with :func:`~stilt.observations.read_proffast`
-instead. It takes the run's ``comb_invparms`` CSV and finds each day's
-kernel and prior files next to it. You get every spectrum, with
-``good`` set by COCCON's screen (solar zenith angle at most 75 degrees,
-``XAIR`` between 0.98 and 1.02), the values before any instrument
-calibration, and COCCON's alternative retrievals (``xco2_str``,
-``xch4_s5p``). PROFFAST reports no error for a single spectrum, so
-``uncertainty`` is NaN. Use the GEOMS files when you want COCCON's
-calibrated, screened release.
-
-.. code-block:: python
-
-   from pathlib import Path
-   import pandas as pd
-   from stilt.observations import read_coccon
 
    days = sorted(Path("coccon").glob("groundbased_ftir.coccon_*.h5"))
    df = pd.concat([read_coccon(p, "xch4") for p in days], ignore_index=True)

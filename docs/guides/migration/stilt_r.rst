@@ -1,28 +1,27 @@
 Coming From STILT-R
 ===================
 
-PYSTILT does the same science as STILT-R. On longitude/latitude grids its
-footprints match STILT-R's cell by cell, to a relative tolerance of 1e-7 in
-the 21 scenarios the tests compare. A few cases differ on purpose
-(:ref:`stilt-r-parity` has them all). One is in the near-field correction
-(``hnf_plume``): a receptor above sea level, whose plume PYSTILT grows from
-the ground. Two are on a projected grid: the smoothing, which PYSTILT makes
-as wide as on a longitude/latitude grid and STILT-R makes a few meters wide,
-and the early-time interpolation, which STILT-R never runs on a grid in
-meters. Three are near 180°: a particle cloud on a grid that goes all the
-way around the earth, which PYSTILT smooths as one cloud and STILT-R smooths
-far too widely, particles just across 180° from the edge of a regional
-grid, which PYSTILT smooths onto the grid and STILT-R drops, and the
-early-time interpolation of a particle that crosses 180°, which PYSTILT
-takes the short way round and STILT-R through 0°. A footprint on a
-global grid written from 0° to 360° keeps those longitudes, where STILT-R
-labels it from -180° to 180°.
+If you run STILT-R, this page shows where each of its settings and steps
+is in PYSTILT. The science is the same: on longitude/latitude grids
+PYSTILT's footprints match STILT-R's cell by cell, to a relative tolerance
+of 1e-7 in the 21 scenarios the tests compare. What changes is where the
+settings live. Instead of editing variables in ``run_stilt.r``, you write
+them in ``config.yaml`` or pass them to :meth:`stilt.Project.init`, and the
+receptors go in ``receptors.csv``.
+
+A few cases differ on purpose, and :ref:`stilt-r-parity` gives each one
+and why:
+
+- the near-field correction of a receptor above sea level, whose plume
+  PYSTILT grows from the ground
+- projected grids, where PYSTILT smooths as widely as on a
+  longitude/latitude grid and runs the early-time interpolation
+- grids near or across 180°, which PYSTILT treats as one stretch of
+  longitude, and global grids written from 0° to 360°, which keep those
+  longitudes
+
 PYSTILT also takes grids that STILT-R cannot use, such as one from -10° to
 190°.
-
-What changes is where the settings live. Instead of editing variables in
-``run_stilt.r``, you write them in ``config.yaml`` or pass them to
-:meth:`stilt.Project.init`. Receptors go in ``receptors.csv``.
 
 The workflow side by side
 -------------------------
@@ -133,8 +132,8 @@ The workflow side by side
        or ``stilt run --receptors ids.txt``
    * - ``ziscale`` as one list per receptor
      - ``ziscale`` per variant, as one factor or one factor per hour. It is
-       the same for every receptor. Per-receptor factors are not supported
-       yet.
+       the same for every receptor; PYSTILT has no per-receptor
+       factors.
    * - ``stilt_wd``, ``output_wd``
      - the project folder
    * - ``lib.loc``
@@ -358,7 +357,7 @@ STILT-R projects that differ only in ``n_hours`` land in two folders.
    * - the met
      - ``met_path``, the directory the ``CONTROL`` files name, as they name it.
        Each run's met files are recorded in its particle file; they need not
-       exist any more
+       still exist
    * - ``grid``, ``tres``
      - ``<id>_foot.nc``. A footprint STILT-R summed over time
        (``time_integrate = T``) is one layer as long as the run: ``tres``
