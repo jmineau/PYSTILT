@@ -1290,13 +1290,13 @@ class Project:
         """
         return check_project(self)
 
-    def fetch(self, sel: Any = None) -> pd.DataFrame:
+    def fetch(self, sel: Any = None, *, skip_existing: bool = True) -> pd.DataFrame:
         """
         Get the met files the unfinished simulations need, and return them.
 
         For each met, gets the files that cover the time of every
-        simulation in *sel* whose transport model has yet to run, as a run
-        would ask for them (the met step at or after a run's end too). With
+        simulation in *sel* whose transport model has yet to run (every
+        one, with ``skip_existing=False``), as a run would ask for them (the met step at or after a run's end too). With
         ``download``, it downloads what is missing and crops it as it
         goes, so the runs that follow find every file and download nothing.
         A met without ``download`` is only checked: its missing files are
@@ -1309,6 +1309,10 @@ class Project:
         sel : optional
             The simulations to fetch for, as for :meth:`status`. Defaults to
             all of them.
+        skip_existing : bool, default True
+            Leave out simulations whose particles exist. ``False`` gets the
+            met files of every simulation in *sel*, for a run with
+            ``skip_existing=False``, which runs them all again.
 
         Returns
         -------
@@ -1339,11 +1343,13 @@ class Project:
         >>> files.message.isna().all()  # True when every file is there  # doctest: +SKIP
         >>> project.run()  # downloads nothing  # doctest: +SKIP
         """
-        return fetch_project(self, self._unrun(sel))
+        return fetch_project(self, self._unrun(sel, skip_existing=skip_existing))
 
-    def _unrun(self, sel: Any = None) -> pd.DataFrame:
-        """Return the rows of the simulations in *sel* whose particles are missing: the ones a fetch gets met for."""
+    def _unrun(self, sel: Any = None, *, skip_existing: bool = True) -> pd.DataFrame:
+        """Return the rows of the simulations in *sel* whose particles are missing (all of them unless *skip_existing*): the ones a fetch gets met for."""
         frame = self._selected(sel)
+        if not skip_existing:
+            return frame
         present = self._present(frame)
         has = np.array(
             [r in present[(v, k)][0] for r, v, k in _rows(frame)], dtype=bool
