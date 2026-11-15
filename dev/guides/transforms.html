@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=a21e2aa3"></script>
+    <script src="../_static/documentation_options.js?v=08d8f6a1"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev34+g9c4573fc1" />
+  <meta name="docsearch:version" content="0.1.0a29.dev35+g806d853d5" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -518,7 +518,8 @@
 <em>transform</em> changes how much each particle counts in that mean, by scaling
 the <code class="docutils literal notranslate"><span class="pre">foot</span></code> column of the particle table. Column instruments need an
 averaging kernel and a pressure weighting. A species that decays during
-transport needs a lifetime.</p>
+transport needs a lifetime, and one that deposits to the ground a
+deposition velocity.</p>
 <p>A transform is any object with an <code class="docutils literal notranslate"><span class="pre">apply</span></code> method:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </pre></div>
@@ -538,6 +539,8 @@ transforms it was made with.</p>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pressure_weighting</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">first_order_lifetime</span>
 <span class="w">    </span><span class="nt">lifetime_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4.0</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dry_deposition</span>
+<span class="w">    </span><span class="nt">velocity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
 </pre></div>
 </div>
 <dl>
@@ -585,6 +588,25 @@ the surface unless that is what you want.</p>
 <dt><code class="docutils literal notranslate"><span class="pre">first_order_lifetime</span></code> (<a class="reference internal" href="../reference/_api/stilt.transforms.FirstOrderLifetime.html#stilt.transforms.FirstOrderLifetime" title="stilt.transforms.FirstOrderLifetime"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transforms.FirstOrderLifetime</span></code></a>)</dt><dd><p>Scales <code class="docutils literal notranslate"><span class="pre">foot</span></code> by <span class="math notranslate nohighlight">\(\exp(-\text{age} / \tau)\)</span>, where
 <span class="math notranslate nohighlight">\(\tau\)</span> is <code class="docutils literal notranslate"><span class="pre">lifetime_hours</span></code>. The age is the particle’s time since
 release, its <code class="docutils literal notranslate"><span class="pre">age</span></code> column.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dry_deposition</span></code> (<a class="reference internal" href="../reference/_api/stilt.transforms.DryDeposition.html#stilt.transforms.DryDeposition" title="stilt.transforms.DryDeposition"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transforms.DryDeposition</span></code></a>)</dt><dd><p>Scales <code class="docutils literal notranslate"><span class="pre">foot</span></code> by the fraction of a depositing tracer that survives
+from the particle’s position to the receptor. Use it for a soluble gas
+or a fine aerosol. While a particle is below <code class="docutils literal notranslate"><span class="pre">surface_layer_depth</span></code>
+(default 50 m), the tracer is lost at the rate <code class="docutils literal notranslate"><span class="pre">velocity</span></code> (m/s)
+divided by that depth, HYSPLIT’s own dry deposition rule. HYSPLIT does
+not deposit in a STILT run, so one run serves every species.</p>
+<p>The depth is the one number to choose. HYSPLIT takes its lowest
+internal level at or below 75 m, which is 50 m on HRRR. On a stable
+night with particles released at 10 m, 30 m gave a surviving fraction
+of 0.53 after 6 h and 75 m gave 0.62. With 50 m the transform came within
+0.5 % of HYSPLIT’s own mass loss in a forward and two backward runs.</p>
+<p>The transform needs <code class="docutils literal notranslate"><span class="pre">zagl</span></code> at every one-minute time step, so keep
+<code class="docutils literal notranslate"><span class="pre">outdt:</span> <span class="pre">0</span></code>, the default. It refuses hourly particles, which do not say
+how long a particle stayed near the ground.
+<a class="reference internal" href="../reference/_api/stilt.transforms.dry_deposition_survival.html#stilt.transforms.dry_deposition_survival" title="stilt.transforms.dry_deposition_survival"><code class="xref py py-func docutils literal notranslate"><span class="pre">dry_deposition_survival()</span></code></a> gives the surviving
+fraction for each row of the particle table, if you want the particles
+rather than a footprint. Wet removal and
+gravitational settling are not included.</p>
 </dd>
 </dl>
 <p>For satellite and TCCON columns, list <code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> and then

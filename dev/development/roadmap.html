@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=a21e2aa3"></script>
+    <script src="../_static/documentation_options.js?v=08d8f6a1"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -63,7 +63,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev34+g9c4573fc1" />
+  <meta name="docsearch:version" content="0.1.0a29.dev35+g806d853d5" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -600,53 +600,56 @@ feature.</p>
 <tr class="row-odd"><td><p>First-order lifetime decay transform</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>Declarative transforms in config YAML (default or per variant)</p></td>
+<tr class="row-even"><td><p>Dry deposition transform (<code class="docutils literal notranslate"><span class="pre">dry_deposition</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-odd"><td><p>Slant-column receptor support</p></td>
+<tr class="row-odd"><td><p>Declarative transforms in config YAML (default or per variant)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-even"><td><p>Slant-column receptor support</p></td>
 <td><p>Implemented (see the <em>Slant Columns</em> guide)</p></td>
 </tr>
-<tr class="row-even"><td><p>Slant altitudes from a retrieval’s pressure levels (<code class="docutils literal notranslate"><span class="pre">pressure_altitudes</span></code>)</p></td>
+<tr class="row-odd"><td><p>Slant altitudes from a retrieval’s pressure levels (<code class="docutils literal notranslate"><span class="pre">pressure_altitudes</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-odd"><td><p>User-defined transforms via <code class="docutils literal notranslate"><span class="pre">kind:</span> <span class="pre">my.module.Class</span></code></p></td>
+<tr class="row-even"><td><p>User-defined transforms via <code class="docutils literal notranslate"><span class="pre">kind:</span> <span class="pre">my.module.Class</span></code></p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>Per-sounding averaging kernels in batch runs (<code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> with <code class="docutils literal notranslate"><span class="pre">table:</span></code>)</p></td>
+<tr class="row-odd"><td><p>Per-sounding averaging kernels in batch runs (<code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> with <code class="docutils literal notranslate"><span class="pre">table:</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-odd"><td><p>A receptor and a kernel for each sounding (<code class="docutils literal notranslate"><span class="pre">receptors_from_soundings</span></code>, <code class="docutils literal notranslate"><span class="pre">project.add_table</span></code>)</p></td>
+<tr class="row-even"><td><p>A receptor and a kernel for each sounding (<code class="docutils literal notranslate"><span class="pre">receptors_from_soundings</span></code>, <code class="docutils literal notranslate"><span class="pre">project.add_table</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>Product readers (OCO-2/3, TROPOMI, TCCON, EM27/SUN from GGG or PROFFAST)</p></td>
+<tr class="row-odd"><td><p>Product readers (OCO-2/3, TROPOMI, TCCON, EM27/SUN from GGG or PROFFAST)</p></td>
 <td><p>Implemented (see <em>Reading Retrieval Products</em>); other instruments as one module each</p></td>
 </tr>
-<tr class="row-odd"><td><p>Transport error on the modeled enhancement (<code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code>)</p></td>
+<tr class="row-even"><td><p>Transport error on the modeled enhancement (<code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>Transport error over a selection, averaging every realization that has run (<code class="docutils literal notranslate"><span class="pre">project.transport_error</span></code>)</p></td>
+<tr class="row-odd"><td><p>Transport error over a selection, averaging every realization that has run (<code class="docutils literal notranslate"><span class="pre">project.transport_error</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-odd"><td><p>Modeled enhancement from a flux field (<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>)</p></td>
+<tr class="row-even"><td><p>Modeled enhancement from a flux field (<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>Background from a mole-fraction field at the trajectory endpoints (<code class="docutils literal notranslate"><span class="pre">sim.background</span></code>)</p></td>
+<tr class="row-odd"><td><p>Background from a mole-fraction field at the trajectory endpoints (<code class="docutils literal notranslate"><span class="pre">sim.background</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-odd"><td><p>The retrieval’s prior term in a modeled column (<code class="docutils literal notranslate"><span class="pre">modelled_column</span></code>)</p></td>
+<tr class="row-even"><td><p>The retrieval’s prior term in a modeled column (<code class="docutils literal notranslate"><span class="pre">modelled_column</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>Satellite-derived plume background (forward trajectories)</p></td>
+<tr class="row-odd"><td><p>Satellite-derived plume background (forward trajectories)</p></td>
 <td><p>Implemented (see the <em>Plume Background</em> guide)</p></td>
 </tr>
-<tr class="row-odd"><td><p>Forward runs (positive <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>) for plume and dispersion studies</p></td>
+<tr class="row-even"><td><p>Forward runs (positive <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>) for plume and dispersion studies</p></td>
 <td><p>Implemented (see the <em>Plume Background</em> guide)</p></td>
 </tr>
-<tr class="row-even"><td><p>Emission-error propagation to the modeled enhancement</p></td>
+<tr class="row-odd"><td><p>Emission-error propagation to the modeled enhancement</p></td>
 <td><p>A recipe on <code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> (see the <em>Transport Error</em> guide); the
 correlated case is fips’s <code class="docutils literal notranslate"><span class="pre">prior_obs_error</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p>Inventory readers</p></td>
+<tr class="row-even"><td><p>Inventory readers</p></td>
 <td><p>Out of scope; a flux field is an xarray array</p></td>
 </tr>
 </tbody>
