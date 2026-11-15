@@ -9,10 +9,12 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from stilt.transforms import (
     AveragingKernel,
+    DryDeposition,
     FirstOrderLifetime,
     PressureWeighting,
     apply_transforms,
     averaging_kernel_table,
+    dry_deposition_survival,
     dump_transform,
     load_transform,
     particle_pwf,
@@ -622,6 +624,64 @@ def test_first_order_lifetime_rejects_nonpositive_lifetime():
 
 
 # ---------------------------------------------------------------------------
+# DryDeposition
+# ---------------------------------------------------------------------------
+
+
+def _deposition_particles() -> pd.DataFrame:
+    """Two particles over three one-minute steps, rows out of order."""
+    return pd.DataFrame(
+        {
+            "particle": [2, 1, 1, 2, 1, 2],
+            "age": [-3.0, -1.0, -3.0, -1.0, -2.0, -2.0],
+            "zagl": [10.0, 10.0, 10.0, 200.0, 100.0, 20.0],
+            "foot": [1.0] * 6,
+        }
+    )
+
+
+def test_dry_deposition_survival_loses_tracer_only_below_the_surface_layer():
+    p = _deposition_particles()
+    s = dry_deposition_survival(p, velocity=0.01, surface_layer_depth=50.0)
+    step = math.exp(-0.01 * 60.0 / 50.0)
+    # particle 1: 10 m, 100 m, 10 m; particle 2: 200 m, 20 m, 10 m
+    assert s.tolist() == pytest.approx([step**2, step, step**2, 1.0, step, step])
+    assert s.index.equals(p.index)
+
+
+def test_dry_deposition_survival_counts_the_step_from_release():
+    p = pd.DataFrame({"particle": [1, 1], "age": [0.0, -1.0], "zagl": [10.0, 10.0]})
+    s = dry_deposition_survival(p, velocity=0.01)
+    assert s.tolist() == pytest.approx([1.0, math.exp(-0.012)])
+
+
+def test_dry_deposition_survival_refuses_hourly_rows():
+    p = pd.DataFrame({"particle": [1, 1], "age": [-60.0, -120.0], "zagl": [10.0, 10.0]})
+    with pytest.raises(ValueError, match="outdt: 0"):
+        dry_deposition_survival(p, velocity=0.01)
+
+
+def test_dry_deposition_survival_requires_zagl():
+    p = _deposition_particles().drop(columns=["zagl"])
+    with pytest.raises(ValueError, match="zagl"):
+        dry_deposition_survival(p, velocity=0.01)
+
+
+def test_dry_deposition_scales_foot_and_leaves_input_unchanged():
+    p = _deposition_particles()
+    before = p.copy(deep=True)
+    result = DryDeposition(velocity=0.01).apply(p)
+    pd.testing.assert_frame_equal(p, before)
+    expected = dry_deposition_survival(p, velocity=0.01).to_numpy()
+    assert result["foot"].to_numpy() == pytest.approx(expected)
+
+
+def test_dry_deposition_rejects_nonpositive_velocity():
+    with pytest.raises(ValidationError):
+        DryDeposition(velocity=0.0)
+
+
+# ---------------------------------------------------------------------------
 # apply_transforms
 # ---------------------------------------------------------------------------
 
@@ -675,6 +735,13 @@ def test_load_transform_pressure_weighting():
     t = load_transform({"kind": "pressure_weighting", "surface_pressure": 850.0})
     assert isinstance(t, PressureWeighting)
     assert t.surface_pressure == pytest.approx(850.0)
+
+
+def test_load_transform_dry_deposition():
+    t = load_transform(
+        {"kind": "dry_deposition", "velocity": 0.01, "surface_layer_depth": 30.0}
+    )
+    assert t == DryDeposition(velocity=0.01, surface_layer_depth=30.0)
 
 
 def test_load_transform_first_order_lifetime():
@@ -760,9 +827,10 @@ def test_load_transform_builtin_validates_fields():
             FirstOrderLifetime(lifetime_hours=2.0),
             "first_order_lifetime",
         ),
+        (DryDeposition(velocity=0.01), "dry_deposition"),
         (ScaleFoot(factor=1.5), SCALE_FOOT_KIND),
     ],
-    ids=["ak", "pwf", "lifetime", "user_pydantic"],
+    ids=["ak", "pwf", "lifetime", "dry_deposition", "user_pydantic"],
 )
 def test_dump_transform_round_trips(transform, kind):
     dumped = dump_transform(transform)

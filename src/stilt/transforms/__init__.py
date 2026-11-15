@@ -36,10 +36,12 @@ the background and the transport error rely on to read each particle's
 weight.
 
 Each built-in transform is a module: :mod:`~stilt.transforms.averaging_kernel`,
-:mod:`~stilt.transforms.pressure_weighting`, and
-:mod:`~stilt.transforms.lifetime`. :func:`particle_pwf` and
-:func:`ak_weights` hold the column weighting ported from X-STILT. They are
-public so your own transforms can use them. This module loads transforms
+:mod:`~stilt.transforms.pressure_weighting`,
+:mod:`~stilt.transforms.lifetime`, and :mod:`~stilt.transforms.deposition`.
+:func:`particle_pwf` and :func:`ak_weights` hold the column weighting ported
+from X-STILT, and :func:`dry_deposition_survival` the fraction of a
+depositing tracer that reaches the receptor. They are public so your own
+transforms can use them. This module loads transforms
 from a config and applies them.
 """
 
@@ -59,6 +61,7 @@ from stilt.transforms.averaging_kernel import (
     ak_weights,
     averaging_kernel_table,
 )
+from stilt.transforms.deposition import DryDeposition, dry_deposition_survival
 from stilt.transforms.lifetime import FirstOrderLifetime
 from stilt.transforms.pressure_weighting import PressureWeighting, particle_pwf
 
@@ -66,7 +69,7 @@ if TYPE_CHECKING:
     from stilt.receptors import Receptor
 
 BuiltinTransform = Annotated[
-    AveragingKernel | PressureWeighting | FirstOrderLifetime,
+    AveragingKernel | PressureWeighting | FirstOrderLifetime | DryDeposition,
     Field(discriminator="kind"),
 ]
 _BUILTIN_ADAPTER: TypeAdapter[Any] = TypeAdapter(BuiltinTransform)
@@ -177,11 +180,13 @@ def apply_transforms(
 
 __all__ = [
     "AveragingKernel",
+    "DryDeposition",
     "FirstOrderLifetime",
     "PressureWeighting",
     "ak_weights",
     "apply_transforms",
     "averaging_kernel_table",
+    "dry_deposition_survival",
     "dump_transform",
     "load_transform",
     "particle_pwf",
