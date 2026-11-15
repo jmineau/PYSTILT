@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=8e62eb4d"></script>
+    <script src="../_static/documentation_options.js?v=a21e2aa3"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev33+ga4699b095" />
+  <meta name="docsearch:version" content="0.1.0a29.dev34+g9c4573fc1" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -578,11 +578,18 @@ them and as PROFFASTpylot writes them</p></td>
 <td><p>Files PROFFASTpylot wrote for KIT’s example data. The committed test
 file is synthetic.</p></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../reference/_api/stilt.observations.read_proffast.html#stilt.observations.read_proffast" title="stilt.observations.read_proffast"><code class="xref py py-func docutils literal notranslate"><span class="pre">read_proffast()</span></code></a></p></td>
+<td><p>A PROFFASTpylot run: its <code class="docutils literal notranslate"><span class="pre">comb_invparms_*.csv</span></code> and the daily
+<code class="docutils literal notranslate"><span class="pre">colsens.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">pT_fast_out.dat</span></code> and <code class="docutils literal notranslate"><span class="pre">VMR_fast_out.dat</span></code> in
+<code class="docutils literal notranslate"><span class="pre">raw_output_proffast/</span></code></p></td>
+<td><p>A run on KIT’s example data, whose kernels and priors match its
+GEOMS files. The committed test run is synthetic.</p></td>
+</tr>
 </tbody>
 </table>
 </div>
 <p>The satellite readers take <code class="docutils literal notranslate"><span class="pre">lon_range</span></code> and <code class="docutils literal notranslate"><span class="pre">lat_range</span></code> to keep only the
-pixels inside a box. Use them on a whole orbit. The GGG and COCCON readers take a
+pixels inside a box. Use them on a whole orbit. The GGG and EM27/SUN readers take a
 <code class="docutils literal notranslate"><span class="pre">species</span></code> (<code class="docutils literal notranslate"><span class="pre">xco2</span></code>, <code class="docutils literal notranslate"><span class="pre">xch4</span></code>, <code class="docutils literal notranslate"><span class="pre">xco</span></code>, …), and the netCDF readers also
 take a <code class="docutils literal notranslate"><span class="pre">time_range</span></code> for multi-year site files. The readers do not filter
 anything else. Quality flags become the <code class="docutils literal notranslate"><span class="pre">good</span></code> column, and you decide
@@ -611,8 +618,15 @@ already interpolated to each measurement’s solar zenith angle, so
 <a class="reference internal" href="../reference/_api/stilt.observations.read_coccon.html#stilt.observations.read_coccon" title="stilt.observations.read_coccon"><code class="xref py py-func docutils literal notranslate"><span class="pre">read_coccon()</span></code></a> returns <code class="docutils literal notranslate"><span class="pre">ak</span></code> per row like the
 satellite readers. The files hold only measurements that passed COCCON’s
 quality filter, so <code class="docutils literal notranslate"><span class="pre">good</span></code> is True everywhere. If you run PROFFASTpylot
-yourself, its GEOMS writer makes these files from your results; the reader
-does not read its <code class="docutils literal notranslate"><span class="pre">comb_invparms</span></code> CSV.</p>
+yourself, read its results with <a class="reference internal" href="../reference/_api/stilt.observations.read_proffast.html#stilt.observations.read_proffast" title="stilt.observations.read_proffast"><code class="xref py py-func docutils literal notranslate"><span class="pre">read_proffast()</span></code></a>
+instead. It takes the run’s <code class="docutils literal notranslate"><span class="pre">comb_invparms</span></code> CSV and finds each day’s
+kernel and prior files next to it. You get every spectrum, with
+<code class="docutils literal notranslate"><span class="pre">good</span></code> set by COCCON’s screen (solar zenith angle at most 75 degrees,
+<code class="docutils literal notranslate"><span class="pre">XAIR</span></code> between 0.98 and 1.02), the values before any instrument
+calibration, and COCCON’s alternative retrievals (<code class="docutils literal notranslate"><span class="pre">xco2_str</span></code>,
+<code class="docutils literal notranslate"><span class="pre">xch4_s5p</span></code>). PROFFAST reports no error for a single spectrum, so
+<code class="docutils literal notranslate"><span class="pre">uncertainty</span></code> is NaN. Use the GEOMS files when you want COCCON’s
+calibrated, screened release.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_coccon</span>
