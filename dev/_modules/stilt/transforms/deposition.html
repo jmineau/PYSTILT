@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=08d8f6a1"></script>
+    <script src="../../../_static/documentation_options.js?v=8ceb4180"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev35+g806d853d5" />
+  <meta name="docsearch:version" content="0.1.0a29.dev36+ga0adb52e7" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -463,6 +463,9 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms._common</span><span class="w"> </span><span class="kn">import</span> <span class="n">step_minutes</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms.lifetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">survival</span>
+
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
 
@@ -515,7 +518,8 @@
 <span class="sd">    -----</span>
 <span class="sd">    The fraction is :math:`\exp(-\sum v_d \, \Delta t / H)` over the</span>
 <span class="sd">    steps spent below :math:`H`, where a step's height is its row's</span>
-<span class="sd">    ``zagl``. It works for any species with a constant deposition</span>
+<span class="sd">    ``zagl``: :func:`survival` with the rate :math:`v_d / H` below</span>
+<span class="sd">    :math:`H` and zero above. It works for any species with a constant deposition</span>
 <span class="sd">    velocity; use it directly when you want the particles, not a</span>
 <span class="sd">    footprint.</span>
 
@@ -539,31 +543,15 @@
             <span class="sa">f</span><span class="s2">"Particle DataFrame has no </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2"> column(s), required for "</span>
             <span class="s2">"dry deposition."</span>
         <span class="p">)</span>
-    <span class="n">elapsed</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">order</span> <span class="o">=</span> <span class="n">elapsed</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">])</span><span class="o">.</span><span class="n">rank</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">"first"</span><span class="p">)</span>
-    <span class="n">sorted_rows</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-        <span class="p">{</span><span class="s2">"particle"</span><span class="p">:</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">],</span> <span class="s2">"elapsed"</span><span class="p">:</span> <span class="n">elapsed</span><span class="p">,</span> <span class="s2">"order"</span><span class="p">:</span> <span class="n">order</span><span class="p">}</span>
-    <span class="p">)</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"order"</span><span class="p">])</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">sorted_rows</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"particle"</span><span class="p">)[</span><span class="s2">"elapsed"</span><span class="p">]</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span>
-    <span class="c1"># The first row's step runs from the release (age 0).</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">sorted_rows</span><span class="p">[</span><span class="s2">"elapsed"</span><span class="p">])</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">step_minutes</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">step</span> <span class="o">&gt;</span> <span class="n">MAX_STEP_MINUTES</span> <span class="o">+</span> <span class="mf">1e-6</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="s2">"Dry deposition needs a particle row at every one-minute time step; "</span>
             <span class="sa">f</span><span class="s2">"these rows are up to </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> minutes apart. Run with "</span>
             <span class="s2">"outdt: 0."</span>
         <span class="p">)</span>
-    <span class="n">below</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sorted_rows</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">&lt;</span> <span class="p">(</span>
-        <span class="n">surface_layer_depth</span>
-    <span class="p">)</span>
-    <span class="n">loss</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">below</span><span class="p">,</span> <span class="n">velocity</span> <span class="o">*</span> <span class="n">step</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">*</span> <span class="mf">60.0</span> <span class="o">/</span> <span class="n">surface_layer_depth</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
-    <span class="n">cumulative</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">sorted_rows</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
-        <span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">sorted_rows</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">])</span>
-        <span class="o">.</span><span class="n">cumsum</span><span class="p">()</span>
-    <span class="p">)</span>
-    <span class="n">survival</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">cumulative</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()),</span> <span class="n">index</span><span class="o">=</span><span class="n">cumulative</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">survival</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">particles</span><span class="o">.</span><span class="n">index</span><span class="p">)</span></div>
+    <span class="n">below</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"zagl"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">surface_layer_depth</span>
+    <span class="k">return</span> <span class="n">survival</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">below</span><span class="p">,</span> <span class="n">velocity</span> <span class="o">/</span> <span class="n">surface_layer_depth</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span></div>
 
 
 

@@ -1,0 +1,6 @@
+﻿stilt.transforms.survival
+=========================
+
+.. currentmodule:: stilt.transforms
+
+.. autofunction:: survival

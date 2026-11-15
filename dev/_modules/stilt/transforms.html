@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=08d8f6a1"></script>
+    <script src="../../_static/documentation_options.js?v=8ceb4180"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev35+g806d853d5" />
+  <meta name="docsearch:version" content="0.1.0a29.dev36+ga0adb52e7" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -486,10 +486,12 @@
 
 <span class="sd">Each built-in transform is a module: :mod:`~stilt.transforms.averaging_kernel`,</span>
 <span class="sd">:mod:`~stilt.transforms.pressure_weighting`,</span>
-<span class="sd">:mod:`~stilt.transforms.lifetime`, and :mod:`~stilt.transforms.deposition`.</span>
-<span class="sd">:func:`particle_pwf` and :func:`ak_weights` hold the column weighting ported</span>
-<span class="sd">from X-STILT, and :func:`dry_deposition_survival` the fraction of a</span>
-<span class="sd">depositing tracer that reaches the receptor. They are public so your own</span>
+<span class="sd">:mod:`~stilt.transforms.lifetime`, :mod:`~stilt.transforms.deposition`, and</span>
+<span class="sd">:mod:`~stilt.transforms.oxidation`. :func:`particle_pwf` and</span>
+<span class="sd">:func:`ak_weights` hold the column weighting ported from X-STILT,</span>
+<span class="sd">:func:`survival` the fraction of a tracer that reaches the receptor for any</span>
+<span class="sd">loss rate, and :func:`dry_deposition_survival` that fraction for a</span>
+<span class="sd">depositing tracer. They are public so your own</span>
 <span class="sd">transforms can use them. This module loads transforms</span>
 <span class="sd">from a config and applies them.</span>
 <span class="sd">"""</span>
@@ -511,14 +513,19 @@
     <span class="n">averaging_kernel_table</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms.deposition</span><span class="w"> </span><span class="kn">import</span> <span class="n">DryDeposition</span><span class="p">,</span> <span class="n">dry_deposition_survival</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms.lifetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">FirstOrderLifetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms.lifetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">FirstOrderLifetime</span><span class="p">,</span> <span class="n">survival</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms.oxidation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Oxidation</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms.pressure_weighting</span><span class="w"> </span><span class="kn">import</span> <span class="n">PressureWeighting</span><span class="p">,</span> <span class="n">particle_pwf</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
 
 <span class="n">BuiltinTransform</span> <span class="o">=</span> <span class="n">Annotated</span><span class="p">[</span>
-    <span class="n">AveragingKernel</span> <span class="o">|</span> <span class="n">PressureWeighting</span> <span class="o">|</span> <span class="n">FirstOrderLifetime</span> <span class="o">|</span> <span class="n">DryDeposition</span><span class="p">,</span>
+    <span class="n">AveragingKernel</span>
+    <span class="o">|</span> <span class="n">PressureWeighting</span>
+    <span class="o">|</span> <span class="n">FirstOrderLifetime</span>
+    <span class="o">|</span> <span class="n">DryDeposition</span>
+    <span class="o">|</span> <span class="n">Oxidation</span><span class="p">,</span>
     <span class="n">Field</span><span class="p">(</span><span class="n">discriminator</span><span class="o">=</span><span class="s2">"kind"</span><span class="p">),</span>
 <span class="p">]</span>
 <span class="n">_BUILTIN_ADAPTER</span><span class="p">:</span> <span class="n">TypeAdapter</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">TypeAdapter</span><span class="p">(</span><span class="n">BuiltinTransform</span><span class="p">)</span>
@@ -640,6 +647,7 @@
     <span class="s2">"AveragingKernel"</span><span class="p">,</span>
     <span class="s2">"DryDeposition"</span><span class="p">,</span>
     <span class="s2">"FirstOrderLifetime"</span><span class="p">,</span>
+    <span class="s2">"Oxidation"</span><span class="p">,</span>
     <span class="s2">"PressureWeighting"</span><span class="p">,</span>
     <span class="s2">"ak_weights"</span><span class="p">,</span>
     <span class="s2">"apply_transforms"</span><span class="p">,</span>
@@ -649,6 +657,7 @@
     <span class="s2">"load_transform"</span><span class="p">,</span>
     <span class="s2">"particle_pwf"</span><span class="p">,</span>
     <span class="s2">"release_coordinate"</span><span class="p">,</span>
+    <span class="s2">"survival"</span><span class="p">,</span>
     <span class="s2">"transform_kind"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>

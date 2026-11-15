@@ -105,6 +105,8 @@ feature.
      - Implemented
    * - Dry deposition transform (``dry_deposition``)
      - Implemented
+   * - Oxidation transform (``oxidation``) and ``survival`` for any loss rate
+     - Implemented
    * - Declarative transforms in config YAML (default or per variant)
      - Implemented
    * - Slant-column receptor support

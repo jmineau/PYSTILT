@@ -5,8 +5,8 @@ A footprint is the mean surface influence of a simulation's particles. A
 *transform* changes how much each particle counts in that mean, by scaling
 the ``foot`` column of the particle table. Column instruments need an
 averaging kernel and a pressure weighting. A species that decays during
-transport needs a lifetime, and one that deposits to the ground a
-deposition velocity.
+transport needs a lifetime, one that reacts with OH a rate constant, and
+one that deposits to the ground a deposition velocity.
 
 A transform is any object with an ``apply`` method::
 
@@ -33,6 +33,10 @@ Built-in transforms
        lifetime_hours: 4.0
      - kind: dry_deposition
        velocity: 0.01
+     - kind: oxidation
+       a: 2.45e-12
+       e_over_r: 1775
+       oxidant: oh.nc
 
 ``averaging_kernel`` (:class:`stilt.transforms.AveragingKernel`)
    Multiplies each particle's ``foot`` by the kernel, interpolated to the
@@ -109,6 +113,40 @@ Built-in transforms
    fraction for each row of the particle table, if you want the particles
    rather than a footprint. Wet removal and
    gravitational settling are not included.
+
+``oxidation`` (:class:`stilt.transforms.Oxidation`)
+   Scales ``foot`` by the fraction of the tracer that survives a reaction
+   with an oxidant on its way from the particle's position to the
+   receptor. Use it for a species lost mainly to OH, such as CO or ethane.
+   At each row the loss rate is :math:`k(T) [X]`: the rate constant
+   :math:`k = a \exp(-E/R \, / \, T)`, with ``a`` and ``e_over_r`` as the
+   JPL and IUPAC tables give them, times the oxidant's number density
+   ``oxidant`` in molecules cm⁻³. Give the oxidant as one number or as a
+   netCDF file of a gridded field (an OH climatology or a chemistry model's
+   output) on ``lat``/``lon``, with pressure levels in hPa and ``time`` if
+   it has them. Each row takes the value of the cell it is in; a row
+   outside the field has no loss there. ``stilt check`` reports a missing
+   file or variable before the run.
+
+   The temperature is the particles' ``temz`` when ``varsiwant`` has it.
+   Otherwise it comes from ``pres`` and ``dens``, which are there by
+   default, so particles you already ran need no rerun. That is within
+   about 1 K of HYSPLIT's ``temz`` in dry air, about 2 % in the rate for
+   methane and OH.
+
+   For methane at regional scales you do not need it: its lifetime
+   against OH is about nine years, and over a few days of trajectory the
+   footprint changes by less than 0.1 %.
+
+Any loss whose rate you can compute at every row works the same way, as
+long as the rate does not depend on how much tracer the particle carries.
+:func:`~stilt.transforms.survival` takes a rate per row, in s⁻¹, and
+returns the fraction that reaches the receptor; the built-in lifetime,
+deposition and oxidation transforms are special cases of it. Use it in your
+own transform for rain-out, photolysis, or a lifetime from a chemistry
+model. A loss that depends on the tracer itself, as NOx's lifetime depends
+on NOx, has no footprint: it needs the emissions and a chemistry model
+along each trajectory.
 
 For satellite and TCCON columns, list ``averaging_kernel`` and then
 ``pressure_weighting``. With no transforms every particle counts equally,
