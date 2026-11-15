@@ -205,8 +205,8 @@ class FootprintConfig(BaseModel):
             "Particle transforms applied in order before the footprint is "
             "computed. Each entry's ``kind`` is a built-in name "
             "(``averaging_kernel``, ``pressure_weighting``, "
-            "``first_order_lifetime``, ``dry_deposition``) or the import path "
-            "of your own class."
+            "``first_order_lifetime``, ``dry_deposition``, ``oxidation``) or "
+            "the import path of your own class."
         ),
         default_factory=list,
     )

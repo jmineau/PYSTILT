@@ -1,5 +1,5 @@
 """
-What the transforms share: a particle's value of a column at release.
+What the transforms share: a particle's value of a column at release, and the length of each time step.
 """
 
 from __future__ import annotations
@@ -30,3 +30,32 @@ def release_coordinate(particles: pd.DataFrame, coordinate: str) -> pd.Series:
     return pd.Series(
         first[coordinate].to_numpy(dtype=float), index=first["particle"].to_numpy()
     )
+
+
+def step_minutes(particles: pd.DataFrame) -> pd.Series:
+    """
+    Return the length of the time step that ends at each row, in minutes.
+
+    A particle's rows are ordered by elapsed time (``|age|``); its first
+    row's step runs from the release (age 0).
+
+    Parameters
+    ----------
+    particles : pandas.DataFrame
+        The particle table, with ``particle`` and ``age`` (minutes) columns.
+
+    Returns
+    -------
+    pandas.Series
+        The step length, aligned with ``particles``' index.
+    """
+    missing = [c for c in ("particle", "age") if c not in particles.columns]
+    if missing:
+        raise ValueError(f"Particle DataFrame has no {missing} column(s).")
+    elapsed = particles["age"].abs().astype(float)
+    order = elapsed.groupby(particles["particle"]).rank(method="first")
+    rows = pd.DataFrame(
+        {"particle": particles["particle"], "elapsed": elapsed, "order": order}
+    ).sort_values(["particle", "order"])
+    step = rows.groupby("particle")["elapsed"].diff().fillna(rows["elapsed"])
+    return step.reindex(particles.index)

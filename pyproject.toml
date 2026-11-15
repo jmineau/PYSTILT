@@ -156,7 +156,8 @@ layers = [
     "footprint : identity : meteorology : transport",
     "particles",
     "receptors : visualization",
-    "transforms | sampling",
+    "transforms",
+    "sampling",
     "spatial",
     "_paths | exceptions | _transient",
 ]
@@ -235,6 +236,7 @@ ignore_imports = [
     "stilt.footprint.** -> stilt.transforms",
     "stilt.footprint.** -> stilt.sampling",
     "stilt.transforms.** -> stilt.transforms.**",
+    "stilt.transforms.oxidation -> stilt.sampling",
     "stilt.observations.** -> stilt.**",
     "stilt.background -> stilt.sampling",
     "stilt.background -> stilt.transforms",
