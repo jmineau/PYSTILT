@@ -13,6 +13,14 @@
 
 
 
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~PressureWeighting.reads_zsfc
+
 
 
 Methods

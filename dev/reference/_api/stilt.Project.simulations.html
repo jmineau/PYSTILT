@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=09fa8d62"></script>
+    <script src="../../_static/documentation_options.js?v=8e62eb4d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev31+gb14092707" />
+  <meta name="docsearch:version" content="0.1.0a29.dev33+ga4699b095" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -544,11 +544,11 @@
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.migration.read_stilt_r.html">stilt.migration.read_stilt_r</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.migration.import_stilt_r.html">stilt.migration.import_stilt_r</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.background.html">stilt.particles.background</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.Background-class.html">stilt.particles.Background</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.transport_error.html">stilt.particles.transport_error</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.particles.TransportError.html">stilt.particles.TransportError</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.particles.TransportError.sd.html">stilt.particles.TransportError.sd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.background.html">stilt.background</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.Background-class.html">stilt.Background</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.transport_error.html">stilt.transport_error</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.TransportError.html">stilt.TransportError</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.TransportError.sd.html">stilt.TransportError.sd</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Mesh.html">stilt.Mesh</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -729,11 +729,13 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../transforms.html">Transforms</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transforms.AveragingKernel.html">stilt.transforms.AveragingKernel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.apply.html">stilt.transforms.AveragingKernel.apply</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.check.html">stilt.transforms.AveragingKernel.check</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.kernel.html">stilt.transforms.AveragingKernel.kernel</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.table_receptors.html">stilt.transforms.AveragingKernel.table_receptors</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transforms.PressureWeighting.html">stilt.transforms.PressureWeighting</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.PressureWeighting.reads_zsfc.html">stilt.transforms.PressureWeighting.reads_zsfc</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transforms.PressureWeighting.apply.html">stilt.transforms.PressureWeighting.apply</a></li>
 </ul>
 </details></li>
@@ -909,7 +911,7 @@ transport model), then the other columns of <a class="reference internal" href="
 run receptor by receptor, with variants in config order. Select rows as in pandas
 and pass the selection to <a class="reference internal" href="stilt.Project.status.html#stilt.Project.status" title="stilt.Project.status"><code class="xref py py-meth docutils literal notranslate"><span class="pre">status()</span></code></a>, <a class="reference internal" href="stilt.Project.incomplete.html#stilt.Project.incomplete" title="stilt.Project.incomplete"><code class="xref py py-meth docutils literal notranslate"><span class="pre">incomplete()</span></code></a>,
 <a class="reference internal" href="stilt.Project.particles.html#stilt.Project.particles" title="stilt.Project.particles"><code class="xref py py-meth docutils literal notranslate"><span class="pre">particles()</span></code></a>, <a class="reference internal" href="stilt.Project.footprints.html#stilt.Project.footprints" title="stilt.Project.footprints"><code class="xref py py-meth docutils literal notranslate"><span class="pre">footprints()</span></code></a>, <a class="reference internal" href="stilt.Project.jacobian.html#stilt.Project.jacobian" title="stilt.Project.jacobian"><code class="xref py py-meth docutils literal notranslate"><span class="pre">jacobian()</span></code></a>, or
-<a class="reference internal" href="stilt.Project.transport_error.html#stilt.Project.transport_error" title="stilt.Project.transport_error"><code class="xref py py-meth docutils literal notranslate"><span class="pre">transport_error()</span></code></a>.</p>
+<a class="reference internal" href="stilt.transport_error.html#stilt.transport_error" title="stilt.transport_error"><code class="xref py py-meth docutils literal notranslate"><span class="pre">transport_error()</span></code></a>.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">july</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span>

@@ -10,7 +10,7 @@ background from observations for an inversion, you need both.
 Each back-trajectory ends where its air came from. Sample a mole-fraction
 field at every particle's endpoint, average over the particles, and you
 have the background the receptor saw. ``sim.background(field)`` does this
-with any field you give it (:func:`stilt.particles.background` without a
+with any field you give it (:func:`stilt.background` without a
 project). X-STILT does the same with
 CarbonTracker in ``endpts.trajfoot``. For a satellite swath you can also
 take the background from the soundings that a city's plume did not reach
@@ -42,8 +42,8 @@ average. Longitudes from 0 to 360, as in many global models, are handled.
 PYSTILT does not read a global model's files. If its levels vary in space,
 as CarbonTracker's do, sample it yourself and pass one value per particle
 instead of a field, as a Series indexed by particle number (``particle``).
-``sim.particles.stilt.endpoints()`` gives the endpoints as a table for this,
-and lair's ``CarbonTracker.sample`` takes that table directly.
+``sim.particles.stilt.endpoints()`` gives the endpoints as a table for this:
+one row per particle, with every column of the particle table.
 
 The background at a receptor
 ----------------------------

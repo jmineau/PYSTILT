@@ -218,7 +218,7 @@ keeps the per-level table described below:
 particles are weighted the way the unperturbed variant's footprint weights
 them, with its transforms: the averaging kernel (including one from a
 per-receptor table), pressure weighting, and lifetime decay.
-:func:`stilt.particles.transport_error` does the same for particle tables
+:func:`stilt.transport_error` does the same for particle tables
 you have without a project.
 
 Is the estimate meaningful?
@@ -480,8 +480,7 @@ anemometer. Sample the 10 m wind, or the lowest model level:
        "v_err": met["V10M"] - stations["v"],
    })
 
-Reading the observations is up to you. The Salt Lake Valley numbers below
-used the sonde reader in `lair <https://github.com/jmineau/lair>`_.
+Reading the observations is up to you.
 
 For radiosondes anywhere in the world, the usual source is NOAA's
 Integrated Global Radiosonde Archive (IGRA2).

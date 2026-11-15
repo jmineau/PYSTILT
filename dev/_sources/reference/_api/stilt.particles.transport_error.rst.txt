@@ -1,6 +1,0 @@
-﻿stilt.particles.transport\_error
-================================
-
-.. currentmodule:: stilt.particles
-
-.. autofunction:: transport_error

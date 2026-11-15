@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=09fa8d62"></script>
+    <script src="../../_static/documentation_options.js?v=8e62eb4d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev31+gb14092707" />
+  <meta name="docsearch:version" content="0.1.0a29.dev33+ga4699b095" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -544,11 +544,11 @@
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.migration.read_stilt_r.html">stilt.migration.read_stilt_r</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.migration.import_stilt_r.html">stilt.migration.import_stilt_r</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.background.html">stilt.particles.background</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.Background-class.html">stilt.particles.Background</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.transport_error.html">stilt.particles.transport_error</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.particles.TransportError.html">stilt.particles.TransportError</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.particles.TransportError.sd.html">stilt.particles.TransportError.sd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.background.html">stilt.background</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.Background-class.html">stilt.Background</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.transport_error.html">stilt.transport_error</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.TransportError.html">stilt.TransportError</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.TransportError.sd.html">stilt.TransportError.sd</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Mesh.html">stilt.Mesh</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -729,11 +729,13 @@
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../transforms.html">Transforms</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2 current active has-children"><a aria-current="page" class="current reference internal" href="#">stilt.transforms.AveragingKernel</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.apply.html">stilt.transforms.AveragingKernel.apply</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.check.html">stilt.transforms.AveragingKernel.check</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.kernel.html">stilt.transforms.AveragingKernel.kernel</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.table_receptors.html">stilt.transforms.AveragingKernel.table_receptors</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transforms.PressureWeighting.html">stilt.transforms.PressureWeighting</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.PressureWeighting.reads_zsfc.html">stilt.transforms.PressureWeighting.reads_zsfc</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transforms.PressureWeighting.apply.html">stilt.transforms.PressureWeighting.apply</a></li>
 </ul>
 </details></li>
@@ -917,10 +919,13 @@ values. The kernel weight is added as an <code class="docutils literal notransla
 <tr class="row-odd"><td><p><a class="reference internal" href="stilt.transforms.AveragingKernel.apply.html#stilt.transforms.AveragingKernel.apply" title="stilt.transforms.AveragingKernel.apply"><code class="xref py py-obj docutils literal notranslate"><span class="pre">apply</span></code></a>(particles[, receptor, directory])</p></td>
 <td><p>Return the particles with <code class="docutils literal notranslate"><span class="pre">foot</span></code> weighted by the averaging kernel.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="stilt.transforms.AveragingKernel.kernel.html#stilt.transforms.AveragingKernel.kernel" title="stilt.transforms.AveragingKernel.kernel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kernel</span></code></a>([receptor, directory])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="stilt.transforms.AveragingKernel.check.html#stilt.transforms.AveragingKernel.check" title="stilt.transforms.AveragingKernel.check"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check</span></code></a>(receptors[, directory])</p></td>
+<td><p>Return what is wrong with the <code class="docutils literal notranslate"><span class="pre">table</span></code> for a project's <em>receptors</em>, which <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> reports.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.transforms.AveragingKernel.kernel.html#stilt.transforms.AveragingKernel.kernel" title="stilt.transforms.AveragingKernel.kernel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kernel</span></code></a>([receptor, directory])</p></td>
 <td><p>Return <code class="docutils literal notranslate"><span class="pre">(levels,</span> <span class="pre">values)</span></code> of the kernel for <em>receptor</em>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="stilt.transforms.AveragingKernel.table_receptors.html#stilt.transforms.AveragingKernel.table_receptors" title="stilt.transforms.AveragingKernel.table_receptors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">table_receptors</span></code></a>([directory])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="stilt.transforms.AveragingKernel.table_receptors.html#stilt.transforms.AveragingKernel.table_receptors" title="stilt.transforms.AveragingKernel.table_receptors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">table_receptors</span></code></a>([directory])</p></td>
 <td><p>Return the ids of the receptors the <code class="docutils literal notranslate"><span class="pre">table</span></code> has a kernel for.</p></td>
 </tr>
 </tbody>
