@@ -101,8 +101,62 @@ Options
    has several. PYSTILT follows the job there. Give ``squeue`` and
    ``scancel`` the cluster too: ``squeue -M kingspeak -j <job_id>``.
 
+``fetch``
+   The Slurm resources of the job that gets the met files before the
+   array, or ``false`` for no such job (below).
+
 A setting PYSTILT does not know is an error, so a misspelled ``partition``
 is caught before anything is submitted.
+
+.. _slurm-fetch:
+
+Met files that download
+-----------------------
+
+When a met has ``download`` set, ``stilt submit`` first submits a job that
+gets the met files, and the array waits for it. Otherwise every array task
+would download the files its own receptors need, and tasks whose receptors
+share a day would download the same files at the same time. The fetch job
+is one task that runs ``stilt fetch`` over the receptors the array runs, so
+each file is downloaded once. ``stilt submit`` prints both job IDs:
+
+.. code-block:: text
+
+   Submitted fetch job: 7712; the job array waits for it to end. Log in /path/my_project/_slurm/20261115_103000_ab12cd/fetch.log
+   Submitted job: 7713 (200 tasks); logs in /path/my_project/_slurm/20261115_103000_ab12cd
+   Submitted job: 7713
+
+The fetch job uses the array's ``partition``, ``account``, ``qos``, ``time``
+and ``mem`` unless ``fetch`` gives its own. Of the ``slurm`` options it
+takes only ``clusters``. If your cluster has a data-transfer partition, we
+recommend sending the fetch job there, because compute nodes often
+download slowly. Give it a ``time`` long enough for every download.
+
+.. code-block:: yaml
+
+   execution:
+     backend: slurm
+     n_workers: 200
+     account: my-account
+     partition: my-partition
+     time: "02:00:00"
+     fetch:
+       partition: my-dtn-partition
+       account: my-dtn-account
+       time: "12:00:00"
+
+The array starts when the fetch job ends, however it ended
+(``--dependency=afterany``). If the archive lacked some files, the runs
+that need them fail with the met failure they would get anyway, and the
+other runs go ahead. If the fetch job was stopped, ran out of time, or could
+not reach the archive, it keeps the files it got and each task downloads
+what is still missing. To stop both jobs, ``scancel`` both.
+
+A met without ``download`` gets no fetch job: its files are already in its
+``directory``, and ``stilt check`` finds any that are missing. Neither does
+a submission whose particles all exist, since making footprints needs no
+met. ``fetch: false`` turns the fetch job off, for example when something
+else fills the met directory.
 
 Preempted and timed-out tasks
 -----------------------------
@@ -166,6 +220,8 @@ earlier one's logs:
        receptors.parquet # their rows of receptors.csv, already checked
        execution.yaml    # the execution settings of this submission
        <task>.log        # each task's progress lines and errors
+       fetch.sh          # the fetch job's script, when a met downloads
+       fetch.log         # the fetch job's log: the files it got
 
 ``job.sh`` is a plain ``sbatch`` script. Task ``i`` of ``N`` runs
 

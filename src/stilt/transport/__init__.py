@@ -259,6 +259,12 @@ class TransportModel(Protocol):
         downloads, and returns a DataFrame with ``file`` and ``message``
         columns: a row for each file, then a row for each window whose files
         could not be had. A model without it has no met files to get.
+    downloads_met : callable, optional
+        ``downloads_met(met)``, for a model with ``fetch_met``: whether *met*
+        downloads files, so that getting them once before the runs saves
+        each run from downloading its own. ``stilt submit`` submits a fetch
+        job before the job array only when it is true for a met the
+        unfinished simulations use. A model without it downloads nothing.
     """
 
     name: str

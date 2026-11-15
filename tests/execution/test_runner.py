@@ -12,7 +12,7 @@ import pytest
 import yaml
 
 from stilt.execution import runner
-from stilt.execution.config import ExecutionConfig, slurm_minutes
+from stilt.execution.config import ExecutionConfig, FetchConfig, slurm_minutes
 from stilt.execution.runner import _project_slug, job_script, task_share
 from stilt.project import Project
 
@@ -656,3 +656,216 @@ def test_a_task_runs_here_whatever_the_backend(tmp_path, monkeypatch, commands):
     assert ran == [[every[1], every[3]]]
     assert list(table["receptor"]) == [every[1], every[3]]
     assert set(table["state"]) == {"pending"}  # nothing was written
+
+
+# ---------------------------------------------------------------------------
+# The fetch before the receptors run (#436)
+# ---------------------------------------------------------------------------
+
+
+def _downloading_project(tmp_path, n: int) -> Project:
+    """A project like :func:`_hourly_project` whose met downloads HRRR."""
+    import datetime as dt
+
+    from stilt.receptors import PointReceptor
+    from stilt.transport.hysplit import MetConfig
+
+    config = make_project_config(
+        tmp_path,
+        mets={"hrrr": MetConfig(directory=tmp_path / "met", download="hrrr")},
+    )
+    receptors = [
+        PointReceptor(
+            time=dt.datetime(2023, 1, 1, h),
+            longitude=-111.85,
+            latitude=40.77,
+            altitude=5.0,
+        )
+        for h in range(n)
+    ]
+    return Project.init(tmp_path / "hourly", config=config, receptors=receptors)
+
+
+@pytest.mark.parametrize("value", [True, None, {}])
+def test_fetch_is_on_with_the_arrays_resources_unless_given(value):
+    config = ExecutionConfig.model_validate({"fetch": value})
+    assert config.fetch == FetchConfig()
+    assert ExecutionConfig().fetch == FetchConfig()
+
+
+def test_fetch_false_turns_it_off_and_a_bad_fetch_setting_is_an_error():
+    assert ExecutionConfig.model_validate({"fetch": False}).fetch is False
+    with pytest.raises(ValueError, match="partiton"):
+        ExecutionConfig.model_validate({"fetch": {"partiton": "dtn"}})
+    with pytest.raises(ValueError, match="Not a Slurm time limit"):
+        ExecutionConfig.model_validate({"fetch": {"time": "soon"}})
+
+
+def test_submit_sends_a_fetch_job_first_and_the_array_waits_for_it(
+    pending, commands, tmp_path
+):
+    project = _downloading_project(tmp_path, 3)
+    pending.extend(project.receptors["receptor"])
+    execution = ExecutionConfig.model_validate(
+        {
+            "backend": "slurm",
+            "time": "01:00:00",
+            "account": "lin-np",
+            "partition": "lin-np",
+            "mem": "8G",
+            "setup": ["module load gcc"],
+            "slurm": {"exclude": "notch345"},
+            "fetch": {"partition": "notchpeak-dtn", "time": "12:00:00"},
+        }
+    )
+    commands.answers["sbatch"] = [_out("41\n"), _out("42\n")]
+
+    job_id = runner.submit(project, execution=execution)
+
+    assert job_id == "42"
+    [fetch, array] = commands.ran
+    assert fetch[:2] == ["sbatch", "--parsable"]
+    assert Path(fetch[-1]).name == "fetch.sh"
+    assert array == [
+        "sbatch",
+        "--parsable",
+        "--dependency=afterany:41",
+        str(Path(fetch[-1]).parent / "job.sh"),
+    ]
+    folder = Path(fetch[-1]).parent
+    text = (folder / "fetch.sh").read_text()
+    options = _sbatch(text)
+    assert options["partition"] == "notchpeak-dtn"
+    assert options["time"] == "12:00:00"
+    assert options["account"] == "lin-np"  # the array's, unset in fetch
+    assert options["mem"] == "8G"
+    assert options["output"] == str(folder / "fetch.log")
+    assert "exclude" not in options  # the array's own sbatch options stay its own
+    assert "array" not in options
+    assert "module load gcc" in text
+    exec_, _python, *command = text.splitlines()[-1].split()
+    assert exec_ == "exec"
+    assert command[:4] == ["-m", "stilt", "fetch", str(project.directory)]
+    assert command[4:6] == ["--receptors", str(folder / "receptors.parquet")]
+    assert command[6:8] == ["--output", str(project.output.directory)]
+    subprocess.run(["bash", "-n", str(folder / "fetch.sh")], check=True)
+
+
+def test_the_array_goes_to_the_cluster_its_fetch_job_went_to(
+    pending, commands, tmp_path
+):
+    project = _downloading_project(tmp_path, 1)
+    pending.extend(project.receptors["receptor"])
+    execution = ExecutionConfig(
+        backend="slurm", time="01:00:00", slurm={"clusters": "kingspeak,notchpeak"}
+    )
+    commands.answers["sbatch"] = [_out("41;kingspeak\n"), _out("42;kingspeak\n")]
+
+    runner.submit(project, execution=execution)
+
+    [fetch, array] = commands.ran
+    assert _sbatch(Path(fetch[-1]).read_text())["clusters"] == "kingspeak,notchpeak"
+    assert array[2:4] == ["--dependency=afterany:41", "--clusters=kingspeak"]
+
+
+def test_a_met_without_download_gets_no_fetch_job(pending, commands, tmp_path):
+    project = _hourly_project(tmp_path, 2)
+    pending.extend(project.receptors["receptor"])
+    commands.answers["sbatch"] = [_out("42\n")]
+
+    runner.submit(project, execution=ExecutionConfig(backend="slurm", time="01:00:00"))
+
+    [array] = commands.ran
+    assert Path(array[-1]).name == "job.sh"
+    assert not (Path(array[-1]).parent / "fetch.sh").exists()
+
+
+def test_fetch_false_sends_no_fetch_job(pending, commands, tmp_path):
+    project = _downloading_project(tmp_path, 2)
+    pending.extend(project.receptors["receptor"])
+    commands.answers["sbatch"] = [_out("42\n")]
+
+    runner.submit(
+        project,
+        execution=ExecutionConfig(backend="slurm", time="01:00:00", fetch=False),
+    )
+
+    [array] = commands.ran
+    assert Path(array[-1]).name == "job.sh"
+
+
+def test_no_fetch_job_when_the_particles_are_there(
+    pending, commands, tmp_path, monkeypatch
+):
+    """Footprints left to make need no met."""
+    import pandas as pd
+
+    project = _downloading_project(tmp_path, 2)
+    pending.extend(project.receptors["receptor"])
+    monkeypatch.setattr(
+        Project, "_unrun", lambda self, sel=None: pd.DataFrame(columns=["receptor"])
+    )
+    commands.answers["sbatch"] = [_out("42\n")]
+
+    runner.submit(project, execution=ExecutionConfig(backend="slurm", time="01:00:00"))
+
+    assert len(commands.ran) == 1
+
+
+def test_a_local_run_on_several_cpus_fetches_before_the_workers_start(
+    tmp_path, monkeypatch
+):
+    import pandas as pd
+
+    from stilt.execution import worker
+
+    project = _downloading_project(tmp_path, 3)
+    steps: list[str] = []
+
+    def fetch(self, sel=None):
+        steps.append(f"fetch {int(sel.sum())}")
+        return pd.DataFrame({"met": [], "file": [], "message": []}, dtype="string")
+
+    monkeypatch.setattr(Project, "fetch", fetch)
+    monkeypatch.setattr(
+        worker, "run_receptors", lambda project, ids, **_: steps.append("run")
+    )
+    monkeypatch.setattr(
+        runner, "_status", lambda project, ids: pd.DataFrame({"state": ["pending"]})
+    )
+
+    runner.run(project, execution=ExecutionConfig(cpus=2))
+    assert steps == ["fetch 3", "run"]
+
+    steps.clear()
+    runner.run(project, execution=ExecutionConfig(cpus=1))
+    runner.run(project, execution=ExecutionConfig(cpus=2, fetch=False))
+    assert steps == ["run", "run"]
+
+
+def test_a_local_fetch_that_cannot_reach_the_archive_lets_the_run_go(
+    tmp_path, monkeypatch, caplog
+):
+    import pandas as pd
+
+    from stilt.execution import worker
+
+    project = _downloading_project(tmp_path, 1)
+    ran: list[str] = []
+
+    def fetch(self, sel=None):
+        raise ConnectionError("archive busy")
+
+    monkeypatch.setattr(Project, "fetch", fetch)
+    monkeypatch.setattr(
+        worker, "run_receptors", lambda project, ids, **_: ran.append("run")
+    )
+    monkeypatch.setattr(
+        runner, "_status", lambda project, ids: pd.DataFrame({"state": ["pending"]})
+    )
+
+    with caplog.at_level("WARNING", logger="stilt.execution.runner"):
+        runner.run(project, execution=ExecutionConfig(cpus=2))
+
+    assert ran == ["run"]
+    assert "archive busy" in caplog.text

@@ -62,7 +62,7 @@ each a ``stilt run --task`` command line.
      - Implemented
    * - A check of a project's met files, grid, and kernel table before any run (``stilt check``, ``project.check()``)
      - Implemented
-   * - Getting the met files a project's runs need once, before many workers start (``stilt fetch``, ``project.fetch()``)
+   * - Getting the met files a project's runs need once, before many workers start (``stilt fetch``, ``project.fetch()``, and a fetch job before ``stilt submit``'s array)
      - Implemented
    * - Slurm job arrays, with preempted tasks resubmitted
      - Implemented

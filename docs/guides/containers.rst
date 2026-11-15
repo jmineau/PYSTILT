@@ -44,7 +44,9 @@ met ``directory``. Pods on one shared volume find the files the first pod
 fetched. Pods with their own disks do not: 50 pods whose receptors fall on
 the same days download, and crop, the same files 50 times.
 
-``stilt fetch`` gets the files once, before the Job starts:
+A task (``stilt run --task``) never fetches for the others, so
+``stilt fetch`` gets the files once, before the Job starts (``stilt submit``
+does this for you on Slurm, :ref:`slurm-fetch`):
 
 .. code-block:: bash
 

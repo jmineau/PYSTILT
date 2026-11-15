@@ -1339,12 +1339,16 @@ class Project:
         >>> files.message.isna().all()  # True when every file is there  # doctest: +SKIP
         >>> project.run()  # downloads nothing  # doctest: +SKIP
         """
+        return fetch_project(self, self._unrun(sel))
+
+    def _unrun(self, sel: Any = None) -> pd.DataFrame:
+        """Return the rows of the simulations in *sel* whose particles are missing: the ones a fetch gets met for."""
         frame = self._selected(sel)
         present = self._present(frame)
         has = np.array(
             [r in present[(v, k)][0] for r, v, k in _rows(frame)], dtype=bool
         )
-        return fetch_project(self, frame.loc[~has])
+        return frame.loc[~has]
 
     def run(
         self,
