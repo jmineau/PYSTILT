@@ -18,7 +18,8 @@ class FetchConfig(BaseModel):
     The Slurm resources of the job that gets the met files before a job array.
 
     Each setting left unset is the array's (``partition``, ``account``,
-    ``qos``, ``time``, ``mem`` of :class:`ExecutionConfig`). Set them to send
+    ``qos``, ``time``, ``mem`` of :class:`ExecutionConfig`, or the ``slurm``
+    option of that name, which replaces it for the array too). Set them to send
     the fetch to a data-transfer partition, where a cluster has one, and
     give ``time`` room for the downloads: a fetch job that runs out of time
     keeps the files it got, and the array then downloads the rest.
@@ -155,8 +156,9 @@ class ExecutionConfig(BaseModel):
         default_factory=dict,
         description=(
             "Any other ``sbatch`` options by name, such as ``exclude: node1`` "
-            "or ``constraint: skl``. ``true`` writes the bare flag. Only "
-            "``clusters`` is passed to the fetch job too."
+            "or ``constraint: skl``. ``true`` writes the bare flag. The fetch job "
+            "takes ``clusters``, ``partition``, ``account``, ``qos``, ``time`` "
+            "and ``mem`` from these, and no other option."
         ),
     )
     fetch: FetchConfig | Literal[False] = Field(

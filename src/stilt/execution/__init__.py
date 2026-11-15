@@ -10,11 +10,12 @@ a scheduler PYSTILT does not drive itself. The workers are in
 """
 
 from .config import ExecutionConfig, FetchConfig
-from .runner import job_script, pending, run, submit, task_share, wait
+from .runner import fetch_script, job_script, pending, run, submit, task_share, wait
 
 __all__ = [
     "ExecutionConfig",
     "FetchConfig",
+    "fetch_script",
     "job_script",
     "pending",
     "run",

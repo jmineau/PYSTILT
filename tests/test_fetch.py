@@ -498,7 +498,7 @@ def test_stilt_fetch_exits_with_2_for_a_directory_that_is_not_a_project(tmp_path
 def test_stilt_fetch_exits_with_3_when_interrupted(tmp_path, monkeypatch):
     project = _project(tmp_path, RECEPTORS[:1])
 
-    def interrupt(self, sel=None):
+    def interrupt(self, sel=None, **_):
         raise KeyboardInterrupt
 
     monkeypatch.setattr(Project, "fetch", interrupt)
@@ -568,3 +568,23 @@ def test_stilt_fetch_refuses_a_receptor_not_in_the_project(tmp_path, archive):
     assert result.exit_code == 2
     assert "not in this project" in result.output
     assert archive.downloaded == []
+
+
+def test_stilt_fetch_no_skip_fetches_for_runs_whose_particles_exist(
+    tmp_path, archive, monkeypatch
+):
+    project = _project(tmp_path, RECEPTORS, n_hours=-6)
+    real_unrun = Project._unrun
+
+    def unrun(self, sel=None, *, skip_existing=True):
+        if skip_existing:  # as if every particles file existed
+            return self._selected(sel).iloc[:0]
+        return real_unrun(self, sel, skip_existing=False)
+
+    monkeypatch.setattr(Project, "_unrun", unrun)
+
+    assert runner.invoke(app, ["fetch", str(project.directory)]).exit_code == 0
+    assert archive.downloaded == []
+    result = runner.invoke(app, ["fetch", str(project.directory), "--no-skip"])
+    assert result.exit_code == 0, result.output
+    assert archive.downloaded

@@ -62,7 +62,7 @@ from typer.core import TyperGroup
 from stilt._transient import is_transient
 from stilt.exceptions import WorkerDied
 from stilt.execution.config import ExecutionConfig
-from stilt.execution.runner import resolve_compute_root
+from stilt.execution.runner import pending, resolve_compute_root
 from stilt.project import STATES, Project
 
 #: Exit codes. 2 is also Click's own for an unknown option or command, so a
@@ -456,6 +456,11 @@ def _stop_once() -> Iterator[None]:
 def fetch(
     project: str | None = _PROJECT_ARG,
     receptors: Path | None = _RECEPTORS,
+    no_skip: bool = typer.Option(
+        False,
+        "--no-skip",
+        help="Get the met of every simulation, also those whose particles exist.",
+    ),
     output: str | None = _OUTPUT,
 ) -> None:
     """
@@ -469,6 +474,7 @@ def fetch(
     only checked for missing files, as stilt check does. --receptors limits
     it to the receptors listed in a file, as for stilt run; the fetch job
     stilt submit sends before a job array reads its receptors.parquet.
+    --no-skip gets the met of every simulation, for a stilt run --no-skip.
     Exits with 0 when
     every file is there, 1 when the archive lacks some, 2 when the command
     line is wrong or a met cannot be read, and 3 when stopped by Ctrl-C or
@@ -483,22 +489,20 @@ def fetch(
         opened._take_rows(rows)
     sel = None
     if receptor_ids is not None:
-        known = set(opened.simulations["receptor"])
-        unknown = [r for r in receptor_ids if r not in known]
-        if unknown:
-            _fail(
-                f"{len(unknown)} receptor ids in {receptors} are not in this "
-                f"project, such as {unknown[:3]}."
-            )
+        try:
+            # Checks the ids as a run does; lists no output without skip_existing.
+            receptor_ids = pending(opened, receptors=receptor_ids, skip_existing=False)
+        except ValueError as error:
+            _fail(f"{receptors}: {error}")
         sel = opened.simulations["receptor"].isin(receptor_ids)
     # arlmet logs each file it downloads, which is the progress to show.
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
     logging.getLogger("arlmet.archives").setLevel(logging.INFO)
-    count = len(opened.receptors) if receptor_ids is None else len(set(receptor_ids))
+    count = len(opened.receptors) if receptor_ids is None else len(receptor_ids)
     typer.echo(f"Project: {opened.directory}  receptors={count}")
     try:
         with _stop_once():
-            files = opened.fetch(sel)
+            files = opened.fetch(sel, skip_existing=not no_skip)
     except (ImportError, ValueError) as error:
         _fail(str(error))
     except KeyboardInterrupt:

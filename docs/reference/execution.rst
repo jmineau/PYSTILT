@@ -69,6 +69,7 @@ Slurm job arrays
    :nosignatures:
 
    stilt.execution.job_script
+   stilt.execution.fetch_script
 
 Transport model
 ----------------

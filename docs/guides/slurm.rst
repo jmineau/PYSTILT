@@ -127,8 +127,10 @@ each file is downloaded once. ``stilt submit`` prints both job IDs:
    Submitted job: 7713
 
 The fetch job uses the array's ``partition``, ``account``, ``qos``, ``time``
-and ``mem`` unless ``fetch`` gives its own. Of the ``slurm`` options it
-takes only ``clusters``. If your cluster has a data-transfer partition, we
+and ``mem`` unless ``fetch`` gives its own, whether you set them at the top
+of ``execution`` or under ``slurm``. Of the other ``slurm`` options it takes
+only ``clusters``, since a data-transfer partition may not have the nodes or
+features (``exclude``, ``constraint``) the array asks for. If your cluster has a data-transfer partition, we
 recommend sending the fetch job there, because compute nodes often
 download slowly. Give it a ``time`` long enough for every download.
 
@@ -150,12 +152,15 @@ The array starts when the fetch job ends, however it ended
 that need them fail with the met failure they would get anyway, and the
 other runs go ahead. If the fetch job was stopped, ran out of time, or could
 not reach the archive, it keeps the files it got and each task downloads
-what is still missing. To stop both jobs, ``scancel`` both.
+what is still missing. If ``sbatch`` refuses the array, PYSTILT cancels the
+fetch job. The fetch job's ID is also in ``fetch.id`` in the submission
+folder; to stop both jobs, ``scancel`` both.
 
 A met without ``download`` gets no fetch job: its files are already in its
 ``directory``, and ``stilt check`` finds any that are missing. Neither does
 a submission whose particles all exist, since making footprints needs no
-met. ``fetch: false`` turns the fetch job off, for example when something
+met, unless it runs with ``--no-skip``, which runs the transport model
+again: then the fetch job gets the met of every run. ``fetch: false`` turns the fetch job off, for example when something
 else fills the met directory.
 
 Preempted and timed-out tasks
@@ -222,6 +227,7 @@ earlier one's logs:
        <task>.log        # each task's progress lines and errors
        fetch.sh          # the fetch job's script, when a met downloads
        fetch.log         # the fetch job's log: the files it got
+       fetch.id          # the fetch job's Slurm ID
 
 ``job.sh`` is a plain ``sbatch`` script. Task ``i`` of ``N`` runs
 

@@ -740,6 +740,7 @@ def test_submit_sends_a_fetch_job_first_and_the_array_waits_for_it(
     assert options["account"] == "lin-np"  # the array's, unset in fetch
     assert options["mem"] == "8G"
     assert options["output"] == str(folder / "fetch.log")
+    assert (folder / "fetch.id").read_text() == "41\n"
     assert "exclude" not in options  # the array's own sbatch options stay its own
     assert "array" not in options
     assert "module load gcc" in text
@@ -748,6 +749,7 @@ def test_submit_sends_a_fetch_job_first_and_the_array_waits_for_it(
     assert command[:4] == ["-m", "stilt", "fetch", str(project.directory)]
     assert command[4:6] == ["--receptors", str(folder / "receptors.parquet")]
     assert command[6:8] == ["--output", str(project.output.directory)]
+    assert "--no-skip" not in command
     subprocess.run(["bash", "-n", str(folder / "fetch.sh")], check=True)
 
 
@@ -803,7 +805,9 @@ def test_no_fetch_job_when_the_particles_are_there(
     project = _downloading_project(tmp_path, 2)
     pending.extend(project.receptors["receptor"])
     monkeypatch.setattr(
-        Project, "_unrun", lambda self, sel=None: pd.DataFrame(columns=["receptor"])
+        Project,
+        "_unrun",
+        lambda self, sel=None, **_: pd.DataFrame(columns=["receptor"]),
     )
     commands.answers["sbatch"] = [_out("42\n")]
 
@@ -822,11 +826,11 @@ def test_a_local_run_on_several_cpus_fetches_before_the_workers_start(
     project = _downloading_project(tmp_path, 3)
     steps: list[str] = []
 
-    def fetch(self, sel=None):
-        steps.append(f"fetch {int(sel.sum())}")
+    def fetch(project, unrun):
+        steps.append(f"fetch {len(unrun)}")
         return pd.DataFrame({"met": [], "file": [], "message": []}, dtype="string")
 
-    monkeypatch.setattr(Project, "fetch", fetch)
+    monkeypatch.setattr(runner, "fetch_project", fetch)
     monkeypatch.setattr(
         worker, "run_receptors", lambda project, ids, **_: steps.append("run")
     )
@@ -853,10 +857,10 @@ def test_a_local_fetch_that_cannot_reach_the_archive_lets_the_run_go(
     project = _downloading_project(tmp_path, 1)
     ran: list[str] = []
 
-    def fetch(self, sel=None):
+    def fetch(project, unrun):
         raise ConnectionError("archive busy")
 
-    monkeypatch.setattr(Project, "fetch", fetch)
+    monkeypatch.setattr(runner, "fetch_project", fetch)
     monkeypatch.setattr(
         worker, "run_receptors", lambda project, ids, **_: ran.append("run")
     )
@@ -869,3 +873,130 @@ def test_a_local_fetch_that_cannot_reach_the_archive_lets_the_run_go(
 
     assert ran == ["run"]
     assert "archive busy" in caplog.text
+
+
+def test_the_fetch_job_takes_the_arrays_resources_from_its_slurm_options(
+    pending, commands, tmp_path
+):
+    """A ``slurm`` option replaces the named setting for the fetch job, as for the array."""
+    project = _downloading_project(tmp_path, 1)
+    pending.extend(project.receptors["receptor"])
+    execution = ExecutionConfig(
+        backend="slurm",
+        time="01:00:00",
+        slurm={
+            "account": "lin-np",
+            "partition": "lin-np",
+            "time": "24:00:00",
+            "constraint": "skl",
+        },
+    )
+    commands.answers["sbatch"] = [_out("41\n"), _out("42\n")]
+
+    runner.submit(project, execution=execution)
+
+    [fetch, array] = commands.ran
+    options = _sbatch(Path(fetch[-1]).read_text())
+    assert options["account"] == "lin-np"
+    assert options["partition"] == "lin-np"
+    assert options["time"] == "24:00:00"  # the array's, as job.sh has it
+    assert "constraint" not in options
+    assert _sbatch(Path(array[-1]).read_text())["time"] == "24:00:00"
+
+
+def test_a_no_skip_submission_fetches_for_every_run_it_makes_again(
+    pending, commands, tmp_path, monkeypatch
+):
+    import pandas as pd
+
+    project = _downloading_project(tmp_path, 2)
+    pending.extend(project.receptors["receptor"])
+    # Every particles file exists: only a rerun needs the met.
+    real_unrun = Project._unrun
+
+    def unrun(self, sel=None, *, skip_existing=True):
+        if skip_existing:
+            return pd.DataFrame(columns=["receptor"])
+        return real_unrun(self, sel, skip_existing=False)
+
+    monkeypatch.setattr(Project, "_unrun", unrun)
+    commands.answers["sbatch"] = [_out("41\n"), _out("42\n")]
+
+    runner.submit(
+        project,
+        execution=ExecutionConfig(backend="slurm", time="01:00:00"),
+        skip_existing=False,
+    )
+
+    [fetch, array] = commands.ran
+    assert Path(fetch[-1]).name == "fetch.sh"
+    assert Path(fetch[-1]).read_text().splitlines()[-1].endswith(" --no-skip")
+
+
+def test_a_refused_array_cancels_its_fetch_job(pending, commands, tmp_path):
+    project = _downloading_project(tmp_path, 1)
+    pending.extend(project.receptors["receptor"])
+    execution = ExecutionConfig(
+        backend="slurm", time="01:00:00", slurm={"clusters": "kingspeak,notchpeak"}
+    )
+    commands.answers["sbatch"] = [
+        _out("41;notchpeak\n"),
+        _out(returncode=1, stderr="invalid partition specified"),
+    ]
+
+    with pytest.raises(RuntimeError, match="invalid partition"):
+        runner.submit(project, execution=execution)
+
+    assert commands.ran[-1] == ["scancel", "-M", "notchpeak", "41"]
+
+
+def test_a_local_fetch_raises_an_error_a_retry_would_repeat(tmp_path, monkeypatch):
+    from stilt.execution import worker
+
+    project = _downloading_project(tmp_path, 1)
+    ran: list[str] = []
+
+    def fetch(project, unrun):
+        raise PermissionError(13, "Permission denied", str(tmp_path / "met"))
+
+    monkeypatch.setattr(runner, "fetch_project", fetch)
+    monkeypatch.setattr(
+        worker, "run_receptors", lambda project, ids, **_: ran.append("run")
+    )
+
+    with pytest.raises(PermissionError):
+        runner.run(project, execution=ExecutionConfig(cpus=2))
+    assert ran == []
+
+
+def test_a_local_fetch_lets_the_run_go_after_a_dropped_ftp_connection(
+    tmp_path, monkeypatch, caplog
+):
+    """A dropped FTP connection is an EOFError from ftplib, not an OSError."""
+    import ftplib
+
+    import pandas as pd
+
+    from stilt.execution import worker
+
+    project = _downloading_project(tmp_path, 1)
+    ran: list[str] = []
+
+    def fetch(project, unrun):
+        ftp = ftplib.FTP()
+        ftp.file = SimpleNamespace(readline=lambda size: "")  # a closed connection
+        ftp.getline()  # raises EOFError from inside ftplib
+
+    monkeypatch.setattr(runner, "fetch_project", fetch)
+    monkeypatch.setattr(
+        worker, "run_receptors", lambda project, ids, **_: ran.append("run")
+    )
+    monkeypatch.setattr(
+        runner, "_status", lambda project, ids: pd.DataFrame({"state": ["pending"]})
+    )
+
+    with caplog.at_level("WARNING", logger="stilt.execution.runner"):
+        runner.run(project, execution=ExecutionConfig(cpus=2))
+
+    assert ran == ["run"]
+    assert "The fetch stopped" in caplog.text
