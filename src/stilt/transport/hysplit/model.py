@@ -165,6 +165,18 @@ class HysplitModel:
         """
         return Met("met", met).fetch(windows)
 
+    def downloads_met(self, met: MetConfig) -> bool:
+        """
+        Whether *met* downloads its files from an ARL archive (``download`` is set).
+
+        Examples
+        --------
+        >>> met = MetConfig(directory="/data/hrrr", download="hrrr")
+        >>> HysplitModel().downloads_met(met)
+        True
+        """
+        return met.download is not None
+
     def run(
         self,
         receptor: Receptor,

@@ -139,10 +139,17 @@ Commands
    Get the met files the unfinished simulations need, then exit. A met with
    ``download`` downloads what is missing, cropped to its subgrid, so the
    runs that follow download nothing; a met without it is only checked for
-   missing files. ``--output DIR`` is as for ``stilt run``. It exits with 0
-   when every file is there, 1 when the archive lacks some, and 3 when it
-   was stopped (Ctrl-C or SIGTERM) or the archive was busy or unreachable
-   (:ref:`fetch-once`).
+   missing files. ``--receptors FILE`` and ``--output DIR`` are as for
+   ``stilt run``. It exits with 0 when every file is there, 1 when the
+   archive lacks some, and 3 when it was stopped (Ctrl-C or SIGTERM) or the
+   archive was busy or unreachable (:ref:`fetch-once`).
+
+   ``stilt submit`` and ``stilt run`` fetch first on their own: on Slurm in
+   a job the array waits for (:ref:`slurm-fetch`), and locally before the
+   workers start when ``cpus`` is above 1. Run ``stilt fetch`` yourself to
+   see whether the archive has every file before you submit, or before you
+   start tasks with ``stilt run --task`` from another scheduler, which does
+   not fetch first (:doc:`containers`).
 
 ``stilt run <project>``
    Run every unfinished simulation and wait until they are done, here or

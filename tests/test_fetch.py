@@ -520,3 +520,51 @@ def test_stilt_fetch_uses_the_output_directory_it_is_given(tmp_path, archive):
 
     assert result.exit_code == 0
     assert "ready" in result.output  # nothing is finished in the other one
+
+
+def test_stilt_fetch_gets_only_the_receptors_it_is_given(tmp_path, archive):
+    project = _project(tmp_path, RECEPTORS, n_hours=-6)
+    ids = tmp_path / "ids.txt"
+    ids.write_text(RECEPTORS[-1].id + "\n")
+
+    result = runner.invoke(
+        app, ["fetch", str(project.directory), "--receptors", str(ids)]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "receptors=1" in result.output
+    assert len(archive.downloaded) == 2  # 8 July 18-23 and 9 July 00-05
+    assert not any("20240702" in name for name in archive.downloaded)
+
+
+def test_stilt_fetch_reads_a_submissions_receptors_parquet(tmp_path, archive):
+    """The fetch job of ``stilt submit`` reads the rows the array reads (#436)."""
+    import pyarrow as pa
+
+    from stilt._paths import write_parquet
+
+    project = _project(tmp_path, RECEPTORS, n_hours=-6)
+    rows = project._rows_of([RECEPTORS[-1].id])
+    parquet = tmp_path / "receptors.parquet"
+    write_parquet(pa.Table.from_pandas(rows, preserve_index=False), parquet)
+
+    result = runner.invoke(
+        app, ["fetch", str(project.directory), "--receptors", str(parquet)]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert len(archive.downloaded) == 2
+
+
+def test_stilt_fetch_refuses_a_receptor_not_in_the_project(tmp_path, archive):
+    project = _project(tmp_path, RECEPTORS[:1])
+    ids = tmp_path / "ids.txt"
+    ids.write_text("not-a-receptor\n")
+
+    result = runner.invoke(
+        app, ["fetch", str(project.directory), "--receptors", str(ids)]
+    )
+
+    assert result.exit_code == 2
+    assert "not in this project" in result.output
+    assert archive.downloaded == []

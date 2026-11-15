@@ -100,6 +100,11 @@ The keys under ``execution:`` (:doc:`../guides/running`).
 
 .. config-model:: stilt.execution.config.ExecutionConfig
 
+The keys under ``execution: fetch:``, the Slurm resources of the job that
+gets the met files before a job array (:ref:`slurm-fetch`).
+
+.. config-model:: stilt.execution.config.FetchConfig
+
 Config objects
 --------------
 

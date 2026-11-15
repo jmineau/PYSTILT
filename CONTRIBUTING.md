@@ -320,7 +320,9 @@ missing results. A local run calls `run_receptors` in this process. A Slurm
 run goes through `submit`, which writes `receptors.txt`,
 `receptors.parquet` (the submitted receptors' checked rows, which tasks
 read in place of `receptors.csv`), `execution.yaml`, and `job.sh`
-(`job_script`) into `_slurm/<stamp>/` and calls `sbatch`.
+(`job_script`) into `_slurm/<stamp>/` and calls `sbatch`. When a met
+downloads, `fetch.sh` (`fetch_script`) is submitted first and the array
+waits for it.
 
 The unit of work is a command line: `stilt run <project> --receptors FILE
 --task I/N`. Any scheduler that can start it with an index can run a

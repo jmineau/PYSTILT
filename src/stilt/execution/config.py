@@ -13,6 +13,60 @@ from pydantic import (
 )
 
 
+class FetchConfig(BaseModel):
+    """
+    The Slurm resources of the job that gets the met files before a job array.
+
+    Each setting left unset is the array's (``partition``, ``account``,
+    ``qos``, ``time``, ``mem`` of :class:`ExecutionConfig`). Set them to send
+    the fetch to a data-transfer partition, where a cluster has one, and
+    give ``time`` room for the downloads: a fetch job that runs out of time
+    keeps the files it got, and the array then downloads the rest.
+
+    Examples
+    --------
+    >>> config = ExecutionConfig(
+    ...     backend="slurm",
+    ...     time="02:00:00",
+    ...     fetch={"partition": "notchpeak-dtn", "account": "dtn", "time": "12:00:00"},
+    ... )
+    >>> config.fetch.partition
+    'notchpeak-dtn'
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    partition: str | None = Field(
+        None, description="Slurm partition of the fetch job. Unset is the array's."
+    )
+    account: str | None = Field(
+        None, description="Slurm account of the fetch job. Unset is the array's."
+    )
+    qos: str | None = Field(
+        None,
+        description="Slurm quality of service of the fetch job. Unset is the array's.",
+    )
+    time: str | int | None = Field(
+        None,
+        description=(
+            "Time limit of the fetch job, as for ``time``. Unset is the "
+            "array's time limit per task."
+        ),
+    )
+    mem: str | None = Field(
+        None,
+        description="Memory of the fetch job, such as ``4G``. Unset is the array's.",
+    )
+
+    @field_validator("time")
+    @classmethod
+    def _slurm_time(cls, value: str | int | None) -> str | int | None:
+        """Raise on a time limit sbatch would not take."""
+        if value is not None:
+            slurm_minutes(value)  # raises on a form sbatch would not take
+        return value
+
+
 class ExecutionConfig(BaseModel):
     """
     Where a project's receptors run, and with what resources.
@@ -101,9 +155,27 @@ class ExecutionConfig(BaseModel):
         default_factory=dict,
         description=(
             "Any other ``sbatch`` options by name, such as ``exclude: node1`` "
-            "or ``constraint: skl``. ``true`` writes the bare flag."
+            "or ``constraint: skl``. ``true`` writes the bare flag. Only "
+            "``clusters`` is passed to the fetch job too."
         ),
     )
+    fetch: FetchConfig | Literal[False] = Field(
+        default_factory=FetchConfig,
+        description=(
+            "Get the met files a met with ``download`` lacks once, before the "
+            "receptors run: on Slurm in a job of its own that the array waits "
+            "for, with these resources (:class:`FetchConfig`); locally before "
+            "the workers start, when ``cpus`` is above 1. ``false`` leaves "
+            "each run to download what it needs, as when something else fills "
+            "the met directory."
+        ),
+    )
+
+    @field_validator("fetch", mode="before")
+    @classmethod
+    def _fetch_true(cls, value: Any) -> Any:
+        """Read ``fetch: true`` (or an empty ``fetch:``) as a fetch job with the array's resources."""
+        return {} if value is True or value is None else value
 
     @field_validator("setup", mode="before")
     @classmethod
@@ -174,4 +246,4 @@ def slurm_minutes(time: str | int) -> int:
     return -(-total // 60)
 
 
-__all__ = ["ExecutionConfig", "slurm_minutes"]
+__all__ = ["ExecutionConfig", "FetchConfig", "slurm_minutes"]

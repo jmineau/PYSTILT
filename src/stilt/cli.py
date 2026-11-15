@@ -455,6 +455,7 @@ def _stop_once() -> Iterator[None]:
 @app.command()
 def fetch(
     project: str | None = _PROJECT_ARG,
+    receptors: Path | None = _RECEPTORS,
     output: str | None = _OUTPUT,
 ) -> None:
     """
@@ -465,20 +466,39 @@ def fetch(
     set downloads what is missing, cropped to its subgrid, so the runs that
     follow find every file and download nothing: run this once where the
     files are shared, before many workers start. A met without download is
-    only checked for missing files, as stilt check does. Exits with 0 when
+    only checked for missing files, as stilt check does. --receptors limits
+    it to the receptors listed in a file, as for stilt run; the fetch job
+    stilt submit sends before a job array reads its receptors.parquet.
+    Exits with 0 when
     every file is there, 1 when the archive lacks some, 2 when the command
     line is wrong or a met cannot be read, and 3 when stopped by Ctrl-C or
     SIGTERM, after removing the file it was downloading, or when the archive
     was busy or the connection failed (4 for any other unexpected error).
     """
+    receptor_ids, rows = (
+        (None, None) if receptors is None else _read_receptors(receptors)
+    )
     opened = _open(project, output=output)
+    if rows is not None:
+        opened._take_rows(rows)
+    sel = None
+    if receptor_ids is not None:
+        known = set(opened.simulations["receptor"])
+        unknown = [r for r in receptor_ids if r not in known]
+        if unknown:
+            _fail(
+                f"{len(unknown)} receptor ids in {receptors} are not in this "
+                f"project, such as {unknown[:3]}."
+            )
+        sel = opened.simulations["receptor"].isin(receptor_ids)
     # arlmet logs each file it downloads, which is the progress to show.
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
     logging.getLogger("arlmet.archives").setLevel(logging.INFO)
-    typer.echo(f"Project: {opened.directory}  receptors={len(opened.receptors)}")
+    count = len(opened.receptors) if receptor_ids is None else len(set(receptor_ids))
+    typer.echo(f"Project: {opened.directory}  receptors={count}")
     try:
         with _stop_once():
-            files = opened.fetch()
+            files = opened.fetch(sel)
     except (ImportError, ValueError) as error:
         _fail(str(error))
     except KeyboardInterrupt:

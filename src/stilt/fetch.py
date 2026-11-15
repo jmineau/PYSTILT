@@ -8,6 +8,7 @@ runs would ask for, so the runs that follow find them and download nothing.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -59,4 +60,20 @@ def fetch_project(project: Project, unrun: pd.DataFrame) -> pd.DataFrame:
     return table.loc[:, list(FETCH_COLUMNS)].astype("string")
 
 
-__all__ = ["FETCH_COLUMNS", "fetch_project"]
+def downloads(project: Project, variants: Iterable[str]) -> bool:
+    """
+    Whether the met of one of *variants* downloads its files.
+
+    Each variant's transport model says, with its ``downloads_met`` (see
+    :class:`stilt.transport.TransportModel`); a model without it downloads
+    nothing. Reads no file, so it is cheap to ask before a listing.
+    """
+    for name in variants:
+        variant = project.variants[str(name)]
+        downloads_met = getattr(get_model(variant.model.name), "downloads_met", None)
+        if downloads_met is not None and downloads_met(variant.met_config):
+            return True
+    return False
+
+
+__all__ = ["FETCH_COLUMNS", "downloads", "fetch_project"]
