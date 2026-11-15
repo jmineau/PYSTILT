@@ -61,3 +61,54 @@ def write_gfs(path, time, sp=95000.0, orog=500.0, levels=None, global_grid=False
             eccodes.codes_write(h, f)
             eccodes.codes_release(h)
     return path
+
+
+#: Three model levels for :func:`write_era5`: half-level ``a`` (Pa) and ``b`` from the top.
+HYBRID_A = (0.0, 20000.0, 10000.0, 0.0)
+HYBRID_B = (0.0, 0.0, 0.5, 1.0)
+
+
+def write_era5(path, time, sp=100000.0, orog=500.0, t=250.0, q=0.0):
+    """
+    Write an ERA5-like GRIB2 file as flex_extract does: ``sp`` and ``z`` at the surface, ``t`` and ``q`` on three model levels.
+
+    The half-level pressures are ``a + b * sp``: 0, 200, 600, and 1000 hPa
+    for the default surface pressure.
+    """
+    import eccodes
+
+    stamp = pd.Timestamp(time)
+    pv = np.array([*HYBRID_A, *HYBRID_B])
+    fields = [("sp", "surface", 0, sp), ("z", "surface", 0, orog * 9.80665)]
+    fields += [
+        (name, "hybrid", n, value)
+        for n in (1, 2, 3)
+        for name, value in (("t", t), ("q", q))
+    ]
+    with open(path, "wb") as f:
+        for name, level_type, level, value in fields:
+            h = eccodes.codes_grib_new_from_samples("regular_ll_sfc_grib2")
+            for key, val in {
+                "Ni": 3,
+                "Nj": 3,
+                "latitudeOfFirstGridPointInDegrees": 42.0,
+                "latitudeOfLastGridPointInDegrees": 40.0,
+                "longitudeOfFirstGridPointInDegrees": 248.0,
+                "longitudeOfLastGridPointInDegrees": 250.0,
+                "iDirectionIncrementInDegrees": 1.0,
+                "jDirectionIncrementInDegrees": 1.0,
+                "dataDate": int(stamp.strftime("%Y%m%d")),
+                "dataTime": int(stamp.strftime("%H%M")),
+                "centre": "ecmf",
+                "typeOfLevel": level_type,
+            }.items():
+                eccodes.codes_set(h, key, val)
+            if level_type == "hybrid":
+                eccodes.codes_set(h, "level", level)
+                eccodes.codes_set(h, "PVPresent", 1)
+                eccodes.codes_set_array(h, "pv", pv)
+            eccodes.codes_set(h, "shortName", name)
+            eccodes.codes_set_values(h, np.full(9, float(value)))
+            eccodes.codes_write(h, f)
+            eccodes.codes_release(h)
+    return path

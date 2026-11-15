@@ -49,6 +49,20 @@ def grib_grid(path: str | Path) -> str:
     return f"{di:g}x{dj:g} deg, {ni}x{nj}"
 
 
+def nxshift(source: str, path: str | Path) -> int:
+    """
+    Return FLEXPART's ``NXSHIFT`` for the files of *source*, from the first one at *path*.
+
+    FLEXPART stops unless it is 0 on a grid that does not go round the
+    earth. On a global grid it is 359 for ECMWF data, FLEXPART's own
+    default, and 0 for GFS, which starts at 0° E.
+    """
+    if source != "era5":
+        return 0
+    di, ni = _first_message_keys(path, ("iDirectionIncrementInDegrees", "Ni"))
+    return 359 if abs(di * ni - 360.0) < 1e-6 else 0
+
+
 @functools.lru_cache(maxsize=16)
 def _catalog(files: tuple[tuple[str, int, int], ...]) -> dict[dt.datetime, Path]:
     """Return the files by valid time; *files* are (path, size, mtime) so a changed file is read again."""
@@ -115,4 +129,4 @@ def files_for(
     return {t: available[t] for t in chosen}
 
 
-__all__ = ["catalog", "files_for", "grib_grid", "grib_valid_time"]
+__all__ = ["catalog", "files_for", "grib_grid", "grib_valid_time", "nxshift"]

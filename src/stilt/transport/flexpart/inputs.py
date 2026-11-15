@@ -25,6 +25,8 @@ from typing import TYPE_CHECKING, Any
 
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 
+from .met import nxshift
+
 if TYPE_CHECKING:
     from stilt.receptors import Receptor
 
@@ -118,8 +120,8 @@ def _time(t: dt.datetime) -> int:
 
 def command(
     config: FlexpartConfig,
-    met: FlexpartMetConfig,
     window: tuple[dt.datetime, dt.datetime],
+    nxshift: int = 0,
 ) -> str:
     """
     Return the ``COMMAND`` file for a run over *window*.
@@ -167,7 +169,7 @@ def command(
             "LINIT_COND": 0,
             "SFC_ONLY": 0,
             "CBLFLAG": config.cblflag,
-            "NXSHIFT": met.nxshift,
+            "NXSHIFT": nxshift,
             "MAXTHREADGRID": 1,
             "MAXFILESIZE": 10000,
             "LOGVERTINTERP": 0,
@@ -325,7 +327,10 @@ def write_inputs(
             f"The FLEXPART checkout has no options/SPECIES/{SPECIES_FILE}."
         )
     shutil.copyfile(species, options / "SPECIES" / "SPECIES_001")
-    (options / "COMMAND").write_text(command(config, met, window))
+    first = next(iter(met_files.values()))
+    (options / "COMMAND").write_text(
+        command(config, window, nxshift(met.source, first))
+    )
     (options / "RELEASES").write_text(releases(receptor, config.numpar))
     (options / "PARTOPTIONS").write_text(partoptions())
     (options / "OUTGRID").write_text(outgrid(receptor))

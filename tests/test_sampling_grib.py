@@ -12,7 +12,7 @@ from stilt.sampling import is_grib, sample_grib_pressure
 pytest.importorskip("eccodes")
 pytest.importorskip("cfgrib")
 
-from .fixtures.grib import write_gfs
+from .fixtures.grib import write_era5, write_gfs
 
 
 def points(zagl, time="2023-06-01 12:00", lon=-111.0, lat=41.0):
@@ -123,3 +123,34 @@ def test_add_foot_with_grib_needs_a_mixed_layer_of_its_own(gfs):
 
     with pytest.raises(ValueError, match="With GRIB met files"):
         add_foot(particles, gfs, veght=0.5)
+
+
+def test_era5_model_levels_isothermal(tmp_path):
+    # An isothermal dry column: p = sp exp(-g z / (R T)) exactly, ln p being
+    # linear in height inside each layer.
+    path = write_era5(tmp_path / "EA23060112", "2023-06-01 12:00")
+    zagl = np.array([0.0, 1000.0, 3000.0])
+
+    pres = sample_grib_pressure(points(zagl), [path])
+
+    np.testing.assert_allclose(
+        pres, 1000.0 * np.exp(-9.80665 * zagl / (287.06 * 250.0)), rtol=1e-9
+    )
+
+
+def test_era5_moisture_thickens_the_layers(tmp_path):
+    dry = write_era5(tmp_path / "dry", "2023-06-01 12:00")
+    wet = write_era5(tmp_path / "wet", "2023-06-01 12:00", q=0.01)
+
+    # Moist air is lighter, so pressure falls more slowly with height.
+    assert (
+        sample_grib_pressure(points(1000.0), [wet])[0]
+        > sample_grib_pressure(points(1000.0), [dry])[0]
+    )
+
+
+def test_era5_above_the_lowest_half_level_below_the_top(tmp_path):
+    path = write_era5(tmp_path / "EA23060112", "2023-06-01 12:00")
+    # The top half level (p = 0) is left out, so the column ends at 200 hPa.
+    top = 287.06 * 250.0 / 9.80665 * np.log(1000.0 / 200.0)
+    assert np.isnan(sample_grib_pressure(points(top + 100.0), [path])[0])

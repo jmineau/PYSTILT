@@ -90,7 +90,7 @@ class FlexpartModel:
         met_files = files_for(catalog(met.directory, met.pattern), window)
         write_inputs(workdir, receptor, config, met, window, met_files)
         try:
-            run_flexpart(workdir, config, timeout)
+            run_flexpart(workdir, config, timeout, met.executable_name)
             outputs = sorted((workdir / "output").glob("partoutput_*.nc"))
             if not outputs:
                 raise SimulationError(
@@ -108,10 +108,13 @@ class FlexpartModel:
 
 
 def run_flexpart(
-    workdir: Path, config: FlexpartConfig, timeout: int | None = None
+    workdir: Path,
+    config: FlexpartConfig,
+    timeout: int | None = None,
+    executable: str = "FLEXPART",
 ) -> None:
     """
-    Run the checkout's FLEXPART in *workdir*, writing its output to ``flexpart.log``.
+    Run the checkout's FLEXPART build *executable* in *workdir*, writing its output to ``flexpart.log``.
 
     It runs with ``config.threads`` OpenMP threads. If this process is
     interrupted while it waits, FLEXPART is stopped too.
@@ -128,7 +131,7 @@ def run_flexpart(
     with (
         log_path.open("w", encoding="utf-8") as handle,
         subprocess.Popen(
-            [str(config.executable), "pathnames"],
+            [str(config.executable(executable)), "pathnames"],
             cwd=workdir,
             stdout=handle,
             stderr=subprocess.STDOUT,

@@ -154,10 +154,9 @@ class FlexpartConfig(TransportConfig):
             )
         return Path(self.flexpart_dir)
 
-    @property
-    def executable(self) -> Path:
-        """The FLEXPART executable in the checkout, ``src/FLEXPART``."""
-        return self.checkout / "src" / "FLEXPART"
+    def executable(self, name: str = "FLEXPART") -> Path:
+        """Return the FLEXPART build *name* in the checkout's ``src/``, ``FLEXPART`` or ``FLEXPART_ETA``."""
+        return self.checkout / "src" / name
 
 
 def flexpart_version(flexpart_dir: str | Path) -> str:
@@ -206,12 +205,13 @@ class FlexpartMetConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    source: Literal["gfs"] = Field(
+    source: Literal["gfs", "era5"] = Field(
         "gfs",
         description=(
-            "The weather model the files come from. ``gfs`` is NCEP's GFS on "
-            "pressure levels; FLEXPART reads ECMWF's (ERA5) differently, and "
-            "PYSTILT does not support it yet."
+            "The weather model the files come from: ``gfs``, NCEP's GFS on "
+            "pressure levels, run with ``src/FLEXPART``; or ``era5``, ECMWF's "
+            "reanalysis on model levels as flex_extract writes it, run with "
+            "the eta build, ``src/FLEXPART_ETA`` (``make eta=yes``)."
         ),
     )
     directory: Path = Field(
@@ -257,9 +257,9 @@ class FlexpartMetConfig(BaseModel):
         return {"source": self.source, "grid": grib_grid(files[0])}
 
     @property
-    def nxshift(self) -> int:
-        """FLEXPART's ``NXSHIFT`` for this source: 0 for GFS, which starts at 0° E."""
-        return 0
+    def executable_name(self) -> str:
+        """The FLEXPART build in the checkout's ``src/`` that reads this source."""
+        return "FLEXPART_ETA" if self.source == "era5" else "FLEXPART"
 
 
 __all__ = ["FlexpartConfig", "FlexpartMetConfig", "flexpart_version"]

@@ -96,7 +96,7 @@ def test_config_records_threads_but_not_where_the_checkout_is(checkout):
 
 def test_config_without_a_checkout_cannot_run():
     with pytest.raises(ValueError, match="Set flexpart_dir"):
-        _ = FlexpartConfig().executable
+        FlexpartConfig().executable()
 
 
 def test_version_from_a_version_file(checkout):
@@ -143,7 +143,7 @@ def test_files_for_a_window_with_a_missing_file(gfs):
 
 
 def test_command_runs_backward_over_the_window(checkout, gfs):
-    text = command(config(checkout), FlexpartMetConfig(directory=gfs), WINDOW)
+    text = command(config(checkout), WINDOW)
     for line in (
         "LDIRECT=-1,",
         "IBDATE=20230531,",
@@ -161,9 +161,7 @@ def test_command_runs_backward_over_the_window(checkout, gfs):
 
 def test_command_times_before_ten_are_integers(checkout, gfs):
     window = (dt.datetime(2023, 6, 1, 6), dt.datetime(2023, 6, 1, 9, 30))
-    text = command(
-        config(checkout, n_hours=3), FlexpartMetConfig(directory=gfs), window
-    )
+    text = command(config(checkout, n_hours=3), window)
     assert " LDIRECT=1,\n" in text
     assert " IBTIME=60000,\n" in text and " IETIME=93000,\n" in text
 
