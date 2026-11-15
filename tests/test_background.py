@@ -7,7 +7,7 @@ import xarray as xr
 
 from stilt import Background, background
 from stilt.sampling import sample_field, vertical_dim
-from stilt.transforms import FirstOrderLifetime, PressureWeighting
+from stilt.transforms import FirstOrderLifetime, Oxidation, PressureWeighting
 
 
 def _field(values=None, lons=(-112.0, -111.0, -110.0), lats=(40.0, 41.0)):
@@ -178,6 +178,15 @@ def test_background_lifetime_decays_at_the_endpoint_age():
         _particles(), _field_3d(), transforms=[FirstOrderLifetime(lifetime_hours=1.0)]
     )
     w = np.exp(-np.array([1.0, 1.0, 2.0])) / 3.0
+    assert result.weights.to_numpy() == pytest.approx(w)
+    assert result.value == pytest.approx(float(np.sum(w * ENDPOINT_VALUES)))
+
+
+def test_background_oxidation_scales_the_inflow_by_the_survival_over_the_whole_path():
+    p = _particles().assign(temz=280.0)
+    oxidation = Oxidation(a=1e-4, oxidant=1.0)  # 1e-4 s⁻¹ everywhere
+    result = background(p, _field_3d(), transforms=[oxidation])
+    w = np.exp(-1e-4 * 60.0 * np.array([60.0, 60.0, 120.0])) / 3.0
     assert result.weights.to_numpy() == pytest.approx(w)
     assert result.value == pytest.approx(float(np.sum(w * ENDPOINT_VALUES)))
 

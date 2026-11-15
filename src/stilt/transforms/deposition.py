@@ -11,6 +11,9 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
+from stilt.transforms._common import step_minutes
+from stilt.transforms.lifetime import survival
+
 if TYPE_CHECKING:
     from stilt.receptors import Receptor
 
@@ -61,7 +64,8 @@ def dry_deposition_survival(
     -----
     The fraction is :math:`\exp(-\sum v_d \, \Delta t / H)` over the
     steps spent below :math:`H`, where a step's height is its row's
-    ``zagl``. It works for any species with a constant deposition
+    ``zagl``: :func:`survival` with the rate :math:`v_d / H` below
+    :math:`H` and zero above. It works for any species with a constant deposition
     velocity; use it directly when you want the particles, not a
     footprint.
 
@@ -85,31 +89,15 @@ def dry_deposition_survival(
             f"Particle DataFrame has no {missing} column(s), required for "
             "dry deposition."
         )
-    elapsed = particles["age"].abs().astype(float)
-    order = elapsed.groupby(particles["particle"]).rank(method="first")
-    sorted_rows = pd.DataFrame(
-        {"particle": particles["particle"], "elapsed": elapsed, "order": order}
-    ).sort_values(["particle", "order"])
-    step = sorted_rows.groupby("particle")["elapsed"].diff()
-    # The first row's step runs from the release (age 0).
-    step = step.fillna(sorted_rows["elapsed"])
+    step = step_minutes(particles)
     if (step > MAX_STEP_MINUTES + 1e-6).any():
         raise ValueError(
             "Dry deposition needs a particle row at every one-minute time step; "
             f"these rows are up to {step.max():g} minutes apart. Run with "
             "outdt: 0."
         )
-    below = particles.loc[sorted_rows.index, "zagl"].to_numpy(dtype=float) < (
-        surface_layer_depth
-    )
-    loss = np.where(below, velocity * step.to_numpy() * 60.0 / surface_layer_depth, 0.0)
-    cumulative = (
-        pd.Series(loss, index=sorted_rows.index)
-        .groupby(sorted_rows["particle"])
-        .cumsum()
-    )
-    survival = pd.Series(np.exp(-cumulative.to_numpy()), index=cumulative.index)
-    return survival.reindex(particles.index)
+    below = particles["zagl"].to_numpy(dtype=float) < surface_layer_depth
+    return survival(particles, np.where(below, velocity / surface_layer_depth, 0.0))
 
 
 class DryDeposition(BaseModel):

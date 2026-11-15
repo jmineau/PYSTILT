@@ -17,6 +17,7 @@ Built-in transforms
    stilt.transforms.PressureWeighting
    stilt.transforms.FirstOrderLifetime
    stilt.transforms.DryDeposition
+   stilt.transforms.Oxidation
 
 Averaging-kernel tables
 -----------------------
@@ -37,6 +38,7 @@ Science helpers
    stilt.transforms.release_coordinate
    stilt.transforms.particle_pwf
    stilt.transforms.ak_weights
+   stilt.transforms.survival
    stilt.transforms.dry_deposition_survival
 
 Loading and dumping

@@ -5,12 +5,14 @@ import math
 import numpy as np
 import pandas as pd
 import pytest
+import xarray as xr
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from stilt.transforms import (
     AveragingKernel,
     DryDeposition,
     FirstOrderLifetime,
+    Oxidation,
     PressureWeighting,
     apply_transforms,
     averaging_kernel_table,
@@ -18,6 +20,7 @@ from stilt.transforms import (
     dump_transform,
     load_transform,
     particle_pwf,
+    survival,
     transform_kind,
 )
 
@@ -682,6 +685,184 @@ def test_dry_deposition_rejects_nonpositive_velocity():
 
 
 # ---------------------------------------------------------------------------
+# survival
+# ---------------------------------------------------------------------------
+
+
+def test_survival_with_a_constant_rate_is_the_first_order_lifetime():
+    p = _deposition_particles()
+    lifetime_hours = 0.5
+    s = survival(p, np.full(len(p), 1.0 / (lifetime_hours * 3600.0)))
+    expected = FirstOrderLifetime(lifetime_hours=lifetime_hours).apply(p)["foot"]
+    assert s.to_numpy() == pytest.approx(expected.to_numpy())
+    assert s.index.equals(p.index)
+
+
+def test_survival_adds_each_rows_loss_over_the_step_that_ends_at_it():
+    # particle 1 rows at 1, 2, 3 min; particle 2 at 1, 2, 3 min (out of order)
+    p = _deposition_particles()
+    rate = np.array([0.0, 1e-3, 2e-3, 3e-3, 4e-3, 0.0])
+    s = survival(p, rate)
+    # particle 1: ages -1 (1e-3), -2 (4e-3), -3 (2e-3)
+    # particle 2: ages -1 (3e-3), -2 (0), -3 (0)
+    one = np.exp(-60.0 * np.cumsum([1e-3, 4e-3, 2e-3]))
+    two = np.exp(-60.0 * np.cumsum([3e-3, 0.0, 0.0]))
+    assert s.tolist() == pytest.approx([two[2], one[0], one[2], two[0], one[1], two[1]])
+
+
+def test_survival_takes_any_step():
+    p = pd.DataFrame({"particle": [1, 1], "age": [-30.0, -90.0]})
+    s = survival(p, [1e-4, 2e-4])
+    assert s.tolist() == pytest.approx(
+        [math.exp(-1e-4 * 1800.0), math.exp(-1e-4 * 1800.0 - 2e-4 * 3600.0)]
+    )
+
+
+@pytest.mark.parametrize(
+    "rate, match",
+    [([1e-3, 1e-3], "values"), ([-1e-3] * 6, "positive"), ([np.nan] * 6, "NaN")],
+)
+def test_survival_refuses_a_bad_rate(rate, match):
+    with pytest.raises(ValueError, match=match):
+        survival(_deposition_particles(), rate)
+
+
+def test_survival_requires_age():
+    p = _deposition_particles().drop(columns=["age"])
+    with pytest.raises(ValueError, match="age"):
+        survival(p, np.zeros(len(p)))
+
+
+# ---------------------------------------------------------------------------
+# Oxidation
+# ---------------------------------------------------------------------------
+
+
+def _oxidized_particles() -> pd.DataFrame:
+    """Two particles at 1 and 2 hours, with temperature, pressure and density."""
+    return pd.DataFrame(
+        {
+            "particle": [1, 1, 2, 2],
+            "age": [-60.0, -120.0, -60.0, -120.0],
+            "lon": [-111.0, -112.0, -111.0, -110.0],
+            "lat": [40.0, 40.0, 40.0, 41.0],
+            "pres": [900.0, 850.0, 900.0, 700.0],
+            "dens": [1.1, 1.05, 1.1, 0.9],
+            "temz": [285.0, 280.0, 285.0, 270.0],
+            "time": pd.to_datetime(["2023-01-01 11:00", "2023-01-01 10:00"] * 2),
+            "foot": [1.0] * 4,
+        }
+    )
+
+
+def _oh_field() -> xr.DataArray:
+    """OH on 1000, 800, 600 hPa: 1e6 times (level index + 1), the same in every cell."""
+    values = np.stack([np.full((2, 3), 1e6 * (i + 1)) for i in range(3)])
+    return xr.DataArray(
+        values,
+        dims=["pres", "lat", "lon"],
+        coords={
+            "pres": [1000.0, 800.0, 600.0],
+            "lat": [40.0, 41.0],
+            "lon": [-112.0, -111.0, -110.0],
+        },
+        name="OH",
+    )
+
+
+def test_oxidation_rate_is_the_rate_constant_times_the_oxidant():
+    p = _oxidized_particles()
+    t = Oxidation(a=2.45e-12, e_over_r=1775.0, oxidant=1e6)
+    k = 2.45e-12 * np.exp(-1775.0 / p["temz"].to_numpy())
+    assert t.rate(p) == pytest.approx(k * 1e6)
+    result = t.apply(p)
+    assert result["foot"].to_numpy() == pytest.approx(survival(p, k * 1e6).to_numpy())
+
+
+def test_oxidation_takes_the_temperature_from_pres_and_dens_without_temz():
+    p = _oxidized_particles().drop(columns=["temz"])
+    t = Oxidation(a=1e-12, e_over_r=1000.0, oxidant=1e6)
+    temperature = p["pres"].to_numpy() * 100.0 / (p["dens"].to_numpy() * 287.05)
+    assert t.rate(p) == pytest.approx(1e-6 * np.exp(-1000.0 / temperature))
+
+
+def test_oxidation_needs_a_temperature():
+    p = _oxidized_particles().drop(columns=["temz", "dens"])
+    with pytest.raises(ValueError, match="temz"):
+        Oxidation(a=1e-12, oxidant=1e6).rate(p)
+
+
+def test_oxidation_samples_the_oxidant_field_at_each_row(tmp_path):
+    _oh_field().to_dataset().to_netcdf(tmp_path / "oh.nc")
+    p = _oxidized_particles()
+    p.loc[3, "lon"] = -100.0  # off the field: no loss there
+    t = Oxidation(a=1e-12, oxidant="oh.nc")
+    # 900 -> 1000 hPa (nearest of 1000/800), 850 -> 800, 700 -> 800 or 600
+    rate = t.rate(p, directory=tmp_path)
+    assert rate[:3] == pytest.approx(1e-12 * np.array([1e6, 2e6, 1e6]))
+    assert rate[3] == 0.0
+
+
+def test_oxidation_matches_the_field_time(tmp_path):
+    field = xr.concat([_oh_field(), 3.0 * _oh_field()], dim="time")
+    field = field.assign_coords(
+        time=pd.to_datetime(["2023-01-01 10:00", "2023-01-01 11:00"])
+    )
+    field.to_dataset().to_netcdf(tmp_path / "oh.nc")
+    p = _oxidized_particles().iloc[:2]
+    rate = Oxidation(a=1e-12, oxidant=str(tmp_path / "oh.nc")).rate(p)
+    # 11:00 at 900 hPa -> 3e6; 10:00 at 850 hPa -> 2e6
+    assert rate == pytest.approx(1e-12 * np.array([3e6, 2e6]))
+
+
+def test_oxidation_names_the_variable_of_a_file_with_several(tmp_path):
+    ds = _oh_field().to_dataset()
+    ds["O3"] = _oh_field() * 0.0
+    ds.to_netcdf(tmp_path / "ox.nc")
+    with pytest.raises(ValueError, match="name one as variable"):
+        Oxidation(a=1e-12, oxidant="ox.nc").rate(_oxidized_particles(), tmp_path)
+    rate = Oxidation(a=1e-12, oxidant="ox.nc", variable="OH").rate(
+        _oxidized_particles(), tmp_path
+    )
+    assert rate[0] == pytest.approx(1e-6)
+
+
+def test_oxidation_check_reports_the_oxidant_file(tmp_path):
+    _oh_field().to_dataset().to_netcdf(tmp_path / "oh.nc")
+    assert Oxidation(a=1e-12, oxidant="oh.nc").check(["r1"], tmp_path) == []
+    assert Oxidation(a=1e-12, oxidant=1e6).check(["r1"], tmp_path) == []
+    [(name, rid, message)] = Oxidation(a=1e-12, oxidant="nope.nc").check(
+        ["r1"], tmp_path
+    )
+    assert (name, rid) == ("oxidant_file", None)
+    assert "does not exist" in message
+    [(name, _, message)] = Oxidation(a=1e-12, oxidant="oh.nc", variable="NO3").check(
+        ["r1"], tmp_path
+    )
+    assert name == "oxidant_file"
+    assert "NO3" in message
+
+
+def test_oxidation_reads_a_number_written_as_text():
+    assert Oxidation(a=1e-12, oxidant="1e6").oxidant == 1e6
+    assert Oxidation(a=1e-12, oxidant=1000000).oxidant == 1e6
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"a": 0.0, "oxidant": 1e6},
+        {"a": 1e-12, "oxidant": -1.0},
+        {"a": 1e-12, "oxidant": "-1"},
+        {"a": 1e-12, "oxidant": " "},
+    ],
+)
+def test_oxidation_rejects_bad_fields(fields):
+    with pytest.raises(ValidationError):
+        Oxidation(**fields)
+
+
+# ---------------------------------------------------------------------------
 # apply_transforms
 # ---------------------------------------------------------------------------
 
@@ -742,6 +923,13 @@ def test_load_transform_dry_deposition():
         {"kind": "dry_deposition", "velocity": 0.01, "surface_layer_depth": 30.0}
     )
     assert t == DryDeposition(velocity=0.01, surface_layer_depth=30.0)
+
+
+def test_load_transform_oxidation_and_dump_it_back():
+    spec = {"kind": "oxidation", "a": 2.45e-12, "e_over_r": 1775.0, "oxidant": "oh.nc"}
+    t = load_transform(spec)
+    assert t == Oxidation(a=2.45e-12, e_over_r=1775.0, oxidant="oh.nc")
+    assert load_transform(dump_transform(t)) == t
 
 
 def test_load_transform_first_order_lifetime():

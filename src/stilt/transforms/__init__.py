@@ -37,10 +37,12 @@ weight.
 
 Each built-in transform is a module: :mod:`~stilt.transforms.averaging_kernel`,
 :mod:`~stilt.transforms.pressure_weighting`,
-:mod:`~stilt.transforms.lifetime`, and :mod:`~stilt.transforms.deposition`.
-:func:`particle_pwf` and :func:`ak_weights` hold the column weighting ported
-from X-STILT, and :func:`dry_deposition_survival` the fraction of a
-depositing tracer that reaches the receptor. They are public so your own
+:mod:`~stilt.transforms.lifetime`, :mod:`~stilt.transforms.deposition`, and
+:mod:`~stilt.transforms.oxidation`. :func:`particle_pwf` and
+:func:`ak_weights` hold the column weighting ported from X-STILT,
+:func:`survival` the fraction of a tracer that reaches the receptor for any
+loss rate, and :func:`dry_deposition_survival` that fraction for a
+depositing tracer. They are public so your own
 transforms can use them. This module loads transforms
 from a config and applies them.
 """
@@ -62,14 +64,19 @@ from stilt.transforms.averaging_kernel import (
     averaging_kernel_table,
 )
 from stilt.transforms.deposition import DryDeposition, dry_deposition_survival
-from stilt.transforms.lifetime import FirstOrderLifetime
+from stilt.transforms.lifetime import FirstOrderLifetime, survival
+from stilt.transforms.oxidation import Oxidation
 from stilt.transforms.pressure_weighting import PressureWeighting, particle_pwf
 
 if TYPE_CHECKING:
     from stilt.receptors import Receptor
 
 BuiltinTransform = Annotated[
-    AveragingKernel | PressureWeighting | FirstOrderLifetime | DryDeposition,
+    AveragingKernel
+    | PressureWeighting
+    | FirstOrderLifetime
+    | DryDeposition
+    | Oxidation,
     Field(discriminator="kind"),
 ]
 _BUILTIN_ADAPTER: TypeAdapter[Any] = TypeAdapter(BuiltinTransform)
@@ -182,6 +189,7 @@ __all__ = [
     "AveragingKernel",
     "DryDeposition",
     "FirstOrderLifetime",
+    "Oxidation",
     "PressureWeighting",
     "ak_weights",
     "apply_transforms",
@@ -191,5 +199,6 @@ __all__ = [
     "load_transform",
     "particle_pwf",
     "release_coordinate",
+    "survival",
     "transform_kind",
 ]
