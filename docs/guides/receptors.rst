@@ -215,8 +215,9 @@ Advanced: release heights for multipoint and slant receptors
 ------------------------------------------------------------
 
 Vertical weighting needs each particle's release height, the
-``release_height`` column of the particles. HYSPLIT does not record which release point a particle came from, so PYSTILT works
-it out from the first row HYSPLIT writes for the particle. With the bundled
+``release_height`` column of the particles. HYSPLIT does not record which
+release point a particle came from, so PYSTILT works it out from the first
+row HYSPLIT writes for the particle. With the bundled
 HYSPLIT build, that row comes one timestep after release. By then the wind
 has moved the particle a few hundred meters, which can be more than the
 spacing between the points of a slant column.
@@ -232,8 +233,8 @@ PYSTILT recovers release heights in this order:
 3. Otherwise it matches by horizontal position. It warns when the release
    points are closer than 1 km, because the match cannot be trusted there.
 
-A HYSPLIT change that writes release-time rows has been sent to NOAA ARL. Until
-a published build includes it, you can point PYSTILT at your own build:
+To get exact release heights, run a HYSPLIT build that writes rows at
+release time (:doc:`hysplit_build`):
 
 .. code-block:: yaml
 

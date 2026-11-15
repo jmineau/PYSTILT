@@ -125,8 +125,10 @@ These footprint settings sit next to ``grid`` at the top level:
    (``foot.sum("time")``).
 
 ``transforms``
-   Steps that weight the particles before the footprint is made, mainly for
-   column measurements. See :doc:`transforms`.
+   Steps that weight the particles before the footprint is made: the
+   averaging kernel and pressure weighting of a column measurement, or the
+   loss of a species that decays, deposits, or reacts on the way. See
+   :doc:`transforms`.
 
 A ``grid`` can be projected, with a ``crs`` such as ``EPSG:32612`` and
 ``xres`` and ``yres`` in the projection's units (meters for UTM), and it can
