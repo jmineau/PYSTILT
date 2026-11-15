@@ -5,7 +5,8 @@ A footprint is the mean surface influence of a simulation's particles. A
 *transform* changes how much each particle counts in that mean, by scaling
 the ``foot`` column of the particle table. Column instruments need an
 averaging kernel and a pressure weighting. A species that decays during
-transport needs a lifetime.
+transport needs a lifetime, and one that deposits to the ground a
+deposition velocity.
 
 A transform is any object with an ``apply`` method::
 
@@ -30,6 +31,8 @@ Built-in transforms
      - kind: pressure_weighting
      - kind: first_order_lifetime
        lifetime_hours: 4.0
+     - kind: dry_deposition
+       velocity: 0.01
 
 ``averaging_kernel`` (:class:`stilt.transforms.AveragingKernel`)
    Multiplies each particle's ``foot`` by the kernel, interpolated to the
@@ -84,6 +87,28 @@ Built-in transforms
    Scales ``foot`` by :math:`\exp(-\text{age} / \tau)`, where
    :math:`\tau` is ``lifetime_hours``. The age is the particle's time since
    release, its ``age`` column.
+
+``dry_deposition`` (:class:`stilt.transforms.DryDeposition`)
+   Scales ``foot`` by the fraction of a depositing tracer that survives
+   from the particle's position to the receptor. Use it for a soluble gas
+   or a fine aerosol. While a particle is below ``surface_layer_depth``
+   (default 50 m), the tracer is lost at the rate ``velocity`` (m/s)
+   divided by that depth, HYSPLIT's own dry deposition rule. HYSPLIT does
+   not deposit in a STILT run, so one run serves every species.
+
+   The depth is the one number to choose. HYSPLIT takes its lowest
+   internal level at or below 75 m, which is 50 m on HRRR. On a stable
+   night with particles released at 10 m, 30 m gave a surviving fraction
+   of 0.53 after 6 h and 75 m gave 0.62. With 50 m the transform came within
+   0.5 % of HYSPLIT's own mass loss in a forward and two backward runs.
+
+   The transform needs ``zagl`` at every one-minute time step, so keep
+   ``outdt: 0``, the default. It refuses hourly particles, which do not say
+   how long a particle stayed near the ground.
+   :func:`~stilt.transforms.dry_deposition_survival` gives the surviving
+   fraction for each row of the particle table, if you want the particles
+   rather than a footprint. Wet removal and
+   gravitational settling are not included.
 
 For satellite and TCCON columns, list ``averaging_kernel`` and then
 ``pressure_weighting``. With no transforms every particle counts equally,

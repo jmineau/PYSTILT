@@ -103,6 +103,8 @@ feature.
      - Implemented
    * - First-order lifetime decay transform
      - Implemented
+   * - Dry deposition transform (``dry_deposition``)
+     - Implemented
    * - Declarative transforms in config YAML (default or per variant)
      - Implemented
    * - Slant-column receptor support
