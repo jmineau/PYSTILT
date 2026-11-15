@@ -42,28 +42,28 @@ A footprint also needs ``foot``:
 
 ``foot``
    The particle's sensitivity to surface fluxes accumulated over the output
-   step, in ppm per (µmol m⁻² s⁻¹). It is zero while the particle is above
-   ``footprint_depth`` of the mixed layer (or ``footprint_depth`` meters
-   when that is more than 1). It is the time the particle spent in that surface layer, divided by
-   the depth the flux is mixed through times the mean air density below it
-   (Lin et al., 2003).
+   step, in ppm per (µmol m⁻² s⁻¹): the time the particle spent in the
+   surface layer, divided by the depth the flux is mixed through times the
+   mean air density below it (Lin et al., 2003). The surface layer is
+   ``footprint_depth`` of the mixed layer, or ``footprint_depth`` meters
+   when that is more than 1; above it ``foot`` is zero.
    :func:`stilt.calc_footprint` adds each particle's ``foot`` into its grid
    cell and divides by the number of particles.
 
-Which models write ``foot``:
+Where ``foot`` comes from:
 
 - **HYSPLIT** computes it in STILT mode, as STILT-R's runs do, when
   ``varsiwant`` has ``foot`` (the default). PYSTILT keeps it as written.
-- **A transport model that writes only positions**, or any model whose
-  particles have no ``foot``, gets it from PYSTILT after the run, from the
-  met files the run read: :func:`add_foot` computes it from ``zagl``,
-  ``mlht``, the air below the depth (the drop in pressure from the ground
-  to the depth) and the output step. The run's log says so. A particle
-  counts for the whole step when it ends the step below the layer, where
-  HYSPLIT counts the minutes it spent there. Without the model's own
-  ``mlht``, the met's boundary-layer height (``PBLH``) is used, not the one
-  HYSPLIT finds from the profile, unless ``pbl_height`` says otherwise.
-  :doc:`/development/validation` says how far a footprint moves.
+- **Any other model whose particles have no** ``foot``, such as one that
+  writes only positions, gets it from PYSTILT after the run
+  (:func:`add_foot`), from ``zagl``, ``mlht``, the output step, and the
+  pressure drop from the ground to the surface layer's top in the met files
+  the run read. The run's log says so. A particle counts for the whole step
+  when it ends the step inside the layer, where HYSPLIT counts the minutes
+  it spent there. When the model wrote no ``mlht``, the met's
+  boundary-layer height (``PBLH``) is used, unless ``pbl_height`` says
+  otherwise. :doc:`/development/validation` says how far this moves a
+  footprint.
 
 The mixed-layer height
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -92,17 +92,17 @@ computes ``foot``; ``pbl_height`` and ``mlht`` name the same quantity.
   a number is a fixed height in meters above ground.
 
 ``pbl_height_min`` keeps a height PYSTILT finds at least that many meters,
-as ``kmix0`` does for HYSPLIT, which keeps its own at least 150 m by
-default. It does not change a model's own ``mlht``.
+as ``kmix0`` (150 m by default) does for HYSPLIT. It does not change a
+model's own ``mlht``.
 
-Every model moved its particles with its own mixed layer: HYSPLIT mixes
-them through the layer ``kmixd`` and ``kmix0`` choose. When PYSTILT
-computes ``foot``, the mixed layer it uses can differ from that one. To grid
-a model that writes only positions and HYSPLIT with the same mixed layer,
-so that only their transport differs, set both: ``pbl_height: richardson``
-and ``pbl_height_min: 150`` match HYSPLIT's defaults, and ``pbl_height:
-met`` with the same minimum matches a HYSPLIT run with ``kmixd: 0``.
-:doc:`/development/validation` gives how far each choice moves a footprint.
+The mixed layer used for ``foot`` can differ from the one the model moved
+its particles in: HYSPLIT mixes them through the layer ``kmixd`` and
+``kmix0`` choose. To compare two transport models with the same footprint
+layer, so that only their transport differs, set both settings:
+``pbl_height: richardson`` with ``pbl_height_min: 150`` matches HYSPLIT's
+defaults, and ``pbl_height: met`` with the same minimum matches a HYSPLIT
+run with ``kmixd: 0``. :doc:`/development/validation` gives how far each
+choice moves a footprint.
 
 The release row
 ---------------
@@ -170,10 +170,25 @@ grows from the release height above ground, so for a receptor above sea
 level it also reads ``zsfc``. Without it the run's log says the correction
 was skipped.
 
-``mlht``, ``dens``, ``pres``, and ``zsfc`` can also be sampled from the met
-files at each particle's position, for a model that writes only positions:
-:func:`stilt.sampling.sample_met`. They differ a little from HYSPLIT's own
-columns; :doc:`/development/validation` says by how much.
+For a model that writes only positions, :func:`stilt.sampling.sample_met`
+reads ``mlht``, ``dens``, ``pres`` and ``zsfc`` from the met files at each
+particle's position and time. Give it the files the run read and the top of
+its domain, which a stored run records:
+
+.. code-block:: python
+
+   from stilt.sampling import sample_met
+
+   meta = stilt.particles.particles_metadata(sim.particles_path)
+   sampled = sample_met(
+       sim.particles.drop(columns=["mlht", "dens"]),
+       meta.met_files,
+       columns=["mlht", "dens"],
+       z_top=meta.settings["z_top"],
+   )
+
+The sampled values differ a little from HYSPLIT's own columns;
+:doc:`/development/validation` says by how much.
 
 Columns PYSTILT adds
 --------------------
@@ -213,20 +228,19 @@ Checking a table
 After a run
 -----------
 
-PYSTILT adds the release heights to any model's particles, and ``foot`` to
-particles that have none. That is what a particle file stores and
-``sim.particles`` returns.
+After a run PYSTILT adds the release heights to any model's particles, and
+``foot`` to particles that have none. That is what a particle file stores
+and ``sim.particles`` returns.
 
-The near-field correction is applied when a footprint is made, by
-:func:`stilt.calc_footprint` when ``hnf_plume`` is set (the default), with
-the run's ``footprint_depth``. The transport error does the same, so its
+The near-field correction is not stored. :func:`stilt.calc_footprint`
+applies it when ``hnf_plume`` is set (the default), with the run's
+``footprint_depth``, and the transport error does the same, so its
 enhancement is the footprint's. Anything else that reads ``foot`` from the
 stored particles, such as ``particles.stilt.enhancement``, reads it
 uncorrected: call :func:`correct_near_field` first to match the footprint.
-Particles that lack the columns the correction reads get none, and a
-warning says so. The correction reads ``samt``, ``sigw`` and ``tlgr``,
-which only HYSPLIT writes, so particles that got their ``foot`` from
-PYSTILT are not corrected.
+The correction reads ``samt``, ``sigw`` and ``tlgr``, which only HYSPLIT
+writes, so particles that lack them, including those whose ``foot`` came
+from PYSTILT, are not corrected, and a warning says so.
 
 .. autosummary::
    :toctree: _api

@@ -9,7 +9,7 @@ enhancement gives the modeled mole fraction. X-STILT does the same in
 ``endpts.trajfoot``, and CT-STILT does it with CarbonTracker.
 
 The average is weighted the way the footprint is, so the particle
-transforms (averaging kernel, pressure weighting, lifetime decay) apply to
+transforms (averaging kernel, pressure weighting, any loss) apply to
 the background too, and the background and enhancement add. The field is
 passed in as an :class:`xarray.DataArray`, or already sampled as one value
 per particle.
@@ -97,7 +97,7 @@ def _endpoint_weights(
 
     Transforms multiply ``foot``, so applying them to particles whose
     ``foot`` is 1 leaves each particle's weight: its averaging kernel and
-    pressure weight, and the lifetime decay at its endpoint age. Without
+    pressure weight, and the fraction surviving from its endpoint. Without
     transforms every weight is 1.
     """
     transforms = list(transforms)

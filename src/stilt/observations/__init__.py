@@ -32,10 +32,10 @@ After a run:
 
 What a simulation's particles give is on the simulation:
 ``sim.background(field)`` and ``sim.transport_error(error_sim, flux)``
-(:mod:`stilt.particles`). The wind-error statistics are in
-:mod:`stilt.meteorology` (``variogram``, ``fit_variogram``), and particle
-weighting (averaging kernel, pressure weighting, lifetime decay) is in
-:mod:`stilt.transforms`.
+(:func:`stilt.background`, :func:`stilt.transport_error`). The wind-error
+statistics are in :mod:`stilt.meteorology` (``variogram``,
+``fit_variogram``), and particle weighting (averaging kernel, pressure
+weighting, loss on the way) is in :mod:`stilt.transforms`.
 """
 
 from .columns import modelled_column
