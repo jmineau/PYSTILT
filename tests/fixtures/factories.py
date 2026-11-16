@@ -36,7 +36,8 @@ def write_arl_file(
     """
     Write a small ARL file whose header names *source*, and return its path.
 
-    One time step per entry in *times* on a 20 x 20 grid, each with PRSS
+    One time step per entry in *times* on a 20 x 20 grid of whole degrees,
+    125 W to 106 W and 30 N to 49 N (so it holds the tests' receptors), each with PRSS
     at the surface and TEMP above it: enough for a met's source to be read
     from it (:meth:`stilt.transport.hysplit.MetConfig.source`) and for
     arlmet to check it, not for HYSPLIT to run on it. With *partial*, the
@@ -62,8 +63,8 @@ def write_arl_file(
                 cone_angle=0.0,
                 sync_x=1.0,
                 sync_y=1.0,
-                sync_lat=-10.0,
-                sync_lon=20.0,
+                sync_lat=30.0,
+                sync_lon=-125.0,
             ),
             nx=20,
             ny=20,

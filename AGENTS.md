@@ -265,7 +265,8 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
   than 5 grid cells inside the domain (only at `outdt: 0`).
   `stilt check` runs the file search for every receptor early; it opens one
   met file per met, to count its time periods (HYSPLIT stops on a file with
-  one, and `Met.check` refuses it), so a damaged file still fails at run time.
+  one, and `Met.check` refuses it), and one per grid the catalog lists, for
+  the domain; so a damaged file still fails at run time.
 - **Realizations are an axis**: `realizations: N` is one variant with a
   `realization` column and `realization=k/` partitions, run with `seed + k`.
   HYSPLIT gets `SEED = -(|seed| + 1)` (`setup_seed`, mirrored by the R
