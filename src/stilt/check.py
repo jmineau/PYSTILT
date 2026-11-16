@@ -2,10 +2,10 @@
 The check before a run: what would stop a project's simulations, found without running one.
 
 :func:`check_project` looks at the inputs of a project, never at its results
-or at HYSPLIT: the met files each receptor needs, whether each receptor is
-inside the footprint grid and the met's crop, whether an averaging-kernel
-table matches the receptors, and whether ``varsiwant`` holds ``zsfc`` where
-the project needs it. ``Project.check`` and ``stilt check`` call it.
+or at HYSPLIT: that it has receptors, the met files each receptor needs,
+whether each receptor is inside the footprint grid and the met's crop,
+whether an averaging-kernel table matches the receptors, and whether
+``varsiwant`` holds ``zsfc`` where the project needs it. ``Project.check`` and ``stilt check`` call it.
 """
 
 from __future__ import annotations
@@ -51,6 +51,8 @@ def check_project(project: Project) -> pd.DataFrame:
     rows = project._rows
     ids = [str(r) for r in project.receptors["receptor"]]
     found: dict[Any, tuple[list[_Finding], list[str]]] = {}
+    if not ids:
+        found["receptors"] = ([_NO_RECEPTORS], list(project.variants))
     for name, variant in project.variants.items():
         checks = (
             *_met_checks(variant, rows),
@@ -69,6 +71,15 @@ def check_project(project: Project) -> pd.DataFrame:
         for check, receptor, message in findings
     ]
     return pd.DataFrame(table, columns=list(CHECK_COLUMNS)).astype("string")
+
+
+#: The finding of a project with no receptors, which has nothing to run.
+_NO_RECEPTORS: _Finding = (
+    "receptors",
+    None,
+    "The project has no receptors: receptors.csv is missing or holds only its "
+    "header. Add them with project.add_receptors, or write rows to receptors.csv.",
+)
 
 
 def _met_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:

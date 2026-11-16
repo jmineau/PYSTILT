@@ -54,6 +54,10 @@ stop on it.
    * - Check
      - What it found
      - What to do
+   * - ``receptors``
+     - The project has no receptors: ``receptors.csv`` is missing or holds
+       only its header, as ``stilt init`` writes it.
+     - Add receptors (:doc:`receptors`).
    * - ``met_directory``
      - A met's ``directory`` does not exist or holds no ARL file.
      - Correct ``directory`` under ``mets:``. A met with ``download`` makes

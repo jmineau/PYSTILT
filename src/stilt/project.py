@@ -258,13 +258,22 @@ class Project:
             If both *config* and keyword settings are given, or either is
             given with ``starter=True``.
         ValueError
-            If a variant's settings are invalid. Nothing is written.
+            If a variant's settings are invalid, or *receptors* is given but
+            holds none (an empty list, or a CSV file with only its header).
+            Nothing is written.
         """
         if config is not None and settings:
             raise TypeError("Give a ProjectConfig or keyword settings, not both.")
         if starter and (config is not None or settings):
             raise TypeError(
                 "A starter config takes no settings; edit its config.yaml instead."
+            )
+        batch = None if receptors is None else _as_receptors(receptors)
+        if batch == []:
+            raise ValueError(
+                "No receptors were given: the list or file is empty. Leave "
+                "receptors out to make a project without them, and add them "
+                "later with project.add_receptors."
             )
         if starter:
             config = ProjectConfig.model_validate(yaml.safe_load(STARTER_CONFIG))
@@ -284,8 +293,8 @@ class Project:
             project.config_path.write_text(STARTER_CONFIG)
         else:
             config.to_yaml(project.config_path)
-        if receptors is not None:
-            project.add_receptors(receptors)
+        if batch is not None:
+            project.add_receptors(batch)
         elif starter:
             # Header only: every other line of a receptors file is a receptor.
             project.receptors_path.write_text("time,longitude,latitude,altitude\n")
@@ -321,12 +330,16 @@ class Project:
         FileNotFoundError
             If the project has no ``config.yaml``.
         """
+        self._require_config()
+        return ProjectConfig.from_yaml(self.config_path)
+
+    def _require_config(self) -> None:
+        """Raise unless the directory has a ``config.yaml``, which is what makes it a project."""
         if not self.config_path.exists():
             raise FileNotFoundError(
                 f"No config.yaml in {self.directory}. Make a project with "
                 "stilt.Project.init(...) or `stilt init`."
             )
-        return ProjectConfig.from_yaml(self.config_path)
 
     @cached_property
     def output(self) -> Output:
@@ -361,6 +374,8 @@ class Project:
         """
         if self._taken_rows is not None:
             return self._taken_rows
+        # A typo in the path would otherwise read as a project with no receptors.
+        self._require_config()
         if not self.receptors_path.exists():
             empty = pd.DataFrame(columns=["time", "longitude", "latitude", "altitude"])
             return receptor_rows(empty)
@@ -381,6 +396,12 @@ class Project:
         (``point``, ``column``, or ``multipoint``), ``location`` (the
         location id), and one column per label from ``receptors.csv``.
         :meth:`receptor` gives the receptor itself.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the directory has no ``config.yaml``, so it is not a project:
+            a mistyped path is not read as a project with no receptors.
         """
         rows = self._rows
         labels = [c for c in rows.columns if c not in COLUMNS and c not in ROW_COLUMNS]
@@ -1234,6 +1255,7 @@ class Project:
         Looks only at the inputs, and runs and downloads nothing. For each
         variant it checks that:
 
+        - the project has receptors (``receptors``);
         - the met's ``directory`` exists and holds an ARL file (``met_directory``);
         - every met file each receptor's run needs is there, naming the
           hours (``met_files``);
