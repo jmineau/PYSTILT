@@ -494,7 +494,10 @@ class ColumnReceptor(Receptor):
         _raise_first(
             [
                 *point_errors(
-                    [self.longitude], [self.latitude], [self.bottom], self.altitude_ref
+                    [self.longitude] * 2,
+                    [self.latitude] * 2,
+                    [self.bottom, self.top],
+                    self.altitude_ref,
                 ),
                 *column_errors([self.bottom], [self.top]),
             ]
@@ -544,8 +547,8 @@ class MultiPointReceptor(Receptor):
     Raises
     ------
     ValueError
-        If the arrays differ in length, a coordinate is out of range, or two
-        points share a horizontal location.
+        If the arrays differ in length, a coordinate is out of range or not a
+        finite number, or two points share a horizontal location.
     """
 
     kind: Literal["multipoint"] = Field(

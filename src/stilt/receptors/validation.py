@@ -39,9 +39,14 @@ def point_errors(
     lat = np.asarray(lat, dtype=float)
     alt = np.asarray(alt, dtype=float)
     agl = np.asarray(altitude_ref) == "agl"
+    # Written as "not inside", so a NaN, which compares False, fails too.
     return [
-        ((lon < -180) | (lon > 180), "longitude must be within [-180, 180]."),
-        ((lat < -90) | (lat > 90), "latitude must be within [-90, 90]."),
+        (
+            ~((lon >= -180) & (lon <= 180)),
+            "longitude must be a number within [-180, 180].",
+        ),
+        (~((lat >= -90) & (lat <= 90)), "latitude must be a number within [-90, 90]."),
+        (~np.isfinite(alt), "altitude must be a finite number."),
         (agl & (alt < 0), "AGL altitudes must be >= 0."),
     ]
 

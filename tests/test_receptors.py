@@ -431,6 +431,53 @@ def test_latitude_out_of_range_raises():
         )
 
 
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("longitude", np.nan, "longitude must be a number"),
+        ("latitude", np.nan, "latitude must be a number"),
+        ("longitude", np.inf, "longitude must be a number"),
+        ("altitude", np.nan, "altitude must be a finite number"),
+        ("altitude", np.inf, "altitude must be a finite number"),
+    ],
+)
+def test_a_point_with_a_nan_or_infinite_coordinate_is_refused(field, value, message):
+    """A NaN passed the range checks and failed later at ``.id``, naming no field (#440)."""
+    point = {"longitude": -111.85, "latitude": 40.77, "altitude": 5.0}
+    with pytest.raises(ValueError, match=message):
+        PointReceptor(time="202301011200", **{**point, field: value})
+
+
+@pytest.mark.parametrize(("bottom", "top"), [(np.nan, 100.0), (0.0, np.inf)])
+def test_a_column_with_a_nan_or_infinite_height_is_refused(bottom, top):
+    with pytest.raises(ValueError, match="altitude must be a finite number"):
+        ColumnReceptor(
+            time="202301011200",
+            longitude=-111.85,
+            latitude=40.77,
+            bottom=bottom,
+            top=top,
+        )
+
+
+def test_a_multipoint_receptor_with_a_nan_point_is_refused():
+    with pytest.raises(ValueError, match="longitude must be a number"):
+        MultiPointReceptor(
+            time="202301011200",
+            longitudes=[-111.0, np.nan],
+            latitudes=[40.0, 40.5],
+            altitudes=[10.0, 20.0],
+        )
+
+
+def test_a_receptors_file_with_an_empty_longitude_names_the_row():
+    text = (
+        "time,lon,lat,z\n2023-07-15 18:00,-111.8,40.7,10\n2023-07-15 18:00,,40.7,10\n"
+    )
+    with pytest.raises(ValueError, match="row 1: longitude must be a number"):
+        read_receptors(io.StringIO(text))
+
+
 def test_negative_agl_altitude_raises():
     with pytest.raises(ValueError, match="AGL altitudes"):
         PointReceptor(
@@ -1121,7 +1168,7 @@ def test_receptor_rows_checks_every_row_without_building(tmp_path):
         }
         return pd.DataFrame({**base, **columns})
 
-    with pytest.raises(ValueError, match="row 0: latitude must be within"):
+    with pytest.raises(ValueError, match="row 0: latitude must be a number within"):
         receptor_rows(table(latitude=[95.0]))
     with pytest.raises(ValueError, match="AGL altitudes must be >= 0"):
         receptor_rows(table(altitude=[-1.0]))

@@ -1523,7 +1523,7 @@ def test_a_bad_receptors_file_fails_when_the_project_is_read(tmp_path):
         "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,95.0,5\n"
     )
 
-    with pytest.raises(ValueError, match="latitude must be within"):
+    with pytest.raises(ValueError, match="latitude must be a number within"):
         _ = Project(project.directory).receptors
 
 

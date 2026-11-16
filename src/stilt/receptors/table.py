@@ -115,7 +115,8 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
     ------
     ValueError
         For anything a receptor would refuse: a missing column, a longitude
-        or latitude out of range, a negative height above ground, rows of one
+        or latitude out of range or empty, a height that is empty or not
+        finite, a negative height above ground, rows of one
         group that differ in time or altitude reference, a column whose two
         heights are equal, a multipoint receptor with two points at one
         location, or two different receptors with one id.
