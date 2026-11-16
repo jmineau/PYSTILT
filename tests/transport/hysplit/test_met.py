@@ -1625,3 +1625,47 @@ def test_check_reads_each_file_once_until_it_changes(tmp_path, monkeypatch):
     with pytest.raises(MeteorologyError, match="to 2023-01-01 09:00"):
         met.check(files, _WINDOW)
     assert opened == ["20230101_00", "20230101_06", "20230101_06"]
+
+
+def test_a_global_met_grid_holds_every_longitude(tmp_path):
+    """On a grid that goes all the way round, no longitude is outside the domain (#440)."""
+    import numpy as np
+    from arlmet import File, Grid, Projection
+    from arlmet.vertical import PressureAxis
+
+    from stilt.transport.hysplit.met import _on_grid
+
+    grid = Grid(
+        projection=Projection(
+            pole_lat=90.0,
+            pole_lon=0.0,
+            tangent_lat=1.0,
+            tangent_lon=1.0,
+            grid_size=0.0,
+            orientation=0.0,
+            cone_angle=0.0,
+            sync_x=1.0,
+            sync_y=1.0,
+            sync_lat=-2.0,
+            sync_lon=0.0,
+        ),
+        nx=360,
+        ny=5,
+    )
+    path = tmp_path / "global.arl"
+    with File(
+        path,
+        mode="w",
+        source="TEST",
+        grid=grid,
+        vertical_axis=PressureAxis(levels=[0.0]),
+    ) as f:
+        rs = f.create_recordset(pd.Timestamp("2023-01-01"))
+        rs.create_datarecord(
+            "PRSS", level=0, forecast=0, data=np.ones((5, 360), np.float32)
+        )
+    points = pd.DataFrame(
+        {"longitude": [-0.5, 179.9, -179.9], "latitude": [0.0, 2.0, 3.0]}
+    )
+
+    assert _on_grid(path, points).tolist() == [True, True, False]

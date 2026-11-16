@@ -1361,3 +1361,33 @@ def test_a_label_column_that_is_not_a_reference_is_kept():
     (receptor,) = read_receptors(io.StringIO(text))
     assert receptor.altitude_ref == "msl"
     assert receptor.attrs == {"site": "WBB", "note": "agl"}
+
+
+def test_a_table_of_numeric_times_is_refused():
+    from stilt.receptors.table import receptor_rows
+
+    frame = pd.DataFrame(
+        {
+            "time": [202307151800],
+            "longitude": [-111.8],
+            "latitude": [40.7],
+            "altitude": [10.0],
+        }
+    )
+    with pytest.raises(ValueError, match="row 0: time must be ISO 8601.*the number"):
+        receptor_rows(frame)
+
+
+def test_a_table_of_datetimes_with_a_missing_one_names_the_row():
+    from stilt.receptors.table import receptor_rows
+
+    frame = pd.DataFrame(
+        {
+            "time": pd.to_datetime(["2023-07-15 18:00", None]),
+            "longitude": [-111.8, -111.7],
+            "latitude": [40.7, 40.7],
+            "altitude": [10.0, 10.0],
+        }
+    )
+    with pytest.raises(ValueError, match="row 1: time is empty"):
+        receptor_rows(frame)
