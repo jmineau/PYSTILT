@@ -54,7 +54,10 @@ Footprint grids
 
 Longitudes count modulo 360, so a grid across 180° can be written
 ``xmin: 170``, ``xmax: 190`` or ``xmin: 170``, ``xmax: -170``, and the
-footprint's longitudes are then 170 to 190. A grid spans at most 360°. A
+footprint's longitudes are then 170 to 190. An ``xmax`` west of ``xmin``
+is read as crossing 180° when the two are on either side of 0° or one is
+written past 180°: with both in one hemisphere (``xmin: -110.5``,
+``xmax: -113``) they are taken to be swapped and the grid is refused. A grid spans at most 360°. A
 particle cloud on both sides of 180° is measured as one cloud for the
 smoothing. A grid that goes all the way around (``xmin: -180``,
 ``xmax: 180``, with cells that fit 360°) is a circle, so smoothing that
@@ -63,7 +66,9 @@ near 180°, particles just across 180° smooth onto the grid, as particles
 just past any other edge do.
 
 Projected grids (a ``crs`` such as ``EPSG:32612``) keep their bounds in
-degrees and take ``xres`` and ``yres`` in the projection's units. The two
+degrees and take ``xres`` and ``yres`` in the projection's units. A grid
+of more than a billion cells is refused, which catches a resolution in
+degrees on a grid in meters. The two
 steps that depend on the cell size work in the grid's units. The smoothing
 kernel's width is worked out in degrees and converted, so a footprint is
 smoothed about as much on 1 km UTM cells as on 0.01° cells. The early-time

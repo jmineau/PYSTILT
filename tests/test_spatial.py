@@ -77,8 +77,8 @@ def test_grid_reads_stilt_r_projection_as_crs():
         "xmax": -111.0,
         "ymin": 40.0,
         "ymax": 41.0,
-        "xres": 0.5,
-        "yres": 0.5,
+        "xres": 5000,
+        "yres": 5000,
     }
     old = Grid(**kw, projection="EPSG:32612")
     assert old == Grid(**kw, crs="EPSG:32612")
@@ -303,9 +303,58 @@ def test_grid_refuses_values_that_leave_no_cell(change, message):
         Grid(**{**kw, **change})
 
 
-def test_a_projected_grid_is_not_checked_for_cells_until_it_is_projected():
-    """Xres is in meters there, so the longitude/latitude extent says nothing."""
+def test_a_projected_grid_counts_its_cells_on_the_projection():
+    """Xres is in meters there, so the cells are counted on the projected extent."""
     grid = Grid(
         xmin=-113, xmax=-110, ymin=40, ymax=42, xres=1000, yres=1000, crs="EPSG:32612"
     )
     assert len(grid.axes[0]) > 100
+    with pytest.raises(ValueError, match="at least one complete cell.*x axis"):
+        Grid(
+            xmin=-113,
+            xmax=-110,
+            ymin=40,
+            ymax=42,
+            xres=1e6,
+            yres=1000,
+            crs="EPSG:32612",
+        )
+
+
+def test_a_projected_grid_refuses_a_resolution_in_degrees():
+    """0.01 on a grid in meters is 4.7e14 cells, refused when made, not a MemoryError later (#439)."""
+    kw = {"xmin": -113.0, "xmax": -110.5, "ymin": 40.0, "ymax": 42.0}
+    with pytest.raises(ValueError, match=r"more than the 1,000,000,000.*\(metre\)"):
+        Grid(**kw, xres=0.01, yres=0.01, crs="EPSG:32612")
+    with pytest.raises(ValueError, match="more than the 1,000,000,000.*in degrees"):
+        Grid(**kw, xres=1e-5, yres=1e-5)
+
+
+def test_a_grid_refuses_a_crs_pyproj_cannot_read():
+    """A misspelled crs fails when the grid is made, not when a footprint is (#439)."""
+    with pytest.raises(ValueError, match="not a coordinate reference system"):
+        Grid(xmin=-113, xmax=-110, ymin=40, ymax=42, xres=1000, yres=1000, crs="nope")
+
+
+@pytest.mark.parametrize(
+    ("xmin", "xmax"), [(-110.5, -113.0), (10.0, 5.0), (10.0, 0.0), (0.0, -10.0)]
+)
+def test_a_grid_refuses_swapped_longitudes_in_one_hemisphere(xmin, xmax):
+    """Swapped edges are refused rather than read as a grid nearly 360 degrees wide (#439)."""
+    kw = {"ymin": 40.0, "ymax": 42.0, "xres": 0.5, "yres": 0.5}
+    with pytest.raises(
+        ValueError, match=f"write its east edge past.*xmax={xmax + 360:g}"
+    ):
+        Grid(xmin=xmin, xmax=xmax, **kw)
+    # Written past the west edge, the same wide grid is taken as asked.
+    assert len(Grid(xmin=xmin, xmax=xmax + 360, **kw).axes[0]) == 2 * (
+        xmax + 360 - xmin
+    )
+
+
+def test_a_grid_across_180_may_be_written_with_xmax_west_of_xmin():
+    """The edges on both sides of 0 degrees still cross 180 (#352, #439)."""
+    kw = {"ymin": 40.0, "ymax": 41.0, "xres": 0.5, "yres": 0.5}
+    for xmin, xmax in [(170.0, -170.0), (100.0, -60.0), (179.5, -179.5)]:
+        x, _ = Grid(xmin=xmin, xmax=xmax, **kw).axes
+        np.testing.assert_array_equal(x, Grid(xmin=xmin, xmax=xmax + 360, **kw).axes[0])
