@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=d7820065"></script>
+    <script src="../../../../_static/documentation_options.js?v=45b9ef5c"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev42+gf967d1d7e" />
+  <meta name="docsearch:version" content="0.1.0a29.dev50+g43a47b10a" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -660,6 +660,7 @@
     <span class="p">)</span>
     <span class="n">emisshrs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="mf">0.01</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Duration of the particle release, in hours."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">hscale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -757,9 +758,11 @@
     <span class="p">)</span>
     <span class="n">outdt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="mi">0</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Interval between particle outputs in ``PARTICLE_STILT.DAT``, in "</span>
-            <span class="s2">"minutes. 0 writes every time step and a negative value writes none. "</span>
+            <span class="s2">"minutes. 0 writes every time step. HYSPLIT writes no particles "</span>
+            <span class="s2">"for a negative value, so it is refused. "</span>
             <span class="s2">"Only at 0 does PYSTILT check where the particles of a run that "</span>
             <span class="s2">"stopped early ended, to tell met that ran out from particles that "</span>
             <span class="s2">"left the met's domain."</span>
@@ -832,6 +835,7 @@
     <span class="p">)</span>
     <span class="n">z_top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="mf">25000.0</span><span class="p">,</span>
+        <span class="n">gt</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Top of HYSPLIT's computational domain, in meters above ground."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">ziscale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -848,30 +852,37 @@
     <span class="p">)</span>
     <span class="n">siguverr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Standard deviation of the horizontal wind error, in m/s."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">tluverr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Correlation timescale of the horizontal wind error, in minutes."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">zcoruverr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Vertical correlation length of the horizontal wind error, in meters."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">horcoruverr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Horizontal correlation length of the horizontal wind error, in km."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">sigzierr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Standard deviation of the mixed-layer height error, in percent."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">tlzierr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Correlation timescale of the mixed-layer height error, in minutes."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">horcorzierr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Horizontal correlation length of the mixed-layer height error, in km."</span><span class="p">,</span>
     <span class="p">)</span>
 

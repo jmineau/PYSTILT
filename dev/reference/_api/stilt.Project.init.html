@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d7820065"></script>
+    <script src="../../_static/documentation_options.js?v=45b9ef5c"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev42+gf967d1d7e" />
+  <meta name="docsearch:version" content="0.1.0a29.dev50+g43a47b10a" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -943,7 +943,9 @@ Without receptors, <code class="docutils literal notranslate"><span class="pre">
     <code class="docutils literal notranslate"><span class="pre">Project(path)</span></code> instead, and edit the file to change settings.</p></li>
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If both <em>config</em> and keyword settings are given, or either is
     given with <code class="docutils literal notranslate"><span class="pre">starter=True</span></code>.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If a variant’s settings are invalid. Nothing is written.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If a variant’s settings are invalid, or <em>receptors</em> is given but
+    holds none (an empty list, or a CSV file with only its header).
+    Nothing is written.</p></li>
 </ul>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>

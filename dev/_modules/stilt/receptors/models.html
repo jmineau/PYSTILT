@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=d7820065"></script>
+    <script src="../../../_static/documentation_options.js?v=45b9ef5c"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev42+gf967d1d7e" />
+  <meta name="docsearch:version" content="0.1.0a29.dev50+g43a47b10a" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -460,7 +460,6 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -500,13 +499,46 @@
 <span class="c1"># ---------------------------------------------------------------------------</span>
 
 
+<span class="c1">#: The forms a receptor time may take as text, for messages.</span>
+<span class="n">_TIME_FORMS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"ISO 8601, such as '2023-07-15 18:00' or '2023-07-15T18:00:00Z', "</span>
+    <span class="s2">"or YYYYMMDDHHMM, such as '202307151800'"</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_time_text</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Read receptor times written as text, and return them as UTC times.</span>
+
+<span class="sd">    Each value is ISO 8601 or ``YYYYMMDDHHMM``. A time with an offset is</span>
+<span class="sd">    converted to UTC; one without is taken as UTC. A value in any other</span>
+<span class="sd">    form gives ``NaT``, as does a missing one: the day-first</span>
+<span class="sd">    ``05/07/2023 18:00`` could also be read month-first, and pandas' words</span>
+<span class="sd">    ``now`` and ``today`` are no fixed time.</span>
+<span class="sd">    """</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"string"</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">compact</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\d</span><span class="si">{12}</span><span class="s2">"</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">word</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s2">"now"</span><span class="p">,</span> <span class="s2">"today"</span><span class="p">])</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">NaT</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">text</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"datetime64[ns, UTC]"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">compact</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="n">times</span><span class="p">[</span><span class="n">compact</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="n">compact</span><span class="p">],</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">%H%M"</span><span class="p">,</span> <span class="n">utc</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">iso</span> <span class="o">=</span> <span class="o">~</span><span class="n">compact</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">word</span>
+    <span class="k">if</span> <span class="n">iso</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="n">times</span><span class="p">[</span><span class="n">iso</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span>
+            <span class="n">text</span><span class="p">[</span><span class="n">iso</span><span class="p">],</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"ISO8601"</span><span class="p">,</span> <span class="n">utc</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">times</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">parse_time</span><span class="p">(</span><span class="n">time</span><span class="p">:</span> <span class="n">TimeLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return *time* as a naive UTC datetime.</span>
 
 <span class="sd">    Accepts datetimes (aware ones are converted to UTC), pandas and numpy</span>
-<span class="sd">    times, ISO strings, and the compact ``"YYYYMMDDHHMM"`` form. A time finer</span>
-<span class="sd">    than a microsecond is cut to the microsecond.</span>
+<span class="sd">    times, and text in ISO 8601 or the compact ``"YYYYMMDDHHMM"`` form</span>
+<span class="sd">    (:func:`_parse_time_text`). Other text, such as the day-first</span>
+<span class="sd">    ``"05/07/2023 18:00"``, is refused, since it could be read either way.</span>
+<span class="sd">    A time finer than a microsecond is cut to the microsecond.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="n">time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"'time' must be provided for all receptor types."</span><span class="p">)</span>
@@ -515,9 +547,11 @@
             <span class="s2">"Numeric receptor times are not accepted. Pass a datetime-like value "</span>
             <span class="s2">"or a string such as '202301011200' or '2023-01-01T12:00:00Z'."</span>
         <span class="p">)</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\d</span><span class="si">{12}</span><span class="s2">"</span><span class="p">,</span> <span class="n">time</span><span class="p">):</span>
-        <span class="n">parsed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">%H%M"</span><span class="p">,</span> <span class="n">utc</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">_parse_time_text</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="n">time</span><span class="p">]))</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">parsed</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"NaT"</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Receptor time </span><span class="si">{</span><span class="n">time</span><span class="si">!r}</span><span class="s2"> is not </span><span class="si">{</span><span class="n">_TIME_FORMS</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">)):</span>
         <span class="n">parsed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">time</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
@@ -691,7 +725,9 @@
     <span class="n">time</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Release time, UTC. A time-zone-aware value is converted to UTC and "</span>
-            <span class="s2">"a naive one taken as UTC. A string may be ISO or ``YYYYMMDDHHMM``."</span>
+            <span class="s2">"a naive one taken as UTC. A string must be ISO 8601 or "</span>
+            <span class="s2">"``YYYYMMDDHHMM``; other forms, such as the day-first "</span>
+            <span class="s2">"``05/07/2023``, are refused."</span>
         <span class="p">)</span>
     <span class="p">)</span>
     <span class="n">altitude_ref</span><span class="p">:</span> <span class="n">VerticalReference</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -981,7 +1017,10 @@
         <span class="n">_raise_first</span><span class="p">(</span>
             <span class="p">[</span>
                 <span class="o">*</span><span class="n">point_errors</span><span class="p">(</span>
-                    <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="p">],</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">],</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">bottom</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span>
+                    <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">bottom</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">top</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span><span class="p">,</span>
                 <span class="p">),</span>
                 <span class="o">*</span><span class="n">column_errors</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">bottom</span><span class="p">],</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">top</span><span class="p">]),</span>
             <span class="p">]</span>
@@ -1037,8 +1076,8 @@
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If the arrays differ in length, a coordinate is out of range, or two</span>
-<span class="sd">        points share a horizontal location.</span>
+<span class="sd">        If the arrays differ in length, a coordinate is out of range or not a</span>
+<span class="sd">        finite number, or two points share a horizontal location.</span>
 <span class="sd">    """</span>
 
     <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"multipoint"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>

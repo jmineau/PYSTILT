@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d7820065"></script>
+    <script src="../../_static/documentation_options.js?v=45b9ef5c"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev42+gf967d1d7e" />
+  <meta name="docsearch:version" content="0.1.0a29.dev50+g43a47b10a" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -654,7 +654,12 @@
 <div class="viewcode-block" id="Bounds">
 <a class="viewcode-back" href="../../reference/_api/stilt.Bounds.html#stilt.Bounds">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Bounds</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Longitude/latitude bounding box, in degrees."""</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Longitude/latitude bounding box, in degrees.</span>
+
+<span class="sd">    The edges are finite numbers, and ``-90 &lt;= ymin &lt; ymax &lt;= 90``.</span>
+<span class="sd">    Longitudes count modulo 360 (:meth:`contains`).</span>
+<span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -662,6 +667,25 @@
     <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Eastern edge, in degrees longitude."</span><span class="p">)</span>
     <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Southern edge, in degrees latitude."</span><span class="p">)</span>
     <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Northern edge, in degrees latitude."</span><span class="p">)</span>
+
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_on_the_globe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse an edge that is not a finite number, and latitudes off the globe or out of order, which no point is inside."""</span>
+        <span class="n">edges</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"xmin"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span>
+            <span class="s2">"xmax"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span>
+            <span class="s2">"ymin"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span>
+            <span class="s2">"ymax"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">edges</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="n">got</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">edges</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Bounds need four finite numbers; got </span><span class="si">{</span><span class="n">got</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="o">-</span><span class="mf">90.0</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span> <span class="o">&lt;=</span> <span class="mf">90.0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Bounds need -90 &lt;= ymin &lt; ymax &lt;= 90 degrees latitude; got "</span>
+                <span class="sa">f</span><span class="s2">"ymin=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">, ymax=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
 
 <div class="viewcode-block" id="Bounds.contains">
 <a class="viewcode-back" href="../../reference/_api/stilt.Bounds.contains.html#stilt.Bounds.contains">[docs]</a>
@@ -800,12 +824,7 @@
 
     <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_latitudes_and_cells</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Refuse latitudes off the globe, swapped longitudes, an unreadable CRS, and a box with no whole cell or too many."""</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="o">-</span><span class="mf">90.0</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span> <span class="o">&lt;=</span> <span class="mf">90.0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"A grid needs -90 &lt;= ymin &lt; ymax &lt;= 90 degrees latitude; got "</span>
-                <span class="sa">f</span><span class="s2">"ymin=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">, ymax=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
-            <span class="p">)</span>
+<span class="w">        </span><span class="sd">"""Refuse equal or swapped longitudes, an unreadable CRS, and a box with no whole cell or too many (:class:`Bounds` checks the latitudes)."""</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"A grid needs xmin and xmax to differ; both are </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d7820065"></script>
+    <script src="../../_static/documentation_options.js?v=45b9ef5c"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev42+gf967d1d7e" />
+  <meta name="docsearch:version" content="0.1.0a29.dev50+g43a47b10a" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -924,6 +924,12 @@
 (<code class="docutils literal notranslate"><span class="pre">point</span></code>, <code class="docutils literal notranslate"><span class="pre">column</span></code>, or <code class="docutils literal notranslate"><span class="pre">multipoint</span></code>), <code class="docutils literal notranslate"><span class="pre">location</span></code> (the
 location id), and one column per label from <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.
 <a class="reference internal" href="stilt.Project.receptor.html#stilt.Project.receptor" title="stilt.Project.receptor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">receptor()</span></code></a> gives the receptor itself.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#FileNotFoundError" title="(in Python v3.15)"><strong>FileNotFoundError</strong></a> – If the directory has no <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, so it is not a project:
+    a mistyped path is not read as a project with no receptors.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>

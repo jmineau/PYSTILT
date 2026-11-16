@@ -125,7 +125,8 @@ Each reason, what happened, and what to do:
        - A HYSPLIT message, such as ``start point not within (x,y,t) any
          data file``: the receptor is outside the files, in time or in
          space. ``source point off grid`` says the receptor is outside the
-         met's grid (check the sign of its longitude), and ``Start height
+         met's grid (check the sign of its longitude; ``stilt check``
+         lists such a receptor as ``met_domain``), and ``Start height
          above mdl domain`` that it is above the met's top; the line gives the
          height and the top.
    * - ``VARYING_MET_INTERVAL``

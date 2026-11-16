@@ -135,11 +135,19 @@ form has one row per point receptor:
    2023-07-15 18:00:00,-111.848,40.766,10
    2023-07-15 19:00:00,-111.848,40.766,10
 
+Write times in ISO 8601, such as ``2023-07-15 18:00:00`` or
+``2023-07-15T18:00:00Z``, or as ``YYYYMMDDHHMM``, such as ``202307151800``.
+A time with an offset, such as ``2023-07-15T12:00:00-06:00``, is converted
+to UTC; one without is taken as UTC. Other forms are refused, naming the
+row: ``05/07/2023`` could be 5 July or 7 May.
+
 The column names from STILT-R also work. Use ``long`` or ``lon`` for
 longitude, ``lati`` or ``lat`` for latitude, and ``zagl`` or ``zmsl`` for
 altitude. A ``zmsl`` column means the altitudes are above sea level. To mix
-the two in one file, add an ``altitude_ref`` column with ``agl`` or ``msl``
-on each row.
+the two in one file, add an ``altitude_ref`` (or ``height_ref``) column with
+``agl`` or ``msl`` on each row. A column under another name that holds only
+``agl`` and ``msl``, such as ``alt_ref``, is an error: it would be kept as a
+label, and every height read as above ground.
 
 To build a column or multipoint receptor, give its rows the same ``r_idx``
 value. Rows that share an ``r_idx`` become one receptor, so they must also
