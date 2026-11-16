@@ -152,6 +152,53 @@ def _east_edge(xmin: float, xmax: float) -> float:
     return xmax + 360.0 if xmax < xmin else xmax
 
 
+#: The most cells a grid may have. A footprint holds a number per cell and
+#: time layer, so a grid past this needs more than 8 GB a layer, which is
+#: most often a resolution in the wrong units (degrees on a grid in meters).
+_MAX_GRID_CELLS = 10**9
+
+
+@functools.lru_cache(maxsize=64)
+def _projected_extent(
+    crs: str, xmin: float, xmax: float, ymin: float, ymax: float
+) -> tuple[float, float, float, float]:
+    """
+    Return ``(xmin, xmax, ymin, ymax)`` of a longitude/latitude box in *crs* units.
+
+    The extent is that of the box's two corners, projected.
+
+    Raises
+    ------
+    ValueError
+        If pyproj cannot read *crs*.
+    """
+    from pyproj import CRS, Transformer
+    from pyproj.exceptions import CRSError
+
+    try:
+        CRS.from_user_input(crs)
+    except CRSError as error:
+        raise ValueError(
+            f"crs={crs!r} is not a coordinate reference system pyproj can read "
+            f"({error})."
+        ) from None
+    tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
+    corners_x, corners_y = tr.transform([xmin, xmax], [ymin, ymax])
+    return (
+        float(np.min(corners_x)),
+        float(np.max(corners_x)),
+        float(np.min(corners_y)),
+        float(np.max(corners_y)),
+    )
+
+
+def _crs_unit(crs: str) -> str:
+    """Return the name of the unit of *crs*'s first axis, such as ``metre`` or ``degree``."""
+    from pyproj import CRS
+
+    return CRS.from_user_input(crs).axis_info[0].unit_name
+
+
 class Bounds(BaseModel):
     """Longitude/latitude bounding box, in degrees."""
 
@@ -225,6 +272,23 @@ class Grid(Bounds):
     across 180 degrees is written ``xmin=170, xmax=190`` or ``xmin=170,
     xmax=-170``. A footprint on either has longitudes 170 to 190. A grid
     spans at most 360 degrees of longitude.
+
+    Notes
+    -----
+    An ``xmax`` written west of ``xmin`` is read as crossing 180 degrees
+    when ``xmin`` is east of 0 and ``xmax`` west of it, as in
+    ``xmin=170, xmax=-170``, or when an edge is written past 180 degrees
+    either way (``xmin=-170, xmax=-190``). With both in one hemisphere and
+    within 180 degrees, such as ``xmin=-110.5, xmax=-113``, the two are
+    most likely swapped, and the grid is refused rather than read as one
+    357.5 degrees wide. To have a grid that wide, write its east edge past
+    its west edge: ``xmin=-110.5, xmax=247``.
+
+    A grid is refused when pyproj cannot read its ``crs``, when no whole
+    cell fits in it, or when it has more than a billion cells (8 GB for
+    each time layer of a footprint). The last is most often a resolution in
+    degrees on a projected grid, whose ``xres`` and ``yres`` are in meters
+    for ``EPSG:32612``.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -276,7 +340,7 @@ class Grid(Bounds):
 
     @model_validator(mode="after")
     def _latitudes_and_cells(self) -> Self:
-        """Refuse latitudes off the globe and, on a longitude/latitude grid, a box that holds no whole cell."""
+        """Refuse latitudes off the globe, swapped longitudes, an unreadable CRS, and a box with no whole cell or too many."""
         if not -90.0 <= self.ymin < self.ymax <= 90.0:
             raise ValueError(
                 f"A grid needs -90 <= ymin < ymax <= 90 degrees latitude; got "
@@ -286,19 +350,46 @@ class Grid(Bounds):
             raise ValueError(
                 f"A grid needs xmin and xmax to differ; both are {self.xmin:g}."
             )
+        one_hemisphere = not self.xmax < 0.0 < self.xmin
+        written_as_a_wrap = max(abs(self.xmin), abs(self.xmax)) > 180.0
+        if self.xmax < self.xmin and one_hemisphere and not written_as_a_wrap:
+            east = _east_edge(self.xmin, self.xmax)
+            raise ValueError(
+                f"xmax={self.xmax:g} is west of xmin={self.xmin:g}, and both are "
+                "between 0 and 180 degrees on one side, so this grid would go "
+                f"{east - self.xmin:g} degrees east around the globe. If xmin and "
+                "xmax are swapped, swap them back. For a grid that wide, write its "
+                f"east edge past its west edge: xmax={east:g}."
+            )
         if self.is_longlat:
-            # The grid's own message, with the axis it is about.
-            for axis, low, high, res in (
-                ("x", self.xmin, _east_edge(self.xmin, self.xmax), self.xres),
-                ("y", self.ymin, self.ymax, self.yres),
-            ):
-                try:
-                    _grid_cell_count(low, high, res)
-                except ValueError as error:
-                    raise ValueError(
-                        f"{error} The {axis} axis runs {low:g} to {high:g} "
-                        f"with {axis}res={res:g}."
-                    ) from None
+            extent = (self.xmin, _east_edge(self.xmin, self.xmax), self.ymin, self.ymax)
+        else:
+            extent = _projected_extent(
+                self.crs, self.xmin, self.xmax, self.ymin, self.ymax
+            )
+        # The grid's own message, with the axis it is about.
+        cells = 1
+        for axis, low, high, res in (
+            ("x", extent[0], extent[1], self.xres),
+            ("y", extent[2], extent[3], self.yres),
+        ):
+            try:
+                cells *= _grid_cell_count(low, high, res)
+            except ValueError as error:
+                raise ValueError(
+                    f"{error} The {axis} axis runs {low:g} to {high:g} "
+                    f"with {axis}res={res:g}."
+                ) from None
+        if cells > _MAX_GRID_CELLS:
+            units = (
+                "degrees"
+                if self.is_longlat
+                else f"the units of crs={self.crs!r} ({_crs_unit(self.crs)})"
+            )
+            raise ValueError(
+                f"This grid has {cells:,} cells, more than the {_MAX_GRID_CELLS:,} "
+                f"a footprint can be made on. Its xres and yres are in {units}."
+            )
         return self
 
     @property
@@ -327,12 +418,7 @@ class Grid(Bounds):
         if self.is_longlat:
             xmax = _east_edge(xmin, xmax)
         else:
-            from pyproj import Transformer
-
-            tr = Transformer.from_crs("EPSG:4326", self.crs, always_xy=True)
-            corners_x, corners_y = tr.transform([xmin, xmax], [ymin, ymax])
-            xmin, xmax = float(np.min(corners_x)), float(np.max(corners_x))
-            ymin, ymax = float(np.min(corners_y)), float(np.max(corners_y))
+            xmin, xmax, ymin, ymax = _projected_extent(self.crs, xmin, xmax, ymin, ymax)
 
         x_centers = _grid_cell_starts(xmin, xmax, self.xres) + self.xres / 2
         y_centers = _grid_cell_starts(ymin, ymax, self.yres) + self.yres / 2
