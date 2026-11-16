@@ -138,8 +138,10 @@ form has one row per point receptor:
 The column names from STILT-R also work. Use ``long`` or ``lon`` for
 longitude, ``lati`` or ``lat`` for latitude, and ``zagl`` or ``zmsl`` for
 altitude. A ``zmsl`` column means the altitudes are above sea level. To mix
-the two in one file, add an ``altitude_ref`` column with ``agl`` or ``msl``
-on each row.
+the two in one file, add an ``altitude_ref`` (or ``height_ref``) column with
+``agl`` or ``msl`` on each row. A column under another name that holds only
+``agl`` and ``msl``, such as ``alt_ref``, is an error: it would be kept as a
+label, and every height read as above ground.
 
 To build a column or multipoint receptor, give its rows the same ``r_idx``
 value. Rows that share an ``r_idx`` become one receptor, so they must also
