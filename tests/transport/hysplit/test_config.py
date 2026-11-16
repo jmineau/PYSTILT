@@ -101,3 +101,48 @@ def test_n_hours_must_not_be_zero():
     with pytest.raises(ValidationError, match="n_hours must not be 0"):
         HysplitConfig(n_hours=0)
     assert HysplitConfig(n_hours=6).n_hours == 6
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("z_top", -100.0),
+        ("z_top", 0.0),
+        ("outdt", -1),
+        ("emisshrs", -0.01),
+        ("footprint_depth", -1.0),
+        ("footprint_depth", 0.0),
+        ("footprint_depth", float("nan")),
+    ],
+)
+def test_a_physical_setting_out_of_its_range_is_refused(field, value):
+    """These were accepted and ran, or failed later with no field named (#440)."""
+    with pytest.raises(ValidationError, match=field):
+        HysplitConfig(**{field: value})
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["siguverr", "tluverr", "zcoruverr", "horcoruverr"],
+)
+def test_a_negative_wind_error_setting_is_refused(field):
+    errors = {
+        "siguverr": 2.6,
+        "tluverr": 260.0,
+        "zcoruverr": 450.0,
+        "horcoruverr": 14.0,
+    }
+    with pytest.raises(ValidationError, match=field):
+        HysplitConfig(**{**errors, field: -errors[field]})
+
+
+@pytest.mark.parametrize("field", ["sigzierr", "tlzierr", "horcorzierr"])
+def test_a_negative_mixed_layer_error_setting_is_refused(field):
+    errors = {"sigzierr": 0.6, "tlzierr": 60.0, "horcorzierr": 40.0}
+    with pytest.raises(ValidationError, match=field):
+        HysplitConfig(**{**errors, field: -errors[field]})
+
+
+def test_a_negative_ziscale_is_kept_as_hysplits_switch_to_the_met_pbl_height():
+    """HYSPLIT reads a negative factor as: use the met files' own PBL height."""
+    assert HysplitConfig(ziscale=-1.0).ziscale == -1.0
