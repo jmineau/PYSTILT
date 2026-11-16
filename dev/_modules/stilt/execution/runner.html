@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=8ceb4180"></script>
+    <script src="../../../_static/documentation_options.js?v=15f09464"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev36+ga0adb52e7" />
+  <meta name="docsearch:version" content="0.1.0a29.dev38+g3205d2c92" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -453,7 +453,8 @@
 <span class="sd">With ``backend: slurm``, :func:`submit` writes a job array script into</span>
 <span class="sd">``_slurm/&lt;stamp&gt;/`` in the project and submits it with ``sbatch``. Each task</span>
 <span class="sd">of the array runs ``stilt run --task``, so a task is a command line that can</span>
-<span class="sd">be read, and run again, by hand.</span>
+<span class="sd">be read, and run again, by hand. When a met downloads, a job that runs</span>
+<span class="sd">``stilt fetch`` goes first and the array waits for it.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -479,7 +480,9 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span><span class="p">,</span> <span class="n">write_parquet</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt._transient</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_transient</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span><span class="p">,</span> <span class="n">FetchConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.fetch</span><span class="w"> </span><span class="kn">import</span> <span class="n">downloads</span><span class="p">,</span> <span class="n">fetch_project</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
@@ -637,6 +640,57 @@
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_to_fetch</span><span class="p">(</span>
+    <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span>
+    <span class="n">receptor_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">execution</span><span class="p">:</span> <span class="n">ExecutionConfig</span><span class="p">,</span>
+    <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the simulations of *receptor_ids* whose met files are got once before they run, or ``None``.</span>
+
+<span class="sd">    ``None`` when ``execution.fetch`` is off, when no met of theirs</span>
+<span class="sd">    downloads (:func:`stilt.fetch.downloads`), or when none of them runs</span>
+<span class="sd">    its transport model: those whose particles are missing, or every one</span>
+<span class="sd">    when not *skip_existing*, since such a run makes the particles again.</span>
+<span class="sd">    The output is listed only when a met downloads.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">execution</span><span class="o">.</span><span class="n">fetch</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
+    <span class="n">chosen</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">downloads</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">chosen</span><span class="p">[</span><span class="s2">"variant"</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">unrun</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">_unrun</span><span class="p">(</span><span class="n">chosen</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">unrun</span><span class="o">.</span><span class="n">empty</span> <span class="k">else</span> <span class="n">unrun</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_here</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">unrun</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Get the met files of the *unrun* simulations in this process, before a local run's workers start.</span>
+
+<span class="sd">    A file that could not be had, or a download that failed and that a</span>
+<span class="sd">    retry may get past (:func:`stilt._transient.is_transient`), is only</span>
+<span class="sd">    logged: each run then tries again, and fails as it would have without</span>
+<span class="sd">    the fetch. Any other error is raised.</span>
+<span class="sd">    """</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Getting the met files first (execution.fetch)."</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="n">fetch_project</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">unrun</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_transient</span><span class="p">(</span><span class="n">error</span><span class="p">):</span>
+            <span class="k">raise</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"The fetch stopped (</span><span class="si">%s</span><span class="s2">); each run downloads its own."</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="n">problems</span> <span class="o">=</span> <span class="n">files</span><span class="p">[</span><span class="s2">"message"</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">problems</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="s2">"</span><span class="si">%d</span><span class="s2"> met windows could not be had, such as: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">problems</span><span class="p">),</span>
+            <span class="n">problems</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_status</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return the status table of the simulations of *receptor_ids*."""</span>
     <span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
@@ -665,7 +719,10 @@
 <span class="sd">    Each receptor with missing results runs once: the transport model once for each</span>
 <span class="sd">    distinct set of transport settings whose particles are missing, then the</span>
 <span class="sd">    footprint of every variant that has a grid. With ``backend: local`` the</span>
-<span class="sd">    receptors run in this process (``cpus`` at a time). With</span>
+<span class="sd">    receptors run in this process (``cpus`` at a time); with ``cpus`` above</span>
+<span class="sd">    1 and a met that downloads, the met files are got first</span>
+<span class="sd">    (:meth:`stilt.Project.fetch`, unless ``execution.fetch`` is ``false``),</span>
+<span class="sd">    so the workers do not download the same file at once. With</span>
 <span class="sd">    ``backend: slurm`` they are submitted as one job array (:func:`submit`)</span>
 <span class="sd">    and this waits for it. When some simulations look unfinished after the</span>
 <span class="sd">    job ends, their results are listed once more :data:`RELIST_SECONDS`</span>
@@ -751,6 +808,13 @@
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">task</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">unrun</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">_to_fetch</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">todo</span><span class="p">,</span> <span class="n">execution</span><span class="p">,</span> <span class="n">skip_existing</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">execution</span><span class="o">.</span><span class="n">cpus</span> <span class="o">&gt;</span> <span class="mi">1</span>
+                <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">unrun</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">_fetch_here</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">unrun</span><span class="p">)</span>
             <span class="n">work</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">_run_task</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">todo</span><span class="p">,</span> <span class="n">work</span><span class="p">)</span>
@@ -783,6 +847,17 @@
 <span class="sd">    that is preempted or nears its time limit requeues itself and skips</span>
 <span class="sd">    what it finished (see :func:`run`).</span>
 
+<span class="sd">    When a met the unfinished simulations use downloads its files, a</span>
+<span class="sd">    fetch job goes first: one task that runs ``stilt fetch &lt;project&gt;</span>
+<span class="sd">    --receptors receptors.parquet`` (:func:`fetch_script`), written to</span>
+<span class="sd">    ``fetch.sh`` with its log in ``fetch.log``, with the resources of</span>
+<span class="sd">    ``execution.fetch``. The array waits for it to end</span>
+<span class="sd">    (``--dependency=afterany``), however it ended, so the runs whose met it</span>
+<span class="sd">    got go ahead, and each task downloads what is still missing. With</span>
+<span class="sd">    ``skip_existing=False`` it gets the met of every run the array makes</span>
+<span class="sd">    again. If ``sbatch`` refuses the array, the fetch job is cancelled.</span>
+<span class="sd">    Set ``execution.fetch`` to ``false`` for no fetch job.</span>
+
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    project, receptors, execution, skip_existing, compute_root</span>
@@ -793,6 +868,8 @@
 <span class="sd">    str or None</span>
 <span class="sd">        The Slurm job id of the array, or ``None`` when nothing needs to</span>
 <span class="sd">        run. ``squeue -j &lt;id&gt;`` follows it and ``scancel &lt;id&gt;`` stops it.</span>
+<span class="sd">        A fetch job is a job of its own: its id is logged and written to</span>
+<span class="sd">        ``fetch.id`` in the submission folder, and ``scancel`` stops it too.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -933,6 +1010,93 @@
 
 
 
+<div class="viewcode-block" id="fetch_script">
+<a class="viewcode-back" href="../../../reference/_api/stilt.execution.fetch_script.html#stilt.execution.fetch_script">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_script</span><span class="p">(</span>
+    <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span>
+    <span class="n">execution</span><span class="p">:</span> <span class="n">ExecutionConfig</span><span class="p">,</span>
+    <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the ``sbatch`` script of the job that gets the met files before a job array.</span>
+
+<span class="sd">    It runs ``stilt fetch &lt;project&gt; --receptors &lt;folder&gt;/receptors.parquet``</span>
+<span class="sd">    (with ``--no-skip`` when not *skip_existing*) with the Python that</span>
+<span class="sd">    called this, as one task, after the ``setup`` commands. Its</span>
+<span class="sd">    ``partition``, ``account``, ``qos``, ``time`` and ``mem`` are</span>
+<span class="sd">    ``execution.fetch``'s, each unset one the array's as :func:`job_script`</span>
+<span class="sd">    writes it (a ``slurm`` option of that name replaces the setting). Of the</span>
+<span class="sd">    other ``slurm`` options it takes only ``clusters``, so it runs on the</span>
+<span class="sd">    cluster of the array that waits for it. Its log is ``&lt;folder&gt;/fetch.log``.</span>
+<span class="sd">    """</span>
+    <span class="n">fetch</span> <span class="o">=</span> <span class="n">execution</span><span class="o">.</span><span class="n">fetch</span> <span class="ow">or</span> <span class="n">FetchConfig</span><span class="p">()</span>
+    <span class="n">slurm</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">):</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">execution</span><span class="o">.</span><span class="n">slurm</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">}</span>
+    <span class="c1"># The array's resources, as job_script writes them.</span>
+    <span class="n">array</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"time"</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
+        <span class="s2">"mem"</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">mem</span><span class="p">,</span>
+        <span class="s2">"partition"</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">partition</span><span class="p">,</span>
+        <span class="s2">"account"</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">account</span><span class="p">,</span>
+        <span class="s2">"qos"</span><span class="p">:</span> <span class="n">execution</span><span class="o">.</span><span class="n">qos</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">array</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">slurm</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">array</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="n">options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"job-name"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"pystilt-fetch-</span><span class="si">{</span><span class="n">_project_slug</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="s2">"time"</span><span class="p">:</span> <span class="n">fetch</span><span class="o">.</span><span class="n">time</span> <span class="ow">or</span> <span class="n">array</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span>
+        <span class="s2">"mem"</span><span class="p">:</span> <span class="n">fetch</span><span class="o">.</span><span class="n">mem</span> <span class="ow">or</span> <span class="n">array</span><span class="p">[</span><span class="s2">"mem"</span><span class="p">],</span>
+        <span class="s2">"partition"</span><span class="p">:</span> <span class="n">fetch</span><span class="o">.</span><span class="n">partition</span> <span class="ow">or</span> <span class="n">array</span><span class="p">[</span><span class="s2">"partition"</span><span class="p">],</span>
+        <span class="s2">"account"</span><span class="p">:</span> <span class="n">fetch</span><span class="o">.</span><span class="n">account</span> <span class="ow">or</span> <span class="n">array</span><span class="p">[</span><span class="s2">"account"</span><span class="p">],</span>
+        <span class="s2">"qos"</span><span class="p">:</span> <span class="n">fetch</span><span class="o">.</span><span class="n">qos</span> <span class="ow">or</span> <span class="n">array</span><span class="p">[</span><span class="s2">"qos"</span><span class="p">],</span>
+        <span class="s2">"clusters"</span><span class="p">:</span> <span class="n">slurm</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"clusters"</span><span class="p">),</span>
+        <span class="s2">"output"</span><span class="p">:</span> <span class="n">folder</span> <span class="o">/</span> <span class="s2">"fetch.log"</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span>
+        <span class="s2">"-m"</span><span class="p">,</span>
+        <span class="s2">"stilt"</span><span class="p">,</span>
+        <span class="s2">"fetch"</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="p">),</span>
+        <span class="s2">"--receptors"</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"receptors.parquet"</span><span class="p">),</span>
+        <span class="s2">"--output"</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">directory</span><span class="p">),</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_existing</span><span class="p">:</span>
+        <span class="n">command</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"--no-skip"</span><span class="p">)</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="s1">'echo "$(date -u +</span><span class="si">%F</span><span class="s1">T%TZ) $SLURMD_NODENAME job $</span><span class="si">{SLURM_JOB_ID}</span><span class="s1">"'</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">"#!/bin/bash"</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">_sbatch_lines</span><span class="p">(</span><span class="n">options</span><span class="p">),</span>
+        <span class="s2">""</span><span class="p">,</span>
+        <span class="n">header</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">execution</span><span class="o">.</span><span class="n">setup</span><span class="p">,</span>
+        <span class="s2">"exec "</span> <span class="o">+</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">command</span><span class="p">),</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sbatch</span><span class="p">(</span><span class="n">script</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="o">*</span><span class="n">extra</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Submit *script* with ``sbatch --parsable`` and return its job id and cluster (``None`` for the default one)."""</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="p">[</span><span class="s2">"sbatch"</span><span class="p">,</span> <span class="s2">"--parsable"</span><span class="p">,</span> <span class="o">*</span><span class="n">extra</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">script</span><span class="p">)],</span>
+        <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"sbatch refused </span><span class="si">{</span><span class="n">script</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="c1"># --parsable prints "&lt;id&gt;", or "&lt;id&gt;;&lt;cluster&gt;" for a job on another cluster.</span>
+    <span class="n">job_id</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">cluster</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">";"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">job_id</span><span class="p">,</span> <span class="n">cluster</span> <span class="ow">or</span> <span class="kc">None</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_submit</span><span class="p">(</span>
     <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span>
     <span class="n">pending</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
@@ -944,7 +1108,10 @@
 <span class="sd">    Write a submission folder for *pending* receptors, submit its job array, and return its job id and cluster.</span>
 
 <span class="sd">    The cluster is the one ``sbatch`` sent the job to when it is not the</span>
-<span class="sd">    default (``clusters`` in the Slurm options), else ``None``.</span>
+<span class="sd">    default (``clusters`` in the Slurm options), else ``None``. When the</span>
+<span class="sd">    met files are got first (:func:`_to_fetch`), the fetch job is</span>
+<span class="sd">    submitted before the array, which waits for it, and cancelled if</span>
+<span class="sd">    ``sbatch`` refuses the array.</span>
 <span class="sd">    """</span>
     <span class="c1"># One folder per submission, so a later array never overwrites these.</span>
     <span class="n">stamp</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="si">:</span><span class="s2">%Y%m%d_%H%M%S</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
@@ -971,18 +1138,41 @@
             <span class="n">compute_root</span><span class="o">=</span><span class="n">compute_root</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="p">)</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-        <span class="p">[</span><span class="s2">"sbatch"</span><span class="p">,</span> <span class="s2">"--parsable"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">script</span><span class="p">)],</span>
-        <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"sbatch refused </span><span class="si">{</span><span class="n">script</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
+    <span class="n">after</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">fetch_id</span><span class="p">,</span> <span class="n">fetch_cluster</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">_to_fetch</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">pending</span><span class="p">,</span> <span class="n">execution</span><span class="p">,</span> <span class="n">skip_existing</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">fetch</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="s2">"fetch.sh"</span>
+        <span class="n">fetch</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
+            <span class="n">fetch_script</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">execution</span><span class="p">,</span> <span class="n">folder</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
         <span class="p">)</span>
-    <span class="c1"># --parsable prints "&lt;id&gt;", or "&lt;id&gt;;&lt;cluster&gt;" for a job on another cluster.</span>
-    <span class="n">job_id</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">cluster</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">";"</span><span class="p">)</span>
+        <span class="n">fetch_id</span><span class="p">,</span> <span class="n">fetch_cluster</span> <span class="o">=</span> <span class="n">_sbatch</span><span class="p">(</span><span class="n">fetch</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"fetch.id"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">fetch_id</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">"Submitted fetch job: </span><span class="si">%s%s</span><span class="s2">; the job array waits for it to end. Log in </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
+            <span class="n">fetch_id</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">" on cluster </span><span class="si">{</span><span class="n">fetch_cluster</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">fetch_cluster</span> <span class="k">else</span> <span class="s2">""</span><span class="p">,</span>
+            <span class="n">folder</span> <span class="o">/</span> <span class="s2">"fetch.log"</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># afterany: a fetch that lacked some files (exit 1), was stopped, or</span>
+        <span class="c1"># could not reach the archive still lets the runs whose met is there go.</span>
+        <span class="n">after</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"--dependency=afterany:</span><span class="si">{</span><span class="n">fetch_id</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">fetch_cluster</span><span class="p">:</span>
+            <span class="c1"># The array must be on the fetch job's cluster to wait for it.</span>
+            <span class="n">after</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"--clusters=</span><span class="si">{</span><span class="n">fetch_cluster</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">job_id</span><span class="p">,</span> <span class="n">cluster</span> <span class="o">=</span> <span class="n">_sbatch</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="o">*</span><span class="n">after</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">fetch_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Nothing waits for the fetch job now: do not leave it downloading.</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                <span class="p">[</span><span class="s2">"scancel"</span><span class="p">,</span> <span class="o">*</span><span class="n">_on_cluster</span><span class="p">(</span><span class="n">fetch_cluster</span><span class="p">),</span> <span class="n">fetch_id</span><span class="p">],</span>
+                <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"Cancelled fetch job </span><span class="si">%s</span><span class="s2">: the job array was refused."</span><span class="p">,</span> <span class="n">fetch_id</span>
+            <span class="p">)</span>
+        <span class="k">raise</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
         <span class="s2">"Submitted job: </span><span class="si">%s%s</span><span class="s2"> (</span><span class="si">%d</span><span class="s2"> tasks); logs in </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
         <span class="n">job_id</span><span class="p">,</span>
@@ -990,7 +1180,7 @@
         <span class="n">n_tasks</span><span class="p">,</span>
         <span class="n">folder</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">job_id</span><span class="p">,</span> <span class="n">cluster</span> <span class="ow">or</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">job_id</span><span class="p">,</span> <span class="n">cluster</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_on_cluster</span><span class="p">(</span><span class="n">cluster</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
@@ -1195,6 +1385,7 @@
     <span class="s2">"MAX_REQUEUES"</span><span class="p">,</span>
     <span class="s2">"NOTICE_SECONDS"</span><span class="p">,</span>
     <span class="s2">"RELIST_SECONDS"</span><span class="p">,</span>
+    <span class="s2">"fetch_script"</span><span class="p">,</span>
     <span class="s2">"job_script"</span><span class="p">,</span>
     <span class="s2">"resolve_compute_root"</span><span class="p">,</span>
     <span class="s2">"run"</span><span class="p">,</span>

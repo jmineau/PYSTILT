@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=8ceb4180"></script>
+    <script src="../_static/documentation_options.js?v=15f09464"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev36+ga0adb52e7" />
+  <meta name="docsearch:version" content="0.1.0a29.dev38+g3205d2c92" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -625,7 +625,7 @@ per line.</p>
 </section>
 <section id="commands">
 <h2>Commands<a class="headerlink" href="#commands" title="Link to this heading">#</a></h2>
-<dl class="simple">
+<dl>
 <dt><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span> <span class="pre">&lt;project&gt;</span></code></dt><dd><p>Create a project folder with a starter <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> and
 <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p>
 </dd>
@@ -639,10 +639,16 @@ it lists anything (<a class="reference internal" href="checking.html"><span clas
 <dt><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span> <span class="pre">&lt;project&gt;</span></code></dt><dd><p>Get the met files the unfinished simulations need, then exit. A met with
 <code class="docutils literal notranslate"><span class="pre">download</span></code> downloads what is missing, cropped to its subgrid, so the
 runs that follow download nothing; a met without it is only checked for
-missing files. <code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">DIR</span></code> is as for <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>. It exits with 0
-when every file is there, 1 when the archive lacks some, and 3 when it
-was stopped (Ctrl-C or SIGTERM) or the archive was busy or unreachable
-(<a class="reference internal" href="containers.html#fetch-once"><span class="std std-ref">Fetching the meteorology once</span></a>).</p>
+missing files. <code class="docutils literal notranslate"><span class="pre">--receptors</span> <span class="pre">FILE</span></code> and <code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">DIR</span></code> are as for
+<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>. It exits with 0 when every file is there, 1 when the
+archive lacks some, and 3 when it was stopped (Ctrl-C or SIGTERM) or the
+archive was busy or unreachable (<a class="reference internal" href="containers.html#fetch-once"><span class="std std-ref">Fetching the meteorology once</span></a>).</p>
+<p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code> and <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code> fetch first on their own: on Slurm in
+a job the array waits for (<a class="reference internal" href="slurm.html#slurm-fetch"><span class="std std-ref">Met files that download</span></a>), and locally before the
+workers start when <code class="docutils literal notranslate"><span class="pre">cpus</span></code> is above 1. Run <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span></code> yourself to
+see whether the archive has every file before you submit, or before you
+start tasks with <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span></code> from another scheduler, which does
+not fetch first (<a class="reference internal" href="containers.html"><span class="doc">In Containers (Kubernetes)</span></a>).</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">&lt;project&gt;</span></code></dt><dd><p>Run every unfinished simulation and wait until they are done, here or
 as a Slurm job array. Its options:</p>

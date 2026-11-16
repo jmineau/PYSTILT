@@ -182,6 +182,17 @@ The parquet file holds the submitted receptors' checked rows, which the
 task's project takes in place of ``receptors.csv``. ``submit`` returns the job
 id at once, and ``run`` waits by polling ``sacct``.
 
+When a simulation whose particles are missing uses a met that downloads
+(the transport model's ``downloads_met``), ``submit`` first submits
+``fetch.sh`` (``fetch_script``), one task of ``stilt fetch --receptors
+receptors.parquet`` with the resources of ``execution.fetch``, and gives the
+array ``--dependency=afterany:<fetch job>``. ``afterany`` because Slurm
+cannot tell ``stilt fetch``'s exit 1 (some files missing) from 3 (stopped,
+archive unreachable), and in both cases the runs whose met is there should
+go. A local run with ``cpus`` above 1 calls ``Project.fetch`` before the pool
+starts, for the same reason: workers that start the same file download it
+twice. A task (``--task``) never fetches.
+
 A task that stops with work left requeues itself (``scontrol requeue``) when
 it got SIGUSR1, which the script asks for two minutes before the time limit
 (``--signal=B:USR1@120``), or when it was preempted (Slurm set the job's

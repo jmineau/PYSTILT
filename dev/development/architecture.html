@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=8ceb4180"></script>
+    <script src="../_static/documentation_options.js?v=15f09464"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev36+ga0adb52e7" />
+  <meta name="docsearch:version" content="0.1.0a29.dev38+g3205d2c92" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -646,6 +646,16 @@ the project and calls <code class="docutils literal notranslate"><span class="pr
 The parquet file holds the submitted receptors’ checked rows, which the
 task’s project takes in place of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>. <code class="docutils literal notranslate"><span class="pre">submit</span></code> returns the job
 id at once, and <code class="docutils literal notranslate"><span class="pre">run</span></code> waits by polling <code class="docutils literal notranslate"><span class="pre">sacct</span></code>.</p>
+<p>When a simulation whose particles are missing uses a met that downloads
+(the transport model’s <code class="docutils literal notranslate"><span class="pre">downloads_met</span></code>), <code class="docutils literal notranslate"><span class="pre">submit</span></code> first submits
+<code class="docutils literal notranslate"><span class="pre">fetch.sh</span></code> (<code class="docutils literal notranslate"><span class="pre">fetch_script</span></code>), one task of <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span> <span class="pre">--receptors</span>
+<span class="pre">receptors.parquet</span></code> with the resources of <code class="docutils literal notranslate"><span class="pre">execution.fetch</span></code>, and gives the
+array <code class="docutils literal notranslate"><span class="pre">--dependency=afterany:&lt;fetch</span> <span class="pre">job&gt;</span></code>. <code class="docutils literal notranslate"><span class="pre">afterany</span></code> because Slurm
+cannot tell <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span></code>’s exit 1 (some files missing) from 3 (stopped,
+archive unreachable), and in both cases the runs whose met is there should
+go. A local run with <code class="docutils literal notranslate"><span class="pre">cpus</span></code> above 1 calls <code class="docutils literal notranslate"><span class="pre">Project.fetch</span></code> before the pool
+starts, for the same reason: workers that start the same file download it
+twice. A task (<code class="docutils literal notranslate"><span class="pre">--task</span></code>) never fetches.</p>
 <p>A task that stops with work left requeues itself (<code class="docutils literal notranslate"><span class="pre">scontrol</span> <span class="pre">requeue</span></code>) when
 it got SIGUSR1, which the script asks for two minutes before the time limit
 (<code class="docutils literal notranslate"><span class="pre">--signal=B:USR1&#64;120</span></code>), or when it was preempted (Slurm set the job’s

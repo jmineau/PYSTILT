@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=8ceb4180"></script>
+    <script src="../_static/documentation_options.js?v=15f09464"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev36+ga0adb52e7" />
+  <meta name="docsearch:version" content="0.1.0a29.dev38+g3205d2c92" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -552,7 +552,9 @@ than <code class="docutils literal notranslate"><span class="pre">config.yaml</s
 met <code class="docutils literal notranslate"><span class="pre">directory</span></code>. Pods on one shared volume find the files the first pod
 fetched. Pods with their own disks do not: 50 pods whose receptors fall on
 the same days download, and crop, the same files 50 times.</p>
-<p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span></code> gets the files once, before the Job starts:</p>
+<p>A task (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span></code>) never fetches for the others, so
+<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span></code> gets the files once, before the Job starts (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code>
+does this for you on Slurm, <a class="reference internal" href="slurm.html#slurm-fetch"><span class="std std-ref">Met files that download</span></a>):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>fetch<span class="w"> </span>/project
 </pre></div>
 </div>
