@@ -268,7 +268,7 @@ def test_write_footprint_refuses_a_grid_wider_than_int16(tmp_path):
     from stilt.footprint import calc_footprint, write_footprint
 
     receptor = PointReceptor(
-        time="2023-07-01 12:00", longitude=-110.5, latitude=40.0005, altitude=5
+        time="2023-07-01 12:00", longitude=-110.25, latitude=40.0005, altitude=5
     )
     particles = pd.DataFrame(
         {

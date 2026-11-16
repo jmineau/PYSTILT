@@ -74,11 +74,15 @@ class EmptyFootprint(StiltError):
     No particle is over the footprint grid, so there is no footprint.
 
     An empty footprint is a finished result, not a failure. The worker
-    catches it and writes a footprint file with no rows, marked empty.
+    catches it and writes a footprint file with no rows, marked empty. The
+    message says why it is empty: the particles are off the grid, no
+    particle row has a positive ``foot``, or the table has no rows.
     """
 
-    def __init__(self) -> None:
-        super().__init__("No particle is over the footprint grid.")
+    def __init__(
+        self, message: str = "No particle is over the footprint grid."
+    ) -> None:
+        super().__init__(message)
 
 
 class WorkerDied(StiltError, RuntimeError):
