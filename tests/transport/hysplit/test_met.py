@@ -89,6 +89,13 @@ def test_metconfig_subgrid_requires_bounds(tmp_path):
         )
 
 
+def test_metconfig_refuses_a_crop_box_with_swapped_latitudes(tmp_path):
+    """A swapped or NaN box held no receptor, so every run would fail (#440)."""
+    box = {"xmin": float("nan"), "xmax": -115, "ymin": 42, "ymax": 39}
+    with pytest.raises(ValueError, match="subgrid_bounds"):
+        MetConfig(directory=tmp_path, subgrid_enable=True, subgrid_bounds=box)
+
+
 def test_metconfig_subgrid_valid(tmp_path):
     cfg = MetConfig(
         directory=tmp_path,

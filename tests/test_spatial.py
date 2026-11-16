@@ -358,3 +358,19 @@ def test_a_grid_across_180_may_be_written_with_xmax_west_of_xmin():
     for xmin, xmax in [(170.0, -170.0), (100.0, -60.0), (179.5, -179.5)]:
         x, _ = Grid(xmin=xmin, xmax=xmax, **kw).axes
         np.testing.assert_array_equal(x, Grid(xmin=xmin, xmax=xmax + 360, **kw).axes[0])
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ({"xmin": np.nan}, "four finite numbers"),
+        ({"ymax": np.inf}, "four finite numbers"),
+        ({"ymin": 42, "ymax": 39}, "ymin < ymax"),
+        ({"ymax": 95}, "ymin < ymax"),
+    ],
+)
+def test_bounds_refuse_edges_no_point_can_be_inside(change, message):
+    """A NaN or swapped crop box was accepted, and then held no point at all (#440)."""
+    box = {"xmin": -114.0, "xmax": -110.0, "ymin": 39.0, "ymax": 42.0}
+    with pytest.raises(ValueError, match=message):
+        Bounds(**{**box, **change})
