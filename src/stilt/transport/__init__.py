@@ -127,6 +127,7 @@ class TransportConfig(BaseModel):
 
     footprint_depth: float = Field(
         0.5,
+        gt=0,
         description=(
             "Height below which a particle's time counts toward the footprint: "
             "the depth surface fluxes are mixed through. A value of 1 or less "

@@ -206,6 +206,7 @@ class HysplitConfig(TransportConfig):
     )
     emisshrs: float = Field(
         0.01,
+        ge=0,
         description="Duration of the particle release, in hours.",
     )
     hscale: float = Field(
@@ -303,9 +304,11 @@ class HysplitConfig(TransportConfig):
     )
     outdt: int = Field(
         0,
+        ge=0,
         description=(
             "Interval between particle outputs in ``PARTICLE_STILT.DAT``, in "
-            "minutes. 0 writes every time step and a negative value writes none. "
+            "minutes. 0 writes every time step. HYSPLIT writes no particles "
+            "for a negative value, so it is refused. "
             "Only at 0 does PYSTILT check where the particles of a run that "
             "stopped early ended, to tell met that ran out from particles that "
             "left the met's domain."
@@ -378,6 +381,7 @@ class HysplitConfig(TransportConfig):
     )
     z_top: float = Field(
         25000.0,
+        gt=0,
         description="Top of HYSPLIT's computational domain, in meters above ground.",
     )
     ziscale: float | list[float] = Field(
@@ -394,30 +398,37 @@ class HysplitConfig(TransportConfig):
     )
     siguverr: float | None = Field(
         None,
+        ge=0,
         description="Standard deviation of the horizontal wind error, in m/s.",
     )
     tluverr: float | None = Field(
         None,
+        ge=0,
         description="Correlation timescale of the horizontal wind error, in minutes.",
     )
     zcoruverr: float | None = Field(
         None,
+        ge=0,
         description="Vertical correlation length of the horizontal wind error, in meters.",
     )
     horcoruverr: float | None = Field(
         None,
+        ge=0,
         description="Horizontal correlation length of the horizontal wind error, in km.",
     )
     sigzierr: float | None = Field(
         None,
+        ge=0,
         description="Standard deviation of the mixed-layer height error, in percent.",
     )
     tlzierr: float | None = Field(
         None,
+        ge=0,
         description="Correlation timescale of the mixed-layer height error, in minutes.",
     )
     horcorzierr: float | None = Field(
         None,
+        ge=0,
         description="Horizontal correlation length of the mixed-layer height error, in km.",
     )
 
