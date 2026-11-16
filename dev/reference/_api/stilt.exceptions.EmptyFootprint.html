@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=e4946dd8"></script>
+    <script src="../../_static/documentation_options.js?v=d7820065"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev40+ga485035b3" />
+  <meta name="docsearch:version" content="0.1.0a29.dev42+gf967d1d7e" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -915,13 +915,18 @@
 <h1>stilt.exceptions.EmptyFootprint<a class="headerlink" href="#stilt-exceptions-emptyfootprint" title="Link to this heading">#</a></h1>
 <dl class="py exception">
 <dt class="sig sig-object py" id="stilt.exceptions.EmptyFootprint">
-<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.exceptions.</span></span><span class="sig-name descname"><span class="pre">EmptyFootprint</span></span><a class="reference internal" href="../../_modules/stilt/exceptions.html#EmptyFootprint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.exceptions.EmptyFootprint" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.exceptions.</span></span><span class="sig-name descname"><span class="pre">EmptyFootprint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'No</span> <span class="pre">particle</span> <span class="pre">is</span> <span class="pre">over</span> <span class="pre">the</span> <span class="pre">footprint</span> <span class="pre">grid.'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/exceptions.html#EmptyFootprint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.exceptions.EmptyFootprint" title="Link to this definition">#</a></dt>
 <dd><p>No particle is over the footprint grid, so there is no footprint.</p>
 <p>An empty footprint is a finished result, not a failure. The worker
-catches it and writes a footprint file with no rows, marked empty.</p>
+catches it and writes a footprint file with no rows, marked empty. The
+message says why it is empty: the particles are off the grid, no
+particle row has a positive <code class="docutils literal notranslate"><span class="pre">foot</span></code>, or the table has no rows.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>None</p>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>message</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>

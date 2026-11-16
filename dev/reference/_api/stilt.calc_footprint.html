@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=e4946dd8"></script>
+    <script src="../../_static/documentation_options.js?v=d7820065"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev40+ga485035b3" />
+  <meta name="docsearch:version" content="0.1.0a29.dev42+gf967d1d7e" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -954,6 +954,16 @@ that decides the early-time interpolation is measured on the projected
 grid, in its units, so a grid of 100 m cells is interpolated as a 0.001°
 grid is. STILT-R measures it in degrees and never interpolates on a grid
 in meters.</p>
+<p>The particle table is checked first for mistakes that would otherwise
+give a plausible footprint. A particle with two rows at one <code class="docutils literal notranslate"><span class="pre">age</span></code> (a
+table concatenated with itself, or several receptors’ particles) is
+refused, as is an infinite <code class="docutils literal notranslate"><span class="pre">foot</span></code>. When the table has a <code class="docutils literal notranslate"><span class="pre">time</span></code>
+column, <code class="docutils literal notranslate"><span class="pre">time</span></code> minus <code class="docutils literal notranslate"><span class="pre">age</span></code> must be the receptor time, which catches
+another receptor’s particles and an <code class="docutils literal notranslate"><span class="pre">age</span></code> in hours or seconds; without
+one, the time is not checked. Each particle’s first row must be within
+10 km of a release point, plus 6 km (100 m/s) for each minute since
+release. Rows with no <code class="docutils literal notranslate"><span class="pre">particle</span></code>, <code class="docutils literal notranslate"><span class="pre">age</span></code>, <code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code> or
+<code class="docutils literal notranslate"><span class="pre">foot</span></code> are left out of the footprint, with a warning that counts them.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -1001,8 +1011,12 @@ accessor has the methods that use it.</p>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ImportError" title="(in Python v3.15)"><strong>ImportError</strong></a> – If a transform is a mapping whose <code class="docutils literal notranslate"><span class="pre">kind</span></code> cannot be imported.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <em>tres</em> is not a positive whole number of minutes.</p></li>
-<li><p><a class="reference internal" href="stilt.exceptions.EmptyFootprint.html#stilt.exceptions.EmptyFootprint" title="stilt.exceptions.EmptyFootprint"><strong>EmptyFootprint</strong></a> – If no particle is over the grid, or the table has none.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <em>tres</em> is not a positive whole number of minutes, or the
+    particles fail a check above: rows repeated, an infinite <code class="docutils literal notranslate"><span class="pre">foot</span></code>,
+    a <code class="docutils literal notranslate"><span class="pre">time</span></code> that is not the receptor time plus <code class="docutils literal notranslate"><span class="pre">age</span></code>, or first
+    positions too far from the receptor.</p></li>
+<li><p><a class="reference internal" href="stilt.exceptions.EmptyFootprint.html#stilt.exceptions.EmptyFootprint" title="stilt.exceptions.EmptyFootprint"><strong>EmptyFootprint</strong></a> – If no particle is over the grid, no row has a positive <code class="docutils literal notranslate"><span class="pre">foot</span></code>,
+    or the table has no rows. Its message says which.</p></li>
 </ul>
 </dd>
 </dl>
