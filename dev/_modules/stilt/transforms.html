@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=15f09464"></script>
+    <script src="../../_static/documentation_options.js?v=e4946dd8"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev38+g3205d2c92" />
+  <meta name="docsearch:version" content="0.1.0a29.dev40+ga485035b3" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -450,17 +450,10 @@
 <span></span><span class="sd">"""</span>
 <span class="sd">Particle transforms that reweight ``foot`` before the footprint is computed.</span>
 
-<span class="sd">A transform is any object with</span>
-<span class="sd">``apply(particles, receptor=None, directory=None) -&gt; DataFrame``: the</span>
-<span class="sd">particle table, the receptor they were released from, and the directory a</span>
-<span class="sd">relative file name in its settings starts from (the project's). Two</span>
-<span class="sd">optional parts let ``stilt check`` look at a project before it runs: a</span>
-<span class="sd">``check(receptors, directory)`` method that returns what is wrong with the</span>
-<span class="sd">transform's inputs for those receptor ids, as ``(check, receptor id or</span>
-<span class="sd">None, message)`` tuples, and ``reads_zsfc = True`` for a transform that</span>
-<span class="sd">reads ``zsfc`` for a receptor above sea level. The</span>
-<span class="sd">built-in ones are pydantic models whose fields are their ``config.yaml``</span>
-<span class="sd">keys::</span>
+<span class="sd">A column measurement needs its averaging kernel and pressure weighting,</span>
+<span class="sd">and a species lost on the way needs the fraction that survives to the</span>
+<span class="sd">receptor. List the transforms in ``config.yaml``; the built-ins are</span>
+<span class="sd">pydantic models whose fields are their keys::</span>
 
 <span class="sd">    transforms:</span>
 <span class="sd">      - kind: averaging_kernel</span>
@@ -472,28 +465,37 @@
 <span class="sd">its own) comes from a table in the project instead::</span>
 
 <span class="sd">      - kind: averaging_kernel</span>
-<span class="sd">        table: kernels.parquet</span>
+<span class="sd">        table: kernels</span>
 
-<span class="sd">A ``kind`` containing a dot is the import path of your own transform class</span>
-<span class="sd">(see the *Custom transforms* guide). Transforms run in list order, starting</span>
-<span class="sd">from the unweighted particle table. Each returns a new table and leaves its</span>
-<span class="sd">input unchanged.</span>
-
-<span class="sd">The footprint is gridded from ``foot``, so a transform changes it through</span>
-<span class="sd">``foot``; it may also add columns. The built-ins only scale ``foot``, which</span>
-<span class="sd">the background and the transport error rely on to read each particle's</span>
-<span class="sd">weight.</span>
+<span class="sd">Transforms run in list order, starting from the unweighted particle table.</span>
+<span class="sd">Each returns a new table and leaves its input unchanged.</span>
 
 <span class="sd">Each built-in transform is a module: :mod:`~stilt.transforms.averaging_kernel`,</span>
 <span class="sd">:mod:`~stilt.transforms.pressure_weighting`,</span>
 <span class="sd">:mod:`~stilt.transforms.lifetime`, :mod:`~stilt.transforms.deposition`, and</span>
-<span class="sd">:mod:`~stilt.transforms.oxidation`. :func:`particle_pwf` and</span>
-<span class="sd">:func:`ak_weights` hold the column weighting ported from X-STILT,</span>
-<span class="sd">:func:`survival` the fraction of a tracer that reaches the receptor for any</span>
-<span class="sd">loss rate, and :func:`dry_deposition_survival` that fraction for a</span>
-<span class="sd">depositing tracer. They are public so your own</span>
-<span class="sd">transforms can use them. This module loads transforms</span>
-<span class="sd">from a config and applies them.</span>
+<span class="sd">:mod:`~stilt.transforms.oxidation`. The functions they are built on are</span>
+<span class="sd">public so your own transforms can use them: :func:`particle_pwf` and</span>
+<span class="sd">:func:`ak_weights`, the column weighting ported from X-STILT;</span>
+<span class="sd">:func:`survival`, the fraction of a tracer that reaches the receptor for any</span>
+<span class="sd">loss rate; and :func:`dry_deposition_survival`, that fraction for a</span>
+<span class="sd">depositing tracer. This module also loads transforms from a config and</span>
+<span class="sd">applies them.</span>
+
+<span class="sd">A transform of your own is any object with</span>
+<span class="sd">``apply(particles, receptor=None, directory=None) -&gt; DataFrame``: the</span>
+<span class="sd">particle table, the receptor the particles were released from, and the</span>
+<span class="sd">directory a relative file name in its settings starts from (the</span>
+<span class="sd">project's). A ``kind`` containing a dot is its import path (the "Writing</span>
+<span class="sd">your own transform" section of the Particle Weighting guide). The footprint</span>
+<span class="sd">is gridded from ``foot``, so a transform changes it through ``foot``; it may</span>
+<span class="sd">also add columns. The built-ins only scale ``foot``, which the background</span>
+<span class="sd">and the transport error rely on to read each particle's weight.</span>
+
+<span class="sd">Two optional parts let ``stilt check`` look at a project before it runs: a</span>
+<span class="sd">``check(receptors, directory)`` method that returns what is wrong with the</span>
+<span class="sd">transform's inputs for those receptor ids, as ``(check, receptor id or</span>
+<span class="sd">None, message)`` tuples, and ``reads_zsfc = True`` for a transform that</span>
+<span class="sd">reads ``zsfc`` for a receptor above sea level.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>

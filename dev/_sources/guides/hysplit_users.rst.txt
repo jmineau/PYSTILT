@@ -215,9 +215,11 @@ What PYSTILT leaves to other tools
 
 PYSTILT runs ``hycs_std`` in its STILT mode (``ICHEM=8``), which writes
 particle positions and the met along them. Concentration grids
-(``cdump``), the deposition and decay of a pollutant's mass, puffs and
-``tdump`` trajectory files come from HYSPLIT run on its own, and NOAA's
-`monetio <https://github.com/noaa-oar-arl/monetio>`_ reads those files in
-Python.
+(``cdump``), puffs and ``tdump`` trajectory files come from HYSPLIT run on
+its own, and NOAA's `monetio <https://github.com/noaa-oar-arl/monetio>`_
+reads those files in Python. A footprint of a species that decays,
+deposits or reacts with OH does not need HYSPLIT's deposition: PYSTILT
+scales each particle by the fraction that survives (:doc:`transforms`), so
+one run serves every species.
 
 When a run fails, :doc:`checking` says how to find why.

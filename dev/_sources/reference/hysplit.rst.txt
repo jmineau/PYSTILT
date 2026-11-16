@@ -26,17 +26,17 @@ Running HYSPLIT
 :func:`~stilt.transport.hysplit.write_inputs` writes everything
 ``hycs_std`` reads into a folder: ``CONTROL``, ``SETUP.CFG``, and the error
 and mixed-layer files when the settings call for them. It takes what
-HYSPLIT's ``CONTROL`` file holds a release time and release locations
-(latitude, longitude and height, in ``CONTROL``'s order), with ``kmsl`` 0
-for heights above ground and 1 above sea level, as ``SETUP.CFG``'s ``KMSL``.
-:class:`~stilt.transport.hysplit.HysplitModel` gives it a receptor's time,
-release points (``receptor.coords()``) and ``altitude_ref``. Use it to look
-at the input files of a run, and
-:func:`~stilt.transport.hysplit.run_hycs_std` to run ``hycs_std`` on them.
-:func:`~stilt.transport.hysplit.read_particle_dat` reads a
-``PARTICLE_STILT.DAT`` as a particle table. The release heights are
-PYSTILT's step after any model's run, and the near-field correction the
-footprint's (:doc:`particles`); this is both, by hand:
+``CONTROL`` starts from: a release time and release locations (latitude,
+longitude and height, in ``CONTROL``'s order), with ``kmsl`` 0 for heights
+above ground and 1 above sea level, as ``SETUP.CFG``'s ``KMSL``.
+:class:`~stilt.transport.hysplit.HysplitModel` passes a receptor's time,
+release points (``receptor.coords()``) and ``altitude_ref``.
+:func:`~stilt.transport.hysplit.run_hycs_std` runs ``hycs_std`` in the
+folder, and :func:`~stilt.transport.hysplit.read_particle_dat` reads its
+``PARTICLE_STILT.DAT`` as a particle table. Use them to look at or change
+the input files of a run. A project run then adds the release heights and,
+when it makes the footprint, the near-field correction
+(:doc:`particles`); by hand:
 
 .. code-block:: python
 

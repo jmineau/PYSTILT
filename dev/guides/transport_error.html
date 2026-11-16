@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=15f09464"></script>
+    <script src="../_static/documentation_options.js?v=e4946dd8"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev38+g3205d2c92" />
+  <meta name="docsearch:version" content="0.1.0a29.dev40+ga485035b3" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -417,6 +417,7 @@
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
 <li class="toctree-l1"><a class="reference internal" href="choosing_settings.html">Choosing Settings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Running</span></p>
 <ul class="nav bd-sidenav">
@@ -439,7 +440,6 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
 <li class="toctree-l1"><a class="reference internal" href="slant_columns.html">Slant Columns</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
 <ul class="nav bd-sidenav">
@@ -615,17 +615,10 @@ is far below <code class="docutils literal notranslate"><span class="pre">noise<
 <p>The enhancement a footprint predicts for a surface flux field is the
 footprint times the flux, summed over the grid. <code class="docutils literal notranslate"><span class="pre">flux</span></code> is an
 <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> on <code class="docutils literal notranslate"><span class="pre">lat</span></code> and <code class="docutils literal notranslate"><span class="pre">lon</span></code>, with an optional <code class="docutils literal notranslate"><span class="pre">time</span></code>
-dimension. It is sampled at the footprint’s cell centers, and footprint
-cells outside the flux field add nothing. Each footprint hour takes the
-flux step whose CF time bounds hold it, if the flux has them; without
-bounds, the <code class="docutils literal notranslate"><span class="pre">time</span></code> labels are read as the starts of the flux’s steps, so
-each footprint hour takes the last step that starts at or before it
-(<a class="reference internal" href="aggregation.html#flux-step-labels"><span class="std std-ref">When the labels are not the starts</span></a> says what to do with CF time bounds, and with
-labels not at the start of a step). A flux with finer cells than the
-footprint’s must be put on the footprint grid first
-(<a class="reference internal" href="../tutorials/flux_inversion.html"><span class="doc">Tutorial: From Footprints To Concentrations</span></a> says how), and one with steps shorter
-than the footprint’s layers (<code class="docutils literal notranslate"><span class="pre">tres</span></code>) must be averaged onto the layers,
-or the footprints made with a shorter <code class="docutils literal notranslate"><span class="pre">tres</span></code>.</p>
+dimension. Footprint cells outside the flux field add nothing. Which flux
+step each footprint hour takes, and what to do with a flux on finer cells
+or shorter steps than the footprint’s, is in <a class="reference internal" href="aggregation.html"><span class="doc">Summing Footprints: Areas And The Jacobian</span></a> (“Footprints
+times a flux”).</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">flux</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataarray</span><span class="p">(</span><span class="s2">"ch4_flux.nc"</span><span class="p">)</span>          <span class="c1"># µmol m⁻² s⁻¹ on lat/lon</span>
 <span class="n">foot</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">"hrrr"</span><span class="p">)</span><span class="o">.</span><span class="n">footprint</span>
 <span class="n">enhancement</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span>             <span class="c1"># ppm per footprint time step</span>
@@ -650,15 +643,15 @@ units. Put it on the footprint grid and compute two limits:</p>
 </div>
 <p>The first assumes the errors in all cells move together, so it is an upper
 bound. <code class="docutils literal notranslate"><span class="pre">sigma</span></code> can come from the spread of several inventories. The
-second assumes the cells are independent. Both values sum the footprint
-over time first, so they take each cell’s flux error to be the same at
-every hour. The second is a lower bound only if that holds and no errors
-are negatively correlated: errors that vary independently from hour to
-hour, or in opposite directions in neighboring cells, can give a smaller
-value. Real inventory errors are correlated over some distance, so for
-errors that do not change with time and are never negatively correlated,
-the true value lies between the two. Computing it needs the covariance of
-the flux errors, which is the prior error covariance of an inversion. If
+second assumes the cells are independent. Real inventory errors are
+correlated over some distance, so the true value lies between the two, with
+two conditions. Both values sum the footprint over time first, so they take
+each cell’s flux error to be the same at every hour. And the second is a
+lower bound only if no errors are negatively correlated: errors that vary
+independently from hour to hour, or in opposite directions in neighboring
+cells, can give a smaller value.</p>
+<p>The value between the limits needs the covariance of the flux errors, which
+is the prior error covariance of an inversion. If
 you set up the inversion with fips, <code class="docutils literal notranslate"><span class="pre">InverseProblem.prior_obs_error</span></code> is
 that covariance carried to every observation (the footprint matrix times
 the prior covariance times its transpose). The square root of its diagonal
@@ -703,7 +696,7 @@ keeps the per-level table described below:</p>
 <p><code class="docutils literal notranslate"><span class="pre">result.sd</span></code> is the square root of <code class="docutils literal notranslate"><span class="pre">result.variance</span></code>. In both calls the
 particles are weighted the way the unperturbed variant’s footprint weights
 them, with its transforms: the averaging kernel (including one from a
-per-receptor table), pressure weighting, and lifetime decay.
+per-receptor table), pressure weighting, and any loss on the way.
 <a class="reference internal" href="../reference/_api/stilt.transport_error.html#stilt.transport_error" title="stilt.transport_error"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.transport_error()</span></code></a> does the same for particle tables
 you have without a project.</p>
 </section>

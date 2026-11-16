@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=15f09464"></script>
+    <script src="../_static/documentation_options.js?v=e4946dd8"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29.dev38+g3205d2c92" />
+  <meta name="docsearch:version" content="0.1.0a29.dev40+ga485035b3" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -959,29 +959,29 @@ minutes, int32, and read back as float64.</p></td>
 <p>A footprint also needs <code class="docutils literal notranslate"><span class="pre">foot</span></code>:</p>
 <dl class="simple">
 <dt><code class="docutils literal notranslate"><span class="pre">foot</span></code></dt><dd><p>The particle’s sensitivity to surface fluxes accumulated over the output
-step, in ppm per (µmol m⁻² s⁻¹). It is zero while the particle is above
-<code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code> of the mixed layer (or <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code> meters
-when that is more than 1). It is the time the particle spent in that surface layer, divided by
-the depth the flux is mixed through times the mean air density below it
-(Lin et al., 2003).
+step, in ppm per (µmol m⁻² s⁻¹): the time the particle spent in the
+surface layer, divided by the depth the flux is mixed through times the
+mean air density below it (Lin et al., 2003). The surface layer is
+<code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code> of the mixed layer, or <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code> meters
+when that is more than 1; above it <code class="docutils literal notranslate"><span class="pre">foot</span></code> is zero.
 <a class="reference internal" href="_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a> adds each particle’s <code class="docutils literal notranslate"><span class="pre">foot</span></code> into its grid
 cell and divides by the number of particles.</p>
 </dd>
 </dl>
-<p>Which models write <code class="docutils literal notranslate"><span class="pre">foot</span></code>:</p>
+<p>Where <code class="docutils literal notranslate"><span class="pre">foot</span></code> comes from:</p>
 <ul class="simple">
 <li><p><strong>HYSPLIT</strong> computes it in STILT mode, as STILT-R’s runs do, when
 <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> has <code class="docutils literal notranslate"><span class="pre">foot</span></code> (the default). PYSTILT keeps it as written.</p></li>
-<li><p><strong>A transport model that writes only positions</strong>, or any model whose
-particles have no <code class="docutils literal notranslate"><span class="pre">foot</span></code>, gets it from PYSTILT after the run, from the
-met files the run read: <a class="reference internal" href="_api/stilt.particles.add_foot.html#stilt.particles.add_foot" title="stilt.particles.add_foot"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_foot()</span></code></a> computes it from <code class="docutils literal notranslate"><span class="pre">zagl</span></code>,
-<code class="docutils literal notranslate"><span class="pre">mlht</span></code>, the air below the depth (the drop in pressure from the ground
-to the depth) and the output step. The run’s log says so. A particle
-counts for the whole step when it ends the step below the layer, where
-HYSPLIT counts the minutes it spent there. Without the model’s own
-<code class="docutils literal notranslate"><span class="pre">mlht</span></code>, the met’s boundary-layer height (<code class="docutils literal notranslate"><span class="pre">PBLH</span></code>) is used, not the one
-HYSPLIT finds from the profile, unless <code class="docutils literal notranslate"><span class="pre">pbl_height</span></code> says otherwise.
-<a class="reference internal" href="../development/validation.html"><span class="doc">Validation</span></a> says how far a footprint moves.</p></li>
+<li><p><strong>Any other model whose particles have no</strong> <code class="docutils literal notranslate"><span class="pre">foot</span></code>, such as one that
+writes only positions, gets it from PYSTILT after the run
+(<a class="reference internal" href="_api/stilt.particles.add_foot.html#stilt.particles.add_foot" title="stilt.particles.add_foot"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_foot()</span></code></a>), from <code class="docutils literal notranslate"><span class="pre">zagl</span></code>, <code class="docutils literal notranslate"><span class="pre">mlht</span></code>, the output step, and the
+pressure drop from the ground to the surface layer’s top in the met files
+the run read. The run’s log says so. A particle counts for the whole step
+when it ends the step inside the layer, where HYSPLIT counts the minutes
+it spent there. When the model wrote no <code class="docutils literal notranslate"><span class="pre">mlht</span></code>, the met’s
+boundary-layer height (<code class="docutils literal notranslate"><span class="pre">PBLH</span></code>) is used, unless <code class="docutils literal notranslate"><span class="pre">pbl_height</span></code> says
+otherwise. <a class="reference internal" href="../development/validation.html"><span class="doc">Validation</span></a> says how far this moves a
+footprint.</p></li>
 </ul>
 <section id="the-mixed-layer-height">
 <h2>The mixed-layer height<a class="headerlink" href="#the-mixed-layer-height" title="Link to this heading">#</a></h2>
@@ -1008,16 +1008,16 @@ a HYSPLIT run’s own <code class="docutils literal notranslate"><span class="pr
 a number is a fixed height in meters above ground.</p></li>
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code> keeps a height PYSTILT finds at least that many meters,
-as <code class="docutils literal notranslate"><span class="pre">kmix0</span></code> does for HYSPLIT, which keeps its own at least 150 m by
-default. It does not change a model’s own <code class="docutils literal notranslate"><span class="pre">mlht</span></code>.</p>
-<p>Every model moved its particles with its own mixed layer: HYSPLIT mixes
-them through the layer <code class="docutils literal notranslate"><span class="pre">kmixd</span></code> and <code class="docutils literal notranslate"><span class="pre">kmix0</span></code> choose. When PYSTILT
-computes <code class="docutils literal notranslate"><span class="pre">foot</span></code>, the mixed layer it uses can differ from that one. To grid
-a model that writes only positions and HYSPLIT with the same mixed layer,
-so that only their transport differs, set both: <code class="docutils literal notranslate"><span class="pre">pbl_height:</span> <span class="pre">richardson</span></code>
-and <code class="docutils literal notranslate"><span class="pre">pbl_height_min:</span> <span class="pre">150</span></code> match HYSPLIT’s defaults, and <code class="docutils literal notranslate"><span class="pre">pbl_height:</span>
-<span class="pre">met</span></code> with the same minimum matches a HYSPLIT run with <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">0</span></code>.
-<a class="reference internal" href="../development/validation.html"><span class="doc">Validation</span></a> gives how far each choice moves a footprint.</p>
+as <code class="docutils literal notranslate"><span class="pre">kmix0</span></code> (150 m by default) does for HYSPLIT. It does not change a
+model’s own <code class="docutils literal notranslate"><span class="pre">mlht</span></code>.</p>
+<p>The mixed layer used for <code class="docutils literal notranslate"><span class="pre">foot</span></code> can differ from the one the model moved
+its particles in: HYSPLIT mixes them through the layer <code class="docutils literal notranslate"><span class="pre">kmixd</span></code> and
+<code class="docutils literal notranslate"><span class="pre">kmix0</span></code> choose. To compare two transport models with the same footprint
+layer, so that only their transport differs, set both settings:
+<code class="docutils literal notranslate"><span class="pre">pbl_height:</span> <span class="pre">richardson</span></code> with <code class="docutils literal notranslate"><span class="pre">pbl_height_min:</span> <span class="pre">150</span></code> matches HYSPLIT’s
+defaults, and <code class="docutils literal notranslate"><span class="pre">pbl_height:</span> <span class="pre">met</span></code> with the same minimum matches a HYSPLIT
+run with <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">0</span></code>. <a class="reference internal" href="../development/validation.html"><span class="doc">Validation</span></a> gives how far each
+choice moves a footprint.</p>
 <section id="the-release-row">
 <h3>The release row<a class="headerlink" href="#the-release-row" title="Link to this heading">#</a></h3>
 <p>A model should write each particle’s release as a row at <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>, with
@@ -1096,10 +1096,23 @@ reads this name only: <code class="docutils literal notranslate"><span class="pr
 grows from the release height above ground, so for a receptor above sea
 level it also reads <code class="docutils literal notranslate"><span class="pre">zsfc</span></code>. Without it the run’s log says the correction
 was skipped.</p>
-<p><code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">dens</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code>, and <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> can also be sampled from the met
-files at each particle’s position, for a model that writes only positions:
-<a class="reference internal" href="_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.sample_met()</span></code></a>. They differ a little from HYSPLIT’s own
-columns; <a class="reference internal" href="../development/validation.html"><span class="doc">Validation</span></a> says by how much.</p>
+<p>For a model that writes only positions, <a class="reference internal" href="_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.sample_met()</span></code></a>
+reads <code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">dens</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code> and <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> from the met files at each
+particle’s position and time. Give it the files the run read and the top of
+its domain, which a stored run records:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample_met</span>
+
+<span class="n">meta</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">particles_metadata</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles_path</span><span class="p">)</span>
+<span class="n">sampled</span> <span class="o">=</span> <span class="n">sample_met</span><span class="p">(</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"mlht"</span><span class="p">,</span> <span class="s2">"dens"</span><span class="p">]),</span>
+    <span class="n">meta</span><span class="o">.</span><span class="n">met_files</span><span class="p">,</span>
+    <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"mlht"</span><span class="p">,</span> <span class="s2">"dens"</span><span class="p">],</span>
+    <span class="n">z_top</span><span class="o">=</span><span class="n">meta</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s2">"z_top"</span><span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The sampled values differ a little from HYSPLIT’s own columns;
+<a class="reference internal" href="../development/validation.html"><span class="doc">Validation</span></a> says by how much.</p>
 </section>
 <section id="columns-pystilt-adds">
 <h3>Columns PYSTILT adds<a class="headerlink" href="#columns-pystilt-adds" title="Link to this heading">#</a></h3>
@@ -1144,19 +1157,18 @@ not stored; reading a particle file adds it, and so does
 </section>
 <section id="after-a-run">
 <h3>After a run<a class="headerlink" href="#after-a-run" title="Link to this heading">#</a></h3>
-<p>PYSTILT adds the release heights to any model’s particles, and <code class="docutils literal notranslate"><span class="pre">foot</span></code> to
-particles that have none. That is what a particle file stores and
-<code class="docutils literal notranslate"><span class="pre">sim.particles</span></code> returns.</p>
-<p>The near-field correction is applied when a footprint is made, by
-<a class="reference internal" href="_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a> when <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is set (the default), with
-the run’s <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code>. The transport error does the same, so its
+<p>After a run PYSTILT adds the release heights to any model’s particles, and
+<code class="docutils literal notranslate"><span class="pre">foot</span></code> to particles that have none. That is what a particle file stores
+and <code class="docutils literal notranslate"><span class="pre">sim.particles</span></code> returns.</p>
+<p>The near-field correction is not stored. <a class="reference internal" href="_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a>
+applies it when <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is set (the default), with the run’s
+<code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code>, and the transport error does the same, so its
 enhancement is the footprint’s. Anything else that reads <code class="docutils literal notranslate"><span class="pre">foot</span></code> from the
 stored particles, such as <code class="docutils literal notranslate"><span class="pre">particles.stilt.enhancement</span></code>, reads it
 uncorrected: call <a class="reference internal" href="_api/stilt.particles.correct_near_field.html#stilt.particles.correct_near_field" title="stilt.particles.correct_near_field"><code class="xref py py-func docutils literal notranslate"><span class="pre">correct_near_field()</span></code></a> first to match the footprint.
-Particles that lack the columns the correction reads get none, and a
-warning says so. The correction reads <code class="docutils literal notranslate"><span class="pre">samt</span></code>, <code class="docutils literal notranslate"><span class="pre">sigw</span></code> and <code class="docutils literal notranslate"><span class="pre">tlgr</span></code>,
-which only HYSPLIT writes, so particles that got their <code class="docutils literal notranslate"><span class="pre">foot</span></code> from
-PYSTILT are not corrected.</p>
+The correction reads <code class="docutils literal notranslate"><span class="pre">samt</span></code>, <code class="docutils literal notranslate"><span class="pre">sigw</span></code> and <code class="docutils literal notranslate"><span class="pre">tlgr</span></code>, which only HYSPLIT
+writes, so particles that lack them, including those whose <code class="docutils literal notranslate"><span class="pre">foot</span></code> came
+from PYSTILT, are not corrected, and a warning says so.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.particles.add_release_heights.html#stilt.particles.add_release_heights" title="stilt.particles.add_release_heights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_release_heights</span></code></a></p></td>

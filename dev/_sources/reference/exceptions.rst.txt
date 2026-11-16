@@ -16,7 +16,7 @@ Every exception PYSTILT raises is a :class:`stilt.StiltError`, so one
 Each one also subclasses the builtin that describes it. A
 :class:`~stilt.exceptions.SimulationError` is a ``RuntimeError`` and a
 :class:`~stilt.exceptions.HYSPLITNotFoundError` is a ``FileNotFoundError``,
-so code that catches the builtin keeps working. Plain input checks, such as
+so an ``except`` for the builtin catches it too. Plain input checks, such as
 a negative particle count, raise ``ValueError``.
 
 Base class
