@@ -200,7 +200,12 @@ def _crs_unit(crs: str) -> str:
 
 
 class Bounds(BaseModel):
-    """Longitude/latitude bounding box, in degrees."""
+    """
+    Longitude/latitude bounding box, in degrees.
+
+    The edges are finite numbers, and ``-90 <= ymin < ymax <= 90``.
+    Longitudes count modulo 360 (:meth:`contains`).
+    """
 
     model_config = ConfigDict(frozen=True)
 
@@ -208,6 +213,25 @@ class Bounds(BaseModel):
     xmax: float = Field(..., description="Eastern edge, in degrees longitude.")
     ymin: float = Field(..., description="Southern edge, in degrees latitude.")
     ymax: float = Field(..., description="Northern edge, in degrees latitude.")
+
+    @model_validator(mode="after")
+    def _on_the_globe(self) -> Self:
+        """Refuse an edge that is not a finite number, and latitudes off the globe or out of order, which no point is inside."""
+        edges = {
+            "xmin": self.xmin,
+            "xmax": self.xmax,
+            "ymin": self.ymin,
+            "ymax": self.ymax,
+        }
+        if not np.isfinite(list(edges.values())).all():
+            got = ", ".join(f"{name}={value:g}" for name, value in edges.items())
+            raise ValueError(f"Bounds need four finite numbers; got {got}.")
+        if not -90.0 <= self.ymin < self.ymax <= 90.0:
+            raise ValueError(
+                f"Bounds need -90 <= ymin < ymax <= 90 degrees latitude; got "
+                f"ymin={self.ymin:g}, ymax={self.ymax:g}."
+            )
+        return self
 
     def contains(self, longitude: ArrayLike, latitude: ArrayLike) -> np.ndarray:
         """
@@ -340,12 +364,7 @@ class Grid(Bounds):
 
     @model_validator(mode="after")
     def _latitudes_and_cells(self) -> Self:
-        """Refuse latitudes off the globe, swapped longitudes, an unreadable CRS, and a box with no whole cell or too many."""
-        if not -90.0 <= self.ymin < self.ymax <= 90.0:
-            raise ValueError(
-                f"A grid needs -90 <= ymin < ymax <= 90 degrees latitude; got "
-                f"ymin={self.ymin:g}, ymax={self.ymax:g}."
-            )
+        """Refuse equal or swapped longitudes, an unreadable CRS, and a box with no whole cell or too many (:class:`Bounds` checks the latitudes)."""
         if self.xmax == self.xmin:
             raise ValueError(
                 f"A grid needs xmin and xmax to differ; both are {self.xmin:g}."
