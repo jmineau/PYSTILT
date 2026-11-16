@@ -217,6 +217,29 @@ def test_opening_reads_nothing_until_asked(tmp_path):
     assert not (tmp_path / "nothing").exists()
 
 
+def test_the_receptors_of_a_path_that_is_not_a_project_are_refused(tmp_path):
+    """A mistyped path read as a project with no receptors, with no warning (#440)."""
+    with pytest.raises(FileNotFoundError, match="No config.yaml"):
+        _ = Project(tmp_path / "my_projcet").receptors
+    (tmp_path / "loose").mkdir()
+    (tmp_path / "loose" / "receptors.csv").write_text(
+        "time,longitude,latitude,altitude\n2023-01-01 12:00,-111.85,40.77,5\n"
+    )
+    with pytest.raises(FileNotFoundError, match="No config.yaml"):
+        _ = Project(tmp_path / "loose").receptors
+
+
+@pytest.mark.parametrize("empty", [[], "header.csv"])
+def test_init_refuses_receptors_that_hold_none_and_writes_nothing(tmp_path, empty):
+    """An empty list or a header-only file made an empty project, with no warning (#440)."""
+    (tmp_path / "header.csv").write_text("time,longitude,latitude,altitude\n")
+    receptors = tmp_path / empty if isinstance(empty, str) else empty
+
+    with pytest.raises(ValueError, match="No receptors were given"):
+        Project.init(tmp_path / "proj", receptors, config=_config(tmp_path))
+    assert not (tmp_path / "proj").exists()
+
+
 def test_a_relative_path_is_taken_from_the_current_directory(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PROJECTS", str(tmp_path / "env"))

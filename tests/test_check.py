@@ -94,6 +94,20 @@ def test_a_project_with_everything_in_place_has_nothing_to_check(tmp_path):
     assert list(table.columns) == ["check", "variant", "receptor", "message"]
 
 
+def test_a_project_with_no_receptors_is_listed_once(tmp_path):
+    """An empty project ran nothing, with no warning (#440)."""
+    project = _project(tmp_path, variants={"hrrr": {}, "hrrr-zi": {"ziscale": 0.8}})
+    project.receptors_path.write_text("time,longitude,latitude,altitude\n")
+    project = Project(project.directory)
+
+    table = project.check()
+
+    assert list(table["check"]) == ["receptors"]
+    assert list(table["variant"]) == ["hrrr, hrrr-zi"]
+    assert table["receptor"].isna().all()
+    assert "no receptors" in table["message"].iloc[0]
+
+
 def test_check_returns_one_row_for_each_thing_found(tmp_path):
     inside, outside = _receptor(12), _receptor(12, longitude=-110.0)
     project = _project(tmp_path, [inside, outside])
