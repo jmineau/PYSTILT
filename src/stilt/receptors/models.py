@@ -11,7 +11,6 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
-import re
 from collections.abc import Iterable, Mapping, Sequence
 from functools import cached_property
 from typing import (
@@ -51,13 +50,46 @@ VerticalReference: TypeAlias = Literal["agl", "msl"]
 # ---------------------------------------------------------------------------
 
 
+#: The forms a receptor time may take as text, for messages.
+_TIME_FORMS = (
+    "ISO 8601, such as '2023-07-15 18:00' or '2023-07-15T18:00:00Z', "
+    "or YYYYMMDDHHMM, such as '202307151800'"
+)
+
+
+def _parse_time_text(text: pd.Series) -> pd.Series:
+    """
+    Read receptor times written as text, and return them as UTC times.
+
+    Each value is ISO 8601 or ``YYYYMMDDHHMM``. A time with an offset is
+    converted to UTC; one without is taken as UTC. A value in any other
+    form gives ``NaT``, as does a missing one: the day-first
+    ``05/07/2023 18:00`` could also be read month-first, and pandas' words
+    ``now`` and ``today`` are no fixed time.
+    """
+    text = text.astype("string").str.strip()
+    compact = text.str.fullmatch(r"\d{12}").fillna(False).to_numpy(dtype=bool)
+    word = text.str.lower().isin(["now", "today"]).to_numpy(dtype=bool)
+    times = pd.Series(pd.NaT, index=text.index, dtype="datetime64[ns, UTC]")
+    if compact.any():
+        times[compact] = pd.to_datetime(text[compact], format="%Y%m%d%H%M", utc=True)
+    iso = ~compact & ~word
+    if iso.any():
+        times[iso] = pd.to_datetime(
+            text[iso], format="ISO8601", utc=True, errors="coerce"
+        )
+    return times
+
+
 def parse_time(time: TimeLike) -> dt.datetime:
     """
     Return *time* as a naive UTC datetime.
 
     Accepts datetimes (aware ones are converted to UTC), pandas and numpy
-    times, ISO strings, and the compact ``"YYYYMMDDHHMM"`` form. A time finer
-    than a microsecond is cut to the microsecond.
+    times, and text in ISO 8601 or the compact ``"YYYYMMDDHHMM"`` form
+    (:func:`_parse_time_text`). Other text, such as the day-first
+    ``"05/07/2023 18:00"``, is refused, since it could be read either way.
+    A time finer than a microsecond is cut to the microsecond.
     """
     if time is None:
         raise ValueError("'time' must be provided for all receptor types.")
@@ -66,9 +98,11 @@ def parse_time(time: TimeLike) -> dt.datetime:
             "Numeric receptor times are not accepted. Pass a datetime-like value "
             "or a string such as '202301011200' or '2023-01-01T12:00:00Z'."
         )
-    if isinstance(time, str) and re.fullmatch(r"\d{12}", time):
-        parsed = pd.Timestamp(pd.to_datetime(time, format="%Y%m%d%H%M", utc=True))
-    elif isinstance(time, (dt.datetime, pd.Timestamp, np.datetime64, str)):
+    if isinstance(time, str):
+        parsed = pd.Timestamp(_parse_time_text(pd.Series([time])).iloc[0])
+        if str(parsed) == "NaT":
+            raise ValueError(f"Receptor time {time!r} is not {_TIME_FORMS}.")
+    elif isinstance(time, (dt.datetime, pd.Timestamp, np.datetime64)):
         parsed = pd.Timestamp(time)
     else:
         raise TypeError(
@@ -237,7 +271,9 @@ class Receptor(BaseModel):
     time: dt.datetime = Field(
         description=(
             "Release time, UTC. A time-zone-aware value is converted to UTC and "
-            "a naive one taken as UTC. A string may be ISO or ``YYYYMMDDHHMM``."
+            "a naive one taken as UTC. A string must be ISO 8601 or "
+            "``YYYYMMDDHHMM``; other forms, such as the day-first "
+            "``05/07/2023``, are refused."
         )
     )
     altitude_ref: VerticalReference = Field(

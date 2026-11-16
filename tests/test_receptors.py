@@ -324,6 +324,36 @@ def test_receptor_time_aware_input_normalizes_to_naive_utc():
     assert r.time.tzinfo is None
 
 
+@pytest.mark.parametrize("text", ["05/07/2023 18:00", "07/15/2023 18:00", "now"])
+def test_receptor_time_text_that_is_not_iso_or_compact_is_refused(text):
+    """05/07/2023 was read as 7 May, and refused only when the day was above 12 (#440)."""
+    with pytest.raises(ValueError, match="is not ISO 8601"):
+        PointReceptor(time=text, longitude=-111.85, latitude=40.77, altitude=5.0)
+
+
+def test_read_receptors_refuses_a_day_first_time_and_names_the_row():
+    text = "time,lon,lat,z\n2023-07-15 18:00,-111.8,40.7,10\n05/07/2023 18:00,-111.8,40.7,10\n"
+    with pytest.raises(ValueError, match="row 1: time is '05/07/2023 18:00'"):
+        read_receptors(io.StringIO(text))
+
+
+def test_read_receptors_reads_iso_and_compact_times_with_or_without_an_offset():
+    text = (
+        "time,lon,lat,z\n"
+        "2023-07-15 18:00,-111.8,40.7,10\n"
+        "202307151900,-111.8,40.7,10\n"
+        "2023-07-15T14:00:00-06:00,-111.8,40.7,10\n"
+        "2023-07-15T21:00Z,-111.8,40.7,10\n"
+    )
+    times = [r.time for r in read_receptors(io.StringIO(text))]
+    assert times == [dt.datetime(2023, 7, 15, h) for h in (18, 19, 20, 21)]
+
+
+def test_read_receptors_refuses_an_empty_time():
+    with pytest.raises(ValueError, match="row 0: time is empty"):
+        read_receptors(io.StringIO("time,lon,lat,z\n,-111.8,40.7,10\n"))
+
+
 def test_receptor_time_with_nanoseconds_is_cut_to_microseconds():
     # satellite readers give nanosecond times (OCO-2: float seconds since 1970)
     r = PointReceptor(
