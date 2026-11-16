@@ -1316,3 +1316,18 @@ def test_multipoint_ids_are_the_same_as_first_written():
         )
         assert location == _multipoint_location_as_first_written(*args)
         assert location == _multipoint_location(*args)
+
+
+@pytest.mark.parametrize("name", ["alt_ref", "height_reference", "ref"])
+def test_a_misnamed_altitude_ref_column_is_refused(name):
+    """Kept as a label, it left 1500 m above sea level as 1500 m above ground (#440)."""
+    text = f"time,lon,lat,z,{name}\n2023-07-15 18:00,-111.8,40.7,1500,MSL\n"
+    with pytest.raises(ValueError, match=f"'{name}'.*Did you mean 'altitude_ref'"):
+        read_receptors(io.StringIO(text))
+
+
+def test_a_label_column_that_is_not_a_reference_is_kept():
+    text = "time,lon,lat,z,site,altitude_ref,note\n2023-07-15 18:00,-111.8,40.7,1500,WBB,msl,agl\n"
+    (receptor,) = read_receptors(io.StringIO(text))
+    assert receptor.altitude_ref == "msl"
+    assert receptor.attrs == {"site": "WBB", "note": "agl"}
