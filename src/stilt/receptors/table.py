@@ -8,7 +8,7 @@ and the functions here convert between tables, CSV files, and receptors.
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from io import StringIO
 from pathlib import Path
 from typing import IO, Any
@@ -17,12 +17,14 @@ import numpy as np
 import pandas as pd
 
 from .models import (
+    _TIME_FORMS,
     ColumnReceptor,
     MultiPointReceptor,
     PointReceptor,
     Receptor,
     _column_location,
     _multipoint_locations,
+    _parse_time_text,
     _point_location,
 )
 from .validation import column_errors, multipoint_errors, point_errors
@@ -157,9 +159,6 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
             "those names. Rename the column."
         )
     n = len(frame)
-    time = pd.to_datetime(frame["time"])
-    if getattr(time.dt, "tz", None) is not None:
-        time = time.dt.tz_convert("UTC").dt.tz_localize(None)
     lon = frame["longitude"].to_numpy(dtype=float)
     lat = frame["latitude"].to_numpy(dtype=float)
     alt = frame["altitude"].to_numpy(dtype=float)
@@ -182,6 +181,7 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
             )
             raise ValueError(f"{label}: {message}")
 
+    time = _times(frame["time"], fail)
     fail(~np.isin(ref, ("agl", "msl")), "altitude_ref must be 'agl' or 'msl'.")
     for bad, message in point_errors(lon, lat, alt, ref):
         fail(bad, message)
@@ -271,6 +271,33 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
             drop.extend(group[1:])  # the same receptor listed again
         out = out.loc[~np.isin(codes, drop)]
     return out
+
+
+def _times(column: pd.Series, fail: Callable[[np.ndarray, str], None]) -> pd.Series:
+    """
+    Return a receptor table's times as naive UTC times, calling *fail* on a row that has none.
+
+    Text must be ISO 8601 or ``YYYYMMDDHHMM`` (:func:`_parse_time_text`);
+    datetimes are taken as they are, an aware one converted to UTC.
+    """
+    if pd.api.types.is_numeric_dtype(column):
+        fail(
+            np.ones(len(column), dtype=bool),
+            f"time must be {_TIME_FORMS}; got the number {column.iloc[0]!r}.",
+        )
+    if pd.api.types.is_string_dtype(column):
+        time = _parse_time_text(column)
+        bad = time.isna().to_numpy()
+        if bad.any():
+            value = column.iloc[int(np.flatnonzero(bad)[0])]
+            what = (
+                "empty" if pd.isna(value) else f"{value!r}, which is not {_TIME_FORMS}"
+            )
+            fail(bad, f"time is {what}.")
+    else:
+        time = pd.to_datetime(column, utc=True)
+        fail(time.isna().to_numpy(), "time is empty.")
+    return time.dt.tz_localize(None)
 
 
 def _build(
@@ -416,16 +443,19 @@ def check_distinct_ids(receptors: Iterable[Receptor]) -> None:
 
 
 def read_receptor_frame(path: str | Path | IO[str]) -> pd.DataFrame:
-    """Read a receptors CSV as a table, with ``r_idx`` as text and ``time`` parsed, without building receptors."""
+    """Read a receptors CSV as a table, with ``r_idx`` and ``time`` as text, without building receptors."""
     header = pd.read_csv(path, nrows=0).columns
     if hasattr(path, "seek"):
         path.seek(0)
     # With type inference, pandas types each chunk of a large file on its
     # own, so an r_idx column that mixes numbers and text would come back
     # part int and part str.
-    dtype: dict[Any, Any] = {c: str for c in header if str(c).lower() == "r_idx"}
-    times = [c for c in header if str(c).lower() == "time"]
-    return pd.read_csv(path, dtype=dtype, parse_dates=times)
+    # Times are read as text, and parsed by receptor_rows in the forms the
+    # docs give, never guessed: pandas would read 05/07/2023 month-first.
+    dtype: dict[Any, Any] = {
+        c: str for c in header if str(c).lower() in ("r_idx", "time")
+    }
+    return pd.read_csv(path, dtype=dtype)
 
 
 def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:

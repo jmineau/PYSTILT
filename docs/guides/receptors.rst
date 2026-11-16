@@ -135,6 +135,12 @@ form has one row per point receptor:
    2023-07-15 18:00:00,-111.848,40.766,10
    2023-07-15 19:00:00,-111.848,40.766,10
 
+Write times in ISO 8601, such as ``2023-07-15 18:00:00`` or
+``2023-07-15T18:00:00Z``, or as ``YYYYMMDDHHMM``, such as ``202307151800``.
+A time with an offset, such as ``2023-07-15T12:00:00-06:00``, is converted
+to UTC; one without is taken as UTC. Other forms are refused, naming the
+row: ``05/07/2023`` could be 5 July or 7 May.
+
 The column names from STILT-R also work. Use ``long`` or ``lon`` for
 longitude, ``lati`` or ``lat`` for latitude, and ``zagl`` or ``zmsl`` for
 altitude. A ``zmsl`` column means the altitudes are above sea level. To mix
