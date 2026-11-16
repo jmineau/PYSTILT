@@ -521,9 +521,14 @@ def _fake_hysplit(
 
 
 def _ending_at(minute: int) -> list[list[float]]:
-    """Particle rows of one particle, written every hour, whose last row is *minute* before release."""
+    """
+    Particle rows of one particle, written every hour, whose last row is *minute* before release.
+
+    The particle is east of the test met's grid, so a run that stops early
+    is a domain exit, not met that ran out.
+    """
     times = [-1, *range(-60, -minute - 1, -60)]
-    return [[t, 1, -111.9, 40.7, 10.0, 0.0] for t in times]
+    return [[t, 1, -100.0, 40.7, 10.0, 0.0] for t in times]
 
 
 def _run(tmp_path, receptor, config=None):
@@ -657,8 +662,9 @@ def test_a_multipoint_release_without_the_warning_is_a_run(
 def test_a_perturbed_run_is_one_hycs_std_call_with_winderr(
     tmp_path, point_receptor, monkeypatch
 ):
+    # East of the test met's grid, so the run's early end is a domain exit.
     calls = _fake_hysplit(
-        monkeypatch, log="", rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
+        monkeypatch, log="", rows=[[-60, 1, -100.0, 40.7, 10.0, 1e-5]]
     )
     config = _config(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
 

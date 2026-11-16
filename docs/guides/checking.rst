@@ -68,6 +68,11 @@ stop on it.
        two files.
      - Add the files, or keep each product in its own folder
        (:doc:`meteorology`).
+   * - ``met_domain``
+     - With the crop off, a receptor lies outside the grid of the met files
+       its run starts in, where HYSPLIT cannot start particles ("source
+       point off grid"). The grid is read from a file's header.
+     - Use met files whose domain holds the receptor, or move the receptor.
    * - ``met_crop``
      - With ``subgrid_enable`` on, a receptor lies outside
        ``subgrid_bounds``, where HYSPLIT cannot start particles.

@@ -13,6 +13,7 @@ from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self
 
+import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
@@ -467,9 +468,10 @@ class Met:
         The file check that :meth:`files_for` makes for each run, made for
         every receptor at once: the met's ``directory`` exists and holds an
         ARL file, and every file a run needs is there, holds at least two
-        time periods, and ends on a whole time step. With the crop on, a
-        receptor outside ``subgrid_bounds`` is listed too, since HYSPLIT
-        cannot start a particle outside the files. A met with ``download``
+        time periods, and ends on a whole time step. A receptor outside the
+        files is listed too, since HYSPLIT cannot start a particle there:
+        outside ``subgrid_bounds`` with the crop on, else outside the grid of
+        the first file its run reads. A met with ``download``
         has no files to look for before a run, so only its crop is checked.
 
         This brings the tables of what the files and their crops hold up to
@@ -491,7 +493,7 @@ class Met:
         -------
         pandas.DataFrame
             One row for each thing found, with ``check`` (``met_directory``,
-            ``met_files``, ``met_periods``, ``met_cut``, or ``met_crop``), ``receptor`` (``NA`` when the
+            ``met_files``, ``met_periods``, ``met_cut``, ``met_domain``, or ``met_crop``), ``receptor`` (``NA`` when the
             finding is about the met), and ``message`` columns. Empty when
             nothing would stop a run.
         """
@@ -526,6 +528,7 @@ class Met:
         messages: dict[Any, str | None] = {}
         single: dict[Path, None] = {}
         cut: dict[Path, None] = {}
+        starts: dict[Any, Path] = {}
         for time in first["time"].drop_duplicates():
             earlier, later = (_time(t) for t in run_window(time, n_hours))
             cover = self._cover(earlier, later)
@@ -534,6 +537,8 @@ class Met:
             )
             single.update(dict.fromkeys(cover.single))
             cut.update(dict.fromkeys(cover.cut))
+            if cover.files and not self.config.subgrid_enable:
+                starts[time] = cover.files[0]
         found: list[tuple[str, str | None, str]] = [
             ("met_files", str(rid), message)
             for rid, time in zip(first["receptor"], first["time"], strict=True)
@@ -553,6 +558,45 @@ class Met:
             )
             for path in cut
         ]
+        return found + self._outside_domain(receptors, starts)
+
+    def _outside_domain(
+        self, receptors: pd.DataFrame, starts: dict[Any, Path]
+    ) -> list[tuple[str, str | None, str]]:
+        """
+        List the receptors with a release point outside the grid of the met files their run starts in.
+
+        *starts* is the first file of each release time's run. The grid is
+        read from one file's header for each grid the catalog lists among
+        them, so a large archive costs a read or two. A cropped met is not
+        looked at here: its crop box is (:meth:`_outside_crop`).
+        """
+        if not starts:
+            return []
+        grid_of = dict(
+            zip(self.catalog.table["resolved"], self.catalog.table["grid"], strict=True)
+        )
+        file_of_grid: dict[str, Path] = {}
+        for path in starts.values():
+            file_of_grid.setdefault(grid_of.get(str(path), str(path)), path)
+        file_of_time = {
+            time: file_of_grid[grid_of.get(str(path), str(path))]
+            for time, path in starts.items()
+        }
+        rows = receptors[receptors["time"].isin(list(file_of_time))]
+        found: list[tuple[str, str | None, str]] = []
+        for path, group in rows.groupby(rows["time"].map(file_of_time), sort=False):
+            outside = group[~_on_grid(Path(str(path)), group)]
+            found += [
+                (
+                    "met_domain",
+                    str(row.receptor),
+                    f"longitude {row.longitude:g} and latitude {row.latitude:g} are "
+                    f"outside the met's domain, the grid of {path}: HYSPLIT "
+                    "cannot start particles there.",
+                )
+                for row in outside.drop_duplicates("receptor").itertuples()
+            ]
         return found
 
     def _outside_crop(
@@ -841,6 +885,27 @@ def _inspect_file(
             return tuple(met.times), tuple(met.check())
     except ARLFormatError as exc:
         return (), (str(exc),)
+
+
+def _on_grid(path: Path, points: pd.DataFrame) -> np.ndarray:
+    """
+    Return whether each point (``longitude``, ``latitude``) is within the grid of the ARL file at *path*.
+
+    Within means from its first grid point to its last in each direction;
+    a longitude/latitude grid that goes all the way round holds every
+    longitude.
+    """
+    from arlmet import probe
+
+    grid = probe(path).grid
+    x, y = grid.fractional_indices(
+        points["longitude"].to_numpy(dtype=float),
+        points["latitude"].to_numpy(dtype=float),
+    )
+    inside = (y >= 0) & (y <= grid.ny - 1)
+    if not grid.wraps_lon:
+        inside &= (x >= 0) & (x <= grid.nx - 1)
+    return inside
 
 
 def _holds_as(crop: Path, source: Path) -> bool:

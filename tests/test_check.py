@@ -424,6 +424,34 @@ def test_a_downloaded_met_is_checked_for_its_crop_only(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# The met's domain
+# ---------------------------------------------------------------------------
+
+
+def test_a_receptor_outside_the_met_files_grid_is_listed(tmp_path):
+    """HYSPLIT stopped such a run with "source point off grid", and check said nothing (#440)."""
+    # The test met files' grid has points from 125 W to 106 W and 30 N to 49 N.
+    east = _receptor(12, longitude=-105.5)
+    north = _receptor(12, latitude=49.5)
+    edge = _receptor(12, longitude=-106.0, latitude=49.0)
+    inside = _receptor(12)
+    project = _project(tmp_path, [east, north, edge, inside], grid=None)
+
+    table = project.check()
+
+    assert list(table["check"]) == ["met_domain", "met_domain"]
+    assert list(table["receptor"]) == [east.id, north.id]
+    assert "outside the met's domain" in table["message"].iloc[0]
+
+
+def test_a_cropped_met_is_checked_for_its_crop_box_not_its_domain(tmp_path):
+    east = _receptor(12, longitude=-105.5)
+    project = _project(tmp_path, [east], met=_cropped(tmp_path), grid=None)
+
+    assert list(project.check()["check"]) == ["met_crop"]
+
+
+# ---------------------------------------------------------------------------
 # The footprint grid
 # ---------------------------------------------------------------------------
 
@@ -489,7 +517,7 @@ def test_a_receptor_outside_a_grid_across_the_dateline_in_latitude_is_listed(tmp
     north = _receptor(12, longitude=175, latitude=42.0)
     project = _project(tmp_path, [north], grid=grid)
 
-    table = project.check()
+    table = _found(project.check(), "grid")
 
     assert list(table["receptor"]) == [north.id]
     assert "170 to -170 longitude, 40 to 41 latitude" in table["message"].iloc[0]
