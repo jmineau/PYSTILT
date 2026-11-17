@@ -31,8 +31,6 @@ jobs:
       - name: Install
         run: uv sync --locked
 
-      # One wheel per bundled HYSPLIT build, plus an sdist without binaries
-      # (`just dist` also checks each wheel holds only its own hycs_std).
       - name: Build and check
         run: uv run just dist
 

@@ -6,8 +6,8 @@ name: STILT-R parity
 #
 #   src/stilt/      everything but observations/ and visualization.py, which no
 #                   STILT-R test reaches. The fidelity scenarios run a project end
-#                   to end (config, project, execution, transport/hysplit and its
-#                   bundled binaries, particles, footprint, receptors, output);
+#                   to end (config, project, execution, transport/hysplit,
+#                   particles, footprint, receptors, output);
 #                   the r_only tests also read STILT-R output (migration.py).
 #   tests/          the STILT-R tests, the shared conftest.py (its _MET_BLOCKS name
 #                   the met cache), the fixtures and R helpers, and the
@@ -69,7 +69,8 @@ jobs:
       #   r/src/write_footprint.r  — output format / precision (float32 assumption)
       #
       # The R helpers in tests/fixtures/r_helpers/ source every file in r/src/, and
-      # STILT-R's HYSPLIT run uses bin/linux_x64/hycs_std and exe/, so once a month
+      # STILT-R's HYSPLIT run uses bin/linux_x64/hycs_std and exe/ (PYSTILT's tests,
+      # docs and parity runs take that hycs_std too), so once a month
       # the Upgrade STILT-R workflow (stilt-r-upgrade.yml) opens a pull request that
       # bumps STILT_R_SHA when a new upstream commit touches any of those.
       #
@@ -145,11 +146,13 @@ jobs:
           git -C stilt-r-src fetch --depth 1 https://github.com/uataq/stilt "$STILT_R_SHA"
           git -C stilt-r-src checkout FETCH_HEAD
 
-      - name: Populate STILT-R exe directory from bundled binaries
+      # PYSTILT runs the same hycs_std, from PATH: it includes no HYSPLIT.
+      - name: Populate STILT-R exe directory from its bundled binaries
         run: |
           mkdir -p stilt-r-src/exe
           cp stilt-r-src/bin/linux_x64/hycs_std stilt-r-src/exe/hycs_std
           chmod +x stilt-r-src/exe/hycs_std
+          sudo install -m 755 stilt-r-src/exe/hycs_std /usr/local/bin/hycs_std
 
       - name: Build permute.so
         run: |

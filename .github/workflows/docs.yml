@@ -48,6 +48,10 @@ jobs:
       - name: Install
         run: uv sync --locked
 
+      # The pages that run a simulation take STILT-R's hycs_std.
+      - name: Install hycs_std
+        run: .github/scripts/install_hycs_std.sh
+
       # The Getting Started page runs a real simulation on the met files the
       # tests cache: the same cache and key as tests.yml and stilt-r.yml.
       - name: Restore HRRR met cache

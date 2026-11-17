@@ -24,7 +24,7 @@ relies on.
 4. For the tests that run HYSPLIT (`integration`, `fidelity`) and the docs
    build, put a `hycs_std` on `PATH`: STILT-R's `bin/linux_x64/hycs_std`
    at the commit `.github/workflows/stilt-r.yml` pins, as CI does
-   (`.github/actions/hycs-std`). Without one those tests are skipped. The
+   (`.github/scripts/install_hycs_std.sh`). Without one those tests are skipped. The
    unit tests need none: they put a stand-in `hycs_std` first on `PATH`.
 
 ## Making a change
