@@ -160,7 +160,9 @@ Exit codes
        retry runs them again, which helps only when the cause is fixed.
    * - 2
      - The command line was wrong: an unknown option, a bad value, or a
-       directory that is not a project. Or a met directory does not exist
+       directory that is not a project. Or the project's files are invalid:
+       ``config.yaml`` is not valid YAML or has a misspelled setting, or a
+       row of ``receptors.csv`` is bad. Or a met directory does not exist
        or holds no ARL file (``stilt check`` lists it; ``stilt status`` exits
        with 2 for it only when the output may hold results). Nothing ran. Do
        not retry.
