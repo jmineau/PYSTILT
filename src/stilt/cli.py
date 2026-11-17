@@ -25,8 +25,10 @@ with 0 when it finds nothing and 1 when it lists anything. ``stilt fetch``
 exits with 0 when every met file the runs need is there, 1 when the archive
 lacks some, and 3 when it was stopped (Ctrl-C or SIGTERM) or the archive was
 busy or unreachable. Every command
-exits with 2 when its command line is wrong: an unknown option, a bad value,
-or a directory that is not a project. ``stilt run`` and ``stilt submit`` also
+exits with 2 when its command line is wrong (an unknown option, a bad value,
+or a directory that is not a project) or the project's files are invalid
+(``config.yaml`` that is not valid YAML or has a misspelled setting, a bad
+row in ``receptors.csv``). ``stilt run`` and ``stilt submit`` also
 exit with 2 when a met directory does not exist or holds no ARL file, which
 ``stilt check`` lists. ``stilt status`` does too, unless the output holds no
 result the project could own: then it counts every simulation as pending.
@@ -173,9 +175,16 @@ def _resolve_project(path: str | Path | None) -> str:
     return str(resolved)
 
 
-def _open(project: str | Path | None, output: str | None = None) -> Project:
+def _open(
+    project: str | Path | None,
+    output: str | None = None,
+    rows: pd.DataFrame | None = None,
+) -> Project:
     """
-    Open the project, exiting with 2 when the met of a variant cannot be read.
+    Open the project, exiting with 2 when its files are invalid or the met of a variant cannot be read.
+
+    With *rows* (from ``--receptors receptors.parquet``) the project takes
+    its receptors from them, so ``receptors.csv`` is not read.
 
     A variant's settings folder is named by its met's weather product, read
     from the header of the met's first file. Without the file every command
@@ -183,8 +192,20 @@ def _open(project: str | Path | None, output: str | None = None) -> Project:
     ``stilt check`` lists the same problem as a finding.
     """
     opened = Project(_resolve_project(project), output=output)
+    if rows is not None:
+        opened._take_rows(rows)
+    _require_inputs(opened)
     _require_met(opened)
     return opened
+
+
+def _require_inputs(project: Project) -> None:
+    """Exit with 2 and the problem when ``config.yaml`` or ``receptors.csv`` is invalid."""
+    try:
+        _ = project.config
+        _ = project.receptors
+    except ValueError as error:
+        _fail(str(error))
 
 
 def _require_met(project: Project) -> None:
@@ -365,9 +386,7 @@ def _start(
     With *receptor_rows* (from ``--receptors receptors.parquet``) the
     project takes its receptors from them, not from ``receptors.csv``.
     """
-    opened = _open(project, output=output)
-    if receptor_rows is not None:
-        opened._take_rows(receptor_rows)
+    opened = _open(project, output=output, rows=receptor_rows)
     if execution_file is None:
         settings = opened.config.execution.model_dump(exclude_unset=True)
     else:
@@ -477,16 +496,14 @@ def fetch(
     --no-skip gets the met of every simulation, for a stilt run --no-skip.
     Exits with 0 when
     every file is there, 1 when the archive lacks some, 2 when the command
-    line is wrong or a met cannot be read, and 3 when stopped by Ctrl-C or
+    line is wrong, the project's files are invalid or a met cannot be read, and 3 when stopped by Ctrl-C or
     SIGTERM, after removing the file it was downloading, or when the archive
     was busy or the connection failed (4 for any other unexpected error).
     """
     receptor_ids, rows = (
         (None, None) if receptors is None else _read_receptors(receptors)
     )
-    opened = _open(project, output=output)
-    if rows is not None:
-        opened._take_rows(rows)
+    opened = _open(project, output=output, rows=rows)
     sel = None
     if receptor_ids is not None:
         try:
@@ -543,7 +560,8 @@ def run(
     failed, 3 when some did not finish (the run was stopped, a worker process
     was killed, often for memory, or a connection
     or I/O error stopped them while they wrote), and 2 when
-    the command line is wrong or a met cannot be read (nothing ran). An
+    the command line is wrong, the project's files are invalid or a met
+    cannot be read (nothing ran). An
     error the run did not expect prints its traceback and exits with 3 when
     it is a connection or I/O error, such as an output bucket that cannot
     be reached, which a retry may get past, and with 4 when it is any
@@ -645,9 +663,10 @@ def status(
     be read, status still counts every simulation as pending if no folder in
     the output has the variant's other settings, since then no result can
     exist. Otherwise it needs the met, and exits with 2, as it does when the
-    command line is wrong.
+    command line is wrong or the project's files are invalid.
     """
     opened = Project(_resolve_project(project), output=output)
+    _require_inputs(opened)
     try:
         table = opened.status()
         folders = opened.folders()

@@ -587,14 +587,16 @@ class ProjectConfig(BaseModel):
             with path.open() as f:
                 raw: dict = yaml.safe_load(f) or {}
         except yaml.YAMLError as error:
+            # PyYAML's own message spans several lines; keep where and what.
             mark = getattr(error, "problem_mark", None)
-            location = (
-                f" line {mark.line + 1}, column {mark.column + 1}"
-                if mark is not None
-                else ""
+            where = (
+                ""
+                if mark is None
+                else f" at line {mark.line + 1}, column {mark.column + 1}"
             )
+            problem = getattr(error, "problem", None) or error
             raise ValueError(
-                f"{path.name} is not valid YAML: {getattr(error, 'problem', error)}.{location}"
+                f"{path.name} is not valid YAML{where}: {problem}."
             ) from None
         return cls.model_validate(raw)
 

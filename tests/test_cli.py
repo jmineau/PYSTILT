@@ -127,17 +127,49 @@ def test_status_exits_when_no_config(tmp_path):
     assert result.exit_code == 2
 
 
-@pytest.mark.parametrize("command", ["check", "status", "run"])
+@pytest.mark.parametrize("command", ["check", "status", "run", "fetch"])
 def test_commands_report_invalid_config_yaml(tmp_path, command):
-    """A malformed project config is a usage error, not an internal traceback."""
+    """A malformed project config is a usage error, not an internal traceback (#364)."""
     (tmp_path / "config.yaml").write_text("n_hours: [\n")
 
     result = runner.invoke(app, [command, str(tmp_path)])
 
     assert result.exit_code == 2
-    assert "Error: config.yaml is not valid YAML" in result.output
-    assert "line " in result.output
-    assert "Traceback" not in result.output
+    assert result.output == (
+        "Error: config.yaml is not valid YAML at line 2, column 1: "
+        "expected the node content, but found '<stream end>'.\n"
+    )
+
+
+@pytest.mark.parametrize("command", ["check", "status", "run", "fetch"])
+@pytest.mark.parametrize(
+    ("table", "message"),
+    [
+        (
+            "time,longitude,latitude,altitude\n2024-07-01 12:00:00,-111.85,140.77,10\n",
+            "Error: row 0: latitude must be a number within [-90, 90].",
+        ),
+        (
+            "time,longitude,latitude,altitude\nyesterday,-111.85,40.77,10\n",
+            "Error: ",
+        ),
+        (
+            "time,longitude,latitude\n2024-07-01 12:00:00,-111.85,40.77\n",
+            "Error: Receptor table must contain columns",
+        ),
+    ],
+    ids=["latitude", "time", "columns"],
+)
+def test_commands_report_a_bad_receptors_csv(tmp_path, command, table, message):
+    """A bad row in receptors.csv is a usage error for every command, as for check (#364)."""
+    _write_minimal_config(tmp_path)
+    (tmp_path / "receptors.csv").write_text(table)
+
+    result = runner.invoke(app, [command, str(tmp_path)])
+
+    assert result.exit_code == 2, result.output
+    assert result.output.startswith(message)
+    assert result.output.count("\n") == 1
 
 
 def test_status_prints_project_info(tmp_path):

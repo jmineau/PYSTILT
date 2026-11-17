@@ -140,7 +140,9 @@ def test_model_config_reports_invalid_yaml(tmp_path):
     path = tmp_path / "config.yaml"
     path.write_text("n_hours: [\n")
 
-    with pytest.raises(ValueError, match=r"config\.yaml is not valid YAML.*line \d+"):
+    with pytest.raises(
+        ValueError, match=r"^config\.yaml is not valid YAML at line 2, column 1: "
+    ):
         ProjectConfig.from_yaml(path)
 
 
