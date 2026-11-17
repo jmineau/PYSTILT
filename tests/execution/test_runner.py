@@ -23,6 +23,13 @@ from ..fixtures.factories import make_project_config
 # ---------------------------------------------------------------------------
 
 
+def _project_at(directory: Path, output: Path) -> Project:
+    """A project in *directory* with an empty ``config.yaml``: the job script reads no setting."""
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "config.yaml").write_text("")
+    return Project(directory, output=output)
+
+
 def _sbatch(script: str) -> dict[str, str | bool]:
     """The #SBATCH options of a script, a bare flag as True."""
     options: dict[str, str | bool] = {}
@@ -34,7 +41,7 @@ def _sbatch(script: str) -> dict[str, str | bool]:
 
 
 def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
-    project = Project(tmp_path / "My_Project", output=tmp_path / "out")
+    project = _project_at(tmp_path / "My_Project", output=tmp_path / "out")
     folder = tmp_path / "My_Project" / "_slurm" / "stamp"
     execution = ExecutionConfig(
         backend="slurm",
@@ -90,7 +97,7 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
 
 def test_job_script_leaves_out_what_was_not_set(tmp_path):
     script = job_script(
-        Project(tmp_path, output=tmp_path / "out"),
+        _project_at(tmp_path, output=tmp_path / "out"),
         ExecutionConfig(backend="slurm", time="01:00:00"),
         tmp_path,
         1,
@@ -106,7 +113,7 @@ def test_job_script_runs_again_only_on_the_first_start_and_names_a_compute_root(
     tmp_path,
 ):
     script = job_script(
-        Project(tmp_path, output=tmp_path / "out"),
+        _project_at(tmp_path, output=tmp_path / "out"),
         ExecutionConfig(backend="slurm", time="01:00:00"),
         tmp_path,
         2,
@@ -135,7 +142,7 @@ def _omp_threads_after_setup(script: str) -> str:
 def test_job_script_gives_each_worker_one_thread_of_the_tasks_cpus(tmp_path):
     # Four workers on four CPUs: without this a worker's BLAS sizes its pool by the node.
     script = job_script(
-        Project(tmp_path, output=tmp_path / "out"),
+        _project_at(tmp_path, output=tmp_path / "out"),
         ExecutionConfig(backend="slurm", time="01:00:00", cpus=4),
         tmp_path,
         1,
@@ -147,7 +154,7 @@ def test_job_script_gives_each_worker_one_thread_of_the_tasks_cpus(tmp_path):
 def test_job_script_shares_cpus_a_slurm_option_adds_among_the_workers(tmp_path):
     # 2 workers on 8 CPUs (cpus-per-task replaced in `slurm`): 4 threads each.
     script = job_script(
-        Project(tmp_path, output=tmp_path / "out"),
+        _project_at(tmp_path, output=tmp_path / "out"),
         ExecutionConfig(
             backend="slurm",
             time="01:00:00",
@@ -163,7 +170,7 @@ def test_job_script_shares_cpus_a_slurm_option_adds_among_the_workers(tmp_path):
 def test_job_script_gives_one_thread_when_cpus_per_task_is_not_a_number(tmp_path):
     # sbatch refuses the value; writing the script must not fail first.
     script = job_script(
-        Project(tmp_path, output=tmp_path / "out"),
+        _project_at(tmp_path, output=tmp_path / "out"),
         ExecutionConfig(
             backend="slurm", time="01:00:00", slurm={"cpus_per_task": "many"}
         ),
@@ -175,7 +182,7 @@ def test_job_script_gives_one_thread_when_cpus_per_task_is_not_a_number(tmp_path
 
 def test_job_script_leaves_the_thread_count_to_a_setup_line(tmp_path):
     script = job_script(
-        Project(tmp_path, output=tmp_path / "out"),
+        _project_at(tmp_path, output=tmp_path / "out"),
         ExecutionConfig(
             backend="slurm",
             time="01:00:00",
@@ -192,7 +199,7 @@ def test_job_script_is_valid_bash(tmp_path):
     script = tmp_path / "job.sh"
     script.write_text(
         job_script(
-            Project(tmp_path / "with space", output=tmp_path / "out"),
+            _project_at(tmp_path / "with space", output=tmp_path / "out"),
             ExecutionConfig(backend="slurm", time="01:00:00", setup=["echo ready"]),
             tmp_path / "with space" / "_slurm",
             3,
@@ -284,7 +291,7 @@ def test_submit_uses_no_more_tasks_than_receptors(pending, commands, tmp_path):
 def test_submit_with_nothing_to_do_submits_nothing(pending, commands, tmp_path):
     assert (
         runner.submit(
-            Project(tmp_path, output=tmp_path / "out"),
+            _project_at(tmp_path, output=tmp_path / "out"),
             execution=ExecutionConfig(backend="slurm", time="01:00:00"),
         )
         is None

@@ -171,6 +171,12 @@ class Project:
         ``s3://bucket/output``. For a container whose output is somewhere
         else than the project's.
 
+    Raises
+    ------
+    FileNotFoundError
+        If the directory has no ``config.yaml``, so it is not a project: a
+        mistyped path is not read as a project with no receptors.
+
     Attributes
     ----------
     directory : Path
@@ -214,6 +220,11 @@ class Project:
         self._output = output
         #: Checked receptor rows used in place of receptors.csv (:meth:`_take_rows`).
         self._taken_rows: pd.DataFrame | None = None
+        if not self.config_path.exists():
+            raise FileNotFoundError(
+                f"No config.yaml in {self.directory}. Make a project with "
+                "stilt.Project.init(...) or `stilt init`."
+            )
 
     @classmethod
     def init(
@@ -279,20 +290,22 @@ class Project:
             config = ProjectConfig.model_validate(yaml.safe_load(STARTER_CONFIG))
         elif config is None:
             config = ProjectConfig(**settings)
-        project = cls(path)
+        directory = absolute(path)
+        config_path = directory / "config.yaml"
         # The config checks a variant's transport settings only when it is
         # resolved; do it now, so a bad config is never written.
-        config.resolve(project.directory)
-        if project.config_path.exists():
+        config.resolve(directory)
+        if config_path.exists():
             raise FileExistsError(
-                f"{project.directory} already has a config.yaml. Open it with "
+                f"{directory} already has a config.yaml. Open it with "
                 "Project(path), and edit config.yaml to change its settings."
             )
-        project.directory.mkdir(parents=True, exist_ok=True)
+        directory.mkdir(parents=True, exist_ok=True)
         if starter:
-            project.config_path.write_text(STARTER_CONFIG)
+            config_path.write_text(STARTER_CONFIG)
         else:
-            config.to_yaml(project.config_path)
+            config.to_yaml(config_path)
+        project = cls(directory)
         if batch is not None:
             project.add_receptors(batch)
         elif starter:
@@ -327,19 +340,10 @@ class Project:
 
         Raises
         ------
-        FileNotFoundError
-            If the project has no ``config.yaml``.
+        ValueError
+            If ``config.yaml`` is not valid YAML or holds a wrong setting.
         """
-        self._require_config()
         return ProjectConfig.from_yaml(self.config_path)
-
-    def _require_config(self) -> None:
-        """Raise unless the directory has a ``config.yaml``, which is what makes it a project."""
-        if not self.config_path.exists():
-            raise FileNotFoundError(
-                f"No config.yaml in {self.directory}. Make a project with "
-                "stilt.Project.init(...) or `stilt init`."
-            )
 
     @cached_property
     def output(self) -> Output:
@@ -374,8 +378,6 @@ class Project:
         """
         if self._taken_rows is not None:
             return self._taken_rows
-        # A typo in the path would otherwise read as a project with no receptors.
-        self._require_config()
         if not self.receptors_path.exists():
             empty = pd.DataFrame(columns=["time", "longitude", "latitude", "altitude"])
             return receptor_rows(empty)
@@ -399,9 +401,8 @@ class Project:
 
         Raises
         ------
-        FileNotFoundError
-            If the directory has no ``config.yaml``, so it is not a project:
-            a mistyped path is not read as a project with no receptors.
+        ValueError
+            If a row of ``receptors.csv`` is wrong, naming the row.
         """
         rows = self._rows
         labels = [c for c in rows.columns if c not in COLUMNS and c not in ROW_COLUMNS]

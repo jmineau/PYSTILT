@@ -165,7 +165,7 @@ def _resolve_project(path: str | Path | None) -> str:
     """Return the absolute project path, exiting if it has no config.yaml."""
     raw = str(path or Path.cwd())
     resolved = Path(raw).resolve()
-    if not Project(resolved).config_path.exists():
+    if not (resolved / "config.yaml").exists():
         typer.echo(
             f"Error: '{resolved}' does not look like a STILT project directory "
             "(no config.yaml found).",
