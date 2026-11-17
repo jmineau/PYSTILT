@@ -131,7 +131,7 @@ class ParticlesAccessor:
         Parameters
         ----------
         grid : stilt.Grid
-            The footprint grid, such as ``project.config.footprint.grid``.
+            The footprint grid, such as ``project.variants["hrrr"].footprint.grid``.
 
         Returns
         -------

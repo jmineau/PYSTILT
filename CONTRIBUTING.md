@@ -232,9 +232,12 @@ fails when one breaks.
 
 ## Adding configuration fields
 
-The public config is flat. Fields such as `seed`, `numpar`, and `ziscale` are
-passed straight to `ProjectConfig(...)` and `Project.init(...)`. Don't add nested
-parameter objects to the public API.
+`config.yaml` is blocks: `mets`, `models`, `stages`, and `variants` each map a
+name to a block, and `ProjectConfig(...)` and `Project.init(...)` take the same
+blocks. Inside a block the settings are flat: fields such as `seed`, `numpar`,
+and `ziscale` are keys of the `hysplit` block under `models`, and `grid` and
+`smooth_factor` of the footprint's under `stages`. Don't add nested parameter
+objects inside a block.
 
 Each HYSPLIT setting is a field of `HysplitConfig`
 (`src/stilt/transport/hysplit/config.py`): a plain pydantic
@@ -288,10 +291,10 @@ workdir=None, timeout=None)`, returning one table with a `receptor` column
 (`stilt.transport.BatchedTransportModel`): the worker then hands it every
 receptor of a variant that needs particles at once, and a receptor it
 returns no rows for fails alone. A model in a package of its own needs no
-registration: `config.yaml` names it by import path
-(`model: mypkg.models.MyModel`), as a transform's `kind:` is, and every
+registration: its block under `models:` in `config.yaml` names it by import
+path (`class: mypkg.models.MyModel`), as a transform's `kind:` is, and every
 process that opens the project imports it from there. The run settings
-record the `model:` string as written, so the same class named by two
+record the `class:` string as written, so the same class named by two
 paths (`mypkg.models.MyModel` and a re-export, `mypkg.MyModel`) gets two
 settings folders. Pick one path and keep it. A model built into
 PYSTILT goes in `stilt.transport.MODELS` under a short name instead. Keep

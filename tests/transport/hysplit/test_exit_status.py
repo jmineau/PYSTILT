@@ -12,6 +12,7 @@ from stilt.meteorology import run_window
 from stilt.project import Project
 from stilt.receptors import PointReceptor
 from stilt.transport.hysplit import FailureReason, HysplitConfig, HysplitModel
+from tests.fixtures.factories import blocks
 
 from ...fixtures.factories import make_met_config, make_met_files
 
@@ -140,13 +141,15 @@ def test_a_killed_simulation_stores_no_particles_and_a_rerun_runs_it_again(tmp_p
     )
     make_met_files(tmp_path / "met", RECEPTOR.time, N_HOURS)
     config = ProjectConfig(
-        mets={"hrrr": make_met_config(tmp_path / "met")},
-        n_hours=N_HOURS,
-        numpar=10,
-        varsiwant=VARS,
-        outdt=30,
-        exe_dir=build,
-        variants={"hrrr": {}},
+        **blocks(
+            mets={"hrrr": make_met_config(tmp_path / "met")},
+            n_hours=N_HOURS,
+            numpar=10,
+            varsiwant=VARS,
+            outdt=30,
+            exe_dir=build,
+            variants={"hrrr": {}},
+        )
     )
     project = Project.init(tmp_path / "project", config=config, receptors=[RECEPTOR])
 

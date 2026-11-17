@@ -26,6 +26,7 @@ from stilt.project import Project
 from stilt.receptors import MultiPointReceptor
 from stilt.transport.hysplit import FailureReason
 from stilt.transport.hysplit.driver import winderrtf
+from tests.fixtures.factories import blocks
 
 from ..conftest import integration
 from ..fixtures.r_stilt_reference import REFERENCE_TIME
@@ -47,9 +48,25 @@ def _incomplete(project: Project) -> list[tuple[str, str]]:
     return list(zip(rows["receptor"], rows["variant"], strict=True))
 
 
-def _with(config: ProjectConfig, **updates) -> ProjectConfig:
-    """A validated copy of *config* with *updates* applied."""
-    return ProjectConfig.model_validate({**config.model_dump(), **updates})
+def _with(
+    config: ProjectConfig,
+    *,
+    hysplit: dict | None = None,
+    footprint: dict | None = None,
+    **updates,
+) -> ProjectConfig:
+    """
+    A validated copy of *config* with *updates* applied.
+
+    *hysplit* changes settings of the ``hysplit`` block under ``models``,
+    and *footprint* of the ``footprint`` block under ``stages``.
+    """
+    data = config.model_dump()
+    if hysplit:
+        data["models"]["hysplit"] = {**data["models"]["hysplit"], **hysplit}
+    if footprint:
+        data["stages"]["footprint"] = {**data["stages"]["footprint"], **footprint}
+    return ProjectConfig.model_validate({**data, **updates})
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +107,7 @@ def test_the_functions_make_what_a_project_stores(tmp_path, wbb_receptor, wbb_co
     """run_trajectories and calc_footprint give a seeded project run's particles and footprint."""
     import stilt
 
-    config = _with(wbb_config, krand=2, seed=7)
+    config = _with(wbb_config, hysplit={"krand": 2, "seed": 7})
     project = Project.init(tmp_path / "p", config=config, receptors=[wbb_receptor])
     project.run()
     sim = project.simulation(*_sim_id(wbb_receptor))
@@ -105,8 +122,8 @@ def test_the_functions_make_what_a_project_stores(tmp_path, wbb_receptor, wbb_co
         stored[columns].reset_index(drop=True),
         check_dtype=False,
     )
-    assert config.footprint.grid is not None
-    foot = stilt.calc_footprint(particles, wbb_receptor, config.footprint.grid)
+    grid = project.variants["hrrr"].footprint.grid
+    foot = stilt.calc_footprint(particles, wbb_receptor, grid)
     assert sim.footprint is not None
     np.testing.assert_allclose(foot.values, sim.footprint.values, rtol=1e-6)
 
@@ -147,7 +164,7 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
     }
     model = Project.init(
         tmp_path / "empty",
-        config=_with(wbb_config, grid=far_grid),
+        config=_with(wbb_config, footprint={"grid": far_grid}),
         receptors=[wbb_receptor],
     )
     model.run()
@@ -223,7 +240,7 @@ def test_particles_that_leave_the_met_domain_complete_the_run(
     receptor = PointReceptor(
         time="2021-01-15 06:00", longitude=-111.848, latitude=40.766, altitude=10
     )
-    config = _with(traj_only_config, n_hours=-24)
+    config = _with(traj_only_config, hysplit={"n_hours": -24})
     project = Project.init(
         tmp_path / "domain_exit", config=config, receptors=[receptor]
     )
@@ -252,7 +269,7 @@ def _project_on_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir)
     damaged.write_bytes(data[:period])
     config = _with(
         traj_only_config,
-        n_hours=-12,
+        hysplit={"n_hours": -12},
         mets={
             "hrrr": {
                 "directory": cut_met,
@@ -298,7 +315,7 @@ def test_hysplit_fails_a_run_whose_met_runs_out(
     Whether HYSPLIT warns depends on the turbulence draws, so the seed is
     fixed. Seeds 1 to 9 warn here; seed 10 does not (the test below).
     """
-    config = _with(traj_only_config, krand=2, seed=7)
+    config = _with(traj_only_config, hysplit={"krand": 2, "seed": 7})
     project = _project_on_met_cut_short(tmp_path, wbb_receptor, config, met_dir)
     _skip_the_met_checks(monkeypatch, tmp_path)
     project.run()
@@ -322,7 +339,7 @@ def test_a_run_the_met_stopped_without_a_warning_fails_by_where_its_particles_en
     since its particles stopped far inside the met's domain, not at its
     edge as particles that leave it do.
     """
-    config = _with(traj_only_config, krand=2, seed=10)
+    config = _with(traj_only_config, hysplit={"krand": 2, "seed": 10})
     project = _project_on_met_cut_short(tmp_path, wbb_receptor, config, met_dir)
     _skip_the_met_checks(monkeypatch, tmp_path)
     project.run()
@@ -498,9 +515,8 @@ def test_adding_a_footprint_only_variant_runs_no_hysplit(
     log_before = base.log_path.read_text()
 
     # The user adds a variant to config.yaml.
-    _with(wbb_config, variants={"hrrr": {}, "s2": {"smooth_factor": 2}}).to_yaml(
-        project / "config.yaml"
-    )
+    s2 = {"stages": {"footprint": {"smooth_factor": 2}}}
+    _with(wbb_config, variants={"hrrr": {}, "s2": s2}).to_yaml(project / "config.yaml")
     grown = Project(project)
     assert _incomplete(grown) == [_sim_id(wbb_receptor, "s2")]
     grown.run()
@@ -623,7 +639,7 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
     """Two realizations run, differ from each other, and resume one at a time."""
     config = _with(
         traj_only_config,
-        krand=4,  # HYSPLIT seeds each run from the clock
+        hysplit={"krand": 4},  # HYSPLIT seeds each run from the clock
         variants={"hrrr": {}, "err": {**_XYERR, "realizations": 2}},
     )
     model = Project.init(
@@ -665,8 +681,7 @@ def test_seeded_error_realizations_differ_and_reproduce(
     """krand=2 with a seed: realizations differ and a rerun is bit-identical."""
     config = _with(
         traj_only_config,
-        krand=2,
-        seed=7,
+        hysplit={"krand": 2, "seed": 7},
         variants={"hrrr": {}, "err": {**_XYERR, "realizations": 2}},
     )
 
@@ -716,14 +731,16 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
         "ids": ["wbb", "nw"],
     }
     config = ProjectConfig(
-        mets={"hrrr": reference_met(met_dir)},
-        n_hours=-6,
-        numpar=100,
-        krand=REFERENCE_KRAND,
-        seed=REFERENCE_SEED,
-        geometry=spec,
-        cells_per_target=10,
-        variants={"hrrr": {}},
+        **blocks(
+            mets={"hrrr": reference_met(met_dir)},
+            n_hours=-6,
+            numpar=100,
+            krand=REFERENCE_KRAND,
+            seed=REFERENCE_SEED,
+            geometry=spec,
+            cells_per_target=10,
+            variants={"hrrr": {}},
+        )
     )
     variant = next(iter(config.resolve().values()))
     fc = variant.footprint
@@ -785,14 +802,16 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
         altitude=REFERENCE_ALTITUDE,
     )
     config = ProjectConfig(
-        mets={"hrrr": reference_met(met_dir)},
-        n_hours=3,
-        numpar=100,
-        krand=REFERENCE_KRAND,
-        seed=REFERENCE_SEED,
-        hnf_plume=True,  # the footprint runs calc_plume_dilution on a forward track
-        grid=wbb_grid,
-        variants={"hrrr": {}},
+        **blocks(
+            mets={"hrrr": reference_met(met_dir)},
+            n_hours=3,
+            numpar=100,
+            krand=REFERENCE_KRAND,
+            seed=REFERENCE_SEED,
+            hnf_plume=True,
+            grid=wbb_grid,
+            variants={"hrrr": {}},
+        )
     )
 
     model = Project.init(tmp_path / "forward", config=config, receptors=[receptor])

@@ -102,12 +102,11 @@ def sample_project() -> Path:
             str(project),
             receptors=receptors,
             mets={"hrrr": met()},
+            models={"hysplit": {"n_hours": -24, "numpar": 200, "krand": 2, "seed": 42}},
+            stages={
+                "footprint": {"class": "stilt.footprint.FootprintStage", "grid": grid}
+            },
             variants={"hrrr": {}},
-            n_hours=-24,
-            numpar=200,
-            krand=2,
-            seed=42,
-            grid=grid,
         ).run()
         marker.touch()
     return project

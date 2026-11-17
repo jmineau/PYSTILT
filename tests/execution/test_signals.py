@@ -154,8 +154,7 @@ def test_sigterm_stops_a_run_on_two_cpus_with_exit_3(tmp_path, method):
     project = tmp_path / "project"
     project.mkdir()
     (project / "config.yaml").write_text(
-        "model: slowpool.SlowModel\n"
-        "n_hours: -1\n"
+        "models:\n  slow:\n    class: slowpool.SlowModel\n    n_hours: -1\n"
         "mets:\n  slow:\n    weather: hrrr\n"
         "variants:\n  slow: {}\n"
     )

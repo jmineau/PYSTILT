@@ -247,7 +247,9 @@ release time (:doc:`hysplit_build`):
 .. code-block:: yaml
 
    # config.yaml
-   exe_dir: /path/to/hysplit/exec    # directory containing hycs_std
+   models:
+     hysplit:
+       exe_dir: /path/to/hysplit/exec    # directory containing hycs_std
 
 The build's version is saved with the particles, so you can tell which
 build made them.

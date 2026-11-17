@@ -23,6 +23,7 @@ from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.project import Project
 from stilt.spatial import Grid
+from tests.fixtures.factories import blocks
 
 from .fixtures.factories import make_met_config, make_project_config
 
@@ -112,7 +113,7 @@ def test_resolve_project_exits_when_no_config_yaml(tmp_path):
 
 def test_resolve_project_returns_path_when_config_exists(tmp_path):
     """Returns the resolved path when config.yaml is present."""
-    (tmp_path / "config.yaml").write_text("n_hours: -24\n")
+    (tmp_path / "config.yaml").write_text("mets:\n  hrrr: /data/hrrr\n")
     resolved = _resolve_project(tmp_path)
     assert resolved == str(tmp_path.resolve())
 
@@ -317,6 +318,11 @@ def _write_checkable_config(tmp_path, n_receptors=1, files=True):
             make_met_files(tmp_path / "met", time, -24)
 
 
+def _footprint_block(grid):
+    """Return a ``stages`` block whose footprint has *grid*."""
+    return {"footprint": {"class": "stilt.footprint.FootprintStage", "grid": grid}}
+
+
 def test_check_exits_when_no_config(tmp_path):
     result = runner.invoke(app, ["check", str(tmp_path)])
 
@@ -355,7 +361,8 @@ def test_check_tells_a_receptor_above_sea_level_to_add_zsfc_and_exits_1(tmp_path
     # A footprint, whose near-field correction reads zsfc for this receptor.
     with (tmp_path / "config.yaml").open("a") as config:
         config.write(
-            "grid: {xmin: -113, xmax: -110, ymin: 40, ymax: 42, xres: 0.1, yres: 0.1}\n"
+            "stages:\n  footprint:\n    class: stilt.footprint.FootprintStage\n"
+            "    grid: {xmin: -113, xmax: -110, ymin: 40, ymax: 42, xres: 0.1, yres: 0.1}\n"
         )
     (tmp_path / "receptors.csv").write_text(
         "time,longitude,latitude,altitude,altitude_ref\n"
@@ -397,31 +404,35 @@ def test_check_exits_2_when_the_project_files_are_invalid(tmp_path):
 @pytest.mark.parametrize(
     ("setting", "message"),
     [
-        ({"numpar": 0}, "numpar"),
-        ({"n_hours": 0}, "n_hours must not be 0"),
+        ({"models": {"hysplit": {"numpar": 0}}}, "numpar"),
+        ({"models": {"hysplit": {"n_hours": 0}}}, "n_hours must not be 0"),
         (
             {
-                "grid": {
-                    "xmin": -111,
-                    "xmax": -110,
-                    "ymin": 40,
-                    "ymax": 41,
-                    "xres": 0,
-                    "yres": 0.1,
-                }
+                "stages": _footprint_block(
+                    {
+                        "xmin": -111,
+                        "xmax": -110,
+                        "ymin": 40,
+                        "ymax": 41,
+                        "xres": 0,
+                        "yres": 0.1,
+                    }
+                )
             },
             "xres",
         ),
         (
             {
-                "grid": {
-                    "xmin": -111,
-                    "xmax": -110,
-                    "ymin": 41,
-                    "ymax": 40,
-                    "xres": 0.1,
-                    "yres": 0.1,
-                }
+                "stages": _footprint_block(
+                    {
+                        "xmin": -111,
+                        "xmax": -110,
+                        "ymin": 41,
+                        "ymax": 40,
+                        "xres": 0.1,
+                        "yres": 0.1,
+                    }
+                )
             },
             "ymin < ymax",
         ),
@@ -450,7 +461,8 @@ def test_check_exits_2_for_a_varsiwant_name_hycs_std_stops_on(tmp_path):
     _write_checkable_config(tmp_path)
     config = tmp_path / "config.yaml"
     config.write_text(
-        config.read_text() + "varsiwant: [time, indx, long, lati, zfx1]\n"
+        config.read_text()
+        + "models:\n  hysplit:\n    varsiwant: [time, indx, long, lati, zfx1]\n"
     )
 
     result = runner.invoke(app, ["check", str(tmp_path)])
@@ -1414,25 +1426,15 @@ def test_init_writes_science_first_commented_config(tmp_path):
 
     assert "#" in text
     assert ProjectConfig.from_yaml(project / "config.yaml")
-    assert list(parsed) == [
-        "mets",
-        "grid",
-        "hnf_plume",
-        "variants",
-        "n_hours",
-        "numpar",
-        "varsiwant",
-        "output",
-    ]
+    assert list(parsed) == ["mets", "models", "stages", "variants", "output"]
     assert parsed["output"] == "./output"
-    assert parsed["grid"]["xmin"] == -113.0
-    loaded = ProjectConfig.from_yaml(project / "config.yaml")
-    assert loaded.footprint.grid is not None and loaded.footprint.grid.xmin == -113.0
-    assert list(loaded.resolve()) == ["hrrr"]
+    assert list(parsed["models"]) == ["hysplit"]
+    assert list(parsed["models"]["hysplit"]) == ["n_hours", "numpar", "varsiwant"]
+    footprint = parsed["stages"]["footprint"]
+    assert footprint["class"] == "stilt.footprint.FootprintStage"
+    assert footprint["grid"]["xmin"] == -113.0
     assert parsed["variants"] == {"hrrr": {}}
-    assert text.index("mets:") < text.index("grid:")
-    assert text.index("grid:") < text.index("n_hours:")
-    assert text.index("numpar:") < text.index("# execution:")
+    assert text.index("output:") < text.index("# execution:")
 
 
 def test_init_config_omits_advanced_and_internal_knobs(tmp_path):
@@ -1450,7 +1452,7 @@ def test_init_config_omits_advanced_and_internal_knobs(tmp_path):
 def test_init_aborts_when_config_exists(tmp_path):
     project = tmp_path / "existing"
     project.mkdir()
-    (project / "config.yaml").write_text("n_hours: -24\n")
+    (project / "config.yaml").write_text("mets:\n  hrrr: /data/hrrr\n")
     result = runner.invoke(app, ["init", str(project)])
     assert result.exit_code == 2
 
@@ -1568,10 +1570,12 @@ def test_status_lists_folders_and_what_differs(tmp_path):
     old = Project.init(
         tmp_path / "old",
         config=ProjectConfig(
-            mets={"hrrr": met},
-            variants={"hrrr": {}},
-            numpar=500,
-            output=str(tmp_path / "out"),
+            **blocks(
+                mets={"hrrr": met},
+                variants={"hrrr": {}},
+                numpar=500,
+                output=str(tmp_path / "out"),
+            )
         ),
         receptors=[receptor],
     )
@@ -1590,10 +1594,12 @@ def test_status_lists_folders_and_what_differs(tmp_path):
     new = Project.init(
         tmp_path / "new",
         config=ProjectConfig(
-            mets={"hrrr": met},
-            variants={"hrrr": {}},
-            numpar=1000,
-            output=str(tmp_path / "out"),
+            **blocks(
+                mets={"hrrr": met},
+                variants={"hrrr": {}},
+                numpar=1000,
+                output=str(tmp_path / "out"),
+            )
         ),
         receptors=[receptor],
     )

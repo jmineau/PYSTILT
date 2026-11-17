@@ -13,16 +13,21 @@ recorded with the footprints.
 
 .. code-block:: yaml
 
-   geometry:                     # the default footprint's geometry
-     kind: file
-     path: counties.shp
-     ids: NAME
+   stages:
+     footprint:
+       class: stilt.footprint.FootprintStage
+       geometry:                   # the default footprint's geometry
+         kind: file
+         path: counties.shp
+         ids: NAME
 
    variants:
      hrrr: {}
      hrrr-hexes:                   # a second footprint from the same particles
-       geometry: {kind: h3, resolution: 8, bounds: {xmin: -112.3, xmax: -111.6, ymin: 40.4, ymax: 41.0}}
-       cells_per_target: 4
+       stages:
+         footprint:
+           geometry: {kind: h3, resolution: 8, bounds: {xmin: -112.3, xmax: -111.6, ymin: 40.4, ymax: 41.0}}
+           cells_per_target: 4
 """
 
 from __future__ import annotations

@@ -16,8 +16,9 @@ need one in two cases:
 A tower measurement of CO2 or methane needs none: with no transforms every
 particle counts equally, which is the standard STILT footprint.
 
-List transforms in ``config.yaml``, as a default or per variant, or pass
-them to :meth:`stilt.Simulation.calc_footprint`. They run once, in order,
+List transforms in ``config.yaml`` as the footprint's ``transforms`` (in its
+block under ``stages:`` as the default, or under a variant's ``stages``), or
+pass them to :meth:`stilt.Simulation.calc_footprint`. They run once, in order,
 starting from the unweighted particles. They are footprint settings, so a
 variant that adds one shares the particles of the variant without it, and
 no transport model runs again. Each footprint file records the transforms it
@@ -28,19 +29,23 @@ Built-in transforms
 
 .. code-block:: yaml
 
-   transforms:
-     - kind: averaging_kernel
-       levels: [0, 500, 1000, 2000]
-       values: [1.0, 0.95, 0.8, 0.5]
-     - kind: pressure_weighting
-     - kind: first_order_lifetime
-       lifetime_hours: 4.0
-     - kind: dry_deposition
-       velocity: 0.01
-     - kind: oxidation
-       a: 2.45e-12
-       e_over_r: 1775
-       oxidant: oh.nc
+   stages:
+     footprint:
+       class: stilt.footprint.FootprintStage
+       grid: {xmin: -113.0, xmax: -110.5, ymin: 40.0, ymax: 42.0, xres: 0.01, yres: 0.01}
+       transforms:
+         - kind: averaging_kernel
+           levels: [0, 500, 1000, 2000]
+           values: [1.0, 0.95, 0.8, 0.5]
+         - kind: pressure_weighting
+         - kind: first_order_lifetime
+           lifetime_hours: 4.0
+         - kind: dry_deposition
+           velocity: 0.01
+         - kind: oxidation
+           a: 2.45e-12
+           e_over_r: 1775
+           oxidant: oh.nc
 
 ``averaging_kernel`` (:class:`stilt.transforms.AveragingKernel`)
    Multiplies each particle's ``foot`` by the kernel, interpolated to the
@@ -161,7 +166,8 @@ One kernel per receptor
 
 A satellite product gives each sounding its own averaging kernel, and an
 EM27/SUN kernel changes with the solar zenith angle. For these, name a
-table in the project in place of inline ``levels`` and ``values``:
+table in the project in place of inline ``levels`` and ``values``. In the
+footprint's block:
 
 .. code-block:: yaml
 
@@ -256,8 +262,8 @@ set in YAML. Return a new table and leave the one you are given unchanged.
            out["foot"] = np.where(keep.to_numpy(), out["foot"], 0.0)
            return out
 
-In ``config.yaml``, set ``kind`` to the class's import path. The other keys
-are the model's fields:
+In the footprint's block of ``config.yaml``, set ``kind`` to the class's
+import path. The other keys are the model's fields:
 
 .. code-block:: yaml
 

@@ -13,6 +13,7 @@ from stilt.config import ProjectConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.spatial import Grid
 from stilt.transport.hysplit import MetConfig
+from tests.fixtures.factories import blocks
 
 from ..fixtures.factories import make_met_config
 from ..fixtures.r_stilt_reference import (
@@ -66,11 +67,13 @@ def wbb_grid() -> Grid:
 def wbb_config(met_dir, wbb_grid) -> ProjectConfig:
     """Minimal ProjectConfig for integration tests (n_hours=-6, numpar=100)."""
     return ProjectConfig(
-        mets={"hrrr": reference_met(met_dir)},
-        n_hours=-6,
-        numpar=100,
-        grid=wbb_grid,
-        variants={"hrrr": {}},
+        **blocks(
+            mets={"hrrr": reference_met(met_dir)},
+            n_hours=-6,
+            numpar=100,
+            grid=wbb_grid,
+            variants={"hrrr": {}},
+        )
     )
 
 
@@ -78,10 +81,12 @@ def wbb_config(met_dir, wbb_grid) -> ProjectConfig:
 def traj_only_config(met_dir) -> ProjectConfig:
     """ProjectConfig without footprints for trajectory-only tests."""
     return ProjectConfig(
-        mets={"hrrr": reference_met(met_dir)},
-        n_hours=-6,
-        numpar=100,
-        variants={"hrrr": {}},
+        **blocks(
+            mets={"hrrr": reference_met(met_dir)},
+            n_hours=-6,
+            numpar=100,
+            variants={"hrrr": {}},
+        )
     )
 
 
@@ -92,14 +97,16 @@ def multifoot_config(met_dir, wbb_grid) -> ProjectConfig:
         xmin=-113.0, xmax=-111.0, ymin=39.5, ymax=41.5, xres=0.05, yres=0.05
     )
     return ProjectConfig(
-        mets={"hrrr": reference_met(met_dir)},
-        n_hours=-6,
-        numpar=100,
-        grid=wbb_grid,
-        variants={
-            "hrrr": {},
-            "coarse": {"grid": coarse_grid.model_dump()},
-        },
+        **blocks(
+            mets={"hrrr": reference_met(met_dir)},
+            n_hours=-6,
+            numpar=100,
+            grid=wbb_grid,
+            variants={
+                "hrrr": {},
+                "coarse": {"grid": coarse_grid.model_dump()},
+            },
+        )
     )
 
 
@@ -108,9 +115,11 @@ def multipoint_config(met_dir) -> ProjectConfig:
     """Config with a wider domain covering all three multipoint receptor locations."""
     grid = Grid(xmin=-113.0, xmax=-110.5, ymin=39.5, ymax=42.0, xres=0.01, yres=0.01)
     return ProjectConfig(
-        mets={"hrrr": reference_met(met_dir)},
-        n_hours=-6,
-        numpar=100,
-        grid=grid,
-        variants={"hrrr": {}},
+        **blocks(
+            mets={"hrrr": reference_met(met_dir)},
+            n_hours=-6,
+            numpar=100,
+            grid=grid,
+            variants={"hrrr": {}},
+        )
     )

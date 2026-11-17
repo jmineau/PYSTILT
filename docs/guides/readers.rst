@@ -224,8 +224,9 @@ sounding becomes a slant receptor on the retrieval's own levels, up to
    project.run()
 
 Each receptor keeps its ``sounding_id`` as a column of ``receptors.csv``,
-so the results join back to the soundings. The footprint config lists two
-transforms, the first reading the kernels by the table's name:
+so the results join back to the soundings. The footprint's block under
+``stages:`` lists two transforms, the first reading the kernels by the
+table's name:
 
 .. code-block:: yaml
 

@@ -175,7 +175,9 @@ Two calls are enough for one receptor. For many receptors, make a
 :class:`~stilt.Project`: a folder that holds your receptors and settings,
 runs every receptor, and keeps the results. :meth:`Project.init
 <stilt.Project.init>` creates the folder and writes both to it. The
-settings are the ones above:
+settings are the ones above, each in the block of what it belongs to: the
+transport model's under ``models``, and the footprint's under ``stages``,
+in a block that names the footprint stage as its ``class``:
 
 .. ipython:: python
 
@@ -183,12 +185,13 @@ settings are the ones above:
        "./my_first_project",
        receptors=[receptor],
        mets={"hrrr": met},          # "hrrr" is a name you choose
+       models={
+           "hysplit": {"n_hours": -12, "numpar": 200, "krand": 2, "seed": 42}
+       },
+       stages={
+           "footprint": {"class": "stilt.footprint.FootprintStage", "grid": grid}
+       },
        variants={"hrrr": {}},       # one variant: these settings, met hrrr
-       n_hours=-12,
-       numpar=200,
-       krand=2,
-       seed=42,
-       grid=grid,
    )
 
 Before running, check the project. ``project.check()`` looks for what would
@@ -273,7 +276,7 @@ Create a project folder with a starter ``config.yaml`` and ``receptors.csv``:
    stilt init ./my_first_project
 
 Open ``my_first_project/config.yaml`` and set the meteorology folder and the
-footprint grid. The keys are the same as in the Python example
+footprint grid. The blocks are the same as in the Python example
 above:
 
 .. code-block:: yaml
@@ -281,21 +284,26 @@ above:
    mets:
      hrrr: /path/to/arl/hrrr
 
+   models:
+     hysplit:
+       n_hours: -12
+       numpar: 200
+       krand: 2
+       seed: 42
+
+   stages:
+     footprint:
+       class: stilt.footprint.FootprintStage
+       grid:
+         xmin: -113.0
+         xmax: -110.5
+         ymin: 40.0
+         ymax: 42.0
+         xres: 0.01
+         yres: 0.01
+
    variants:
      hrrr: {}
-
-   grid:
-     xmin: -113.0
-     xmax: -110.5
-     ymin: 40.0
-     ymax: 42.0
-     xres: 0.01
-     yres: 0.01
-
-   n_hours: -12
-   numpar: 200
-   krand: 2
-   seed: 42
 
 Add your receptor to ``my_first_project/receptors.csv`` below the header
 line, so the file reads:

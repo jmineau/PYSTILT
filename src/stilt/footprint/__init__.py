@@ -7,6 +7,8 @@ Footprints of receptors, calculated from particles and applied to surface fluxes
     :func:`calc_footprint`, the footprint from particles, as in STILT-R.
 ``aggregation``
     Summing footprints onto other grids or polygons (:func:`jacobian`).
+``stage``
+    :class:`FootprintStage`, what a ``stages`` block of ``config.yaml`` names.
 ``io``
     The footprint array and its attributes, footprint files, and
     :func:`open_footprints`, many stored footprints as one dataset.
@@ -29,6 +31,7 @@ from .io import (
     write_empty_footprint,
     write_footprint,
 )
+from .stage import FootprintStage
 from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights
 
 __all__ = [
@@ -36,6 +39,7 @@ __all__ = [
     "UNITS",
     "FootprintAccessor",
     "FootprintConfig",
+    "FootprintStage",
     "Geometry",
     "Jacobian",
     "Mesh",

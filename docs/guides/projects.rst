@@ -15,7 +15,7 @@ The project folder
 .. code-block:: text
 
    my_project/
-     config.yaml        # your settings: meteorology, variants, footprint, run options
+     config.yaml        # your settings: meteorology, transport model, footprint, variants
      receptors.csv      # your receptors: where and when to release particles
      tables/            # other inputs, such as averaging kernels (project.add_table)
 
@@ -39,19 +39,32 @@ A typical config.yaml
    mets:
      hrrr: /data/arl/hrrr
 
+   models:
+     hysplit:
+       n_hours: -24
+       numpar: 500
+
+   stages:
+     footprint:
+       class: stilt.footprint.FootprintStage
+       grid:
+         xmin: -114.0
+         xmax: -111.0
+         ymin: 39.0
+         ymax: 42.0
+         xres: 0.01
+         yres: 0.01
+
    variants:
      hrrr: {}            # every receptor runs once, with these settings
 
-   grid:
-     xmin: -114.0
-     xmax: -111.0
-     ymin: 39.0
-     ymax: 42.0
-     xres: 0.01
-     yres: 0.01
-
-   n_hours: -24
-   numpar: 500
+The file is four blocks, and each names its entries. ``mets`` is your
+meteorology. ``models`` is the transport model that makes the particles,
+with its settings. ``stages`` is what is made from each simulation's
+particles: the footprint, which ``class`` names, with its settings.
+``variants`` is what runs. No setting sits outside a block: one written at
+the top of the file is refused with a message that names the block it
+belongs in.
 
 A key PYSTILT does not know is an error that names the nearest setting, so
 a typo such as ``smooth_factr`` is caught when the file loads, before
@@ -73,28 +86,28 @@ The settings most people change
      - Where the meteorology files are and how they are named. See
        :doc:`meteorology`.
      - one entry
-   * - ``variants``
-     - The variants that run. ``hrrr: {}`` runs the defaults (see
-       `Variants`_).
-     - one entry
-   * - ``grid``
-     - The map grid for the footprint: the longitude range
-       (``xmin``/``xmax``), the latitude range (``ymin``/``ymax``), and the
-       cell size in degrees (``xres``/``yres``). Make it cover where the
-       air comes from over the whole run. Leave it out, or set it to
-       ``null``, to make particles but no footprint.
-     - 0.01° (about 1 km) for a city, 0.1° for a region
-   * - ``n_hours``
+   * - ``n_hours``, under ``models: hysplit:``
      - How many hours to follow the particles. Negative values run backward
        in time, which is what footprints need. Positive values run forward
        from the receptor (see :ref:`plume-background`).
      - ``-24`` to ``-72``
-   * - ``numpar``
+   * - ``numpar``, under ``models: hysplit:``
      - Particles released per simulation. More particles give a smoother
        footprint and take longer. The default is 200, enough to try a
        project; we use 1000 for results, as the config ``stilt init``
        writes does.
      - ``1000``
+   * - ``grid``, under ``stages: footprint:``
+     - The map grid for the footprint: the longitude range
+       (``xmin``/``xmax``), the latitude range (``ymin``/``ymax``), and the
+       cell size in degrees (``xres``/``yres``). Make it cover where the
+       air comes from over the whole run. Leave the ``stages`` block out to
+       make particles but no footprint.
+     - 0.01° (about 1 km) for a city, 0.1° for a region
+   * - ``variants``
+     - The variants that run. ``hrrr: {}`` runs the defaults (see
+       `Variants`_).
+     - one entry
    * - ``output``
      - Where results go (`The output directory`_).
      - ``./output``
@@ -103,7 +116,7 @@ The settings most people change
        :doc:`running`.
      - (omit)
 
-These footprint settings sit next to ``grid`` at the top level:
+These footprint settings sit next to ``grid``, in the footprint's block:
 
 ``smooth_factor``
    Scales the Gaussian smoothing applied to each particle's influence,
@@ -136,8 +149,9 @@ cross 180° (``xmin: 170``, ``xmax: -170``).
 :doc:`../reference/configuration` ("Footprint grids") says how the smoothing
 and the time layers work on such grids.
 
-``config.yaml`` also takes the lower-level HYSPLIT and STILT settings, such
-as turbulence, time step, and output variables, by the names STILT-R uses.
+The ``hysplit`` block also takes the lower-level HYSPLIT and STILT settings,
+such as turbulence, time step, and output variables, by the names STILT-R
+uses.
 Most projects never change them; :doc:`../reference/configuration`
 describes each one.
 
@@ -145,10 +159,10 @@ Variants
 --------
 
 Every receptor runs once per variant. A variant has a name, a met, and any
-settings that differ from the top level of ``config.yaml``, which are the
-defaults. Every config lists its variants, and only those run. An entry with
-no overrides (``hrrr: {}`` below) runs the defaults unchanged. Add more
-entries to run the same receptors under other settings:
+settings that differ from the blocks above, which are the defaults: its
+model's block and the footprint's. Every config lists its variants, and only
+those run. An entry with no overrides (``hrrr: {}`` below) runs the defaults
+unchanged. Add more entries to run the same receptors under other settings:
 
 .. code-block:: yaml
 
@@ -161,7 +175,7 @@ entries to run the same receptors under other settings:
        tluverr: 260
        zcoruverr: 450
        horcoruverr: 14
-       grid: null                 # particles only
+       stages: {footprint: null}  # particles only
 
 Each variant of each receptor is one simulation, so 100 receptors and
 three variants make 300 simulations. A variant may set:
@@ -179,14 +193,22 @@ three variants make 300 simulations. A variant may set:
    count later only adds realizations.
 
 ``model``
-   The transport model, ``hysplit`` unless set. A model from another
-   package is named by its import path (:doc:`../reference/execution`).
+   Which block under ``models`` it runs, by the block's name. You need it
+   only when ``models`` has more than one entry
+   (:doc:`../reference/configuration` says how a model from another package
+   gets a block).
 
-Any other setting
-   Transport settings (``numpar``, ``ziscale``, turbulence, wind errors)
-   and footprint settings (``grid``, ``smooth_factor``, ``tres``,
-   ``transforms``) override the defaults for that variant
-   only.
+``stages``
+   The footprint settings this variant changes (``grid``,
+   ``smooth_factor``, ``tres``, ``transforms``), under the footprint
+   block's name: ``stages: {footprint: {smooth_factor: 2}}``. Set the stage
+   to null, ``stages: {footprint: null}``, for a variant that makes
+   particles only.
+
+Any other key
+   A setting of the variant's transport model (``numpar``, ``ziscale``,
+   turbulence, wind errors), which replaces the model block's value for
+   that variant only.
 
 Variant names may use lowercase letters, digits, and hyphens, because they
 become folder names. The same rule applies to the names in ``mets``.
@@ -204,9 +226,13 @@ from them:
    variants:
      hrrr: {}
      hrrr-regional:
-       grid: {xmin: -125.0, xmax: -100.0, ymin: 30.0, ymax: 50.0, xres: 0.1, yres: 0.1}
+       stages:
+         footprint:
+           grid: {xmin: -125.0, xmax: -100.0, ymin: 30.0, ymax: 50.0, xres: 0.1, yres: 0.1}
      hrrr-ak:
-       transforms: [{kind: averaging_kernel, table: kernels}]
+       stages:
+         footprint:
+           transforms: [{kind: averaging_kernel, table: kernels}]
 
 ``hrrr-regional`` and ``hrrr-ak`` have the same transport settings as
 ``hrrr``, so HYSPLIT runs once per receptor for the three of them. There is
@@ -215,7 +241,8 @@ are equal. Add such a variant to a finished project and run again, and
 PYSTILT makes only the new footprints, from the stored particles.
 
 A ``grid`` in a variant changes only the fields it names. A coarser version
-of the default domain is just ``grid: {xres: 0.1, yres: 0.1}``. You may not
+of the default domain is just ``stages: {footprint: {grid: {xres: 0.1,
+yres: 0.1}}}``. You may not
 need a variant at all: ``foot.stilt.aggregate`` sums a fine footprint onto
 coarser cells or irregular areas after the run.
 
@@ -294,7 +321,7 @@ Reruns skip finished work
 Before running, PYSTILT checks which simulations are finished and runs only
 the rest. A simulation is complete when the result files its variant makes
 exist in the output directory: the particle file, and the footprint file
-when the variant has a grid. If the particle file is missing, HYSPLIT runs
+when the variant has a footprint. If the particle file is missing, HYSPLIT runs
 again, and the footprints of every variant that shares those particles are
 remade from the new particles.
 
@@ -361,17 +388,21 @@ Footprints for shapefiles, hexagons, or point sources
 
 You may plan to add footprints up over irregular areas, such as counties
 from a shapefile, H3 hexagons, or small windows around point sources. You
-can then name those areas in ``geometry`` instead of giving a grid. PYSTILT
+can then name those areas in the footprint's ``geometry`` instead of giving a
+grid. PYSTILT
 picks a grid fine enough to resolve them (see
 :meth:`stilt.Mesh.to_grid`). This needs the ``geometry`` extra
 (``pip install "pystilt[geometry]"``).
 
 .. code-block:: yaml
 
-   geometry:
-     kind: file          # a shapefile, GeoPackage, or GeoJSON
-     path: counties.shp
-     ids: NAME           # attribute column used as cell ids
+   stages:
+     footprint:
+       class: stilt.footprint.FootprintStage
+       geometry:
+         kind: file          # a shapefile, GeoPackage, or GeoJSON
+         path: counties.shp
+         ids: NAME           # attribute column used as cell ids
 
 The other kinds are ``h3`` hexagons and ``windows`` around point sources.
 To make footprints for several geometries from the same particles, declare
@@ -382,17 +413,21 @@ one variant per geometry; they share the particles:
    variants:
      hrrr: {}
      hrrr-hexes:
-       geometry:
-         kind: h3
-         resolution: 8
-         bounds: {xmin: -112.3, xmax: -111.6, ymin: 40.4, ymax: 41.0}
-       cells_per_target: 4   # grid cells across the smallest hexagon (default)
+       stages:
+         footprint:
+           geometry:
+             kind: h3
+             resolution: 8
+             bounds: {xmin: -112.3, xmax: -111.6, ymin: 40.4, ymax: 41.0}
+           cells_per_target: 4   # grid cells across the smallest hexagon (default)
      hrrr-sources:
-       geometry:
-         kind: windows
-         coords: [[-111.97, 40.515], [-112.015, 40.779]]
-         size: 0.01
-         ids: [landfill, wwtp]
+       stages:
+         footprint:
+           geometry:
+             kind: windows
+             coords: [[-111.97, 40.515], [-112.015, 40.779]]
+             size: 0.01
+             ids: [landfill, wwtp]
 
 To make the grid PYSTILT picks finer or coarser, change
 ``cells_per_target``. The grid is saved with each footprint, so you do not
@@ -458,7 +493,7 @@ Receptors already in the file are left as they are.
 The same settings in Python
 ---------------------------
 
-You can pass any ``config.yaml`` key to
+You can pass the blocks of ``config.yaml`` to
 :meth:`Project.init <stilt.Project.init>` directly, as plain dictionaries:
 
 .. code-block:: python
@@ -468,18 +503,22 @@ You can pass any ``config.yaml`` key to
    project = stilt.Project.init(
        "./my_project",
        mets={"hrrr": "/data/arl/hrrr"},
-       grid={
-           "xmin": -114.0, "xmax": -111.0,
-           "ymin": 39.0, "ymax": 42.0,
-           "xres": 0.01, "yres": 0.01,
+       models={"hysplit": {"n_hours": -24, "numpar": 500}},
+       stages={
+           "footprint": {
+               "class": "stilt.footprint.FootprintStage",
+               "grid": {
+                   "xmin": -114.0, "xmax": -111.0,
+                   "ymin": 39.0, "ymax": 42.0,
+                   "xres": 0.01, "yres": 0.01,
+               },
+           }
        },
        variants={"hrrr": {}, "hrrr-zi08": {"ziscale": 0.8}},
-       n_hours=-24,
-       numpar=500,
    )
 
-You can also use the config classes, which your editor can autocomplete and
-check:
+You can also build the config first, with the classes for a met and a grid,
+which your editor can autocomplete and check:
 
 .. code-block:: python
 
@@ -487,13 +526,17 @@ check:
 
    config = stilt.ProjectConfig(
        mets={"hrrr": MetConfig(directory="/data/arl/hrrr")},
-       grid=stilt.Grid(
-           xmin=-114.0, xmax=-111.0,
-           ymin=39.0, ymax=42.0,
-           xres=0.01, yres=0.01,
-       ),
-       n_hours=-24,
-       numpar=500,
+       models={"hysplit": {"n_hours": -24, "numpar": 500}},
+       stages={
+           "footprint": {
+               "class": "stilt.footprint.FootprintStage",
+               "grid": stilt.Grid(
+                   xmin=-114.0, xmax=-111.0,
+                   ymin=39.0, ymax=42.0,
+                   xres=0.01, yres=0.01,
+               ),
+           }
+       },
        variants={"hrrr": {}},
    )
    project = stilt.Project.init("./my_project", config=config)

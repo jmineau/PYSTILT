@@ -7,13 +7,14 @@ import pytest
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from stilt.config import ProjectConfig
+from stilt.config import FOOTPRINT_STAGE, ProjectConfig
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.targets import Mesh
 from stilt.identity import footprint_settings, read_footprint_settings
 from stilt.spatial import Grid
 from stilt.transforms import AveragingKernel, FirstOrderLifetime, PressureWeighting
 from stilt.transport.hysplit.driver import winderrtf
+from tests.fixtures.factories import blocks
 
 from .fixtures.factories import make_met_config, write_arl_file
 
@@ -42,26 +43,175 @@ SCALE_FOOT_KIND = f"{__name__}.ScaleFoot"
 # ---------------------------------------------------------------------------
 # winderrtf
 # ---------------------------------------------------------------------------
-# ProjectConfig - flat construction
+# ProjectConfig - the blocks
 # ---------------------------------------------------------------------------
 
 
-def test_model_config_flat_construction(tmp_path):
+def test_a_config_is_blocks(tmp_path, grid):
+    """Mets, models, stages and variants each map a name to a block; a variant overrides its model's."""
     cfg = ProjectConfig(
-        n_hours=-24,
-        numpar=100,
-        seed=42,
-        krand=2,
-        mets={
-            "hrrr": make_met_config(
-                directory=tmp_path / "met",
-            )
+        mets={"hrrr": make_met_config(directory=tmp_path / "met")},
+        models={"hysplit": {"n_hours": -24, "numpar": 100, "seed": 42, "krand": 2}},
+        stages={
+            "footprint": {"class": FOOTPRINT_STAGE, "grid": grid, "smooth_factor": 0.5}
         },
-        variants={"hrrr": {}},
+        variants={"hrrr": {}, "hrrr-long": {"n_hours": -72}},
     )
-    assert cfg.n_hours == -24
-    assert cfg.numpar == 100
-    assert cfg.seed == 42
+    variants = cfg.resolve()
+    assert variants["hrrr"].transport.n_hours == -24
+    assert variants["hrrr"].transport.seed == 42
+    assert variants["hrrr-long"].transport.n_hours == -72
+    assert variants["hrrr-long"].transport.numpar == 100
+    assert variants["hrrr"].footprint.grid == grid
+    assert variants["hrrr"].footprint.smooth_factor == 0.5
+    assert variants["hrrr-long"].footprint == variants["hrrr"].footprint
+
+
+@pytest.mark.parametrize(
+    ("setting", "message"),
+    [
+        (
+            {"n_hours": -24},
+            "config: 'n_hours' is a hysplit setting. Write it under models: hysplit:.",
+        ),
+        (
+            {"smooth_factor": 0.5},
+            "config: 'smooth_factor' is a footprint setting. Write it under stages:, "
+            "in the footprint's block (class: stilt.footprint.FootprintStage).",
+        ),
+        (
+            {"model": "hysplit"},
+            "config: 'model' is no longer a key. Name each transport model as a "
+            "block under models:, such as models: {hysplit: {}}.",
+        ),
+    ],
+    ids=["model setting", "footprint setting", "model"],
+)
+def test_a_setting_at_the_top_is_refused_naming_its_block(tmp_path, setting, message):
+    with pytest.raises(ValueError, match=re.escape(message)):
+        ProjectConfig(mets=_met_config(tmp_path), variants={"hrrr": {}}, **setting)
+
+
+def test_a_setting_in_another_block_is_refused_naming_its_own(tmp_path, grid):
+    mets = _met_config(tmp_path)
+    stage = {"class": FOOTPRINT_STAGE, "grid": grid}
+    with pytest.raises(
+        ValueError,
+        match="models: hysplit: 'grid' is a footprint setting. Write it under stages:",
+    ):
+        ProjectConfig(
+            mets=mets, models={"hysplit": {"grid": grid}}, variants={"hrrr": {}}
+        )
+    with pytest.raises(
+        ValueError,
+        match="stages: footprint: 'numpar' is a hysplit setting. "
+        "Write it under models: hysplit:.",
+    ):
+        ProjectConfig(
+            mets=mets,
+            stages={"footprint": {**stage, "numpar": 5}},
+            variants={"hrrr": {}},
+        )
+    with pytest.raises(
+        ValueError,
+        match="Variant 'hrrr': 'smooth_factor' is a footprint setting. "
+        "Write it under the variant's stages: footprint:.",
+    ):
+        ProjectConfig(
+            mets=mets,
+            stages={"footprint": stage},
+            variants={"hrrr": {"smooth_factor": 2}},
+        )
+    with pytest.raises(
+        ValueError,
+        match="Variant 'hrrr', stages: footprint: 'class' is the stage itself",
+    ):
+        ProjectConfig(
+            mets=mets,
+            stages={"footprint": stage},
+            variants={"hrrr": {"stages": {"footprint": {"class": FOOTPRINT_STAGE}}}},
+        )
+
+
+def test_a_models_wrong_value_is_reported_for_its_block(tmp_path):
+    """A block is checked when the file loads, as the variants that change none of it run it."""
+    mets = _met_config(tmp_path)
+    with pytest.raises(
+        ValueError, match=r"models: hysplit \(hysplit\): [\s\S]*n_hours must not be 0"
+    ):
+        ProjectConfig(
+            mets=mets, models={"hysplit": {"n_hours": 0}}, variants={"hrrr": {}}
+        )
+    with pytest.raises(
+        ValueError, match=r"Variant 'hrrr' \(hysplit\): [\s\S]*n_hours must not be 0"
+    ):
+        ProjectConfig(mets=mets, variants={"hrrr": {"n_hours": 0}}).resolve()
+
+
+def test_a_stage_block_names_the_footprint_stage_as_its_class(tmp_path, grid):
+    mets = _met_config(tmp_path)
+    with pytest.raises(
+        ValueError,
+        match="stages: footprint names no class. The footprint is "
+        "class: stilt.footprint.FootprintStage.",
+    ):
+        ProjectConfig(
+            mets=mets, stages={"footprint": {"grid": grid}}, variants={"hrrr": {}}
+        )
+    with pytest.raises(
+        ValueError, match="stages: wind: 'mypkg.WindRose' is not a stage"
+    ):
+        ProjectConfig(
+            mets=mets,
+            stages={"wind": {"class": "mypkg.WindRose"}},
+            variants={"hrrr": {}},
+        )
+    stage = {"class": FOOTPRINT_STAGE, "grid": grid}
+    with pytest.raises(
+        ValueError,
+        match="stages: fine and coarse are both stilt.footprint.FootprintStage. "
+        "A stage has one block",
+    ):
+        ProjectConfig(
+            mets=mets, stages={"fine": stage, "coarse": stage}, variants={"hrrr": {}}
+        )
+
+
+def test_a_stage_blocks_name_is_what_a_variant_calls_it(tmp_path, grid):
+    """The block's name is a handle: the class says what the stage is."""
+    config = ProjectConfig(
+        mets=_met_config(tmp_path),
+        stages={"foot": {"class": FOOTPRINT_STAGE, "grid": grid}},
+        variants={
+            "hrrr": {},
+            "smooth": {"stages": {"foot": {"smooth_factor": 2}}},
+            "particles": {"stages": {"foot": None}},
+        },
+    )
+    variants = config.resolve()
+    assert variants["hrrr"].footprint.smooth_factor == 1
+    assert variants["smooth"].footprint.smooth_factor == 2
+    assert variants["smooth"].footprint.grid == grid
+    assert variants["particles"].footprint is None
+    with pytest.raises(
+        ValueError,
+        match=r"Variant 'hrrr' names the stage 'footprint', which stages: does "
+        r"not have \(it has \['foot'\]\)",
+    ):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            stages={"foot": {"class": FOOTPRINT_STAGE, "grid": grid}},
+            variants={"hrrr": {"stages": {"footprint": None}}},
+        )
+
+
+def test_the_footprint_stage_is_at_the_path_a_config_names():
+    import importlib
+
+    module, _, name = FOOTPRINT_STAGE.rpartition(".")
+    stage = getattr(importlib.import_module(module), name)
+    assert stage.name == "footprint"
+    assert stage.config_class is FootprintConfig
 
 
 def test_model_config_requires_nonempty_mets():
@@ -80,7 +230,9 @@ def test_a_config_loads_without_its_hysplit_build(tmp_path):
     """Loading checks the variants but builds none, so exe_dir is not needed yet."""
     mc = make_met_config(directory=tmp_path / "met")
     elsewhere = tmp_path / "not-mounted"
-    cfg = ProjectConfig(mets={"hrrr": mc}, exe_dir=elsewhere, variants={"hrrr": {}})
+    cfg = ProjectConfig(
+        **blocks(mets={"hrrr": mc}, exe_dir=elsewhere, variants={"hrrr": {}})
+    )
     with pytest.raises(FileNotFoundError, match="version"):
         cfg.resolve()
     with pytest.raises(ValueError, match="realizations must be >= 1"):
@@ -92,16 +244,14 @@ def _default_footprint(cfg):
     return next(iter(cfg.resolve().values())).footprint
 
 
-def test_model_config_footprint_fields_are_flat(tmp_path, grid):
-    """The footprint settings sit beside the transport ones and form the footprint."""
+def test_without_a_stages_block_a_project_makes_particles_only(tmp_path, grid):
     mc = make_met_config(directory=tmp_path / "met")
     cfg = ProjectConfig(
-        mets={"hrrr": mc}, grid=grid, smooth_factor=0.5, variants={"hrrr": {}}
+        mets={"hrrr": mc},
+        stages={"footprint": {"class": FOOTPRINT_STAGE, "grid": grid}},
+        variants={"hrrr": {}},
     )
-    foot = _default_footprint(cfg)
-    assert foot is not None
-    assert foot.grid == grid
-    assert foot.smooth_factor == 0.5
+    assert _default_footprint(cfg).grid == grid
     assert (
         _default_footprint(ProjectConfig(mets={"hrrr": mc}, variants={"hrrr": {}}))
         is None
@@ -115,13 +265,8 @@ def test_model_config_footprint_fields_are_flat(tmp_path, grid):
 
 def test_model_config_yaml_roundtrip_basic(tmp_path):
     cfg = ProjectConfig(
-        n_hours=-24,
-        numpar=100,
-        mets={
-            "hrrr": make_met_config(
-                directory=tmp_path / "met",
-            )
-        },
+        mets={"hrrr": make_met_config(directory=tmp_path / "met")},
+        models={"hysplit": {"n_hours": -24, "numpar": 100}},
         variants={"hrrr": {}},
     )
     path = tmp_path / "config.yaml"
@@ -130,9 +275,9 @@ def test_model_config_yaml_roundtrip_basic(tmp_path):
     text = path.read_text()
 
     assert "#" not in text
-    assert loaded.n_hours == -24
-    assert loaded.numpar == 100
+    assert loaded.models == {"hysplit": {"n_hours": -24, "numpar": 100}}
     assert "hrrr" in loaded.mets
+    assert list(yaml.safe_load(text)) == ["mets", "models", "variants"]
 
 
 def test_model_config_reports_invalid_yaml(tmp_path):
@@ -149,13 +294,16 @@ def test_model_config_reports_invalid_yaml(tmp_path):
 @pytest.mark.parametrize(
     ("text", "where"),
     [
-        ("n_hours: -24\nnumpar: 100\nn_hours: 24\n", "line 3, column 1: 'n_hours'"),
+        (
+            "models:\n  hysplit:\n    n_hours: -24\n    numpar: 100\n    n_hours: 24\n",
+            "line 5, column 5: 'n_hours'",
+        ),
         (
             "variants:\n  a:\n    numpar: 10\n    numpar: 20\n",
             "line 4, column 5: 'numpar'",
         ),
     ],
-    ids=["top", "variant"],
+    ids=["block", "variant"],
 )
 def test_model_config_refuses_a_repeated_key(tmp_path, text, where):
     """A key written twice is refused, not read as its last value (#440)."""
@@ -249,14 +397,16 @@ def test_execution_accepts_one_setup_line():
 def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
     """The footprint settings survive a to_yaml/from_yaml roundtrip."""
     cfg = ProjectConfig(
-        mets={
-            "hrrr": make_met_config(
-                directory=tmp_path / "met",
-            )
-        },
-        grid=grid,
-        tres="15min",
-        variants={"hrrr": {}},
+        **blocks(
+            mets={
+                "hrrr": make_met_config(
+                    directory=tmp_path / "met",
+                )
+            },
+            grid=grid,
+            tres="15min",
+            variants={"hrrr": {}},
+        )
     )
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
@@ -274,10 +424,9 @@ def test_time_integrate_is_refused_saying_what_to_do_instead(tmp_path, grid, whe
     variant = {} if where == "top" else footprint
     with pytest.raises(ValueError, match=r"time_integrate was removed.*sum\('time'\)"):
         ProjectConfig(
-            mets=_met_config(tmp_path),
-            grid=grid,
-            variants={"hrrr": variant},
-            **top,
+            **blocks(
+                mets=_met_config(tmp_path), grid=grid, variants={"hrrr": variant}, **top
+            )
         )
 
 
@@ -286,16 +435,20 @@ def test_veght_is_refused_naming_footprint_depth(tmp_path, where):
     top = {"veght": 0.3} if where == "top" else {}
     variant = {} if where == "top" else {"veght": 0.3}
     with pytest.raises(ValueError, match="veght was renamed footprint_depth"):
-        ProjectConfig(mets=_met_config(tmp_path), variants={"hrrr": variant}, **top)
+        ProjectConfig(
+            **blocks(mets=_met_config(tmp_path), variants={"hrrr": variant}, **top)
+        )
 
 
 def test_footprint_depth_goes_to_hysplit_as_veght(tmp_path):
     from stilt.transport.hysplit.driver import setup_entries
 
     config = ProjectConfig(
-        mets=_met_config(tmp_path), footprint_depth=0.3, variants={"hrrr": {}}
+        mets=_met_config(tmp_path),
+        models={"hysplit": {"footprint_depth": 0.3}},
+        variants={"hrrr": {}},
     )
-    entries = setup_entries(config.transport)
+    entries = setup_entries(config.resolve()["hrrr"].transport)
     assert entries["veght"] == 0.3
     assert "footprint_depth" not in entries
 
@@ -304,40 +457,56 @@ def test_hnf_plume_needs_its_columns_in_varsiwant_only_with_a_footprint(tmp_path
     varsiwant = ["time", "indx", "long", "lati", "zagl", "foot"]
     with pytest.raises(ValueError, match=r"near-field correction \(hnf_plume\) reads"):
         ProjectConfig(
-            mets=_met_config(tmp_path),
-            grid=grid,
-            varsiwant=varsiwant,
-            variants={"hrrr": {}},
+            **blocks(
+                mets=_met_config(tmp_path),
+                grid=grid,
+                varsiwant=varsiwant,
+                variants={"hrrr": {}},
+            )
         )
     # Without a footprint, or with the correction off, nothing reads them.
     ProjectConfig(
-        mets=_met_config(tmp_path), varsiwant=varsiwant, variants={"hrrr": {}}
+        **blocks(mets=_met_config(tmp_path), varsiwant=varsiwant, variants={"hrrr": {}})
     )
     ProjectConfig(
-        mets=_met_config(tmp_path),
-        grid=grid,
-        varsiwant=varsiwant,
-        hnf_plume=False,
-        variants={"hrrr": {}},
-    )
-
-
-def test_a_particles_only_variant_drops_the_footprint_settings_it_inherits(
-    tmp_path, grid
-):
-    config = ProjectConfig(
-        mets=_met_config(tmp_path),
-        grid=grid,
-        hnf_plume=False,
-        smooth_factor=0.5,
-        variants={"hrrr": {}, "hrrr-err": {"grid": None}},
-    )
-    assert config.resolve()["hrrr-err"].footprint is None
-    with pytest.raises(ValueError, match=r"sets footprint settings \(smooth_factor\)"):
-        ProjectConfig(
+        **blocks(
             mets=_met_config(tmp_path),
             grid=grid,
-            variants={"hrrr": {}, "hrrr-err": {"grid": None, "smooth_factor": 2.0}},
+            varsiwant=varsiwant,
+            hnf_plume=False,
+            variants={"hrrr": {}},
+        )
+    )
+
+
+def test_a_variant_turns_the_footprint_off_with_null(tmp_path, grid):
+    stage = {
+        "class": FOOTPRINT_STAGE,
+        "grid": grid,
+        "hnf_plume": False,
+        "smooth_factor": 0.5,
+    }
+    config = ProjectConfig(
+        mets=_met_config(tmp_path),
+        stages={"footprint": stage},
+        variants={"hrrr": {}, "hrrr-err": {"stages": {"footprint": None}}},
+    )
+    variants = config.resolve()
+    assert variants["hrrr"].footprint is not None
+    assert variants["hrrr-err"].footprint is None
+    # A footprint with its grid taken away has nothing to grid on: say how to turn it off.
+    with pytest.raises(
+        ValueError,
+        match=r"Variant 'hrrr-err': its footprint has no grid. [\s\S]*"
+        r"stages: \{footprint: null\} to make particles only",
+    ):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            stages={"footprint": stage},
+            variants={
+                "hrrr": {},
+                "hrrr-err": {"stages": {"footprint": {"grid": None}}},
+            },
         )
 
 
@@ -365,12 +534,17 @@ def test_model_config_yaml_roundtrip_with_footprint_transforms(tmp_path, grid):
         FirstOrderLifetime(lifetime_hours=4.0),
     ]
     cfg = ProjectConfig(
-        mets=_met_config(tmp_path), grid=grid, transforms=given, variants={"hrrr": {}}
+        **blocks(
+            mets=_met_config(tmp_path),
+            grid=grid,
+            transforms=given,
+            variants={"hrrr": {}},
+        )
     )
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
     loaded = ProjectConfig.from_yaml(path)
-    transforms = loaded.footprint.transforms
+    transforms = loaded.resolve()["hrrr"].footprint.transforms
     assert len(transforms) == 3
     assert transforms == given
     assert isinstance(transforms[0], AveragingKernel)
@@ -381,10 +555,12 @@ def test_model_config_yaml_roundtrip_with_footprint_transforms(tmp_path, grid):
 
 def test_model_config_yaml_roundtrip_with_user_transform(tmp_path, grid):
     cfg = ProjectConfig(
-        mets=_met_config(tmp_path),
-        grid=grid,
-        transforms=[ScaleFoot(factor=2.5)],
-        variants={"hrrr": {}},
+        **blocks(
+            mets=_met_config(tmp_path),
+            grid=grid,
+            transforms=[ScaleFoot(factor=2.5)],
+            variants={"hrrr": {}},
+        )
     )
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
@@ -394,38 +570,38 @@ def test_model_config_yaml_roundtrip_with_user_transform(tmp_path, grid):
     assert "factor: 2.5" in text
 
     loaded = ProjectConfig.from_yaml(path)
-    transforms = loaded.footprint.transforms
-    assert len(transforms) == 1
-    assert isinstance(transforms[0], ScaleFoot)
-    assert transforms[0].factor == pytest.approx(2.5)
-    assert transforms[0] == cfg.transforms[0]
+    transforms = loaded.resolve()["hrrr"].footprint.transforms
+    assert transforms == [ScaleFoot(factor=2.5)]
 
 
 def test_model_config_variant_grid_in_yaml(tmp_path):
     """A variant may carry its own grid; the others inherit the default."""
     yaml_text = textwrap.dedent(f"""\
-        n_hours: -24
-        numpar: 100
         mets:
           hrrr:
             directory: {tmp_path / "met"}
-        grid:
-          xmin: -114.0
-          xmax: -111.0
-          ymin: 39.0
-          ymax: 42.0
-          xres: 0.01
-          yres: 0.01
-        variants:
-          hrrr: {{}}
-          coarse:
+        models:
+          hysplit:
+            n_hours: -24
+            numpar: 100
+        stages:
+          footprint:
+            class: stilt.footprint.FootprintStage
             grid:
               xmin: -114.0
               xmax: -111.0
               ymin: 39.0
               ymax: 42.0
-              xres: 0.05
-              yres: 0.05
+              xres: 0.01
+              yres: 0.01
+        variants:
+          hrrr: {{}}
+          coarse:
+            stages:
+              footprint:
+                grid:
+                  xres: 0.05
+                  yres: 0.05
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
@@ -438,49 +614,59 @@ def test_model_config_variant_grid_in_yaml(tmp_path):
 def test_model_config_inline_grid_in_yaml(tmp_path):
     """The default grid is a mapping under ``grid``."""
     yaml_text = textwrap.dedent(f"""\
-        n_hours: -24
-        numpar: 100
         mets:
           hrrr:
             directory: {tmp_path / "met"}
-        grid:
-          xmin: -114.0
-          xmax: -111.0
-          ymin: 39.0
-          ymax: 42.0
-          xres: 0.05
-          yres: 0.05
-        smooth_factor: 0.75
+        models:
+          hysplit:
+            n_hours: -24
+            numpar: 100
+        stages:
+          footprint:
+            class: stilt.footprint.FootprintStage
+            grid:
+              xmin: -114.0
+              xmax: -111.0
+              ymin: 39.0
+              ymax: 42.0
+              xres: 0.05
+              yres: 0.05
+            smooth_factor: 0.75
         variants:
           hrrr: {{}}
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
-    loaded = ProjectConfig.from_yaml(path)
-    assert loaded.footprint.grid is not None
-    assert loaded.footprint.grid.xres == 0.05
-    assert loaded.footprint.grid.xmin == -114.0
-    assert loaded.footprint.smooth_factor == 0.75
+    footprint = ProjectConfig.from_yaml(path).resolve()["hrrr"].footprint
+    assert footprint.grid.xres == 0.05
+    assert footprint.grid.xmin == -114.0
+    assert footprint.smooth_factor == 0.75
 
 
 def test_model_config_null_grid_means_trajectory_only(tmp_path):
     yaml_text = textwrap.dedent(f"""\
-        n_hours: -24
-        numpar: 100
         mets:
           hrrr:
             directory: {tmp_path / "met"}
-        grid:
-          xmin: -114.0
-          xmax: -111.0
-          ymin: 39.0
-          ymax: 42.0
-          xres: 0.05
-          yres: 0.05
+        models:
+          hysplit:
+            n_hours: -24
+            numpar: 100
+        stages:
+          footprint:
+            class: stilt.footprint.FootprintStage
+            grid:
+              xmin: -114.0
+              xmax: -111.0
+              ymin: 39.0
+              ymax: 42.0
+              xres: 0.05
+              yres: 0.05
         variants:
           hrrr: {{}}
           traj:
-            grid: null
+            stages:
+              footprint: null
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
@@ -491,28 +677,33 @@ def test_model_config_null_grid_means_trajectory_only(tmp_path):
 
 def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
     yaml_text = textwrap.dedent(f"""\
-        n_hours: -24
-        numpar: 100
         mets:
           hrrr:
             directory: {tmp_path / "met"}
-        grid:
-          xmin: -114.0
-          xmax: -111.0
-          ymin: 39.0
-          ymax: 42.0
-          xres: 0.05
-          yres: 0.05
-        transforms:
-          - kind: averaging_kernel
-            levels: [0.0, 1000.0]
-            values: [0.3, 0.7]
-            coordinate: release_height
-          - kind: pressure_weighting
-          - kind: first_order_lifetime
-            lifetime_hours: 3.0
-          - kind: {SCALE_FOOT_KIND}
-            factor: 0.5
+        models:
+          hysplit:
+            n_hours: -24
+            numpar: 100
+        stages:
+          footprint:
+            class: stilt.footprint.FootprintStage
+            grid:
+              xmin: -114.0
+              xmax: -111.0
+              ymin: 39.0
+              ymax: 42.0
+              xres: 0.05
+              yres: 0.05
+            transforms:
+              - kind: averaging_kernel
+                levels: [0.0, 1000.0]
+                values: [0.3, 0.7]
+                coordinate: release_height
+              - kind: pressure_weighting
+              - kind: first_order_lifetime
+                lifetime_hours: 3.0
+              - kind: {SCALE_FOOT_KIND}
+                factor: 0.5
         variants:
           hrrr: {{}}
     """)
@@ -520,7 +711,7 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
     path.write_text(yaml_text)
 
     loaded = ProjectConfig.from_yaml(path)
-    transforms = loaded.footprint.transforms
+    transforms = loaded.resolve()["hrrr"].footprint.transforms
 
     assert len(transforms) == 4
     assert isinstance(transforms[0], AveragingKernel)
@@ -537,21 +728,26 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
 
 def test_model_config_rejects_unimportable_transform_from_yaml(tmp_path):
     yaml_text = textwrap.dedent(f"""\
-        n_hours: -24
-        numpar: 100
         mets:
           hrrr:
             directory: {tmp_path / "met"}
-        grid:
-          xmin: -114.0
-          xmax: -111.0
-          ymin: 39.0
-          ymax: 42.0
-          xres: 0.05
-          yres: 0.05
-        transforms:
-          - kind: no_such_pkg_for_stilt_tests.transforms.MyKernel
-            levels: [0.0, 1000.0]
+        models:
+          hysplit:
+            n_hours: -24
+            numpar: 100
+        stages:
+          footprint:
+            class: stilt.footprint.FootprintStage
+            grid:
+              xmin: -114.0
+              xmax: -111.0
+              ymin: 39.0
+              ymax: 42.0
+              xres: 0.05
+              yres: 0.05
+            transforms:
+              - kind: no_such_pkg_for_stilt_tests.transforms.MyKernel
+                levels: [0.0, 1000.0]
         variants:
           hrrr: {{}}
     """)
@@ -565,7 +761,6 @@ def test_model_config_rejects_unimportable_transform_from_yaml(tmp_path):
 def test_model_config_unknown_keys_raise(tmp_path):
     """from_yaml must fail fast on unrecognized keys."""
     yaml_text = textwrap.dedent(f"""\
-        n_hours: -24
         mets:
           hrrr:
             directory: {tmp_path / "met"}
@@ -589,7 +784,9 @@ def _resolved_footprint(tmp_path, **footprint) -> FootprintConfig:
     """The resolved footprint of a one-met project with these footprint fields."""
     variant = (
         ProjectConfig(
-            mets=_met_config(tmp_path), **{"variants": {"hrrr": {}}, **footprint}
+            **blocks(
+                mets=_met_config(tmp_path), **{"variants": {"hrrr": {}}, **footprint}
+            )
         )
     ).resolve()["hrrr"]
     assert variant.footprint is not None
@@ -667,15 +864,17 @@ def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
     gdf.to_file(shp, driver="GeoJSON")
 
     config = ProjectConfig(
-        mets={
-            "hrrr": {
-                "directory": tmp_path / "met",
-            }
-        },
-        n_hours=-6,
-        numpar=100,
-        geometry={"kind": "file", "path": str(shp), "ids": "NAME"},
-        variants={"hrrr": {}},
+        **blocks(
+            mets={
+                "hrrr": {
+                    "directory": tmp_path / "met",
+                }
+            },
+            n_hours=-6,
+            numpar=100,
+            geometry={"kind": "file", "path": str(shp), "ids": "NAME"},
+            variants={"hrrr": {}},
+        )
     )
     fc = next(iter(config.resolve().values())).footprint
     assert fc is not None
@@ -717,31 +916,35 @@ def test_file_geometry_spec_layer_and_where(tmp_path):
 
 def _variant_config(tmp_path, **kwargs):
     return ProjectConfig(
-        mets=_met_config(tmp_path), **{"variants": {"hrrr": {}}, **kwargs}
+        **blocks(mets=_met_config(tmp_path), **{"variants": {"hrrr": {}}, **kwargs})
     )
 
 
-def test_footprint_settings_without_a_grid_are_an_error(tmp_path):
-    """Settings that would be dropped are refused instead."""
-    from stilt.transforms import FirstOrderLifetime
-
-    with pytest.raises(
-        ValueError, match="'decay' sets footprint settings .transforms. but no grid"
-    ):
-        _variant_config(
-            tmp_path,
-            variants={
-                "decay": {"transforms": [FirstOrderLifetime(lifetime_hours=1.0)]}
-            },
+def test_a_footprint_without_a_grid_is_an_error(tmp_path, grid):
+    """A footprint with nothing to grid on is refused, for the variant that has none."""
+    stage = {"class": FOOTPRINT_STAGE, "smooth_factor": 2}
+    with pytest.raises(ValueError, match="Variant 'hrrr': its footprint has no grid"):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            stages={"footprint": stage},
+            variants={"hrrr": {}},
         )
-    with pytest.raises(ValueError, match="smooth_factor"):
-        _variant_config(tmp_path, smooth_factor=2)
+    # The block may leave the grid to each variant.
+    config = ProjectConfig(
+        mets=_met_config(tmp_path),
+        stages={"footprint": stage},
+        variants={"hrrr": {"stages": {"footprint": {"grid": grid}}}},
+    )
+    footprint = config.resolve()["hrrr"].footprint
+    assert footprint.grid == grid and footprint.smooth_factor == 2
 
 
 def test_variants_default_to_one_per_met(tmp_path):
     mc = _met_config(tmp_path)["hrrr"]
     cfg = ProjectConfig(
-        mets={"hrrr": mc, "gfs": mc}, ziscale=0.9, variants={"hrrr": {}, "gfs": {}}
+        **blocks(
+            mets={"hrrr": mc, "gfs": mc}, ziscale=0.9, variants={"hrrr": {}, "gfs": {}}
+        )
     )
     variants = cfg.resolve()
     assert list(variants) == ["hrrr", "gfs"]
@@ -934,7 +1137,7 @@ def test_variants_survive_a_yaml_roundtrip_as_written(tmp_path, grid):
     declared = {
         "hrrr": {},
         "zi08": {"ziscale": 0.8},
-        "s2": {"smooth_factor": 2},
+        "s2": {"stages": {"footprint": {"smooth_factor": 2}}},
     }
     cfg = _variant_config(tmp_path, grid=grid, variants=declared)
     path = tmp_path / "config.yaml"
@@ -947,7 +1150,9 @@ def test_variants_survive_a_yaml_roundtrip_as_written(tmp_path, grid):
 def test_to_yaml_always_writes_the_variants_that_run(tmp_path):
     mc = _met_config(tmp_path)["hrrr"]
     cfg = ProjectConfig(
-        mets={"hrrr": mc, "gfs": mc}, numpar=50, variants={"hrrr": {}, "gfs": {}}
+        **blocks(
+            mets={"hrrr": mc, "gfs": mc}, numpar=50, variants={"hrrr": {}, "gfs": {}}
+        )
     )
     text = cfg.to_yaml()
     assert "variants:\n  hrrr: {}\n  gfs: {}\n" in text
@@ -1016,13 +1221,18 @@ def test_each_geometry_is_built_once_and_not_on_load(tmp_path, monkeypatch):
         textwrap.dedent(f"""
         mets:
           hrrr: {{directory: {tmp_path}/met}}
-        geometry: {{kind: windows, coords: [[-111.5, 40.2]], size: 0.05}}
+        stages:
+          footprint:
+            class: stilt.footprint.FootprintStage
+            geometry: {{kind: windows, coords: [[-111.5, 40.2]], size: 0.05}}
         variants:
           hrrr: {{}}
           np50: {{numpar: 50}}
           err: {{realizations: 2, seed: 1, krand: 2}}
           src:
-            geometry: {{kind: windows, coords: [[-111.97, 40.515]], size: 0.01}}
+            stages:
+              footprint:
+                geometry: {{kind: windows, coords: [[-111.97, 40.515]], size: 0.01}}
         """)
     )
     cfg = ProjectConfig.from_yaml(tmp_path / "config.yaml")
@@ -1040,7 +1250,7 @@ def test_config_loads_without_its_geometry_file(tmp_path):
     cfg = _variant_config(
         tmp_path, geometry={"kind": "file", "path": str(tmp_path / "missing.shp")}
     )
-    assert cfg.footprint.geometry is not None and cfg.footprint.grid is None
+    assert "grid" not in cfg.stages["footprint"]
     with pytest.raises(Exception, match="missing.shp"):
         cfg.resolve()
 
@@ -1107,13 +1317,30 @@ def test_a_config_without_variants_says_what_to_write(tmp_path):
     [
         (
             {"smooth_factr": 0.5},
-            "config: 'smooth_factr' is not a setting. Did you mean 'smooth_factor', a footprint setting?",
+            "config: 'smooth_factr' is not a setting. Did you mean 'smooth_factor'? "
+            "It is a footprint setting. Write it under stages:, in the footprint's block",
         ),
         (
             {"numpr": 10},
-            "config: 'numpr' is not a setting. Did you mean 'numpar', a hysplit setting?",
+            "config: 'numpr' is not a setting. Did you mean 'numpar'? "
+            "It is a hysplit setting. Write it under models: hysplit:.",
         ),
         ({"varients": {}}, "Did you mean 'variants', a config key?"),
+        (
+            {"models": {"hysplit": {"numpr": 10}}},
+            "models: hysplit: 'numpr' is not a setting. Did you mean 'numpar', a hysplit setting?",
+        ),
+        (
+            {"stages": {"footprint": {"class": FOOTPRINT_STAGE, "smooth_factr": 1}}},
+            "stages: footprint: 'smooth_factr' is not a setting. Did you mean 'smooth_factor', a footprint setting?",
+        ),
+        (
+            {
+                "stages": {"footprint": {"class": FOOTPRINT_STAGE}},
+                "variants": {"hrrr": {"stages": {"footprint": {"tress": "1h"}}}},
+            },
+            "Variant 'hrrr', stages: footprint: 'tress' is not a setting. Did you mean 'tres', a footprint setting?",
+        ),
         (
             {"variants": {"hrrr": {"zisacle": 0.8}}},
             "Variant 'hrrr': 'zisacle' is not a setting. Did you mean 'ziscale', a hysplit setting?",
@@ -1144,9 +1371,11 @@ def test_a_relative_geometry_file_starts_from_the_project_directory(
         crs="EPSG:4326",
     ).to_file(project / "cells.geojson", driver="GeoJSON")
     config = ProjectConfig(
-        mets=_met_config(tmp_path),
-        geometry={"kind": "file", "path": "cells.geojson", "ids": "NAME"},
-        variants={"hrrr": {}},
+        **blocks(
+            mets=_met_config(tmp_path),
+            geometry={"kind": "file", "path": "cells.geojson", "ids": "NAME"},
+            variants={"hrrr": {}},
+        )
     )
     monkeypatch.chdir(tmp_path)  # not the project
     variant = config.resolve(project)["hrrr"]

@@ -48,7 +48,8 @@ Glossary
       with several mets side by side.
 
    defaults
-      The settings written at the top level of ``config.yaml``. Every
+      The settings written in the blocks of ``config.yaml``: the transport
+      model's under ``models`` and the footprint's under ``stages``. Every
       :term:`variant` starts from them and overrides what it changes. A
       variant with no overrides runs them as they are.
 

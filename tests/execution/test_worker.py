@@ -1328,8 +1328,7 @@ def test_a_run_on_two_cpus_writes_to_the_output_it_was_given(tmp_path):
     project = tmp_path / "project"
     project.mkdir()
     (project / "config.yaml").write_text(
-        "model: toypool.ToyModel\n"
-        "n_hours: -1\n"
+        "models:\n  toy:\n    class: toypool.ToyModel\n    n_hours: -1\n"
         "mets:\n  toy:\n    weather: hrrr\n"
         "variants:\n  toy: {}\n"
     )
@@ -1384,8 +1383,7 @@ def test_a_worker_killed_outright_stops_the_run_and_a_rerun_finishes_it(tmp_path
     project = tmp_path / "project"
     project.mkdir()
     (project / "config.yaml").write_text(
-        "model: toykill.KillingToy\n"
-        "n_hours: -1\n"
+        "models:\n  toy:\n    class: toykill.KillingToy\n    n_hours: -1\n"
         "mets:\n  toy:\n    weather: hrrr\n"
         "variants:\n  toy: {}\n"
     )
@@ -1518,10 +1516,8 @@ def test_a_batched_model_runs_every_receptor_of_a_variant_in_one_call(
         [receptor, other_receptor, third],
         grid=GRID,
         hnf_plume=False,
-        variants={
-            "toy": {"model": BATCHED_TOY},
-            "toy-s2": {"model": BATCHED_TOY, "smooth_factor": 2.0},
-        },
+        models={"toy": {"class": BATCHED_TOY}},
+        variants={"toy": {}, "toy-s2": {"smooth_factor": 2.0}},
     )
     ids = [str(r.id) for r in (receptor, other_receptor, third)]
     batched_toy.skip = {ids[2]}

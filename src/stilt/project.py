@@ -257,8 +257,8 @@ class Project:
             (:data:`stilt.config.STARTER_CONFIG`) in place of a config.
             Without receptors, ``receptors.csv`` gets only its header.
         **settings
-            Settings for :class:`~stilt.ProjectConfig`, such as ``mets``, ``variants``,
-            ``n_hours``, ``numpar``, and ``grid``.
+            The blocks of :class:`~stilt.ProjectConfig`: ``mets``, ``models``,
+            ``stages`` and ``variants``, and ``execution`` and ``output``.
 
         Raises
         ------
@@ -292,7 +292,7 @@ class Project:
             config = ProjectConfig(**settings)
         directory = absolute(path)
         config_path = directory / "config.yaml"
-        # The config checks a variant's transport settings only when it is
+        # The config checks a variant's own transport settings only when it is
         # resolved; do it now, so a bad config is never written.
         config.resolve(directory)
         if config_path.exists():

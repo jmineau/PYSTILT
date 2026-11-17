@@ -36,7 +36,7 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from stilt.config import VARIANT_NAME_RE, Variant
+from stilt.config import FOOTPRINT_STAGE, VARIANT_NAME_RE, Variant
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _footprint_array
 from stilt.identity import footprint_settings
@@ -657,6 +657,8 @@ def import_stilt_r(
     mets:
       stilt-r:
         met_path: /data/hrrr
+    models:
+      stilt-r: {}
     variants:
       stilt-r:
         model: stilt-r
@@ -754,10 +756,14 @@ def import_stilt_r(
                 output.write_empty_footprint(printed[0], receptor)
     if f"{name}-err" in made:
         printed.append(made[f"{name}-err"][0])
-    config = {
+    config: dict[str, Any] = {
         "mets": {name: met.settings()},
-        "variants": {v.name: _variant_entry(v) for v in printed},
+        "models": {StiltRModel.name: {}},
     }
+    footprints = any(v.footprint is not None for v in printed)
+    if footprints:
+        config["stages"] = {"footprint": {"class": FOOTPRINT_STAGE}}
+    config["variants"] = {v.name: _variant_entry(v, footprints) for v in printed}
     print(yaml.safe_dump(config, sort_keys=False, default_flow_style=None), end="")
     return receptors
 
@@ -955,8 +961,13 @@ def _write_particles(
         output.write_log(variant, receptor.id, log.read_text(errors="replace"))
 
 
-def _variant_entry(variant: Variant) -> dict[str, Any]:
-    """Return a variant as ``config.yaml`` names its folders: the keys of ``_settings.yaml``, flat."""
+def _variant_entry(variant: Variant, footprints: bool) -> dict[str, Any]:
+    """
+    Return a variant as ``config.yaml`` names its folders: the keys of each ``_settings.yaml``.
+
+    With *footprints*, the config has a footprint stage, so a variant
+    without a footprint sets the stage to null.
+    """
     entry: dict[str, Any] = {
         "model": variant.model.name,
         "met": variant.met,
@@ -964,10 +975,10 @@ def _variant_entry(variant: Variant) -> dict[str, Any]:
     }
     settings = variant.transport.settings()
     entry.update({k: settings[k] for k in sorted(settings)})
-    if variant.footprint is None:
-        entry["grid"] = None
-    else:
-        entry.update(variant.footprint.model_dump(mode="json"))
+    if variant.footprint is not None:
+        entry["stages"] = {"footprint": variant.footprint.model_dump(mode="json")}
+    elif footprints:
+        entry["stages"] = {"footprint": None}
     return entry
 
 

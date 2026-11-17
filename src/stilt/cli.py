@@ -548,7 +548,7 @@ def run(
     Run every unfinished simulation in a project, and wait until they are done.
 
     Runs the transport model for each receptor and variant, then the footprint when the
-    variant has a grid. Simulations whose outputs exist are skipped unless
+    variant has one. Simulations whose outputs exist are skipped unless
     --no-skip is given. With the Slurm backend this submits a job array and
     waits for it; use stilt submit to return as soon as it is submitted.
 

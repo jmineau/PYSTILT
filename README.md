@@ -70,10 +70,9 @@ project = stilt.Project.init(
     "./my_project",
     receptors=[receptor],
     mets={"hrrr": met},
+    models={"hysplit": {"n_hours": -24, "numpar": 100}},
+    stages={"footprint": {"class": "stilt.footprint.FootprintStage", "grid": grid}},
     variants={"hrrr": {}},
-    n_hours=-24,
-    numpar=100,
-    grid=grid,
 )
 project.run()   # returns when the run is done
 
@@ -106,11 +105,20 @@ also then, unless the output holds no result the project could own (it reports e
 
 ## Variants
 
-A variant is a named set of settings. Every receptor runs once under each variant. The top-level
-settings in `config.yaml` are the defaults, and a variant lists only what it changes. The
-`variants` section declares them all; `hrrr: {}` runs the defaults.
+A variant is a named set of settings. Every receptor runs once under each variant. `config.yaml`
+is blocks: `models` holds the transport model's settings and `stages` the footprint's, which are
+the defaults, and a variant lists only what it changes. The `variants` block declares them all;
+`hrrr: {}` runs the defaults.
 
 ```yaml
+mets:
+  hrrr: /data/hrrr
+models:
+  hysplit: {n_hours: -24, numpar: 1000}
+stages:
+  footprint:
+    class: stilt.footprint.FootprintStage
+    grid: {xmin: -113.0, xmax: -110.5, ymin: 40.0, ymax: 42.0, xres: 0.01, yres: 0.01}
 variants:
   hrrr: {}                                  # the defaults
   hrrr-zi08: {ziscale: 0.8}                 # mixed-layer height scaled by 0.8
@@ -120,9 +128,11 @@ variants:
     zcoruverr: 450
     horcoruverr: 14
     realizations: 4                         # realizations 0 to 3 of hrrr-err
-    grid: null                              # particles only, no footprint
+    stages: {footprint: null}               # particles only, no footprint
   hrrr-ak:                                  # another footprint from the hrrr particles
-    transforms: [{kind: averaging_kernel, table: kernels}]
+    stages:
+      footprint:
+        transforms: [{kind: averaging_kernel, table: kernels}]
 ```
 
 Each receptor under each variant is one simulation. Results go to the output directory

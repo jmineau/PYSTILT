@@ -10,6 +10,7 @@ import pytest
 from stilt.config import ProjectConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.spatial import Grid
+from tests.fixtures.factories import blocks
 
 from .fixtures.factories import make_met_config
 
@@ -177,7 +178,9 @@ def met_config(tmp_path):
 def model_config(tmp_path, met_config):
     """Minimal ProjectConfig with one met entry."""
     return ProjectConfig(
-        n_hours=-24, numpar=100, mets={"hrrr": met_config}, variants={"hrrr": {}}
+        **blocks(
+            n_hours=-24, numpar=100, mets={"hrrr": met_config}, variants={"hrrr": {}}
+        )
     )
 
 

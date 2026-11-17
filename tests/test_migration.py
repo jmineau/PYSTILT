@@ -487,6 +487,21 @@ def test_imported_runs_are_the_results_of_the_printed_variants(tmp_path, capsys)
     )
 
 
+def test_the_import_prints_the_config_in_blocks(tmp_path, capsys):
+    """The model's block, the footprint stage, and each variant's footprint under its stages."""
+    _, config = _import(_by_id(tmp_path, POINT), tmp_path / "output", capsys)
+    assert list(config) == ["mets", "models", "stages", "variants"]
+    assert config["models"] == {"stilt-r": {}}
+    assert config["stages"] == {
+        "footprint": {"class": "stilt.footprint.FootprintStage"}
+    }
+    variant = config["variants"]["stilt-r"]
+    assert variant["model"] == "stilt-r"
+    assert "grid" in variant["stages"]["footprint"]
+    # The transport-error particles have no footprint of their own.
+    assert config["variants"]["stilt-r-err"]["stages"] == {"footprint": None}
+
+
 def test_jacobian_sums_the_imported_footprints(tmp_path, capsys):
     by_id = _by_id(tmp_path, POINT)
     project = _project(tmp_path, by_id, capsys)

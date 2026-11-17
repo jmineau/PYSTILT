@@ -239,7 +239,7 @@ class ReferenceScenario:
 
     def make_model_config(self, met_dir):
         """Return a :class:`~stilt.config.ProjectConfig` configured for this scenario."""
-        from stilt.config import ProjectConfig
+        from stilt.config import FOOTPRINT_STAGE, ProjectConfig
 
         config: dict = {
             "mets": {
@@ -247,16 +247,25 @@ class ReferenceScenario:
                     "directory": met_dir,
                 }
             },
-            "n_hours": self.n_hours,
-            "numpar": self.numpar,
-            "krand": self.krand,
-            "seed": self.seed,
-            "footprint_depth": self.veght,
-            "varsiwant": [*REFERENCE_VARSIWANT, *self.extra_varsiwant],
+            "models": {
+                "hysplit": {
+                    "n_hours": self.n_hours,
+                    "numpar": self.numpar,
+                    "krand": self.krand,
+                    "seed": self.seed,
+                    "footprint_depth": self.veght,
+                    "varsiwant": [*REFERENCE_VARSIWANT, *self.extra_varsiwant],
+                }
+            },
+            "stages": {
+                "footprint": {
+                    "class": FOOTPRINT_STAGE,
+                    **self.make_footprint_config().model_dump(),
+                }
+            },
             # The fidelity tests read SETUP.CFG afterwards.
             "execution": {"keep_workdir": True},
             "variants": {REFERENCE_MET: {}},
-            **self.make_footprint_config().model_dump(),
         }
         if self.error_variant is not None:
             # STILT-R's error run: a second HYSPLIT call with WINDERR and the
@@ -269,7 +278,7 @@ class ReferenceScenario:
                     "tluverr": self.tluverr,
                     "zcoruverr": self.zcoruverr,
                     "horcoruverr": self.horcoruverr,
-                    "grid": None,
+                    "stages": {"footprint": None},
                 },
             }
         return ProjectConfig.model_validate(config)
