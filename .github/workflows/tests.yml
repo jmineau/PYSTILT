@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The bundled HYSPLIT builds are Linux and macOS only.
+        # HYSPLIT runs on Linux and macOS. The unit tests need no hycs_std.
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.11", "3.12", "3.13", "3.14"]
     env:
@@ -61,7 +61,7 @@ jobs:
 
   integration:
     name: Integration tests
-    runs-on: ubuntu-latest  # HYSPLIT binary is linux_x64 only
+    runs-on: ubuntu-latest  # STILT-R's hycs_std is linux_x64
     env:
       UV_NO_SYNC: "1"
 
@@ -78,6 +78,9 @@ jobs:
 
       - name: Install
         run: uv sync --locked
+
+      - name: Install hycs_std
+        run: .github/scripts/install_hycs_std.sh
 
       - name: Restore HRRR met cache
         id: met-cache
@@ -131,37 +134,46 @@ jobs:
       - name: Install
         run: uv sync --locked
 
-      - name: Build and check the sdist and platform wheels
+      - name: Build and check the sdist and wheel
         run: uv run just dist
 
-      - name: Install the Linux wheel in a clean environment
+      - name: Install the wheel in a clean environment
         run: |
           uv venv .pkgtest
-          uv pip install --python .pkgtest dist/*manylinux*.whl
+          uv pip install --python .pkgtest dist/*.whl
 
-      - name: Smoke test installed package
+      - name: Smoke test the installed package
         run: |
           .pkgtest/bin/python -c "import stilt; print(stilt.__version__)"
           .pkgtest/bin/python -m stilt --help
           .pkgtest/bin/stilt --help
-          .pkgtest/bin/python -c "from stilt.transport.hysplit.driver import _bundled_exe_dir; print(_bundled_exe_dir())"
+          .pkgtest/bin/python -c "from stilt.transport.hysplit.driver import _bundled_data_dir; assert (_bundled_data_dir() / 'ASCDATA.CFG').is_file()"
 
-      - name: Install the sdist in a clean environment
+      - name: Check the wheel and sdist hold no hycs_std
         run: |
-          uv venv .sdisttest
-          uv pip install --python .sdisttest dist/*.tar.gz
+          .pkgtest/bin/python - <<'PY'
+          import tarfile
+          import zipfile
+          from pathlib import Path
 
-      - name: Smoke test the sdist install (no bundled HYSPLIT)
+          for wheel in Path("dist").glob("*.whl"):
+              found = [n for n in zipfile.ZipFile(wheel).namelist() if n.endswith("hycs_std")]
+              assert not found, f"{wheel.name} holds {found}"
+          for sdist in Path("dist").glob("*.tar.gz"):
+              found = [n for n in tarfile.open(sdist).getnames() if n.endswith("hycs_std")]
+              assert not found, f"{sdist.name} holds {found}"
+          PY
+
+      - name: Without hycs_std, the installed package says what to set
         run: |
-          .sdisttest/bin/python -c "import stilt; print(stilt.__version__)"
-          .sdisttest/bin/python - <<'EOF'
+          .pkgtest/bin/python - <<'PY'
           from stilt.exceptions import HYSPLITNotFoundError
-          from stilt.transport.hysplit.driver import _bundled_exe_dir
+          from stilt.transport.hysplit import find_hycs_std
 
           try:
-              _bundled_exe_dir()
+              find_hycs_std()
           except HYSPLITNotFoundError as err:
               print(err)
           else:
-              raise SystemExit("the sdist install found a bundled hycs_std")
-          EOF
+              raise SystemExit("found a hycs_std on a runner that has none")
+          PY
