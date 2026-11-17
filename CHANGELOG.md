@@ -7,6 +7,41 @@ file alone: the entries are written at release (`just changelog` drafts them).
 
 ## [Unreleased]
 
+## [0.1.0a29] - 2026-11-17
+
+Several settings left a run's settings or changed name, so stored runs are found under new settings folders after this release. A project's runs made with 0.1.0a28 are not found by 0.1.0a29; keep such a project on 0.1.0a28 until its runs are moved or made again.
+
+### Added
+
+- `add_foot` computes `foot` from the met files for a transport model that writes only positions: the time a particle spends below `footprint_depth` of the mixed layer over the air below that depth, as HYSPLIT computes it in STILT mode. After a run whose particles have no `foot`, PYSTILT computes it this way and the run's log says so; HYSPLIT's own `foot` is kept as written. (#422)
+- A setting, `pbl_height`, chooses the mixed-layer height for a computed `foot`: the met's PBLH (`met`), HYSPLIT's bulk Richardson-number method on the run's own internal levels (`richardson`), or a fixed height in meters, with `pbl_height_min` its minimum. Unset, the model's `foot` is kept. Both are recorded only when set, so stored runs keep their folders. (#426)
+- Two transforms weigh `foot` by the share of a tracer that reaches the receptor: `dry_deposition`, and `oxidation`, for a reaction with an oxidant whose rate is `a exp(-e_over_r / T)` and whose number density is a constant or a netCDF field. `survival(particles, rate)` gives that share for any loss rate. (#434, #435)
+- `particles.stilt.grid_exits()` gives, for each particle that left the footprint grid, the edge it left by and where and when it crossed it, on projected grids and across 180 degrees too. (#407)
+- `particles.stilt.to_cf_trajectories()` writes particles as CF-1.10 trajectories, and `foot.stilt.to_paris()` writes a footprint in OpenGHG's PARIS format. The table from `stilt.run_trajectories` now has the `time` column a stored particle file has. (#408)
+- `receptors_from_track` makes receptors along the track of a moving platform. (#411)
+- `read_coccon` reads COCCON's EM27/SUN retrievals from PROFFAST, and `read_proffast` a PROFFASTpylot run's results. (#431, #433)
+- When a met downloads, `stilt submit` first submits a one-task `stilt fetch` job over the submission's receptors, and the array waits for it, so tasks whose receptors share a day no longer download the same file at once. `execution.fetch` holds the fetch job's partition, account, qos, time and memory (each unset one the array's), or `false` for none. A local run with `cpus` above 1 fetches before its workers start, and `stilt fetch` takes `--receptors`. (#437)
+- The guide "PYSTILT for HYSPLIT users", with the recipe for a single trajectory.
+
+### Changed
+
+- **Breaking:** `veght` is now `footprint_depth`, the depth surface fluxes are mixed through for the footprint. HYSPLIT still gets it as `VEGHT`, and an import from STILT-R reads `VEGHT` into it. A config that sets `veght` is refused with a message naming the new setting. (#428)
+- **Breaking:** the near-field correction is applied when a footprint is made: `hnf_plume` is a footprint setting, a run's particles keep the model's `foot`, and a variant with `hnf_plume: false` shares the particles of one with it on. The transport error corrects both of its tables, so its enhancement is the footprint's. An import from STILT-R stores `foot_no_hnf_dilution` as `foot`. (#428)
+- **Breaking:** 41 HYSPLIT settings that cannot change the particles are no longer settings (`delt`, `ichem`, `idsp`, `kagl`, `cmass`, `conage` and 35 more): STILT mode overrides them, or only HYSPLIT's concentration grids, puffs and dump files read them. `SETUP.CFG` gets the same values as before, and a config that sets one is refused, naming it. `qcycle` stays. (#427)
+- **Breaking:** the layer dimension of `project.footprints()` is named for the unit of `tres` and counts in it: `hour` -1, -2, ... for `1h`, `day` -1, -2, ... for `1D`, `minute` -15, -30, ... for `15min`. Stored files are unchanged. (#406)
+- **Breaking:** background and transport error moved out of `stilt.particles`: call `stilt.background`, `stilt.transport_error`, `stilt.Background` and `stilt.TransportError`. `sim.background`, `sim.transport_error` and `project.transport_error` do not change. A transform checks its own inputs with an optional `check` method. (#432)
+- **Breaking:** `Project(path)` on a folder with no `config.yaml` raises `FileNotFoundError` at once, naming `Project.init` and `stilt init`. (#369)
+- `ControlFile`, `write_inputs`, `release_locations` and `check_release` take a release time and release locations, HYSPLIT's words, in place of a receptor; `ControlFile.read` no longer takes `altitude_ref`. The files written are the same. (#418)
+- arlmet 0.1.0b10 or newer is required. This also fixes a fresh install of 0.1.0a28, which allowed arlmet 0.1.0b10 and then failed on import. (#426)
+
+### Fixed
+
+- `calc_footprint` refuses particles that gave a wrong footprint silently: two rows of one particle at one age (a table concatenated with itself doubled the footprint), an infinite `foot`, a `time` column that is not the receptor time plus `age`, and first positions farther from every release point than particles could go. Rows with a missing value are left out as before, now with a warning that counts them. (#441)
+- A grid with `xmax` west of `xmin`, both in one hemisphere, is refused as swapped, where it went 357.5 degrees around the globe. A projected grid reads its crs when it is made, and a grid of more than a billion cells is refused. (#441)
+- `config.yaml` and `receptors.csv` that cannot be read stop `stilt run`, `submit`, `fetch` and `status` with one line and exit code 2, as `stilt check` does: invalid YAML (with its line and column), a key written twice, and a bad row. A negative `smooth_factor`, negative heights, durations, output intervals and transport-error settings, NaN or infinite receptor coordinates, a misnamed `altitude_ref` column, and bounds out of order are refused. (#369, #442)
+- Receptor times are read only as ISO 8601 or `YYYYMMDDHHMM`, never day-first, and a time finer than a microsecond is cut without a warning. (#429, #442)
+- A project with no receptors is refused when it is made or checked, and `stilt check` lists a receptor outside the grid of its met files as `met_domain`. (#442)
+
 ## [0.1.0a28] - 2026-11-10
 
 ### Added
