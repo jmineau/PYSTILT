@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import datetime as dt
+import functools
 import hashlib
+import re
+import subprocess
 import tempfile
 from collections.abc import Iterable
-from importlib.resources import files as pkg_files
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,6 +22,7 @@ from .driver import (
     _bundled_data_dir,
     check_met_stop,
     check_release,
+    find_hycs_std,
     read_particle_dat,
     run_hycs_std,
     write_inputs,
@@ -34,31 +37,72 @@ if TYPE_CHECKING:
     from stilt.receptors import Receptor
 
 
-def hysplit_version(exe_dir: str | Path | None = None) -> str:
-    """
-    Return the version of the HYSPLIT build in *exe_dir*, or of the bundled build.
+#: What ``hycs_std`` prints on its first lines: ``HYSPLIT version: hysplit.v5.1.0``.
+_VERSION_LINE = re.compile(r"HYSPLIT version:\s*(\S+)")
 
-    A build directory names its version in a ``version`` file beside
-    ``hycs_std``, as the bundled one does. Two builds with the same settings
-    can give different particles, so the version is part of a run's
-    identity.
+
+def hysplit_version(exe_dir: str | Path | None = None) -> str | None:
+    """
+    Return the version the ``hycs_std`` in *exe_dir*, or else on ``PATH``, prints when it starts.
+
+    ``hycs_std`` prints a line such as ``HYSPLIT version: hysplit.v5.1.0``
+    before it reads its input; this returns ``hysplit.v5.1.0``. It runs the
+    binary for a moment in an empty temporary directory, where it stops for
+    want of a ``CONTROL`` file. The version is recorded with a run's
+    settings, but it is not what tells two builds apart: the SHA-256 of
+    ``hycs_std`` is (:meth:`HysplitModel.sha256`). Two builds of one
+    release print the same version, and CHPC's ``hysplit/5.2.3`` module
+    prints ``hysplit.v5.2.2``.
+
+    Returns
+    -------
+    str or None
+        The version, or ``None`` when ``hycs_std`` printed none or could
+        not be run here.
 
     Raises
     ------
-    FileNotFoundError
-        If *exe_dir* has no ``version`` file.
+    HYSPLITNotFoundError
+        If there is no ``hycs_std`` (:func:`find_hycs_std`).
     """
-    if exe_dir is None:
-        path = Path(str(pkg_files("stilt.transport.hysplit") / "bin" / "version"))
-    else:
-        path = Path(exe_dir) / "version"
-        if not path.exists():
-            raise FileNotFoundError(
-                f"{exe_dir} has no 'version' file. A custom hycs_std build needs "
-                "one beside the binary, holding its version string (such as "
-                "v5.3.2+t0-rows), so its runs are told apart from other builds'."
+    return _printed_version(*_stamp(find_hycs_std(exe_dir)))
+
+
+def _stamp(path: Path) -> tuple[str, int, int]:
+    """Return *path*, resolved, with its modification time and size, the key of the caches below."""
+    path = path.resolve()
+    stat = path.stat()
+    return str(path), stat.st_mtime_ns, stat.st_size
+
+
+@functools.lru_cache(maxsize=16)
+def _printed_version(path: str, mtime_ns: int, size: int) -> str | None:
+    """Return the version the ``hycs_std`` at *path* prints, read once per file."""
+    with tempfile.TemporaryDirectory(prefix="stilt-version-") as tmp:
+        try:
+            proc = subprocess.Popen(
+                [path],
+                cwd=tmp,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
             )
-    return path.read_text().strip()
+        except OSError:  # not executable here, such as another platform's build
+            return None
+        try:
+            out, _ = proc.communicate(timeout=30)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate()
+            return None
+    found = _VERSION_LINE.search(out.decode(errors="replace"))
+    return found.group(1) if found else None
+
+
+@functools.lru_cache(maxsize=16)
+def _file_sha256(path: str, mtime_ns: int, size: int) -> str:
+    """Return the SHA-256 of the file at *path*, read once per file."""
+    return _sha256(Path(path))
 
 
 def _sha256(path: Path) -> str:
@@ -87,8 +131,22 @@ class HysplitModel:
     #: One hycs_std process per receptor.
     batched = False
 
-    def version(self, config: HysplitConfig) -> str:
-        """Return the version of the bundled build, or of the one in ``config.exe_dir``."""
+    def sha256(self, config: HysplitConfig) -> str:
+        """
+        Return the SHA-256 of the ``hycs_std`` *config* runs, which tells its build from any other.
+
+        The ``hycs_std`` in ``config.exe_dir``, or else on ``PATH``
+        (:func:`find_hycs_std`). Read once per file.
+
+        Raises
+        ------
+        HYSPLITNotFoundError
+            If there is no ``hycs_std``.
+        """
+        return _file_sha256(*_stamp(find_hycs_std(config.exe_dir)))
+
+    def version(self, config: HysplitConfig) -> str | None:
+        """Return the version the ``hycs_std`` *config* runs prints when it starts (:func:`hysplit_version`)."""
         return hysplit_version(config.exe_dir)
 
     def data_files(self, config: HysplitConfig) -> dict[str, str] | None:

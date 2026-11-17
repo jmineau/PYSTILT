@@ -6,7 +6,8 @@ settings, recorded in its ``_settings.yaml``. This module writes those
 records and hashes them. A run's settings are its transport config without
 the fields that change no particle (``exe_dir``, ``data_dir``), its met as
 the met config records it (for HYSPLIT, the weather product and the crop),
-the model build, and whether it is an ensemble (the realizations of one
+the model build (for HYSPLIT, the SHA-256 of ``hycs_std``, not the version
+it prints), and whether it is an ensemble (the realizations of one
 share a folder, a ``realization=k`` partition each, so the number is not
 in the hash). A
 footprint's settings are its footprint config, with the grid it is
@@ -73,7 +74,7 @@ def run_settings(
 
     The transport model's settings (``transport.settings()``) sit at the top
     level, beside ``met`` (what the met config's ``settings()`` returns)
-    and ``model``. An ensemble records ``ensemble: true`` and its base
+    and ``model`` (the build, without the version it reports). An ensemble records ``ensemble: true`` and its base
     seed; its realization ``k`` runs with ``seed + k`` in the folder's
     ``realization=k`` partition.
     """

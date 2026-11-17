@@ -66,6 +66,7 @@ Every settings folder holds a ``_settings.yaml``. A particles folder's:
    name: hrrr
    hash: 7d36c80b3b5a1a33cc355998f5755de469f61c53151a9d1b953fa698c81cd51f
    pystilt: 0.1.0a23
+   model_version: hysplit.v5.1.0
    settings:
      capemin: -1
      # ... every transport parameter, in name order
@@ -75,7 +76,7 @@ Every settings folder holds a ``_settings.yaml``. A particles folder's:
      model:
        data_files: null
        name: hysplit
-       version: v5.1.0
+       sha256: 37346bee81a62f31d2f273c9813d53a76c54d59cfd5adbf3f76a7f870e3f49f9
      n_hours: -24
      # ...
 
@@ -111,10 +112,15 @@ A footprints folder's adds the particles folder it was made from:
    its first six characters.
 ``pystilt``
    The PYSTILT version that wrote the folder.
+``model_version``
+   In a particles folder only: the version the transport model's build
+   reports, such as what ``hycs_std`` prints when it starts. It is not in
+   the hash: ``model.sha256`` is.
 ``settings``
    What the results were made with. In a particles folder, the transport
    model's parameters, ``met`` (the weather product and its crop), and
-   ``model`` (the transport model and its build). An ensemble adds
+   ``model`` (the transport model and its build: the SHA-256 of
+   ``hycs_std``, and of any data table that differs from PYSTILT's copy). An ensemble adds
    ``ensemble: true``, and realization ``k`` ran with ``seed + k``. In a
    footprints folder, the footprint settings, with the grid.
 ``particles``, ``particles_hash``

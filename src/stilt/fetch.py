@@ -47,7 +47,7 @@ def fetch_project(project: Project, unrun: pd.DataFrame) -> pd.DataFrame:
         variant = project.variants[str(name)]
         times = start.loc[group["receptor"].astype(str).unique()].drop_duplicates()
         windows = {run_window(t, variant.transport.n_hours) for t in times}
-        key = (variant.met, variant.model.name)
+        key = (variant.met, variant.model)
         needed.setdefault(key, (variant.met_config, set()))[1].update(windows)
     tables = []
     for (met, model), (config, windows) in needed.items():
@@ -70,7 +70,7 @@ def downloads(project: Project, variants: Iterable[str]) -> bool:
     """
     for name in variants:
         variant = project.variants[str(name)]
-        downloads_met = getattr(get_model(variant.model.name), "downloads_met", None)
+        downloads_met = getattr(get_model(variant.model), "downloads_met", None)
         if downloads_met is not None and downloads_met(variant.met_config):
             return True
     return False

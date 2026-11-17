@@ -568,7 +568,7 @@ class Project:
         """The table :attr:`simulations` copies, built once."""
         variants = pd.DataFrame(
             [
-                (name, k, v.model.name)
+                (name, k, v.model)
                 for name, v in self.variants.items()
                 for k in v.realization_numbers
             ],

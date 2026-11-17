@@ -62,23 +62,31 @@ def test_stilt_r_settings_have_no_defaults():
     config = StiltRConfig.model_validate({**settings, "version": "1d936c1"})
     with pytest.raises(ValueError, match="valid dictionary"):
         StiltRConfig.model_validate(["not", "settings"])
-    # The version is recorded as the model's, not as a setting.
-    assert config.settings() == settings
+    # The version is a setting: it tells imports of two STILT-R versions apart.
+    assert config.settings() == {**settings, "version": "1d936c1"}
     assert get_model("stilt-r").version(config) == "1d936c1"
-    with pytest.raises(ValueError, match="needs version"):
-        get_model("stilt-r").version(StiltRConfig.model_validate(settings))
+    assert get_model("stilt-r").sha256(config) is None
+    with pytest.raises(ValueError, match="missing: version"):
+        StiltRConfig.model_validate(settings)
 
 
-def test_hysplit_model_version_is_the_bundled_build_or_exe_dirs(tmp_path):
-    from stilt.transport.hysplit.model import hysplit_version
+def test_hysplit_model_build_is_the_hycs_std_on_path_or_in_exe_dir(tmp_path):
+    import hashlib
+
+    from stilt.transport.hysplit import find_hycs_std
 
     model = HysplitModel()
-    assert model.version(HysplitConfig(n_hours=-1)) == hysplit_version()
-
-    (tmp_path / "version").write_text("v9.9.9+patched\n")
-    assert (
-        model.version(HysplitConfig(n_hours=-1, exe_dir=tmp_path)) == "v9.9.9+patched"
+    on_path = find_hycs_std()
+    assert model.sha256(HysplitConfig(n_hours=-1)) == (
+        hashlib.sha256(on_path.read_bytes()).hexdigest()
     )
+
+    exe = tmp_path / "hycs_std"
+    exe.write_text("#!/bin/sh\necho ' HYSPLIT version: hysplit.v9.9.9'\n")
+    exe.chmod(0o755)
+    config = HysplitConfig(n_hours=-1, exe_dir=tmp_path)
+    assert model.version(config) == "hysplit.v9.9.9"
+    assert model.sha256(config) == hashlib.sha256(exe.read_bytes()).hexdigest()
 
 
 def test_the_settings_record_the_model_that_makes_the_particles(tmp_path):
@@ -86,8 +94,9 @@ def test_the_settings_record_the_model_that_makes_the_particles(tmp_path):
     variant = (
         ProjectConfig(**blocks(mets={"hrrr": met}, n_hours=-1, variants={"hrrr": {}}))
     ).resolve()["hrrr"]
-    model = get_model(variant.model.name)
-    assert variant.model.version == model.version(variant.transport)
+    model = get_model(variant.model)
+    assert variant.build.version == model.version(variant.transport)
+    assert variant.run_settings["model"]["sha256"] == model.sha256(variant.transport)
 
 
 def _fake_hysplit(monkeypatch) -> dict:
@@ -189,6 +198,9 @@ class _EchoModel:
     config_class = HysplitConfig
     met_config_class = MetConfig
     seen: dict = {}
+
+    def sha256(self, config):
+        return None
 
     def version(self, config):
         return "1"

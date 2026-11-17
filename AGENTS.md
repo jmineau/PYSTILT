@@ -79,7 +79,7 @@ src/stilt/
   transforms/     pre-footprint particle transforms, one module each
   transport/      TransportModel/TransportConfig protocols, MODELS, get_model, run_model;
                   stilt_r.py, the stilt-r model of imported runs (runs nothing)
-    hysplit/      config, met, catalog, driver, CONTROL and SETUP.CFG writers, failures, bin/, data/
+    hysplit/      config, met, catalog, driver, CONTROL and SETUP.CFG writers, failures, data/
   execution/      ExecutionConfig (a block per backend), runner (plan, local run, Slurm submit), worker
   observations/   the X-STILT port (readers, sounding selection, slant receptors, columns);
                   receptors along a moving platform's track (tracks.py)
@@ -125,10 +125,10 @@ only when the core reads it. Config classes do no I/O when they validate;
 - **Identity is content.** PYSTILT never deletes or overwrites a results folder.
 - **The CLI stays thin.** Orchestration does not belong in `cli.py`.
 - **Meteorology I/O goes through [arlmet](https://github.com/jmineau/arl-met).**
-- **Bundled HYSPLIT is package data** (Linux and macOS x86-64), reached via
-  `importlib.resources`, never a repo path. Each wheel carries only its
-  platform's `hycs_std`, the sdist none. A new platform needs a case in
-  `bundled_build` (`setup.py`), `_bundled_exe_dir`, and `just dist`/`check-dist`.
+- **PYSTILT ships no HYSPLIT** (`find_hycs_std`: `exe_dir`, else `PATH`). The SHA-256
+  of `hycs_std` is in the particles hash, read on first use (`Variant.build`); its
+  printed version is recorded as `model_version`, never hashed. Without `hycs_std` a
+  project opens and `Output` compares on `Variant.readable_run_settings`.
 - **Pydantic for all configuration**: every field a plain
   `Field(default, description=...)`, and the settings inside a block stay flat.
 
@@ -151,7 +151,7 @@ Driven by [`just`](https://github.com/casey/just) and
 | `just changelog` | draft the CHANGELOG entries from the commits since the last release (at release) |
 | `just pre-commit` | every pre-commit hook on every file |
 | `just build-docs` | a clean Sphinx build that runs every example; warnings are errors |
-| `just dist` | the sdist and one wheel per bundled HYSPLIT build, then `just check-dist` |
+| `just dist` | the sdist and the wheel, checked with twine |
 
 ### Tests
 
@@ -159,10 +159,10 @@ Driven by [`just`](https://github.com/casey/just) and
 are errors (a test that expects one uses `pytest.warns`). CI runs `-m integration`
 in `tests.yml`, `-m fidelity` and `-m r_only` in `stilt-r.yml` (the paths at its top):
 
-- `integration`: end to end with real met files and HYSPLIT. Needs
-  `STILT_TEST_MET_DIR` (HRRR ARL files) or `STILT_TEST_FETCH_MET=1` (downloads
-  seven 6 h blocks, 23.9 GB in all, and keeps 211 MB in the ignored
-  `tests/met_cache/`); otherwise they skip.
+- `integration`: end to end with real met files and HYSPLIT. Needs a `hycs_std` on
+  `PATH` (unit tests get a stand-in) and `STILT_TEST_MET_DIR` (HRRR ARL files) or
+  `STILT_TEST_FETCH_MET=1` (downloads seven 6 h blocks, 23.9 GB in all, and keeps
+  211 MB in the ignored `tests/met_cache/`); otherwise they skip.
 - `fidelity`: PYSTILT against STILT-R, both running HYSPLIT. Needs the met,
   `STILT_R_DIR` (a STILT-R checkout built as `stilt-r.yml` builds it), `Rscript`.
 - `r_only`: STILT-R comparisons with no met or HYSPLIT (`STILT_R_DIR`, `Rscript`).
@@ -282,7 +282,7 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
 - **Pressure weighting fits `ln p = b + a·z`** (`particle_pwf`); never use raw
   `pres` (`tests/integration/test_pressure_weighting.py` guards it).
 - **Release heights come from the `age = 0` row** (`add_release_heights`), with
-  a fallback for models that write none, as the bundled HYSPLIT does.
+  a fallback for models that write none, as HYSPLIT 5.1.0 does.
 - **Transport-error settings** are easy to misread: read
   `docs/guides/transport_error.rst` before changing or validating them.
 - **Never name a workdir from the simulation alone**: each run gets a new path

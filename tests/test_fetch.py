@@ -119,7 +119,7 @@ def _files_a_run_gets(project: Project, receptor_ids, monkeypatch, tmp_path):
         sim = project.simulation(rid, "hrrr")
         with pytest.raises(_Stop):
             transport.run_model(
-                sim.variant.model.name,
+                sim.variant.model,
                 sim.receptor,
                 sim.transport,
                 sim.variant.met_config,

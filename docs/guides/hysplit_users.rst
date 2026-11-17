@@ -8,7 +8,9 @@ ARL met files, and returns every particle's position at every time step as
 a pandas table. For many starting times and places, and for the same runs
 under other settings, a project runs them all, on your computer or as a
 Slurm job array, and keeps the particles of each set of settings in a
-folder of its own.
+folder of its own. It runs the ``hycs_std`` you already have: set
+``exe_dir`` to its folder, or put the folder on ``PATH``
+(:doc:`../getting_started/installation`).
 
 .. ipython:: python
    :suppress:

@@ -220,7 +220,7 @@ def run_particles(
         missing.
     """
     output, rid = sim.output, sim.receptor.id
-    needs_workdir = getattr(get_model(sim.variant.model.name), "needs_workdir", True)
+    needs_workdir = getattr(get_model(sim.variant.model), "needs_workdir", True)
     if needs_workdir:
         # The model runs in an empty directory. The runner gives each run a
         # new one, but a caller can hand over a directory that a stopped run
@@ -232,7 +232,7 @@ def run_particles(
     succeeded = False
     try:
         result = run_model(
-            sim.variant.model.name,
+            sim.variant.model,
             sim.receptor,
             sim.transport,
             sim.variant.met_config,
@@ -304,7 +304,7 @@ def run_particles_batch(
         _log_start(sim)
     try:
         results = run_model_many(
-            first.variant.model.name,
+            first.variant.model,
             [sim.receptor for sim in sims],
             first.transport,
             first.variant.met_config,
@@ -464,7 +464,7 @@ def _groups(project: Project) -> dict[tuple[str, int | None], list[str]]:
 
 def _is_batched(project: Project, variant: str) -> bool:
     """Whether a variant's transport model runs many receptors in one call."""
-    model = get_model(project.variants[variant].model.name)
+    model = get_model(project.variants[variant].model)
     return bool(getattr(model, "batched", False))
 
 

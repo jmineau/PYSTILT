@@ -21,6 +21,11 @@ relies on.
    ```bash
    uv run pre-commit install
    ```
+4. For the tests that run HYSPLIT (`integration`, `fidelity`) and the docs
+   build, put a `hycs_std` on `PATH`: STILT-R's `bin/linux_x64/hycs_std`
+   at the commit `.github/workflows/stilt-r.yml` pins, as CI does
+   (`.github/actions/hycs-std`). Without one those tests are skipped. The
+   unit tests need none: they put a stand-in `hycs_std` first on `PATH`.
 
 ## Making a change
 
@@ -267,9 +272,13 @@ settings folder), `settings()` (what a run
 records), and `realizations(n)` (realization `k` with `seed + k`); override
 those two only where the model differs. The model itself names that class as
 `config_class`, names its met config as `met_config_class`, and gives
-`version`, `data_files`, and
+`sha256` (the checksum of the executable it runs, `None` for none: part of
+the run's settings), `version` (what the build reports, recorded beside
+them), `data_files`, and
 `run(receptor, config, met, window, workdir=None, timeout=None)`
-(`stilt.transport.TransportModel`). The met config is a pydantic model that
+(`stilt.transport.TransportModel`). `sha256` raises `FileNotFoundError` when
+the executable cannot be found; the project still opens, and its status
+compares stored folders without the build. The met config is a pydantic model that
 checks one entry under `mets:`; its `settings()` returns what a run records
 of the met (which weather it is, and anything else that changes the
 particles, never where its files are kept). HYSPLIT's is
@@ -366,18 +375,12 @@ Test:
 
 ## Building distributions
 
-PYSTILT ships a compiled HYSPLIT, so each wheel is built for one platform and
-holds only that platform's `hycs_std`. The source archive holds none. Build
-and check all of them with:
+PYSTILT is pure Python and includes no HYSPLIT, so one wheel and the source
+archive serve every platform. Build and check them with:
 
 ```bash
-just dist         # sdist plus one wheel per bundled HYSPLIT build, in dist/
+just dist         # the sdist and the wheel, in dist/
 ```
-
-`just dist` ends with `just check-dist`, which checks each wheel's platform
-tag and binary, and that the sdist has none. Don't publish from
-`python -m build` or a bare `uv build`: they make the wheel from the source
-archive, so it has no binary.
 
 ## Releasing
 

@@ -330,13 +330,10 @@ def _differences(
 ) -> str:
     """Return how a folder's stored settings differ from *variant*'s, the first four, ``; ``-joined."""
     if kind == "particles":
-        stored = read_run_settings(record["settings"])
-        try:
-            current: Mapping[str, Any] | None = variant.run_settings
-        except FileNotFoundError:
-            # The met cannot be read: compare what does not need it.
-            stored = _without_met(stored)
-            current = variant.run_settings_without_met
+        # What can be read here: the met's files or the build may be missing.
+        readable = variant.readable_run_settings
+        stored = _like(read_run_settings(record["settings"]), readable)
+        current: Mapping[str, Any] | None = readable
     else:
         config, geometry_hash = read_footprint_settings(record["settings"], str(path))
         stored = footprint_settings(config, geometry_hash)
@@ -351,9 +348,16 @@ def _differences(
     return "; ".join(found)
 
 
-def _without_met(settings: Mapping[str, Any]) -> dict[str, Any]:
-    """Return run *settings* without the met, whose weather product needs the met's files."""
-    return {k: v for k, v in settings.items() if k != "met"}
+def _like(stored: Mapping[str, Any], readable: Mapping[str, Any]) -> dict[str, Any]:
+    """
+    Return *stored* run settings with only the parts *readable* has.
+
+    Without ``met`` when the met's files cannot be read here, and with only
+    the model's name when its build cannot (:attr:`Variant.readable_run_settings`).
+    """
+    like = {k: v for k, v in stored.items() if k != "met" or "met" in readable}
+    like["model"] = {k: v for k, v in stored["model"].items() if k in readable["model"]}
+    return like
 
 
 def _check_realization(variant: Variant, realization: int | None) -> None:
@@ -511,39 +515,62 @@ class Output:
         """
         Return the hash that finds *variant*'s folder of *kind*, or ``None`` when no folder can be its.
 
-        ``None`` for footprints without a grid, and for a variant whose met
-        cannot be read when the output holds no particles folder with its
-        settings but the met's (:meth:`_may_hold`): the weather product is
-        the only part of the hash that needs the met, so no folder has its
-        results.
+        ``None`` for footprints without a grid. When the settings cannot all
+        be read here, the particles folders are compared on what can be
+        (:meth:`_readable_matches`):
+
+        - The met's files cannot be read: ``None`` when no folder has the
+          variant's other settings, since then no folder has its results.
+        - Only the build cannot be read, as on a machine without
+          ``hycs_std`` that reports status: the folder this variant made
+          (its ``name``) with its other settings, or ``None`` when there is
+          none.
 
         Raises
         ------
         FileNotFoundError
-            If the met cannot be read and a folder may hold the results.
+            If the met cannot be read and a folder may hold the results, or
+            the build cannot be read and the variant made folders with two
+            builds.
         """
         try:
             return self._variant_hash(kind, variant)
         except FileNotFoundError:
-            if self._may_hold(variant):
+            found = self._readable_matches(variant)
+            if not found:
+                return None
+            if "met" not in variant.readable_run_settings:
                 raise
-            return None
+            # Only the build cannot be read: the folder this variant made.
+            mine = [digest for digest, name in found if name == variant.name]
+            if len(mine) > 1:
+                raise
+            if not mine:
+                return None
+            if kind == "particles":
+                return mine[0]
+            settings = variant.footprint_settings
+            return None if settings is None else footprint_hash(mine[0], settings)
 
-    def _may_hold(self, variant: Variant) -> bool:
+    def _readable_matches(self, variant: Variant) -> list[tuple[str, str]]:
         """
-        Return whether a particles folder has *variant*'s settings, the met's apart.
+        Return ``(hash, name)`` of each particles folder with *variant*'s settings, on what can be read here.
 
-        Footprints come from particles with the same hash, so when no
-        particles folder can hold the variant's results, no footprints
-        folder can either.
+        The settings of :attr:`Variant.readable_run_settings`: without the
+        met's when its files cannot be read, and without the build's
+        checksums when the model's executable cannot be found. Footprints
+        come from particles with the same hash, so when no particles folder
+        can hold the variant's results, no footprints folder can either.
         """
-        wanted = settings_hash(variant.run_settings_without_met)
-        for name in _settings_folders(self.directory / "particles"):
-            record = _read_yaml(self._dir("particles", name) / SETTINGS_FILE)
-            stored = _without_met(read_run_settings(record["settings"]))
-            if settings_hash(stored) == wanted:
-                return True
-        return False
+        wanted = variant.readable_run_settings
+        digest = settings_hash(wanted)
+        found = []
+        for folder in _settings_folders(self.directory / "particles"):
+            record = _read_yaml(self._dir("particles", folder) / SETTINGS_FILE)
+            stored = read_run_settings(record["settings"])
+            if settings_hash(_like(stored, wanted)) == digest:
+                found.append((settings_hash(stored), record.get("name", "")))
+        return found
 
     def _name(self, kind: Kind, variant: Variant) -> str | None:
         """Return the name of *variant*'s folder of *kind*, or ``None`` when it does not exist."""
@@ -583,6 +610,7 @@ class Output:
                 "name": variant.name,
                 "hash": digest,
                 "pystilt": _pystilt_version(),
+                "model_version": variant.build.version,
                 "settings": variant.run_settings,
             }
         else:

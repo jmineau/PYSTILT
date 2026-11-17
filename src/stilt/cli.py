@@ -208,6 +208,15 @@ def _require_inputs(project: Project) -> None:
         _fail(str(error))
 
 
+def _require_build(project: Project) -> None:
+    """Exit with 2 and the line ``stilt check`` lists when a variant's transport model cannot be found, such as no ``hycs_std``."""
+    try:
+        for variant in project.variants.values():
+            _ = variant.build
+    except FileNotFoundError as error:
+        _fail(str(error))
+
+
 def _require_met(project: Project) -> None:
     """Exit with 2 and the line ``stilt check`` lists when a variant's met cannot be read."""
     try:
@@ -388,6 +397,7 @@ def _start(
     project takes its receptors from them, not from ``receptors.csv``.
     """
     opened = _open(project, output=output, rows=receptor_rows)
+    _require_build(opened)
     if execution_file is None:
         settings = opened.config.execution.model_dump(exclude_unset=True)
     else:
@@ -666,6 +676,11 @@ def status(
     the output has the variant's other settings, since then no result can
     exist. Otherwise it needs the met, and exits with 2, as it does when the
     command line is wrong or the project's files are invalid.
+
+    The hash also includes the checksum of hycs_std. On a machine without
+    hycs_std, a variant's folder is the one it made (by its name) with its
+    other settings; status exits with 2 when the variant made two, with two
+    builds of hycs_std.
     """
     opened = Project(_resolve_project(project), output=output)
     _require_inputs(opened)
@@ -674,6 +689,7 @@ def status(
         folders = opened.folders()
     except FileNotFoundError:
         _require_met(opened)
+        _require_build(opened)
         raise
     if as_json:
         typer.echo(json.dumps(_status_data(opened, table, folders), indent=2))

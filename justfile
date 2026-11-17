@@ -63,49 +63,11 @@ quality-check: lint type-check imports docstr test
 pre-commit:
     uv run pre-commit run --all-files
 
-# Wheel platform tag for each bundled HYSPLIT build. linux_x64/hycs_std is
-# statically linked (no glibc symbol versions) and needs Linux 3.2 or newer,
-# which every manylinux2014 (glibc 2.17) system has. macos_x64/hycs_std
-# declares a minimum of macOS 10.16, which is macOS 11 (LC_BUILD_VERSION).
-linux_wheel := "manylinux_2_17_x86_64"
-macos_wheel := "macosx_11_0_x86_64"
-
-# Build the sdist and one wheel per bundled HYSPLIT build into dist/, then check them
-dist: && check-dist
-    rm -rf build dist
-    uv build --sdist
-    uv build --wheel -C--build-option=--plat-name={{ linux_wheel }}
-    uv build --wheel -C--build-option=--plat-name={{ macos_wheel }}
+# Build the sdist and wheel into dist/ and check them
+dist:
+    rm -rf dist
+    uv build
     uv run twine check --strict dist/*
-
-# Check dist/: each wheel holds only its own hycs_std, the sdist none
-check-dist:
-    #!/usr/bin/env python3
-    import tarfile
-    import zipfile
-    from pathlib import Path
-
-    expected = {"{{ linux_wheel }}": "linux_x64", "{{ macos_wheel }}": "macos_x64"}
-    wheels = sorted(Path("dist").glob("*.whl"))
-    platforms = [wheel.stem.rsplit("-", 1)[1] for wheel in wheels]
-    assert sorted(platforms) == sorted(expected), f"wheels for {platforms}"
-    for wheel, platform in zip(wheels, platforms):
-        assert wheel.stem.split("-")[2:4] == ["py3", "none"], wheel.name
-        with zipfile.ZipFile(wheel) as zf:
-            names = zf.namelist()
-            info = next(n for n in names if n.endswith(".dist-info/WHEEL"))
-            meta = zf.read(info).decode()
-        assert f"Tag: py3-none-{platform}\n" in meta, meta
-        assert "Root-Is-Purelib: false\n" in meta, meta
-        binaries = [n for n in names if n.endswith("/hycs_std")]
-        want = [f"stilt/transport/hysplit/bin/{expected[platform]}/hycs_std"]
-        assert binaries == want, f"{wheel.name} holds {binaries}"
-        print(f"{wheel.name}: {binaries[0]}")
-    (sdist,) = Path("dist").glob("*.tar.gz")
-    with tarfile.open(sdist) as tf:
-        binaries = [n for n in tf.getnames() if n.endswith("/hycs_std")]
-    assert not binaries, f"{sdist.name} holds {binaries}"
-    print(f"{sdist.name}: no binary")
 
 # At release, draft the CHANGELOG entries from the commits since the last release
 changelog:

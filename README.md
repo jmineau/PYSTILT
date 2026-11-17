@@ -39,6 +39,20 @@ NOAA, and reading STILT-R output, install everything:
 pip install "pystilt[complete]"
 ```
 
+PYSTILT runs NOAA's HYSPLIT program, `hycs_std`, but does not include it. Get the build
+STILT-R uses, HYSPLIT 5.1.0, from STILT-R's repository (`bin/macos_x64/hycs_std` on a Mac),
+and put its folder on `PATH` or set `exe_dir` under `models: hysplit:` in `config.yaml`:
+
+```bash
+mkdir -p hysplit
+curl -L -o hysplit/hycs_std https://raw.githubusercontent.com/uataq/stilt/main/bin/linux_x64/hycs_std
+chmod +x hysplit/hycs_std
+export PATH="$PWD/hysplit:$PATH"
+```
+
+[Installation](https://jmineau.github.io/PYSTILT/stable/getting_started/installation.html)
+has the details and other builds.
+
 ## Quickstart
 
 Describe a measurement, follow particles back from it through the
@@ -306,9 +320,8 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set
 
 PYSTILT is released under the MIT License. See the LICENSE file.
 
-PYSTILT's wheels also carry a compiled `hycs_std`, the HYSPLIT build that STILT-R
-distributes. It is NOAA Air Resources Laboratory (ARL) software, not covered by the MIT
-License, and is subject to the
+PYSTILT runs HYSPLIT's `hycs_std`, which it does not include. HYSPLIT is NOAA Air
+Resources Laboratory (ARL) software, not covered by the MIT License, and is subject to the
 [HYSPLIT terms of use](https://www.ready.noaa.gov/HYSPLIT_agreement.php), which ask that
 publications using it cite NOAA ARL (Stein et al., 2015,
 [doi:10.1175/BAMS-D-14-00110.1](https://doi.org/10.1175/BAMS-D-14-00110.1)) and do not

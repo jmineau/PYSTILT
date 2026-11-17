@@ -18,6 +18,7 @@ from stilt.output import Output
 from stilt.particles import particles_metadata, write_particles
 from stilt.spatial import Grid
 
+from .conftest import STAND_IN_VERSION
 from .fixtures.output import (
     FEET,
     GRID,
@@ -70,6 +71,9 @@ def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
     assert record["name"] == "hrrr"
     assert record["hash"] == digest
     assert record["settings"]["numpar"] == 100
+    # The version hycs_std prints is recorded beside the settings, not in them.
+    assert record["model_version"] == STAND_IN_VERSION
+    assert "version" not in record["settings"]["model"]
     assert (
         "exe_dir" not in record["settings"]
         and "directory" not in record["settings"]["met"]

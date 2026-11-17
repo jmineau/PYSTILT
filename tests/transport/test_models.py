@@ -44,6 +44,9 @@ class ToyModel:
     config_class = ToyConfig
     met_config_class = ToyMet
 
+    def sha256(self, config):
+        return None
+
     def version(self, config: ToyConfig) -> str:
         return "1.0"
 
@@ -79,11 +82,11 @@ def test_a_variant_may_run_another_model(tmp_path, toy):
     )
     variants = config.resolve()
     hrrr, toy_variant = variants["hrrr"], variants["toy"]
-    assert hrrr.model.name == "hysplit" and hrrr.transport.numpar == 500
+    assert hrrr.model == "hysplit" and hrrr.transport.numpar == 500
     # Another model's variant gives its own parameters and gets the same stages.
-    assert toy_variant.model.name == "toy" and toy_variant.transport.nparticles == 10
+    assert toy_variant.model == "toy" and toy_variant.transport.nparticles == 10
     assert toy_variant.footprint == hrrr.footprint
-    assert variants["toy"].model == ModelInfo(name="toy", version="1.0")
+    assert variants["toy"].build == ModelInfo(name="toy", version="1.0")
     assert variants["toy"].particles_hash != variants["hrrr"].particles_hash
     recorded = variants["toy"].run_settings
     assert recorded["model"]["name"] == "toy" and recorded["nparticles"] == 10
@@ -145,7 +148,7 @@ def test_a_variant_names_its_model_when_there_are_several(tmp_path, toy):
     only = ProjectConfig(
         mets=_mets(tmp_path), models={"toy": {}}, variants={"hrrr": {}}
     )
-    assert only.resolve()["hrrr"].model.name == "toy"
+    assert only.resolve()["hrrr"].model == "toy"
 
 
 def test_a_met_is_checked_by_the_model_that_reads_it(tmp_path, toy):
@@ -212,7 +215,7 @@ def test_a_model_has_one_block(tmp_path):
 
 def test_hysplit_runs_when_no_model_is_named(tmp_path):
     config = ProjectConfig(mets=_mets(tmp_path), variants={"hrrr": {}})
-    assert config.resolve()["hrrr"].model.name == "hysplit"
+    assert config.resolve()["hrrr"].model == "hysplit"
     assert "models:" not in config.to_yaml()  # only what was given is written
 
     given = ProjectConfig(
@@ -272,7 +275,7 @@ def test_a_model_is_named_by_its_import_path_without_registering_it(tmp_path):
         "mine": {"class": TOY_PATH, "nparticles": 3}
     }
     # The record names the import path, so another process imports it again.
-    assert variant.model == ModelInfo(name=TOY_PATH, version="1.0")
+    assert variant.build == ModelInfo(name=TOY_PATH, version="1.0")
     stored = read_run_settings(variant.run_settings)
     assert settings_hash(stored) == variant.particles_hash
 
@@ -313,6 +316,9 @@ def test_a_model_in_its_own_package_runs_from_a_fresh_interpreter(tmp_path):
                 name = "toy"
                 config_class = ToyConfig
                 met_config_class = ToyMet
+
+                def sha256(self, config):
+                    return None
 
                 def version(self, config):
                     return "1.0"

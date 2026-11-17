@@ -1,18 +1,17 @@
 Your Own HYSPLIT Build And Data Tables
 ======================================
 
-PYSTILT runs the copy of HYSPLIT that pip installs with it, and reads
-HYSPLIT's data tables from the same place. You can replace either: a
-newer HYSPLIT, a build with a fix the bundled one lacks, or a
-higher-resolution land use.
+PYSTILT runs the ``hycs_std`` you give it (:doc:`../getting_started/installation`),
+and reads HYSPLIT's data tables from its own copy. You can replace either: a
+newer HYSPLIT, a build with a fix STILT-R's lacks, or a higher-resolution
+land use.
 
 A HYSPLIT build
 ---------------
 
-Compile ``hycs_std`` from NOAA's HYSPLIT source. Beside it, put a file
-named ``version`` that holds the build's version, such as ``v5.3.2`` or
-``v5.3.2+t0-rows`` for a patched build. Then point ``exe_dir`` at that
-folder:
+Get ``hycs_std`` from NOAA's HYSPLIT download, a cluster's HYSPLIT module,
+or by compiling NOAA's source. Then point ``exe_dir`` at its folder, or put
+the folder on ``PATH``:
 
 .. code-block:: yaml
 
@@ -30,15 +29,26 @@ compare two builds on the same receptors:
      hrrr-v532: {exe_dir: /path/to/hysplit-5.3.2/exec}
 
 Two builds can give different particles from the same settings, so a run
-records the build's version and runs of different builds go to different
-settings folders (:doc:`projects`). The folder itself is not recorded:
-moving a build keeps its results. A build without a ``version`` file is
-refused, since its runs could not be told apart from another build's.
+records the SHA-256 of the ``hycs_std`` it ran, and runs of different
+builds go to different settings folders (:doc:`projects`). A rebuilt or
+updated ``hycs_std`` starts new folders even when it behaves the same. The
+folder ``hycs_std`` is in is not recorded: moving a build keeps its results.
+
+A run also records the version ``hycs_std`` prints when it starts, such as
+``hysplit.v5.1.0``, as ``model_version`` in the settings folder's
+``_settings.yaml`` (:doc:`../reference/layout`). The version does not tell
+builds apart: two builds of one release print the same, and some builds
+print an older release than they are.
+
+A machine without ``hycs_std``, such as one that only reports status,
+still opens a project. ``stilt status`` finds each variant's folder by the
+variant's name and its other settings, and exits with 2 when the variant
+has folders from two builds.
 
 A build that writes each particle's release as a row at ``age = 0`` gives
-exact release heights for multipoint and slant receptors. The bundled
-build writes its first row one time step after release, and PYSTILT
-matches each particle to its release point from that first position
+exact release heights for multipoint and slant receptors. HYSPLIT 5.1.0
+writes its first row one time step after release, and PYSTILT matches
+each particle to its release point from that first position
 (:doc:`../reference/particles`).
 
 What a build reads from PYSTILT
@@ -46,13 +56,13 @@ What a build reads from PYSTILT
 
 PYSTILT writes HYSPLIT's ``CONTROL`` file with the met files as one grid,
 listed in time. HYSPLIT reads at most 128 files of one grid (``mtim`` in
-its ``DEFGRID.INC``), in the bundled build and in NOAA's, so a run can
+its ``DEFGRID.INC``), in STILT-R's build and in NOAA's, so a run can
 read at most 128 met files: 32 days of 6-hour files, or about 5 days of
 hourly ones. A run that needs more stops with ``Numb meteo times exceed
 DEFGRID limit`` in its log.
 
 STILT-R lists each file as its own grid instead, which NOAA's builds limit
-to 12 files a run and the bundled build to 99 (``mgrd``). The particles
+to 12 files a run and STILT-R's build to 99 (``mgrd``). The particles
 are the same either way.
 
 To rerun a kept workdir by hand, you can edit its ``CONTROL`` file. A
@@ -65,8 +75,9 @@ Data tables
 
 HYSPLIT's data tables (``ASCDATA.CFG``, ``LANDUSE.ASC``, ``ROUGLEN.ASC``,
 ``TERRAIN.ASC``) set the land use, roughness, and terrain under the
-particles. To use your own, put them in a folder and set ``data_dir``. A
-table the folder does not hold comes from the bundled set:
+particles. PYSTILT includes a copy of HYSPLIT's tables and uses it with
+any build. To use your own, put them in a folder and set ``data_dir``. A
+table the folder does not hold comes from PYSTILT's copy:
 
 .. code-block:: yaml
 
@@ -75,13 +86,5 @@ table the folder does not hold comes from the bundled set:
        data_dir: /path/to/hysplit/bdyfiles
 
 The tables change the particles, so a run records the checksum of each
-table that differs from the bundled one, and such runs are kept apart from
-the others. A folder whose tables match the bundled ones changes nothing.
-
-Platforms without a bundled build
----------------------------------
-
-pip installs a HYSPLIT build on Linux (x86_64) and Intel macOS. On any
-other platform, such as an Apple Silicon Mac with an arm64 Python, PYSTILT
-reads results but a run stops with an error until ``exe_dir`` points at a
-build (:doc:`../getting_started/installation`).
+table that differs from PYSTILT's copy, and such runs are kept apart from
+the others. A folder whose tables match PYSTILT's copy changes nothing.

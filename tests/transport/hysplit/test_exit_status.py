@@ -34,7 +34,6 @@ def _particle_dat(path: Path, last_minute: int) -> Path:
 def _fake_hycs_std(directory: Path, body: str) -> Path:
     """Return a build directory whose ``hycs_std`` runs the shell commands in *body*."""
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "version").write_text("fake-1.0\n")  # a custom build names its version
     exe = directory / "hycs_std"
     exe.write_text("#!/usr/bin/env bash\n" + body)
     exe.chmod(exe.stat().st_mode | stat.S_IXUSR)

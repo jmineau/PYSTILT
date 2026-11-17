@@ -10,7 +10,7 @@ input files of a run, or to read a ``PARTICLE_STILT.DAT`` from elsewhere.
 
 import datetime as dt
 import os
-import platform
+import shutil
 import signal
 import subprocess
 import warnings
@@ -74,31 +74,38 @@ NOT_IN_SETUP = frozenset(
 )
 
 
-def _bundled_exe_dir() -> Path:
+def find_hycs_std(exe_dir: str | Path | None = None) -> Path:
     """
-    Return the directory of the bundled ``hycs_std`` for this platform.
+    Return the ``hycs_std`` a run uses: the one in *exe_dir*, else the first on ``PATH``.
 
-    The bundled builds are x86-64 Linux and x86-64 macOS. The macOS build
-    also runs on Apple Silicon through Rosetta. Any other platform raises,
-    rather than running a binary the operating system cannot execute. So
-    does an install from the source archive, which carries no binary.
+    PYSTILT does not include HYSPLIT, so the build is yours: set ``exe_dir``
+    in ``config.yaml`` to the directory that holds ``hycs_std``, or put that
+    directory on ``PATH``. ``exe_dir`` wins when both are set.
+
+    Raises
+    ------
+    HYSPLITNotFoundError
+        If *exe_dir* holds no ``hycs_std``, or, without *exe_dir*, no
+        ``hycs_std`` is on ``PATH``.
     """
-    system = platform.system()
-    machine = platform.machine().lower()
-    subdir = None
-    if system == "Linux" and machine in ("x86_64", "amd64"):
-        subdir = "linux_x64"
-    elif system == "Darwin" and machine in ("x86_64", "arm64"):
-        subdir = "macos_x64"
-    if subdir is not None:
-        exe_dir = Path(str(pkg_files("stilt.transport.hysplit") / "bin" / subdir))
-        if (exe_dir / HYCS_STD_FILE).is_file():
-            return exe_dir
-    raise HYSPLITNotFoundError(
-        f"No bundled HYSPLIT binary for {system} {platform.machine()}. "
-        "Build hycs_std for this machine and set exe_dir in config.yaml "
-        "to the directory that holds it."
-    )
+    if exe_dir is not None:
+        exe = Path(exe_dir) / HYCS_STD_FILE
+        if not exe.is_file():
+            raise HYSPLITNotFoundError(
+                f"No {HYCS_STD_FILE} in {exe_dir}. Set exe_dir (under models: "
+                f"hysplit: in config.yaml) to the directory that holds HYSPLIT's "
+                f"{HYCS_STD_FILE}."
+            )
+        return exe
+    found = shutil.which(HYCS_STD_FILE)
+    if found is None:
+        raise HYSPLITNotFoundError(
+            f"No {HYCS_STD_FILE} on PATH. PYSTILT does not include HYSPLIT: get "
+            f"{HYCS_STD_FILE} (the installation guide says where), then set "
+            "exe_dir (under models: hysplit: in config.yaml) to the directory "
+            "that holds it, or put that directory on PATH."
+        )
+    return Path(found)
 
 
 def _bundled_data_dir() -> Path:
@@ -394,7 +401,8 @@ def write_inputs(
     """
     Write everything ``hycs_std`` reads for one run into *workdir*.
 
-    Links ``hycs_std`` (from ``config.exe_dir``, or the bundled build) and
+    Links ``hycs_std`` (from ``config.exe_dir``, or else ``PATH``:
+    :func:`find_hycs_std`) and
     HYSPLIT's data tables (the bundled ones, replaced by any in
     ``config.data_dir``), and writes ``CONTROL`` and ``SETUP.CFG``, plus
     ``ZICONTROL``, ``WINDERR``, and ``ZIERR`` when the settings call for
@@ -420,7 +428,7 @@ def write_inputs(
     Raises
     ------
     HYSPLITNotFoundError
-        If there is no ``hycs_std`` to link.
+        If there is no ``hycs_std`` to link (:func:`find_hycs_std`).
     """
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
@@ -428,13 +436,7 @@ def write_inputs(
     # Link the binary and the data tables, as STILT-R does. Only hycs_std is
     # taken from exe_dir: a custom build directory usually holds a whole
     # HYSPLIT exec/ tree.
-    exe_dir = Path(config.exe_dir) if config.exe_dir is not None else _bundled_exe_dir()
-    exe = exe_dir / HYCS_STD_FILE
-    if not exe.is_file():
-        raise HYSPLITNotFoundError(
-            f"No {HYCS_STD_FILE!r} executable in {exe_dir}. Check exe_dir."
-        )
-    links = {HYCS_STD_FILE: exe}
+    links = {HYCS_STD_FILE: find_hycs_std(config.exe_dir)}
     links.update({f.name: f for f in _bundled_data_dir().iterdir()})
     if config.data_dir is not None:  # its tables replace the bundled ones
         links.update(

@@ -44,22 +44,48 @@ An output directory on an object store needs the fsspec package for it,
 such as ``s3fs`` for ``s3://`` or ``gcsfs`` for ``gs://``
 (:doc:`../guides/projects`).
 
-HYSPLIT is included
--------------------
+Get HYSPLIT
+-----------
 
-PYSTILT runs NOAA's HYSPLIT program to move particles. pip installs a copy
-of HYSPLIT with PYSTILT on:
+PYSTILT runs NOAA's HYSPLIT program, ``hycs_std``, to move particles, but it
+does not include it: you get ``hycs_std`` yourself and tell PYSTILT where it
+is. We recommend STILT-R's copy, HYSPLIT 5.1.0, which is the build PYSTILT's
+comparisons with STILT-R run. Download it from STILT-R's repository and make
+it executable:
 
-- Linux (x86_64)
-- macOS 11 or newer (Intel, x86_64)
+.. code-block:: bash
 
-On any other platform pip installs PYSTILT without HYSPLIT. This includes
-Apple Silicon Macs with an arm64 Python. PYSTILT still imports and reads
-existing results, but a run stops with an error that no bundled HYSPLIT binary
-exists for the machine.
+   mkdir -p hysplit
+   curl -L -o hysplit/hycs_std \
+       https://raw.githubusercontent.com/uataq/stilt/main/bin/linux_x64/hycs_std
+   chmod +x hysplit/hycs_std
 
-There, or anywhere you want another HYSPLIT version or your own land-use
-tables, compile ``hycs_std`` and set ``exe_dir`` in ``config.yaml``
-(:doc:`../guides/hysplit_build`).
+That is the Linux (x86_64) build. On a Mac, download
+``bin/macos_x64/hycs_std`` instead; Apple Silicon runs it through Rosetta.
+
+Then tell PYSTILT where it is, in one of two ways:
+
+- Put its folder on ``PATH``, for example in your shell's startup file:
+  ``export PATH="/path/to/hysplit:$PATH"``. A cluster's HYSPLIT module
+  does this when you load it.
+- Set ``exe_dir`` to the folder in a project's ``config.yaml``, under
+  ``models: hysplit:``. This wins over ``PATH``:
+
+  .. code-block:: yaml
+
+     models:
+       hysplit:
+         exe_dir: /path/to/hysplit
+
+``stilt check`` lists a project that can find no ``hycs_std``, and
+``stilt run`` stops with the same message before it runs anything. A
+project still opens and reads its results without one.
+
+Any other HYSPLIT build works too, such as NOAA's own download or one you
+compile (:doc:`../guides/hysplit_build`). Each run records the checksum of
+the ``hycs_std`` it ran, so runs of different builds are kept apart.
+
+HYSPLIT is NOAA Air Resources Laboratory software, under the
+`HYSPLIT terms of use <https://www.ready.noaa.gov/HYSPLIT_agreement.php>`_.
 
 Next: :doc:`quickstart`.

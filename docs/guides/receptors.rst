@@ -225,8 +225,8 @@ Advanced: release heights for multipoint and slant receptors
 Vertical weighting needs each particle's release height, the
 ``release_height`` column of the particles. HYSPLIT does not record which
 release point a particle came from, so PYSTILT works it out from the first
-row HYSPLIT writes for the particle. With the bundled
-HYSPLIT build, that row comes one timestep after release. By then the wind
+row HYSPLIT writes for the particle. With HYSPLIT 5.1.0, STILT-R's
+build, that row comes one timestep after release. By then the wind
 has moved the particle a few hundred meters, which can be more than the
 spacing between the points of a slant column.
 
@@ -251,8 +251,9 @@ release time (:doc:`hysplit_build`):
      hysplit:
        exe_dir: /path/to/hysplit/exec    # directory containing hycs_std
 
-The build's version is saved with the particles, so you can tell which
-build made them.
+The checksum of the build's ``hycs_std`` is part of the particles'
+settings, and the version it prints is recorded beside them, so you can
+tell which build made them.
 
 
 Working with receptors in code
