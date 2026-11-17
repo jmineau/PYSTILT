@@ -124,7 +124,7 @@ class ParticlesAccessor:
         along it to where it crosses. If the line crosses two edges at a
         corner, ``edge`` is the first it crosses. A particle whose first row is
         already outside has no row inside to interpolate from (the
-        meteorology HYSPLIT builds bundled with PYSTILT writes no row at
+        meteorology HYSPLIT 5.1.0, the build STILT-R uses, writes no row at
         the release), so it is reported at that row, on the edge it is
         farthest beyond, in cells.
 

@@ -115,7 +115,7 @@ class _Declared(NamedTuple):
 @dataclass(frozen=True)
 class Variant:
     """
-    One variant, resolved: its configs, its met, the model build, and its hashes.
+    One variant, resolved: its configs, its met, its transport model, and its hashes.
 
     Get one from ``project.variants`` or ``sim.variant``. A variant with
     ``realizations: N`` is an ensemble: its simulations run N times,
@@ -139,8 +139,10 @@ class Variant:
     transport : TransportConfig
         The transport model's config, such as a
         :class:`~stilt.transport.hysplit.HysplitConfig`, with the base seed.
-    model : ModelInfo
-        The transport model build that runs it.
+    model : str
+        The transport model that runs it, as ``config.yaml`` names it: a
+        built-in name such as ``hysplit``, or a model class's import path.
+        Its build is :attr:`build`.
     realizations : int or None
         Number of realizations of an ensemble, or ``None`` for a single run.
     footprint : FootprintConfig or None
@@ -154,7 +156,7 @@ class Variant:
     met: str
     met_config: Any
     transport: TransportConfig
-    model: ModelInfo
+    model: str
     realizations: int | None = None
     footprint: FootprintConfig | None = None
     geometry_hash: str | None = None
@@ -207,27 +209,66 @@ class Variant:
             raise FileNotFoundError(f"Met {self.met!r}: {error}") from None
 
     @cached_property
+    def build(self) -> ModelInfo:
+        """
+        The transport model build that runs it.
+
+        For HYSPLIT, the SHA-256 of the ``hycs_std`` it runs and the version
+        that ``hycs_std`` prints. Read on first use, as :attr:`met_settings`
+        is, so a project opens on a machine without the model's executable.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the model's executable cannot be found here, such as a
+            machine without ``hycs_std`` that only reports status.
+        """
+        model = get_model(self.model)
+        return ModelInfo(
+            name=self.model,
+            sha256=model.sha256(self.transport),
+            data_files=model.data_files(self.transport),
+            version=model.version(self.transport),
+        )
+
+    @cached_property
     def run_settings(self) -> dict[str, Any]:
         """The settings that identify this variant's particles, as ``_settings.yaml`` records them."""
         return run_settings(
             self.transport,
             self.met_settings,
-            self.model,
+            self.build,
             ensemble=self.realizations is not None,
         )
 
     @cached_property
-    def run_settings_without_met(self) -> dict[str, Any]:
+    def readable_run_settings(self) -> dict[str, Any]:
         """
-        The settings that identify this variant's particles, except the met's.
+        The settings that identify this variant's particles, without what cannot be read here.
 
-        What can be compared with a stored folder when the met's files
-        cannot be read, and so :attr:`run_settings` cannot be made.
+        ``met`` is left out when the met's files cannot be read, and
+        ``model`` keeps only its ``name`` when the model's executable cannot
+        be found. What can be compared with a stored folder when
+        :attr:`run_settings` cannot be made; equal to it when it can.
         """
+        try:
+            met: dict[str, Any] | None = self.met_settings
+        except FileNotFoundError:
+            met = None
+        try:
+            build: ModelInfo | None = self.build
+        except FileNotFoundError:
+            build = None
         settings = run_settings(
-            self.transport, {}, self.model, ensemble=self.realizations is not None
+            self.transport,
+            met or {},
+            build or ModelInfo(name=self.model),
+            ensemble=self.realizations is not None,
         )
-        del settings["met"]
+        if met is None:
+            del settings["met"]
+        if build is None:
+            settings["model"] = {"name": self.model}
         return settings
 
     @cached_property
@@ -630,9 +671,8 @@ class ProjectConfig(BaseModel):
         use (:attr:`Variant.met_settings`). Each geometry is read
         once, however many variants use it, and the grid of a footprint
         given only by a geometry is derived from it
-        (:meth:`stilt.Mesh.to_grid`). The transport model's version and
-        data files are read once for each distinct build: the fields of its
-        config that change no particle, such as ``exe_dir``.
+        (:meth:`stilt.Mesh.to_grid`). The transport model's build is read
+        on first use too (:attr:`Variant.build`).
         ``project.variants`` holds the result.
 
         Parameters
@@ -648,7 +688,6 @@ class ProjectConfig(BaseModel):
             realizations would repeat one another.
         """
         meshes: dict[str, Mesh] = {}
-        builds: dict[tuple[str, str], ModelInfo] = {}
         mets: dict[tuple[str, str], Any] = {}
         variants: dict[str, Variant] = {}
         for group in self.variants:
@@ -665,16 +704,6 @@ class ProjectConfig(BaseModel):
                 if footprint.grid is None:
                     grid = mesh.to_grid(cells_per_target=footprint.cells_per_target)
                     footprint = footprint.model_copy(update={"grid": grid})
-            where = transport.model_dump_json(include=set(transport.UNRECORDED))
-            build = (declared.model, where)
-            if build not in builds:
-                model = get_model(declared.model)
-                builds[build] = ModelInfo(
-                    # As config.yaml names it, so another process imports it again.
-                    name=declared.model,
-                    version=model.version(transport),
-                    data_files=model.data_files(transport),
-                )
             if declared.realizations is not None:
                 try:
                     transport.realizations(declared.realizations)
@@ -690,7 +719,7 @@ class ProjectConfig(BaseModel):
                 met=declared.met,
                 met_config=mets[met_key],
                 transport=transport,
-                model=builds[build],
+                model=declared.model,
                 realizations=declared.realizations,
                 footprint=footprint,
                 geometry_hash=geometry_hash,

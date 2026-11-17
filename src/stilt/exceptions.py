@@ -63,9 +63,11 @@ class HYSPLITNotFoundError(StiltError, FileNotFoundError):
     """
     The HYSPLIT executable (``hycs_std``) is missing.
 
-    Raised when there is no bundled build for this platform, and when
-    ``exe_dir`` holds no ``hycs_std``. Build ``hycs_std`` and set
-    ``exe_dir`` in ``config.yaml`` to the directory that holds it.
+    Raised when ``exe_dir`` holds no ``hycs_std``, and, without ``exe_dir``,
+    when no ``hycs_std`` is on ``PATH``. PYSTILT does not include HYSPLIT:
+    get ``hycs_std`` and set ``exe_dir`` (under ``models: hysplit:`` in
+    ``config.yaml``) to the directory that holds it, or put that directory
+    on ``PATH``.
     """
 
 

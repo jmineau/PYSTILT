@@ -365,7 +365,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "stilt" = ["py.typed"]
-"stilt.transport.hysplit" = ["bin/**/*", "data/*"]
+"stilt.transport.hysplit" = ["data/*"]
 
 [tool.setuptools_scm]
 # Releases are git tags vX.Y.Z (see CONTRIBUTING.md). Between releases the

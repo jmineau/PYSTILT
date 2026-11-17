@@ -374,8 +374,8 @@ Some settings do not change a result, so changing them changes no folder:
 
 - ``execution`` (including ``timeout`` and ``keep_workdir``) and ``output``
 - the ``exe_dir`` and ``data_dir`` paths (what they hold is recorded
-  instead: the build's version, and a checksum of each data table that
-  differs from the bundled one, so a different build or table is a new
+  instead: the checksum of ``hycs_std``, and of each data table that
+  differs from PYSTILT's copy, so a different build or table is a new
   folder)
 - where the meteorology files are (``directory`` and ``subgrid_dir``)
 

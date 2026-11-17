@@ -32,7 +32,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.transport.hysplit.driver import _bundled_exe_dir, setup_seed
+from stilt.transport.hysplit.driver import find_hycs_std, setup_seed
 
 from ..fixtures.r_stilt_reference import (
     STILT_R_NAMES,
@@ -159,7 +159,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _assert_hysplit_binary_matches_r(r_stilt_dir: Path) -> None:
-    py_hycs = _bundled_exe_dir() / "hycs_std"
+    py_hycs = find_hycs_std()
     r_hycs = r_stilt_dir / "exe" / "hycs_std"
     assert py_hycs.exists(), f"PYSTILT hycs_std not found: {py_hycs}"
     assert r_hycs.exists(), f"STILT-R hycs_std not found: {r_hycs}"

@@ -44,7 +44,6 @@ from stilt.output import Kind, Output
 from stilt.particles import check_particles
 from stilt.receptors import Receptor
 from stilt.spatial import Grid
-from stilt.transport import ModelInfo
 from stilt.transport.hysplit.config import (
     FIXED_SETUP,
     SETUP_NAMES,
@@ -909,7 +908,7 @@ def _variant(
         met=met_name,
         met_config=met,
         transport=config,
-        model=ModelInfo(name=StiltRModel.name, version=StiltRModel().version(config)),
+        model=StiltRModel.name,
     )
     if name not in made:
         made[name] = (variant, folder)
@@ -968,12 +967,12 @@ def _variant_entry(variant: Variant, footprints: bool) -> dict[str, Any]:
     With *footprints*, the config has a footprint stage, so a variant
     without a footprint sets the stage to null.
     """
-    entry: dict[str, Any] = {
-        "model": variant.model.name,
-        "met": variant.met,
-        "version": variant.model.version,
-    }
     settings = variant.transport.settings()
+    entry: dict[str, Any] = {
+        "model": variant.model,
+        "met": variant.met,
+        "version": settings.pop("version"),
+    }
     entry.update({k: settings[k] for k in sorted(settings)})
     if variant.footprint is not None:
         entry["stages"] = {"footprint": variant.footprint.model_dump(mode="json")}

@@ -43,6 +43,57 @@ def pytest_collection_modifyitems(items):
 
 
 # ---------------------------------------------------------------------------
+# HYSPLIT's hycs_std
+# ---------------------------------------------------------------------------
+
+#: The markers of the tests that run a real ``hycs_std``.
+_REAL_HYSPLIT = ("integration", "fidelity")
+
+#: What the stand-in prints when it starts, as ``hycs_std`` does.
+STAND_IN_VERSION = "hysplit.v5.1.0-test"
+
+
+@pytest.fixture(scope="session")
+def stand_in_hycs_std(tmp_path_factory) -> Path:
+    """
+    A directory whose ``hycs_std`` prints a version and stops, as ``hycs_std`` does without ``CONTROL``.
+
+    PYSTILT does not include HYSPLIT, and a run's settings hold the SHA-256
+    of the ``hycs_std`` it runs, so the unit tests hash this one instead.
+    """
+    directory = tmp_path_factory.mktemp("hysplit")
+    exe = directory / "hycs_std"
+    exe.write_text(
+        "#!/bin/sh\n"
+        f"echo ' HYSPLIT version: {STAND_IN_VERSION}'\n"
+        "echo ' Last Changed Date: 2021-05-13'\n"
+        "exit 2\n"
+    )
+    exe.chmod(0o755)
+    return directory
+
+
+@pytest.fixture(autouse=True)
+def _hycs_std_on_path(request, monkeypatch):
+    """
+    Put the stand-in ``hycs_std`` first on ``PATH`` for a unit test; skip a real-HYSPLIT test without one.
+
+    A test marked ``integration`` or ``fidelity`` runs the first ``hycs_std``
+    on ``PATH``, such as STILT-R's ``bin/linux_x64/hycs_std``, and is
+    skipped when there is none.
+    """
+    if any(request.node.get_closest_marker(m) for m in _REAL_HYSPLIT):
+        if shutil.which("hycs_std") is None:
+            pytest.skip(
+                "No hycs_std on PATH. Put the directory of STILT-R's "
+                "bin/linux_x64/hycs_std (or another HYSPLIT build) on PATH."
+            )
+        return
+    stand_in = request.getfixturevalue("stand_in_hycs_std")
+    monkeypatch.setenv("PATH", f"{stand_in}{os.pathsep}{os.environ.get('PATH', '')}")
+
+
+# ---------------------------------------------------------------------------
 # Met directory
 # ---------------------------------------------------------------------------
 

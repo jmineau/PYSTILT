@@ -1,5 +1,6 @@
 """Tests for stilt.identity: what identifies a run and a footprint, and reading it back."""
 
+import hashlib
 import shutil
 from dataclasses import replace
 
@@ -7,6 +8,7 @@ import pytest
 import yaml
 
 from stilt.config import ProjectConfig, Variant
+from stilt.exceptions import HYSPLITNotFoundError
 from stilt.identity import read_run_settings, run_settings, settings_hash
 from stilt.output import Output
 from stilt.transport import ModelInfo
@@ -14,6 +16,7 @@ from stilt.transport.hysplit import HysplitConfig, MetConfig
 from stilt.transport.hysplit.model import hysplit_version
 from tests.fixtures.factories import blocks
 
+from .conftest import STAND_IN_VERSION
 from .fixtures.factories import make_met_config, make_receptor, write_arl_file
 
 GRID = {"xmin": -112, "xmax": -111, "ymin": 40, "ymax": 41, "xres": 0.1, "yres": 0.1}
@@ -47,19 +50,74 @@ def test_settings_hash_ignores_key_order_and_number_spelling():
 
 
 # ---------------------------------------------------------------------------
-# model version
+# the model build
 # ---------------------------------------------------------------------------
 
 
-def test_bundled_hysplit_version():
-    assert hysplit_version() == "v5.1.0"
+def _build(directory, version="hysplit.v5.1.0", comment=""):
+    """Write a ``hycs_std`` into *directory* that prints *version*, as HYSPLIT's does, and return the directory."""
+    directory.mkdir(parents=True)
+    exe = directory / "hycs_std"
+    exe.write_text(
+        f"#!/bin/sh\n# {comment}\necho ' HYSPLIT version: {version}'\nexit 2\n"
+    )
+    exe.chmod(0o755)
+    return directory
 
 
-def test_custom_build_needs_a_version_file(tmp_path):
-    with pytest.raises(FileNotFoundError, match="version"):
-        hysplit_version(tmp_path)
-    (tmp_path / "version").write_text("v5.3.2+t0-rows\n")
-    assert hysplit_version(tmp_path) == "v5.3.2+t0-rows"
+def test_hysplit_version_is_what_hycs_std_prints(tmp_path):
+    assert hysplit_version(_build(tmp_path / "b", "hysplit.v5.2.2")) == "hysplit.v5.2.2"
+
+
+def test_hysplit_version_without_exe_dir_is_of_the_hycs_std_on_path():
+    assert hysplit_version() == STAND_IN_VERSION
+
+
+def test_hysplit_version_is_none_when_hycs_std_prints_none(tmp_path):
+    build = tmp_path / "b"
+    build.mkdir()
+    (build / "hycs_std").write_text("#!/bin/sh\nexit 0\n")
+    (build / "hycs_std").chmod(0o755)
+    assert hysplit_version(build) is None
+
+
+def test_without_hycs_std_hysplit_version_says_what_to_set(monkeypatch, tmp_path):
+    monkeypatch.setenv("PATH", str(tmp_path))
+    with pytest.raises(HYSPLITNotFoundError, match="exe_dir"):
+        hysplit_version()
+
+
+def test_the_build_is_the_checksum_of_hycs_std(tmp_path):
+    """Two builds that print one version are two runs; the version is recorded beside."""
+    one = _variant(tmp_path, exe_dir=_build(tmp_path / "one", comment="one"))
+    two = _variant(tmp_path, exe_dir=_build(tmp_path / "two", comment="two"))
+    exe = tmp_path / "one" / "hycs_std"
+    assert one.build.sha256 == hashlib.sha256(exe.read_bytes()).hexdigest()
+    assert one.build.version == two.build.version == "hysplit.v5.1.0"
+    assert one.run_settings["model"] == {
+        "name": "hysplit",
+        "sha256": one.build.sha256,
+        "data_files": None,
+    }
+    assert one.particles_hash != two.particles_hash
+
+
+def test_the_version_a_build_reports_is_not_in_the_hash():
+    def settings(version):
+        build = ModelInfo(name="hysplit", sha256="0" * 64, version=version)
+        return run_settings(HysplitConfig(), {}, build)
+
+    assert settings("hysplit.v5.1.0") == settings("hysplit.v5.2.2")
+
+
+def test_a_project_opens_without_hycs_std_and_its_hash_needs_one(monkeypatch, tmp_path):
+    """A machine that only reports status has no hycs_std: the build is read on first use."""
+    variant = _variant(tmp_path)
+    monkeypatch.setenv("PATH", str(tmp_path))
+    with pytest.raises(HYSPLITNotFoundError, match="PATH"):
+        _ = variant.particles_hash
+    assert variant.readable_run_settings["model"] == {"name": "hysplit"}
+    assert variant.readable_run_settings["met"] == {"source": "HRRR", "crop": None}
 
 
 # ---------------------------------------------------------------------------
@@ -69,9 +127,7 @@ def test_custom_build_needs_a_version_file(tmp_path):
 
 def test_a_runs_met_is_its_product_and_crop(tmp_path):
     met = _met(tmp_path, subgrid_dir=tmp_path / "sub")
-    recorded = run_settings(
-        HysplitConfig(), met.settings(), ModelInfo(name="hysplit", version="v5.1.0")
-    )
+    recorded = run_settings(HysplitConfig(), met.settings(), ModelInfo(name="hysplit"))
     assert recorded["met"] == {"source": "HRRR", "crop": None}
 
 
@@ -104,11 +160,7 @@ def test_run_settings_leave_out_what_changes_no_particle(tmp_path):
     base = _variant(tmp_path, numpar=100)
     recorded = base.run_settings
     assert "exe_dir" not in recorded
-    assert recorded["model"] == {
-        "name": "hysplit",
-        "version": "v5.1.0",
-        "data_files": None,
-    }
+    assert set(recorded["model"]) == {"name", "sha256", "data_files"}
     # Unset, maxpar depends on the receptor (#237), so it is recorded unset,
     # and a set maxpar, which can stop a multipoint release, is another run.
     assert recorded["maxpar"] is None
@@ -116,10 +168,6 @@ def test_run_settings_leave_out_what_changes_no_particle(tmp_path):
     assert capped.run_settings["maxpar"] == 100
     assert capped.particles_hash != base.particles_hash
     assert _variant(tmp_path, numpar=200).particles_hash != base.particles_hash
-    other_model = replace(
-        base, model=ModelInfo(name="hysplit", version="v5.3.2+t0-rows")
-    )
-    assert other_model.particles_hash != base.particles_hash
 
 
 def test_where_met_is_downloaded_from_does_not_identify_the_run(tmp_path):
@@ -266,7 +314,7 @@ def test_a_data_dir_of_bundled_copies_is_the_same_run(tmp_path):
     shutil.copy(_bundled_table("LANDUSE.ASC"), data / "LANDUSE.ASC")
     base = _variant(tmp_path, numpar=100)
     same = _variant(tmp_path, numpar=100, data_dir=data)
-    assert same.model.data_files is None
+    assert same.build.data_files is None
     assert "data_dir" not in same.run_settings
     assert same.particles_hash == base.particles_hash
 
@@ -280,7 +328,7 @@ def test_a_changed_data_table_is_recorded_and_makes_another_run(tmp_path):
     )
     base = _variant(tmp_path, numpar=100)
     other = _variant(tmp_path, numpar=100, data_dir=data)
-    assert other.model.data_files is not None
-    assert set(other.model.data_files) == {"LANDUSE.ASC"}
-    assert other.run_settings["model"]["data_files"] == other.model.data_files
+    assert other.build.data_files is not None
+    assert set(other.build.data_files) == {"LANDUSE.ASC"}
+    assert other.run_settings["model"]["data_files"] == other.build.data_files
     assert other.particles_hash != base.particles_hash

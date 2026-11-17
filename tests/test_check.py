@@ -936,6 +936,9 @@ class _NoFilesModel:
     config_class = transport.TransportConfig
     met_config_class = _NoFilesMet
 
+    def sha256(self, config):
+        return None
+
     def version(self, config) -> str:
         return "1.0"
 

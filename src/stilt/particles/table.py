@@ -363,8 +363,8 @@ def add_release_heights(particles: pd.DataFrame, receptor: Receptor) -> pd.DataF
     point's altitude. For a column receptor it is inside one of the
     ``numpar`` slabs the column is split into, and ``release_height`` is that slab's
     center: the slab is what the particle stands for, not the random
-    height inside it. A model that writes no release row, such as the
-    bundled HYSPLIT, falls back to matching: a column's particles are
+    height inside it. A model that writes no release row, such as HYSPLIT
+    5.1.0 (STILT-R's build), falls back to matching: a column's particles are
     released bottom to top in ``particle`` order, and a multipoint receptor's
     are matched to the nearest point from their first row.
 
@@ -406,8 +406,8 @@ def _column_release_heights(p: pd.DataFrame, receptor: ColumnReceptor) -> pd.Ser
 
     The column is split into ``numpar`` slabs of equal depth. With release
     rows, a particle's slab is the one its release height falls in;
-    without them, particle ``particle`` is in slab ``particle``, as the bundled
-    HYSPLIT releases them.
+    without them, particle ``particle`` is in slab ``particle``, as HYSPLIT
+    releases them.
     """
     numpar = int(p["particle"].max())
     step = (receptor.top - receptor.bottom) / numpar

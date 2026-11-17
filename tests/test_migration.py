@@ -542,7 +542,8 @@ def test_the_settings_are_what_the_files_record(tmp_path, capsys):
     assert run["seed"] is None
     assert run["siguverr"] is None
     assert run["ziscale"] == 1
-    assert run["model"] == {"name": "stilt-r", "version": VERSION, "data_files": None}
+    assert run["model"] == {"name": "stilt-r", "sha256": None, "data_files": None}
+    assert run["version"] == VERSION
     assert run["met"] == {"met_path": "met"}
     error = _settings(output, "particles", "stilt-r-err")
     assert {

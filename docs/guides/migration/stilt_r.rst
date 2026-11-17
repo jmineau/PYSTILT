@@ -376,7 +376,8 @@ STILT-R projects that differ only in ``n_hours`` land in two folders.
      - ``params.RDS``, or the ``smooth_factor`` argument, as for
        :func:`~stilt.migration.read_stilt_r`
    * - ``version``
-     - the ``version`` argument
+     - the ``version`` argument, recorded with the settings, so imports of
+       two STILT-R versions are kept apart
 
 The runs of one import must share their settings. A run whose settings
 differ from the first run's stops the import, which names the setting. The

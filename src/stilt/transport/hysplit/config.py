@@ -105,8 +105,8 @@ class HysplitConfig(TransportConfig):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     #: Fields left out of a run's recorded settings. What they point at is
-    #: recorded instead: the build's version and the checksums of data files
-    #: that differ from the bundled ones.
+    #: recorded instead: the checksum of ``hycs_std`` and of each data file
+    #: that differs from the bundled one.
     UNRECORDED: ClassVar[frozenset[str]] = frozenset({"exe_dir", "data_dir"})
 
     numpar: int = Field(
@@ -120,12 +120,12 @@ class HysplitConfig(TransportConfig):
     exe_dir: Path | None = Field(
         None,
         description=(
-            "Directory holding a custom ``hycs_std`` build to run in place of "
-            "the one bundled with PYSTILT, with a ``version`` file beside it. "
-            "The version is recorded with each run, so runs of different "
-            "builds are kept apart. A build that writes release-time (t = 0) rows to "
-            "``PARTICLE_STILT.DAT`` gives exact release heights for multipoint "
-            "and slant receptors."
+            "Directory holding the HYSPLIT ``hycs_std`` to run. Unset, the "
+            "first ``hycs_std`` on ``PATH`` runs; PYSTILT does not include "
+            "one. The SHA-256 of ``hycs_std`` is part of each run's settings, "
+            "so runs of different builds are kept apart. A build that writes "
+            "release-time (t = 0) rows to ``PARTICLE_STILT.DAT`` gives exact "
+            "release heights for multipoint and slant receptors."
         ),
     )
     data_dir: Path | None = Field(
@@ -267,8 +267,8 @@ class HysplitConfig(TransportConfig):
         None,
         description=(
             "Random seed for a reproducible run. Different seeds give "
-            "different runs. Requires ``krand: 2``. The bundled ``hycs_std`` "
-            "ignores the seed under ``krand`` 4 and 10 to 13, and under 1 uses "
+            "different runs. Requires ``krand: 2``. HYSPLIT 5.1.0 (STILT-R's "
+            "build) ignores the seed under ``krand`` 4 and 10 to 13, and under 1 uses "
             "it only for the initial turbulent velocity. PYSTILT writes it to "
             "``SETUP.CFG`` as ``-(abs(seed) + 1)``, because HYSPLIT reseeds its "
             "generator only from a negative value and gives every ``SEED`` of "
@@ -501,7 +501,7 @@ class HysplitConfig(TransportConfig):
         if self.seed is not None and self.krand != 2:
             raise ValueError(
                 f"seed={self.seed} requires krand=2 (got krand={self.krand}): the "
-                "bundled hycs_std discards the namelist seed under krand=4 and "
+                "hycs_std of HYSPLIT 5.1.0 discards the namelist seed under krand=4 and "
                 "10-13 and uses it only for the initial turbulent velocity under "
                 "krand=1. Set krand=2, or drop the seed."
             )

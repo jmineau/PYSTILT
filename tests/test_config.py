@@ -226,15 +226,16 @@ def test_model_config_rejects_met_keys_that_cannot_name_a_variant(tmp_path):
         ProjectConfig(mets={"hrrr_v2": mc}, variants={"hrrr_v2": {}})
 
 
-def test_a_config_loads_without_its_hysplit_build(tmp_path):
-    """Loading checks the variants but builds none, so exe_dir is not needed yet."""
+def test_a_config_loads_and_resolves_without_its_hysplit_build(tmp_path):
+    """The build is read on first use, so a machine without hycs_std opens the project."""
     mc = make_met_config(directory=tmp_path / "met")
     elsewhere = tmp_path / "not-mounted"
     cfg = ProjectConfig(
         **blocks(mets={"hrrr": mc}, exe_dir=elsewhere, variants={"hrrr": {}})
     )
-    with pytest.raises(FileNotFoundError, match="version"):
-        cfg.resolve()
+    variant = cfg.resolve()["hrrr"]
+    with pytest.raises(FileNotFoundError, match="hycs_std"):
+        _ = variant.build
     with pytest.raises(ValueError, match="realizations must be >= 1"):
         ProjectConfig(mets={"hrrr": mc}, variants={"e": {"realizations": 0}})
 

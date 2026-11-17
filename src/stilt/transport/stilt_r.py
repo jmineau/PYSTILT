@@ -38,16 +38,16 @@ class StiltRConfig(HysplitConfig):
     ``config.yaml`` variant the import prints gives them all.
     """
 
-    #: Fields left out of a run's recorded settings. ``version`` is recorded
-    #: as the transport model's version instead, as HYSPLIT's build is.
-    UNRECORDED: ClassVar[frozenset[str]] = frozenset({"exe_dir", "data_dir", "version"})
+    #: Fields left out of a run's recorded settings. ``version`` is recorded:
+    #: it is what tells imported runs of two STILT-R versions apart.
+    UNRECORDED: ClassVar[frozenset[str]] = frozenset({"exe_dir", "data_dir"})
 
     version: str | None = Field(
         None,
         description=(
             "The STILT-R version that made the runs, such as a commit of "
             "uataq/stilt. No STILT-R file records it, so the import is given "
-            "it. Recorded as the transport model's version."
+            "it. Recorded with the runs' settings."
         ),
     )
 
@@ -111,21 +111,13 @@ class StiltRModel:
     needs_workdir = False
     batched = False
 
-    def version(self, config: StiltRConfig) -> str:
-        """
-        Return the STILT-R version of *config*.
-
-        Raises
-        ------
-        ValueError
-            If *config* gives none.
-        """
-        if config.version is None:
-            raise ValueError(
-                "A stilt-r variant needs version: the STILT-R version given to "
-                "stilt.migration.import_stilt_r, as it printed the variant."
-            )
+    def version(self, config: StiltRConfig) -> str | None:
+        """Return the STILT-R version of *config*, which its settings record too."""
         return config.version
+
+    def sha256(self, config: StiltRConfig) -> None:
+        """Return ``None``: nothing runs, and the build is fixed by the STILT-R version in the settings."""
+        return None
 
     def data_files(self, config: StiltRConfig) -> dict[str, str] | None:
         """Return ``None``: the data files are STILT-R's own, fixed by its version."""

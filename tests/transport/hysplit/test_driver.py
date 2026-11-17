@@ -1007,9 +1007,31 @@ def test_exe_dir_is_used(tmp_path, point_receptor):
     assert (workdir / "hycs_std").read_text() == "patched"
 
 
-def test_default_is_the_bundled_binary(tmp_path, point_receptor):
+def test_without_exe_dir_the_hycs_std_on_path_is_used(
+    tmp_path, point_receptor, stand_in_hycs_std
+):
     workdir = _inputs(tmp_path, point_receptor)
-    assert (workdir / "hycs_std").resolve().parent.name in {"linux_x64", "macos_x64"}
+    assert (workdir / "hycs_std").resolve() == (
+        stand_in_hycs_std / "hycs_std"
+    ).resolve()
+
+
+def test_exe_dir_comes_before_path(tmp_path, monkeypatch):
+    build = _fake_build(tmp_path / "my_build")
+    elsewhere = _fake_build(tmp_path / "elsewhere")
+    (elsewhere / "hycs_std").chmod(0o755)  # PATH finds only an executable
+    monkeypatch.setenv("PATH", str(elsewhere))
+    assert driver.find_hycs_std(build) == build / "hycs_std"
+    assert driver.find_hycs_std().resolve() == (elsewhere / "hycs_std").resolve()
+
+
+def test_without_exe_dir_or_hycs_std_on_path_says_what_to_set(
+    tmp_path, point_receptor, monkeypatch
+):
+    """PYSTILT includes no HYSPLIT: the message names both places to put it."""
+    monkeypatch.setenv("PATH", str(tmp_path))
+    with pytest.raises(HYSPLITNotFoundError, match="exe_dir.*PATH"):
+        _inputs(tmp_path, point_receptor)
 
 
 def test_exe_dir_without_hycs_std_raises(tmp_path, point_receptor):
@@ -1042,51 +1064,6 @@ def test_data_dir_tables_replace_the_bundled_ones(tmp_path, point_receptor):
     assert (workdir / "ROUGLEN.ASC").resolve() == (data / "ROUGLEN.ASC").resolve()
     bundled = driver._bundled_data_dir()
     assert (workdir / "LANDUSE.ASC").resolve() == (bundled / "LANDUSE.ASC").resolve()
-
-
-# ---------------------------------------------------------------------------
-# Bundled binary selection
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    ("system", "machine", "subdir"),
-    [
-        ("Linux", "x86_64", "linux_x64"),
-        ("Darwin", "x86_64", "macos_x64"),
-        ("Darwin", "arm64", "macos_x64"),  # runs through Rosetta
-    ],
-)
-def test_bundled_exe_dir_picks_the_build_for_the_platform(
-    monkeypatch, system, machine, subdir
-):
-    monkeypatch.setattr(driver.platform, "system", lambda: system)
-    monkeypatch.setattr(driver.platform, "machine", lambda: machine)
-    assert driver._bundled_exe_dir().name == subdir
-
-
-@pytest.mark.parametrize(
-    ("system", "machine"),
-    [("Linux", "aarch64"), ("Windows", "AMD64"), ("Linux", "ppc64le")],
-)
-def test_bundled_exe_dir_rejects_platforms_without_a_build(
-    monkeypatch, system, machine
-):
-    """An aarch64 Linux machine must not be handed the x86-64 binary (#61)."""
-    monkeypatch.setattr(driver.platform, "system", lambda: system)
-    monkeypatch.setattr(driver.platform, "machine", lambda: machine)
-    with pytest.raises(HYSPLITNotFoundError, match="exe_dir"):
-        driver._bundled_exe_dir()
-
-
-def test_bundled_exe_dir_rejects_an_install_without_the_binary(monkeypatch, tmp_path):
-    """The source archive carries no hycs_std; say so rather than fail later."""
-    (tmp_path / "bin" / "linux_x64").mkdir(parents=True)
-    monkeypatch.setattr(driver.platform, "system", lambda: "Linux")
-    monkeypatch.setattr(driver.platform, "machine", lambda: "x86_64")
-    monkeypatch.setattr(driver, "pkg_files", lambda _package: tmp_path)
-    with pytest.raises(HYSPLITNotFoundError, match="exe_dir"):
-        driver._bundled_exe_dir()
 
 
 def test_winderrtf_all_none():

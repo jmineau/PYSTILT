@@ -20,6 +20,23 @@ of the ``hysplit`` block under ``models:``.
 
    stilt.transport.hysplit.HysplitConfig
 
+The HYSPLIT build
+-----------------
+
+PYSTILT includes no HYSPLIT. :func:`~stilt.transport.hysplit.find_hycs_std`
+returns the ``hycs_std`` a run uses: the one in ``exe_dir``, or else the
+first on ``PATH`` (:doc:`../getting_started/installation`).
+:meth:`HysplitModel.sha256 <stilt.transport.hysplit.HysplitModel.sha256>`
+is its checksum, part of each run's settings, and
+:meth:`HysplitModel.version <stilt.transport.hysplit.HysplitModel.version>`
+the version it prints when it starts, recorded beside them.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.transport.hysplit.find_hycs_std
+
 Running HYSPLIT
 ---------------
 

@@ -569,6 +569,33 @@ def test_status_with_an_unreadable_met_and_a_folder_that_may_hold_results_exits_
     assert result.output == f"Error: Met 'hrrr': {missing} does not exist.\n"
 
 
+@pytest.mark.parametrize("command", [["run"], ["submit"]])
+def test_without_hycs_std_run_and_submit_exit_2_in_one_line(
+    tmp_path, calls, monkeypatch, command
+):
+    """PYSTILT includes no HYSPLIT: say where to put hycs_std, and run nothing."""
+    _write_minimal_config(tmp_path)
+    monkeypatch.setenv("PATH", str(tmp_path / "no-hysplit"))
+
+    result = runner.invoke(app, [*command, str(tmp_path)])
+
+    assert result.exit_code == 2, result.output
+    assert result.output.startswith("Error: No hycs_std on PATH.")
+    assert len(result.output.splitlines()) == 1
+    assert calls == []
+
+
+def test_check_lists_a_missing_hycs_std(tmp_path, monkeypatch):
+    _write_checkable_config(tmp_path)
+    monkeypatch.setenv("PATH", str(tmp_path / "no-hysplit"))
+
+    result = runner.invoke(app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 1, result.output
+    row = next(line for line in result.output.splitlines() if line.startswith("model"))
+    assert "No hycs_std on PATH" in row
+
+
 def test_a_met_directory_with_no_arl_file_exits_2_in_one_line(tmp_path, calls):
     _write_minimal_config(tmp_path)
     empty = tmp_path / "empty-met"

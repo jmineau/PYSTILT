@@ -1,8 +1,9 @@
 """
 The check before a run: what would stop a project's simulations, found without running one.
 
-:func:`check_project` looks at the inputs of a project, never at its results
-or at HYSPLIT: that it has receptors, the met files each receptor needs,
+:func:`check_project` looks at the inputs of a project, never at its results:
+that it has receptors, that the transport model's
+executable is there (HYSPLIT's ``hycs_std``), the met files each receptor needs,
 whether each receptor is inside the footprint grid and the met's crop,
 whether an averaging-kernel table matches the receptors, and whether
 ``varsiwant`` holds ``zsfc`` where the project needs it. ``Project.check`` and ``stilt check`` call it.
@@ -55,6 +56,7 @@ def check_project(project: Project) -> pd.DataFrame:
         found["receptors"] = ([_NO_RECEPTORS], list(project.variants))
     for name, variant in project.variants.items():
         checks = (
+            *_build_checks(variant),
             *_met_checks(variant, rows),
             *_grid_checks(variant, rows),
             *_transform_checks(variant, project, ids),
@@ -82,9 +84,27 @@ _NO_RECEPTORS: _Finding = (
 )
 
 
+def _build_checks(variant: Variant) -> Iterator[_Check]:
+    """Yield the variant's transport model build when it cannot be found here, such as no ``hycs_std``."""
+    # Variants that differ only in what changes no particle (exe_dir) share it.
+    where = variant.transport.model_dump_json(include=set(variant.transport.UNRECORDED))
+
+    def make() -> list[_Finding]:
+        """Return the model's message when its executable cannot be found, running nothing."""
+        model = get_model(variant.model)
+        try:
+            model.sha256(variant.transport)
+            model.data_files(variant.transport)
+        except FileNotFoundError as error:
+            return [("model", None, str(error))]
+        return []
+
+    yield ("model", variant.model, where), make
+
+
 def _met_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
     """Yield what the variant's transport model finds wrong with its met, for the project's receptors."""
-    check_met = getattr(get_model(variant.model.name), "check_met", None)
+    check_met = getattr(get_model(variant.model), "check_met", None)
     if check_met is None:
         return
     n_hours = variant.transport.n_hours
@@ -97,7 +117,7 @@ def _met_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
             for check, receptor, message in table.itertuples(index=False)
         ]
 
-    yield ("met", variant.met, variant.model.name, n_hours), make
+    yield ("met", variant.met, variant.model, n_hours), make
 
 
 def _grid_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:

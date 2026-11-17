@@ -616,6 +616,61 @@ def test_status_without_a_readable_met_and_an_empty_output_is_pending(
     assert unread.folders().empty
 
 
+def _without_hycs_std(project, monkeypatch, tmp_path):
+    """Open *project*'s directory again on a machine with no hycs_std, as one that only reports status."""
+    monkeypatch.setenv("PATH", str(tmp_path / "no-hysplit"))
+    return Project(project.directory)
+
+
+def test_status_without_hycs_std_finds_the_folder_the_variant_made(
+    tmp_path, point_receptor, monkeypatch
+):
+    """The build is the only part of the hash that needs hycs_std; the variant's name settles the rest."""
+    project = _project(tmp_path, [point_receptor])
+    _write_trajectory(project, point_receptor)
+    _write_footprint(project, point_receptor)
+
+    status = _without_hycs_std(project, monkeypatch, tmp_path)
+    with pytest.raises(FileNotFoundError, match="hycs_std"):
+        _ = status.variants["hrrr"].particles_hash
+    assert list(status.status()["state"]) == ["complete"]
+    assert list(status.folders()["variant"]) == ["hrrr", "hrrr"]
+
+
+def test_status_without_hycs_std_leaves_a_folder_another_variant_made(
+    tmp_path, point_receptor, monkeypatch
+):
+    project = _project(tmp_path, [point_receptor])
+    sim = project.simulation(point_receptor.id, "hrrr")
+    particles = finished(_particles(), sim.receptor)
+    other = replace(sim.variant, name="other")
+    sim.output.write_particles(other, sim.receptor, particles, [])
+
+    status = _without_hycs_std(project, monkeypatch, tmp_path)
+    assert list(status.status()["state"]) == ["pending"]
+    assert list(status.folders()["variant"]) == [""]
+
+
+def test_status_without_hycs_std_raises_when_the_variant_ran_two_builds(
+    tmp_path, point_receptor, monkeypatch
+):
+    """Two folders of one variant whose settings differ only in hycs_std: which is this machine's is unknown."""
+    project = _project(tmp_path, [point_receptor])
+    _write_trajectory(project, point_receptor)
+    build = tmp_path / "rebuilt"
+    build.mkdir()
+    (build / "hycs_std").write_text("#!/bin/sh\n# rebuilt\nexit 2\n")
+    (build / "hycs_std").chmod(0o755)
+    _config(tmp_path, exe_dir=build).to_yaml(project.config_path)
+    _write_trajectory(Project(project.directory), point_receptor)
+    assert len(project.output.hashes("particles")) == 2
+    _config(tmp_path).to_yaml(project.config_path)  # back to the hycs_std on PATH
+
+    status = _without_hycs_std(project, monkeypatch, tmp_path)
+    with pytest.raises(FileNotFoundError, match="hycs_std"):
+        status.status()
+
+
 def test_folders_say_which_the_config_no_longer_uses(tmp_path, point_receptor):
     project = _project(
         tmp_path, [point_receptor], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}

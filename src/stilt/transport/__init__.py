@@ -64,7 +64,15 @@ class ModelRun:
 
 
 class ModelInfo(BaseModel):
-    """The transport model build a run was made with, recorded in the run's settings."""
+    """
+    The transport model build a run was made with.
+
+    Its name, the SHA-256 of its executable, and the SHA-256 of any data
+    file in place of its own are part of the run's settings, so two builds
+    never share a settings folder. The version the build reports is
+    recorded beside the settings (``model_version`` in ``_settings.yaml``),
+    not in them: two builds of one release report the same version.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -76,14 +84,26 @@ class ModelInfo(BaseModel):
             "model class (the block's ``class``)."
         ),
     )
-    version: str = Field(
-        ..., description="Version string of the build, such as ``v5.1.0``."
+    sha256: str | None = Field(
+        None,
+        description=(
+            "SHA-256 of the executable the model runs, such as HYSPLIT's "
+            "``hycs_std``. ``None`` for a model that runs none."
+        ),
     )
     data_files: dict[str, str] | None = Field(
         None,
         description=(
             "SHA-256 of each data file the run used in place of the model's "
             "own, by file name. ``None`` when it used the model's own."
+        ),
+    )
+    version: str | None = Field(
+        None,
+        exclude=True,
+        description=(
+            "The version the build reports, such as ``hysplit.v5.1.0``. "
+            "Recorded beside the run's settings and left out of them."
         ),
     )
 
@@ -287,8 +307,19 @@ class TransportModel(Protocol):
         """
         ...
 
-    def version(self, config: Any) -> str:
-        """Return the version of the build *config* would run, recorded with the run."""
+    def sha256(self, config: Any) -> str | None:
+        """
+        Return the SHA-256 of the executable *config* would run, ``None`` for a model that runs none.
+
+        Part of the run's identity: another build gives another settings
+        folder. Raises ``FileNotFoundError`` when the executable cannot be
+        found here; a project still opens, and its status compares stored
+        folders without the build.
+        """
+        ...
+
+    def version(self, config: Any) -> str | None:
+        """Return the version the build *config* would run reports, recorded with the run but not part of its identity."""
         ...
 
     def data_files(self, config: Any) -> dict[str, str] | None:

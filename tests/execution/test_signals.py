@@ -96,6 +96,9 @@ class SlowModel:
     config_class = SlowConfig
     met_config_class = SlowMet
 
+    def sha256(self, config):
+        return None
+
     def version(self, config):
         return "1.0"
 

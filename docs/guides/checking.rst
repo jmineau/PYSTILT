@@ -58,6 +58,11 @@ stop on it.
      - The project has no receptors: ``receptors.csv`` is missing or holds
        only its header, as ``stilt init`` writes it.
      - Add receptors (:doc:`receptors`).
+   * - ``model``
+     - No ``hycs_std`` in ``exe_dir``, or, without ``exe_dir``, none on
+       ``PATH``; or a ``data_dir`` that does not exist.
+     - Get ``hycs_std`` and set ``exe_dir`` or ``PATH``
+       (:doc:`../getting_started/installation`).
    * - ``met_directory``
      - A met's ``directory`` does not exist or holds no ARL file.
      - Correct ``directory`` under ``mets:``. A met with ``download`` makes

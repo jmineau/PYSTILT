@@ -17,7 +17,7 @@ from typing import Any
 from stilt.config import FOOTPRINT_STAGE, ProjectConfig, Variant
 from stilt.footprint.config import FootprintConfig
 from stilt.receptors import PointReceptor
-from stilt.transport import ModelInfo, TransportConfig
+from stilt.transport import TransportConfig
 from stilt.transport.hysplit import HysplitConfig, MetConfig
 
 #: The source id the ARL files these factories write carry.
@@ -222,7 +222,7 @@ def make_variant(
         met="hrrr",
         met_config=met_config if met_config is not None else MET,
         transport=transport,
-        model=ModelInfo(name="hysplit", version="v5.1.0"),
+        model="hysplit",
         footprint=footprint,
         realizations=realizations,
     )

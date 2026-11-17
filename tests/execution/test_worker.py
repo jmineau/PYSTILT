@@ -1304,6 +1304,9 @@ class ToyModel:
     config_class = ToyConfig
     met_config_class = ToyMet
 
+    def sha256(self, config):
+        return None
+
     def version(self, config):
         return "1.0"
 
@@ -1467,6 +1470,9 @@ class BatchedToy:
     needs_workdir = False
     calls: ClassVar[list[list[str]]] = []
     skip: ClassVar[set[str]] = set()  # receptors it returns no rows for
+
+    def sha256(self, config):
+        return None
 
     def version(self, config):
         return "1.0"
