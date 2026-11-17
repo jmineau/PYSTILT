@@ -206,27 +206,31 @@ def test_init_copies_receptors_from_a_csv(tmp_path):
     assert project.receptors["site"].tolist() == ["WBB"]
 
 
-def test_opening_reads_nothing_until_asked(tmp_path):
-    project = Project(tmp_path / "nothing")
+def test_opening_reads_nothing_but_looks_for_config_yaml(tmp_path):
+    (tmp_path / "proj").mkdir()
+    (tmp_path / "proj" / "config.yaml").write_text(
+        "n_hours: [\n"
+    )  # read only when asked
+    project = Project(tmp_path / "proj")
 
-    assert project.directory == (tmp_path / "nothing").resolve()
-    assert project.name == "nothing"
+    assert project.directory == (tmp_path / "proj").resolve()
+    assert project.name == "proj"
     assert repr(project) == f"Project({str(project.directory)!r})"
-    with pytest.raises(FileNotFoundError, match="Project.init"):
+    with pytest.raises(ValueError, match="not valid YAML"):
         _ = project.config
-    assert not (tmp_path / "nothing").exists()
 
 
-def test_the_receptors_of_a_path_that_is_not_a_project_are_refused(tmp_path):
+def test_a_path_that_is_not_a_project_is_refused_when_opened(tmp_path):
     """A mistyped path read as a project with no receptors, with no warning (#440)."""
-    with pytest.raises(FileNotFoundError, match="No config.yaml"):
-        _ = Project(tmp_path / "my_projcet").receptors
+    with pytest.raises(FileNotFoundError, match=r"No config.yaml.*Project\.init"):
+        Project(tmp_path / "my_projcet")
+    assert not (tmp_path / "my_projcet").exists()
     (tmp_path / "loose").mkdir()
     (tmp_path / "loose" / "receptors.csv").write_text(
         "time,longitude,latitude,altitude\n2023-01-01 12:00,-111.85,40.77,5\n"
     )
     with pytest.raises(FileNotFoundError, match="No config.yaml"):
-        _ = Project(tmp_path / "loose").receptors
+        Project(tmp_path / "loose")
 
 
 @pytest.mark.parametrize("empty", [[], "header.csv"])
@@ -243,6 +247,9 @@ def test_init_refuses_receptors_that_hold_none_and_writes_nothing(tmp_path, empt
 def test_a_relative_path_is_taken_from_the_current_directory(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PROJECTS", str(tmp_path / "env"))
+    for folder in (tmp_path / "rel", tmp_path / "env" / "p"):
+        folder.mkdir(parents=True)
+        (folder / "config.yaml").write_text("")
     assert Project("rel").directory == (tmp_path / "rel").resolve()
     assert Project("$PROJECTS/p").directory == (tmp_path / "env" / "p").resolve()
 
