@@ -27,7 +27,8 @@ pytestmark = [pytest.mark.fidelity]
 # ---------------------------------------------------------------------------
 
 # Every key here corresponds to a parameter that affects particle trajectories
-# or footprint sensitivity.  Value is what calc_trajectory.r passes to STILT-R.
+# or footprint sensitivity.  Value is what calc_trajectory.r passes to STILT-R
+# (veght is the scenario's, 0.5 unless it sets one).
 _R_PHYSICS_NAMELIST: dict[str, float] = {
     "capemin": -1.0,
     "delt": 1.0,
@@ -102,8 +103,10 @@ def test_setup_cfg_physics_matches_r_namelist(scenario_outputs: dict) -> None:
     selecting a different turbulence scheme).
     """
     parsed = _parse_setup_cfg(scenario_outputs["setup"])
+    # calc_trajectory.r takes veght from the scenario; the rest is fixed.
+    expected = {**_R_PHYSICS_NAMELIST, "veght": scenario_outputs["scenario"].veght}
     mismatches: list[str] = []
-    for key, r_val in _R_PHYSICS_NAMELIST.items():
+    for key, r_val in expected.items():
         py_str = parsed.get(key)
         if py_str is None:
             mismatches.append(f"  {key}: absent from SETUP.CFG (R wants {r_val})")

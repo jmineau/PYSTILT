@@ -235,6 +235,15 @@ def fit_variogram(
     Returns
     -------
     VariogramFit
+
+    Notes
+    -----
+    The model has no nugget, and the fit is unweighted least squares on the
+    bins, whatever the number of pairs in each. Noise in the errors adds a
+    variance that stays at small separations, which the model cannot hold,
+    so with *sigma* fixed at the sample standard deviation the fitted
+    ``length`` comes out too short. In a test with a true length of 450 m,
+    noise that was 20% of the variance gave about 330 m.
     """
     from scipy.optimize import curve_fit
 

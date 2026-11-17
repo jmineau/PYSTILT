@@ -1,12 +1,10 @@
 """
 Particle transforms that reweight ``foot`` before the footprint is computed.
 
-A transform is any object with
-``apply(particles, receptor=None, directory=None) -> DataFrame``: the
-particle table, the receptor they were released from, and the directory a
-relative file name in its settings starts from (the project's). The
-built-in ones are pydantic models whose fields are their ``config.yaml``
-keys::
+A column measurement needs its averaging kernel and pressure weighting,
+and a species lost on the way needs the fraction that survives to the
+receptor. List the transforms in ``config.yaml``; the built-ins are
+pydantic models whose fields are their keys::
 
     transforms:
       - kind: averaging_kernel
@@ -18,24 +16,37 @@ An averaging kernel that differs per receptor (every satellite sounding has
 its own) comes from a table in the project instead::
 
       - kind: averaging_kernel
-        table: kernels.parquet
+        table: kernels
 
-A ``kind`` containing a dot is the import path of your own transform class
-(see the *Custom transforms* guide). Transforms run in list order, starting
-from the unweighted particle table. Each returns a new table and leaves its
-input unchanged.
-
-The footprint is gridded from ``foot``, so a transform changes it through
-``foot``; it may also add columns. The built-ins only scale ``foot``, which
-the background and the transport error rely on to read each particle's
-weight.
+Transforms run in list order, starting from the unweighted particle table.
+Each returns a new table and leaves its input unchanged.
 
 Each built-in transform is a module: :mod:`~stilt.transforms.averaging_kernel`,
-:mod:`~stilt.transforms.pressure_weighting`, and
-:mod:`~stilt.transforms.lifetime`. :func:`particle_pwf` and
-:func:`ak_weights` hold the column weighting ported from X-STILT. They are
-public so your own transforms can use them. This module loads transforms
-from a config and applies them.
+:mod:`~stilt.transforms.pressure_weighting`,
+:mod:`~stilt.transforms.lifetime`, :mod:`~stilt.transforms.deposition`, and
+:mod:`~stilt.transforms.oxidation`. The functions they are built on are
+public so your own transforms can use them: :func:`particle_pwf` and
+:func:`ak_weights`, the column weighting ported from X-STILT;
+:func:`survival`, the fraction of a tracer that reaches the receptor for any
+loss rate; and :func:`dry_deposition_survival`, that fraction for a
+depositing tracer. This module also loads transforms from a config and
+applies them.
+
+A transform of your own is any object with
+``apply(particles, receptor=None, directory=None) -> DataFrame``: the
+particle table, the receptor the particles were released from, and the
+directory a relative file name in its settings starts from (the
+project's). A ``kind`` containing a dot is its import path (the "Writing
+your own transform" section of the Particle Weighting guide). The footprint
+is gridded from ``foot``, so a transform changes it through ``foot``; it may
+also add columns. The built-ins only scale ``foot``, which the background
+and the transport error rely on to read each particle's weight.
+
+Two optional parts let ``stilt check`` look at a project before it runs: a
+``check(receptors, directory)`` method that returns what is wrong with the
+transform's inputs for those receptor ids, as ``(check, receptor id or
+None, message)`` tuples, and ``reads_zsfc = True`` for a transform that
+reads ``zsfc`` for a receptor above sea level.
 """
 
 from __future__ import annotations
@@ -54,14 +65,20 @@ from stilt.transforms.averaging_kernel import (
     ak_weights,
     averaging_kernel_table,
 )
-from stilt.transforms.lifetime import FirstOrderLifetime
+from stilt.transforms.deposition import DryDeposition, dry_deposition_survival
+from stilt.transforms.lifetime import FirstOrderLifetime, survival
+from stilt.transforms.oxidation import Oxidation
 from stilt.transforms.pressure_weighting import PressureWeighting, particle_pwf
 
 if TYPE_CHECKING:
     from stilt.receptors import Receptor
 
 BuiltinTransform = Annotated[
-    AveragingKernel | PressureWeighting | FirstOrderLifetime,
+    AveragingKernel
+    | PressureWeighting
+    | FirstOrderLifetime
+    | DryDeposition
+    | Oxidation,
     Field(discriminator="kind"),
 ]
 _BUILTIN_ADAPTER: TypeAdapter[Any] = TypeAdapter(BuiltinTransform)
@@ -172,14 +189,18 @@ def apply_transforms(
 
 __all__ = [
     "AveragingKernel",
+    "DryDeposition",
     "FirstOrderLifetime",
+    "Oxidation",
     "PressureWeighting",
     "ak_weights",
     "apply_transforms",
     "averaging_kernel_table",
+    "dry_deposition_survival",
     "dump_transform",
     "load_transform",
     "particle_pwf",
     "release_coordinate",
+    "survival",
     "transform_kind",
 ]

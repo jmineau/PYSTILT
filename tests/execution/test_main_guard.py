@@ -34,7 +34,6 @@ project = stilt.Project.init(
     mets={"toy": {"weather": "hrrr"}},
     variants={"toy": {}},
     n_hours=-1,
-    hnf_plume=False,
     execution={"backend": "local", "cpus": 2},
 )
 project.run()
@@ -70,8 +69,10 @@ def _run_script(tmp_path, body, method):
         output, _ = proc.communicate()
         pytest.fail(f"the script hung instead of stopping:\n{output[-2000:]}")
     finally:
-        # A pool that kept starting workers would leave some behind.
-        with contextlib.suppress(ProcessLookupError):
+        # A pool that kept starting workers would leave some behind. macOS
+        # refuses to signal a group whose last processes are exiting
+        # (PermissionError); such a group needs no cleanup either.
+        with contextlib.suppress(ProcessLookupError, PermissionError):
             os.killpg(proc.pid, signal.SIGKILL)
     return proc.returncode, output
 

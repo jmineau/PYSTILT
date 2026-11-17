@@ -19,6 +19,28 @@ from .fixtures.factories import make_met_config
 
 integration = pytest.mark.integration
 
+# Parametrized fixtures that run HYSPLIT (and STILT-R) once per parameter for
+# several tests. CI runs the integration and STILT-R tests on several workers
+# (pytest-xdist, ``--dist loadgroup``); grouping keeps the tests of one parameter
+# on one worker, so each run still happens once.
+_SHARED_RUNS = ("scenario_outputs", "hysplit_run")
+
+
+# tryfirst: xdist reads the groups in its own pytest_collection_modifyitems.
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(items):
+    """Put the tests that share one run of a ``_SHARED_RUNS`` fixture in one xdist group."""
+    for item in items:
+        callspec = getattr(item, "callspec", None)
+        if callspec is None:
+            continue
+        for name in _SHARED_RUNS:
+            if name in callspec.params:
+                value = callspec.params[name]
+                group = f"{name}-{getattr(value, 'name', value)}"
+                item.add_marker(pytest.mark.xdist_group(group))
+
+
 # ---------------------------------------------------------------------------
 # Met directory
 # ---------------------------------------------------------------------------
@@ -33,13 +55,14 @@ def _met_catalogs_stay_out_of_the_home_folder(tmp_path_factory, monkeypatch):
 _TESTS_DIR = Path(__file__).parent
 _MET_CACHE = _TESTS_DIR / "met_cache"
 
-# SLV bounding box for bbox-cropped HRRRArchive downloads (~16 MB per 6h block)
+# SLV bounding box for bbox-cropped HRRRArchive downloads. Each 6h block is a
+# 3.42 GB full-domain file, cropped to 130 x 129 cells (30.2 MB) once it is down.
 _SLV_BBOX = (-114.0, 39.0, -110.0, 42.0)  # (west, south, east, north)
 
 # Individual 6h HRRR blocks needed by all 12 fidelity scenarios.
 # Each entry is a (block_start, block_end) pair that maps to exactly one file.
 # Winter blocks cover day_backward (24h), which needs blocks from the previous day.
-# Bump the GHA cache key in tests.yml when you add blocks here.
+# Bump the GHA cache key in tests.yml, stilt-r.yml and docs.yml when you add blocks here.
 _MET_BLOCKS: list[tuple[str, str]] = [
     # Winter 2021-01-15 (includes day_backward 24h)
     ("2021-01-14 06:00", "2021-01-14 11:59"),
@@ -61,8 +84,10 @@ def met_dir() -> Path:
     Resolution order:
     1. STILT_TEST_MET_DIR env var — point at a pre-downloaded cache directory.
     2. STILT_TEST_FETCH_MET=1 — download all 7 bbox-cropped 6h blocks in parallel
-       via HRRRArchive into tests/met_cache/ (gitignored; ~112 MB total; cached in CI).
-       Already-present files are skipped automatically.
+       via HRRRArchive into tests/met_cache/ (gitignored; cached in CI).
+       Already-present files are skipped automatically. Each block is
+       downloaded whole (3.42 GB) and then cropped, so the 7 blocks download
+       23.9 GB, all staged in tests/met_cache/ at once, and keep 211 MB.
     3. Otherwise skip.
     """
     env = os.environ.get("STILT_TEST_MET_DIR")

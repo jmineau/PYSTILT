@@ -99,3 +99,28 @@ html[data-theme="dark"] code.literal,
 html[data-theme="dark"] .rst-content code.literal {
   color: #8fd1f3;
 }
+
+.home-animation {
+  margin: 1.5rem 0 1.75rem;
+}
+
+.home-animation video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
+}
+
+.home-animation figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--pst-color-text-muted);
+}
+
+/* An `.. ipython::` block with `:suppress:` and a `@savefig` still writes an
+   empty code box above its figure. Hide a box whose only content is the
+   empty span Pygments starts every block with. */
+div.highlight-ipython:has(pre > span:only-child:empty) {
+  display: none;
+}

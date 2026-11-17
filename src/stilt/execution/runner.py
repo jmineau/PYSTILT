@@ -4,7 +4,8 @@ Running a project: finding the receptors with missing results and handing them t
 With ``backend: slurm``, :func:`submit` writes a job array script into
 ``_slurm/<stamp>/`` in the project and submits it with ``sbatch``. Each task
 of the array runs ``stilt run --task``, so a task is a command line that can
-be read, and run again, by hand.
+be read, and run again, by hand. When a met downloads, a job that runs
+``stilt fetch`` goes first and the array waits for it.
 """
 
 from __future__ import annotations
@@ -30,7 +31,9 @@ import pyarrow as pa
 import yaml
 
 from stilt._paths import absolute, write_parquet
-from stilt.execution.config import ExecutionConfig
+from stilt._transient import is_transient
+from stilt.execution.config import ExecutionConfig, FetchConfig
+from stilt.fetch import downloads, fetch_project
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -179,6 +182,57 @@ def pending(
     return chosen
 
 
+def _to_fetch(
+    project: Project,
+    receptor_ids: list[str],
+    execution: ExecutionConfig,
+    skip_existing: bool,
+) -> pd.DataFrame | None:
+    """
+    Return the simulations of *receptor_ids* whose met files are got once before they run, or ``None``.
+
+    ``None`` when ``execution.fetch`` is off, when no met of theirs
+    downloads (:func:`stilt.fetch.downloads`), or when none of them runs
+    its transport model: those whose particles are missing, or every one
+    when not *skip_existing*, since such a run makes the particles again.
+    The output is listed only when a met downloads.
+    """
+    if execution.fetch is False:
+        return None
+    sims = project.simulations
+    chosen = sims[sims["receptor"].isin(receptor_ids)]
+    if not downloads(project, chosen["variant"].unique()):
+        return None
+    unrun = project._unrun(chosen, skip_existing=skip_existing)
+    return None if unrun.empty else unrun
+
+
+def _fetch_here(project: Project, unrun: pd.DataFrame) -> None:
+    """
+    Get the met files of the *unrun* simulations in this process, before a local run's workers start.
+
+    A file that could not be had, or a download that failed and that a
+    retry may get past (:func:`stilt._transient.is_transient`), is only
+    logged: each run then tries again, and fails as it would have without
+    the fetch. Any other error is raised.
+    """
+    logger.info("Getting the met files first (execution.fetch).")
+    try:
+        files = fetch_project(project, unrun)
+    except Exception as error:
+        if not is_transient(error):
+            raise
+        logger.warning("The fetch stopped (%s); each run downloads its own.", error)
+        return
+    problems = files["message"].dropna()
+    if len(problems):
+        logger.warning(
+            "%d met windows could not be had, such as: %s",
+            len(problems),
+            problems.iloc[0],
+        )
+
+
 def _status(project: Project, receptor_ids: list[str]) -> pd.DataFrame:
     """Return the status table of the simulations of *receptor_ids*."""
     sims = project.simulations
@@ -205,7 +259,10 @@ def run(
     Each receptor with missing results runs once: the transport model once for each
     distinct set of transport settings whose particles are missing, then the
     footprint of every variant that has a grid. With ``backend: local`` the
-    receptors run in this process (``cpus`` at a time). With
+    receptors run in this process (``cpus`` at a time); with ``cpus`` above
+    1 and a met that downloads, the met files are got first
+    (:meth:`stilt.Project.fetch`, unless ``execution.fetch`` is ``false``),
+    so the workers do not download the same file at once. With
     ``backend: slurm`` they are submitted as one job array (:func:`submit`)
     and this waits for it. When some simulations look unfinished after the
     job ends, their results are listed once more :data:`RELIST_SECONDS`
@@ -291,6 +348,13 @@ def run(
             )
 
         if task is None:
+            unrun = (
+                _to_fetch(project, todo, execution, skip_existing)
+                if execution.cpus > 1
+                else None
+            )
+            if unrun is not None:
+                _fetch_here(project, unrun)
             work()
         else:
             return _run_task(project, todo, work)
@@ -320,6 +384,17 @@ def submit(
     that is preempted or nears its time limit requeues itself and skips
     what it finished (see :func:`run`).
 
+    When a met the unfinished simulations use downloads its files, a
+    fetch job goes first: one task that runs ``stilt fetch <project>
+    --receptors receptors.parquet`` (:func:`fetch_script`), written to
+    ``fetch.sh`` with its log in ``fetch.log``, with the resources of
+    ``execution.fetch``. The array waits for it to end
+    (``--dependency=afterany``), however it ended, so the runs whose met it
+    got go ahead, and each task downloads what is still missing. With
+    ``skip_existing=False`` it gets the met of every run the array makes
+    again. If ``sbatch`` refuses the array, the fetch job is cancelled.
+    Set ``execution.fetch`` to ``false`` for no fetch job.
+
     Parameters
     ----------
     project, receptors, execution, skip_existing, compute_root
@@ -330,6 +405,8 @@ def submit(
     str or None
         The Slurm job id of the array, or ``None`` when nothing needs to
         run. ``squeue -j <id>`` follows it and ``scancel <id>`` stops it.
+        A fetch job is a job of its own: its id is logged and written to
+        ``fetch.id`` in the submission folder, and ``scancel`` stops it too.
 
     Raises
     ------
@@ -361,6 +438,20 @@ def _sbatch_lines(options: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _threads_per_worker(options: dict[str, Any], execution: ExecutionConfig) -> int:
+    """
+    Return the threads each worker process gets: the task's CPUs shared among its workers.
+
+    The task's CPUs are ``--cpus-per-task`` as written, so a ``slurm`` option
+    that replaces it counts. With ``cpus`` workers on ``cpus`` CPUs this is 1.
+    """
+    try:
+        task_cpus = int(options["cpus-per-task"])
+    except (TypeError, ValueError):
+        return 1  # sbatch will refuse the value; do not fail here
+    return max(1, task_cpus // execution.cpus)
+
+
 def job_script(
     project: Project,
     execution: ExecutionConfig,
@@ -378,7 +469,10 @@ def job_script(
     that called this. The ``#SBATCH`` lines come from *execution*: its
     resources, ``--requeue``, ``--signal=B:USR1@120`` (see :func:`run`),
     and its ``slurm`` options, which can replace any of them. Its ``setup``
-    commands run before the task.
+    commands run before the task, after the script exports ``OMP_NUM_THREADS``
+    as the task's CPUs divided by the workers it runs at once (``cpus``),
+    which a ``setup`` line can export again. NumPy's BLAS follows it, so a
+    worker does not start a thread pool the size of the node.
     """
     options: dict[str, Any] = {
         "job-name": f"pystilt-{_project_slug(project.directory)}",
@@ -426,7 +520,17 @@ def job_script(
         "job ${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} "
         'restart ${SLURM_RESTART_COUNT:-0}"'
     )
-    lines = ["#!/bin/bash", *_sbatch_lines(options), "", header, *execution.setup]
+    # One thread per worker unless the task has CPUs to spare. Before setup,
+    # so an export there decides.
+    threads = f"export OMP_NUM_THREADS={_threads_per_worker(options, execution)}"
+    lines = [
+        "#!/bin/bash",
+        *_sbatch_lines(options),
+        "",
+        header,
+        threads,
+        *execution.setup,
+    ]
     if not skip_existing:
         # A requeued task keeps what it finished before.
         lines += [
@@ -437,6 +541,90 @@ def job_script(
     # exec, so this process is the one Slurm signals.
     lines.append("exec " + " ".join(words))
     return "\n".join(lines) + "\n"
+
+
+def fetch_script(
+    project: Project,
+    execution: ExecutionConfig,
+    folder: Path,
+    *,
+    skip_existing: bool = True,
+) -> str:
+    """
+    Return the ``sbatch`` script of the job that gets the met files before a job array.
+
+    It runs ``stilt fetch <project> --receptors <folder>/receptors.parquet``
+    (with ``--no-skip`` when not *skip_existing*) with the Python that
+    called this, as one task, after the ``setup`` commands. Its
+    ``partition``, ``account``, ``qos``, ``time`` and ``mem`` are
+    ``execution.fetch``'s, each unset one the array's as :func:`job_script`
+    writes it (a ``slurm`` option of that name replaces the setting). Of the
+    other ``slurm`` options it takes only ``clusters``, so it runs on the
+    cluster of the array that waits for it. Its log is ``<folder>/fetch.log``.
+    """
+    fetch = execution.fetch or FetchConfig()
+    slurm = {
+        str(key).replace("_", "-"): value for key, value in execution.slurm.items()
+    }
+    # The array's resources, as job_script writes them.
+    array = {
+        "time": execution.time,
+        "mem": execution.mem,
+        "partition": execution.partition,
+        "account": execution.account,
+        "qos": execution.qos,
+    }
+    array = {key: slurm.get(key, value) for key, value in array.items()}
+    options: dict[str, Any] = {
+        "job-name": f"pystilt-fetch-{_project_slug(project.directory)}",
+        "time": fetch.time or array["time"],
+        "mem": fetch.mem or array["mem"],
+        "partition": fetch.partition or array["partition"],
+        "account": fetch.account or array["account"],
+        "qos": fetch.qos or array["qos"],
+        "clusters": slurm.get("clusters"),
+        "output": folder / "fetch.log",
+    }
+    command = [
+        sys.executable,
+        "-m",
+        "stilt",
+        "fetch",
+        str(project.directory),
+        "--receptors",
+        str(folder / "receptors.parquet"),
+        "--output",
+        str(project.output.directory),
+    ]
+    if not skip_existing:
+        command.append("--no-skip")
+    header = 'echo "$(date -u +%FT%TZ) $SLURMD_NODENAME job ${SLURM_JOB_ID}"'
+    lines = [
+        "#!/bin/bash",
+        *_sbatch_lines(options),
+        "",
+        header,
+        *execution.setup,
+        "exec " + " ".join(shlex.quote(w) for w in command),
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _sbatch(script: Path, *extra: str) -> tuple[str, str | None]:
+    """Submit *script* with ``sbatch --parsable`` and return its job id and cluster (``None`` for the default one)."""
+    result = subprocess.run(
+        ["sbatch", "--parsable", *extra, str(script)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"sbatch refused {script}: {result.stderr.strip() or result.stdout.strip()}"
+        )
+    # --parsable prints "<id>", or "<id>;<cluster>" for a job on another cluster.
+    job_id, _, cluster = result.stdout.strip().partition(";")
+    return job_id, cluster or None
 
 
 def _submit(
@@ -450,7 +638,10 @@ def _submit(
     Write a submission folder for *pending* receptors, submit its job array, and return its job id and cluster.
 
     The cluster is the one ``sbatch`` sent the job to when it is not the
-    default (``clusters`` in the Slurm options), else ``None``.
+    default (``clusters`` in the Slurm options), else ``None``. When the
+    met files are got first (:func:`_to_fetch`), the fetch job is
+    submitted before the array, which waits for it, and cancelled if
+    ``sbatch`` refuses the array.
     """
     # One folder per submission, so a later array never overwrites these.
     stamp = f"{datetime.now():%Y%m%d_%H%M%S}_{uuid4().hex[:6]}"
@@ -477,18 +668,41 @@ def _submit(
             compute_root=compute_root,
         )
     )
-    result = subprocess.run(
-        ["sbatch", "--parsable", str(script)],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"sbatch refused {script}: {result.stderr.strip() or result.stdout.strip()}"
+    after: list[str] = []
+    fetch_id, fetch_cluster = None, None
+    if _to_fetch(project, pending, execution, skip_existing) is not None:
+        fetch = folder / "fetch.sh"
+        fetch.write_text(
+            fetch_script(project, execution, folder, skip_existing=skip_existing)
         )
-    # --parsable prints "<id>", or "<id>;<cluster>" for a job on another cluster.
-    job_id, _, cluster = result.stdout.strip().partition(";")
+        fetch_id, fetch_cluster = _sbatch(fetch)
+        (folder / "fetch.id").write_text(fetch_id + "\n")
+        logger.info(
+            "Submitted fetch job: %s%s; the job array waits for it to end. Log in %s",
+            fetch_id,
+            f" on cluster {fetch_cluster}" if fetch_cluster else "",
+            folder / "fetch.log",
+        )
+        # afterany: a fetch that lacked some files (exit 1), was stopped, or
+        # could not reach the archive still lets the runs whose met is there go.
+        after = [f"--dependency=afterany:{fetch_id}"]
+        if fetch_cluster:
+            # The array must be on the fetch job's cluster to wait for it.
+            after.append(f"--clusters={fetch_cluster}")
+    try:
+        job_id, cluster = _sbatch(script, *after)
+    except RuntimeError:
+        if fetch_id is not None:
+            # Nothing waits for the fetch job now: do not leave it downloading.
+            subprocess.run(
+                ["scancel", *_on_cluster(fetch_cluster), fetch_id],
+                capture_output=True,
+                check=False,
+            )
+            logger.warning(
+                "Cancelled fetch job %s: the job array was refused.", fetch_id
+            )
+        raise
     logger.info(
         "Submitted job: %s%s (%d tasks); logs in %s",
         job_id,
@@ -496,7 +710,7 @@ def _submit(
         n_tasks,
         folder,
     )
-    return job_id, cluster or None
+    return job_id, cluster
 
 
 def _on_cluster(cluster: str | None) -> list[str]:
@@ -698,6 +912,7 @@ __all__ = [
     "MAX_REQUEUES",
     "NOTICE_SECONDS",
     "RELIST_SECONDS",
+    "fetch_script",
     "job_script",
     "resolve_compute_root",
     "run",

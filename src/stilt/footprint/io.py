@@ -58,15 +58,16 @@ def _footprint_array(
     """
     Return a footprint: *values* in ``(time, y, x)`` order, at cell centers *x* and *y*.
 
-    Layer ``k`` is the hour from ``hours[k]`` hours after the receptor time,
-    and is stamped there, as in STILT-R; a backward run's first hour is
-    layer -1, and a time-integrated footprint is the one layer 0. This is
-    the one place a footprint array is made, for :func:`calc_footprint` and for
-    :func:`read_footprint` alike.
+    Layer ``k`` starts ``hours[k]`` layers of ``config.tres`` after the
+    receptor time, and is stamped there, as in STILT-R; a backward run's
+    first layer is -1. With the default ``tres`` of ``1h``, ``hours`` are
+    hours. This is the one place a footprint array is made, for
+    :func:`calc_footprint` and for :func:`read_footprint` alike.
     """
     if config.grid is None:
         raise ValueError("Footprint settings need a grid.")
-    times = _naive_utc([receptor.time + pd.Timedelta(hours=int(h)) for h in hours])
+    step = pd.Timedelta(minutes=config.tres_minutes)
+    times = _naive_utc([receptor.time + int(h) * step for h in hours])
     y_dim, x_dim = config.grid.dims
     data = xr.DataArray(
         values,
@@ -283,11 +284,11 @@ def open_footprints(
     paths: Iterable[str | Path | UPath], *, workers: int | None = None
 ) -> xr.Dataset:
     """
-    Open stored footprints as one dataset, stacked on the hour from each receptor's time.
+    Open stored footprints as one dataset, stacked on the layer from each receptor's time.
 
-    Footprints of many receptors are stacked by their hour offset rather
+    Footprints of many receptors are stacked by their layer offset rather
     than by absolute time, so receptors at different times share one
-    ``hour`` axis. Only the files' metadata is read here. The values are
+    layer axis (``hour`` for hourly layers). Only the files' metadata is read here. The values are
     read with dask when they are used, a block of receptors from one date
     folder at a time. :meth:`stilt.Project.footprints` opens a selection
     of a project's footprints this way.
@@ -305,11 +306,14 @@ def open_footprints(
     -------
     xarray.Dataset
         ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and ``x``
-        on a projected grid), as ``float32`` like the stored values. ``hour``
-        is the start of each layer, in hours after the receptor time, so a
-        backward run's first hour is -1. The ``time`` coordinate, with dims
-        ``(receptor, hour)``, is that start as a date and time. A receptor
-        whose footprint is empty has no row; ``attrs["empty"]`` lists them.
+        on a projected grid), as ``float32`` like the stored values. The
+        layer dimension is named for the unit ``tres`` is written in and
+        counts each layer's start from the receptor time in it: ``hour``
+        -1, -2, ... for ``1h``; ``hour`` -6, -12, ... for ``6h``; ``day`` -1,
+        -2, ... for ``1D``; ``minute`` -15, -30, ... for ``15min``. The
+        ``time`` coordinate, with dims ``(receptor, <unit>)``, is that start
+        as a date and time. A receptor whose footprint is empty has no
+        row; ``attrs["empty"]`` lists them.
 
     Raises
     ------
@@ -380,16 +384,19 @@ def open_footprints(
     )
 
     start_times = _naive_utc([receptors[i].time for i in kept])
-    times = start_times.to_numpy()[:, None] + hours.astype("timedelta64[h]")[None, :]
+    offsets = (hours * config.tres_minutes).astype("timedelta64[m]")
+    times = start_times.to_numpy()[:, None] + offsets[None, :]
+    # The layer dimension is named for tres's unit and counts in it.
+    unit, unit_minutes = config.layer_unit
     foot = xr.DataArray(
         values,
-        dims=("receptor", "hour", y_dim, x_dim),
+        dims=("receptor", unit, y_dim, x_dim),
         coords={
             "receptor": [str(receptors[i].id) for i in kept],
-            "hour": hours,
+            unit: hours * (config.tres_minutes // unit_minutes),
             y_dim: y_axis,
             x_dim: x_axis,
-            "time": (("receptor", "hour"), times),
+            "time": (("receptor", unit), times),
         },
         name="foot",
         attrs={"units": UNITS, "long_name": "footprint"},
@@ -466,9 +473,10 @@ def write_footprint(
     Write a footprint to a Parquet file that :func:`read_footprint` reads alone.
 
     Only the non-zero cells are stored, as ``hour`` (the offset of the time
-    layer from the receptor time), ``y`` and ``x`` (the cell's place on the
-    grid), and ``foot`` in float32. Every layer is recorded in the metadata,
-    so the dense array reads back with the same shape. The metadata also
+    layer from the receptor time, in layers of ``tres``: hours by
+    default), ``y`` and ``x`` (the cell's place on the grid), and ``foot``
+    in float32. Every layer is recorded in the metadata, so the dense array
+    reads back with the same shape. The metadata also
     holds the receptor and the footprint settings.
 
     Parameters
@@ -495,8 +503,10 @@ def write_footprint(
     ------
     ValueError
         If the footprint is not on the grid, the grid has more cells along
-        an axis than ``x`` and ``y`` can hold (32,767), or a time layer is
-        not a whole number of hours from the receptor time.
+        an axis than ``x`` and ``y`` can hold (32,767), a time layer is
+        not a whole number of layers (``tres``) from the receptor
+        time, or more layers from the receptor time than ``hour`` can hold
+        (32,767).
     """
     settings = foot.stilt.config if config is None else config
     if settings.grid is None:
@@ -515,13 +525,20 @@ def write_footprint(
     yi = _cell_indices(np.asarray(foot[y_dim].values, dtype=float), y_axis, y_dim)
 
     times = _naive_utc(foot["time"].values)
-    hours_f = (times - pd.Timestamp(receptor.time)) / pd.Timedelta(hours=1)
-    hours = np.asarray(hours_f, dtype=float)
-    if not np.allclose(hours, np.round(hours)):
+    step = pd.Timedelta(minutes=settings.tres_minutes)
+    layers = np.asarray((times - pd.Timestamp(receptor.time)) / step, dtype=float)
+    if not np.allclose(layers, np.round(layers)):
         raise ValueError(
-            "Footprint time layers are not whole hours from the receptor time."
+            "Footprint time layers are not whole layers of "
+            f"{settings.tres} (tres) from the receptor time."
         )
-    hours = np.round(hours).astype(np.int16)
+    if layers.size and np.abs(layers).max() > most:
+        raise ValueError(
+            f"The footprint has a layer {int(np.abs(layers).max())} layers of "
+            f"{settings.tres} from the receptor time, and a stored footprint "
+            f"holds at most {most}. Use longer layers (tres)."
+        )
+    hours = np.round(layers).astype(np.int16)
 
     values = foot.transpose("time", y_dim, x_dim).to_numpy()
     t, y, x = np.nonzero(np.nan_to_num(values, nan=0.0))

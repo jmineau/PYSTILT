@@ -1,12 +1,12 @@
 """Tests for HYSPLIT's input files, running hycs_std, and reading its particles."""
 
+import datetime as dt
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from stilt.exceptions import HYSPLITNotFoundError, SimulationError
-from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.transport.hysplit import (
     FailureReason,
     HysplitConfig,
@@ -16,6 +16,7 @@ from stilt.transport.hysplit import (
     read_particle_dat,
     write_inputs,
 )
+from stilt.transport.hysplit.config import FIXED_SETUP
 from stilt.transport.hysplit.control import ControlFile
 from stilt.transport.hysplit.driver import (
     MET_STOP_CELLS,
@@ -41,7 +42,8 @@ def _make_control(
     if met_files is None:
         met_files = [Path("/met/hrrr_2023010100")]
     return ControlFile(
-        receptor=receptor,
+        release_time=receptor.time,
+        locations=receptor.coords(),
         emisshrs=emisshrs,
         n_hours=n_hours,
         w_option=w_option,
@@ -61,7 +63,8 @@ def test_control_file_roundtrip_single_point(point_receptor, tmp_path):
     cf.write(path)
     loaded = ControlFile.read(path)
 
-    assert loaded.receptor == point_receptor
+    assert loaded.release_time == point_receptor.time
+    assert loaded.locations == point_receptor.coords()
     assert loaded.n_hours == -24
     assert loaded.w_option == 0
     assert loaded.z_top == 25000.0
@@ -92,22 +95,37 @@ def test_control_file_roundtrip_n_hours_forward(point_receptor, tmp_path):
     assert loaded.n_hours == 24
 
 
-def test_control_file_roundtrip_receptor_time(point_receptor, tmp_path):
+def test_control_file_roundtrip_release_time(point_receptor, tmp_path):
     cf = _make_control(point_receptor)
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert loaded.receptor.time == point_receptor.time
+    assert loaded.release_time == point_receptor.time
 
 
-def test_control_file_roundtrip_receptor_coords(point_receptor, tmp_path):
-    cf = _make_control(point_receptor)
+def test_control_file_lists_a_location_as_latitude_longitude_height(tmp_path):
+    """CONTROL's order, which is not the (lon, lat, height) of a receptor's points."""
     path = tmp_path / "CONTROL"
-    cf.write(path)
-    loaded = ControlFile.read(path)
-    assert loaded.receptor.longitude == pytest.approx(point_receptor.longitude)
-    assert loaded.receptor.latitude == pytest.approx(point_receptor.latitude)
-    assert loaded.receptor.altitude == pytest.approx(point_receptor.altitude)
+    ControlFile(
+        release_time=dt.datetime(2023, 7, 15, 18, 5),
+        locations=[(40.766, -111.848, 10.0), (40.5, -112.0, 250.0)],
+        emisshrs=0.01,
+        n_hours=-24,
+        w_option=0,
+        z_top=25000.0,
+        met_files=[Path("/met/hrrr")],
+    ).write(path)
+
+    assert path.read_text().splitlines()[:4] == [
+        "23 07 15 18 05",
+        "2",
+        "40.766 -111.848 10.0",
+        "40.5 -112.0 250.0",
+    ]
+    assert ControlFile.read(path).locations == [
+        (40.766, -111.848, 10.0),
+        (40.5, -112.0, 250.0),
+    ]
 
 
 def test_control_file_roundtrip_multiple_met_files(point_receptor, tmp_path):
@@ -151,9 +169,11 @@ def test_control_file_roundtrip_column_receptor(column_receptor, tmp_path):
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert isinstance(loaded.receptor, ColumnReceptor)
-    assert loaded.receptor.bottom == pytest.approx(column_receptor.bottom)
-    assert loaded.receptor.top == pytest.approx(column_receptor.top)
+    assert loaded.locations == column_receptor.coords()
+    assert [height for _, _, height in loaded.locations] == [
+        column_receptor.bottom,
+        column_receptor.top,
+    ]
 
 
 def test_control_file_roundtrip_multipoint_receptor(multipoint_receptor, tmp_path):
@@ -161,8 +181,7 @@ def test_control_file_roundtrip_multipoint_receptor(multipoint_receptor, tmp_pat
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert isinstance(loaded.receptor, MultiPointReceptor)
-    assert loaded.receptor.coords() == multipoint_receptor.coords()
+    assert loaded.locations == multipoint_receptor.coords()
 
 
 def test_control_file_read_missing_raises(tmp_path):
@@ -180,8 +199,7 @@ VARS = ["time", "indx", "long", "lati", "zagl", "foot"]
 def _config(**overrides) -> HysplitConfig:
     """A small config whose particle rows are the six columns of VARS."""
     return HysplitConfig(
-        **{"n_hours": -24, "numpar": 10, "hnf_plume": False, "varsiwant": VARS}
-        | overrides
+        **{"n_hours": -24, "numpar": 10, "varsiwant": VARS} | overrides
     )
 
 
@@ -193,9 +211,11 @@ def _fake_build(path: Path, marker: str = "fake binary") -> Path:
 
 
 def _inputs(tmp_path, receptor, config=None) -> Path:
-    """Write the input files for *receptor* and return the working directory."""
+    """Write the input files for *receptor*, as the model does, and return the working directory."""
     workdir = tmp_path / "run"
-    write_inputs(workdir, receptor, config or _config(), [tmp_path / "met" / "dummy"])
+    model._write_inputs(
+        workdir, receptor, config or _config(), [tmp_path / "met" / "dummy"]
+    )
     return workdir
 
 
@@ -327,7 +347,12 @@ def test_run_times_out_and_keeps_log_output(tmp_path):
 
 
 def _kill_when_started(workdir: Path, sig: int):
-    """Send *sig* to the script in *workdir* once it has written its pid, from another thread."""
+    """
+    Send *sig* to the script in *workdir* once it has written its pid, from another thread.
+
+    The script must write ``pid`` last, just before ``exec``, so the kill cannot land
+    before the script has written what the test reads afterwards (#396).
+    """
     import os
     import threading
     import time
@@ -352,9 +377,9 @@ def test_run_fails_when_hycs_std_is_killed_from_outside(tmp_path):
 
     _script(
         tmp_path,
-        "echo $$ > pid\n"
         "echo 'starting hycs_std'\n"
         "printf 'first line\\nlast line of MESSAGE\\n' > MESSAGE\n"
+        "echo $$ > pid\n"
         "exec sleep 60\n",
     )
     thread = _kill_when_started(tmp_path, signal.SIGKILL)
@@ -496,9 +521,14 @@ def _fake_hysplit(
 
 
 def _ending_at(minute: int) -> list[list[float]]:
-    """Particle rows of one particle, written every hour, whose last row is *minute* before release."""
+    """
+    Particle rows of one particle, written every hour, whose last row is *minute* before release.
+
+    The particle is east of the test met's grid, so a run that stops early
+    is a domain exit, not met that ran out.
+    """
     times = [-1, *range(-60, -minute - 1, -60)]
-    return [[t, 1, -111.9, 40.7, 10.0, 0.0] for t in times]
+    return [[t, 1, -100.0, 40.7, 10.0, 0.0] for t in times]
 
 
 def _run(tmp_path, receptor, config=None):
@@ -605,7 +635,7 @@ def test_a_multipoint_release_cut_short_by_maxpar_fails(
     """HYSPLIT's puff-limit warning means the last locations got fewer particles (#237)."""
     _fake_hysplit(monkeypatch, log="", rows=_ending_at(24 * 60), warning=PUFF_LIMIT)
 
-    with pytest.raises(SimulationError, match="3 locations") as caught:
+    with pytest.raises(SimulationError, match="3 release locations") as caught:
         _run(tmp_path, multipoint_receptor, _config(maxpar=10))
     assert caught.value.reason == FailureReason.PARTICLE_LIMIT
     assert "Raise maxpar or leave it unset" in str(caught.value)
@@ -632,8 +662,9 @@ def test_a_multipoint_release_without_the_warning_is_a_run(
 def test_a_perturbed_run_is_one_hycs_std_call_with_winderr(
     tmp_path, point_receptor, monkeypatch
 ):
+    # East of the test met's grid, so the run's early end is a domain exit.
     calls = _fake_hysplit(
-        monkeypatch, log="", rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
+        monkeypatch, log="", rows=[[-60, 1, -100.0, 40.7, 10.0, 1e-5]]
     )
     config = _config(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
 
@@ -864,7 +895,7 @@ def test_setup_cfg_takes_kmsl_from_an_msl_receptor(tmp_path, point_receptor):
 def test_read_namelist_reads_the_setup_cfg_written(tmp_path, point_receptor):
     from stilt.transport.hysplit.namelist import read_namelist
 
-    config = HysplitConfig(numpar=150, dzf=0.01, wvert=True, efile="")
+    config = HysplitConfig(numpar=150, wvert=True)
     entries = read_namelist(_inputs(tmp_path, point_receptor, config) / "SETUP.CFG")
     assert entries["numpar"] == 150
     assert entries["dzf"] == 0.01
@@ -890,6 +921,40 @@ def test_kmsl_comes_only_from_the_receptor():
     """KMSL follows each receptor's altitude_ref; there is no setting to contradict it."""
     with pytest.raises(ValueError, match="kmsl"):
         HysplitConfig(kmsl=0)
+
+
+def test_write_inputs_takes_a_release_time_and_release_locations(tmp_path):
+    """HYSPLIT's own inputs, with no receptor: CONTROL's first lines, KMSL and MAXPAR."""
+    workdir = tmp_path / "run"
+    write_inputs(
+        workdir,
+        release_time=dt.datetime(2021, 1, 5, 7, 37),
+        locations=[(40.7, -111.9, 1500.0), (40.8, -111.8, 1600.0)],
+        config=_config(),
+        met_files=[tmp_path / "met" / "dummy"],
+        kmsl=1,
+    )
+
+    assert (workdir / "CONTROL").read_text().splitlines()[:4] == [
+        "21 01 05 07 37",
+        "2",
+        "40.7 -111.9 1500.0",
+        "40.8 -111.8 1600.0",
+    ]
+    setup = (workdir / "SETUP.CFG").read_text().lower()
+    assert "kmsl=1," in setup
+    assert "maxpar=12," in setup  # two locations: 2 * (10 // 2 + 1)
+
+
+def test_write_inputs_takes_heights_as_above_ground_unless_told(tmp_path):
+    write_inputs(
+        tmp_path / "run",
+        dt.datetime(2021, 1, 5, 7, 37),
+        [(40.7, -111.9, 10.0)],
+        _config(),
+        [tmp_path / "met" / "dummy"],
+    )
+    assert "kmsl=0," in (tmp_path / "run" / "SETUP.CFG").read_text().lower()
 
 
 # ---------------------------------------------------------------------------
@@ -1084,7 +1149,7 @@ def test_setup_cfg_maxpar_follows_the_receptors_locations(
         (column_receptor, 10),
         (multipoint_receptor, 12),
     ]:
-        assert driver.release_locations(receptor) == (3 if maxpar == 12 else 1)
+        assert driver.release_locations(receptor.coords()) == (3 if maxpar == 12 else 1)
         assert f"maxpar={maxpar}," in _setup_cfg(tmp_path / receptor.kind, receptor)
     set_maxpar = _config(maxpar=10)
     assert "maxpar=10," in _setup_cfg(tmp_path / "set", multipoint_receptor, set_maxpar)
@@ -1174,7 +1239,12 @@ def test_hysplit_setup_types_cover_every_setup_entry():
 
 
 @pytest.mark.parametrize(
-    "name", [n for n, t in HYSPLIT_SETUP_TYPES.items() if t == "REAL"]
+    "name",
+    [
+        n
+        for n, t in HYSPLIT_SETUP_TYPES.items()
+        if t == "REAL" and n in HysplitConfig.model_fields
+    ],
 )
 def test_real_setup_fields_accept_fractions(name):
     # HYSPLIT reads these as REAL, so a fractional value is valid.
@@ -1193,6 +1263,43 @@ def test_integer_setup_fields_reject_fractions(name):
     # HYSPLIT stops with a namelist read error on a fractional INTEGER.
     with pytest.raises(ValidationError):
         HysplitConfig(**{name: 0.5})
+
+
+def test_fixed_setup_entries_are_written_and_are_no_settings():
+    entries = setup_entries(HysplitConfig())
+    for name, value in FIXED_SETUP.items():
+        assert name not in HysplitConfig.model_fields
+        assert entries[name] == value
+
+
+@pytest.mark.parametrize("name", ["delt", "ichem", "cmass", "khinp"])
+def test_a_fixed_setup_entry_is_refused_as_a_setting(name):
+    with pytest.raises(ValidationError, match=name):
+        HysplitConfig(**{name: FIXED_SETUP[name]})
+
+
+def test_setup_cfg_holds_the_entries_it_held_when_they_were_settings():
+    # Every SETUP.CFG entry and value from before the fixed ones stopped
+    # being settings: the default config, with a seed and maxpar.
+    before = {
+        "veght": 0.5, "numpar": 200, "capemin": -1, "cmass": 0, "conage": 48,
+        "cpack": 1, "delt": 1, "dxf": 1, "dyf": 1, "dzf": 0.01, "efile": "",
+        "frhmax": 3, "frhs": 1, "frme": 0.1, "frmr": 0, "frts": 0.1,
+        "frvs": 0.01, "hscale": 10800, "ichem": 8, "idsp": 2, "initd": 0,
+        "k10m": 1, "kagl": 1, "kbls": 1, "kblt": 5, "kdef": 0, "khinp": 0,
+        "khmax": 9999, "kmix0": 150, "kmixd": 3, "kpuff": 0, "krand": 2,
+        "krnd": 6, "kspl": 1, "kwet": 1, "kzmix": 0, "maxdim": 1,
+        "maxpar": 1000, "mgmin": 10, "mhrs": 9999, "nbptyp": 1, "ncycl": 0,
+        "ndump": 0, "ninit": 1, "nstr": 0, "nturb": 0, "nver": 0, "outdt": 0,
+        "p10f": 1, "pinbc": "", "pinpf": "", "poutf": "", "qcycle": 0,
+        "rhb": 80, "rht": 60, "seed": -4, "splitf": 1, "tkerd": 0.18,
+        "tkern": 0.18, "tlfrac": 0.1, "tout": 0, "tratio": 0.75, "tvmix": 1,
+        "vscale": 200, "vscaleu": 200, "vscales": -1, "wbbh": 0, "wbwf": 0,
+        "wbwr": 0, "wvert": False, "zicontroltf": 0,
+    }  # fmt: skip
+    entries = setup_entries(HysplitConfig(seed=3, krand=2, maxpar=1000))
+    entries.pop("varsiwant")
+    assert entries == before
 
 
 def test_setup_entries_map_seed_to_negative_namelist_value():

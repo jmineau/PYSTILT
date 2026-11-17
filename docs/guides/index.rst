@@ -8,9 +8,16 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 
 - :doc:`receptors`: where and when you measured (towers, columns,
   satellites)
+- :doc:`tracks`: receptors along the track of a car, train, aircraft, or
+  ship, and the link from each measurement to its receptor
 - :doc:`meteorology`: use your own ARL files or download them from NOAA
 - :doc:`projects`: what goes in ``config.yaml``, variants, and how reruns
   and changed settings work
+- :doc:`choosing_settings`: how many particles, how long a run, which grid
+  and which met, and how to check each choice
+- :doc:`transforms`: weight the particles before the footprint is made:
+  averaging kernels and pressure weighting for columns, and the loss of a
+  species that decays, deposits, or reacts with OH on the way
 
 **Running**
 
@@ -22,32 +29,34 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 
 **Results**
 
-- :doc:`outputs`: load and plot footprints and particles
+- :doc:`outputs`: load and plot footprints and particles, and write them
+  for other tools (CF NetCDF, CF trajectories, openghg)
 - :doc:`aggregation`: sum footprints over counties, hexagons, or sources,
   and many at once into a Jacobian
-- :doc:`transport_error`: the modeled enhancement from a flux field, and
-  its transport uncertainty
-- :doc:`wind_errors`: the wind-error statistics a transport-error run needs
+- :doc:`transport_error`: the transport uncertainty of a modeled
+  enhancement, and the wind-error statistics it needs
 - :doc:`background`: the mole fraction at the trajectory endpoints, as a
   background for the receptor
-- :doc:`trajectory_analyses`: residence time, PSCF, CWT, mean paths, and transit time from a source
-  from particles and footprints, for HyTraj and pysplit users
+- :doc:`trajectory_analyses`: residence time, PSCF, CWT, mean paths, and
+  the transit time from a source, from particles and footprints
 
 **Column and satellite measurements**
 
-- :doc:`readers`: read TROPOMI, OCO-2, or TCCON files into a table of
-  soundings, or add your own instrument
+- :doc:`readers`: read TROPOMI, OCO-2/3, TCCON, or EM27/SUN (GGG, COCCON,
+  PROFFAST) files into a table of soundings, or add your own instrument
 - :doc:`slant_columns`: instruments that look along a tilted path
   (EM27/SUN, TCCON, off-nadir satellites)
-- :doc:`transforms`: averaging kernels, pressure weighting, and your own
-  particle weights
-- :doc:`plume_background`: a background from the soundings a forward-run
+- :doc:`transforms`: the averaging kernel and pressure weighting a column
+  footprint needs
+- :ref:`plume-background`: a background from the soundings a forward-run
   plume did not reach
 - :doc:`../tutorials/satellite_column`: from satellite soundings to
   receptors, kernels, and modeled enhancements
 
 **HYSPLIT**
 
+- :doc:`hysplit_users`: HYSPLIT's starting points, settings and particle
+  output in PYSTILT, a single trajectory, and many runs as a project
 - :doc:`hysplit_build`: run another HYSPLIT build, or your own land-use
   and terrain tables
 
@@ -73,8 +82,11 @@ steps are in PYSTILT.
    :caption: Setting up a project
 
    receptors
+   tracks
    meteorology
    projects
+   choosing_settings
+   transforms
 
 .. toctree::
    :hidden:
@@ -90,7 +102,6 @@ steps are in PYSTILT.
    outputs
    aggregation
    transport_error
-   wind_errors
    background
    trajectory_analyses
 
@@ -100,13 +111,12 @@ steps are in PYSTILT.
 
    readers
    slant_columns
-   transforms
-   plume_background
 
 .. toctree::
    :hidden:
    :caption: HYSPLIT
 
+   hysplit_users
    hysplit_build
 
 .. toctree::

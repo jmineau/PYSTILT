@@ -35,6 +35,11 @@ def test_all_failure_reasons_exist():
             "NO_PARTICLE_DATA",
         ),
         ("start point not within (x,y,t) any data file", "MET_COVERAGE"),
+        ("WARNING main: source point off grid", "MET_COVERAGE"),
+        (
+            "*ERROR* runset: Start height above mdl domain  Source - 1 Height - 100000.000  Model top ht - 25000.0000",
+            "MET_COVERAGE",
+        ),
         ("WARNING metpos: no more meteorology -     63723240", "MET_COVERAGE"),
         ("WARNING metpos: too much time between files - 1", "MET_COVERAGE"),
         ("WARNING metpos: no meteo data at current time - 1", "MET_COVERAGE"),

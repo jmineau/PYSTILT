@@ -74,15 +74,16 @@ src/stilt/
   simulation.py   Simulation: a frozen (receptor, variant, output) value
   config.py       ProjectConfig and Variant;  identity.py  settings records, hashes
   receptors/      receptor models, receptors.csv, shared validation
-  particles/      the particle table and files, release heights, near-field correction
+  particles/      the particle table and files, release heights, foot, near-field correction
   footprint/      FootprintConfig, calc_footprint (gridding.py), aggregation, io, targets
   transforms/     pre-footprint particle transforms, one module each
   transport/      TransportModel/TransportConfig protocols, MODELS, get_model, run_model;
                   stilt_r.py, the stilt-r model of imported runs (runs nothing)
     hysplit/      config, met, catalog, driver, CONTROL and SETUP.CFG writers, failures, bin/, data/
   execution/      ExecutionConfig, runner (plan, local run, Slurm submit), worker
-  observations/   the X-STILT port: readers, sounding selection, slant receptors, columns
-  meteorology.py, sampling.py, spatial.py, visualization.py, exceptions.py, _paths.py
+  observations/   the X-STILT port (readers, sounding selection, slant receptors, columns);
+                  receptors along a moving platform's track (tracks.py)
+  background.py, transport_error.py, meteorology.py, sampling.py, spatial.py, visualization.py, exceptions.py, _paths.py
 ```
 
 **A run** (`stilt run`, `Project.run()`, `submit()`) happens in this process
@@ -95,9 +96,10 @@ soundings into receptors, then a run goes as usual. Keep it out of `project.py`.
 
 The import contracts in `pyproject.toml` (`just imports`) hold this shape: an
 exhaustive `layers` contract (a new top-level module fails until placed), only
-`stilt.transport` imports HYSPLIT's package, and the project config reads no
-results and runs nothing. Slurm tasks rebuild the project in another process,
-so anything a worker needs must be in the project or the output directory.
+`stilt.transport` imports HYSPLIT's package, the project config reads no results
+and runs nothing, and the core imports STILT's side only where the contract
+lists it. Slurm tasks rebuild the project in another process, so anything a worker
+needs must be in the project or the output directory.
 
 `ProjectConfig` holds the transport model (`hysplit` unless set), its
 parameters and the footprint fields as flat defaults, `mets`, and `variants`.
@@ -154,14 +156,15 @@ Driven by [`just`](https://github.com/casey/just) and
 ### Tests
 
 `just test` runs every test without one of three disjoint markers. Warnings
-are errors (a test that expects one uses `pytest.warns`). CI also runs
-`-m "integration or fidelity"` and `-m r_only`:
+are errors (a test that expects one uses `pytest.warns`). CI runs `-m integration`
+in `tests.yml`, `-m fidelity` and `-m r_only` in `stilt-r.yml` (the paths at its top):
 
 - `integration`: end to end with real met files and HYSPLIT. Needs
   `STILT_TEST_MET_DIR` (HRRR ARL files) or `STILT_TEST_FETCH_MET=1` (downloads
-  seven 6 h blocks into the ignored `tests/met_cache/`); otherwise they skip.
+  seven 6 h blocks, 23.9 GB in all, and keeps 211 MB in the ignored
+  `tests/met_cache/`); otherwise they skip.
 - `fidelity`: PYSTILT against STILT-R, both running HYSPLIT. Needs the met,
-  `STILT_R_DIR` (a STILT-R checkout built as `tests.yml` builds it), `Rscript`.
+  `STILT_R_DIR` (a STILT-R checkout built as `stilt-r.yml` builds it), `Rscript`.
 - `r_only`: STILT-R comparisons with no met or HYSPLIT (`STILT_R_DIR`, `Rscript`).
 
 Docstring examples (`>>>` lines under `src/`) run as tests too
@@ -172,10 +175,10 @@ Docstring examples (`>>>` lines under `src/`) run as tests too
 pytest loads a local `.env` for such variables. Test folders follow the
 package. `tests/observations/` is self-contained (its own `conftest.py` and
 `data/`, never `tests/conftest.py`'s fixtures). Committed test data stays
-small: slices of public products (TROPOMI, TCCON) keep the granule's own name
-and are cut by `tests/observations/data/products/make_samples.py`. Retrievals
-that are not public (GGG, EM27) or that we cannot get (OCO-2 Lite) stay
-synthetic files with the real format's quirks. Never commit met files.
+small: slices of public products (TROPOMI, TCCON, OCO-2/3) keep the granule's
+own name and are cut by `tests/observations/data/products/make_samples.py`.
+Retrievals that are not public (GGG, EM27) stay synthetic files with the real
+format's quirks. Never commit met files.
 
 ### Code conventions
 
@@ -199,17 +202,19 @@ synthetic files with the real format's quirks. Never commit met files.
 
 ### Documentation
 
-A user-facing change updates its guide or reference in `docs/` in the same
-change, and `just build-docs` must pass. Examples run when the docs build, so
+A user-facing change updates the docs in the same change: the guide when
+what the user does changes, the reference (docstring Notes) otherwise. A bug
+fix's edge case goes to the reference. `just build-docs` must pass. Examples run when the docs build, so
 they use synthetic data, a small repository file, a public download, or the
 test met cache, and seed their random numbers (`CONTRIBUTING.md`). Give
 every public property and attribute a docstring, with no colon in the middle
 of its first line (napoleon reads `text: more` as `type: description`).
 
 **Voice** (docs, docstrings, field descriptions, CLI help): write for
-scientists who want to run the model and trust the result. Open with what it
-does, then an example. One idea per sentence; no metaphors, selling, or
-filler; American spelling. The full guide, with the habits that read as
+scientists who want to run the model and trust the result. Open with the
+reader's goal, recommend a default and say why ("you" for the reader, "we"
+for our advice), and show real output. One point per paragraph; no
+metaphors, selling, or filler; American spelling. The full guide, with the habits that read as
 machine-written, is "Writing documentation" in `CONTRIBUTING.md`. Words:
 
 | Say (user-facing) | Not |
@@ -230,7 +235,8 @@ machine-written, is "Writing documentation" in `CONTRIBUTING.md`. Words:
   message as the line a user would read. The version comes from git tags
   (setuptools-scm). Releases are cut by the maintainer (CONTRIBUTING.md).
 - `uv.lock` is updated by the Upgrade lock workflow (`lock-upgrade.yml`, monthly,
-  opens the `chore/lock-upgrade` pull request), not by Dependabot.
+  opens the `chore/lock-upgrade` pull request), not by Dependabot; `STILT_R_SHA` by
+  `stilt-r-upgrade.yml` (monthly, opens `chore/stilt-r-upgrade`).
 - Open work is in [GitHub issues](https://github.com/jmineau/PYSTILT/issues);
   read one before working on it. Feature status lives in `docs/development/roadmap.rst`
   (update its row when a feature lands). Over-engineered code goes on the
@@ -259,7 +265,8 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
   than 5 grid cells inside the domain (only at `outdt: 0`).
   `stilt check` runs the file search for every receptor early; it opens one
   met file per met, to count its time periods (HYSPLIT stops on a file with
-  one, and `Met.check` refuses it), so a damaged file still fails at run time.
+  one, and `Met.check` refuses it), and one per grid the catalog lists, for
+  the domain; so a damaged file still fails at run time.
 - **Realizations are an axis**: `realizations: N` is one variant with a
   `realization` column and `realization=k/` partitions, run with `seed + k`.
   HYSPLIT gets `SEED = -(|seed| + 1)` (`setup_seed`, mirrored by the R
@@ -284,9 +291,14 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
 - **Docs `.. ipython::` blocks**: no multi-line statement may be a block's 10th
   (or 100th) statement, because the directive runs only that statement's first
   line. Split the block.
+- **The pool is a `ProcessPoolExecutor`** holding at most `cpus` receptors, so
+  the ones it holds are in progress. A worker killed outright breaks it:
+  `run_receptors` raises `WorkerDied` naming them, and `stilt run` exits with 3.
+  Workers must exit on SIGTERM: the executor's loop catches `SystemExit`, so
+  `_pool_run` ends the process itself, or a stop waits for ever.
 - **A pool with `cpus` above 1 first starts one worker that does nothing**
   (`_check_workers_can_start`), unless the start method is `fork`. Under `spawn`
   and `forkserver` a worker runs the user's script again, and a script without
-  `if __name__ == "__main__":` fails in every worker; a `Pool` starts a new
-  worker for each one that died, for ever. The check turns that hang into an
-  error that shows the guard. Tests that fake the pool patch it out.
+  `if __name__ == "__main__":` fails in every worker; the pool would end with
+  `WorkerDied` ("out of memory") or a bare connection error. The check shows
+  the guard instead. Tests that fake the pool patch it out.

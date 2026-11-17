@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import signal
 import subprocess
 from pathlib import Path
@@ -11,7 +12,7 @@ import pytest
 import yaml
 
 from stilt.execution import runner
-from stilt.execution.config import ExecutionConfig, slurm_minutes
+from stilt.execution.config import ExecutionConfig, FetchConfig, slurm_minutes
 from stilt.execution.runner import _project_slug, job_script, task_share
 from stilt.project import Project
 
@@ -45,7 +46,7 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
         account="lin-np",
         qos="lin-np",
         array_parallelism=10,
-        setup=["module load gcc", "export OMP_NUM_THREADS=1"],
+        setup=["module load gcc", "export OMP_NUM_THREADS=2"],
         slurm={"exclude": "notch345", "signal": "B:USR1@300", "exclusive": True},
     )
 
@@ -70,9 +71,11 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
     }
     lines = script.splitlines()
     # The log says where and when the task ran, before any setup can fail.
-    header = lines.index("module load gcc") - 1
+    header = lines.index("module load gcc") - 2
     assert lines[header].startswith('echo "$(date -u +%FT%TZ) $SLURMD_NODENAME job ')
-    assert lines.index("module load gcc") < lines.index("export OMP_NUM_THREADS=1")
+    # The script's own OMP_NUM_THREADS comes before setup, so a setup line has the last word.
+    assert lines.index("export OMP_NUM_THREADS=1") < lines.index("module load gcc")
+    assert lines.index("module load gcc") < lines.index("export OMP_NUM_THREADS=2")
     last = lines[-1]
     assert last.startswith("exec ")
     assert f"-m stilt run {project.directory} " in last
@@ -114,6 +117,75 @@ def test_job_script_runs_again_only_on_the_first_start_and_names_a_compute_root(
     assert script.splitlines()[-1].endswith(
         f"--compute-root {(tmp_path / 'scratch').resolve()} $skip"
     )
+
+
+def _omp_threads_after_setup(script: str) -> str:
+    """What OMP_NUM_THREADS is when the script reaches its last line, run in bash."""
+    before_exec = script.rstrip("\n").rpartition("\n")[0]
+    done = subprocess.run(
+        ["bash", "-c", before_exec + '\necho "${OMP_NUM_THREADS-unset}"'],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={"PATH": os.environ["PATH"]},
+    )
+    return done.stdout.splitlines()[-1]
+
+
+def test_job_script_gives_each_worker_one_thread_of_the_tasks_cpus(tmp_path):
+    # Four workers on four CPUs: without this a worker's BLAS sizes its pool by the node.
+    script = job_script(
+        Project(tmp_path, output=tmp_path / "out"),
+        ExecutionConfig(backend="slurm", time="01:00:00", cpus=4),
+        tmp_path,
+        1,
+    )
+    assert "export OMP_NUM_THREADS=1" in script.splitlines()
+    assert _omp_threads_after_setup(script) == "1"
+
+
+def test_job_script_shares_cpus_a_slurm_option_adds_among_the_workers(tmp_path):
+    # 2 workers on 8 CPUs (cpus-per-task replaced in `slurm`): 4 threads each.
+    script = job_script(
+        Project(tmp_path, output=tmp_path / "out"),
+        ExecutionConfig(
+            backend="slurm",
+            time="01:00:00",
+            cpus=2,
+            slurm={"cpus_per_task": 8},
+        ),
+        tmp_path,
+        1,
+    )
+    assert _omp_threads_after_setup(script) == "4"
+
+
+def test_job_script_gives_one_thread_when_cpus_per_task_is_not_a_number(tmp_path):
+    # sbatch refuses the value; writing the script must not fail first.
+    script = job_script(
+        Project(tmp_path, output=tmp_path / "out"),
+        ExecutionConfig(
+            backend="slurm", time="01:00:00", slurm={"cpus_per_task": "many"}
+        ),
+        tmp_path,
+        1,
+    )
+    assert _omp_threads_after_setup(script) == "1"
+
+
+def test_job_script_leaves_the_thread_count_to_a_setup_line(tmp_path):
+    script = job_script(
+        Project(tmp_path, output=tmp_path / "out"),
+        ExecutionConfig(
+            backend="slurm",
+            time="01:00:00",
+            cpus=4,
+            setup=["export OMP_NUM_THREADS=3"],
+        ),
+        tmp_path,
+        1,
+    )
+    assert _omp_threads_after_setup(script) == "3"
 
 
 def test_job_script_is_valid_bash(tmp_path):
@@ -584,3 +656,347 @@ def test_a_task_runs_here_whatever_the_backend(tmp_path, monkeypatch, commands):
     assert ran == [[every[1], every[3]]]
     assert list(table["receptor"]) == [every[1], every[3]]
     assert set(table["state"]) == {"pending"}  # nothing was written
+
+
+# ---------------------------------------------------------------------------
+# The fetch before the receptors run (#436)
+# ---------------------------------------------------------------------------
+
+
+def _downloading_project(tmp_path, n: int) -> Project:
+    """A project like :func:`_hourly_project` whose met downloads HRRR."""
+    import datetime as dt
+
+    from stilt.receptors import PointReceptor
+    from stilt.transport.hysplit import MetConfig
+
+    config = make_project_config(
+        tmp_path,
+        mets={"hrrr": MetConfig(directory=tmp_path / "met", download="hrrr")},
+    )
+    receptors = [
+        PointReceptor(
+            time=dt.datetime(2023, 1, 1, h),
+            longitude=-111.85,
+            latitude=40.77,
+            altitude=5.0,
+        )
+        for h in range(n)
+    ]
+    return Project.init(tmp_path / "hourly", config=config, receptors=receptors)
+
+
+@pytest.mark.parametrize("value", [True, None, {}])
+def test_fetch_is_on_with_the_arrays_resources_unless_given(value):
+    config = ExecutionConfig.model_validate({"fetch": value})
+    assert config.fetch == FetchConfig()
+    assert ExecutionConfig().fetch == FetchConfig()
+
+
+def test_fetch_false_turns_it_off_and_a_bad_fetch_setting_is_an_error():
+    assert ExecutionConfig.model_validate({"fetch": False}).fetch is False
+    with pytest.raises(ValueError, match="partiton"):
+        ExecutionConfig.model_validate({"fetch": {"partiton": "dtn"}})
+    with pytest.raises(ValueError, match="Not a Slurm time limit"):
+        ExecutionConfig.model_validate({"fetch": {"time": "soon"}})
+
+
+def test_submit_sends_a_fetch_job_first_and_the_array_waits_for_it(
+    pending, commands, tmp_path
+):
+    project = _downloading_project(tmp_path, 3)
+    pending.extend(project.receptors["receptor"])
+    execution = ExecutionConfig.model_validate(
+        {
+            "backend": "slurm",
+            "time": "01:00:00",
+            "account": "lin-np",
+            "partition": "lin-np",
+            "mem": "8G",
+            "setup": ["module load gcc"],
+            "slurm": {"exclude": "notch345"},
+            "fetch": {"partition": "notchpeak-dtn", "time": "12:00:00"},
+        }
+    )
+    commands.answers["sbatch"] = [_out("41\n"), _out("42\n")]
+
+    job_id = runner.submit(project, execution=execution)
+
+    assert job_id == "42"
+    [fetch, array] = commands.ran
+    assert fetch[:2] == ["sbatch", "--parsable"]
+    assert Path(fetch[-1]).name == "fetch.sh"
+    assert array == [
+        "sbatch",
+        "--parsable",
+        "--dependency=afterany:41",
+        str(Path(fetch[-1]).parent / "job.sh"),
+    ]
+    folder = Path(fetch[-1]).parent
+    text = (folder / "fetch.sh").read_text()
+    options = _sbatch(text)
+    assert options["partition"] == "notchpeak-dtn"
+    assert options["time"] == "12:00:00"
+    assert options["account"] == "lin-np"  # the array's, unset in fetch
+    assert options["mem"] == "8G"
+    assert options["output"] == str(folder / "fetch.log")
+    assert (folder / "fetch.id").read_text() == "41\n"
+    assert "exclude" not in options  # the array's own sbatch options stay its own
+    assert "array" not in options
+    assert "module load gcc" in text
+    exec_, _python, *command = text.splitlines()[-1].split()
+    assert exec_ == "exec"
+    assert command[:4] == ["-m", "stilt", "fetch", str(project.directory)]
+    assert command[4:6] == ["--receptors", str(folder / "receptors.parquet")]
+    assert command[6:8] == ["--output", str(project.output.directory)]
+    assert "--no-skip" not in command
+    subprocess.run(["bash", "-n", str(folder / "fetch.sh")], check=True)
+
+
+def test_the_array_goes_to_the_cluster_its_fetch_job_went_to(
+    pending, commands, tmp_path
+):
+    project = _downloading_project(tmp_path, 1)
+    pending.extend(project.receptors["receptor"])
+    execution = ExecutionConfig(
+        backend="slurm", time="01:00:00", slurm={"clusters": "kingspeak,notchpeak"}
+    )
+    commands.answers["sbatch"] = [_out("41;kingspeak\n"), _out("42;kingspeak\n")]
+
+    runner.submit(project, execution=execution)
+
+    [fetch, array] = commands.ran
+    assert _sbatch(Path(fetch[-1]).read_text())["clusters"] == "kingspeak,notchpeak"
+    assert array[2:4] == ["--dependency=afterany:41", "--clusters=kingspeak"]
+
+
+def test_a_met_without_download_gets_no_fetch_job(pending, commands, tmp_path):
+    project = _hourly_project(tmp_path, 2)
+    pending.extend(project.receptors["receptor"])
+    commands.answers["sbatch"] = [_out("42\n")]
+
+    runner.submit(project, execution=ExecutionConfig(backend="slurm", time="01:00:00"))
+
+    [array] = commands.ran
+    assert Path(array[-1]).name == "job.sh"
+    assert not (Path(array[-1]).parent / "fetch.sh").exists()
+
+
+def test_fetch_false_sends_no_fetch_job(pending, commands, tmp_path):
+    project = _downloading_project(tmp_path, 2)
+    pending.extend(project.receptors["receptor"])
+    commands.answers["sbatch"] = [_out("42\n")]
+
+    runner.submit(
+        project,
+        execution=ExecutionConfig(backend="slurm", time="01:00:00", fetch=False),
+    )
+
+    [array] = commands.ran
+    assert Path(array[-1]).name == "job.sh"
+
+
+def test_no_fetch_job_when_the_particles_are_there(
+    pending, commands, tmp_path, monkeypatch
+):
+    """Footprints left to make need no met."""
+    import pandas as pd
+
+    project = _downloading_project(tmp_path, 2)
+    pending.extend(project.receptors["receptor"])
+    monkeypatch.setattr(
+        Project,
+        "_unrun",
+        lambda self, sel=None, **_: pd.DataFrame(columns=["receptor"]),
+    )
+    commands.answers["sbatch"] = [_out("42\n")]
+
+    runner.submit(project, execution=ExecutionConfig(backend="slurm", time="01:00:00"))
+
+    assert len(commands.ran) == 1
+
+
+def test_a_local_run_on_several_cpus_fetches_before_the_workers_start(
+    tmp_path, monkeypatch
+):
+    import pandas as pd
+
+    from stilt.execution import worker
+
+    project = _downloading_project(tmp_path, 3)
+    steps: list[str] = []
+
+    def fetch(project, unrun):
+        steps.append(f"fetch {len(unrun)}")
+        return pd.DataFrame({"met": [], "file": [], "message": []}, dtype="string")
+
+    monkeypatch.setattr(runner, "fetch_project", fetch)
+    monkeypatch.setattr(
+        worker, "run_receptors", lambda project, ids, **_: steps.append("run")
+    )
+    monkeypatch.setattr(
+        runner, "_status", lambda project, ids: pd.DataFrame({"state": ["pending"]})
+    )
+
+    runner.run(project, execution=ExecutionConfig(cpus=2))
+    assert steps == ["fetch 3", "run"]
+
+    steps.clear()
+    runner.run(project, execution=ExecutionConfig(cpus=1))
+    runner.run(project, execution=ExecutionConfig(cpus=2, fetch=False))
+    assert steps == ["run", "run"]
+
+
+def test_a_local_fetch_that_cannot_reach_the_archive_lets_the_run_go(
+    tmp_path, monkeypatch, caplog
+):
+    import pandas as pd
+
+    from stilt.execution import worker
+
+    project = _downloading_project(tmp_path, 1)
+    ran: list[str] = []
+
+    def fetch(project, unrun):
+        raise ConnectionError("archive busy")
+
+    monkeypatch.setattr(runner, "fetch_project", fetch)
+    monkeypatch.setattr(
+        worker, "run_receptors", lambda project, ids, **_: ran.append("run")
+    )
+    monkeypatch.setattr(
+        runner, "_status", lambda project, ids: pd.DataFrame({"state": ["pending"]})
+    )
+
+    with caplog.at_level("WARNING", logger="stilt.execution.runner"):
+        runner.run(project, execution=ExecutionConfig(cpus=2))
+
+    assert ran == ["run"]
+    assert "archive busy" in caplog.text
+
+
+def test_the_fetch_job_takes_the_arrays_resources_from_its_slurm_options(
+    pending, commands, tmp_path
+):
+    """A ``slurm`` option replaces the named setting for the fetch job, as for the array."""
+    project = _downloading_project(tmp_path, 1)
+    pending.extend(project.receptors["receptor"])
+    execution = ExecutionConfig(
+        backend="slurm",
+        time="01:00:00",
+        slurm={
+            "account": "lin-np",
+            "partition": "lin-np",
+            "time": "24:00:00",
+            "constraint": "skl",
+        },
+    )
+    commands.answers["sbatch"] = [_out("41\n"), _out("42\n")]
+
+    runner.submit(project, execution=execution)
+
+    [fetch, array] = commands.ran
+    options = _sbatch(Path(fetch[-1]).read_text())
+    assert options["account"] == "lin-np"
+    assert options["partition"] == "lin-np"
+    assert options["time"] == "24:00:00"  # the array's, as job.sh has it
+    assert "constraint" not in options
+    assert _sbatch(Path(array[-1]).read_text())["time"] == "24:00:00"
+
+
+def test_a_no_skip_submission_fetches_for_every_run_it_makes_again(
+    pending, commands, tmp_path, monkeypatch
+):
+    import pandas as pd
+
+    project = _downloading_project(tmp_path, 2)
+    pending.extend(project.receptors["receptor"])
+    # Every particles file exists: only a rerun needs the met.
+    real_unrun = Project._unrun
+
+    def unrun(self, sel=None, *, skip_existing=True):
+        if skip_existing:
+            return pd.DataFrame(columns=["receptor"])
+        return real_unrun(self, sel, skip_existing=False)
+
+    monkeypatch.setattr(Project, "_unrun", unrun)
+    commands.answers["sbatch"] = [_out("41\n"), _out("42\n")]
+
+    runner.submit(
+        project,
+        execution=ExecutionConfig(backend="slurm", time="01:00:00"),
+        skip_existing=False,
+    )
+
+    [fetch, array] = commands.ran
+    assert Path(fetch[-1]).name == "fetch.sh"
+    assert Path(fetch[-1]).read_text().splitlines()[-1].endswith(" --no-skip")
+
+
+def test_a_refused_array_cancels_its_fetch_job(pending, commands, tmp_path):
+    project = _downloading_project(tmp_path, 1)
+    pending.extend(project.receptors["receptor"])
+    execution = ExecutionConfig(
+        backend="slurm", time="01:00:00", slurm={"clusters": "kingspeak,notchpeak"}
+    )
+    commands.answers["sbatch"] = [
+        _out("41;notchpeak\n"),
+        _out(returncode=1, stderr="invalid partition specified"),
+    ]
+
+    with pytest.raises(RuntimeError, match="invalid partition"):
+        runner.submit(project, execution=execution)
+
+    assert commands.ran[-1] == ["scancel", "-M", "notchpeak", "41"]
+
+
+def test_a_local_fetch_raises_an_error_a_retry_would_repeat(tmp_path, monkeypatch):
+    from stilt.execution import worker
+
+    project = _downloading_project(tmp_path, 1)
+    ran: list[str] = []
+
+    def fetch(project, unrun):
+        raise PermissionError(13, "Permission denied", str(tmp_path / "met"))
+
+    monkeypatch.setattr(runner, "fetch_project", fetch)
+    monkeypatch.setattr(
+        worker, "run_receptors", lambda project, ids, **_: ran.append("run")
+    )
+
+    with pytest.raises(PermissionError):
+        runner.run(project, execution=ExecutionConfig(cpus=2))
+    assert ran == []
+
+
+def test_a_local_fetch_lets_the_run_go_after_a_dropped_ftp_connection(
+    tmp_path, monkeypatch, caplog
+):
+    """A dropped FTP connection is an EOFError from ftplib, not an OSError."""
+    import ftplib
+
+    import pandas as pd
+
+    from stilt.execution import worker
+
+    project = _downloading_project(tmp_path, 1)
+    ran: list[str] = []
+
+    def fetch(project, unrun):
+        ftp = ftplib.FTP()
+        ftp.file = SimpleNamespace(readline=lambda size: "")  # a closed connection
+        ftp.getline()  # raises EOFError from inside ftplib
+
+    monkeypatch.setattr(runner, "fetch_project", fetch)
+    monkeypatch.setattr(
+        worker, "run_receptors", lambda project, ids, **_: ran.append("run")
+    )
+    monkeypatch.setattr(
+        runner, "_status", lambda project, ids: pd.DataFrame({"state": ["pending"]})
+    )
+
+    with caplog.at_level("WARNING", logger="stilt.execution.runner"):
+        runner.run(project, execution=ExecutionConfig(cpus=2))
+
+    assert ran == ["run"]
+    assert "The fetch stopped" in caplog.text

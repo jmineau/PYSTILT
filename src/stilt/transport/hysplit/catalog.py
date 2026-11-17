@@ -60,10 +60,14 @@ def is_stray(name: str) -> bool:
     A header cannot tell: a crop being written can read as whole time steps
     until it is renamed into place. Stray names are lock files, backup copies
     (``name~<timestamp>~``, ``name.~1~``, and ``name~`` all end in ``~``), a
-    download cut short (``.partial``), and a copy set aside as damaged
-    (``.bad``).
+    download cut short (``.partial``), a copy set aside as damaged
+    (``.bad``), and a crop PYSTILT is still writing (``.name.<id>.tmp``).
     """
-    return ".lock" in name or name.endswith(("~", ".partial", ".bad"))
+    return (
+        ".lock" in name
+        or name.endswith(("~", ".partial", ".bad"))
+        or (name.startswith(".") and name.endswith(".tmp"))
+    )
 
 
 def walk(directory: Path) -> Iterator[tuple[str, list[str]]]:
@@ -177,6 +181,8 @@ class Cover:
     ----------
     files : list of Path
         The files, in time order, with symlinks resolved.
+    firsts, lasts : list of pandas.Timestamp
+        The first and last time each of :attr:`files` holds.
     gaps : list of tuple of pandas.Timestamp
         The stretches of the time asked for that no file holds.
     clash : str or None
@@ -188,6 +194,8 @@ class Cover:
     """
 
     files: list[Path] = field(default_factory=list)
+    firsts: list[pd.Timestamp] = field(default_factory=list)
+    lasts: list[pd.Timestamp] = field(default_factory=list)
     gaps: list[tuple[pd.Timestamp, pd.Timestamp]] = field(default_factory=list)
     clash: str | None = None
     single: list[Path] = field(default_factory=list)
@@ -354,6 +362,8 @@ class Catalog:
             kept = _longest(chosen)
         return Cover(
             files=[Path(row.resolved) for row in kept],
+            firsts=[row.first for row in kept],
+            lasts=[row.last for row in kept],
             gaps=_gaps(kept, earlier, later),
             clash=_clash(chosen),
             single=[Path(row.resolved) for row in kept if row.n_steps == 1],

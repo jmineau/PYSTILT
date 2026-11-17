@@ -7,7 +7,7 @@ tests cannot reliably target:
   test_single_particle_gaussian     One particle; verify Gaussian rasterization.
   test_all_outside_domain           All particles off-grid → zero footprint.
   test_boundary_particles           Particles at exact grid-edge fencepost.
-  test_time_integrate               time_integrate=True collapses time axis.
+  test_time_integrate               STILT-R's summed map is one layer as long as the run.
   test_smooth_factor_scaling        smooth_factor=0.5 produces narrower Gaussian.
   test_hnf_dilution_active          plume < mixing-depth → foot corrected.
   test_hnf_dilution_inactive        plume >> mixing-depth → foot unchanged.
@@ -47,7 +47,7 @@ from stilt.footprint.gridding import (
     _project_particles_to_crs,
 )
 from stilt.particles import correct_near_field
-from stilt.receptors import PointReceptor
+from stilt.receptors import MultiPointReceptor, PointReceptor
 from stilt.spatial import Grid, _east_edge, _grid_cell_starts
 
 from ..fixtures.particles import point_at
@@ -63,9 +63,6 @@ pytestmark = [pytest.mark.r_only]
 _R_HELPERS = Path(__file__).parents[1] / "fixtures" / "r_helpers"
 
 _RECEPTOR_TIME = dt.datetime(2015, 12, 10, 0, 0)
-_RECEPTOR = PointReceptor(
-    time=_RECEPTOR_TIME, longitude=-112.0, latitude=40.5, altitude=5.0
-)
 
 _GRID = Grid(
     xmin=-113.0,
@@ -220,22 +217,72 @@ def _r_footprint_stages(
     }
 
 
+def _released_from(particles: pd.DataFrame) -> PointReceptor | MultiPointReceptor:
+    """
+    Return a receptor released from *particles*' first positions.
+
+    STILT-R's ``calc_footprint`` takes no receptor; PYSTILT's checks that the
+    particles start near one of its release points. The hand-built tables
+    here start particles anywhere on the grid, so each first position is a
+    release point.
+    """
+    first = (
+        particles.assign(_age=particles["time"].abs())
+        .sort_values("_age", kind="stable")
+        .drop_duplicates(subset="indx")
+    )
+    points = (
+        pd.DataFrame(
+            {
+                "lon": ((first["long"] + 180.0) % 360.0) - 180.0,
+                "lat": first["lati"],
+            }
+        )
+        .drop_duplicates()
+        .to_numpy()
+    )
+    if len(points) == 1:
+        lon, lat = points[0]
+        return PointReceptor(
+            time=_RECEPTOR_TIME, longitude=lon, latitude=lat, altitude=5.0
+        )
+    return MultiPointReceptor(
+        time=_RECEPTOR_TIME,
+        longitudes=points[:, 0].tolist(),
+        latitudes=points[:, 1].tolist(),
+        altitudes=[5.0] * len(points),
+    )
+
+
 def _py_footprint(
     tmp_path: Path,
     particles: pd.DataFrame,
-    receptor: PointReceptor = _RECEPTOR,
+    receptor: PointReceptor | MultiPointReceptor | None = None,
     grid: Grid = _GRID,
     smooth_factor: float = 1.0,
     time_integrate: bool = False,
 ) -> xr.Dataset:
-    """Call PYSTILT's calc_footprint on *particles*, return xr.Dataset."""
+    """
+    Call PYSTILT's calc_footprint on *particles*, return xr.Dataset.
+
+    The receptor, unless given, is released from the particles' first
+    positions (``_released_from``). For STILT-R's *time_integrate*, PYSTILT makes one
+    layer as long as the run: ``tres`` the whole hours that hold the oldest
+    particle row.
+    """
     tmp_path.mkdir(parents=True, exist_ok=True)
+    if receptor is None:
+        receptor = _released_from(particles)
+    tres = "1h"
+    if time_integrate:
+        tres = f"{max(1, int(np.ceil(np.abs(particles['time']).max() / 60)))}h"
     foot = calc_footprint(
         _as_py(particles),
         receptor,
         grid,
         smooth_factor=smooth_factor,
-        time_integrate=time_integrate,
+        tres=tres,
+        hnf_plume=False,  # STILT-R's calc_footprint grids foot as given
         name="test",
     )
     nc_path = tmp_path / "py_foot.nc"
@@ -250,7 +297,6 @@ def _py_footprint_stages(
     particles: pd.DataFrame,
     grid: Grid = _GRID,
     smooth_factor: float = 1.0,
-    time_integrate: bool = False,
 ) -> dict[str, pd.DataFrame]:
     """Return Python-side calc_footprint intermediate tables matching the R helper."""
     projection = grid.crs
@@ -322,7 +368,7 @@ def _py_footprint_stages(
         ymax=ymax,
         xres=xres,
         yres=yres,
-        time_integrate=time_integrate,
+        layer_minutes=60,
         longlat=is_longlat,
     )
 
@@ -800,10 +846,11 @@ def test_utm_smoothing_intentionally_differs_from_r(rscript, r_stilt_dir, tmp_pa
 
 def test_time_integrate(rscript, r_stilt_dir, tmp_path):
     """
-    Particles at three distinct time steps with time_integrate=True.
+    Particles at three distinct time steps, summed over time.
 
-    The output footprint must have a single time layer whose values equal
-    the sum of the per-time-step footprints.  Both tools should agree.
+    STILT-R's ``time_integrate=TRUE`` gives one layer, the sum of the
+    per-time-step footprints. PYSTILT's one layer as long as the run must
+    hold the same values.
     """
     rng = np.random.default_rng(0)
     n_per_step = 20
@@ -949,6 +996,74 @@ def test_hnf_dilution_inactive(rscript, r_stilt_dir, tmp_path):
         rtol=1e-7,
         err_msg="[hnf_inactive] foot disagrees between PYSTILT and STILT-R",
     )
+
+
+def _one_track(times: list[float]) -> pd.DataFrame:
+    """One particle with a row per time, in the order given, and the HNF columns."""
+    n = len(times)
+    p = _particles(
+        n=n,
+        times=times,
+        mlht=[2000.0] * n,
+        dens=[1.2] * n,
+        samt=[10.0] * n,
+        sigw=[0.05] * n,
+        tlgr=[50.0] * n,
+    )
+    p["indx"] = 1.0
+    return p
+
+
+def test_hnf_dilution_forward_run(rscript, r_stilt_dir, tmp_path):
+    """
+    HNF correction on a forward run: the plume grows outward from the release.
+
+    One particle with rows 3 h, 0.5 h and 0.05 h after release, listed out of
+    order. Both tools accumulate the plume by particle age, so the row nearest
+    the release has the thinnest plume and the largest corrected foot.
+    """
+    r_zagl = 5.0
+    p = _one_track([0.5, 3.0, 0.05])
+
+    py_result = correct_near_field(_as_py(p), point_at(r_zagl), _VEGHT)
+    r_result = _r_plume_dilution(tmp_path, rscript, r_stilt_dir, p, r_zagl=r_zagl)
+
+    # STILT-R returns the rows sorted by particle age, PYSTILT in the order given
+    py_foot = pd.Series(py_result["foot"].values, index=p["time"].values).sort_index()
+    r_foot = pd.Series(r_result["foot"].values, index=r_result["time"].values)
+    np.testing.assert_allclose(
+        py_foot.values,
+        r_foot.sort_index().values,
+        rtol=1e-7,
+        err_msg="[hnf_forward] corrected foot disagrees between PYSTILT and STILT-R",
+    )
+    assert py_foot.is_monotonic_decreasing, "foot should fall as the plume grows"
+
+
+def test_hnf_dilution_veght_in_meters(rscript, r_stilt_dir, tmp_path):
+    """
+    HNF correction with veght above 1: a height in meters above ground.
+
+    With veght = 100 the correction applies while the plume is below 100 m, so
+    the 3 h row, whose plume is deeper, keeps its foot. Read as a fraction of
+    the mixed-layer height (100 * 2000 m) it would be corrected too.
+    """
+    r_zagl = 5.0
+    p = _one_track([-0.05, -0.5, -3.0])
+
+    py_result = correct_near_field(_as_py(p), point_at(r_zagl), 100.0)
+    r_result = _r_plume_dilution(
+        tmp_path, rscript, r_stilt_dir, p, r_zagl=r_zagl, veght=100.0
+    )
+
+    np.testing.assert_allclose(
+        py_result["foot"].values,
+        r_result["foot"].values,
+        rtol=1e-7,
+        err_msg="[veght_meters] corrected foot disagrees between PYSTILT and STILT-R",
+    )
+    corrected = ~np.isclose(py_result["foot"].values, p["foot"].values, rtol=1e-3)
+    assert corrected.tolist() == [True, True, False]
 
 
 def test_early_time_multi_timestep(rscript, r_stilt_dir, tmp_path):
@@ -1438,6 +1553,26 @@ def test_latitude_kernel_scaling(rscript, r_stilt_dir, tmp_path):
         py_ds = _py_footprint(tmp_path / f"py_{tag}", p, grid=grid)
         r_ds = _r_footprint(tmp_path / f"r_{tag}", rscript, r_stilt_dir, p, grid=grid)
         _assert_footprint_close(py_ds, r_ds, label=f"lat_{tag}")
+
+
+@pytest.mark.parametrize(("xres", "yres"), [(0.02, 0.01), (0.01, 0.02)])
+def test_non_square_cells_match_r(rscript, r_stilt_dir, tmp_path, xres, yres):
+    """
+    Smoothing on cells with ``xres`` different from ``yres``.
+
+    The kernel has a different number of cells along longitude and latitude.
+    STILT-R's ``permute.f90`` read it as if the two were equal until
+    uataq/stilt#148, which gave a footprint total off by several percent or a
+    read past the end of the kernel. Both orders of the two resolutions are
+    checked against the pinned commit, which has the fix.
+    """
+    grid = Grid(xmin=-112.5, xmax=-111.5, ymin=40.0, ymax=41.0, xres=xres, yres=yres)
+    p = _day_old_particles()
+
+    py = _py_footprint(tmp_path / "py", p, grid=grid)
+    r = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, p, grid=grid)
+
+    _assert_footprint_close(py, r, label=f"xres{xres}_yres{yres}")
 
 
 def test_global_grid_matches_r(rscript, r_stilt_dir, tmp_path):

@@ -47,11 +47,20 @@ Options
    and ``n_workers: 200``, each task runs 50 receptors one after another.
    Each receptor runs once per variant, so set ``time`` long enough for one
    task's share. If fewer receptors are left than ``n_workers``, PYSTILT
-   submits one task per receptor.
+   submits one task per receptor. We size the tasks to run an hour or two,
+   because each task first loads Python and the project, and a shorter
+   task spends more of its time on that.
 
 ``cpus``
    CPUs per array task (default 1). With more than one, each task runs that
    many receptors at the same time. A local run uses ``cpus`` the same way.
+   Each worker is one process that uses one CPU, so the job script sets
+   ``OMP_NUM_THREADS=1`` for it. Without that, NumPy's BLAS starts a thread
+   pool the size of the node in every worker (64 threads on a 104-core node)
+   and the threads sit idle. A task with more CPUs than workers
+   (``slurm: {cpus_per_task: 8}`` with ``cpus: 2``) gives each worker its
+   share, 4 here. To choose another value, export ``OMP_NUM_THREADS`` in
+   ``setup``.
 
 ``time``
    The time limit of each array task, written to ``--time`` as you give
@@ -71,7 +80,8 @@ Options
 
 ``setup``
    Shell commands to run at the start of each task, before PYSTILT. Use it
-   to load modules or set environment variables.
+   to load modules or set environment variables. They run after the script
+   exports ``OMP_NUM_THREADS`` (see ``cpus``), so they can change it.
 
 ``slurm``
    Any other ``sbatch`` option, by name:
@@ -91,8 +101,67 @@ Options
    has several. PYSTILT follows the job there. Give ``squeue`` and
    ``scancel`` the cluster too: ``squeue -M kingspeak -j <job_id>``.
 
+``fetch``
+   The Slurm resources of the job that gets the met files before the
+   array, or ``false`` for no such job (below).
+
 A setting PYSTILT does not know is an error, so a misspelled ``partition``
 is caught before anything is submitted.
+
+.. _slurm-fetch:
+
+Met files that download
+-----------------------
+
+When a met has ``download`` set, ``stilt submit`` first submits a job that
+gets the met files, and the array waits for it. Otherwise every array task
+would download the files its own receptors need, and tasks whose receptors
+share a day would download the same files at the same time. The fetch job
+is one task that runs ``stilt fetch`` over the receptors the array runs, so
+each file is downloaded once. ``stilt submit`` prints both job IDs:
+
+.. code-block:: text
+
+   Submitted fetch job: 7712; the job array waits for it to end. Log in /path/my_project/_slurm/20261115_103000_ab12cd/fetch.log
+   Submitted job: 7713 (200 tasks); logs in /path/my_project/_slurm/20261115_103000_ab12cd
+   Submitted job: 7713
+
+The fetch job uses the array's ``partition``, ``account``, ``qos``, ``time``
+and ``mem`` unless ``fetch`` gives its own, whether you set them at the top
+of ``execution`` or under ``slurm``. Of the other ``slurm`` options it takes
+only ``clusters``, since a data-transfer partition may not have the nodes or
+features (``exclude``, ``constraint``) the array asks for. If your cluster has a data-transfer partition, we
+recommend sending the fetch job there, because compute nodes often
+download slowly. Give it a ``time`` long enough for every download.
+
+.. code-block:: yaml
+
+   execution:
+     backend: slurm
+     n_workers: 200
+     account: my-account
+     partition: my-partition
+     time: "02:00:00"
+     fetch:
+       partition: my-dtn-partition
+       account: my-dtn-account
+       time: "12:00:00"
+
+The array starts when the fetch job ends, however it ended
+(``--dependency=afterany``). If the archive lacked some files, the runs
+that need them fail with the met failure they would get anyway, and the
+other runs go ahead. If the fetch job was stopped, ran out of time, or could
+not reach the archive, it keeps the files it got and each task downloads
+what is still missing. If ``sbatch`` refuses the array, PYSTILT cancels the
+fetch job. The fetch job's ID is also in ``fetch.id`` in the submission
+folder; to stop both jobs, ``scancel`` both.
+
+A met without ``download`` gets no fetch job: its files are already in its
+``directory``, and ``stilt check`` finds any that are missing. Neither does
+a submission whose particles all exist, since making footprints needs no
+met, unless it runs with ``--no-skip``, which runs the transport model
+again: then the fetch job gets the met of every run. ``fetch: false`` turns the fetch job off, for example when something
+else fills the met directory.
 
 Preempted and timed-out tasks
 -----------------------------
@@ -156,6 +225,9 @@ earlier one's logs:
        receptors.parquet # their rows of receptors.csv, already checked
        execution.yaml    # the execution settings of this submission
        <task>.log        # each task's progress lines and errors
+       fetch.sh          # the fetch job's script, when a met downloads
+       fetch.log         # the fetch job's log: the files it got
+       fetch.id          # the fetch job's Slurm ID
 
 ``job.sh`` is a plain ``sbatch`` script. Task ``i`` of ``N`` runs
 

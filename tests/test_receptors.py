@@ -324,6 +324,47 @@ def test_receptor_time_aware_input_normalizes_to_naive_utc():
     assert r.time.tzinfo is None
 
 
+@pytest.mark.parametrize("text", ["05/07/2023 18:00", "07/15/2023 18:00", "now"])
+def test_receptor_time_text_that_is_not_iso_or_compact_is_refused(text):
+    """05/07/2023 was read as 7 May, and refused only when the day was above 12 (#440)."""
+    with pytest.raises(ValueError, match="is not ISO 8601"):
+        PointReceptor(time=text, longitude=-111.85, latitude=40.77, altitude=5.0)
+
+
+def test_read_receptors_refuses_a_day_first_time_and_names_the_row():
+    text = "time,lon,lat,z\n2023-07-15 18:00,-111.8,40.7,10\n05/07/2023 18:00,-111.8,40.7,10\n"
+    with pytest.raises(ValueError, match="row 1: time is '05/07/2023 18:00'"):
+        read_receptors(io.StringIO(text))
+
+
+def test_read_receptors_reads_iso_and_compact_times_with_or_without_an_offset():
+    text = (
+        "time,lon,lat,z\n"
+        "2023-07-15 18:00,-111.8,40.7,10\n"
+        "202307151900,-111.8,40.7,10\n"
+        "2023-07-15T14:00:00-06:00,-111.8,40.7,10\n"
+        "2023-07-15T21:00Z,-111.8,40.7,10\n"
+    )
+    times = [r.time for r in read_receptors(io.StringIO(text))]
+    assert times == [dt.datetime(2023, 7, 15, h) for h in (18, 19, 20, 21)]
+
+
+def test_read_receptors_refuses_an_empty_time():
+    with pytest.raises(ValueError, match="row 0: time is empty"):
+        read_receptors(io.StringIO("time,lon,lat,z\n,-111.8,40.7,10\n"))
+
+
+def test_receptor_time_with_nanoseconds_is_cut_to_microseconds():
+    # satellite readers give nanosecond times (OCO-2: float seconds since 1970)
+    r = PointReceptor(
+        time=pd.Timestamp("2026-02-08T19:37:37.282009602"),
+        longitude=-94.91,
+        latitude=29.22,
+        altitude=5.0,
+    )
+    assert r.time == dt.datetime(2026, 2, 8, 19, 37, 37, 282009)
+
+
 def test_receptor_equality():
     r1 = PointReceptor(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
@@ -418,6 +459,53 @@ def test_latitude_out_of_range_raises():
         PointReceptor(
             time="202301011200", longitude=-111.85, latitude=-95.0, altitude=5.0
         )
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("longitude", np.nan, "longitude must be a number"),
+        ("latitude", np.nan, "latitude must be a number"),
+        ("longitude", np.inf, "longitude must be a number"),
+        ("altitude", np.nan, "altitude must be a finite number"),
+        ("altitude", np.inf, "altitude must be a finite number"),
+    ],
+)
+def test_a_point_with_a_nan_or_infinite_coordinate_is_refused(field, value, message):
+    """A NaN passed the range checks and failed later at ``.id``, naming no field (#440)."""
+    point = {"longitude": -111.85, "latitude": 40.77, "altitude": 5.0}
+    with pytest.raises(ValueError, match=message):
+        PointReceptor(time="202301011200", **{**point, field: value})
+
+
+@pytest.mark.parametrize(("bottom", "top"), [(np.nan, 100.0), (0.0, np.inf)])
+def test_a_column_with_a_nan_or_infinite_height_is_refused(bottom, top):
+    with pytest.raises(ValueError, match="altitude must be a finite number"):
+        ColumnReceptor(
+            time="202301011200",
+            longitude=-111.85,
+            latitude=40.77,
+            bottom=bottom,
+            top=top,
+        )
+
+
+def test_a_multipoint_receptor_with_a_nan_point_is_refused():
+    with pytest.raises(ValueError, match="longitude must be a number"):
+        MultiPointReceptor(
+            time="202301011200",
+            longitudes=[-111.0, np.nan],
+            latitudes=[40.0, 40.5],
+            altitudes=[10.0, 20.0],
+        )
+
+
+def test_a_receptors_file_with_an_empty_longitude_names_the_row():
+    text = (
+        "time,lon,lat,z\n2023-07-15 18:00,-111.8,40.7,10\n2023-07-15 18:00,,40.7,10\n"
+    )
+    with pytest.raises(ValueError, match="row 1: longitude must be a number"):
+        read_receptors(io.StringIO(text))
 
 
 def test_negative_agl_altitude_raises():
@@ -637,7 +725,7 @@ def test_read_receptors_zmsl_infers_msl(tmp_path):
 
 
 def test_multipoint_rejects_stacked_heights_at_one_location():
-    # HYSPLIT chains same-lat/lon starting locations into one vertical line
+    # HYSPLIT chains same-lat/lon release locations into one vertical line
     # source and releases only between the last two heights.
     with pytest.raises(ValueError, match="distinct horizontal"):
         MultiPointReceptor(
@@ -1110,7 +1198,7 @@ def test_receptor_rows_checks_every_row_without_building(tmp_path):
         }
         return pd.DataFrame({**base, **columns})
 
-    with pytest.raises(ValueError, match="row 0: latitude must be within"):
+    with pytest.raises(ValueError, match="row 0: latitude must be a number within"):
         receptor_rows(table(latitude=[95.0]))
     with pytest.raises(ValueError, match="AGL altitudes must be >= 0"):
         receptor_rows(table(altitude=[-1.0]))
@@ -1258,3 +1346,48 @@ def test_multipoint_ids_are_the_same_as_first_written():
         )
         assert location == _multipoint_location_as_first_written(*args)
         assert location == _multipoint_location(*args)
+
+
+@pytest.mark.parametrize("name", ["alt_ref", "height_reference", "ref"])
+def test_a_misnamed_altitude_ref_column_is_refused(name):
+    """Kept as a label, it left 1500 m above sea level as 1500 m above ground (#440)."""
+    text = f"time,lon,lat,z,{name}\n2023-07-15 18:00,-111.8,40.7,1500,MSL\n"
+    with pytest.raises(ValueError, match=f"'{name}'.*Did you mean 'altitude_ref'"):
+        read_receptors(io.StringIO(text))
+
+
+def test_a_label_column_that_is_not_a_reference_is_kept():
+    text = "time,lon,lat,z,site,altitude_ref,note\n2023-07-15 18:00,-111.8,40.7,1500,WBB,msl,agl\n"
+    (receptor,) = read_receptors(io.StringIO(text))
+    assert receptor.altitude_ref == "msl"
+    assert receptor.attrs == {"site": "WBB", "note": "agl"}
+
+
+def test_a_table_of_numeric_times_is_refused():
+    from stilt.receptors.table import receptor_rows
+
+    frame = pd.DataFrame(
+        {
+            "time": [202307151800],
+            "longitude": [-111.8],
+            "latitude": [40.7],
+            "altitude": [10.0],
+        }
+    )
+    with pytest.raises(ValueError, match="row 0: time must be ISO 8601.*the number"):
+        receptor_rows(frame)
+
+
+def test_a_table_of_datetimes_with_a_missing_one_names_the_row():
+    from stilt.receptors.table import receptor_rows
+
+    frame = pd.DataFrame(
+        {
+            "time": pd.to_datetime(["2023-07-15 18:00", None]),
+            "longitude": [-111.8, -111.7],
+            "latitude": [40.7, 40.7],
+            "altitude": [10.0, 10.0],
+        }
+    )
+    with pytest.raises(ValueError, match="row 1: time is empty"):
+        receptor_rows(frame)

@@ -17,7 +17,9 @@ degrees. Run the ``fidelity`` tests before merging any change to this module.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Sequence
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, cast
 
@@ -28,8 +30,9 @@ import xarray as xr
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.particles import FOOTPRINT_COLUMNS, check_particles
+from stilt.particles.table import _near_field
 from stilt.receptors import Receptor
-from stilt.spatial import Grid, _east_edge, _grid_cell_starts, is_longlat
+from stilt.spatial import Grid, _east_edge, _grid_cell_starts, haversine_km, is_longlat
 from stilt.transforms import apply_transforms
 
 from .io import _footprint_array
@@ -54,6 +57,114 @@ def _make_gauss_kernel(rs: tuple[float, float], sigma: float) -> np.ndarray:
 #: passes ``calc_footprint`` only these (``footprint_varsiwant``), so the rows the
 #: early-time interpolation inserts have no missing values and are kept.
 _FOOTPRINT_INPUTS = ("particle", "age", "lon", "lat", "foot")
+
+
+#: How far a particle's first row may be from its release point, in km, before
+#: the particles are taken to come from another receptor: a margin, plus
+#: 100 m/s (6 km a minute, jet-stream speed) for the minutes to that row.
+_RELEASE_MARGIN_KM = 10.0
+_MAX_KM_PER_MINUTE = 6.0
+
+
+def _check_particles_for_footprint(particles: pd.DataFrame, receptor: Receptor) -> None:
+    """
+    Refuse a particle table that would give a wrong footprint, and warn about rows left out.
+
+    Refused: an infinite ``foot``; two rows of one particle at one ``age``
+    (a table concatenated twice, or several receptors' particles); a
+    ``time`` column that does not equal the receptor time plus ``age``
+    (another receptor's time, or ``age`` in hours or seconds); and first
+    positions farther from every release point than the particles could
+    have gone by then (another receptor's place). Rows with no ``particle``,
+    ``age``, ``lon``, ``lat`` or ``foot`` are left out of the footprint, with a
+    warning that counts them.
+    """
+    p = particles.loc[:, list(_FOOTPRINT_INPUTS)]
+    n_inf = int(np.isinf(p["foot"].to_numpy(dtype=float)).sum())
+    if n_inf:
+        raise ValueError(
+            f"foot is infinite on {n_inf:,} of {len(p):,} particle rows; a "
+            "footprint needs a finite foot on every row."
+        )
+    missing = p.isna()
+    n_missing = int(missing.any(axis=1).sum())
+    if n_missing:
+        columns = ", ".join(c for c in _FOOTPRINT_INPUTS if missing[c].any())
+        warnings.warn(
+            f"{receptor.id}: {n_missing:,} of {len(p):,} particle rows have no "
+            f"{columns} and are left out of the footprint.",
+            stacklevel=3,
+        )
+    p = p.dropna()
+    if p.empty:
+        return
+    repeated = p.duplicated(["particle", "age"])
+    if repeated.any():
+        first = p[repeated].iloc[0]
+        raise ValueError(
+            f"{int(repeated.sum()):,} particle rows repeat a particle at an age it "
+            f"already has, the first particle {first['particle']:g} at age "
+            f"{first['age']:g}. A particle has one row per time step: give one "
+            "receptor's particles, from one run, once."
+        )
+    _check_release_time(particles, receptor)
+    _check_release_point(p, receptor)
+
+
+def _check_release_time(particles: pd.DataFrame, receptor: Receptor) -> None:
+    """Refuse particles whose ``time`` minus ``age`` is not the receptor time; a table without ``time`` passes."""
+    if "time" not in particles.columns or not pd.api.types.is_datetime64_any_dtype(
+        particles["time"]
+    ):
+        return
+    time = particles["time"]
+    if time.dt.tz is not None:
+        time = time.dt.tz_convert("UTC").dt.tz_localize(None)
+    released = (time - pd.to_timedelta(particles["age"], unit="min")).dropna()
+    if released.empty:
+        return
+    receptor_time = pd.Timestamp(receptor.time)
+    off = (released - receptor_time).abs() >= pd.Timedelta(minutes=1)
+    if not off.any():
+        return
+    if released.max() - released.min() < pd.Timedelta(minutes=1):
+        raise ValueError(
+            f"These particles were released at {released.iloc[0]:%Y-%m-%d %H:%M} "
+            f"(their time minus age), not at the receptor's time, "
+            f"{receptor_time:%Y-%m-%d %H:%M}. Give the receptor they were "
+            "released from."
+        )
+    raise ValueError(
+        f"age does not agree with time on {int(off.sum()):,} of {len(off):,} "
+        "particle rows: time is the receptor time plus age, and age is in "
+        "minutes since release. Is age in hours or seconds?"
+    )
+
+
+def _check_release_point(p: pd.DataFrame, receptor: Receptor) -> None:
+    """Refuse particles whose first positions are farther from every release point than they could have gone."""
+    first = (
+        p.assign(_age=p["age"].abs())
+        .sort_values("_age", kind="stable")
+        .drop_duplicates(subset="particle")
+    )
+    points = np.asarray(receptor.coords(), dtype=float)
+    distance = haversine_km(
+        first["lon"].to_numpy(dtype=float)[:, None],
+        first["lat"].to_numpy(dtype=float)[:, None],
+        points[None, :, 1],
+        points[None, :, 0],
+    ).min(axis=1)
+    median = float(np.median(distance))
+    minutes = float(np.median(first["_age"]))
+    if median > _RELEASE_MARGIN_KM + _MAX_KM_PER_MINUTE * minutes:
+        where = "release point" if len(points) == 1 else "nearest release point"
+        raise ValueError(
+            f"These particles' first positions, {minutes:g} minutes from release, "
+            f"are a median {median:,.0f} km from the receptor's {where}, farther "
+            "than particles travel in that time. Give the receptor they were "
+            "released from."
+        )
 
 
 def _r_seq(start: float, stop: float, by: float) -> np.ndarray:
@@ -480,16 +591,16 @@ def _filter_and_rasterize_particles(
     ymax: float,
     xres: float,
     yres: float,
-    time_integrate: bool,
+    layer_minutes: int,
     longlat: bool = False,
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """
     Sum ``foot`` by padded grid cell and time step for particles on the padded grid.
 
     Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,
-    foot, layer``, and ``layers`` holds the sorted hour indices, or ``[0]``
-    when ``time_integrate`` is set. Both are empty when no particle is on
-    the padded grid. On a *longlat* grid a particle a whole turn from the
+    foot, layer``, and ``layers`` holds the sorted layer indices, each
+    *layer_minutes* minutes long from the receptor time. Both are empty
+    when no particle is on the padded grid. On a *longlat* grid a particle a whole turn from the
     padded grid is on it (``_onto_padded_axis``).
     """
     if longlat:
@@ -534,9 +645,8 @@ def _filter_and_rasterize_particles(
         filtered.groupby(["loi", "lai", "age", "rtime"], as_index=False)["foot"].sum(),
     )
 
-    # time_integrate=True collapses all steps into a single layer; otherwise
-    # bin into hourly layers for time-resolved output.
-    p["layer"] = 0 if time_integrate else np.floor(p["age"] / 60).astype(int)
+    # Bin the time steps into layers of layer_minutes (tres).
+    p["layer"] = np.floor(p["age"] / layer_minutes).astype(int)
     layers = np.sort(np.asarray(p["layer"].unique(), dtype=int))
     return p, layers
 
@@ -676,7 +786,9 @@ def calc_footprint(
     grid: Grid,
     *,
     smooth_factor: float = 1.0,
-    time_integrate: bool = False,
+    tres: str | timedelta = "1h",
+    hnf_plume: bool = True,
+    footprint_depth: float = 0.5,
     transforms: Sequence[Any] = (),
     name: str = "",
     directory: str | Path | None = None,
@@ -685,14 +797,16 @@ def calc_footprint(
     """
     Calculate a footprint from particles, as STILT-R's ``calc_footprint`` does.
 
-    The particle *transforms* are applied first, in order, so the footprint
-    records exactly the transforms it was made with. Near the receptor,
+    The near-field correction is applied first (*hnf_plume*), then the
+    particle *transforms*, in order, so the footprint records exactly what
+    it was made with. Near the receptor,
     particle tracks are interpolated to finer times when particles cross
     more than a grid cell per step. Each particle's ``foot`` is added to the
     cell it is in, and each time step is smoothed with a Gaussian kernel
     that widens with the particles' spread and age. The sum is divided by
-    the number of particles and binned by hour, unless *time_integrate* is
-    set.
+    the number of particles and binned into time layers *tres* long
+    (an hour by default). Sum the layers, ``foot.sum("time")``, for one map
+    of the whole run.
 
     A grid that goes all the way around the earth (``xmin=-180``,
     ``xmax=180``, with cells that fit 360 degrees) is treated as a circle:
@@ -708,14 +822,31 @@ def calc_footprint(
     100 minutes is interpolated the short way round, on any grid; STILT-R
     interpolates it through 0 degrees.
 
-    On a projected grid the kernel's width is worked out in degrees, as on
-    a longitude/latitude grid, and converted to the grid's units, so the
-    footprint is smoothed as much. STILT-R applies its formula to the
-    projected coordinates and barely smooths a footprint there. The step
+    The kernel has one width on both axes of the grid. On a
+    longitude/latitude grid that width is in degrees, so on the ground the
+    kernel is ``1 / cos(latitude)`` times wider from north to south than
+    from east to west (1.32 times at 40.7° N). STILT-R does the same. On a
+    projected grid the width is worked out in degrees, as on a
+    longitude/latitude grid, and converted to the grid's units by the length
+    of one degree of longitude, so the kernel is as wide from east to west as
+    on a longitude/latitude grid and round on the ground. STILT-R applies its
+    formula to the projected coordinates, which makes the kernel a few meters
+    wide and barely smooths a footprint. The step
     that decides the early-time interpolation is measured on the projected
     grid, in its units, so a grid of 100 m cells is interpolated as a 0.001°
     grid is. STILT-R measures it in degrees and never interpolates on a grid
     in meters.
+
+    The particle table is checked first for mistakes that would otherwise
+    give a plausible footprint. A particle with two rows at one ``age`` (a
+    table concatenated with itself, or several receptors' particles) is
+    refused, as is an infinite ``foot``. When the table has a ``time``
+    column, ``time`` minus ``age`` must be the receptor time, which catches
+    another receptor's particles and an ``age`` in hours or seconds; without
+    one, the time is not checked. Each particle's first row must be within
+    10 km of a release point, plus 6 km (100 m/s) for each minute since
+    release. Rows with no ``particle``, ``age``, ``lon``, ``lat`` or
+    ``foot`` are left out of the footprint, with a warning that counts them.
 
     Parameters
     ----------
@@ -733,8 +864,18 @@ def calc_footprint(
     smooth_factor : float, default 1.0
         Factor on the width of the Gaussian smoothing kernel. 0 turns
         smoothing off.
-    time_integrate : bool, default False
-        Sum the footprint over time into one layer instead of hourly layers.
+    tres : str or timedelta, default "1h"
+        Length of each time layer from the receptor time, a duration in
+        whole minutes such as ``"15min"``, ``"1h"`` or ``"1D"``. A particle
+        row at ``age`` minutes falls in layer ``floor(age / minutes)``.
+    hnf_plume : bool, default True
+        Correct ``foot`` for the thin plume near the receptor first
+        (:func:`stilt.particles.correct_near_field`), as STILT-R does by
+        default. Particles without the columns it reads get no correction,
+        and a warning is logged.
+    footprint_depth : float, default 0.5
+        The depth surface fluxes are mixed through, which the near-field
+        correction reads: the run's own ``footprint_depth``.
     transforms : sequence, optional
         Particle transforms applied before the footprint is calculated, as
         objects or as the mappings ``config.yaml`` takes
@@ -756,15 +897,21 @@ def calc_footprint(
         or ``(time, y, x)`` on a projected grid. Coordinates are cell
         centers, those of ``Grid.axes``, so longitudes are the ones the grid
         is written with: 170.25 to 189.75 on a grid from 170 to 190, 0.5
-        degree cells. ``time`` is the start of each hour. The ``.stilt``
+        degree cells. ``time`` is the start of each layer. The ``.stilt``
         accessor has the methods that use it.
 
     Raises
     ------
     ImportError
         If a transform is a mapping whose ``kind`` cannot be imported.
+    ValueError
+        If *tres* is not a positive whole number of minutes, or the
+        particles fail a check above: rows repeated, an infinite ``foot``,
+        a ``time`` that is not the receptor time plus ``age``, or first
+        positions too far from the receptor.
     EmptyFootprint
-        If no particle is over the grid, or the table has none.
+        If no particle is over the grid, no row has a positive ``foot``,
+        or the table has no rows. Its message says which.
 
     Examples
     --------
@@ -786,22 +933,26 @@ def calc_footprint(
         {
             "grid": grid,
             "smooth_factor": smooth_factor,
-            "time_integrate": time_integrate,
+            "tres": tres,
+            "hnf_plume": hnf_plume,
             "transforms": list(transforms),
         }
     )
     if not particles.empty:
         check_particles(particles, need=FOOTPRINT_COLUMNS)
+        _check_particles_for_footprint(particles, receptor)
+        if config.hnf_plume:
+            particles = _near_field(particles, receptor, footprint_depth)
     if config.transforms:
         particles = apply_transforms(particles, config.transforms, receptor, directory)
     crs = grid.crs
     xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
     smooth_factor = config.smooth_factor
-    time_integrate = config.time_integrate
+    layer_minutes = config.tres_minutes
 
     if particles.empty:
-        raise EmptyFootprint()
+        raise EmptyFootprint("The particle table has no rows.")
 
     # Only the columns the footprint is made from, as STILT-R passes them.
     p = particles.loc[:, list(_FOOTPRINT_INPUTS)]
@@ -859,6 +1010,7 @@ def calc_footprint(
         ybuf=ybuf,
     )
 
+    any_foot = bool((p["foot"] > 0).any())
     p, layers = _filter_and_rasterize_particles(
         p,
         glong_buf=glong_buf,
@@ -871,12 +1023,16 @@ def calc_footprint(
         ymax=ymax,
         xres=xres,
         yres=yres,
-        time_integrate=time_integrate,
+        layer_minutes=layer_minutes,
         longlat=grid.is_longlat,
     )
 
     if p.empty:
-        raise EmptyFootprint()
+        raise EmptyFootprint(
+            "No particle is over the footprint grid."
+            if any_foot
+            else "No particle row has a positive foot."
+        )
 
     foot_arr = _accumulate_smoothed_footprint(
         p,

@@ -138,10 +138,10 @@ Both weight the particles the way the footprint does.
    :toctree: _api
    :nosignatures:
 
-   particles.background
-   particles.Background
-   particles.transport_error
-   particles.TransportError
+   background
+   Background
+   transport_error
+   TransportError
 
 Simulation tables
 -----------------
@@ -197,7 +197,7 @@ Sampling fields
 :mod:`stilt.sampling` looks up a gridded field at points: a surface flux
 under a footprint or along particle paths (``foot.stilt.enhancement``,
 ``particles.stilt.enhancement``), or a mole-fraction field at particle
-endpoints (:func:`stilt.particles.background`). :func:`~stilt.sampling.sample_met`
+endpoints (:func:`stilt.background`). :func:`~stilt.sampling.sample_met`
 reads ARL met files at particle positions, for the particle columns a
 transport model can write from the met.
 

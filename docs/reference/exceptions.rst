@@ -16,7 +16,7 @@ Every exception PYSTILT raises is a :class:`stilt.StiltError`, so one
 Each one also subclasses the builtin that describes it. A
 :class:`~stilt.exceptions.SimulationError` is a ``RuntimeError`` and a
 :class:`~stilt.exceptions.HYSPLITNotFoundError` is a ``FileNotFoundError``,
-so code that catches the builtin keeps working. Plain input checks, such as
+so an ``except`` for the builtin catches it too. Plain input checks, such as
 a negative particle count, raise ``ValueError``.
 
 Base class
@@ -44,6 +44,19 @@ cover fails as ``MET_COVERAGE``.
 
    stilt.exceptions.SimulationError
    stilt.exceptions.MeteorologyError
+
+Stopped runs
+------------
+
+A run on ``cpus`` above 1 raises :class:`~stilt.exceptions.WorkerDied` when a
+worker process is killed outright, as the out-of-memory killer does. It is not
+a failed simulation: nothing is recorded, and running again continues.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.exceptions.WorkerDied
 
 Setup
 -----

@@ -424,7 +424,7 @@ def test_every_multipoint_location_gets_the_same_particles(tmp_path, met_dir):
     receptor = _forty_points()
     particles = stilt.run_trajectories(
         receptor, reference_met(met_dir), workdir=tmp_path, n_hours=-1,
-        numpar=1000, krand=2, seed=42, hnf_plume=False,
+        numpar=1000, krand=2, seed=42,
     )  # fmt: skip
 
     # A particle's first row is a minute after release, much nearer its own
@@ -446,10 +446,10 @@ def test_every_multipoint_location_gets_the_same_particles(tmp_path, met_dir):
 def test_a_maxpar_that_cuts_a_multipoint_release_short_fails(tmp_path, met_dir):
     import stilt
 
-    with pytest.raises(SimulationError, match="40 locations") as caught:
+    with pytest.raises(SimulationError, match="40 release locations") as caught:
         stilt.run_trajectories(
             _forty_points(), reference_met(met_dir), workdir=tmp_path, n_hours=-1,
-            numpar=1000, maxpar=1000, krand=2, seed=42, hnf_plume=False,
+            numpar=1000, maxpar=1000, krand=2, seed=42,
         )  # fmt: skip
     assert caught.value.reason == FailureReason.PARTICLE_LIMIT
 
@@ -790,7 +790,7 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
         numpar=100,
         krand=REFERENCE_KRAND,
         seed=REFERENCE_SEED,
-        hnf_plume=True,  # exercises calc_plume_dilution on a forward track
+        hnf_plume=True,  # the footprint runs calc_plume_dilution on a forward track
         grid=wbb_grid,
         variants={"hrrr": {}},
     )
@@ -807,7 +807,8 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     # HYSPLIT reports elapsed minutes signed by run direction
     assert (particles["age"] >= 0).all()
     assert particles["age"].max() > 0
-    assert "foot_no_hnf_dilution" in particles.columns
+    # Stored uncorrected: the footprint applies the near-field correction.
+    assert "foot_no_hnf_dilution" not in particles.columns
 
     start, stop = receptor.time, receptor.time + pd.Timedelta(hours=3)
 

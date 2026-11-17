@@ -43,38 +43,60 @@ relies on.
 ## Writing documentation
 
 The sources are in `docs/`: `getting_started/` (install, quickstart,
-concepts), `guides/` (task-oriented how-tos, one idea per page, with
+concepts), `guides/` (task-oriented how-tos, one task per page, with
 `guides/migration/` for moving from STILT-R, X-STILT, stiltctl, and Jena
 STILT), `tutorials/` (end-to-end worked examples), `reference/` (API pages
 built from docstrings, and the table of every `config.yaml` key, made by the
 `config-model` directive in `docs/_ext/`), and `development/` (architecture,
-STILT-R parity, roadmap). A user-facing change needs a guide or reference
-update, and `just build-docs` must pass: warnings are errors. The
-Documentation workflow builds the docs on every pull request and publishes
-`main` as `dev/` and each release under its version.
+STILT-R parity, roadmap). A user-facing change updates the docs: the guide
+when what the user does changes, the reference otherwise. `just build-docs`
+must pass, and warnings are errors. The Documentation workflow builds the
+docs on every pull request and publishes `main` as `dev/` and each release
+under its version.
 
 ### Voice
 
-Docs, docstrings, config field descriptions, and CLI help all follow this
-voice. Most readers are scientists who want to run the model and trust the
-result; write for them. Good examples are the
-[STILT-R docs](https://uataq.github.io/stilt/) and the xarray, pandas, and
-MetPy user guides.
+Docs, docstrings, config field descriptions, and CLI help are written for
+scientists who want to run the model and trust the result. Our models are the
+[STILT-R docs](https://uataq.github.io/stilt/), the xarray and MetPy user
+guides, and Herbie's tutorials.
 
-- **Start with what it is for.** Open a page or docstring with what the thing
-  does, in plain words. Then show an example. Internals and edge cases go
-  last, or in `docs/development/architecture.rst`.
-- **Keep sentences short.** One idea per sentence. If a sentence needs a
-  colon, a semicolon, and a parenthesis, split it.
+- **Start from the reader's goal.** Open a page or section with what the
+  reader wants to do and why it matters to their result. Then show it.
+- **Recommend.** When there is a choice, say which one we would use and why
+  ("Start with HRRR, because its 3 km grid resolves the valleys around a
+  city"). "We" is the developers, "you" is the reader.
+- **Give the reason in the same sentence.** Join cause and effect with
+  "because" or "so". Keep one point per paragraph, and let a sentence be as
+  long as its reason needs.
+- **Show real output, and say what to notice in it.** Prefer an `ipython`
+  block to a `code-block`, and a figure to a paragraph that describes one.
+- **A guide holds what the reader acts on.** Exact rules, failure behavior,
+  file-name rules and internals go in the docstring (Notes) and the
+  reference. Measured accuracy goes on a Development page, with its test or
+  study. A bug fix changes a guide only when it changes what the user does.
+- **Say it once.** A caveat lives on one page, and the others link to it.
 - **Use the reader's words.** Receptor, particles, footprint, meteorology.
   Internal names (store key, publish, resolve) belong only on pages about
   internals. Describe a config's fields (its parameters) in plain English,
   naming no class or module. `AGENTS.md` has the table of words to use.
-- **Show it.** A short code block, with its output when that helps, is
-  clearer than a paragraph describing it.
 - **Say it plainly.** No metaphors ("a dial worth turning"), no selling
   ("powerful", "seamless"), no filler ("note that", "it's worth noting").
   Use American spelling (meters, modeled, center).
+
+Each kind of page has its own job:
+
+- **Getting Started** tells one story, from a measurement to a footprint
+  map, and says what to notice in each output.
+- **Tutorials** answer a science question end to end. They run when the docs
+  build and end in a figure.
+- **User Guide** pages each cover one task, in the order a user meets them.
+  A page opens with why the reader would do it, recommends a default, shows
+  real output, and ends by linking to checking for when it goes wrong.
+- **API Reference** pages are complete and exact, so the edge cases live
+  there.
+- **Development** pages hold the architecture, STILT-R parity, the roadmap,
+  and measured accuracy.
 
 Some habits make text read as machine-written. Avoid them:
 
@@ -82,13 +104,16 @@ Some habits make text read as machine-written. Avoid them:
   "PYSTILT follows the air."
 - "X, not Y" contrasts when nobody suggested Y.
 - A bold sentence at the start of a paragraph that states its point.
-- Dashes joining clauses. Use a period or parentheses.
-- Lists of three out of habit, and closing sentences that restate the
-  paragraph.
+- A page that begins "This page covers", and closing sentences that restate
+  the paragraph.
+- A run of sentences that each say what something does *not* do.
+- Lists of three out of habit.
 - Asides about what the code does "deliberately" or used to do.
-- Validation statistics in a user guide. Give the reader the setting to use
-  and cite the study.
 - Labels invented on one line and referred to later ("the first case").
+
+Before you commit a page, read it top to bottom as someone who has never run
+STILT. If a paragraph is there because of a bug fix, move it to the
+reference.
 
 Docstrings follow the NumPy style. The summary line says what the object is
 or what the function returns. Parameter descriptions give the meaning and
@@ -183,6 +208,15 @@ fails when one breaks.
     --setup-only -q
   ```
 
+  The fetch is large. NOAA's HRRR files cover the whole CONUS grid and are
+  3.42 GB each; each is downloaded whole and then cropped to the 130 by 129
+  cells around Salt Lake, which keeps 30.2 MB. The seven blocks the tests need
+  therefore download 23.9 GB, all seven at once into `tests/met_cache`, so that
+  folder's disk needs about 24 GB free while it runs. After the crop it holds
+  211 MB. The time depends on your connection (at 10 MB/s it is about 40
+  minutes). Fetch once, and keep the folder: a file already in it is not
+  downloaded again.
+
   A receptor on the page must stay inside that time window. `docs.yml`
   restores the same cache the tests use.
 - **The guides that open a project start from a sample project**
@@ -220,10 +254,13 @@ driver; a test fails if it would land in `SETUP.CFG` unknown to HYSPLIT.
 A transport model owns its config: a subclass of
 `stilt.transport.TransportConfig` with the model's own parameters. The base
 gives the parameters PYSTILT's own code reads whatever the model
-(`n_hours`, `seed`, `hnf_plume`, `veght`); a parameter goes there only
-when the core reads it, so another model is never handed a setting it
-would ignore. It also gives an `UNRECORDED` set of the fields that change no
-particle (empty unless the subclass names some), `settings()` (what a run
+(`n_hours`, `seed`, `footprint_depth`, `pbl_height`, `pbl_height_min`);
+a parameter goes there only when the core reads it, so another model is
+never handed a setting it would ignore. It also gives an `UNRECORDED` set
+of the fields that change no particle (empty unless the subclass names
+some), a `RECORDED_WHEN_SET` set of the fields a run records only when they
+are not at their defaults (so adding them moved no stored run to a new
+settings folder), `settings()` (what a run
 records), and `realizations(n)` (realization `k` with `seed + k`); override
 those two only where the model differs. The model itself names that class as
 `config_class`, names its met config as `met_config_class`, and gives
@@ -242,8 +279,8 @@ columns of `stilt.particles.PARTICLE_SCHEMA`, `foot`, and what the
 transforms read, with a release row at `age = 0` when the model can write
 one; see `docs/reference/particles.rst`), its log as text, and the met
 files it read. A failed run raises `SimulationError` with its log. PYSTILT
-adds the release heights and the near-field correction itself
-(`stilt.transport.run_model`). A model that writes no files sets
+adds the release heights itself (`stilt.transport.run_model`), and the
+footprint applies the near-field correction (`stilt.calc_footprint`). A model that writes no files sets
 `needs_workdir = False` and is handed `workdir=None`. A model that runs
 many receptors in one call, such as an emulator on a GPU, sets
 `batched = True` and gives `run_many(receptors, config, met, windows,
@@ -283,7 +320,9 @@ missing results. A local run calls `run_receptors` in this process. A Slurm
 run goes through `submit`, which writes `receptors.txt`,
 `receptors.parquet` (the submitted receptors' checked rows, which tasks
 read in place of `receptors.csv`), `execution.yaml`, and `job.sh`
-(`job_script`) into `_slurm/<stamp>/` and calls `sbatch`.
+(`job_script`) into `_slurm/<stamp>/` and calls `sbatch`. When a met
+downloads, `fetch.sh` (`fetch_script`) is submitted first and the array
+waits for it.
 
 The unit of work is a command line: `stilt run <project> --receptors FILE
 --task I/N`. Any scheduler that can start it with an index can run a

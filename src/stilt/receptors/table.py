@@ -8,7 +8,7 @@ and the functions here convert between tables, CSV files, and receptors.
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from io import StringIO
 from pathlib import Path
 from typing import IO, Any
@@ -17,12 +17,14 @@ import numpy as np
 import pandas as pd
 
 from .models import (
+    _TIME_FORMS,
     ColumnReceptor,
     MultiPointReceptor,
     PointReceptor,
     Receptor,
     _column_location,
     _multipoint_locations,
+    _parse_time_text,
     _point_location,
 )
 from .validation import column_errors, multipoint_errors, point_errors
@@ -90,8 +92,32 @@ def _normalize_columns(frame: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str
     frame = frame.rename(columns={name: field for field, name in spelling.items()})
     if "altitude_ref" not in frame.columns:
         implied = "msl" if spelling.get("altitude", "").lower() == "zmsl" else "agl"
+        _refuse_misnamed_altitude_ref(frame, implied)
         frame = frame.assign(altitude_ref=implied)
     return frame, spelling
+
+
+def _refuse_misnamed_altitude_ref(frame: pd.DataFrame, implied: str) -> None:
+    """
+    Raise if a label column holds only ``agl`` and ``msl``, as an ``altitude_ref`` column would.
+
+    Under another name, such as ``alt_ref``, the column would be kept as a
+    label and every height read as *implied*: 1500 m above sea level as
+    1500 m above ground.
+    """
+    for col in frame.columns:
+        if col in COLUMNS or not pd.api.types.is_string_dtype(frame[col]):
+            continue
+        values = pd.unique(frame[col].dropna())
+        refs = {str(v).strip().lower() for v in values}
+        if refs and refs <= {"agl", "msl"}:
+            raise ValueError(
+                f"The column {col!r} holds altitude references "
+                f"({', '.join(sorted(refs))}), but only a column named "
+                f"'altitude_ref' or 'height_ref' is read as one, so every height "
+                f"would be taken as {implied}. Did you mean 'altitude_ref'? "
+                "Rename the column."
+            )
 
 
 #: Columns :func:`receptor_rows` adds; a receptors file may not use these names.
@@ -115,10 +141,12 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
     ------
     ValueError
         For anything a receptor would refuse: a missing column, a longitude
-        or latitude out of range, a negative height above ground, rows of one
-        group that differ in time or altitude reference, a column whose two
-        heights are equal, a multipoint receptor with two points at one
-        location, or two different receptors with one id.
+        or latitude out of range or empty, a height that is empty or not
+        finite, a negative height above ground, rows of one group that
+        differ in time or altitude reference, a column whose two heights are
+        equal, a multipoint receptor with two points at one location, or two
+        different receptors with one id. Also for a misnamed
+        ``altitude_ref`` column (:func:`receptors_from_frame`).
     """
     frame, _ = _normalize_columns(frame)
     required = ("time", "longitude", "latitude", "altitude")
@@ -131,9 +159,6 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
             "those names. Rename the column."
         )
     n = len(frame)
-    time = pd.to_datetime(frame["time"])
-    if getattr(time.dt, "tz", None) is not None:
-        time = time.dt.tz_convert("UTC").dt.tz_localize(None)
     lon = frame["longitude"].to_numpy(dtype=float)
     lat = frame["latitude"].to_numpy(dtype=float)
     alt = frame["altitude"].to_numpy(dtype=float)
@@ -156,6 +181,7 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
             )
             raise ValueError(f"{label}: {message}")
 
+    time = _times(frame["time"], fail)
     fail(~np.isin(ref, ("agl", "msl")), "altitude_ref must be 'agl' or 'msl'.")
     for bad, message in point_errors(lon, lat, alt, ref):
         fail(bad, message)
@@ -245,6 +271,33 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
             drop.extend(group[1:])  # the same receptor listed again
         out = out.loc[~np.isin(codes, drop)]
     return out
+
+
+def _times(column: pd.Series, fail: Callable[[np.ndarray, str], None]) -> pd.Series:
+    """
+    Return a receptor table's times as naive UTC times, calling *fail* on a row that has none.
+
+    Text must be ISO 8601 or ``YYYYMMDDHHMM`` (:func:`_parse_time_text`);
+    datetimes are taken as they are, an aware one converted to UTC.
+    """
+    if pd.api.types.is_numeric_dtype(column):
+        fail(
+            np.ones(len(column), dtype=bool),
+            f"time must be {_TIME_FORMS}; got the number {column.iloc[0]!r}.",
+        )
+    if pd.api.types.is_string_dtype(column):
+        time = _parse_time_text(column)
+        bad = time.isna().to_numpy()
+        if bad.any():
+            value = column.iloc[int(np.flatnonzero(bad)[0])]
+            what = (
+                "empty" if pd.isna(value) else f"{value!r}, which is not {_TIME_FORMS}"
+            )
+            fail(bad, f"time is {what}.")
+    else:
+        time = pd.to_datetime(column, utc=True)
+        fail(time.isna().to_numpy(), "time is empty.")
+    return time.dt.tz_localize(None)
 
 
 def _build(
@@ -351,7 +404,9 @@ def receptors_from_frame(frame: pd.DataFrame) -> list[Receptor]:
     Without an ``altitude_ref`` column, altitudes are above mean sea level
     when the column is named ``zmsl`` and above ground level otherwise. Any
     other column becomes a label in each receptor's ``attrs``. For a group,
-    labels come from its first row.
+    labels come from its first row. Without an ``altitude_ref`` column, a
+    label column that holds only ``agl`` and ``msl``, such as ``alt_ref``,
+    is refused, since its heights would be read with the wrong reference.
 
     Returns
     -------
@@ -388,16 +443,19 @@ def check_distinct_ids(receptors: Iterable[Receptor]) -> None:
 
 
 def read_receptor_frame(path: str | Path | IO[str]) -> pd.DataFrame:
-    """Read a receptors CSV as a table, with ``r_idx`` as text and ``time`` parsed, without building receptors."""
+    """Read a receptors CSV as a table, with ``r_idx`` and ``time`` as text, without building receptors."""
     header = pd.read_csv(path, nrows=0).columns
     if hasattr(path, "seek"):
         path.seek(0)
     # With type inference, pandas types each chunk of a large file on its
     # own, so an r_idx column that mixes numbers and text would come back
     # part int and part str.
-    dtype: dict[Any, Any] = {c: str for c in header if str(c).lower() == "r_idx"}
-    times = [c for c in header if str(c).lower() == "time"]
-    return pd.read_csv(path, dtype=dtype, parse_dates=times)
+    # Times are read as text, and parsed by receptor_rows in the forms the
+    # docs give, never guessed: pandas would read 05/07/2023 month-first.
+    dtype: dict[Any, Any] = {
+        c: str for c in header if str(c).lower() in ("r_idx", "time")
+    }
+    return pd.read_csv(path, dtype=dtype)
 
 
 def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:

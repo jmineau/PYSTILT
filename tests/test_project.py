@@ -2,6 +2,7 @@
 
 import datetime as dt
 import doctest
+from dataclasses import replace
 from pathlib import Path
 
 import matplotlib
@@ -10,11 +11,11 @@ import pandas as pd
 import pytest
 import xarray as xr
 
+from stilt import transport_error
 from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
 from stilt.output import Output
-from stilt.particles import transport_error
 from stilt.project import Project
 from stilt.receptors import ColumnReceptor, PointReceptor
 from stilt.spatial import Grid
@@ -88,7 +89,7 @@ def _write_trajectory(
 ) -> Path:
     """Write a small particle file for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant, realization)
-    particles = finished(_particles(), sim.receptor, sim.transport)
+    particles = finished(_particles(), sim.receptor)
     return sim.output.write_particles(
         sim.variant, sim.receptor, particles, [], realization
     )
@@ -214,6 +215,29 @@ def test_opening_reads_nothing_until_asked(tmp_path):
     with pytest.raises(FileNotFoundError, match="Project.init"):
         _ = project.config
     assert not (tmp_path / "nothing").exists()
+
+
+def test_the_receptors_of_a_path_that_is_not_a_project_are_refused(tmp_path):
+    """A mistyped path read as a project with no receptors, with no warning (#440)."""
+    with pytest.raises(FileNotFoundError, match="No config.yaml"):
+        _ = Project(tmp_path / "my_projcet").receptors
+    (tmp_path / "loose").mkdir()
+    (tmp_path / "loose" / "receptors.csv").write_text(
+        "time,longitude,latitude,altitude\n2023-01-01 12:00,-111.85,40.77,5\n"
+    )
+    with pytest.raises(FileNotFoundError, match="No config.yaml"):
+        _ = Project(tmp_path / "loose").receptors
+
+
+@pytest.mark.parametrize("empty", [[], "header.csv"])
+def test_init_refuses_receptors_that_hold_none_and_writes_nothing(tmp_path, empty):
+    """An empty list or a header-only file made an empty project, with no warning (#440)."""
+    (tmp_path / "header.csv").write_text("time,longitude,latitude,altitude\n")
+    receptors = tmp_path / empty if isinstance(empty, str) else empty
+
+    with pytest.raises(ValueError, match="No receptors were given"):
+        Project.init(tmp_path / "proj", receptors, config=_config(tmp_path))
+    assert not (tmp_path / "proj").exists()
 
 
 def test_a_relative_path_is_taken_from_the_current_directory(tmp_path, monkeypatch):
@@ -520,6 +544,63 @@ def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_rece
     assert project.simulation(point_receptor.id, "s2").has_particles
     assert not project.simulation(point_receptor.id, "zi08").has_particles
     assert len(project.output.hashes("particles")) == 1
+
+
+def _with_unreadable_met(project, tmp_path, **overrides):
+    """Open *project*'s directory again with a met whose directory does not exist."""
+    config = ProjectConfig(
+        mets={"hrrr": MetConfig(directory=tmp_path / "no-such-met")},
+        **{"variants": {"hrrr": {}}, "grid": _GRID, **overrides},
+    )
+    config.to_yaml(project.config_path)
+    return Project(project.directory)
+
+
+def test_status_without_a_readable_met_is_pending_when_no_folder_can_hold_results(
+    tmp_path, point_receptor
+):
+    """The weather product is the only part of the hash that needs the met (#377)."""
+    project = _project(tmp_path, [point_receptor], variants={"hrrr": {"ziscale": 0.8}})
+    _write_trajectory(project, point_receptor)
+
+    # The settings differ from the folder's in more than the met: nothing is there.
+    unread = _with_unreadable_met(project, tmp_path)
+    status = unread.status()
+    assert list(status["state"]) == ["pending"]
+    assert list(status["particles"]) == [False]
+    assert list(status["footprint"]) == [False]
+    assert unread.incomplete().shape[0] == 1
+    assert list(unread.folders()["variant"]) == [""]
+    assert "ziscale" in unread.folders().loc[0, "differs"]
+
+
+def test_status_without_a_readable_met_raises_when_a_folder_may_hold_results(
+    tmp_path, point_receptor
+):
+    """Same settings but the met's: the folder, whatever it is named, may be this variant's."""
+    project = _project(tmp_path, [point_receptor])
+    sim = project.simulation(point_receptor.id, "hrrr")
+    particles = finished(_particles(), sim.receptor)
+    renamed = replace(sim.variant, name="renamed")
+    sim.output.write_particles(renamed, sim.receptor, particles, [])
+
+    unread = _with_unreadable_met(project, tmp_path)
+
+    with pytest.raises(FileNotFoundError, match="Met 'hrrr'"):
+        unread.status()
+    with pytest.raises(FileNotFoundError, match="Met 'hrrr'"):
+        unread.folders()
+
+
+def test_status_without_a_readable_met_and_an_empty_output_is_pending(
+    tmp_path, point_receptor
+):
+    project = _project(tmp_path, [point_receptor])
+
+    unread = _with_unreadable_met(project, tmp_path)
+
+    assert list(unread.status()["state"]) == ["pending"]
+    assert unread.folders().empty
 
 
 def test_folders_say_which_the_config_no_longer_uses(tmp_path, point_receptor):
@@ -861,7 +942,7 @@ def _write_spread_particles(
             "foot": np.full(n, 1e-3),
         }
     )
-    particles = finished(particles, sim.receptor, sim.transport)
+    particles = finished(particles, sim.receptor)
     sim.output.write_particles(sim.variant, sim.receptor, particles, [], realization)
 
 
@@ -886,7 +967,6 @@ def test_transport_error_docstring_recipe_gives_the_realizations_of_sim_transpor
         tmp_path,
         [a, b],
         grid=None,
-        hnf_plume=False,
         krand=4,
         variants={"hrrr": {}, "hrrr-err": {**_XYERR, "realizations": 4}},
     )
@@ -929,6 +1009,7 @@ def test_transport_error_docstring_recipe_gives_the_realizations_of_sim_transpor
             sim.particles,
             [rows for _, rows in project.particles(ensemble).groupby("variant")],
             flux,
+            receptor=sim.receptor,
         )
         assert merged.realizations == 1
         assert merged.variance != pytest.approx(expected.variance, rel=0.2)
@@ -951,7 +1032,7 @@ def _write_aged_particles(
             "foot": np.full(n, 1e-3),
         }
     )
-    particles = finished(particles, sim.receptor, sim.transport)
+    particles = finished(particles, sim.receptor)
     sim.output.write_particles(sim.variant, sim.receptor, particles, [], realization)
 
 
@@ -1465,7 +1546,7 @@ def test_a_bad_receptors_file_fails_when_the_project_is_read(tmp_path):
         "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,95.0,5\n"
     )
 
-    with pytest.raises(ValueError, match="latitude must be within"):
+    with pytest.raises(ValueError, match="latitude must be a number within"):
         _ = Project(project.directory).receptors
 
 

@@ -9,14 +9,18 @@ source files at hand when a product changes::
     uv run python tests/observations/data/products/make_samples.py \
         --tropomi S5P_OFFL_L2__CH4____20231019T192749_....nc \
         --blended S5P_BLND_L2__CH4____20180430T001950_....nc \
-        --tccon if20120823_20121201.public.qc.nc
+        --tccon if20120823_20121201.public.qc.nc \
+        --oco2 oco2_LtCO2_260208_B11300Ar_260529230202s.nc4 \
+        --oco3 oco3_LtCO2_260208_B11077Ar_260327001412s.nc4
 
-The OCO-2 sample is synthetic: it follows the OCO-2 Lite v11 layout (variable
-names, groups, dimensions, units) with made-up values, because Lite files sit
-behind an Earthdata login. Replace it with a real slice when one is available.
+The OCO-2 and OCO-3 Lite files come from NASA GES DISC (an Earthdata login,
+free) and are open data: OCO-2 L2 Lite FP v11.2r, doi:10.5067/C4OENLFCYVSA;
+OCO-3 L2 Lite FP v11r, doi:10.5067/8U0VGVQC7HZG. Each slice keeps the
+granule's global attributes, the DOI among them.
 
 The GGG samples are synthetic too, on the GGG2020 ``.oof`` and
-``*.private.nc`` layouts, so no instrument team's retrievals are
+``*.private.nc`` layouts, and so are the COCCON GEOMS sample (the layout of
+PROFFASTpylot's GEOMS writer) and the PROFFASTpylot run folder, so no instrument team's retrievals are
 redistributed here. They keep the format's quirks, including the .oof header
 count that exceeds the number of columns written.
 """
@@ -27,6 +31,7 @@ import argparse
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from netCDF4 import Dataset
 
 HERE = Path(__file__).parent
@@ -426,206 +431,308 @@ def ggg_private_synthetic() -> None:
         var("o2_7885_am_o2", ("time",), np.full(nt, 5.53, "f4"))
 
 
-def oco2_synthetic() -> None:
-    """A made-up OCO-2 Lite v11 file: the real layout, invented values."""
-    rng = np.random.default_rng(0)
-    n, nlev = 6, 20
-    dst = HERE / "oco2_LtCO2_231019_B11210Ar_synthetic.nc4"
-    with Dataset(dst, "w", format="NETCDF4") as d:
-        d.setncattr("title", "Synthetic OCO-2 Lite layout for PYSTILT tests")
+#: Every variable read_oco2 uses, by its path in a Lite file.
+OCO_KEEP = {
+    "sounding_id",
+    "levels",
+    "time",
+    "latitude",
+    "longitude",
+    "xco2",
+    "xco2_uncertainty",
+    "xco2_apriori",
+    "xco2_quality_flag",
+    "solar_zenith_angle",
+    "sensor_zenith_angle",
+    "pressure_levels",
+    "pressure_weight",
+    "xco2_averaging_kernel",
+    "co2_profile_apriori",
+    "vertex_latitude",
+    "vertex_longitude",
+    "Sounding/solar_azimuth_angle",
+    "Sounding/sensor_azimuth_angle",
+    "Sounding/altitude",
+    "Sounding/land_fraction",
+    "Sounding/operation_mode",
+    "Sounding/orbit",
+    "Retrieval/psurf",
+}
+
+
+def oco(
+    src: Path, box: tuple[float, float, float, float], mode: int, n: int = 12
+) -> None:
+    """
+    The first ``n`` consecutive soundings of an OCO-2 or OCO-3 Lite file in a box.
+
+    ``box`` is ``(lon_min, lon_max, lat_min, lat_max)``, and every sounding in
+    the slice must be in operation mode ``mode`` (0 nadir, 1 glint, 2 target,
+    3 transition, 4 SAM).
+    """
+    lon0, lon1, lat0, lat1 = box
+    with Dataset(src) as ds:
+        lon = ds["longitude"][:]
+        lat = ds["latitude"][:]
+        ok = (
+            (lon > lon0)
+            & (lon < lon1)
+            & (lat > lat0)
+            & (lat < lat1)
+            & (ds["Sounding/operation_mode"][:] == mode)
+        )
+    start = next(i for i in np.flatnonzero(ok) if ok[i : i + n].all())
+    copy_subset(
+        src, HERE / src.name, OCO_KEEP, {"sounding_id": slice(start, start + n)}
+    )
+
+
+#: The synthetic COCCON GEOMS file, named the way COCCON names its files.
+GEOMS_NAME = (
+    "groundbased_ftir.coccon_zz000_synthetic_20230715t160000z_20230715t161200z_001.h5"
+)
+
+
+def geoms_synthetic() -> None:
+    """
+    A made-up COCCON GEOMS file: the real layout, invented values.
+
+    Five EM27/SUN measurements three minutes apart on 2023-07-15 on the
+    GEOMS-TE-FTIR-COCCON-001 template that PROFFASTpylot writes: dotted
+    variable names, ``VAR_*`` attributes, unnamed dimensions, and a CH4
+    prior in ppbv against a column in ppmv. The third XCH4 is the fill
+    value. Ten levels stand in for the real 49.
+    """
+    nt, nlev = 5, 10
+    fill = np.float32(-900000.0)
+    alt_km = np.linspace(OOF_ZOBS_KM, 30.0, nlev)
+    pres = 853.3 * np.exp(-(alt_km - OOF_ZOBS_KM) / 8.0)
+    sza = 40.0 - 0.5 * np.arange(nt)
+    with Dataset(HERE / GEOMS_NAME, "w", format="NETCDF4") as d:
+        d.setncattr("DATA_LOCATION", "SYNTHETIC")
+        d.setncattr("DATA_SOURCE", "FTIR.COCCON_ZZ000")
+        d.setncattr("DATA_TEMPLATE", "GEOMS-TE-FTIR-COCCON-001")
+        d.setncattr("DATA_PROCESSOR", "PROFFAST Version 2.4")
         d.setncattr(
             "stilt_sample_note",
-            "Synthetic file following the OCO-2 L2 Lite FP v11 layout with invented "
-            "values, made by tests/observations/data/products/make_samples.py. Not a real granule.",
+            "Invented values on the COCCON GEOMS layout, made by "
+            "tests/observations/data/products/make_samples.py. Not measurements.",
         )
-        d.createDimension("sounding_id", n)
-        d.createDimension("levels", nlev)
-        d.createDimension("vertices", 4)
-        d.createDimension("epoch_dimension", 7)
+        d.createDimension("phony_dim_0", nt)
+        d.createDimension("phony_dim_1", nlev)
+        dims1, dims2 = ("phony_dim_0",), ("phony_dim_0", "phony_dim_1")
 
-        def var(group, name, dtype, dims, values, **attrs):
-            fill = attrs.pop("_FillValue", None)
-            v = group.createVariable(name, dtype, dims, fill_value=fill)
-            for k, a in attrs.items():
-                v.setncattr(k, a)
+        def var(name, values, units, dtype="f4"):
+            v = d.createVariable(
+                name,
+                dtype,
+                dims2 if np.ndim(values) == 2 else dims1,
+                fill_value=np.array(fill, dtype=dtype),
+            )
+            v.setncattr("VAR_NAME", name)
+            v.setncattr("VAR_UNITS", units)
+            v.setncattr("units", units)
+            v.setncattr("VAR_FILL_VALUE", np.array(fill, dtype=dtype))
+            v.setncattr(
+                "VAR_DEPEND",
+                "DATETIME;ALTITUDE" if np.ndim(values) == 2 else "DATETIME",
+            )
             v[:] = values
             return v
 
-        base = np.datetime64("2023-10-19T19:48:00")
-        secs = (base - np.datetime64("1970-01-01T00:00:00")) / np.timedelta64(1, "s")
+        def per_level(profile):
+            return np.tile(np.asarray(profile, dtype="f4"), (nt, 1))
+
+        mjd2k = (
+            np.datetime64("2023-07-15T16:00:00") - np.datetime64("2000-01-01")
+        ) / np.timedelta64(1, "D")
         var(
-            d,
-            "sounding_id",
-            "i8",
-            ("sounding_id",),
-            2023101919480000 + np.arange(n) * 10,
-            units="1",
-            long_name="sounding ID",
-        )
-        var(d, "levels", "f4", ("levels",), np.arange(1, nlev + 1), units="1")
-        var(
-            d,
-            "time",
+            "DATETIME",
+            np.round(mjd2k + np.arange(nt) * 180.0 / 86400.0, 5),
+            "MJD2K",
             "f8",
-            ("sounding_id",),
-            secs + np.arange(n) * 0.333,
-            units="seconds since 1970-01-01 00:00:00",
-            long_name="time",
         )
-        var(
-            d,
-            "latitude",
-            "f4",
-            ("sounding_id",),
-            40.70 + 0.02 * np.arange(n),
-            units="degrees_north",
+        var("LATITUDE.INSTRUMENT", np.full(nt, OOF_LAT), "deg")
+        var("LONGITUDE.INSTRUMENT", np.full(nt, OOF_LON), "deg")
+        var("ALTITUDE.INSTRUMENT", np.full(nt, OOF_ZOBS_KM), "km")
+        var("ANGLE.SOLAR_ZENITH.ASTRONOMICAL", sza, "deg")
+        var("ANGLE.SOLAR_AZIMUTH", 110.0 + 0.8 * np.arange(nt), "deg")
+        var("SURFACE.PRESSURE_INDEPENDENT", np.full(nt, 853.3), "hPa")
+        var("ALTITUDE", per_level(alt_km), "km")
+        var("PRESSURE_INDEPENDENT", per_level(pres), "hPa")
+        var("TEMPERATURE_INDEPENDENT", per_level(np.linspace(300.0, 220.0, nlev)), "K")
+        for gas, column, col_units, prior_units, prior_surface in (
+            ("CH4", 1.8698, "ppmv", "ppbv", 1990.0),
+            ("CO2", 419.38, "ppmv", "ppmv", 421.0),
+            ("CO", 87.8, "ppbv", "ppbv", 110.0),
+            ("H2O", 1920.0, "ppmv", "ppmv", 8000.0),
+        ):
+            name = f"{gas}.COLUMN.MIXING.RATIO.VOLUME.DRY_ABSORPTION.SOLAR"
+            values = column + 1e-3 * column * np.arange(nt)
+            if gas == "CH4":
+                values[2] = fill
+            var(name, values, col_units)
+            var(
+                f"{name}_UNCERTAINTY.RANDOM.STANDARD",
+                np.full(nt, 0.001 * column),
+                col_units,
+            )
+            # the kernel falls with height and grows near the surface at high sun
+            ak = np.outer(1.0 + 0.002 * sza, np.linspace(1.05, 0.6, nlev))
+            var(f"{gas}.COLUMN_ABSORPTION.SOLAR_AVK", ak, "1")
+            var(
+                f"{gas}.MIXING.RATIO.VOLUME.DRY_APRIORI",
+                per_level(prior_surface * np.linspace(1.0, 0.8, nlev)),
+                prior_units,
+            )
+
+
+#: The synthetic PROFFASTpylot results folder, named the way PROFFASTpylot names it.
+PROFFAST_RUN = "ZZsynthetic_SN000_230715-230716"
+#: The angles (radians) of a real colsens.dat table.
+COLSENS_SZA = [
+    0.0,
+    0.3965,
+    0.5607,
+    0.6867,
+    0.7930,
+    0.8866,
+    0.9712,
+    1.049,
+    1.121,
+    1.189,
+    1.254,
+    1.315,
+    1.373,
+    1.430,
+    1.484,
+]
+
+
+def proffast_synthetic() -> None:
+    """
+    A made-up PROFFASTpylot run: the real file layouts, invented values.
+
+    Two days, three spectra each, on ten levels (a real run has 49): the
+    ``comb_invparms`` CSV with its comma-and-space columns, and each day's
+    ``colsens.dat`` (gas names in quotes, the long ones without the closing
+    quote), ``pT_fast_out.dat`` (spaces inside the header's names) and
+    ``VMR_fast_out.dat`` (no header). One spectrum is past the table's last
+    angle, and one has an XAIR outside COCCON's screen.
+    """
+    run = HERE / PROFFAST_RUN
+    raw = run / "raw_output_proffast"
+    raw.mkdir(parents=True, exist_ok=True)
+    nlev = 10
+    alt_m = np.linspace(OOF_ZOBS_KM * 1000.0, 30000.0, nlev)
+    pres_pa = 85330.0 * np.exp(-(alt_m - alt_m[0]) / 8000.0)
+    gases = ["H2O", "HDO", "CO2", "CO2_STR", "CH4", "CH4_S5P", "N2O", "CO", "O2", "HF"]
+    for day in ("230715", "230716"):
+        lines = []
+        for k, gas in enumerate(gases):
+            name = f"'{gas}'" if len(gas) < 7 else f"'{gas}"
+            lines += [
+                " ",
+                f"{name:<8s}",
+                "$",
+                "          SZA[rad] ->   " + "".join(f"{a:13.3E}" for a in COLSENS_SZA),
+                " ",
+                " alt [km]     p [mbar]",
+            ]
+            for z, p in zip(alt_m, pres_pa, strict=True):
+                # falls with height, grows with the sun's angle; gas k offsets it
+                sens = (1.05 - 0.45 * (z - alt_m[0]) / (alt_m[-1] - alt_m[0])) * (
+                    1.0 + 0.2 * np.asarray(COLSENS_SZA)
+                ) + 0.01 * k
+                lines.append(
+                    f"{z / 1000:11.3E}{p / 100:13.3E}"
+                    + "".join(f"{v:13.3E}" for v in sens)
+                )
+        (raw / f"ZZsynthetic{day}-colsens.dat").write_text("\n".join(lines) + "\n")
+        pt = [
+            "Level index    Altitude(m)       Temperature(K)    Pressure(Pa)      dry air column    H2O[ppmv]         HDO[ppmv]"
+        ]
+        vmr = []
+        for i, (z, p) in enumerate(zip(alt_m, pres_pa, strict=True)):
+            t = 300.0 - 6.5 * (z - alt_m[0]) / 1000.0
+            h2o = 8000.0 * np.exp(-(z - alt_m[0]) / 2000.0)
+            pt.append(
+                f"{i + 1:8d}{z:18.5E}{t:18.5E}{p:18.5E}{3e27:18.5E}{h2o:18.5E}{0.8 * h2o:18.5E}"
+            )
+            frac = i / (nlev - 1)
+            vmr.append(
+                f"{i + 1:4d}{z:18.5E}{h2o:18.5E}{0.8 * h2o:18.5E}{421.0 - 5 * frac:18.5E}"
+                f"{1.99 - 0.4 * frac:18.5E}{0.33:18.5E}{0.11 - 0.05 * frac:18.5E}{2.0946e5:18.5E}{1e-7:18.5E}"
+            )
+        (raw / f"ZZsynthetic{day}-pT_fast_out.dat").write_text("\n".join(pt) + "\n")
+        (raw / f"ZZsynthetic{day}-VMR_fast_out.dat").write_text("\n".join(vmr) + "\n")
+
+    columns = [
+        "UTC",
+        "LocalTime",
+        "JulianDate",
+        "YYMMDD",
+        "UTtimeh",
+        "spectrum",
+        "gndPmap",
+        "gndP",
+        "gndTmap",
+        "gndT",
+        "latdeg",
+        "londeg",
+        "altim",
+        "appSZA",
+        "azimuth",
+        "XH2O",
+        "XAIR",
+        "XCO2",
+        "XCH4",
+        "XCO2_STR",
+        "XCH4_S5P",
+        "XCO",
+        "job01_rms",
+    ]
+    rows = []
+    #: (day, hour, minute, apparent SZA, PROFFAST azimuth from south, XAIR)
+    spectra = [
+        ("230715", 16, 0, 40.0, -70.0, 1.0001),
+        ("230715", 16, 3, 39.5, -69.2, 0.9700),  # fails the XAIR screen
+        ("230715", 16, 6, 39.0, -68.4, 1.0003),
+        ("230716", 1, 30, 86.0, 115.0, 1.0002),  # past the table's last angle
+        ("230716", 16, 0, 40.2, -70.1, 0.9999),
+        ("230716", 16, 3, 39.7, -69.3, 1.0000),
+    ]
+    for i, (day, hh, mm, sza, azi, xair) in enumerate(spectra):
+        t = pd.Timestamp(f"20{day[:2]}-{day[2:4]}-{day[4:]} {hh:02d}:{mm:02d}:00")
+        rows.append(
+            [
+                str(t),
+                str(t - pd.Timedelta(hours=6)),
+                f"{t.to_julian_date():.5f}",
+                day,
+                f"{hh + mm / 60:6.1f}",
+                f"{day}_{hh:02d}{mm:02d}00SN.BIN",
+                "853.30",
+                "853.30",
+                "300.00",
+                "300.00",
+                f"{OOF_LAT:.5f}",
+                f"{OOF_LON:.5f}",
+                f"{OOF_ZOBS_KM * 1000:.3f}",
+                f"{sza:.2f}",
+                f"{azi:.2f}",
+                f"{1920.0 + i:.5e}",
+                f"{xair:.5e}",
+                f"{419.38 + 0.1 * i:.5e}",
+                f"{1.8698 + 1e-4 * i:.5e}",
+                f"{419.10 + 0.1 * i:.5e}",
+                f"{1.8710 + 1e-4 * i:.5e}",
+                f"{0.0878 + 1e-4 * i:.5e}",
+                f"{1.8e-3:.5e}",
+            ]
         )
-        var(
-            d,
-            "longitude",
-            "f4",
-            ("sounding_id",),
-            -111.90 + 0.01 * np.arange(n),
-            units="degrees_east",
-        )
-        xco2 = np.array([418.1, 418.4, -999999.0, 419.0, 418.8, 418.2], dtype="f4")
-        var(
-            d,
-            "xco2",
-            "f4",
-            ("sounding_id",),
-            xco2,
-            units="ppm",
-            _FillValue=np.float32(-999999.0),
-        )
-        var(
-            d,
-            "xco2_uncertainty",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 0.5, "f4"),
-            units="ppm",
-        )
-        var(
-            d,
-            "xco2_apriori",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 417.0, "f4"),
-            units="ppm",
-        )
-        var(
-            d,
-            "xco2_quality_flag",
-            "i1",
-            ("sounding_id",),
-            np.array([0, 0, 1, 0, 1, 0], "i1"),
-            comment="0=good, 1=bad",
-        )
-        var(
-            d,
-            "solar_zenith_angle",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 52.0, "f4"),
-            units="degrees",
-        )
-        var(
-            d,
-            "sensor_zenith_angle",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 20.0, "f4"),
-            units="degrees",
-        )
-        # levels 1..20 from space to the surface; level 20 pressure = psurf
-        psurf = np.array([868.0, 866.0, 870.0, 865.0, 869.0, 867.0], "f4")
-        sigma = np.linspace(0.0001, 1.0, nlev)
-        plev = psurf[:, None] * sigma[None, :]
-        var(
-            d,
-            "pressure_levels",
-            "f4",
-            ("sounding_id", "levels"),
-            plev,
-            units="hPa",
-            comment="level 20 is the surface",
-        )
-        ak = np.tile(np.linspace(0.3, 1.1, nlev), (n, 1)).astype("f4")
-        var(d, "xco2_averaging_kernel", "f4", ("sounding_id", "levels"), ak, units="1")
-        pw = np.gradient(sigma) / np.gradient(sigma).sum()
-        var(
-            d,
-            "pressure_weight",
-            "f4",
-            ("sounding_id", "levels"),
-            np.tile(pw, (n, 1)),
-            units="1",
-        )
-        var(
-            d,
-            "co2_profile_apriori",
-            "f4",
-            ("sounding_id", "levels"),
-            np.tile(np.linspace(405.0, 420.0, nlev), (n, 1)),
-            units="ppm",
-        )
-        var(
-            d,
-            "vertex_latitude",
-            "f4",
-            ("sounding_id", "vertices"),
-            40.70 + 0.02 * np.arange(n)[:, None] + np.array([-0.01, -0.01, 0.01, 0.01]),
-        )
-        var(
-            d,
-            "vertex_longitude",
-            "f4",
-            ("sounding_id", "vertices"),
-            -111.90
-            + 0.01 * np.arange(n)[:, None]
-            + np.array([-0.01, 0.01, 0.01, -0.01]),
-        )
-        s = d.createGroup("Sounding")
-        var(
-            s,
-            "solar_azimuth_angle",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 205.0, "f4"),
-            units="degrees",
-        )
-        var(
-            s,
-            "sensor_azimuth_angle",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 98.0, "f4"),
-            units="degrees",
-            comment="degrees East of North",
-        )
-        var(
-            s,
-            "altitude",
-            "f4",
-            ("sounding_id",),
-            np.full(n, 1300.0, "f4") + rng.normal(0, 5, n).astype("f4"),
-            units="m",
-            long_name="surface altitude",
-        )
-        var(s, "land_fraction", "f4", ("sounding_id",), np.full(n, 100.0, "f4"))
-        var(
-            s,
-            "operation_mode",
-            "i1",
-            ("sounding_id",),
-            np.zeros(n, "i1"),
-            comment="0=Nadir,1=Glint,2=Target,3=Transition,4=SAM",
-        )
-        var(s, "orbit", "i4", ("sounding_id",), np.full(n, 49123, "i4"))
-        var(s, "footprint", "i1", ("sounding_id",), np.arange(1, n + 1, dtype="i1"))
-        r = d.createGroup("Retrieval")
-        var(r, "psurf", "f4", ("sounding_id",), psurf, units="hPa")
+    text = ", ".join(columns) + "\n" + "\n".join(", ".join(r) for r in rows) + "\n"
+    (run / f"comb_invparms_{PROFFAST_RUN}.csv").write_text(text)
 
 
 def main() -> None:
@@ -633,7 +740,8 @@ def main() -> None:
     ap.add_argument("--tropomi", type=Path)
     ap.add_argument("--blended", type=Path)
     ap.add_argument("--tccon", type=Path)
-    ap.add_argument("--no-oco2", action="store_true")
+    ap.add_argument("--oco2", type=Path)
+    ap.add_argument("--oco3", type=Path)
     a = ap.parse_args()
     if a.tropomi:
         tropomi(a.tropomi)
@@ -641,11 +749,15 @@ def main() -> None:
         blended(a.blended)
     if a.tccon:
         tccon(a.tccon)
-    if not a.no_oco2:
-        oco2_synthetic()
+    if a.oco2:
+        oco(a.oco2, box=(-95.2, -94.7, 29.2, 29.6), mode=0)  # nadir, near Houston
+    if a.oco3:
+        oco(a.oco3, box=(-97.6, -97.0, 36.3, 36.9), mode=2)  # target, Lamont (SGP)
     # The GGG samples need no source file: they are synthetic by construction.
     oof_synthetic()
     ggg_private_synthetic()
+    geoms_synthetic()
+    proffast_synthetic()
 
 
 if __name__ == "__main__":

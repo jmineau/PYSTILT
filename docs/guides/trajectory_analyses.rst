@@ -4,10 +4,9 @@ Trajectory-Style Analyses
 Tools such as HyTraj and pysplit work with a few trajectories per
 measurement: residence time, potential source contribution (PSCF),
 concentration-weighted trajectories (CWT), a mean path, the time the
-air took from a source. This page does the same with PYSTILT's results.
-A run gives hundreds of particles per receptor, and a footprint that
-already weights them by their time near the ground, so most of these
-analyses get simpler.
+air took from a source. PYSTILT's results do all of these, and most get
+simpler, because a run gives hundreds of particles per receptor and a
+footprint that already weights them by their time near the ground.
 
 The examples use a month of receptors at one site, and a table of your
 measurements with a ``receptor`` column, such as ``project.simulations``
@@ -92,7 +91,7 @@ A mean path
 -----------
 
 The mean path of a receptor's particles is their mean position at each
-output step:
+output step, the center of the cloud as it spreads:
 
 .. code-block:: python
 
@@ -100,8 +99,12 @@ output step:
    path = particles.groupby(["receptor", "age"])[["lon", "lat", "zagl"]].mean()
    one = path.loc[rid].sort_index(ascending=False)   # from the release backwards
 
-A mean path hides how the particles spread, which is what the footprint
-keeps. ``sim.particles.stilt.plot.map()`` draws them all.
+It is not the path of a mean-wind trajectory, such as ``hyts_std`` computes.
+In a 6-hour run from 500 m the mean of 1,000 particles ended about 21 km
+from that trajectory and 400 m lower. For the trajectory, run one particle
+with turbulence off (:ref:`single-trajectory`). A mean path also hides how
+the particles spread, which is what the footprint keeps.
+``sim.particles.stilt.plot.map()`` draws them all.
 
 Transit time from a source
 --------------------------
@@ -216,7 +219,7 @@ Some variations:
   smoke injected above the boundary layer drops out. The region version
   above does not depend on ``foot``.
 - **Forward runs from the source.** When the release is the source, a
-  row's ``age`` is already its transit time (:doc:`plume_background`).
+  row's ``age`` is already its transit time (:ref:`plume-background`).
 
 Comparing variants
 ------------------

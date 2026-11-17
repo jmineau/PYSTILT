@@ -49,6 +49,47 @@ The footprint's settings, top-level keys too.
 
 .. config-model:: stilt.footprint.config.FootprintConfig
 
+Footprint grids
+^^^^^^^^^^^^^^^
+
+Longitudes count modulo 360, so a grid across 180° can be written
+``xmin: 170``, ``xmax: 190`` or ``xmin: 170``, ``xmax: -170``, and the
+footprint's longitudes are then 170 to 190. An ``xmax`` west of ``xmin``
+is read as crossing 180° when the two are on either side of 0° or one is
+written past 180°: with both in one hemisphere (``xmin: -110.5``,
+``xmax: -113``) they are taken to be swapped and the grid is refused. A grid spans at most 360°. A
+particle cloud on both sides of 180° is measured as one cloud for the
+smoothing. A grid that goes all the way around (``xmin: -180``,
+``xmax: 180``, with cells that fit 360°) is a circle, so smoothing that
+passes the east edge returns at the west edge. On a grid that ends at or
+near 180°, particles just across 180° smooth onto the grid, as particles
+just past any other edge do.
+
+Projected grids (a ``crs`` such as ``EPSG:32612``) keep their bounds in
+degrees and take ``xres`` and ``yres`` in the projection's units. A grid
+of more than a billion cells is refused, which catches a resolution in
+degrees on a grid in meters. The two
+steps that depend on the cell size work in the grid's units. The smoothing
+kernel's width is worked out in degrees and converted, so a footprint is
+smoothed about as much on 1 km UTM cells as on 0.01° cells. The early-time
+interpolation, which adds particle positions between output steps in the
+first 100 minutes when the particles move more than a cell per step, runs
+on 100 m UTM cells as it does on 0.001° cells. :ref:`stilt-r-parity` says
+where STILT-R differs on these grids.
+
+Time layers (``tres``) are recorded one way, so ``60min`` is recorded as
+``1h`` and two spellings of one length share a settings folder. Each layer
+holds the influence of the particles in its minutes, so the layers sum to
+the same total footprint whatever ``tres`` is.
+
+Loading ``config.yaml`` does not read a ``geometry`` file.
+PYSTILT reads it once, when it works out the variants' settings, and picks
+the grid then (:meth:`stilt.Mesh.to_grid`), so a variant with a geometry
+cannot change only part of the grid (``grid: {xres: 0.1}``). A ``grid``
+given with a ``geometry`` is used as given. Each footprint file stores a
+code for the geometry it was made for, which is how
+``foot.stilt.aggregate`` knows when a mesh no longer matches.
+
 A met
 ~~~~~
 
@@ -63,6 +104,11 @@ Execution
 The keys under ``execution:`` (:doc:`../guides/running`).
 
 .. config-model:: stilt.execution.config.ExecutionConfig
+
+The keys under ``execution: fetch:``, the Slurm resources of the job that
+gets the met files before a job array (:ref:`slurm-fetch`).
+
+.. config-model:: stilt.execution.config.FetchConfig
 
 Config objects
 --------------
@@ -96,8 +142,11 @@ They are flat, top-level keys. HYSPLIT's are in
 :class:`stilt.transport.hysplit.HysplitConfig`, under HYSPLIT's names (see
 :doc:`hysplit`). A variant that names another ``model`` gives that model's
 parameters itself, and inherits the met, the footprint settings, and the
-parameters PYSTILT reads itself (``n_hours``, ``seed``, ``hnf_plume``, and
-``veght``).
+parameters PYSTILT reads itself (``n_hours``, ``seed``,
+``footprint_depth``, ``pbl_height``, and ``pbl_height_min``). ``hnf_plume``,
+the near-field correction, is a footprint setting: it is applied when the
+footprint is made, so it does not change the particles or their settings
+folder.
 
 
 Geometry specifications

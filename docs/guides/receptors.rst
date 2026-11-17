@@ -16,7 +16,7 @@ that matches how your instrument samples the air.
      - You give it
    * - :class:`PointReceptor`
      - An instrument sampling at one point, such as a tower inlet, a flask,
-       or an aircraft or vehicle measurement
+       or an aircraft or vehicle measurement (:doc:`tracks`)
      - ``longitude``, ``latitude``, ``altitude``
    * - :class:`ColumnReceptor`
      - An instrument measuring the vertical column above one spot, such as a
@@ -36,7 +36,8 @@ PointReceptor
 -------------
 
 This is the most common type. Use it for a fixed surface site or an airborne
-sample at one height.
+sample at one height. For an analyzer that measures as it moves,
+:doc:`tracks` makes these receptors from its track.
 
 .. ipython:: python
 
@@ -134,11 +135,19 @@ form has one row per point receptor:
    2023-07-15 18:00:00,-111.848,40.766,10
    2023-07-15 19:00:00,-111.848,40.766,10
 
+Write times in ISO 8601, such as ``2023-07-15 18:00:00`` or
+``2023-07-15T18:00:00Z``, or as ``YYYYMMDDHHMM``, such as ``202307151800``.
+A time with an offset, such as ``2023-07-15T12:00:00-06:00``, is converted
+to UTC; one without is taken as UTC. Other forms are refused, naming the
+row: ``05/07/2023`` could be 5 July or 7 May.
+
 The column names from STILT-R also work. Use ``long`` or ``lon`` for
 longitude, ``lati`` or ``lat`` for latitude, and ``zagl`` or ``zmsl`` for
 altitude. A ``zmsl`` column means the altitudes are above sea level. To mix
-the two in one file, add an ``altitude_ref`` column with ``agl`` or ``msl``
-on each row.
+the two in one file, add an ``altitude_ref`` (or ``height_ref``) column with
+``agl`` or ``msl`` on each row. A column under another name that holds only
+``agl`` and ``msl``, such as ``alt_ref``, is an error: it would be kept as a
+label, and every height read as above ground.
 
 To build a column or multipoint receptor, give its rows the same ``r_idx``
 value. Rows that share an ``r_idx`` become one receptor, so they must also
@@ -214,8 +223,9 @@ Advanced: release heights for multipoint and slant receptors
 ------------------------------------------------------------
 
 Vertical weighting needs each particle's release height, the
-``release_height`` column of the particles. HYSPLIT does not record which release point a particle came from, so PYSTILT works
-it out from the first row HYSPLIT writes for the particle. With the bundled
+``release_height`` column of the particles. HYSPLIT does not record which
+release point a particle came from, so PYSTILT works it out from the first
+row HYSPLIT writes for the particle. With the bundled
 HYSPLIT build, that row comes one timestep after release. By then the wind
 has moved the particle a few hundred meters, which can be more than the
 spacing between the points of a slant column.
@@ -231,8 +241,8 @@ PYSTILT recovers release heights in this order:
 3. Otherwise it matches by horizontal position. It warns when the release
    points are closer than 1 km, because the match cannot be trusted there.
 
-A HYSPLIT change that writes release-time rows has been sent to NOAA ARL. Until
-a published build includes it, you can point PYSTILT at your own build:
+To get exact release heights, run a HYSPLIT build that writes rows at
+release time (:doc:`hysplit_build`):
 
 .. code-block:: yaml
 

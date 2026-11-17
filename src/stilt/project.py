@@ -34,10 +34,10 @@ from stilt.execution.config import ExecutionConfig
 from stilt.fetch import fetch_project
 from stilt.footprint import Geometry, Jacobian
 from stilt.footprint.aggregation import _jacobian
+from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _threads, open_footprints
 from stilt.output import Kind, Output, completed
 from stilt.particles import particles_from_table, read_particles
-from stilt.particles.transport_error import _transport_errors
 from stilt.receptors import Receptor, read_receptors
 from stilt.receptors.table import (
     COLUMNS,
@@ -50,6 +50,7 @@ from stilt.receptors.table import (
     receptors_to_csv,
 )
 from stilt.simulation import Simulation
+from stilt.transport_error import _transport_errors
 
 if TYPE_CHECKING:
     from stilt.visualization import ProjectPlotAccessor
@@ -257,13 +258,22 @@ class Project:
             If both *config* and keyword settings are given, or either is
             given with ``starter=True``.
         ValueError
-            If a variant's settings are invalid. Nothing is written.
+            If a variant's settings are invalid, or *receptors* is given but
+            holds none (an empty list, or a CSV file with only its header).
+            Nothing is written.
         """
         if config is not None and settings:
             raise TypeError("Give a ProjectConfig or keyword settings, not both.")
         if starter and (config is not None or settings):
             raise TypeError(
                 "A starter config takes no settings; edit its config.yaml instead."
+            )
+        batch = None if receptors is None else _as_receptors(receptors)
+        if batch == []:
+            raise ValueError(
+                "No receptors were given: the list or file is empty. Leave "
+                "receptors out to make a project without them, and add them "
+                "later with project.add_receptors."
             )
         if starter:
             config = ProjectConfig.model_validate(yaml.safe_load(STARTER_CONFIG))
@@ -283,8 +293,8 @@ class Project:
             project.config_path.write_text(STARTER_CONFIG)
         else:
             config.to_yaml(project.config_path)
-        if receptors is not None:
-            project.add_receptors(receptors)
+        if batch is not None:
+            project.add_receptors(batch)
         elif starter:
             # Header only: every other line of a receptors file is a receptor.
             project.receptors_path.write_text("time,longitude,latitude,altitude\n")
@@ -320,12 +330,16 @@ class Project:
         FileNotFoundError
             If the project has no ``config.yaml``.
         """
+        self._require_config()
+        return ProjectConfig.from_yaml(self.config_path)
+
+    def _require_config(self) -> None:
+        """Raise unless the directory has a ``config.yaml``, which is what makes it a project."""
         if not self.config_path.exists():
             raise FileNotFoundError(
                 f"No config.yaml in {self.directory}. Make a project with "
                 "stilt.Project.init(...) or `stilt init`."
             )
-        return ProjectConfig.from_yaml(self.config_path)
 
     @cached_property
     def output(self) -> Output:
@@ -360,6 +374,8 @@ class Project:
         """
         if self._taken_rows is not None:
             return self._taken_rows
+        # A typo in the path would otherwise read as a project with no receptors.
+        self._require_config()
         if not self.receptors_path.exists():
             empty = pd.DataFrame(columns=["time", "longitude", "latitude", "altitude"])
             return receptor_rows(empty)
@@ -380,6 +396,12 @@ class Project:
         (``point``, ``column``, or ``multipoint``), ``location`` (the
         location id), and one column per label from ``receptors.csv``.
         :meth:`receptor` gives the receptor itself.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the directory has no ``config.yaml``, so it is not a project:
+            a mistyped path is not read as a project with no receptors.
         """
         rows = self._rows
         labels = [c for c in rows.columns if c not in COLUMNS and c not in ROW_COLUMNS]
@@ -930,9 +952,11 @@ class Project:
         """
         Open the footprints of the selected simulations as one dataset.
 
-        Footprints are stacked by their hour from the receptor time, so
-        receptors at any time share one ``hour`` axis; the ``time``
-        coordinate says when each layer starts. Only the files' metadata is
+        Footprints are stacked by their layer from the receptor time, so
+        receptors at any time share one layer axis, named for the unit
+        ``tres`` is written in and counted in it: ``hour`` with the default
+        ``tres`` of ``1h``, ``day`` for ``1D``, ``minute`` for ``15min``. The
+        ``time`` coordinate says when each layer starts. Only the files' metadata is
         read here. The values load with dask when they are used, in blocks
         of receptors from one date folder. The selection must hold one
         variant, as for :meth:`jacobian`.
@@ -947,7 +971,9 @@ class Project:
         -------
         xarray.Dataset
             ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and
-            ``x`` on a projected grid), in selection order. A receptor with
+            ``x`` on a projected grid, and ``day`` or ``minute`` in place
+            of ``hour`` when ``tres`` is written in them), in selection
+            order. A receptor with
             an empty footprint has no row and is listed in
             ``attrs["empty"]``; one not run yet is listed in
             ``attrs["missing"]``.
@@ -1026,7 +1052,10 @@ class Project:
         time_bins : pandas.IntervalIndex
             Flux time bins, such as a flux inventory's steps. They must be
             closed on the left (``closed="left"``): each bin holds the
-            footprint hours that start in it. You build these yourself;
+            footprint layers that start in it. A layer goes whole into the
+            bin where it starts, so the bins must be as long as the
+            footprints' layers (``tres``) or longer; a layer that crosses a
+            bin edge still goes into the bin where it starts. You build these yourself;
             ``jacobian`` does not read them from an inventory's own CF time
             bounds, unlike ``foot.stilt.enhancement`` with a flux that has
             them. Building the bins from an inventory's own time labels
@@ -1056,7 +1085,9 @@ class Project:
         ValueError
             If the selection holds more or fewer than one variant, or
             several realizations of an ensemble, the variant has no grid or
-            no footprints yet, or ``time_bins`` is not closed on the left.
+            no footprints yet, ``time_bins`` is not closed on the left, or a
+            bin is shorter than the footprints' layers (use a shorter
+            ``tres``).
         """
         frame = self._selected(sel)
         name, k = _one_group(frame, "A Jacobian")
@@ -1116,9 +1147,8 @@ class Project:
             Threads that read and estimate receptors. Defaults to the CPUs
             this process may use (in a Slurm job, the job's), at most 8.
         **options
-            Passed to :func:`stilt.particles.transport_error`: ``levels``,
-            ``length_scale``, ``percentile``, ``noise_splits``, and
-            ``background``.
+            Passed to :func:`stilt.transport_error`: ``levels``,
+            ``length_scale``, ``percentile``, and ``background``.
 
         Returns
         -------
@@ -1198,16 +1228,19 @@ class Project:
                 [particles(perturbed, rid, k) for k in runs[rid]],
             )
 
+        footprint = variant.footprint or FootprintConfig.model_validate({})
         found = _transport_errors(
             read,
             list(self._receptors(runs).values()),
             flux,
-            transforms=()
-            if variant.footprint is None
-            else variant.footprint.transforms,
+            transforms=footprint.transforms,
             directory=self.directory,
             workers=_threads(workers),
-            **options,
+            **{
+                "hnf_plume": footprint.hnf_plume,
+                "footprint_depth": variant.transport.footprint_depth,
+                **options,
+            },
         )
         result = found.reindex(frame["receptor"].to_numpy())
         result["realizations"] = result["realizations"].fillna(0).astype("int64")
@@ -1222,21 +1255,23 @@ class Project:
         Looks only at the inputs, and runs and downloads nothing. For each
         variant it checks that:
 
+        - the project has receptors (``receptors``);
         - the met's ``directory`` exists and holds an ARL file (``met_directory``);
         - every met file each receptor's run needs is there, naming the
           hours (``met_files``);
         - each met file they need holds at least two time periods, which
           HYSPLIT needs (``met_periods``), and ends on a whole time step
           (``met_cut``);
-        - each receptor is inside the met's crop box, ``subgrid_bounds``,
-          when the crop is on (``met_crop``);
+        - each receptor is inside the grid of the met files its run starts
+          in, when the crop is off (``met_domain``), or inside the met's
+          crop box, ``subgrid_bounds``, when it is on (``met_crop``);
         - each receptor is inside the footprint grid (``grid``);
         - each ``averaging_kernel`` table exists (``kernel_table``), has a
           kernel for every receptor (``kernel_missing``), and holds none for
           a receptor the project lacks (``kernel_unused``);
         - ``varsiwant`` holds ``zsfc`` when a receptor is above sea level
           (``altitude_ref="msl"``) and a run reads it: the near-field
-          correction, the release heights of a multipoint receptor whose
+          correction of a footprint, the release heights of a multipoint receptor whose
           points are less than 1 km apart and at different altitudes, or the
           ``pressure_weighting`` transform (``zsfc``).
 
@@ -1261,12 +1296,11 @@ class Project:
         Notes
         -----
         The check looks for files, not inside them (except to count the time
-        periods of the first file a run needs, and to read the spacing of the
-        met steps from the file of a run's end), and the crop box is the
-        only domain it knows. A run that passes it can still fail as
+        periods of the first file a run needs, to read the spacing of the
+        met steps from the file of a run's end, and to read a grid from a
+        file's header). A run that passes it can still fail as
         ``MET_COVERAGE``: a met file that is damaged or cut short is found
-        when the run opens it, and a receptor outside the domain of the
-        files (an uncropped met), when HYSPLIT starts it.
+        when the run opens it.
 
         Examples
         --------
@@ -1278,13 +1312,13 @@ class Project:
         """
         return check_project(self)
 
-    def fetch(self, sel: Any = None) -> pd.DataFrame:
+    def fetch(self, sel: Any = None, *, skip_existing: bool = True) -> pd.DataFrame:
         """
         Get the met files the unfinished simulations need, and return them.
 
         For each met, gets the files that cover the time of every
-        simulation in *sel* whose transport model has yet to run, as a run
-        would ask for them (the met step at or after a run's end too). With
+        simulation in *sel* whose transport model has yet to run (every
+        one, with ``skip_existing=False``), as a run would ask for them (the met step at or after a run's end too). With
         ``download``, it downloads what is missing and crops it as it
         goes, so the runs that follow find every file and download nothing.
         A met without ``download`` is only checked: its missing files are
@@ -1297,6 +1331,10 @@ class Project:
         sel : optional
             The simulations to fetch for, as for :meth:`status`. Defaults to
             all of them.
+        skip_existing : bool, default True
+            Leave out simulations whose particles exist. ``False`` gets the
+            met files of every simulation in *sel*, for a run with
+            ``skip_existing=False``, which runs them all again.
 
         Returns
         -------
@@ -1327,12 +1365,18 @@ class Project:
         >>> files.message.isna().all()  # True when every file is there  # doctest: +SKIP
         >>> project.run()  # downloads nothing  # doctest: +SKIP
         """
+        return fetch_project(self, self._unrun(sel, skip_existing=skip_existing))
+
+    def _unrun(self, sel: Any = None, *, skip_existing: bool = True) -> pd.DataFrame:
+        """Return the rows of the simulations in *sel* whose particles are missing (all of them unless *skip_existing*): the ones a fetch gets met for."""
         frame = self._selected(sel)
+        if not skip_existing:
+            return frame
         present = self._present(frame)
         has = np.array(
             [r in present[(v, k)][0] for r, v, k in _rows(frame)], dtype=bool
         )
-        return fetch_project(self, frame.loc[~has])
+        return frame.loc[~has]
 
     def run(
         self,

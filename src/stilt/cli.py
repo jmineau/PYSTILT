@@ -18,16 +18,18 @@ prints a short summary. Examples::
 
 ``stilt run`` exits with 0 when every simulation it ran is complete, 1 when
 some failed, and 3 when some did not finish because the run was
-interrupted (Ctrl-C, or SIGTERM from a scheduler) or a connection or I/O error
+interrupted (Ctrl-C, or SIGTERM from a scheduler), a worker process was killed
+(often for memory), or a connection or I/O error
 stopped them (an output bucket that stopped answering while a simulation wrote). ``stilt check`` exits
 with 0 when it finds nothing and 1 when it lists anything. ``stilt fetch``
 exits with 0 when every met file the runs need is there, 1 when the archive
 lacks some, and 3 when it was stopped (Ctrl-C or SIGTERM) or the archive was
 busy or unreachable. Every command
 exits with 2 when its command line is wrong: an unknown option, a bad value,
-or a directory that is not a project. ``stilt run``, ``stilt submit``, and
-``stilt status`` also exit with 2 when a met directory does not exist or
-holds no ARL file, which ``stilt check`` lists.
+or a directory that is not a project. ``stilt run`` and ``stilt submit`` also
+exit with 2 when a met directory does not exist or holds no ARL file, which
+``stilt check`` lists. ``stilt status`` does too, unless the output holds no
+result the project could own: then it counts every simulation as pending.
 
 An error the command did not expect ends it too, after its traceback: with
 3 when the error is a connection or an I/O error (a bucket that cannot be
@@ -58,8 +60,9 @@ from pydantic import ValidationError
 from typer.core import TyperGroup
 
 from stilt._transient import is_transient
+from stilt.exceptions import WorkerDied
 from stilt.execution.config import ExecutionConfig
-from stilt.execution.runner import resolve_compute_root
+from stilt.execution.runner import pending, resolve_compute_root
 from stilt.project import STATES, Project
 
 #: Exit codes. 2 is also Click's own for an unknown option or command, so a
@@ -180,12 +183,17 @@ def _open(project: str | Path | None, output: str | None = None) -> Project:
     ``stilt check`` lists the same problem as a finding.
     """
     opened = Project(_resolve_project(project), output=output)
+    _require_met(opened)
+    return opened
+
+
+def _require_met(project: Project) -> None:
+    """Exit with 2 and the line ``stilt check`` lists when a variant's met cannot be read."""
     try:
-        for variant in opened.variants.values():
+        for variant in project.variants.values():
             _ = variant.met_settings
     except (FileNotFoundError, ValueError) as error:
         _fail(str(error))
-    return opened
 
 
 # ---------------------------------------------------------------------------
@@ -447,6 +455,12 @@ def _stop_once() -> Iterator[None]:
 @app.command()
 def fetch(
     project: str | None = _PROJECT_ARG,
+    receptors: Path | None = _RECEPTORS,
+    no_skip: bool = typer.Option(
+        False,
+        "--no-skip",
+        help="Get the met of every simulation, also those whose particles exist.",
+    ),
     output: str | None = _OUTPUT,
 ) -> None:
     """
@@ -457,20 +471,38 @@ def fetch(
     set downloads what is missing, cropped to its subgrid, so the runs that
     follow find every file and download nothing: run this once where the
     files are shared, before many workers start. A met without download is
-    only checked for missing files, as stilt check does. Exits with 0 when
+    only checked for missing files, as stilt check does. --receptors limits
+    it to the receptors listed in a file, as for stilt run; the fetch job
+    stilt submit sends before a job array reads its receptors.parquet.
+    --no-skip gets the met of every simulation, for a stilt run --no-skip.
+    Exits with 0 when
     every file is there, 1 when the archive lacks some, 2 when the command
     line is wrong or a met cannot be read, and 3 when stopped by Ctrl-C or
     SIGTERM, after removing the file it was downloading, or when the archive
     was busy or the connection failed (4 for any other unexpected error).
     """
+    receptor_ids, rows = (
+        (None, None) if receptors is None else _read_receptors(receptors)
+    )
     opened = _open(project, output=output)
+    if rows is not None:
+        opened._take_rows(rows)
+    sel = None
+    if receptor_ids is not None:
+        try:
+            # Checks the ids as a run does; lists no output without skip_existing.
+            receptor_ids = pending(opened, receptors=receptor_ids, skip_existing=False)
+        except ValueError as error:
+            _fail(f"{receptors}: {error}")
+        sel = opened.simulations["receptor"].isin(receptor_ids)
     # arlmet logs each file it downloads, which is the progress to show.
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
     logging.getLogger("arlmet.archives").setLevel(logging.INFO)
-    typer.echo(f"Project: {opened.directory}  receptors={len(opened.receptors)}")
+    count = len(opened.receptors) if receptor_ids is None else len(receptor_ids)
+    typer.echo(f"Project: {opened.directory}  receptors={count}")
     try:
         with _stop_once():
-            files = opened.fetch()
+            files = opened.fetch(sel, skip_existing=not no_skip)
     except (ImportError, ValueError) as error:
         _fail(str(error))
     except KeyboardInterrupt:
@@ -508,7 +540,8 @@ def run(
     Kubernetes indexed Job.
 
     Exits with 0 when every simulation that ran is complete, 1 when some
-    failed, 3 when some did not finish (the run was stopped, or a connection
+    failed, 3 when some did not finish (the run was stopped, a worker process
+    was killed, often for memory, or a connection
     or I/O error stopped them while they wrote), and 2 when
     the command line is wrong or a met cannot be read (nothing ran). An
     error the run did not expect prints its traceback and exits with 3 when
@@ -538,6 +571,10 @@ def run(
         table = opened.run(receptors=receptor_ids, task=share, **options)
     except ValueError as error:
         _fail(str(error))
+    except WorkerDied as error:
+        # A worker was killed, most likely for memory; the message says what to do.
+        typer.echo(f"stilt run stopped: {error}", err=True)
+        raise typer.Exit(code=EXIT_INTERRUPTED) from None
     if receptor_ids is None and share is None:
         _print_status(opened)
     else:
@@ -601,15 +638,27 @@ def status(
     The counts are per variant when there are several. Each settings folder
     holds the results of one set of settings; the list says how many result
     files it holds, which variants use it, and, for a folder this project
-    does not use, how its settings differ from the variant of its name. Exits with
-    2 when the command line is wrong or a met cannot be read.
+    does not use, how its settings differ from the variant of its name.
+
+    The settings folders are named by the hash of the settings, which includes
+    the met's weather product, read from the met's files. When a met cannot
+    be read, status still counts every simulation as pending if no folder in
+    the output has the variant's other settings, since then no result can
+    exist. Otherwise it needs the met, and exits with 2, as it does when the
+    command line is wrong.
     """
-    opened = _open(project, output=output)
+    opened = Project(_resolve_project(project), output=output)
+    try:
+        table = opened.status()
+        folders = opened.folders()
+    except FileNotFoundError:
+        _require_met(opened)
+        raise
     if as_json:
-        typer.echo(json.dumps(_status_data(opened), indent=2))
+        typer.echo(json.dumps(_status_data(opened, table, folders), indent=2))
         return
-    _print_status(opened)
-    _print_folders(opened)
+    _print_status(opened, status=table)
+    _print_folders(opened, folders)
 
 
 # ---------------------------------------------------------------------------
@@ -622,14 +671,19 @@ def _counts(states: Iterable[str]) -> str:
     return "  ".join(f"{name}={n}" for name, n in _state_counts(states).items())
 
 
-def _print_status(project: Project, ran: pd.DataFrame | None = None) -> None:
+def _print_status(
+    project: Project,
+    ran: pd.DataFrame | None = None,
+    status: pd.DataFrame | None = None,
+) -> None:
     """
     Print a project status summary, per variant when there are several.
 
     With *ran*, the status table of a run, it sums up those simulations
-    only.
+    only. *status* is the project's status table, when the caller has it.
     """
-    table = project.status() if ran is None else ran
+    shown = status if ran is None else ran
+    table = project.status() if shown is None else shown
     label = f"Project: {project.directory}" if ran is None else "This run:"
     typer.echo(f"{label}  {_counts(table['state'])}")
     if len(project.variants) > 1:
@@ -651,17 +705,19 @@ def _state_counts(states: Iterable[str]) -> dict[str, int]:
     return {"total": counts.total(), **{s: counts[s] for s in STATES}}
 
 
-def _status_data(project: Project) -> dict[str, Any]:
+def _status_data(
+    project: Project, table: pd.DataFrame, folders: pd.DataFrame
+) -> dict[str, Any]:
     """
     Return what ``stilt status`` prints, as plain data.
+
+    *table* is the project's status table and *folders* its settings folders.
 
     ``simulations`` and ``variants`` count the simulations in each state,
     ``failed`` counts the failed ones by reason, and ``folders`` lists the
     settings folders as :meth:`stilt.Project.folders` does.
     """
-    table = project.status()
     failed = table.loc[table.state == "failed", "reason"]
-    folders = project.folders()
     return {
         "project": str(project.directory),
         "output": str(project.output.directory),
@@ -747,15 +803,15 @@ def _print_fetch(files: pd.DataFrame) -> int:
     return len(failed)
 
 
-def _print_folders(project: Project) -> None:
+def _print_folders(project: Project, table: pd.DataFrame) -> None:
     """
     Print the output directory's settings folders, this project's first.
 
     The folders no variant of this project uses (changed settings, a
     dropped variant, or another project sharing the output directory) follow
-    under their own heading, with how their settings differ.
+    under their own heading, with how their settings differ. *table* is
+    :meth:`stilt.Project.folders`.
     """
-    table = project.folders()
     typer.echo(f"Output: {project.output.directory}")
     if table.empty:
         typer.echo("  no settings folders yet")

@@ -206,7 +206,9 @@ def test_sigterm_stops_a_run_on_two_cpus_with_exit_3(tmp_path, method):
             pytest.fail("stilt run did not stop within 20 s of SIGTERM")
         assert time.monotonic() - started < 20
     finally:
-        with contextlib.suppress(ProcessLookupError):
+        # macOS refuses to signal a group whose last processes are exiting
+        # (PermissionError); such a group needs no cleanup either.
+        with contextlib.suppress(ProcessLookupError, PermissionError):
             os.killpg(proc.pid, signal.SIGKILL)
         # The fake hycs_std runs have sessions of their own.
         for pid in pids.read_text().split() if pids.exists() else []:

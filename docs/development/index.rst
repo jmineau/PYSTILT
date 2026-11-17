@@ -13,6 +13,10 @@ for conventions and for how to write the docs, and open issues on
 :doc:`stilt_r_parity`
    What "matches STILT-R" covers, and how to move to a newer STILT-R commit.
 
+:doc:`validation`
+   How closely results match a reference, as measured, with the test behind
+   each number.
+
 :doc:`roadmap`
    What is implemented and what is planned.
 
@@ -52,4 +56,5 @@ Common tasks:
 
    architecture
    stilt_r_parity
+   validation
    roadmap

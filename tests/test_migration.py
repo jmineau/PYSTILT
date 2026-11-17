@@ -209,7 +209,7 @@ def test_hourly_footprint_layers_are_stamped_as_stilt_r_stamps_them():
         pd.Timestamp("2015-07-04 23:00"),
     ]
     np.testing.assert_array_equal(foot["time"].to_numpy(), stamps.to_numpy())
-    assert foot.stilt.config.time_integrate is False
+    assert foot.stilt.config.tres == "1h"
 
 
 def test_footprint_values_are_the_file_values_on_its_grid():
@@ -224,11 +224,20 @@ def test_footprint_values_are_the_file_values_on_its_grid():
     assert (grid.xres, grid.yres) == (0.02, 0.025)
 
 
-def test_time_integrated_footprint_is_one_layer_at_the_receptor_time():
-    receptor, _, foot = _read()[COLUMN]
+def test_time_integrated_footprint_is_one_layer_as_long_as_the_run():
+    """STILT-R stamps its summed map at the receptor time; it is read as one layer of the run's length."""
+    receptor, particles, foot = _read()[COLUMN]
+    raw = _raw_foot(COLUMN)
+    assert raw.sizes["time"] == 1
     assert foot.sizes["time"] == 1
-    assert foot["time"].to_numpy()[0] == np.datetime64(receptor.time)
-    assert foot.stilt.config.time_integrate is True
+    run = pd.Timedelta(foot.stilt.config.tres)
+    assert run > pd.Timedelta(hours=1)
+    assert particles["age"].min() >= -run / pd.Timedelta(minutes=1)
+    assert foot["time"].to_numpy()[0] == np.datetime64(receptor.time - run)
+    np.testing.assert_array_equal(
+        foot.to_numpy(),
+        raw.transpose("time", "lat", "lon").to_numpy().astype("float64"),
+    )
     assert foot.stilt.receptor == receptor
 
 
@@ -245,7 +254,7 @@ def test_footprint_matches_pystilt_footprint_of_the_particles(name):
         receptor,
         config.grid,
         smooth_factor=config.smooth_factor,
-        time_integrate=config.time_integrate,
+        tres=config.tres,
     )
     assert mine is not None
     xr.testing.assert_allclose(mine, foot, rtol=1e-7, atol=1e-12)
@@ -459,10 +468,16 @@ def test_imported_runs_are_the_results_of_the_printed_variants(tmp_path, capsys)
     ((receptor, particles, foot),) = list(read_stilt_r(by_id))
     sim = project.simulation(POINT, "stilt-r")
     assert sim.receptor == receptor
-    for column in ("particle", "age", "lon", "lat", "zagl", "foot"):
+    for column in ("particle", "age", "lon", "lat", "zagl"):
         np.testing.assert_array_equal(
             sim.particles[column].to_numpy(), particles[column].to_numpy()
         )
+    # Stored before STILT-R's near-field correction, as PYSTILT stores its own.
+    np.testing.assert_array_equal(
+        sim.particles["foot"].to_numpy(), particles["foot_no_hnf_dilution"].to_numpy()
+    )
+    assert "foot_no_hnf_dilution" not in sim.particles.columns
+    assert sim.variant.footprint is not None and sim.variant.footprint.hnf_plume
     assert foot is not None
     np.testing.assert_allclose(sim.footprint.to_numpy(), foot.to_numpy(), rtol=1e-6)
     ((_, perturbed, _),) = list(read_stilt_r(by_id, error=True))
@@ -499,13 +514,15 @@ def test_the_settings_are_what_the_files_record(tmp_path, capsys):
     # SETUP.CFG
     assert run["numpar"] == 10
     assert run["kmix0"] == 150
-    assert run["frvs"] == 0.01
+    assert run["hscale"] == 10800
+    # SETUP.CFG entries that cannot change the particles are no settings.
+    assert "frvs" not in run
     # CONTROL
     assert run["n_hours"] == -2
     assert run["emisshrs"] == 0.01
     assert run["z_top"] == 25000
-    # The particles have STILT-R's near-field correction.
-    assert run["hnf_plume"] is True
+    # The near-field correction is the footprint's, not the run's.
+    assert "hnf_plume" not in run
     # What no file holds is unset: no seed, no error, no mixed-layer factor.
     assert run["seed"] is None
     assert run["siguverr"] is None
@@ -527,7 +544,7 @@ def test_the_settings_are_what_the_files_record(tmp_path, capsys):
     }
     foot = _settings(output, "footprints", "stilt-r")
     assert foot["smooth_factor"] == 0.5
-    assert foot["time_integrate"] is False
+    assert foot["tres"] == "1h"
     assert foot["grid"]["yres"] == 0.025
     path = next((output / "particles").rglob(f"{POINT}.parquet"))
     assert [str(p) for p in particles_metadata(path).met_files] == [

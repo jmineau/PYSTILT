@@ -1,14 +1,15 @@
 """
-Tools for column and satellite observations, ported from X-STILT.
+Tools for column, satellite, and mobile observations.
 
-The functions take and return plain arrays and tables, so they work with
-any product reader.
+The column and satellite tools are ported from X-STILT. The functions take
+and return plain arrays and tables, so they work with any product reader.
 
 Before a run:
 
 - Read a product into a table of soundings with :func:`read_tropomi_ch4`,
-  :func:`read_oco2`, :func:`read_tccon`, :func:`read_ggg_oof`, or
-  :func:`read_ggg_netcdf`.
+  :func:`read_oco2`, :func:`read_tccon`, :func:`read_ggg_oof`,
+  :func:`read_ggg_netcdf`, :func:`read_coccon`, or
+  :func:`read_proffast`.
 - Group soundings into overpasses (:func:`group_by_overpass`) and choose
   which to run (:func:`select_observations_spatial`).
 - Make a receptor for each sounding, and their averaging-kernel table, with
@@ -17,6 +18,10 @@ Before a run:
   of sight (:func:`slant_points`) at the retrieval's pressure levels
   (:func:`pressure_altitudes`). Every reader's table has the columns in
   :data:`SOUNDING_SCHEMA` (:func:`check_soundings`).
+- Group the measurements of a vehicle, train, aircraft, or ship into
+  receptors along its track, and link each measurement to its receptor,
+  with :func:`receptors_from_track`. A track has the columns in
+  :data:`TRACK_SCHEMA` (:func:`check_track`).
 
 After a run:
 
@@ -27,10 +32,10 @@ After a run:
 
 What a simulation's particles give is on the simulation:
 ``sim.background(field)`` and ``sim.transport_error(error_sim, flux)``
-(:mod:`stilt.particles`). The wind-error statistics are in
-:mod:`stilt.meteorology` (``variogram``, ``fit_variogram``), and particle
-weighting (averaging kernel, pressure weighting, lifetime decay) is in
-:mod:`stilt.transforms`.
+(:func:`stilt.background`, :func:`stilt.transport_error`). The wind-error
+statistics are in :mod:`stilt.meteorology` (``variogram``,
+``fit_variogram``), and particle weighting (averaging kernel, pressure
+weighting, loss on the way) is in :mod:`stilt.transforms`.
 """
 
 from .columns import modelled_column
@@ -42,20 +47,26 @@ from .placement import (
 )
 from .plumes import Plume, PlumeBackground, plume_background, plume_polygon
 from .readers import (
+    read_coccon,
     read_ggg_netcdf,
     read_ggg_oof,
     read_oco2,
+    read_proffast,
     read_tccon,
     read_tropomi_ch4,
 )
 from .readers.schema import SOUNDING_SCHEMA, check_soundings
 from .selection import group_by_overpass, select_observations_spatial
+from .tracks import TRACK_SCHEMA, check_track, receptors_from_track
 
 __all__ = [
     "SOUNDING_SCHEMA",
+    "TRACK_SCHEMA",
     "check_soundings",
+    "check_track",
     "modelled_column",
     "receptors_from_soundings",
+    "receptors_from_track",
     "Plume",
     "PlumeBackground",
     "group_by_overpass",
@@ -63,9 +74,11 @@ __all__ = [
     "plume_background",
     "plume_polygon",
     "pressure_altitudes",
+    "read_coccon",
     "read_ggg_netcdf",
     "read_ggg_oof",
     "read_oco2",
+    "read_proffast",
     "read_tccon",
     "read_tropomi_ch4",
     "select_observations_spatial",

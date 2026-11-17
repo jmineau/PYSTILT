@@ -165,6 +165,18 @@ class HysplitModel:
         """
         return Met("met", met).fetch(windows)
 
+    def downloads_met(self, met: MetConfig) -> bool:
+        """
+        Whether *met* downloads its files from an ARL archive (``download`` is set).
+
+        Examples
+        --------
+        >>> met = MetConfig(directory="/data/hrrr", download="hrrr")
+        >>> HysplitModel().downloads_met(met)
+        True
+        """
+        return met.download is not None
+
     def run(
         self,
         receptor: Receptor,
@@ -181,8 +193,9 @@ class HysplitModel:
         or after its end, which HYSPLIT interpolates, cropped when the met
         is. Its output is ``stilt.log`` in *workdir*, returned as the run's
         log. Without *workdir* it runs in a temporary directory. The release
-        heights and the near-field correction are added by the caller, as
-        for any model (:func:`stilt.transport.run_model`).
+        heights are added by the caller, as for any model
+        (:func:`stilt.transport.run_model`), and the near-field correction
+        when a footprint is made (:func:`stilt.calc_footprint`).
 
         Raises
         ------
@@ -213,10 +226,10 @@ class HysplitModel:
         source = files.files_for(window)
         readable = files.readable(source)
         files.check(readable, window)
-        write_inputs(workdir, receptor, config, readable)
+        _write_inputs(workdir, receptor, config, readable)
         try:
             run_hycs_std(workdir, timeout)
-            check_release(workdir, receptor, config)
+            check_release(workdir, receptor.coords(), config)
             path = workdir / PARTICLE_STILT_FILE
             if not path.exists():
                 raise SimulationError(
@@ -229,9 +242,30 @@ class HysplitModel:
         except SimulationError as error:
             error.log = _read_log(workdir)
             raise
-        # The record names the source files; the crop settings are in the
-        # run's settings.
+        # The record names the files found for the run: the archive's, or a
+        # crop that served it; the crop settings are in the run's settings.
         return ModelRun(particles=particles, log=_read_log(workdir), met_files=source)
+
+
+def _write_inputs(
+    workdir: Path, receptor: Receptor, config: HysplitConfig, met_files: list[Path]
+) -> None:
+    """
+    Write HYSPLIT's input files for *receptor* into *workdir*.
+
+    The one place a receptor becomes what HYSPLIT's ``CONTROL`` holds: its
+    time is the release time, its release points are the release
+    locations, and its ``altitude_ref`` is ``KMSL`` (0 above ground, 1
+    above sea level).
+    """
+    write_inputs(
+        workdir,
+        release_time=receptor.time,
+        locations=receptor.coords(),
+        config=config,
+        met_files=met_files,
+        kmsl=1 if receptor.altitude_ref == "msl" else 0,
+    )
 
 
 def _met_grid(path: Path) -> Grid:

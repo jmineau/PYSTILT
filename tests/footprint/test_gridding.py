@@ -10,6 +10,7 @@ import xarray as xr
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calc_footprint, gridding
+from stilt.footprint.config import FootprintConfig
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
     _fold_padding_around_the_globe,
@@ -23,7 +24,8 @@ from stilt.footprint.gridding import (
     _unwrap_around_cloud,
 )
 from stilt.footprint.io import read_footprint, write_footprint
-from stilt.receptors import PointReceptor
+from stilt.particles import correct_near_field
+from stilt.receptors import MultiPointReceptor, PointReceptor
 from stilt.spatial import Grid
 
 
@@ -46,6 +48,18 @@ def _particles_in_domain(n: int = 30, seed: int = 42) -> pd.DataFrame:
 
 def _grid(xres=0.1, yres=0.1):
     return Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=xres, yres=yres)
+
+
+def _moved(receptor: PointReceptor, longitude: float, latitude: float) -> PointReceptor:
+    """*receptor* at another place: the one test particles were released from."""
+    return receptor.model_copy(update={"longitude": longitude, "latitude": latitude})
+
+
+def _whole_run(particles: pd.DataFrame, *args, **kwargs) -> xr.DataArray:
+    """The footprint in one layer as long as the run: whole days that hold every row."""
+    oldest = float(np.nan_to_num(particles["age"].abs().max())) if len(particles) else 0
+    days = max(1, int(np.ceil(oldest / 1440)))
+    return calc_footprint(particles, *args, tres=f"{days}D", **kwargs)
 
 
 def _interior_particles(n: int = 40, seed: int = 55) -> pd.DataFrame:
@@ -113,10 +127,9 @@ def test_calc_footprint_raises_when_particles_outside_domain(
 ):
     """All particles outside the domain is an EmptyFootprint, not zeros."""
     particles = _particles_in_domain()
-    particles["lon"] = 0.0  # far outside [-114, -113]
-    particles["lat"] = 0.0
-    with pytest.raises(EmptyFootprint):
-        calc_footprint(particles, point_receptor, _grid())
+    far = Grid(xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0, xres=0.1, yres=0.1)
+    with pytest.raises(EmptyFootprint, match="No particle is over the footprint grid"):
+        calc_footprint(particles, point_receptor, far)
 
 
 def test_calc_footprint_raises_when_there_are_no_particles(point_receptor):
@@ -132,11 +145,78 @@ def test_calc_footprint_assigns_name(point_receptor):
     assert foot.stilt.name == "test"
 
 
-def test_calc_footprint_time_integrate_collapses_to_single_timestep(point_receptor):
-    particles = _particles_in_domain()
-    foot = calc_footprint(particles, point_receptor, _grid(), time_integrate=True)
-    assert foot is not None
-    assert len(foot.time) == 1
+def _particles_every_ten_minutes(n: int = 20, seed: int = 3) -> pd.DataFrame:
+    """Backward particles with a row every 10 minutes over the first two hours."""
+    rng = np.random.default_rng(seed)
+    ages = np.arange(-10.0, -121.0, -10.0)
+    return pd.DataFrame(
+        {
+            "age": np.repeat(ages, n),
+            "particle": np.tile(np.arange(1, n + 1, dtype=float), len(ages)),
+            "lon": rng.uniform(-113.9, -113.1, len(ages) * n),
+            "lat": rng.uniform(39.1, 39.9, len(ages) * n),
+            "zagl": rng.uniform(5, 100, len(ages) * n),
+            "foot": rng.uniform(1e-6, 1e-4, len(ages) * n),
+        }
+    )
+
+
+def test_ten_minute_layers_are_stamped_every_ten_minutes_and_sum_to_the_hours(
+    point_receptor,
+):
+    """Each 10-minute layer holds its own particle rows; six of them make the hour."""
+    particles = _particles_every_ten_minutes()
+    point_receptor = _moved(point_receptor, -113.5, 39.5)
+    hourly = calc_footprint(particles, point_receptor, _grid())
+    tens = calc_footprint(particles, point_receptor, _grid(), tres="10min")
+
+    expected = [
+        pd.Timestamp(point_receptor.time) - pd.Timedelta(minutes=10 * k)
+        for k in range(12, 0, -1)
+    ]
+    np.testing.assert_array_equal(tens.time.values, pd.DatetimeIndex(expected))
+    assert tens.stilt.config.tres == "10min"
+    # The rows at age -60 fall in layer floor(-60 / 10) = -6, which starts at
+    # 11:00 and is in the hour from 11:00, layer -1 of the hourly footprint.
+    by_hour = tens.resample(time="60min").sum()
+    np.testing.assert_array_equal(by_hour.time.values, hourly.time.values)
+    np.testing.assert_allclose(by_hour.values, hourly.values, rtol=1e-12)
+
+
+def test_two_hour_layers_hold_two_hourly_layers(point_receptor):
+    particles = _particles_every_ten_minutes()
+    point_receptor = _moved(point_receptor, -113.5, 39.5)
+    hourly = calc_footprint(particles, point_receptor, _grid())
+    two = calc_footprint(particles, point_receptor, _grid(), tres="2h")
+
+    assert len(two.time) == 1
+    assert two.time.values[0] == np.datetime64(
+        pd.Timestamp(point_receptor.time) - pd.Timedelta(hours=2)
+    )
+    np.testing.assert_allclose(two.values[0], hourly.sum("time").values, rtol=1e-12)
+
+
+@pytest.mark.parametrize("tres", ["0min", "-10min", "90s", 15])
+def test_a_layer_length_must_be_positive_whole_minutes(point_receptor, tres):
+    with pytest.raises(ValueError, match="tres"):
+        calc_footprint(_particles_in_domain(), point_receptor, _grid(), tres=tres)
+
+
+@pytest.mark.parametrize(
+    ("tres", "written"),
+    [
+        ("60min", "1h"),
+        ("1h", "1h"),
+        ("90min", "90min"),
+        ("1.5h", "90min"),
+        ("1440min", "1D"),
+        ("48h", "2D"),
+        (pd.Timedelta(minutes=15), "15min"),
+    ],
+)
+def test_a_layer_length_is_written_one_way(tres, written):
+    """``60min`` and ``1h`` are one setting, so they name one settings folder."""
+    assert FootprintConfig(tres=tres).tres == written
 
 
 def test_calc_footprint_nonnegative_foot_values(point_receptor):
@@ -464,11 +544,10 @@ def test_projected_footprint_fills_the_cells_between_steps_like_the_longlat_one(
     """
     pytest.importorskip("pyproj")
     p = _northward_particles().assign(zagl=5.0)
+    point_receptor = _moved(point_receptor, -112.0, 40.5)
     bounds = {"xmin": -112.05, "xmax": -111.95, "ymin": 40.45, "ymax": 41.05}
     feet = {
-        name: calc_footprint(
-            p, point_receptor, grid, time_integrate=True, smooth_factor=0.0
-        ).to_numpy()
+        name: _whole_run(p, point_receptor, grid, smooth_factor=0.0).to_numpy()
         for name, grid in {
             "longlat": Grid(**bounds, xres=0.001, yres=0.001),
             "utm": Grid(**bounds, xres=100.0, yres=100.0, crs=_UTM12),
@@ -575,28 +654,6 @@ def test_calc_footprint_reproducible(point_receptor):
         foot1.values,
         foot2.values,
         err_msg="calc_footprint must be deterministic — identical inputs must produce identical outputs",
-    )
-
-
-def test_calc_footprint_time_integrate_equals_sum_of_time_slices(point_receptor):
-    """
-    time_integrate=True must equal summing the per-time-step footprint.
-
-    If the collapsed footprint were computed differently from the sum of slices,
-    daily-average footprints used in Bayesian inversion would silently differ from
-    the sum of the hourly footprints researchers expect.
-    """
-    particles = _particles_in_domain()
-    grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
-
-    foot_ti = calc_footprint(particles, point_receptor, grid, time_integrate=True)
-    foot_no = calc_footprint(particles, point_receptor, grid, time_integrate=False)
-
-    np.testing.assert_allclose(
-        foot_ti.values.squeeze(),
-        foot_no.sum("time").values,
-        rtol=1e-10,
-        err_msg="time_integrate=True must equal the sum over all individual time slices",
     )
 
 
@@ -943,9 +1000,8 @@ def test_projected_footprint_of_a_cloud_across_180_degrees_keeps_its_total(
             yres=3000,
             crs=_lambert_at(lon0),
         )
-        feet.append(
-            calc_footprint(_cloud_at(lon0), point_receptor, grid, time_integrate=True)
-        )
+        receptor = _moved(point_receptor, ((lon0 + 180.0) % 360.0) - 180.0, 50.0)
+        feet.append(_whole_run(_cloud_at(lon0), receptor, grid))
     across, at_zero = (f.to_numpy() for f in feet)
     np.testing.assert_allclose(across.sum(), at_zero.sum(), rtol=1e-6)
     np.testing.assert_allclose(
@@ -1109,10 +1165,8 @@ def test_projected_footprint_is_made_when_a_far_step_is_where_the_projection_has
     grid = Grid(
         xmin=103.3, xmax=104.4, ymin=1.0, ymax=1.8, xres=1000, yres=1000, crs=crs
     )
-    foot = calc_footprint(p, receptor, grid, time_integrate=True)
-    without_far = calc_footprint(
-        p[p["age"] > -14400], receptor, grid, time_integrate=True
-    )
+    foot = _whole_run(p, receptor, grid)
+    without_far = _whole_run(p[p["age"] > -14400], receptor, grid)
     assert float(foot.sum()) > 0
     np.testing.assert_array_equal(foot.to_numpy(), without_far.to_numpy())
 
@@ -1280,11 +1334,7 @@ def test_footprint_does_not_depend_on_where_the_release_was(
     for release_lon in (-111.85, 10.0):
         receptor = point_receptor.model_copy(update={"longitude": release_lon})
         particles = _cloud_from(release_lon, cloud_lon)
-        feet.append(
-            calc_footprint(particles, receptor, grid, time_integrate=True)
-            .isel(time=0)
-            .to_numpy()
-        )
+        feet.append(_whole_run(particles, receptor, grid).isel(time=0).to_numpy())
     np.testing.assert_allclose(feet[0], feet[1], atol=1e-14, rtol=0)
     assert 100 < np.count_nonzero(feet[0]) < 2000
 
@@ -1335,11 +1385,7 @@ def test_projected_footprint_does_not_depend_on_where_the_release_was(
     for release_lon in (-111.85, cloud_lon):
         receptor = point_receptor.model_copy(update={"longitude": release_lon})
         particles = _cloud_from(release_lon, cloud_lon)
-        feet.append(
-            calc_footprint(particles, receptor, grid, time_integrate=True)
-            .isel(time=0)
-            .to_numpy()
-        )
+        feet.append(_whole_run(particles, receptor, grid).isel(time=0).to_numpy())
     np.testing.assert_allclose(feet[0], feet[1], atol=1e-14, rtol=0)
     assert 500 < np.count_nonzero(feet[0]) < 3000
 
@@ -1353,7 +1399,7 @@ def _global_footprint(lon0: float, receptor: PointReceptor, **grid_kw) -> np.nda
     receptor = receptor.model_copy(
         update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
     )
-    foot = calc_footprint(_cloud_at(lon0), receptor, grid, time_integrate=True)
+    foot = _whole_run(_cloud_at(lon0), receptor, grid)
     return foot.isel(time=0).to_numpy()
 
 
@@ -1380,11 +1426,10 @@ def test_global_footprint_wraps_smoothing_across_the_seam(point_receptor):
     """Smoothing that spills past the east edge of a global grid returns at the west edge."""
     near = _global_footprint(179.9, point_receptor)
     assert near[:, :20].sum() > 0 and near[:, -20:].sum() > 0
-    unsmoothed = calc_footprint(
+    unsmoothed = _whole_run(
         _cloud_at(179.9),
         point_receptor.model_copy(update={"longitude": 179.9, "latitude": 50.0}),
         Grid(**_GLOBAL, xres=0.05, yres=0.05),
-        time_integrate=True,
         smooth_factor=0,
     )
     # The mass past the seam is in the cells smoothing added, not lost.
@@ -1396,11 +1441,10 @@ def test_global_footprint_is_the_same_however_the_grid_is_written(point_receptor
     """A grid of any 360 degrees is one grid, smoothing past its edges included, and keeps its own longitudes."""
     receptor = point_receptor.model_copy(update={"longitude": 179.9, "latitude": 50.0})
     feet = [
-        calc_footprint(
+        _whole_run(
             _cloud_at(179.9),
             receptor,
             Grid(**{**_GLOBAL, "xres": 0.05, "yres": 0.05, "xmin": w, "xmax": w + 360}),
-            time_integrate=True,
         )
         for w in (west, -180.0)
     ]
@@ -1433,9 +1477,7 @@ def test_footprint_of_a_cloud_across_180_degrees_on_a_grid_that_crosses_it(
                 "latitude": 50.0,
             }
         )
-        feet.append(
-            calc_footprint(_cloud_at(lon0), receptor, grid, time_integrate=True)
-        )
+        feet.append(_whole_run(_cloud_at(lon0), receptor, grid))
     across, at_zero = feet
     # The grid across 180 degrees runs west to east from its own west edge.
     np.testing.assert_allclose(across["lon"][[0, -1]], [177.925, 181.875])
@@ -1476,9 +1518,7 @@ def _edge_footprint(
     receptor = receptor.model_copy(
         update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
     )
-    foot = calc_footprint(
-        _edge_cloud(lon0, sd_lon), receptor, grid, time_integrate=True
-    )
+    foot = _whole_run(_edge_cloud(lon0, sd_lon), receptor, grid)
     return foot.isel(time=0).to_numpy()
 
 
@@ -1530,9 +1570,9 @@ def test_footprint_whose_padding_does_not_pass_180_degrees_is_unchanged(
         update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
     )
     p = _cloud_at(lon0)
-    new = calc_footprint(p, receptor, grid, time_integrate=True).to_numpy()
+    new = _whole_run(p, receptor, grid).to_numpy()
     monkeypatch.setattr(gridding, "_onto_padded_axis", lambda lon, **_: lon)
-    old = calc_footprint(p, receptor, grid, time_integrate=True).to_numpy()
+    old = _whole_run(p, receptor, grid).to_numpy()
     assert new.sum() > 0
     np.testing.assert_array_equal(new, old)
 
@@ -1588,8 +1628,8 @@ def test_footprint_on_a_grid_written_past_180_is_that_of_the_same_box(
         update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
     )
     p = _edge_cloud(lon0)
-    foot = _by_meridian(calc_footprint(p, receptor, grid, time_integrate=True))
-    expected = _by_meridian(calc_footprint(p, receptor, other, time_integrate=True))
+    foot = _by_meridian(_whole_run(p, receptor, grid))
+    expected = _by_meridian(_whole_run(p, receptor, other))
     assert expected.sum() > 1e-5
     pd.testing.assert_index_equal(foot.index, expected.index)
     np.testing.assert_allclose(foot, expected, rtol=1e-12, atol=0)
@@ -1620,7 +1660,7 @@ def test_footprint_has_the_longitudes_its_grid_is_written_with(
     receptor = point_receptor.model_copy(
         update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
     )
-    foot = calc_footprint(_edge_cloud(lon0), receptor, grid, time_integrate=True)
+    foot = _whole_run(_edge_cloud(lon0), receptor, grid)
     x_axis, y_axis = grid.axes
     assert (x_axis[0], x_axis[-1]) == (first, last)
     np.testing.assert_array_equal(foot["lon"], x_axis)
@@ -1676,9 +1716,7 @@ def _crossing_footprint(
     receptor = point_receptor.model_copy(
         update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
     )
-    return calc_footprint(
-        _crossing_cloud(lon0), receptor, grid, time_integrate=True, smooth_factor=0
-    )
+    return _whole_run(_crossing_cloud(lon0), receptor, grid, smooth_factor=0)
 
 
 @pytest.mark.parametrize(
@@ -1810,6 +1848,7 @@ def test_projected_footprint_is_smoothed_like_the_longlat_footprint(point_recept
     """
     pyproj = pytest.importorskip("pyproj")
     p = _spread_particles()
+    point_receptor = _moved(point_receptor, -112.0, 40.5)
     bounds = {"xmin": -112.5, "xmax": -111.5, "ymin": 40.0, "ymax": 41.0}
     geod = pyproj.Geod(ellps="WGS84")
     km_per_lon = geod.inv(-112.5, 40.5, -111.5, 40.5)[2] / 1000
@@ -1820,10 +1859,8 @@ def test_projected_footprint_is_smoothed_like_the_longlat_footprint(point_recept
         "lonlat": Grid(**bounds, xres=0.01, yres=0.01),
         "utm": Grid(**bounds, xres=1000, yres=1000, crs=_UTM12),
     }.items():
-        foot = calc_footprint(p, point_receptor, grid, time_integrate=True)
-        unsmoothed = calc_footprint(
-            p, point_receptor, grid, time_integrate=True, smooth_factor=0
-        )
+        foot = _whole_run(p, point_receptor, grid)
+        unsmoothed = _whole_run(p, point_receptor, grid, smooth_factor=0)
         if name == "lonlat":
             x_km, y_km = foot.lon.values * km_per_lon, foot.lat.values * km_per_lat
         else:
@@ -1843,13 +1880,12 @@ def test_projected_footprint_on_cells_that_are_not_square_keeps_its_total(
     """With 1000 m by 500 m cells, smoothing spreads the footprint and loses none of it."""
     pytest.importorskip("pyproj")
     p = _spread_particles()
+    point_receptor = _moved(point_receptor, -112.0, 40.5)
     grid = Grid(
         xmin=-112.5, xmax=-111.5, ymin=40.0, ymax=41.0, xres=1000, yres=500, crs=_UTM12
     )
-    smoothed = calc_footprint(p, point_receptor, grid, time_integrate=True)
-    unsmoothed = calc_footprint(
-        p, point_receptor, grid, time_integrate=True, smooth_factor=0
-    )
+    smoothed = _whole_run(p, point_receptor, grid)
+    unsmoothed = _whole_run(p, point_receptor, grid, smooth_factor=0)
     assert np.count_nonzero(smoothed.to_numpy()) > 2 * np.count_nonzero(
         unsmoothed.to_numpy()
     )
@@ -1877,15 +1913,14 @@ def test_one_layer_footprint_is_stamped_at_its_hour():
     grid = Grid(xmin=-112.3, xmax=-111.6, ymin=40.5, ymax=41.0, xres=0.01, yres=0.01)
 
     foot = calc_footprint(_first_hour_particles(), receptor, grid)
-    integrated = calc_footprint(
-        _first_hour_particles(), receptor, grid, time_integrate=True
-    )
+    whole = _whole_run(_first_hour_particles(), receptor, grid)
 
     assert list(pd.DatetimeIndex(foot["time"].values)) == [
         pd.Timestamp("2023-01-01 11:00")
     ]
-    assert list(pd.DatetimeIndex(integrated["time"].values)) == [
-        pd.Timestamp("2023-01-01 12:00")
+    # One layer as long as the run starts where the run ends, not at the receptor.
+    assert list(pd.DatetimeIndex(whole["time"].values)) == [
+        pd.Timestamp("2022-12-31 12:00")
     ]
 
 
@@ -1901,3 +1936,240 @@ def test_calculated_coordinates_match_the_grid_axes():
     x, y = grid.axes
     np.testing.assert_array_equal(foot["lon"].values, x)
     np.testing.assert_array_equal(foot["lat"].values, y)
+
+
+def _near_field_particles() -> pd.DataFrame:
+    """Two particles below 50 m near the receptor, with the columns the near-field correction reads."""
+    return pd.DataFrame(
+        {
+            "particle": [1, 1, 2, 2],
+            "age": [-1.0, -2.0, -1.0, -2.0],
+            "lon": [-111.85, -111.86, -111.85, -111.84],
+            "lat": [40.77, 40.77, 40.77, 40.78],
+            "zagl": [5.0, 20.0, 5.0, 30.0],
+            "foot": [1e-3, 1e-3, 1e-3, 1e-3],
+            "dens": 1.2,
+            "samt": 1.0,
+            "sigw": 0.1,
+            "tlgr": 10.0,
+            "mlht": 500.0,
+        }
+    )
+
+
+_NEAR_GRID = Grid(xmin=-112.0, xmax=-111.7, ymin=40.7, ymax=40.9, xres=0.01, yres=0.01)
+
+
+def test_calc_footprint_applies_the_near_field_correction_with_hnf_plume():
+    receptor = PointReceptor(
+        time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
+    particles = _near_field_particles()
+    corrected = calc_footprint(particles, receptor, _NEAR_GRID, smooth_factor=0)
+    plain = calc_footprint(
+        particles, receptor, _NEAR_GRID, smooth_factor=0, hnf_plume=False
+    )
+    expected = calc_footprint(
+        correct_near_field(particles, receptor, 0.5),
+        receptor,
+        _NEAR_GRID,
+        smooth_factor=0,
+        hnf_plume=False,
+    )
+
+    np.testing.assert_allclose(corrected.to_numpy(), expected.to_numpy())
+    assert float(corrected.sum()) != pytest.approx(float(plain.sum()))
+    assert corrected.stilt.config.hnf_plume is True
+    assert plain.stilt.config.hnf_plume is False
+    # The particles given are not changed.
+    assert "foot_no_hnf_dilution" not in particles.columns
+
+
+def test_calc_footprint_reads_footprint_depth_for_the_near_field_correction():
+    receptor = PointReceptor(
+        time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
+    particles = _near_field_particles()
+    deep = calc_footprint(particles, receptor, _NEAR_GRID, smooth_factor=0)
+    shallow = calc_footprint(
+        particles, receptor, _NEAR_GRID, smooth_factor=0, footprint_depth=6.0
+    )
+    expected = calc_footprint(
+        correct_near_field(particles, receptor, 6.0),
+        receptor,
+        _NEAR_GRID,
+        smooth_factor=0,
+        hnf_plume=False,
+    )
+
+    np.testing.assert_allclose(shallow.to_numpy(), expected.to_numpy())
+    assert float(shallow.sum()) != pytest.approx(float(deep.sum()))
+
+
+def test_calc_footprint_skips_the_near_field_correction_without_its_columns(caplog):
+    """An MSL receptor's plume starts at the ground, which needs zsfc (#287)."""
+    receptor = PointReceptor(
+        time="2023-01-01 12:00",
+        longitude=-111.85,
+        latitude=40.77,
+        altitude=1305.0,
+        altitude_ref="msl",
+    )
+    particles = _near_field_particles()
+
+    with caplog.at_level("WARNING", logger="stilt.particles.table"):
+        skipped = calc_footprint(particles, receptor, _NEAR_GRID, smooth_factor=0)
+    plain = calc_footprint(
+        particles, receptor, _NEAR_GRID, smooth_factor=0, hnf_plume=False
+    )
+    corrected = calc_footprint(
+        particles.assign(zsfc=1300.0), receptor, _NEAR_GRID, smooth_factor=0
+    )
+
+    assert "near-field correction skipped: no zsfc" in caplog.text
+    np.testing.assert_array_equal(skipped.to_numpy(), plain.to_numpy())
+    assert float(corrected.sum()) != pytest.approx(float(plain.sum()))
+
+
+# ---------------------------------------------------------------------------
+# Inputs that would give a wrong footprint without an error (#439)
+# ---------------------------------------------------------------------------
+
+_WALK_GRID = Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.05, yres=0.05)
+
+
+def _walk(receptor, n: int = 10, steps: int = 36, seed: int = 0) -> pd.DataFrame:
+    """Particles walking away from *receptor*, a row every 10 minutes, with ``time``."""
+    rng = np.random.default_rng(seed)
+    age = -10.0 * np.arange(1, steps + 1)
+    frames = [
+        pd.DataFrame(
+            {
+                "particle": float(k),
+                "age": age,
+                "lon": receptor.longitude + np.cumsum(rng.normal(-0.004, 0.01, steps)),
+                "lat": receptor.latitude + np.cumsum(rng.normal(0.002, 0.01, steps)),
+                "zagl": 10.0,
+                "foot": rng.uniform(0.0, 0.01, steps),
+            }
+        )
+        for k in range(1, n + 1)
+    ]
+    table = pd.concat(frames, ignore_index=True)
+    table["time"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
+        table["age"], unit="min"
+    )
+    return table
+
+
+def test_calc_footprint_refuses_repeated_particle_rows(point_receptor):
+    """A table concatenated with itself would double the footprint."""
+    walk = _walk(point_receptor)
+    with pytest.raises(ValueError, match=r"360 particle rows repeat a particle"):
+        calc_footprint(pd.concat([walk, walk]), point_receptor, _WALK_GRID)
+
+
+def test_calc_footprint_refuses_another_receptors_time(point_receptor):
+    """The time column says when the particles left; another time only relabels the layers."""
+    walk = _walk(point_receptor)
+    other = point_receptor.model_copy(update={"time": dt.datetime(2022, 7, 15, 18)})
+    with pytest.raises(
+        ValueError, match="released at 2023-01-01 12:00.*2022-07-15 18:00"
+    ):
+        calc_footprint(walk, other, _WALK_GRID)
+
+
+@pytest.mark.parametrize("scale", [1 / 60, 60])
+def test_calc_footprint_refuses_an_age_that_is_not_in_minutes(point_receptor, scale):
+    """Age in hours gives one layer and in seconds hundreds, so it is checked against time."""
+    walk = _walk(point_receptor)
+    with pytest.raises(ValueError, match="age does not agree with time on 360 of 360"):
+        calc_footprint(walk.assign(age=walk["age"] * scale), point_receptor, _WALK_GRID)
+
+
+def test_calc_footprint_refuses_another_receptors_place(point_receptor):
+    """Particles that start 600 km away were released from another receptor, time column or not."""
+    walk = _walk(point_receptor).drop(columns="time")
+    denver = point_receptor.model_copy(update={"longitude": -104.99, "latitude": 39.74})
+    with pytest.raises(
+        ValueError, match="10 minutes from release, are a median 59[0-9] km"
+    ):
+        calc_footprint(walk, denver, _WALK_GRID)
+
+
+def test_calc_footprint_takes_particles_from_any_release_point(point_receptor):
+    """A multipoint receptor's particles are measured from the nearest of its points."""
+    second = point_receptor.model_copy(update={"longitude": -110.9, "latitude": 41.3})
+    receptor = MultiPointReceptor(
+        time=point_receptor.time,
+        longitudes=[-111.85, -110.9],
+        latitudes=[40.77, 41.3],
+        altitudes=[5.0, 5.0],
+    )
+    with pytest.raises(ValueError, match="first positions"):
+        calc_footprint(_walk(second), point_receptor, _WALK_GRID)
+    assert float(calc_footprint(_walk(second), receptor, _WALK_GRID).sum()) > 0
+
+
+def test_calc_footprint_takes_particles_far_out_late_in_the_run(point_receptor):
+    """A table that starts a day back may be far from the receptor: the distance allowed grows with age."""
+    walk = _walk(point_receptor, steps=200)
+    late = walk[walk["age"] <= -1440.0].assign(lon=lambda d: d["lon"] + 1.5)
+    grid = Grid(xmin=-115.0, xmax=-108.0, ymin=38.0, ymax=44.0, xres=0.1, yres=0.1)
+    assert float(calc_footprint(late, point_receptor, grid).sum()) > 0
+
+
+def test_calc_footprint_refuses_an_infinite_foot(point_receptor):
+    walk = _walk(point_receptor)
+    walk.loc[5, "foot"] = np.inf
+    with pytest.raises(ValueError, match="foot is infinite on 1 of 360"):
+        calc_footprint(walk, point_receptor, _WALK_GRID)
+
+
+@pytest.mark.parametrize("column", ["foot", "lon"])
+def test_calc_footprint_warns_of_rows_with_missing_values(point_receptor, column):
+    """Rows with no foot or position are left out, and a warning counts them."""
+    walk = _walk(point_receptor)
+    holes = walk.assign(**{column: walk[column].where(walk.index % 3 != 0)})
+    with pytest.warns(UserWarning, match=f"120 of 360 particle rows have no {column}"):
+        foot = calc_footprint(holes, point_receptor, _WALK_GRID)
+    expected = calc_footprint(walk[walk.index % 3 != 0], point_receptor, _WALK_GRID)
+    np.testing.assert_array_equal(foot.to_numpy(), expected.to_numpy())
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ({"foot": -0.001}, "No particle row has a positive foot"),
+        ({"foot": 0.0}, "No particle row has a positive foot"),
+    ],
+)
+def test_an_empty_footprint_names_its_cause(point_receptor, change, message):
+    """A table with no positive foot is not said to be off the grid (#439)."""
+    walk = _walk(point_receptor).assign(**change)
+    with pytest.raises(EmptyFootprint, match=message):
+        calc_footprint(walk, point_receptor, _WALK_GRID)
+    off_grid = Grid(xmin=-100.0, xmax=-99.0, ymin=40.0, ymax=41.0, xres=0.1, yres=0.1)
+    with pytest.raises(EmptyFootprint, match="No particle is over the footprint grid"):
+        calc_footprint(_walk(point_receptor), point_receptor, off_grid)
+
+
+def test_calc_footprint_reads_times_with_a_time_zone_or_none(point_receptor):
+    """A time column in UTC with its zone is checked as a naive one; one with no times is not checked."""
+    walk = _walk(point_receptor)
+    expected = calc_footprint(walk, point_receptor, _WALK_GRID).to_numpy()
+    for times in (
+        walk["time"].dt.tz_localize("UTC"),
+        pd.Series(pd.NaT, index=walk.index),
+    ):
+        foot = calc_footprint(walk.assign(time=times), point_receptor, _WALK_GRID)
+        np.testing.assert_array_equal(foot.to_numpy(), expected)
+
+
+def test_an_empty_footprint_of_rows_with_no_foot_says_so(point_receptor):
+    walk = _walk(point_receptor).assign(foot=np.nan)
+    with (
+        pytest.warns(UserWarning, match="360 of 360 particle rows have no foot"),
+        pytest.raises(EmptyFootprint, match="No particle row has a positive foot"),
+    ):
+        calc_footprint(walk, point_receptor, _WALK_GRID)

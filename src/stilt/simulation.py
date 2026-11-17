@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import timedelta
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -12,20 +13,16 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 import xarray as xr
 
+from stilt.background import Background, background
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import gridding
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import read_footprint
 from stilt.output import Output, completed
-from stilt.particles import (
-    Background,
-    TransportError,
-    background,
-    read_particles,
-    transport_error,
-)
+from stilt.particles import read_particles
 from stilt.receptors import Receptor
 from stilt.spatial import Grid
+from stilt.transport_error import TransportError, transport_error
 
 if TYPE_CHECKING:
     from stilt._paths import Location
@@ -289,15 +286,17 @@ class Simulation:
         *,
         grid: Grid | None = None,
         smooth_factor: float | None = None,
-        time_integrate: bool | None = None,
+        tres: str | timedelta | None = None,
+        hnf_plume: bool | None = None,
         transforms: Sequence[Any] | None = None,
     ) -> xr.DataArray | None:
         """
         Calculate a footprint from the stored particles, without writing it.
 
         This is :func:`stilt.calc_footprint` with this simulation's
-        particles, receptor, and settings filled in. Each setting given
-        replaces the variant's own. Use it to try other settings; the
+        particles, receptor, and settings filled in, the run's
+        ``footprint_depth`` among them. Each setting given replaces the
+        variant's own. Use it to try other settings; the
         workers write the variant's own footprint. A relative file name in
         a transform's settings starts from the project directory.
 
@@ -316,6 +315,7 @@ class Simulation:
         Examples
         --------
         >>> smoother = sim.calc_footprint(smooth_factor=2.0)  # doctest: +SKIP
+        >>> quarter_hours = sim.calc_footprint(tres="15min")  # doctest: +SKIP
         >>> fine = sim.calc_footprint(
         ...     grid=hexes.to_grid(cells_per_target=4)
         ... )  # doctest: +SKIP
@@ -337,9 +337,9 @@ class Simulation:
                 smooth_factor=own.smooth_factor
                 if smooth_factor is None
                 else smooth_factor,
-                time_integrate=own.time_integrate
-                if time_integrate is None
-                else time_integrate,
+                tres=own.tres if tres is None else tres,
+                hnf_plume=own.hnf_plume if hnf_plume is None else hnf_plume,
+                footprint_depth=self.variant.transport.footprint_depth,
                 transforms=own.transforms if transforms is None else transforms,
                 name=self.variant.name,
                 directory=self.directory,
@@ -355,13 +355,22 @@ class Simulation:
             () if self.variant.footprint is None else self.variant.footprint.transforms
         )
 
+    @property
+    def _near_field_settings(self) -> dict[str, Any]:
+        """The near-field correction a footprint of this simulation gets: ``hnf_plume`` and the run's ``footprint_depth``."""
+        footprint = self.variant.footprint or FootprintConfig.model_validate({})
+        return {
+            "hnf_plume": footprint.hnf_plume,
+            "footprint_depth": self.variant.transport.footprint_depth,
+        }
+
     def background(self, field: xr.DataArray | pd.Series) -> Background:
         """
         Return the background mole fraction at the receptor.
 
         The background is the field where each particle ends, averaged over
         the particles with the footprint's weights (its transforms), so it
-        adds to the enhancement. See :func:`stilt.particles.background`.
+        adds to the enhancement. See :func:`stilt.background`.
 
         Parameters
         ----------
@@ -394,9 +403,9 @@ class Simulation:
 
         It is the extra spread in the per-particle enhancement that a
         wind-error variant of the same receptor adds (Lin and Gerbig, 2005).
-        See :func:`stilt.particles.transport_error`, which documents the
+        See :func:`stilt.transport_error`, which documents the
         options (``levels``, ``length_scale``, ``percentile``,
-        ``noise_splits``, ``background``).
+        ``background``).
 
         Parameters
         ----------
@@ -423,7 +432,7 @@ class Simulation:
             transforms=self._transforms,
             receptor=self.receptor,
             directory=self.directory,
-            **options,
+            **{**self._near_field_settings, **options},
         )
 
 

@@ -2,7 +2,7 @@
 
 import datetime as dt
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import MagicMock
 
 import pandas as pd
@@ -92,6 +92,20 @@ def test_a_project_with_everything_in_place_has_nothing_to_check(tmp_path):
 
     assert table.empty
     assert list(table.columns) == ["check", "variant", "receptor", "message"]
+
+
+def test_a_project_with_no_receptors_is_listed_once(tmp_path):
+    """An empty project ran nothing, with no warning (#440)."""
+    project = _project(tmp_path, variants={"hrrr": {}, "hrrr-zi": {"ziscale": 0.8}})
+    project.receptors_path.write_text("time,longitude,latitude,altitude\n")
+    project = Project(project.directory)
+
+    table = project.check()
+
+    assert list(table["check"]) == ["receptors"]
+    assert list(table["variant"]) == ["hrrr, hrrr-zi"]
+    assert table["receptor"].isna().all()
+    assert "no receptors" in table["message"].iloc[0]
 
 
 def test_check_returns_one_row_for_each_thing_found(tmp_path):
@@ -410,6 +424,34 @@ def test_a_downloaded_met_is_checked_for_its_crop_only(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# The met's domain
+# ---------------------------------------------------------------------------
+
+
+def test_a_receptor_outside_the_met_files_grid_is_listed(tmp_path):
+    """HYSPLIT stopped such a run with "source point off grid", and check said nothing (#440)."""
+    # The test met files' grid has points from 125 W to 106 W and 30 N to 49 N.
+    east = _receptor(12, longitude=-105.5)
+    north = _receptor(12, latitude=49.5)
+    edge = _receptor(12, longitude=-106.0, latitude=49.0)
+    inside = _receptor(12)
+    project = _project(tmp_path, [east, north, edge, inside], grid=None)
+
+    table = project.check()
+
+    assert list(table["check"]) == ["met_domain", "met_domain"]
+    assert list(table["receptor"]) == [east.id, north.id]
+    assert "outside the met's domain" in table["message"].iloc[0]
+
+
+def test_a_cropped_met_is_checked_for_its_crop_box_not_its_domain(tmp_path):
+    east = _receptor(12, longitude=-105.5)
+    project = _project(tmp_path, [east], met=_cropped(tmp_path), grid=None)
+
+    assert list(project.check()["check"]) == ["met_crop"]
+
+
+# ---------------------------------------------------------------------------
 # The footprint grid
 # ---------------------------------------------------------------------------
 
@@ -475,7 +517,7 @@ def test_a_receptor_outside_a_grid_across_the_dateline_in_latitude_is_listed(tmp
     north = _receptor(12, longitude=175, latitude=42.0)
     project = _project(tmp_path, [north], grid=grid)
 
-    table = project.check()
+    table = _found(project.check(), "grid")
 
     assert list(table["receptor"]) == [north.id]
     assert "170 to -170 longitude, 40 to 41 latitude" in table["message"].iloc[0]
@@ -844,7 +886,7 @@ def test_variants_that_need_zsfc_for_the_same_reason_share_the_row(tmp_path):
     project = _project(
         tmp_path,
         [_above_sea_level_point()],
-        variants={"hrrr": {}, "hrrr-b": {"veght": 0.3}},
+        variants={"hrrr": {}, "hrrr-b": {"footprint_depth": 0.3}},
     )
 
     table = _found(project.check(), "zsfc")
@@ -923,3 +965,35 @@ def test_a_project_whose_files_are_invalid_cannot_be_checked(tmp_path):
 
     with pytest.raises(ValueError, match="nonsense"):
         Project(project.directory).check()
+
+
+class _SelfChecking(BaseModel):
+    """A user's transform that checks its own inputs and reads zsfc, named by import path."""
+
+    reads_zsfc: ClassVar[bool] = True
+
+    def apply(self, particles, receptor=None, directory=None):
+        return particles.copy()
+
+    def check(self, receptors, directory):
+        return [
+            ("my_input", rid, f"no input for this receptor in {directory}")
+            for rid in receptors
+        ]
+
+
+def test_a_transform_checks_its_own_inputs_and_says_it_reads_zsfc(tmp_path):
+    project = _project(
+        tmp_path,
+        [_column("msl")],
+        hnf_plume=False,
+        variants={"hrrr": {"transforms": [{"kind": "tests.test_check._SelfChecking"}]}},
+    )
+
+    found = project.check()
+
+    mine = _found(found, "my_input")
+    assert list(mine["receptor"]) == [str(project.receptors["receptor"].iloc[0])]
+    assert str(project.directory) in mine["message"].iloc[0]
+    zsfc = _found(found, "zsfc")["message"].iloc[0]
+    assert "the tests.test_check._SelfChecking transform fails their footprints" in zsfc

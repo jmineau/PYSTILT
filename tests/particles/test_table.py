@@ -1,4 +1,4 @@
-"""Tests for stilt.particles.table: particle files, release heights, the near-field correction."""
+"""Tests for stilt.particles.table: particle files, release heights, foot, the near-field correction."""
 
 import datetime as dt
 import json
@@ -12,6 +12,7 @@ import pytest
 
 from stilt.identity import run_settings, transport_from_settings
 from stilt.particles import (
+    add_foot,
     correct_near_field,
     particles_from_table,
     particles_metadata,
@@ -73,12 +74,8 @@ def _particles_release_rows(
     )
 
 
-def _params(tmp_path, hnf_plume=False) -> HysplitConfig:
-    return HysplitConfig(
-        n_hours=-24,
-        numpar=10,
-        hnf_plume=hnf_plume,
-    )
+def _params(tmp_path) -> HysplitConfig:
+    return HysplitConfig(n_hours=-24, numpar=10)
 
 
 def _settings(params: HysplitConfig) -> dict:
@@ -103,12 +100,10 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
     # Receptor normalizes tz-aware input to naive UTC.
     assert aware_receptor.time.tzinfo is None
 
-    traj = finished(
-        _particles_basic(), aware_receptor, _params(tmp_path, hnf_plume=False)
-    )
+    traj = finished(_particles_basic(), aware_receptor)
 
     path = tmp_path / "traj.parquet"
-    params = _params(tmp_path, hnf_plume=False)
+    params = _params(tmp_path)
     write_particles(path, traj, aware_receptor, _settings(params), [Path("/tmp/met1")])
     loaded = read_particles(path)
 
@@ -126,8 +121,8 @@ def test_read_particles_builds_time_when_only_time_is_asked_for(
     point_receptor, tmp_path
 ):
     """``time`` is not stored; asking for it reads ``age`` to build it."""
-    params = _params(tmp_path, hnf_plume=False)
-    traj = finished(_particles_basic(), point_receptor, params)
+    params = _params(tmp_path)
+    traj = finished(_particles_basic(), point_receptor)
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, _settings(params), [])
     loaded = read_particles(path, columns=["time"])
@@ -212,8 +207,8 @@ def test_particles_from_table_rejects_an_id_it_cannot_time():
 
 def test_write_and_read_particles_round_trip(point_receptor, tmp_path):
     """A particle file holds everything needed to read it back."""
-    params = _params(tmp_path, hnf_plume=False)
-    traj = finished(_particles_basic(), point_receptor, params)
+    params = _params(tmp_path)
+    traj = finished(_particles_basic(), point_receptor)
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, _settings(params), [Path("/tmp/met1")])
 
@@ -231,8 +226,8 @@ def test_write_and_read_particles_round_trip(point_receptor, tmp_path):
 
 def test_a_file_without_settings_is_refused_for_its_metadata(point_receptor, tmp_path):
     """A particle file written before files recorded settings still reads, but has no metadata."""
-    params = _params(tmp_path, hnf_plume=False)
-    traj = finished(_particles_basic(), point_receptor, params)
+    params = _params(tmp_path)
+    traj = finished(_particles_basic(), point_receptor)
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, _settings(params), [])
     table = pq.ParquetFile(path).read()
@@ -246,8 +241,8 @@ def test_a_file_without_settings_is_refused_for_its_metadata(point_receptor, tmp
 
 
 def test_write_particles_is_atomic_on_failure(point_receptor, tmp_path, monkeypatch):
-    params = _params(tmp_path, hnf_plume=False)
-    traj = finished(_particles_basic(), point_receptor, params)
+    params = _params(tmp_path)
+    traj = finished(_particles_basic(), point_receptor)
     path = tmp_path / "traj.parquet"
     tmp = path.with_suffix(".parquet.tmp")
 
@@ -281,8 +276,8 @@ def test_correct_near_field_adds_reference_column():
     assert out["foot_no_hnf_dilution"].iloc[0] == pytest.approx(1e-5)
 
 
-def test_correct_near_field_reads_veght_above_one_as_meters():
-    """A veght above 1 is meters above ground, as HYSPLIT reads it (#167)."""
+def test_correct_near_field_reads_footprint_depth_above_one_as_meters():
+    """A footprint_depth above 1 is meters above ground, as HYSPLIT reads it (#167)."""
     p = _particles_basic().drop(columns=["zagl"]).assign(release_height=[5.0, 5.0])
     # The plume is about 32 m deep after one hour and 70 m after two.
     as_fraction = correct_near_field(p, _NO_POINT, 0.5)  # below 250 m
@@ -361,7 +356,7 @@ def test_finished_particles_column_receptor_assigns_release_height(
     column_receptor, tmp_path
 ):
     particles = _particles_basic().assign(particle=[1, 2])
-    traj = finished(particles, column_receptor, _params(tmp_path, hnf_plume=False))
+    traj = finished(particles, column_receptor)
     assert "release_height" in traj.columns
     assert traj["release_height"].tolist() == pytest.approx([16.25, 38.75])
 
@@ -379,9 +374,7 @@ def test_finished_particles_column_receptor_spans_column_monotonically(tmp_path)
         longs=[-111.85] * 12,
         lats=[40.77] * 12,
     )
-    traj = finished(
-        particles, receptor, HysplitConfig(n_hours=-24, numpar=12, hnf_plume=False)
-    )
+    traj = finished(particles, receptor)
 
     expected = [
         ((i - 0.5) * (receptor.top - receptor.bottom) / 12) + receptor.bottom
@@ -445,9 +438,7 @@ def test_finished_particles_multipoint_receptor_assigns_release_height_from_rele
             893.0,
         ],
     )
-    traj = finished(
-        particles, receptor, HysplitConfig(n_hours=-24, numpar=12, hnf_plume=False)
-    )
+    traj = finished(particles, receptor)
 
     assert "release_height" in traj.columns
     assert traj["release_height"].tolist() == pytest.approx(
@@ -505,9 +496,7 @@ def test_finished_particles_multipoint_nondivisible_particle_blocks_follow_relea
         ],
         zagl=[98.0, 104.0, 91.0, 110.0, 512.0, 489.0, 503.0, 497.0, 880.0, 905.0],
     )
-    traj = finished(
-        particles, receptor, HysplitConfig(n_hours=-24, numpar=10, hnf_plume=False)
-    )
+    traj = finished(particles, receptor)
 
     assert traj["release_height"].tolist() == pytest.approx(
         [100.0, 100.0, 100.0, 100.0, 500.0, 500.0, 500.0, 500.0, 900.0, 900.0]
@@ -537,8 +526,7 @@ def _slant(spacing_deg: float = 0.002, n: int = 4, **kwargs) -> MultiPointRecept
 
 
 def _finish(particles, receptor):
-    config = HysplitConfig(n_hours=-24, numpar=len(particles), hnf_plume=False)
-    return finished(particles, receptor, config)
+    return finished(particles, receptor)
 
 
 def test_multipoint_close_points_are_matched_on_height_not_position():
@@ -682,12 +670,11 @@ def test_multipoint_release_time_rows_silence_the_warning(recwarn):
     assert not [w for w in recwarn if "reliably matched" in str(w.message)]
 
 
-def test_finished_particles_with_hnf_plume(point_receptor, tmp_path):
-    """hnf_plume=True runs plume-dilution correction and adds reference column."""
-    traj = finished(
-        _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=True)
-    )
-    assert "foot_no_hnf_dilution" in traj.columns
+def test_finished_particles_keep_the_uncorrected_foot(point_receptor):
+    """A run's particles are stored as the model left them; the footprint applies the correction."""
+    traj = finished(_particles_basic(), point_receptor)
+    assert "foot_no_hnf_dilution" not in traj.columns
+    assert traj["foot"].tolist() == _particles_basic()["foot"].tolist()
 
 
 def test_correct_near_field_raises_without_a_release_height():
@@ -703,9 +690,7 @@ def test_footprint_calculate_from_trajectory(point_receptor, tmp_path):
     from stilt.footprint import calc_footprint
     from stilt.spatial import Grid
 
-    traj = finished(
-        _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=False)
-    )
+    traj = finished(_particles_basic(), point_receptor)
     grid = Grid(xmin=-115.0, xmax=-110.0, ymin=38.0, ymax=43.0, xres=0.1, yres=0.1)
     # particles are at [-111.9, -112.0] x [40.7, 40.6] - inside the grid
     result = calc_footprint(traj, point_receptor, grid)
@@ -738,7 +723,7 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
     There is no duration filtering: a particle that left the domain early is
     a real endpoint.
     """
-    particles = finished(_particles_two_lengths(), point_receptor, _params(tmp_path))
+    particles = finished(_particles_two_lengths(), point_receptor)
     # As read_particles gives them.
     particles["time"] = point_receptor.time + pd.to_timedelta(
         particles["age"], unit="min"
@@ -777,9 +762,7 @@ def test_calc_footprint_regenerates_a_footprint_on_a_new_grid(tmp_path):
     receptor = PointReceptor(
         time="2023-01-01 12:00:00", longitude=-113.5, latitude=39.5, altitude=5.0
     )
-    traj = finished(
-        particles, receptor, HysplitConfig(n_hours=-2, numpar=n, hnf_plume=False)
-    )
+    traj = finished(particles, receptor)
     grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
     from stilt.transforms import FirstOrderLifetime
 
@@ -801,7 +784,7 @@ def test_stored_settings_this_version_does_not_have_are_dropped(
 ):
     """Files written before a setting was removed still load (#44)."""
     params = _params(tmp_path)
-    traj = finished(_particles_basic(), point_receptor, params)
+    traj = finished(_particles_basic(), point_receptor)
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, _settings(params), [])
     table = pq.ParquetFile(path).read()
@@ -990,3 +973,187 @@ def test_msl_multipoint_release_heights_do_not_read_zsfc_when_it_is_not_needed(
         "release_height"
     ]
     assert without.tolist() == with_zsfc.tolist()
+
+
+#: foot of one minute below a 500 m layer of air of mean density 1 kg/m3.
+_ONE_MINUTE_IN_500_M = 0.02897 * 60 / 500
+
+
+def _positions(**columns) -> pd.DataFrame:
+    """A table of positions, two particles of two rows each, with *columns* added."""
+    base = pd.DataFrame(
+        {
+            "particle": [1, 1, 2, 2],
+            "age": [-1, -2, -1, -2],
+            "lon": -112.0,
+            "lat": 40.5,
+            "zagl": [50.0, 80.0, 50.0, 900.0],
+            "time": pd.Timestamp("2023-01-01 12:00"),
+            "mlht": 1000.0,
+        }
+    )
+    return base.assign(**columns)
+
+
+@pytest.fixture
+def met(monkeypatch):
+    """
+    Stand in for the met files: air of density ``met["density"]`` kg/m3 and a 1000 m PBLH.
+
+    The pressure falls ρ g / 100 hPa per meter, so the air below a depth is
+    ρ times the depth. A row at longitude 0 is off the grid.
+    """
+    from stilt.particles import table
+
+    met = {"density": 1.0, "calls": []}
+
+    def sample_met(particles, files, columns, *, z_top):
+        met["calls"].append((list(columns), z_top, list(files)))
+        off = particles["lon"] == 0
+        if columns == ["mlht"]:
+            return particles.assign(mlht=np.where(off, np.nan, 1000.0))
+        pres = 1000.0 - met["density"] * 9.80665 / 100 * particles["zagl"]
+        return particles.assign(pres=np.where(off, np.nan, pres))
+
+    monkeypatch.setattr(table, "sample_met", sample_met)
+    return met
+
+
+def test_add_foot_counts_a_whole_step_below_the_mixing_depth_and_none_above(met):
+    foot = add_foot(_positions(), ["met"], footprint_depth=0.5)["foot"]
+
+    np.testing.assert_allclose(foot, [_ONE_MINUTE_IN_500_M] * 3 + [0.0])
+    # The pressure at the ground and at the depth, on the met's own levels.
+    assert met["calls"] == [(["pres"], None, ["met"])]
+
+
+def test_add_foot_reads_footprint_depth_above_1_as_meters(met):
+    foot = add_foot(_positions(), ["met"], footprint_depth=800.0)["foot"]
+
+    np.testing.assert_allclose(foot, [0.02897 * 60 / 800] * 3 + [0.0])
+
+
+def test_add_foot_divides_by_the_air_below_the_depth(met):
+    met["density"] = 2.0
+    foot = add_foot(
+        _positions(mlht=[1000.0, 2000.0, 500.0, 1e4]), ["met"], footprint_depth=0.5
+    )["foot"]
+
+    np.testing.assert_allclose(
+        foot,
+        np.array([1.0, 1 / 2, 2.0, 1 / 10]) * _ONE_MINUTE_IN_500_M / 2,
+    )
+
+
+def test_add_foot_samples_the_mets_mlht_when_the_table_has_none(met):
+    out = add_foot(_positions().drop(columns="mlht"), ["met"], footprint_depth=0.5)
+
+    assert out["mlht"].tolist() == [1000.0] * 4
+    np.testing.assert_allclose(out["foot"], [_ONE_MINUTE_IN_500_M] * 3 + [0.0])
+    assert [call[0] for call in met["calls"]] == [["mlht"], ["pres"]]
+
+
+def test_add_foot_takes_each_step_from_the_particle_s_own_rows(met):
+    """Steps follow each particle in time, whatever the row order, and a release row gets none."""
+    particles = pd.DataFrame(
+        {
+            "particle": [2, 1, 1, 2, 1, 2],
+            "age": [10, 5, 0, 0, 15, 30],
+            "lon": -112.0,
+            "lat": 40.5,
+            "zagl": 10.0,
+            "time": pd.Timestamp("2023-01-01 12:00"),
+            "mlht": 1000.0,
+        }
+    )
+
+    foot = (
+        add_foot(particles, ["met"], footprint_depth=0.5)["foot"] / _ONE_MINUTE_IN_500_M
+    )
+
+    np.testing.assert_allclose(foot, [10.0, 5.0, 0.0, 0.0, 10.0, 20.0])
+
+
+def test_add_foot_uses_the_time_below_the_layer_a_model_writes(met):
+    foot = add_foot(
+        _positions(samt=[0.5, 1.0, 0.0, 0.25]), ["met"], footprint_depth=0.5
+    )["foot"]
+
+    np.testing.assert_allclose(
+        foot, np.array([0.5, 1.0, 0.0, 0.25]) * _ONE_MINUTE_IN_500_M
+    )
+
+
+def test_add_foot_gives_nan_off_the_mets_grid(met):
+    foot = add_foot(_positions(lon=[0.0, -112.0, -112.0, -112.0]), ["met"], 0.5)["foot"]
+
+    assert np.isnan(foot[0])
+    assert np.isfinite(foot[1:]).all()
+
+
+def test_add_foot_refuses_a_table_that_has_foot(met):
+    with pytest.raises(ValueError, match="foot column already"):
+        add_foot(_positions(foot=1.0), ["met"], footprint_depth=0.5)
+
+
+def test_add_foot_with_a_fixed_pbl_height_replaces_mlht_and_ignores_samt(met):
+    particles = _positions(samt=[0.5, 1.0, 0.0, 0.25])
+    out = add_foot(particles, ["met"], footprint_depth=1.0, pbl_height=500.0)
+
+    assert out["mlht"].tolist() == [500.0] * 4
+    # samt counts the minutes below the model's own layer, so it is not used.
+    np.testing.assert_allclose(out["foot"], [_ONE_MINUTE_IN_500_M] * 3 + [0.0])
+    assert [call[0] for call in met["calls"]] == [["pres"]]
+
+
+def test_add_foot_with_pbl_height_met_samples_pblh_over_the_models_mlht(met):
+    out = add_foot(
+        _positions(mlht=300.0), ["met"], footprint_depth=0.5, pbl_height="met"
+    )
+
+    assert out["mlht"].tolist() == [1000.0] * 4
+    assert [call[0] for call in met["calls"]] == [["mlht"], ["pres"]]
+
+
+def test_add_foot_keeps_a_height_it_finds_at_least_pbl_height_min(met):
+    out = add_foot(
+        _positions().drop(columns="mlht"),
+        ["met"],
+        footprint_depth=0.5,
+        pbl_height_min=1200.0,
+    )
+
+    assert out["mlht"].tolist() == [1200.0] * 4
+
+
+def test_add_foot_applies_no_minimum_to_the_models_own_mlht(met):
+    out = add_foot(
+        _positions(mlht=300.0), ["met"], footprint_depth=0.5, pbl_height_min=1200.0
+    )
+
+    assert out["mlht"].tolist() == [300.0] * 4
+
+
+def test_add_foot_with_pbl_height_richardson_finds_it_from_the_profile(
+    met, monkeypatch
+):
+    from stilt.particles import table
+
+    seen = {}
+
+    def calc_pbl_height(particles, files, **top):
+        seen.update(columns=list(particles.columns), files=files, **top)
+        return np.full(len(particles), 400.0)
+
+    monkeypatch.setattr(table, "calc_pbl_height", calc_pbl_height)
+    out = add_foot(_positions(), ["met"], footprint_depth=0.5, pbl_height="richardson")
+
+    assert "mlht" not in seen["columns"]
+    assert seen["files"] == ["met"]
+    assert "z_top" not in seen  # calc_pbl_height's default, HYSPLIT's 25 km
+    assert out["mlht"].tolist() == [400.0] * 4
+
+    add_foot(
+        _positions(), ["met"], footprint_depth=0.5, pbl_height="richardson", z_top=1e4
+    )
+    assert seen["z_top"] == 1e4

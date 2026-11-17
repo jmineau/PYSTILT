@@ -29,7 +29,7 @@ def sim(monkeypatch, tmp_path, point_receptor):
     from stilt.simulation import Simulation
     from stilt.transport.hysplit import model
 
-    monkeypatch.setattr(model, "write_inputs", lambda *args: None)
+    monkeypatch.setattr(model, "write_inputs", lambda *args, **kwargs: None)
     monkeypatch.setattr(model, "run_hycs_std", _stop)
     SEEN.clear()
     make_met_files(tmp_path / "met", point_receptor.time, -24)

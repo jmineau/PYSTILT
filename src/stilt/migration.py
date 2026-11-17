@@ -45,7 +45,12 @@ from stilt.particles import check_particles
 from stilt.receptors import Receptor
 from stilt.spatial import Grid
 from stilt.transport import ModelInfo
-from stilt.transport.hysplit.config import WIND_ERROR_SETTINGS, ZI_ERROR_SETTINGS
+from stilt.transport.hysplit.config import (
+    FIXED_SETUP,
+    SETUP_NAMES,
+    WIND_ERROR_SETTINGS,
+    ZI_ERROR_SETTINGS,
+)
 from stilt.transport.hysplit.namelist import read_namelist
 from stilt.transport.stilt_r import StiltRConfig, StiltRMetConfig, StiltRModel
 
@@ -120,9 +125,11 @@ def read_stilt_r(
 
     The footprint is ``<id>_foot.nc``, on the grid its file gives, with
     layers stamped at the receptor time plus whole hours, as STILT-R stamps
-    them. Its settings hold that grid, ``time_integrate`` (true for a
-    backward run with one layer at the receptor time), and
-    ``smooth_factor``. The footprint file does not record ``smooth_factor``.
+    them. Its settings hold that grid, ``tres``, and ``smooth_factor``.
+    ``tres`` is ``1h``, except for a backward run whose footprint STILT-R
+    summed over time (``time_integrate = T``, one layer at the receptor
+    time): that is one layer as long as the run, ``tres`` the run's
+    ``n_hours``, stamped at the start of the run. The footprint file does not record ``smooth_factor``.
     It comes from ``params.RDS``, which STILT-R's Slurm runs (rslurm) leave
     in ``_rslurm_<project>/`` beside ``out/``, or else from the
     *smooth_factor* argument. ``params.RDS`` is used only when its
@@ -406,7 +413,7 @@ def _receptor(stored: Any, control: ControlFile, path: Path) -> Receptor:
     if "run_time" not in stored:
         raise ValueError(f"{path}: the receptor has no run_time.")
     time = pd.DatetimeIndex(stored["run_time"])[0]
-    points = [(lon, lat, alt) for lat, lon, alt in control.receptor.coords()]
+    points = [(lon, lat, alt) for lat, lon, alt in control.locations]
     return Receptor.from_points(time, points)
 
 
@@ -438,7 +445,11 @@ def _axis(centers: np.ndarray, name: str, path: Path) -> tuple[float, float, flo
 
 
 def _footprint(
-    path: Path, receptor: Receptor, backward: bool, smooth_factor: float
+    path: Path,
+    receptor: Receptor,
+    backward: bool,
+    smooth_factor: float,
+    n_hours: int,
 ) -> xr.DataArray:
     """
     Return a STILT-R ``_foot.nc`` as a PYSTILT footprint.
@@ -446,7 +457,10 @@ def _footprint(
     STILT-R writes ``foot`` with dimensions ``lon``, ``lat``, and ``time``
     (seconds since 1970-01-01 UTC), at cell centers. The grid is rebuilt from
     the centers and checked against them, so the footprint has the
-    coordinates of a PYSTILT footprint on the same grid.
+    coordinates of a PYSTILT footprint on the same grid. A backward
+    footprint STILT-R summed over time has one layer, at the receptor time;
+    it becomes one layer of *n_hours*, layer -1, which starts where the run
+    ends.
     """
     with xr.open_dataset(path, decode_times=False) as ds:
         foot = ds["foot"].load()
@@ -479,10 +493,10 @@ def _footprint(
             f"{path}: the footprint's layers are not whole hours from the "
             f"receptor time {receptor.time}."
         )
-    integrated = backward and hours.size == 1 and hours[0] == 0
-    config = FootprintConfig(
-        grid=grid, smooth_factor=smooth_factor, time_integrate=bool(integrated)
-    )
+    tres = "1h"
+    if backward and hours.size == 1 and hours[0] == 0:
+        tres, hours = f"{abs(n_hours)}h", np.array([-1.0])
+    config = FootprintConfig(grid=grid, smooth_factor=smooth_factor, tres=tres)
     values = foot.to_numpy().astype("float64")
     return _footprint_array(values, hours.astype(int), receptor, config, "", x, y)
 
@@ -539,7 +553,7 @@ def _folder_footprint(
     )
     # STILT-R reads the run's direction the same way (calc_footprint).
     backward = bool(np.median(particles["age"]) < 0)
-    return _footprint(foot_path, receptor, backward, smooth)
+    return _footprint(foot_path, receptor, backward, smooth, control.n_hours)
 
 
 def import_stilt_r(
@@ -570,12 +584,14 @@ def import_stilt_r(
       ``w_option``, ``z_top``, and ``emisshrs`` from its ``CONTROL``; and
       ``ziscale`` from its ``ZICONTROL`` file when ``SETUP.CFG`` says
       STILT-R wrote one (``ZICONTROLTF``), else 1 (no scaling).
-    - ``hnf_plume`` from the particles: STILT-R's near-field correction adds
-      the ``foot_no_hnf_dilution`` column.
+    - The footprint's ``hnf_plume`` from the particles: STILT-R's near-field
+      correction adds the ``foot_no_hnf_dilution`` column. The particles are
+      stored with that column as ``foot``, uncorrected, as PYSTILT stores
+      its own runs; the footprint applies the correction.
     - The met: the directory the ``CONTROL`` files name, as they name it.
       Each run's met files are recorded in its particle file, and need not
       exist any more.
-    - The footprint's grid and ``time_integrate`` from ``<id>_foot.nc``, and
+    - The footprint's grid and ``tres`` from ``<id>_foot.nc``, and
       its ``smooth_factor`` from ``params.RDS`` or *smooth_factor*, as
       :func:`read_stilt_r` reads them.
     - The STILT-R version, which no file records: *version*.
@@ -684,11 +700,9 @@ def import_stilt_r(
         log = folder / _LOG
 
         particles = _particles(stored["particle"], receptor, traj)
-        settings = {
-            **hysplit,
-            **dict.fromkeys(_ERROR_SETTINGS),
-            "hnf_plume": "foot_no_hnf_dilution" in particles.columns,
-        }
+        hnf_plume = "foot_no_hnf_dilution" in particles.columns
+        particles = _uncorrected(particles)
+        settings = {**hysplit, **dict.fromkeys(_ERROR_SETTINGS)}
         base = _variant(made, name, name, met, settings, version, folder)
         _write_particles(output, base, receptor, particles, control, log)
 
@@ -696,10 +710,11 @@ def import_stilt_r(
             folder, receptor, particles, control, stored, rslurm, smooth_factor
         )
         if foot is not None:
-            first_foot = first_foot or (foot.stilt.config, folder)
+            foot_config = foot.stilt.config.model_copy(update={"hnf_plume": hnf_plume})
+            first_foot = first_foot or (foot_config, folder)
             _agree(
                 footprint_settings(first_foot[0], None),
-                footprint_settings(foot.stilt.config, None),
+                footprint_settings(foot_config, None),
                 "footprint settings",
                 first_foot[1],
                 folder,
@@ -724,12 +739,8 @@ def import_stilt_r(
                 f"{folder / _SETUP} gives WINDERRTF={winderrtf}, and the "
                 f"particle_error_params of {traj.name} {recorded_tf}."
             )
-        perturbed = _error_particles(stored, receptor, traj)
-        error_settings = {
-            **hysplit,
-            **errors,
-            "hnf_plume": "foot_no_hnf_dilution" in perturbed.columns,
-        }
+        perturbed = _uncorrected(_error_particles(stored, receptor, traj))
+        error_settings = {**hysplit, **errors}
         error = _variant(
             made, f"{name}-err", name, met, error_settings, version, folder
         )
@@ -751,6 +762,15 @@ def import_stilt_r(
     return receptors
 
 
+def _uncorrected(particles: pd.DataFrame) -> pd.DataFrame:
+    """Return STILT-R's particles with ``foot`` before its near-field correction, as PYSTILT stores particles."""
+    if "foot_no_hnf_dilution" not in particles.columns:
+        return particles
+    return particles.assign(foot=particles["foot_no_hnf_dilution"]).drop(
+        columns="foot_no_hnf_dilution"
+    )
+
+
 def _hysplit_settings(folder: Path, control: ControlFile) -> tuple[dict[str, Any], int]:
     """
     Return the HYSPLIT settings a run's ``SETUP.CFG``, ``CONTROL``, and ``ZICONTROL`` record, and its ``WINDERRTF``.
@@ -758,7 +778,9 @@ def _hysplit_settings(folder: Path, control: ControlFile) -> tuple[dict[str, Any
     STILT-R writes ``SETUP.CFG`` again for its transport-error run, the same
     but for ``WINDERRTF``, so that flag is returned on its own. STILT-R
     writes no ``SEED``: HYSPLIT seeded its random numbers itself, which is
-    ``seed: null``.
+    ``seed: null``. The entries of
+    :data:`~stilt.transport.hysplit.config.FIXED_SETUP` are left out: they
+    cannot change the particles, and PYSTILT has no setting for them.
     """
     path = folder / _SETUP
     if not path.is_file():
@@ -766,6 +788,9 @@ def _hysplit_settings(folder: Path, control: ControlFile) -> tuple[dict[str, Any
             f"{folder} has no {_SETUP}, which holds the HYSPLIT settings of its run."
         )
     setup = read_namelist(path)
+    setup = {k: v for k, v in setup.items() if k not in FIXED_SETUP}
+    pystilt_names = {hysplit: ours for ours, hysplit in SETUP_NAMES.items()}
+    setup = {pystilt_names.get(k, k): v for k, v in setup.items()}
     unknown = sorted(set(setup) - set(StiltRConfig.model_fields) - set(_SETUP_ONLY))
     if unknown:
         raise ValueError(

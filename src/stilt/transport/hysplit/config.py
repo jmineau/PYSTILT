@@ -13,7 +13,6 @@ from typing import Any, ClassVar, Literal, Self
 
 from pydantic import ConfigDict, Field, field_validator, model_validator
 
-from stilt.particles import HNF_PLUME_COLUMNS
 from stilt.transport import TransportConfig
 
 #: Most hourly ZICONTROL factors HYSPLIT can hold (``ZIPRESC(150)`` in
@@ -25,6 +24,64 @@ WIND_ERROR_SETTINGS = ("siguverr", "tluverr", "zcoruverr", "horcoruverr")
 
 #: The mixed-layer error settings, in the order of the lines of HYSPLIT's ZIERR file.
 ZI_ERROR_SETTINGS = ("sigzierr", "tlzierr", "horcorzierr")
+
+#: ``SETUP.CFG`` entries written with the same value in every run, which no
+#: setting changes. None of them can change ``PARTICLE_STILT.DAT``: they are
+#: read only for HYSPLIT's concentration grids and deposition (``CMASS`` to
+#: ``KWET``), for puffs, which ``INITD=0`` turns off (``CONAGE`` to ``INITD``),
+#: by other HYSPLIT programs (``TOUT`` to ``DZF``), or for dump and restart
+#: files PYSTILT neither supplies nor reads (``NDUMP`` to ``KHINP``), or STILT
+#: mode overrides them (``DELT`` to ``IDSP``). Some break a run when changed:
+#: ``ICHEM=0`` and ``IDSP=1`` write no particle file, and ``INITD`` 1 or 4
+#: releases puffs.
+#: Settings whose ``SETUP.CFG`` entry has another name: PYSTILT's name to
+#: HYSPLIT's. ``footprint_depth`` is read by PYSTILT's own code too, so it
+#: has a name that says what it does.
+SETUP_NAMES: dict[str, str] = {"footprint_depth": "veght"}
+
+FIXED_SETUP: dict[str, Any] = {
+    "cmass": 0,
+    "cpack": 1,
+    "maxdim": 1,
+    "nbptyp": 1,
+    "p10f": 1.0,
+    "rhb": 80,
+    "rht": 60,
+    "efile": "",
+    "kwet": 1,
+    "conage": 48,
+    "frhmax": 3.0,
+    "frhs": 1.0,
+    "frme": 0.1,
+    "frmr": 0.0,
+    "frts": 0.1,
+    "frvs": 0.01,
+    "kpuff": 0,
+    "krnd": 6,
+    "kspl": 1,
+    "splitf": 1.0,
+    "initd": 0,
+    "tout": 0,
+    "nstr": 0,
+    "mhrs": 9999,
+    "nver": 0,
+    "kagl": 1,
+    "dxf": 1.0,
+    "dyf": 1.0,
+    "dzf": 0.01,
+    "ndump": 0,
+    "ncycl": 0,
+    "poutf": "",
+    "pinpf": "",
+    "pinbc": "",
+    "ninit": 1,
+    "khinp": 0,
+    "delt": 1.0,
+    "tratio": 0.75,
+    "khmax": 9999,
+    "ichem": 8,
+    "idsp": 2,
+}
 
 
 class HysplitConfig(TransportConfig):
@@ -40,6 +97,10 @@ class HysplitConfig(TransportConfig):
     (``sigzierr``, ``tlzierr``, ``horcorzierr``) perturbs each particle's
     footprint by a random mixed-layer height error. Each group is set in full
     or not at all.
+
+    ``SETUP.CFG`` entries that cannot change the particles, such as ``delt``
+    and ``ichem``, are not settings: PYSTILT writes the same value in every
+    run (:data:`FIXED_SETUP`), and a config that sets one is refused.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -51,6 +112,7 @@ class HysplitConfig(TransportConfig):
 
     numpar: int = Field(
         200,
+        ge=1,
         description=(
             "Number of particles released per simulation. More particles give a "
             "less noisy footprint and take longer to run."
@@ -142,78 +204,14 @@ class HysplitConfig(TransportConfig):
             "it, in J/kg."
         ),
     )
-    cmass: int = Field(
-        0,
-        description="Compute grid concentrations (0) or grid mass (1).",
-    )
-    conage: int = Field(
-        48,
-        description="Particle age at which particles and puffs convert, in hours.",
-    )
-    cpack: int = Field(
-        1,
-        description="Packing of the binary concentration grid.",
-    )
-    delt: float = Field(
-        1.0,
-        description=(
-            "Integration time step, in minutes. 0 lets HYSPLIT choose; a "
-            "negative value sets the minimum step."
-        ),
-    )
-    dxf: float = Field(
-        1.0,
-        description="Horizontal x-grid offset factor for ensemble runs.",
-    )
-    dyf: float = Field(
-        1.0,
-        description="Horizontal y-grid offset factor for ensemble runs.",
-    )
-    dzf: float = Field(
-        0.01,
-        description="Vertical offset factor for ensemble runs (0.01 is about 250 m).",
-    )
-    efile: str = Field(
-        "",
-        description="Name of a time-varying emissions file. Blank uses none.",
-    )
     emisshrs: float = Field(
         0.01,
+        ge=0,
         description="Duration of the particle release, in hours.",
     )
-    frhmax: float = Field(
-        3.0,
-        description="Maximum horizontal puff-rounding parameter.",
-    )
-    frhs: float = Field(
-        1.0,
-        description="Horizontal puff-rounding fraction for merging.",
-    )
-    frme: float = Field(
-        0.1,
-        description="Mass-rounding fraction for enhanced merging.",
-    )
-    frmr: float = Field(
-        0.0,
-        description="Mass-removal fraction for enhanced merging.",
-    )
-    frts: float = Field(0.1, description="Temporal puff-rounding fraction.")
-    frvs: float = Field(0.01, description="Vertical puff-rounding fraction.")
     hscale: float = Field(
         10800.0,
         description="Horizontal Lagrangian timescale, in seconds.",
-    )
-    ichem: int = Field(
-        8,
-        description="HYSPLIT chemistry and output mode. 8 is the STILT emulation mode.",
-    )
-    idsp: int = Field(
-        2,
-        description="Particle dispersion scheme: 1 for HYSPLIT, 2 for STILT.",
-    )
-    initd: int = Field(
-        0,
-        description="Initial distribution as particles, puffs, or a mix. 0 is 3D particles.",
     )
     k10m: int = Field(
         1,
@@ -221,10 +219,6 @@ class HysplitConfig(TransportConfig):
             "Use the 10 m winds and 2 m temperature as the lowest meteorology "
             "level (1) or skip them (0)."
         ),
-    )
-    kagl: int = Field(
-        1,
-        description="Write trajectory heights above ground (1) or above sea level (0).",
     )
     kbls: int = Field(
         1,
@@ -244,14 +238,6 @@ class HysplitConfig(TransportConfig):
         0,
         description="Horizontal turbulence from vertical mixing (0) or wind deformation (1).",
     )
-    khinp: int = Field(
-        0,
-        description="Age, in hours, given to particles read from ``pinpf``. 0 keeps their own age.",
-    )
-    khmax: int = Field(
-        9999,
-        description="Maximum particle or trajectory age, in hours.",
-    )
     kmix0: int = Field(
         150,
         description="Minimum mixed-layer depth, in meters.",
@@ -263,10 +249,6 @@ class HysplitConfig(TransportConfig):
             "temperature profile, 2 from the TKE profile, 3 from a modified "
             "Richardson number."
         ),
-    )
-    kpuff: int = Field(
-        0,
-        description="Horizontal puff growth: linear (0) or empirical (1).",
     )
     krand: Literal[0, 1, 2, 3, 4, 10, 11, 12, 13] = Field(
         4,
@@ -296,25 +278,12 @@ class HysplitConfig(TransportConfig):
             "seed, as STILT-R's error run does."
         ),
     )
-    krnd: int = Field(6, description="Enhanced-merging interval, in hours.")
-    kspl: int = Field(
-        1,
-        description="Standard puff-splitting interval, in hours.",
-    )
-    kwet: int = Field(
-        1,
-        description="Precipitation from the meteorology (1) or from an external ARL file (2).",
-    )
     kzmix: int = Field(
         0,
         description=(
             "Vertical mixing adjustment: 0 none, 1 a single PBL-average value, "
             "2 scale by ``tvmix``."
         ),
-    )
-    maxdim: int = Field(
-        1,
-        description="Maximum number of pollutant species carried on one particle.",
     )
     maxpar: int | None = Field(
         None,
@@ -329,79 +298,25 @@ class HysplitConfig(TransportConfig):
         10,
         description="Minimum meteorological subgrid size, in grid points.",
     )
-    mhrs: int = Field(
-        9999,
-        description="Trajectory restart duration limit, in hours.",
-    )
-    nbptyp: int = Field(
-        1,
-        description="Number of particle-size bins per pollutant type.",
-    )
-    ncycl: int = Field(
-        0,
-        description="Cycle time of the particle dump file, in hours.",
-    )
-    ndump: int = Field(
-        0,
-        description="Interval between particle dumps, in hours. 0 writes none.",
-    )
-    ninit: int = Field(
-        1,
-        description=(
-            "Particle initialization from ``pinpf``: 0 none, 1 once at the "
-            "start, 2 add every hour, 3 replace every hour."
-        ),
-    )
-    nstr: int = Field(0, description="Trajectory restart interval, in hours.")
     nturb: int = Field(
         0,
         description="Turbulence on (0) or off (1).",
     )
-    nver: int = Field(0, description="Trajectory vertical split number.")
     outdt: int = Field(
         0,
+        ge=0,
         description=(
             "Interval between particle outputs in ``PARTICLE_STILT.DAT``, in "
-            "minutes. 0 writes every time step and a negative value writes none. "
+            "minutes. 0 writes every time step. HYSPLIT writes no particles "
+            "for a negative value, so it is refused. "
             "Only at 0 does PYSTILT check where the particles of a run that "
             "stopped early ended, to tell met that ran out from particles that "
             "left the met's domain."
         ),
     )
-    p10f: float = Field(
-        1.0,
-        description="Dust threshold velocity sensitivity factor.",
-    )
-    pinbc: str = Field(
-        "",
-        description="Particle input file for time-varying boundary conditions.",
-    )
-    pinpf: str = Field(
-        "",
-        description="Particle input file for initialization or boundary-condition runs.",
-    )
-    poutf: str = Field(
-        "",
-        description="Particle output file name.",
-    )
     qcycle: float = Field(
         0.0,
         description="Emission cycling period, in hours. 0 turns cycling off.",
-    )
-    rhb: int = Field(
-        80,
-        description="Relative humidity that defines a cloud base, in percent.",
-    )
-    rht: int = Field(
-        60,
-        description="Relative humidity that defines a cloud top, in percent.",
-    )
-    splitf: float = Field(
-        1.0,
-        description=(
-            "Factor for the automatic horizontal splitting size. A negative "
-            "value turns the automatic sizing off."
-        ),
     )
     tkerd: float = Field(
         0.18,
@@ -417,14 +332,6 @@ class HysplitConfig(TransportConfig):
             "Fraction of the vertical Lagrangian timescale used as the time "
             "step of the STILT dispersion scheme."
         ),
-    )
-    tout: int = Field(
-        0,
-        description="Trajectory output interval, in minutes.",
-    )
-    tratio: float = Field(
-        0.75,
-        description="Advection stability ratio (fraction of a grid cell per time step).",
     )
     tvmix: float = Field(
         1.0,
@@ -474,6 +381,7 @@ class HysplitConfig(TransportConfig):
     )
     z_top: float = Field(
         25000.0,
+        gt=0,
         description="Top of HYSPLIT's computational domain, in meters above ground.",
     )
     ziscale: float | list[float] = Field(
@@ -490,30 +398,37 @@ class HysplitConfig(TransportConfig):
     )
     siguverr: float | None = Field(
         None,
+        ge=0,
         description="Standard deviation of the horizontal wind error, in m/s.",
     )
     tluverr: float | None = Field(
         None,
+        ge=0,
         description="Correlation timescale of the horizontal wind error, in minutes.",
     )
     zcoruverr: float | None = Field(
         None,
+        ge=0,
         description="Vertical correlation length of the horizontal wind error, in meters.",
     )
     horcoruverr: float | None = Field(
         None,
+        ge=0,
         description="Horizontal correlation length of the horizontal wind error, in km.",
     )
     sigzierr: float | None = Field(
         None,
+        ge=0,
         description="Standard deviation of the mixed-layer height error, in percent.",
     )
     tlzierr: float | None = Field(
         None,
+        ge=0,
         description="Correlation timescale of the mixed-layer height error, in minutes.",
     )
     horcorzierr: float | None = Field(
         None,
+        ge=0,
         description="Horizontal correlation length of the mixed-layer height error, in km.",
     )
 
@@ -593,17 +508,6 @@ class HysplitConfig(TransportConfig):
             )
         return self
 
-    @model_validator(mode="after")
-    def _validate_hnf_plume(self) -> Self:
-        """Require the variables the near-field plume model reads when ``hnf_plume`` is on."""
-        if self.hnf_plume:
-            missing = set(HNF_PLUME_COLUMNS) - set(self.varsiwant)
-            if missing:
-                raise ValueError(
-                    f"hnf_plume=True requires varsiwant to include: {sorted(missing)}"
-                )
-        return self
-
     def maxpar_for(self, locations: int) -> int:
         """
         Return the ``MAXPAR`` HYSPLIT gets for a release from *locations* horizontal locations.
@@ -662,6 +566,8 @@ class HysplitConfig(TransportConfig):
 
 
 __all__ = [
+    "FIXED_SETUP",
+    "SETUP_NAMES",
     "MAX_ZISCALE_HOURS",
     "WIND_ERROR_SETTINGS",
     "ZI_ERROR_SETTINGS",

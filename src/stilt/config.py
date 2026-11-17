@@ -40,7 +40,11 @@ from pydantic import (
 
 from stilt._paths import absolute
 from stilt.execution.config import ExecutionConfig
-from stilt.footprint.config import FileGeometrySpec, FootprintConfig
+from stilt.footprint.config import (
+    TIME_INTEGRATE_REMOVED,
+    FileGeometrySpec,
+    FootprintConfig,
+)
 from stilt.footprint.targets import Mesh
 from stilt.identity import (
     footprint_hash,
@@ -48,7 +52,14 @@ from stilt.identity import (
     run_settings,
     settings_hash,
 )
-from stilt.transport import MODELS, ModelInfo, TransportConfig, get_model
+from stilt.particles import HNF_PLUME_COLUMNS
+from stilt.transport import (
+    MODELS,
+    VEGHT_RENAMED,
+    ModelInfo,
+    TransportConfig,
+    get_model,
+)
 
 #: Pattern for variant and met names, which become directory names.
 VARIANT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -191,6 +202,20 @@ class Variant:
             self.model,
             ensemble=self.realizations is not None,
         )
+
+    @cached_property
+    def run_settings_without_met(self) -> dict[str, Any]:
+        """
+        The settings that identify this variant's particles, except the met's.
+
+        What can be compared with a stored folder when the met's files
+        cannot be read, and so :attr:`run_settings` cannot be made.
+        """
+        settings = run_settings(
+            self.transport, {}, self.model, ensemble=self.realizations is not None
+        )
+        del settings["met"]
+        return settings
 
     @cached_property
     def particles_hash(self) -> str:
@@ -433,14 +458,20 @@ class ProjectConfig(BaseModel):
         )
         base = {**defaults, **self._footprint.model_dump()}
         merged = _override(group, base, spec)
+        transport = {k: v for k, v in merged.items() if k not in _FOOTPRINT_FIELDS}
+        footprint = _footprint(
+            group,
+            {k: v for k, v in merged.items() if k in _FOOTPRINT_FIELDS},
+            # grid: null turns the footprint off, inherited settings with it.
+            own=set(spec) if "grid" in spec and spec["grid"] is None else None,
+        )
+        _check_near_field_columns(group, transport, footprint)
         return _Declared(
             met=met,
             model=model,
             realizations=realizations,
-            transport={k: v for k, v in merged.items() if k not in _FOOTPRINT_FIELDS},
-            footprint=_footprint(
-                group, {k: v for k, v in merged.items() if k in _FOOTPRINT_FIELDS}
-            ),
+            transport=transport,
+            footprint=footprint,
         )
 
     def resolve(self, directory: str | Path | None = None) -> dict[str, Variant]:
@@ -588,6 +619,7 @@ grid:
   ymax: 42.0
   xres: 0.01
   yres: 0.01
+hnf_plume: true  # correct foot for the thin plume near the receptor before gridding
 
 
 # Variants. Every receptor runs once per variant, with the settings in this
@@ -604,7 +636,6 @@ variants:
 n_hours: -24
 numpar: 1000
 varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
-hnf_plume: true  # rescale footprints via a gaussian plume model in the hyper-near field
 
 
 # Results go to this directory, relative to the project unless absolute.
@@ -684,11 +715,15 @@ def _override(group: str, base: dict[str, Any], spec: dict[str, Any]) -> dict[st
     return merged
 
 
-def _footprint(name: str, fields: dict[str, Any]) -> FootprintConfig | None:
+def _footprint(
+    name: str, fields: dict[str, Any], own: set[str] | None = None
+) -> FootprintConfig | None:
     """
     Return the footprint settings, or ``None`` when they give no grid or geometry.
 
-    The geometry is not read here.
+    The geometry is not read here. *own* names the settings the variant gave
+    itself, when it turned the footprint off with ``grid: null``; only those
+    can be stray, and the ones it inherited are dropped.
 
     Raises
     ------
@@ -701,13 +736,44 @@ def _footprint(name: str, fields: dict[str, Any]) -> FootprintConfig | None:
         return config
     given = config.model_dump()
     default = FootprintConfig.model_validate({}).model_dump()
-    stray = sorted(field for field in given if given[field] != default[field])
+    stray = sorted(
+        field
+        for field in given
+        if given[field] != default[field] and (own is None or field in own)
+    )
     if stray:
         raise ValueError(
             f"Variant {name!r} sets footprint settings ({', '.join(stray)}) "
             "but no grid. Add a grid or geometry, or remove them."
         )
     return None
+
+
+def _check_near_field_columns(
+    name: str, transport: dict[str, Any], footprint: FootprintConfig | None
+) -> None:
+    """
+    Refuse a variant whose footprint has the near-field correction and whose model is not asked for its columns.
+
+    Only a model with ``varsiwant`` (HYSPLIT's list of particle columns) is
+    checked; another model's particles are checked when the footprint is
+    made.
+
+    Raises
+    ------
+    ValueError
+        If ``hnf_plume`` is set and ``varsiwant`` lacks a column it reads.
+    """
+    varsiwant = transport.get("varsiwant")
+    if footprint is None or not footprint.hnf_plume or varsiwant is None:
+        return
+    missing = sorted(set(HNF_PLUME_COLUMNS) - set(varsiwant))
+    if missing:
+        raise ValueError(
+            f"Variant {name!r}: the near-field correction (hnf_plume) reads the "
+            f"particle columns {missing}. Add them to varsiwant, or set "
+            "hnf_plume: false."
+        )
 
 
 def _mesh(spec: Any, directory: str | Path | None, meshes: dict[str, Mesh]) -> Mesh:
@@ -745,6 +811,10 @@ def _check_keys(keys: Iterable[str], model: str, where: str, own: set[str]) -> N
     for key in keys:
         if key in parts or key == "from":  # "from:" has its own message
             continue
+        if key == "time_integrate":
+            raise ValueError(f"{where}: {TIME_INTEGRATE_REMOVED}")
+        if key == "veght":
+            raise ValueError(f"{where}: {VEGHT_RENAMED}")
         close = difflib.get_close_matches(key, list(parts), n=1)
         hint = f" Did you mean {close[0]!r}, {parts[close[0]]}?" if close else ""
         raise ValueError(f"{where}: {key!r} is not a setting.{hint}")

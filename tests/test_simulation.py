@@ -18,7 +18,7 @@ from .fixtures.factories import make_met_config, make_variant
 from .fixtures.particles import finished
 
 GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
-FOOT = FootprintConfig(grid=GRID, time_integrate=True, smooth_factor=0.0)
+FOOT = FootprintConfig(grid=GRID, smooth_factor=0.0)
 
 
 def _met_config(tmp_path, **kwargs) -> MetConfig:
@@ -33,7 +33,7 @@ def _variant(
         name,
         met_config=_met_config(tmp_path),
         footprint=footprint,
-        **{"numpar": 10, "hnf_plume": False, **overrides},
+        **{"numpar": 10, **overrides},
     )
 
 
@@ -60,7 +60,7 @@ def _trajectories(receptor, params, foot: float = 1e-5) -> pd.DataFrame:
             "foot": [foot],
         }
     )
-    return finished(particles, receptor, params)
+    return finished(particles, receptor)
 
 
 def _write_particles(sim: Simulation) -> pd.DataFrame:
@@ -289,6 +289,9 @@ def test_calc_footprint_replaces_the_settings_given(point_receptor, tmp_path):
     smooth = sim.calc_footprint(smooth_factor=0.0)
     assert smooth.stilt.config.smooth_factor == 0.0
     assert smooth.stilt.grid == GRID
+    quarters = sim.calc_footprint(tres="15min")
+    assert quarters.stilt.config.tres == "15min"
+    assert float(quarters.sum()) == pytest.approx(float(base.sum()))
     decay = sim.calc_footprint(transforms=[FirstOrderLifetime(lifetime_hours=1.0)])
     assert [transform_kind(t) for t in decay.stilt.config.transforms] == [
         "first_order_lifetime"
@@ -344,7 +347,7 @@ def test_background_and_transport_error_weight_the_particles_like_the_footprint(
 ):
     import numpy as np
 
-    from stilt.particles import background, transport_error
+    from stilt import background, transport_error
 
     lifetime = [FirstOrderLifetime(lifetime_hours=1.0)]
     footprint = FOOT.model_copy(update={"transforms": lifetime})
@@ -369,15 +372,14 @@ def test_background_and_transport_error_weight_the_particles_like_the_footprint(
         dims=("lat", "lon"),
         coords={"lat": [40.6, 40.7, 40.8], "lon": [-112.0, -111.9, -111.8]},
     )
-    one = sim.transport_error(err, flux, noise_splits=0)
-    many = sim.transport_error([err, err], flux, noise_splits=0)
+    one = sim.transport_error(err, flux)
+    many = sim.transport_error([err, err], flux)
     error = transport_error(
         particles,
         [err.particles],
         flux,
         transforms=lifetime,
         receptor=point_receptor,
-        noise_splits=0,
     )
     np.testing.assert_equal(
         (one.variance, one.enhancement), (error.variance, error.enhancement)

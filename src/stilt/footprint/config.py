@@ -27,14 +27,17 @@ recorded with the footprints.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Annotated, Any, Literal
 
+import pandas as pd
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
     field_serializer,
     field_validator,
+    model_validator,
 )
 
 from stilt.spatial import Bounds, Grid
@@ -95,9 +98,46 @@ GeometrySpec = Annotated[
 """Any geometry spec accepted by ``FootprintConfig.geometry``."""
 
 
+#: What to do instead of ``time_integrate``, which was removed.
+TIME_INTEGRATE_REMOVED = (
+    "time_integrate was removed. Sum the layers instead: foot.sum('time'), "
+    "or project.footprints().foot.sum('hour') (the layer dimension is named for tres's unit). For one layer as long as the "
+    "run, set tres to the run's length (tres: 1D for a 24-hour run)."
+)
+
+
+def _minutes(tres: str | timedelta) -> int:
+    """
+    Return the length of a footprint time layer, *tres*, in whole minutes.
+
+    *tres* is a duration such as ``"15min"``, ``"1h"`` or ``"1D"`` (any
+    string :class:`pandas.Timedelta` reads), or a :class:`datetime.timedelta`.
+
+    Raises
+    ------
+    ValueError
+        If *tres* is a number, is not positive, or is not whole minutes.
+
+    Examples
+    --------
+    >>> _minutes("15min"), _minutes("1h"), _minutes("1D")
+    (15, 60, 1440)
+    """
+    if not isinstance(tres, str | timedelta):
+        raise ValueError(
+            f"tres is a duration such as '15min', '1h' or '1D', not {tres!r}."
+        )
+    step = pd.Timedelta(tres)
+    if pd.isna(step) or step <= pd.Timedelta(0) or step % pd.Timedelta(minutes=1):
+        raise ValueError(
+            f"tres must be a positive whole number of minutes, not {tres!r}."
+        )
+    return int(step / pd.Timedelta(minutes=1))
+
+
 class FootprintConfig(BaseModel):
     """
-    Footprint settings: the grid, smoothing, and particle transforms.
+    Footprint settings: the grid, smoothing, the near-field correction, and particle transforms.
 
     The config and each variant hold these as their defaults and overrides,
     and every footprint keeps the settings it was calculated with.
@@ -139,19 +179,88 @@ class FootprintConfig(BaseModel):
             "Factor on the width of the Gaussian smoothing kernel. 0 turns smoothing off."
         ),
     )
-    time_integrate: bool = Field(
-        False,
-        description="Sum the footprint over time into a single layer instead of hourly layers.",
+    tres: str = Field(
+        "1h",
+        description=(
+            "Length of each time layer of the footprint, counted from the "
+            "receptor time, as a duration in whole minutes: ``1h`` for hourly "
+            "layers, ``15min`` for 15-minute data, ``1D`` for days."
+        ),
+    )
+    hnf_plume: bool = Field(
+        True,
+        description=(
+            "Correct ``foot`` near the receptor with a vertical Gaussian plume "
+            "model before the footprint is computed "
+            "(:func:`stilt.particles.correct_near_field`). Close to the "
+            "receptor the plume is thinner than the layer surface fluxes are "
+            "mixed through, so this raises the influence of nearby fluxes. "
+            "Needs the particle columns ``dens``, ``tlgr``, ``sigw``, ``foot``, "
+            "``mlht``, and ``samt``, and ``zsfc`` for a receptor above sea "
+            "level; particles without them get no correction."
+        ),
     )
     transforms: list[Any] = Field(
         description=(
             "Particle transforms applied in order before the footprint is "
             "computed. Each entry's ``kind`` is a built-in name "
             "(``averaging_kernel``, ``pressure_weighting``, "
-            "``first_order_lifetime``) or the import path of your own class."
+            "``first_order_lifetime``, ``dry_deposition``, ``oxidation``) or "
+            "the import path of your own class."
         ),
         default_factory=list,
     )
+
+    @property
+    def tres_minutes(self) -> int:
+        """Length of each time layer of the footprint, in minutes."""
+        return _minutes(self.tres)
+
+    @property
+    def layer_unit(self) -> tuple[str, int]:
+        """
+        Name and length in minutes of the unit ``tres`` is written in.
+
+        It names the layer dimension of :meth:`stilt.Project.footprints`, which
+        counts in it: ``hour`` for ``1h``, ``day`` for ``1D``, ``minute`` for
+        ``15min``.
+
+        Examples
+        --------
+        >>> FootprintConfig(tres="6h").layer_unit
+        ('hour', 60)
+        >>> FootprintConfig(tres="90min").layer_unit
+        ('minute', 1)
+        """
+        if self.tres.endswith("D"):
+            return "day", 1440
+        if self.tres.endswith("h"):
+            return "hour", 60
+        return "minute", 1
+
+    @field_validator("tres", mode="before")
+    @classmethod
+    def _one_spelling(cls, value: Any) -> str:
+        """Write the layer length one way, so ``60min`` and ``1h`` name one settings folder."""
+        minutes = _minutes(value)
+        if minutes % 1440 == 0:
+            return f"{minutes // 1440}D"
+        if minutes % 60 == 0:
+            return f"{minutes // 60}h"
+        return f"{minutes}min"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_time_integrate(cls, data: Any) -> Any:
+        """
+        Refuse ``time_integrate: true``, which was removed.
+
+        A stored record of an hourly footprint may still hold
+        ``time_integrate: false``, which is ignored, so its folder is found.
+        """
+        if isinstance(data, dict) and data.get("time_integrate"):
+            raise ValueError(TIME_INTEGRATE_REMOVED)
+        return data
 
     @field_validator("transforms", mode="before")
     @classmethod

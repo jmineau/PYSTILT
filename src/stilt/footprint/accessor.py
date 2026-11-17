@@ -19,7 +19,8 @@ from stilt.identity import read_footprint_settings
 from stilt.receptors import Receptor
 from stilt.spatial import Grid, horizontal_dims
 
-from .aggregation import aggregate
+from ._paris import to_paris
+from .aggregation import _check_steps_hold_layers, aggregate
 from .io import _naive_utc, _with_cf_metadata
 from .targets import Geometry
 
@@ -92,6 +93,7 @@ class FootprintAccessor:
     >>> foot.stilt.receptor  # doctest: +SKIP
     >>> foot.stilt.enhancement(flux).sum()  # doctest: +SKIP
     >>> foot.stilt.aggregate(counties, time_bins=bins)  # doctest: +SKIP
+    >>> foot.stilt.to_paris(sim.particles)  # doctest: +SKIP
     """
 
     def __init__(self, foot: xr.DataArray) -> None:
@@ -181,6 +183,83 @@ class FootprintAccessor:
             ds.to_netcdf(tmp, encoding={"foot": {"zlib": True, "complevel": 4}})
         return path
 
+    def to_paris(self, particles: pd.DataFrame | None = None) -> xr.Dataset:
+        """
+        Return the footprint as a PARIS-format dataset, which openghg reads.
+
+        The footprint's hourly layers go to ``srr_time_resolved`` by hours
+        back from the receptor time, ``H_back``. The layer from one hour
+        before the receptor time to the receptor time is ``H_back = 1``,
+        because openghg pairs ``H_back = k`` with the flux hour that starts
+        ``k`` hours before the footprint's time. ``H_back = 0``, the hour
+        after the receptor time, stays zero. Only ``H_back`` 0 to 23 are
+        resolved, since openghg reads the axis as a time span and a 24th
+        hour would wrap to 0. Layers 24 or more hours back are summed into
+        ``srr_residual``, and ``srr`` is the sum of all layers. The values
+        are PYSTILT's: ppm per (µmol m⁻² s⁻¹) is the same quantity as the
+        PARIS unit, (mol/mol)/(mol/m2/s).
+
+        ``particle_locations_n``, ``_e``, ``_s`` and ``_w`` are the fraction
+        of the particles that first left the footprint grid through that
+        edge, by grid cell along the edge and by 1 km height layer from the
+        ground to 20 km. A particle that stayed inside counts nowhere. They
+        need the particles; without them they are left out, and openghg
+        refuses the file unless it is told not to expect them.
+
+        The layers are found from each layer's ``time`` coordinate, not from
+        the name of the layer dimension, so one receptor of
+        ``project.footprints().foot`` works as well as ``sim.footprint``.
+
+        Parameters
+        ----------
+        particles : pandas.DataFrame, optional
+            The particles the footprint was made from, such as
+            ``sim.particles``. Where they left the grid comes from
+            :meth:`~stilt.particles.ParticlesAccessor.grid_exits` on the
+            footprint's grid, and the fractions are of the particles in the
+            table.
+
+        Returns
+        -------
+        xarray.Dataset
+            Dimensions ``time`` (one entry, the receptor time), ``latitude``,
+            ``longitude``, ``resolution`` (``H_back``, 0 to 23 hours) and,
+            with exits, ``height``. A PARIS file holds one site with one
+            entry along ``time`` per receptor: concatenate the datasets of
+            many receptors along ``time`` with :func:`xarray.concat` before
+            writing them with :meth:`xarray.Dataset.to_netcdf`.
+
+        Raises
+        ------
+        ValueError
+            If the footprint's layers are not one hour long (make it with
+            ``tres: 1h``), if a layer ends after the receptor time (a
+            forward run), if the grid is not in longitude and latitude (a
+            projected grid), if the footprint holds several receptors or has
+            no receptor id.
+
+        Examples
+        --------
+        A footprint of three hourly layers before 18:00, each cell worth 1:
+
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> import xarray as xr
+        >>> receptor_time = pd.Timestamp("2024-01-15 18:00")
+        >>> layers = receptor_time - pd.to_timedelta([3, 2, 1], unit="h")
+        >>> foot = xr.DataArray(
+        ...     np.ones((3, 2, 2)),
+        ...     dims=("time", "lat", "lon"),
+        ...     coords={"time": layers, "lat": [40.5, 41.5], "lon": [-112.5, -111.5]},
+        ... ).assign_coords(receptor="202401151800_-111.85_40.77_5")
+        >>> ds = foot.stilt.to_paris()
+        >>> ds.srr_time_resolved.sum(["latitude", "longitude"]).values.ravel()[:5]
+        array([0., 4., 4., 4., 0.])
+        >>> float(ds.srr.sum())
+        12.0
+        """
+        return to_paris(self._foot, particles)
+
     def enhancement(self, flux: xr.DataArray) -> xr.DataArray:
         """
         Return the modeled enhancement at the receptor, footprint times flux summed over the grid.
@@ -205,16 +284,16 @@ class FootprintAccessor:
             ppm. When the flux's ``time`` coordinate carries CF time bounds
             (:func:`stilt.sampling.sample_field`'s ``step_starts``: its
             ``time`` is a :class:`pandas.IntervalIndex`), each footprint
-            hour takes the step whose bounds hold it; an hour before the
-            first bound, after the last, or in a gap between bounds gets
+            layer takes the step whose bounds hold its start; a layer before
+            the first bound, after the last, or in a gap between bounds gets
             zero flux, since the bounds say where every step starts and
             ends. Without bounds, a flux with a ``time`` dimension is read
             as steps that start at their labels, as ``aggregate`` and
-            ``project.jacobian`` read them: each footprint hour takes the
-            last flux step that starts at or before the hour's start. A
+            ``project.jacobian`` read them: each footprint layer takes the
+            last flux step that starts at or before the layer's start. A
             monthly flux labeled on the 1st gives every hour of July 20
-            July's flux. An hour before the first label gets zero flux, and
-            an hour after the last label takes the last step, since the
+            July's flux. A layer before the first label gets zero flux, and
+            a layer after the last label takes the last step, since the
             labels do not say where it ends (add a step of zeros to end
             it). A flux not labeled at the start of its steps and with no
             bounds must be relabeled first. A flux labeled at the middle of
@@ -225,7 +304,13 @@ class FootprintAccessor:
             full step late: shift its labels back by a full step instead.
             See :ref:`flux-step-labels` for both shifts worked out, and for
             how to give a flux its bounds as an interval index. The labels
-            must strictly increase; the bounds must not overlap.
+            must strictly increase; the bounds must not overlap. A layer
+            takes the flux of the one step where it starts, so the steps
+            must be as long as the footprint's layers (``tres``) or longer:
+            a flux with a shorter step is an error. A flux with one time
+            (a static flux) is not checked. Layers start at the receptor's
+            time, so a layer that crosses a step boundary still takes the
+            step where it starts.
 
         Returns
         -------
@@ -239,7 +324,9 @@ class FootprintAccessor:
         ValueError
             If the flux has a ``time`` dimension and the footprint has none,
             since a time-summed footprint cannot say which flux step each
-            hour meets, if the flux cells are finer than the footprint's, if
+            layer meets, if the flux cells are finer than the footprint's, if
+            a step of the flux is shorter than the footprint's layers (use a
+            shorter ``tres``, or average the flux onto the layers first), if
             the flux's time labels do not strictly increase (a repeated
             label is an error), or if its CF time bounds overlap.
         """
@@ -257,6 +344,7 @@ class FootprintAccessor:
             foot[y_dim].to_numpy(), foot[x_dim].to_numpy(), indexing="ij"
         )
         if "time" in flux.dims:
+            _check_steps_hold_layers(flux.indexes["time"], self.config.tres_minutes)
             layers = [
                 sample_field(
                     flux,
@@ -311,8 +399,11 @@ class FootprintAccessor:
         time_bins : pandas.IntervalIndex
             Time intervals to sum over, such as the time steps of a flux
             inventory. They must be closed on the left
-            (``closed="left"``): each bin holds the footprint hours that
-            start in it.
+            (``closed="left"``): each bin holds the footprint layers that
+            start in it. A layer goes whole into the bin where it starts, so
+            the bins must be as long as the footprint's layers (``tres``) or
+            longer. Layers start at the receptor's time, so one that crosses
+            a bin edge still goes into the bin where it starts.
 
         Returns
         -------
@@ -327,6 +418,7 @@ class FootprintAccessor:
         TypeError
             If ``time_bins`` is not a :class:`pandas.IntervalIndex`.
         ValueError
-            If ``time_bins`` is not closed on the left.
+            If ``time_bins`` is not closed on the left, or a bin is shorter
+            than the footprint's layers (use a shorter ``tres``).
         """
         return aggregate(self._foot, target, time_bins)

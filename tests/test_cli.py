@@ -3,6 +3,7 @@
 import errno
 import ftplib
 import io
+import json
 import os
 import socket
 import subprocess
@@ -222,7 +223,7 @@ def test_status_counts_each_state_per_variant(tmp_path, monkeypatch):
         }
     )
     monkeypatch.setattr(Project, "status", lambda self, sel=None: table)
-    monkeypatch.setattr("stilt.cli._print_folders", lambda project: None)
+    monkeypatch.setattr("stilt.cli._print_folders", lambda project, folders: None)
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -319,6 +320,11 @@ def test_check_lists_what_would_stop_a_run_and_exits_1(tmp_path, calls):
 
 def test_check_tells_a_receptor_above_sea_level_to_add_zsfc_and_exits_1(tmp_path):
     _write_checkable_config(tmp_path)
+    # A footprint, whose near-field correction reads zsfc for this receptor.
+    with (tmp_path / "config.yaml").open("a") as config:
+        config.write(
+            "grid: {xmin: -113, xmax: -110, ymin: 40, ymax: 42, xres: 0.1, yres: 0.1}\n"
+        )
     (tmp_path / "receptors.csv").write_text(
         "time,longitude,latitude,altitude,altitude_ref\n"
         "2023-01-01 12:00:00,-111.85,40.77,1500.0,msl\n"
@@ -356,6 +362,57 @@ def test_check_exits_2_when_the_project_files_are_invalid(tmp_path):
     assert "nonsense" in result.output
 
 
+@pytest.mark.parametrize(
+    ("setting", "message"),
+    [
+        ({"numpar": 0}, "numpar"),
+        ({"n_hours": 0}, "n_hours must not be 0"),
+        (
+            {
+                "grid": {
+                    "xmin": -111,
+                    "xmax": -110,
+                    "ymin": 40,
+                    "ymax": 41,
+                    "xres": 0,
+                    "yres": 0.1,
+                }
+            },
+            "xres",
+        ),
+        (
+            {
+                "grid": {
+                    "xmin": -111,
+                    "xmax": -110,
+                    "ymin": 41,
+                    "ymax": 40,
+                    "xres": 0.1,
+                    "yres": 0.1,
+                }
+            },
+            "ymin < ymax",
+        ),
+    ],
+)
+def test_check_exits_2_for_a_run_setting_or_grid_no_run_can_use(
+    tmp_path, setting, message
+):
+    """A numpar or n_hours of 0 and a grid with no cells were found only after the HYSPLIT run (#366)."""
+    import yaml
+
+    _write_checkable_config(tmp_path)
+    config = tmp_path / "config.yaml"
+    settings = yaml.safe_load(config.read_text())
+    settings.update(setting)
+    config.write_text(yaml.safe_dump(settings))
+
+    result = runner.invoke(app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 2, result.output
+    assert message in result.output
+
+
 def test_check_exits_2_for_a_varsiwant_name_hycs_std_stops_on(tmp_path):
     """`zfx1` passed validation and stopped hycs_std; now check names the spelling it reads (#324)."""
     _write_checkable_config(tmp_path)
@@ -379,9 +436,7 @@ def _point_met_at(tmp_path, directory):
     config.write_text(text.replace(str(tmp_path / "met"), str(directory)))
 
 
-@pytest.mark.parametrize(
-    "command", [["run"], ["submit"], ["status"], ["status", "--json"]]
-)
+@pytest.mark.parametrize("command", [["run"], ["submit"]])
 def test_a_met_directory_that_does_not_exist_exits_2_in_one_line(
     tmp_path, calls, command
 ):
@@ -398,6 +453,76 @@ def test_a_met_directory_that_does_not_exist_exits_2_in_one_line(
     checked = runner.invoke(app, ["check", str(tmp_path)])
     assert checked.exit_code == 1
     assert f"{missing} does not exist." in checked.output
+
+
+def _make_results_folder(tmp_path, name="hrrr", **transport):
+    """Make a particles folder, as a run of variant *name* with *transport* settings, under the project's output."""
+    project = Project(tmp_path)
+    variant = project.variants["hrrr"]
+    if transport:
+        variant = replace(
+            variant, transport=variant.transport.model_copy(update=transport)
+        )
+    project.output.write_log(replace(variant, name=name), "202301011200_any", "")
+
+
+@pytest.mark.parametrize("flags", [[], ["--json"]])
+def test_status_with_an_unreadable_met_and_an_empty_output_is_all_pending(
+    tmp_path, flags
+):
+    """A bare project, as pystiltctl asks about it: nothing can be there (pystiltctl#37)."""
+    _write_minimal_config(tmp_path)
+    _point_met_at(tmp_path, tmp_path / "no-such-met")
+
+    result = runner.invoke(app, ["status", str(tmp_path), *flags])
+
+    assert result.exit_code == 0, result.output
+    if flags:
+        data = json.loads(result.output)
+        assert data["simulations"]["pending"] == data["simulations"]["total"] == 1
+        assert data["folders"] == []
+    else:
+        assert "total=1  complete=0  failed=0  interrupted=0  pending=1" in (
+            result.output
+        )
+        assert "no settings folders yet" in result.output
+
+
+def test_status_with_an_unreadable_met_lists_folders_of_other_settings(tmp_path):
+    """A folder of the variant's name that differs in a setting other than the met."""
+    _write_minimal_config(tmp_path)
+    _make_results_folder(tmp_path, numpar=7)
+    _point_met_at(tmp_path, tmp_path / "no-such-met")
+
+    result = runner.invoke(app, ["status", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "pending=1" in result.output
+    assert "Used by this project: none yet" in result.output
+    assert "settings=hrrr-" in result.output
+    assert "numpar" in result.output
+
+
+@pytest.mark.parametrize("flags", [[], ["--json"]])
+@pytest.mark.parametrize("name", ["hrrr", "renamed"])
+def test_status_with_an_unreadable_met_and_a_folder_that_may_hold_results_exits_2(
+    tmp_path, flags, name
+):
+    """
+    Same settings but the met's: pending could be false, so the met is needed.
+
+    The folder's name is the variant that first made it, so a renamed
+    variant, or another project's, owns it under another name.
+    """
+    _write_minimal_config(tmp_path)
+    _make_results_folder(tmp_path, name=name)
+    missing = tmp_path / "no-such-met"
+    _point_met_at(tmp_path, missing)
+
+    result = runner.invoke(app, ["status", str(tmp_path), *flags])
+
+    assert result.exit_code == 2, result.output
+    assert result.output == f"Error: Met 'hrrr': {missing} does not exist.\n"
 
 
 def test_a_met_directory_with_no_arl_file_exits_2_in_one_line(tmp_path, calls):
@@ -1260,11 +1385,11 @@ def test_init_writes_science_first_commented_config(tmp_path):
     assert list(parsed) == [
         "mets",
         "grid",
+        "hnf_plume",
         "variants",
         "n_hours",
         "numpar",
         "varsiwant",
-        "hnf_plume",
         "output",
     ]
     assert parsed["output"] == "./output"
@@ -1356,7 +1481,6 @@ def test_status_counts_failures_by_reason(tmp_path):
 
 
 def test_status_json_is_the_same_as_data(tmp_path):
-    import json
 
     from stilt.project import Project
     from stilt.receptors import PointReceptor
@@ -1415,7 +1539,6 @@ def test_status_lists_folders_and_what_differs(tmp_path):
             mets={"hrrr": met},
             variants={"hrrr": {}},
             numpar=500,
-            hnf_plume=False,
             output=str(tmp_path / "out"),
         ),
         receptors=[receptor],
@@ -1431,16 +1554,13 @@ def test_status_lists_folders_and_what_differs(tmp_path):
             "foot": [1e-5],
         }
     )
-    sim.output.write_particles(
-        sim.variant, receptor, finished(particles, receptor, sim.transport), []
-    )
+    sim.output.write_particles(sim.variant, receptor, finished(particles, receptor), [])
     new = Project.init(
         tmp_path / "new",
         config=ProjectConfig(
             mets={"hrrr": met},
             variants={"hrrr": {}},
             numpar=1000,
-            hnf_plume=False,
             output=str(tmp_path / "out"),
         ),
         receptors=[receptor],

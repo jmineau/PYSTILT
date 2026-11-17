@@ -9,11 +9,13 @@ a scheduler PYSTILT does not drive itself. The workers are in
 :mod:`stilt.execution.worker`.
 """
 
-from .config import ExecutionConfig
-from .runner import job_script, pending, run, submit, task_share, wait
+from .config import ExecutionConfig, FetchConfig
+from .runner import fetch_script, job_script, pending, run, submit, task_share, wait
 
 __all__ = [
     "ExecutionConfig",
+    "FetchConfig",
+    "fetch_script",
     "job_script",
     "pending",
     "run",

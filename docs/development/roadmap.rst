@@ -23,6 +23,9 @@ These parts are stable and covered by the test suite:
   and footprints (:func:`stilt.migration.read_stilt_r`), and importing it
   into an output directory, where a ``stilt-r`` variant reads it
   (:func:`stilt.migration.import_stilt_r`)
+- Exports to other tools: the particles as CF-1.10 trajectories for trajan
+  and cf-xarray (``particles.stilt.to_cf_trajectories``), and a footprint in
+  openghg's PARIS format (``foot.stilt.to_paris``)
 
 Footprints can also be summed onto other geometries. A footprint is computed
 on a rectangular grid and then summed onto a :class:`stilt.Grid`, a
@@ -30,7 +33,9 @@ on a rectangular grid and then summed onto a :class:`stilt.Grid`, a
 or :class:`stilt.Zones` (groups of cells), using cached overlap weights.
 ``Mesh.to_grid`` picks a grid for a geometry, the ``geometry``
 footprint setting names one in YAML, and ``sim.calc_footprint`` makes
-new footprints from saved particles.
+new footprints from saved particles. A footprint's time layers are an hour
+long by default, and ``tres`` sets another length, such as ``15min``
+for EM27/SUN data or a day for a coarse inversion.
 
 Most new work is on column and slant-column workflows for satellite and
 ground-based instruments (see *Future plans* below).
@@ -57,7 +62,7 @@ each a ``stilt run --task`` command line.
      - Implemented
    * - A check of a project's met files, grid, and kernel table before any run (``stilt check``, ``project.check()``)
      - Implemented
-   * - Getting the met files a project's runs need once, before many workers start (``stilt fetch``, ``project.fetch()``)
+   * - Getting the met files a project's runs need once, before many workers start (``stilt fetch``, ``project.fetch()``, and a fetch job before ``stilt submit``'s array)
      - Implemented
    * - Slurm job arrays, with preempted tasks resubmitted
      - Implemented
@@ -71,6 +76,10 @@ each a ``stilt run --task`` command line.
      - Implemented (the interface; HYSPLIT is the one model)
    * - Met columns (``mlht``, ``dens``, ``pres``, ``zsfc``) sampled at particle positions, for a model that writes only positions (``stilt.sampling.sample_met``)
      - Implemented (see the Meteorology guide for how closely ``pres`` and ``dens`` match HYSPLIT's)
+   * - ``foot`` computed from the met files for a model that writes only positions, so its particles make footprints (``stilt.particles.add_foot``)
+     - Implemented (no near-field correction for such a model; see Validation for how far a footprint moves)
+   * - The mixed-layer height for a computed ``foot``: the met's ``PBLH``, HYSPLIT's Richardson-number method (``kmixd: 3``), or a fixed depth, with a minimum (``pbl_height``, ``pbl_height_min``)
+     - Implemented (HYSPLIT's ``kmixd: 1`` and ``2`` are not ported)
 
 Column and satellite science (from X-STILT)
 --------------------------------------------
@@ -94,6 +103,10 @@ feature.
      - Implemented
    * - First-order lifetime decay transform
      - Implemented
+   * - Dry deposition transform (``dry_deposition``)
+     - Implemented
+   * - Oxidation transform (``oxidation``) and ``survival`` for any loss rate
+     - Implemented
    * - Declarative transforms in config YAML (default or per variant)
      - Implemented
    * - Slant-column receptor support
@@ -106,7 +119,7 @@ feature.
      - Implemented
    * - A receptor and a kernel for each sounding (``receptors_from_soundings``, ``project.add_table``)
      - Implemented
-   * - Product readers (OCO-2/3, TROPOMI, TCCON)
+   * - Product readers (OCO-2/3, TROPOMI, TCCON, EM27/SUN from GGG or PROFFAST)
      - Implemented (see *Reading Retrieval Products*); other instruments as one module each
    * - Transport error on the modeled enhancement (``sim.transport_error``)
      - Implemented
@@ -127,6 +140,18 @@ feature.
        correlated case is fips's ``prior_obs_error``
    * - Inventory readers
      - Out of scope; a flux field is an xarray array
+
+Mobile measurements
+-------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 60 20
+
+   * - Feature
+     - Status
+   * - Receptors along the track of a car, train, aircraft, or ship, and each measurement's receptor (``receptors_from_track``)
+     - Implemented (see the *Mobile Measurements* guide)
 
 Future plans
 ------------

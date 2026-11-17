@@ -44,7 +44,9 @@ met ``directory``. Pods on one shared volume find the files the first pod
 fetched. Pods with their own disks do not: 50 pods whose receptors fall on
 the same days download, and crop, the same files 50 times.
 
-``stilt fetch`` gets the files once, before the Job starts:
+A task (``stilt run --task``) never fetches for the others, so
+``stilt fetch`` gets the files once, before the Job starts (``stilt submit``
+does this for you on Slurm, :ref:`slurm-fetch`):
 
 .. code-block:: bash
 
@@ -61,16 +63,20 @@ results.
 A met without ``download`` is only checked: ``stilt fetch`` reports the
 files it lacks, as ``stilt check`` does, and does not make them.
 
-It exits with 0 when every file is there, 1 when some could not be had
-(the archive does not have the file; it prints the times of the runs that
-need them), 2 when the command line is wrong or a met directory cannot be
-read, and 3 when it was stopped (Ctrl-C, or SIGTERM, which Kubernetes and
-Slurm send) or the archive was busy or the connection failed (a throttled
-bucket, a timeout, a refused connection), which a retry may get past. Any other
-unexpected error is 4 (:ref:`exit-codes`). A stop removes the file it was downloading,
-and a second stop signal while it does is ignored. Run it again to try the
-missing files, or to finish after a stop: the ones it got are kept. A process
-killed with SIGKILL, which cannot be caught, leaves its hidden
+It exits with:
+
+- 0 when every file is there
+- 1 when the archive does not have some files; it prints the times of the
+  runs that need them
+- 2 when the command line is wrong or a met directory cannot be read
+- 3 when it was stopped (Ctrl-C, or the SIGTERM that Kubernetes and Slurm
+  send), or the archive was busy or could not be reached, which a retry may
+  get past
+- 4 for any other unexpected error (:ref:`exit-codes`)
+
+Run it again to get the missing files or to finish after a stop: the files
+it got are kept. A stop removes the file being downloaded. A process killed
+with SIGKILL, which cannot be caught, leaves a hidden
 ``.<name>.<random>.partial`` file in the met directory; delete it.
 
 Fetches can overlap. Several ``stilt fetch`` processes, or a fetch beside
@@ -155,53 +161,51 @@ Exit codes
    * - 2
      - The command line was wrong: an unknown option, a bad value, or a
        directory that is not a project. Or a met directory does not exist
-       or holds no ARL file (``stilt check`` lists it). Nothing ran. Do not
-       retry.
+       or holds no ARL file (``stilt check`` lists it; ``stilt status`` exits
+       with 2 for it only when the output may hold results). Nothing ran. Do
+       not retry.
    * - 3
      - Retry it. Some simulations did not finish, because the run was
-       stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), or a
-       connection or I/O error, such as an output bucket that could not be
-       reached, stopped an unfinished simulation or ended the run. A retry
-       continues where it stopped.
+       stopped (Ctrl-C, or a stop signal from Kubernetes or Slurm), a worker
+       process was killed (``--cpus`` above 1; the error names the receptors
+       that were in progress, and it is usually the out-of-memory killer, so a
+       retry may need fewer ``--cpus``), or a connection or I/O error, such as
+       an output bucket that could not be reached, stopped an unfinished
+       simulation or ended the run. A retry continues where it stopped.
    * - 4
      - A bug: any other error the command did not expect. Its traceback is
        printed. Do not retry; a retry meets the same error.
 
-Whether an error is a connection or I/O error is read from the error and
-what it was raised from, not from its being an ``OSError``: s3fs turns many
-permanent answers of a bucket into a plain ``OSError``. It is 3 when it is a
-refused, reset or timed-out connection or a name-resolution failure, an error of
-the cloud libraries that is not an ``OSError`` (such as botocore's
-``EndpointConnectionError`` and ``ReadTimeoutError``), an FTP 4xx reply ("421
-too many users") or an FTP server that closed the connection (``ftplib``'s
-``EOFError``), or has the status of a busy or briefly unavailable service
-(408, 429, 500, 502, 503, 504, or the errno s3fs gives such an answer).
-When an error hides its cause, as fsspec's HTTP filesystem does by raising
-``FileNotFoundError`` for every failure, the cause decides. An ``OSError`` that nothing explains is
-3 when its errno is input/output trouble that goes away (``EIO``, a stale
-NFS handle, a busy or interrupted call) and 4 otherwise, a full disk
-(``ENOSPC``) included. It is 4 when the status is any other 3xx, 4xx or 5xx (a
-bucket in another region, a bad request, a 403, a 404), an FTP 5xx reply, a file
-that is not there or may not be used, or anything else. Every ``stilt`` command ends this way on
-an error it did not expect, not only ``stilt run``, except that a closed
-standard output (``stilt status | head``) ends quietly with 1, as it always
-has. ``stilt fetch`` follows the same table, except that
-1 is a file the archive does not have (a 404, whatever library reports it).
+An unexpected error ends with 3, not 4, when a retry may get past it:
+
+- a refused, reset or timed-out connection, or a name that did not resolve,
+  including the cloud libraries' own errors for these (botocore's
+  ``EndpointConnectionError`` and ``ReadTimeoutError``)
+- a busy or briefly unavailable service: HTTP 408, 429, 500, 502, 503 or
+  504, an FTP 4xx reply such as "421 too many users", or an FTP server that
+  closed the connection
+- input/output trouble that goes away: ``EIO``, a stale NFS handle, a busy
+  or interrupted call
+
+Anything else is 4: another HTTP status (a bucket in another region, a
+403, a 404), an FTP 5xx reply, a file that is not there or may not be used,
+or a full disk. PYSTILT decides from the error and what caused it, not from
+its type, because s3fs and fsspec's HTTP filesystem report many permanent
+answers as a plain ``OSError`` or ``FileNotFoundError``. Every ``stilt``
+command follows this table, except that a closed standard output
+(``stilt status | head``) ends quietly with 1, and ``stilt fetch`` gives 1
+for a file the archive does not have.
 
 The same rule applies to an error inside one simulation, such as a worker
-that cannot write its particles or footprint to the output bucket. An error
-that is 3 by the rule above is not a failure of the simulation: no failure
-record is written (an earlier attempt's is removed), the simulation stays
-unfinished (``pending``, or ``interrupted`` once its particles run had started),
-the other simulations go on, and the run ends with 3 so that a retry picks it
-up. Any other error inside a simulation, a ``SimulationError`` such as a
-failed HYSPLIT run or missing met files included, a bucket answer that a retry
-repeats (access denied, no such key), or a full disk, is a failure record and
-exit 1. When both happen in one run it exits 3, and the retry, which runs only
-what did not finish, ends with 1 if the failure remains. A bucket that stays
-down keeps every try at 3, so a driver sets how many times it retries. If the
-output cannot be reached to remove an earlier failure record, that record stays
-until a run writes the result.
+that cannot write its result to the output bucket. An error a retry may get
+past is not a failure of the simulation: no failure record is written (an
+earlier attempt's is removed), the simulation stays ``pending``, or
+``interrupted`` once its run had started, the other simulations go on, and
+the run ends with 3. Any other error, a ``SimulationError`` such as a failed
+HYSPLIT run included, is a failure record and exit 1. When both happen in
+one run it exits 3, and the retry, which runs only what did not finish,
+ends with 1 if the failure remains. A bucket that stays down keeps every
+try at 3, so the program that drives the retries sets how many to make.
 
 For a Kubernetes indexed Job, a ``podFailurePolicy`` that retries on 3 and
 fails the task on 1 and 4 follows from this table.

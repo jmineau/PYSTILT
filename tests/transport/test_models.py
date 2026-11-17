@@ -84,17 +84,16 @@ def test_a_variant_may_run_another_model(tmp_path, toy):
 
 
 def test_another_models_variant_inherits_the_shared_parameters_only(tmp_path, toy):
-    """n_hours, seed, hnf_plume, and veght are every model's; numpar and krand are HYSPLIT's."""
+    """n_hours, seed, and footprint_depth are every model's; numpar and krand are HYSPLIT's."""
     config = ProjectConfig(
         mets=_mets(tmp_path),
         n_hours=-6,
         numpar=300,
         krand=2,
-        variants={"hrrr": {}, "toy": {"model": "toy", "hnf_plume": False}},
+        variants={"hrrr": {}, "toy": {"model": "toy"}},
     )
     toy_variant = config.resolve()["toy"]
     assert toy_variant.transport.n_hours == -6  # inherited from the defaults
-    assert toy_variant.transport.hnf_plume is False
     assert "numpar" not in type(toy_variant.transport).model_fields
     for hysplits_own in ("krand", "numpar"):
         with pytest.raises(ValueError, match=f"'{hysplits_own}' is not a setting"):
@@ -151,8 +150,7 @@ def test_a_model_config_inherits_the_recorded_settings_and_realizations():
 
     assert config.settings() == {
         "n_hours": -6,
-        "hnf_plume": True,
-        "veght": 0.5,
+        "footprint_depth": 0.5,
         "seed": 5,
         "nparticles": 10,
     }
@@ -243,7 +241,7 @@ def test_a_model_in_its_own_package_runs_from_a_fresh_interpreter(tmp_path):
         )
         met = {"weather": "hrrr"}  # no directory: the toy reads no met files
         particles = stilt.run_trajectories(
-            receptor, met, model="toypkg.ToyModel", n_hours=-1, nparticles=4, hnf_plume=False
+            receptor, met, model="toypkg.ToyModel", n_hours=-1, nparticles=4
         )
         print(len(particles), sorted(int(p) for p in particles["particle"].unique()))
         """

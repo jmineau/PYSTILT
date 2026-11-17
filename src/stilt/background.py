@@ -9,7 +9,7 @@ enhancement gives the modeled mole fraction. X-STILT does the same in
 ``endpts.trajfoot``, and CT-STILT does it with CarbonTracker.
 
 The average is weighted the way the footprint is, so the particle
-transforms (averaging kernel, pressure weighting, lifetime decay) apply to
+transforms (averaging kernel, pressure weighting, any loss) apply to
 the background too, and the background and enhancement add. The field is
 passed in as an :class:`xarray.DataArray`, or already sampled as one value
 per particle.
@@ -97,7 +97,7 @@ def _endpoint_weights(
 
     Transforms multiply ``foot``, so applying them to particles whose
     ``foot`` is 1 leaves each particle's weight: its averaging kernel and
-    pressure weight, and the lifetime decay at its endpoint age. Without
+    pressure weight, and the fraction surviving from its endpoint. Without
     transforms every weight is 1.
     """
     transforms = list(transforms)
@@ -179,9 +179,10 @@ def background(
         The simulation's particle table (``sim.particles``).
     field : xarray.DataArray or pandas.Series
         The background field, or one value per particle that you sampled
-        yourself, as a Series indexed by ``particle``. For example, lair's
-        ``CarbonTracker.sample`` on ``sim.particles.stilt.endpoints()``. A
-        field is sampled at each particle's endpoint, the row farthest in
+        yourself, as a Series indexed by ``particle``: for a model whose
+        levels vary in space, such as CarbonTracker, sample it at the
+        endpoints in ``sim.particles.stilt.endpoints()`` with your own
+        reader. A field is sampled at each particle's endpoint, the row farthest in
         time from release (``particles.stilt.endpoints()``). Its vertical
         dimension must be named after the particle column it is matched
         against: ``pres`` for pressure in hPa, ``zagl`` for height above

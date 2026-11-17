@@ -47,7 +47,7 @@ def test_mesh_to_grid_cells_per_target_knob():
 
 
 def test_mesh_to_grid_warns_when_huge():
-    mesh = Mesh.from_windows([(0.0, 0.0), (50.0, 50.0)], 0.001)
+    mesh = Mesh.from_windows([(0.0, 0.0), (1.0, 1.0)], 0.001)
     with pytest.warns(UserWarning, match="cells"):
         mesh.to_grid(max_cells=1000)
 

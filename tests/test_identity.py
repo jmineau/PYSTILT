@@ -13,7 +13,7 @@ from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig, MetConfig
 from stilt.transport.hysplit.model import hysplit_version
 
-from .fixtures.factories import make_met_config, write_arl_file
+from .fixtures.factories import make_met_config, make_receptor, write_arl_file
 
 GRID = {"xmin": -112, "xmax": -111, "ymin": 40, "ymax": 41, "xres": 0.1, "yres": 0.1}
 
@@ -215,6 +215,29 @@ def test_output_finds_a_run_whose_stored_settings_predate_a_field(tmp_path):
     assert out.folder("particles", variant) == run
     renamed = replace(variant, name="hrrr-renamed")
     assert out.folder("particles", renamed) == run
+
+
+def test_footprints_written_before_tres_are_hourly_and_still_found(tmp_path):
+    """A footprints folder from before ``tres`` is an hourly variant's."""
+    config = ProjectConfig(
+        mets={"hrrr": _met(tmp_path)},
+        grid=GRID,
+        numpar=100,
+        variants={"hrrr": {}, "hrrr-quarters": {"tres": "15min"}},
+    )
+    variants = config.resolve()
+    hourly, quarters = variants["hrrr"], variants["hrrr-quarters"]
+    assert hourly.particles_hash == quarters.particles_hash
+    assert hourly.footprint_hash != quarters.footprint_hash
+
+    out = Output(tmp_path / "out")
+    out.write_empty_footprint(hourly, make_receptor())
+    folder = out.folder("footprints", hourly)
+    _rewrite_record(folder, lambda s: s.pop("tres"))
+
+    out = Output(tmp_path / "out")
+    assert out.folder("footprints", hourly) == folder
+    assert out.folder("footprints", quarters) is None
 
 
 # ---------------------------------------------------------------------------

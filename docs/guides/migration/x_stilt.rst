@@ -63,7 +63,7 @@ the ones that have an equivalent.
        settings. X-STILT estimates only ``siguverr`` and fixes the others.
        The met is sampled at the observations with ``arlmet.sample_points``
        instead of one HYSPLIT run per sonde, and sondes come from IGRA2
-       through siphon. See :doc:`/guides/wind_errors`.
+       through siphon. See :ref:`wind-error-statistics`.
    * - Mixing-height scaling for the vertical transport error (``run_ver_err``, ``zisf``)
      - ``get.zierr``
      - ``ziscale``, one variant per factor in the same project (see the
@@ -83,7 +83,7 @@ the ones that have an equivalent.
      - ``background/``
      - :func:`stilt.observations.plume_polygon` and
        :func:`stilt.observations.plume_background` on forward runs
-       (:doc:`/guides/plume_background`)
+       (:ref:`plume-background`)
 
 Runs you already have in X-STILT's ``out/by-id`` folder are read with
 :func:`stilt.migration.read_stilt_r` (:doc:`stilt_r`). X-STILT weights the
@@ -118,6 +118,13 @@ X-STILT. Each row says what each one does.
        and Gerbig's equation 4), so the noise in it averages out over many
        receptors. ``noise`` says how large it is
        (:doc:`/guides/transport_error`).
+   * - Sum of the levels into the column (``cal.var.cov``)
+     - Counts a pair of levels with the product of their two standard
+       deviations, times the correlation between them.
+     - Counts a pair with the mean of their two variance differences, times
+       the correlation between them. The sum is then linear in the variance
+       differences, so their noise averages out over receptors too. The two
+       agree when both levels have the same error.
    * - Particles kept in each level (``pct``)
      - Drops the particles above the 99th percentile of the enhancement.
      - Keeps every particle, as Lin and Gerbig do. ``percentile=0.99``

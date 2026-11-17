@@ -3,28 +3,46 @@
 import datetime as dt
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
-
-from stilt.receptors import Receptor, VerticalReference
+from pydantic import BaseModel
 
 
 class ControlFile(BaseModel):
     """
-    Contents of a HYSPLIT ``CONTROL`` file for one STILT run.
+    Contents of a HYSPLIT ``CONTROL`` file for one run of ``hycs_std``.
 
-    Holds the receptor, run length, vertical motion option, model top, and
-    met files. The pollutant, concentration grid, and deposition sections
-    HYSPLIT requires are written with fixed values that STILT does not use.
+    Holds the release time and the release locations, the run time, the
+    vertical motion option, the model top, and the met files. The pollutant,
+    concentration grid, and deposition sections HYSPLIT requires are written
+    with fixed values that the particle output does not use.
+
+    Attributes
+    ----------
+    release_time : datetime
+        The release time, in UTC, written to the minute.
+    locations : list of tuple of float
+        The release locations, each ``(latitude, longitude, height)`` in
+        degrees and meters, in the order ``CONTROL`` lists them. Whether the
+        heights are above ground or above sea level is ``SETUP.CFG``'s
+        ``KMSL``, not in this file.
+    emisshrs : float
+        Hours of emission.
+    n_hours : int
+        Total run time, in hours, negative for a backward run.
+    w_option : int
+        Vertical motion option.
+    z_top : float
+        Top of the model domain, in meters above ground.
+    met_files : list of Path
+        The meteorology files, in the order HYSPLIT reads them.
     """
 
-    receptor: Receptor
+    release_time: dt.datetime
+    locations: list[tuple[float, float, float]]
     emisshrs: float
     n_hours: int
     w_option: int
     z_top: float
     met_files: list[Path]
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def write(self, path: str | Path) -> None:
         """
@@ -37,14 +55,13 @@ class ControlFile(BaseModel):
         """
         lines: list[str] = []
 
-        # Receptor time - 2-digit year (HYSPLIT convention)
-        lines.append(self.receptor.time.strftime("%y %m %d %H %M"))
+        # (1) release time, with a 2-digit year (HYSPLIT convention)
+        lines.append(self.release_time.strftime("%y %m %d %H %M"))
 
-        # Receptor coordinates (one line per point)
-        n_points = len(self.receptor.coords())
-        lines.append(str(n_points))
-        for lat, lon, altitude in self.receptor.coords():
-            lines.append(f"{lat} {lon} {altitude}")
+        # (2) number of release locations, (3) one line for each
+        lines.append(str(len(self.locations)))
+        for lat, lon, height in self.locations:
+            lines.append(f"{lat} {lon} {height}")
 
         # Run parameters
         lines.append(str(self.n_hours))  # (4) total run time (hours)
@@ -71,16 +88,20 @@ class ControlFile(BaseModel):
         lines.append("1")  # (12) emission rate (per hour)
         lines.append(str(self.emisshrs))  # (13) hours of emission (can be fractional)
         # (14) release start (YY MM DD HH MM). Zeros mean the simulation
-        # start, which keeps the receptor's minute.
+        # start, which keeps the release time's minute.
         lines.append("00 00 00 00 00")
 
-        # Concentration / Grid  Definition (hardcoded - required by HYSPLIT parser, ignored by STILT)
+        # Concentration / Grid  Definition (hardcoded - required by HYSPLIT's parser, not used by the particle output)
         lines.append("1")  # (15) number of simultaneous concentration grids
-        lines.append("0.0 0.0")  # (16) grid center (lat, lon), 0s for receptor location
+        lines.append(
+            "0.0 0.0"
+        )  # (16) grid center (lat, lon), 0s for the release location
         lines.append("0.5 0.5")  # (17) grid spacing (degrees)
         lines.append("30.0 30.0")  # (18) grid span (degrees)
         lines.append("./")  # (19) output directory
-        lines.append("cdump")  # (20) output filename (STILT reads PARTICLE_STILT.DAT)
+        lines.append(
+            "cdump"
+        )  # (20) output filename (the particles are in PARTICLE_STILT.DAT)
         lines.append("1")  # (21) number of vertical concentration levels
         lines.append("100")  # (22) height of each level (m)
         lines.append("00 00 00 00 00")  # (23) sampling start
@@ -104,7 +125,7 @@ class ControlFile(BaseModel):
         Path(path).write_text("\n".join(lines) + "\n")
 
     @classmethod
-    def read(cls, path, *, altitude_ref: VerticalReference = "agl"):
+    def read(cls, path: str | Path) -> "ControlFile":
         """
         Read a ``CONTROL`` file written by :meth:`write`.
 
@@ -112,9 +133,6 @@ class ControlFile(BaseModel):
         ----------
         path : str or Path
             File to read.
-        altitude_ref : {"agl", "msl"}, default "agl"
-            Vertical reference of the release heights, which the file does not
-            record.
 
         Returns
         -------
@@ -130,26 +148,18 @@ class ControlFile(BaseModel):
         with path.open() as f:
             lines = f.readlines()
 
-        # Parse receptor time
-        time = dt.datetime.strptime(lines[0].strip(), "%y %m %d %H %M")
+        # Parse the release time
+        release_time = dt.datetime.strptime(lines[0].strip(), "%y %m %d %H %M")
 
-        # Parse receptors
-        n_receptors = int(lines[1].strip())
+        # Parse the release locations
+        n_locations = int(lines[1].strip())
         cursor = 2
-        lats, lons, altitudes = [], [], []
-        for i in range(cursor, cursor + n_receptors):
-            lat, lon, altitude = map(float, lines[i].strip().split())
-            lats.append(lat)
-            lons.append(lon)
-            altitudes.append(altitude)
+        locations = []
+        for i in range(cursor, cursor + n_locations):
+            lat, lon, height = map(float, lines[i].strip().split())
+            locations.append((lat, lon, height))
 
-        receptor = Receptor.from_points(
-            time=time,
-            points=list(zip(lons, lats, altitudes, strict=False)),
-            altitude_ref=altitude_ref,
-        )
-
-        cursor += n_receptors
+        cursor += n_locations
         n_hours = int(lines[cursor].strip())
         w_option = int(lines[cursor + 1].strip())
         z_top = float(lines[cursor + 2].strip())
@@ -171,7 +181,8 @@ class ControlFile(BaseModel):
         emisshrs = float(lines[cursor + 3].strip())
 
         return cls(
-            receptor=receptor,
+            release_time=release_time,
+            locations=locations,
             emisshrs=emisshrs,
             n_hours=n_hours,
             w_option=w_option,

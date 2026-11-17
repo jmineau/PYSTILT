@@ -4,15 +4,19 @@
 [![Documentation](https://github.com/jmineau/PYSTILT/actions/workflows/docs.yml/badge.svg)](https://github.com/jmineau/PYSTILT/actions/workflows/docs.yml)
 [![Code Quality](https://github.com/jmineau/PYSTILT/actions/workflows/quality.yml/badge.svg)](https://github.com/jmineau/PYSTILT/actions/workflows/quality.yml)
 [![codecov](https://codecov.io/gh/jmineau/PYSTILT/branch/main/graph/badge.svg)](https://codecov.io/gh/jmineau/PYSTILT)
+[![STILT-R parity](https://github.com/jmineau/PYSTILT/actions/workflows/stilt-r.yml/badge.svg)](https://github.com/jmineau/PYSTILT/actions/workflows/stilt-r.yml)
 [![PyPI version](https://badge.fury.io/py/pystilt.svg)](https://badge.fury.io/py/pystilt)
 [![Python Version](https://img.shields.io/pypi/pyversions/pystilt.svg)](https://pypi.org/project/pystilt/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22211796.svg)](https://doi.org/10.5281/zenodo.22211796)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Pyrefly](https://img.shields.io/badge/types-pyrefly-blue.svg)](https://pyrefly.org)
 
 PYSTILT is a Python version of the [STILT](https://uataq.github.io/stilt/) atmospheric transport model.
 It follows air backward in time from a measurement with [HYSPLIT](https://www.ready.noaa.gov/HYSPLIT.php)
 and computes a footprint, a map of which upwind surface areas influenced the measurement and by how much.
+If you run HYSPLIT on its own, PYSTILT also runs it from Python for particles alone; see
+[PYSTILT for HYSPLIT users](https://jmineau.github.io/PYSTILT/stable/guides/hysplit_users.html).
 
 ## Status
 
@@ -95,8 +99,9 @@ stilt status ./my_project        # what has finished, and the settings folders
 when it was stopped, or a connection error stopped some, before they finished. An error it did not expect exits with 3 when it is a
 connection or I/O error (a bucket that cannot be reached), which a retry may get past, and with 4
 for any other, which a retry would repeat. `stilt check` exits with 0 when it finds nothing and 1
-when it lists anything. Every command exits with 2 when its command line is wrong; `stilt run`,
-`stilt submit` and `stilt status` also when a met directory does not exist or holds no met files.
+when it lists anything. Every command exits with 2 when its command line is wrong; `stilt run`
+and `stilt submit` also when a met directory does not exist or holds no met files, and `stilt status`
+also then, unless the output holds no result the project could own (it reports every simulation pending).
 
 ## Variants
 
@@ -260,10 +265,12 @@ STILT-R made.
 ## STILT-R parity
 
 PYSTILT footprints match the [STILT-R](https://github.com/uataq/stilt) footprints to a relative
-tolerance of 1e-7 in every grid cell. The test suite checks this against a pinned STILT-R
-commit. The NetCDF files are laid out differently from STILT-R's, so read them as standard
+tolerance of 1e-7 in every grid cell, on longitude/latitude grids. The test
+suite checks this on 21 scenarios against a pinned STILT-R commit. A few cases differ on
+purpose: smoothing on a projected grid, grids and particles near 180°, and the near-field
+correction for receptors above sea level. The NetCDF files are laid out differently from STILT-R's, so read them as standard
 CF-1.8 NetCDF. The [STILT-R parity page](https://jmineau.github.io/PYSTILT/stable/development/stilt_r_parity.html)
-of the development docs has the details.
+of the development docs lists every difference.
 
 ## Roadmap
 

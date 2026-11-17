@@ -1,28 +1,27 @@
 Coming From STILT-R
 ===================
 
-PYSTILT does the same science as STILT-R, and its footprints match STILT-R's
-cell by cell. A few cases differ on purpose. Three are in the near-field
-correction (``hnf_plume``): forward runs, where PYSTILT fixes how the plume
-grows, a ``veght`` above 1, which PYSTILT reads as meters above ground, as
-HYSPLIT does, and a receptor above sea level, whose plume PYSTILT grows from
-the ground. Two are on a projected grid: the smoothing, which PYSTILT makes
-as wide as on a longitude/latitude grid and STILT-R makes a few meters wide,
-and the early-time interpolation, which STILT-R never runs on a grid in
-meters. Three are near 180°: a particle cloud on a grid that goes all the
-way around the earth, which PYSTILT smooths as one cloud and STILT-R smooths
-far too widely, particles just across 180° from the edge of a regional
-grid, which PYSTILT smooths onto the grid and STILT-R drops, and the
-early-time interpolation of a particle that crosses 180°, which PYSTILT
-takes the short way round and STILT-R through 0° (see
-:ref:`stilt-r-parity`). A footprint on a global grid written from 0°
-to 360° keeps those longitudes, where STILT-R labels it from -180° to 180°.
+If you run STILT-R, this page shows where each of its settings and steps
+is in PYSTILT. The science is the same: on longitude/latitude grids
+PYSTILT's footprints match STILT-R's cell by cell, to a relative tolerance
+of 1e-7 in the 21 scenarios the tests compare. What changes is where the
+settings live. Instead of editing variables in ``run_stilt.r``, you write
+them in ``config.yaml`` or pass them to :meth:`stilt.Project.init`, and the
+receptors go in ``receptors.csv``.
+
+A few cases differ on purpose, and :ref:`stilt-r-parity` gives each one
+and why:
+
+- the near-field correction of a receptor above sea level, whose plume
+  PYSTILT grows from the ground
+- projected grids, where PYSTILT smooths as widely as on a
+  longitude/latitude grid and runs the early-time interpolation
+- grids near or across 180°, which PYSTILT treats as one stretch of
+  longitude, and global grids written from 0° to 360°, which keep those
+  longitudes
+
 PYSTILT also takes grids that STILT-R cannot use, such as one from -10° to
 190°.
-
-What changes is where the settings live. Instead of editing variables in
-``run_stilt.r``, you write them in ``config.yaml`` or pass them to
-:meth:`stilt.Project.init`. Receptors go in ``receptors.csv``.
 
 The workflow side by side
 -------------------------
@@ -82,8 +81,13 @@ The workflow side by side
      - ``grid: xmin``, ``xmax``, ``ymin``, ``ymax``
    * - ``xres``, ``yres``, ``projection``
      - ``grid: xres``, ``yres``, ``crs`` (``projection`` is read too)
-   * - ``smooth_factor``, ``time_integrate``
-     - same names, top level
+   * - ``smooth_factor``
+     - same name, top level
+   * - ``time_integrate``
+     - none: footprints keep their time layers (``tres``, an hour by
+       default), and ``foot.sum("time")`` gives the summed map. For one
+       layer as long as the run, set ``tres`` to its length (``tres: 1D``
+       for ``n_hours = -24``)
    * - ``n_hours``, ``numpar``, ``hnf_plume``, ``varsiwant``
      - same names, top level
    * - ``timeout``
@@ -91,9 +95,15 @@ The workflow side by side
    * - ``rm_dat``
      - no setting: a successful run's working directory is removed;
        ``execution: keep_workdir`` keeps it
-   * - HYSPLIT settings (``capemin``, ``delt``, ``kmix0``, ``tlfrac``,
-       ``veght``, …)
+   * - HYSPLIT settings (``capemin``, ``kmix0``, ``tlfrac``, …)
      - same names, top level
+   * - ``veght``
+     - ``footprint_depth``, top level: the same value, still written to
+       ``SETUP.CFG`` as ``VEGHT``
+   * - HYSPLIT settings that cannot change the particles (``delt``,
+       ``cmass``, ``conage``, ``ichem``, ``kagl``, …)
+     - no setting: PYSTILT writes STILT-R's values to ``SETUP.CFG`` in
+       every run
    * - wind and mixing-depth error settings (``siguverr``, ``tluverr``,
        ``sigzierr``, …)
      - same names, usually on a variant of their own
@@ -122,8 +132,8 @@ The workflow side by side
        or ``stilt run --receptors ids.txt``
    * - ``ziscale`` as one list per receptor
      - ``ziscale`` per variant, as one factor or one factor per hour. It is
-       the same for every receptor. Per-receptor factors are not supported
-       yet.
+       the same for every receptor; PYSTILT has no per-receptor
+       factors.
    * - ``stilt_wd``, ``output_wd``
      - the project folder
    * - ``lib.loc``
@@ -241,7 +251,8 @@ become ``particle``, ``age``, ``lon``, ``lat``, and ``release_height``) and a
 footprint, or ``None`` when the folder has none. Both are kept as STILT-R
 made them: the near-field correction STILT-R applied stays in ``foot``, and
 the footprint's values are the file's. To make a footprint on another grid,
-pass the particles to :func:`stilt.calc_footprint`.
+pass the particles to :func:`stilt.calc_footprint` with
+``hnf_plume=False``, since their ``foot`` is corrected already.
 
 Some of what STILT-R saved is not read:
 
@@ -293,7 +304,7 @@ It prints the met and the variant that name the imported folders, for
        met: stilt-r
        version: 1d936c1
        capemin: -1.0
-       cmass: 0
+       hscale: 10800.0
        # ... every HYSPLIT setting, in name order
        ziscale: 1.0
        grid: {xmin: -112.5, xmax: -111.5, ymin: 40.25, ymax: 41.25, xres: 0.01,
@@ -301,7 +312,7 @@ It prints the met and the variant that name the imported folders, for
        geometry: null
        cells_per_target: 4.0
        smooth_factor: 1.0
-       time_integrate: false
+       tres: 1h
        transforms: []
 
 and returns the receptors, for ``receptors.csv``. Paste the printed lines into
@@ -329,24 +340,29 @@ STILT-R projects that differ only in ``n_hours`` land in two folders.
 
    * - Setting
      - Where it comes from
-   * - HYSPLIT's settings (``numpar``, ``kmix0``, ``veght``, ``varsiwant``, …)
+   * - HYSPLIT's settings (``numpar``, ``kmix0``, ``varsiwant``, …), and
+       ``footprint_depth`` from ``VEGHT``
      - each run's ``SETUP.CFG``
    * - ``n_hours``, ``w_option``, ``z_top``, ``emisshrs``
      - each run's ``CONTROL``
    * - ``ziscale``
      - the ``ZICONTROL`` file, when ``SETUP.CFG`` says STILT-R wrote one; else
        1, no scaling
-   * - ``hnf_plume``
+   * - the footprint's ``hnf_plume``
      - the particles: STILT-R's near-field correction adds
-       ``foot_no_hnf_dilution``
+       ``foot_no_hnf_dilution``. The particles are stored with it as
+       ``foot``, uncorrected, as PYSTILT stores its own
    * - ``seed``
      - none: STILT-R sets no seed
    * - the met
      - ``met_path``, the directory the ``CONTROL`` files name, as they name it.
        Each run's met files are recorded in its particle file; they need not
-       exist any more
-   * - ``grid``, ``time_integrate``
-     - ``<id>_foot.nc``
+       still exist
+   * - ``grid``, ``tres``
+     - ``<id>_foot.nc``. A footprint STILT-R summed over time
+       (``time_integrate = T``) is one layer as long as the run: ``tres``
+       the run's ``n_hours``, stamped at the start of the run, not at the
+       receptor time
    * - ``smooth_factor``
      - ``params.RDS``, or the ``smooth_factor`` argument, as for
        :func:`~stilt.migration.read_stilt_r`

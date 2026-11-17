@@ -26,7 +26,7 @@ def _raw_particles(receptor, config, met, workdir, timeout):
     """Run hycs_std and return its particles as HYSPLIT wrote them, before release heights are added."""
     window = run_window(receptor.time, config.n_hours)
     files = met.files_for(window)
-    write_inputs(workdir, receptor, config, files)
+    write_inputs(workdir, receptor.time, receptor.coords(), config, files)
     run_hycs_std(workdir, timeout)
     return read_particle_dat(workdir / "PARTICLE_STILT.DAT", config.varsiwant)
 
@@ -67,7 +67,6 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
     params = HysplitConfig(
         n_hours=-1,
         numpar=12,
-        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
     met = Met("hrrr", make_met_config(met_dir))
@@ -118,7 +117,6 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
     params = HysplitConfig(
         n_hours=-1,
         numpar=10,
-        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
     met = Met("hrrr", make_met_config(met_dir))
@@ -159,7 +157,6 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
         # (matches the fidelity reference); otherwise the stochastic draw flaked.
         krand=2,
         seed=42,
-        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
     met = Met("hrrr", make_met_config(met_dir))
@@ -213,12 +210,12 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
         latitudes=np.full(n_levels, 40.766),
         altitudes=altitudes,
     )
-    params = HysplitConfig(n_hours=-1, numpar=200, hnf_plume=False)
+    params = HysplitConfig(n_hours=-1, numpar=200)
     met = Met("hrrr", make_met_config(met_dir))
     particles = _raw_particles(
         receptor, params, met, Path(tmp_path) / "close_slant", timeout=300
     )
-    data = finished(particles, receptor, params)
+    data = finished(particles, receptor)
 
     release = _release_time_rows(data).drop_duplicates("particle")
     # Each group's actual height should sit at the altitude it was assigned.

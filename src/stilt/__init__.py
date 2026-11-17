@@ -9,6 +9,7 @@ directory of receptors and settings, and loads their results.
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _version
 
+from .background import Background, background
 from .config import ProjectConfig
 from .exceptions import StiltError
 from .execution import ExecutionConfig, task_share
@@ -26,6 +27,7 @@ from .simulation import Simulation
 from .spatial import Bounds, Grid
 from .transforms import averaging_kernel_table
 from .transport import run_trajectories
+from .transport_error import TransportError, transport_error
 
 try:
     __version__ = _version("pystilt")
@@ -55,6 +57,11 @@ __all__ = [
     "run_trajectories",
     "task_share",
     "calc_footprint",
+    # What the particles give beyond the footprint
+    "background",
+    "Background",
+    "transport_error",
+    "TransportError",
     # Result files
     "read_particles",
     "read_footprint",

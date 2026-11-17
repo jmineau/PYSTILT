@@ -187,16 +187,6 @@ def _sorted_trajectory(df: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFra
 
 
 def _trajectory_compare_columns(scenario: ReferenceScenario) -> tuple[str, ...]:
-    if scenario.n_hours > 0 and scenario.hnf_plume:
-        # STILT-R accumulates the hyper-near-field plume by walking each
-        # particle in descending time order, which is release -> far end only
-        # when time is negative. On a forward run it walks from the far end
-        # back to the release point, so its plume shrinks with distance
-        # travelled. PYSTILT sorts by elapsed time instead, so its HNF-
-        # corrected foot intentionally differs here; everything else,
-        # including the uncorrected foot_no_hnf_dilution, still matches.
-        # test_forward_hnf_foot_intentionally_differs_from_r pins the gap.
-        return tuple(c for c in scenario.compare_columns if c != "foot")
     if scenario.receptor_type == "multipoint" and scenario.hnf_plume:
         # STILT-R has no direct PYSTILT-style multipoint receptor; when given
         # multiple heights in one run, calc_trajectory treats them as a
@@ -317,50 +307,6 @@ def test_hysplit_binary_matches_r(r_stilt_dir: Path) -> None:
     _assert_hysplit_binary_matches_r(r_stilt_dir)
 
 
-def test_forward_hnf_foot_intentionally_differs_from_r(
-    scenario_outputs: dict,
-    r_stilt_dir: Path,
-) -> None:
-    """
-    On a forward run PYSTILT's HNF-corrected foot must NOT match STILT-R's.
-
-    STILT-R's cumulative sum runs from the far end of the track back to the
-    release point when n_hours > 0, so its plume is widest at release and the
-    foot it produces is nearly flat. PYSTILT accumulates outward from release,
-    so the foot is largest just after release and decays. Guarding the
-    difference keeps someone from "restoring parity" by reintroducing the bug.
-    """
-    s: ReferenceScenario = scenario_outputs["scenario"]
-    if not (s.n_hours > 0 and s.hnf_plume):
-        pytest.skip("only the forward hnf_plume scenario diverges from STILT-R")
-    if scenario_outputs["r_traj"] is None:
-        pytest.skip(f"[{s.name}] trajectory shared with another scenario")
-    _assert_hysplit_binary_matches_r(r_stilt_dir)
-
-    cols = ("particle", "age", "foot", "foot_no_hnf_dilution")
-    py = _sorted_trajectory(pd.read_parquet(scenario_outputs["traj"]), cols)
-    r = _sorted_trajectory(scenario_outputs["r_traj"], cols)
-
-    # the uncorrected foot is the same calculation in both, so it still matches
-    np.testing.assert_allclose(
-        py["foot_no_hnf_dilution"].to_numpy(dtype=float),
-        r["foot_no_hnf_dilution"].to_numpy(dtype=float),
-        rtol=1e-7,
-        atol=1e-10,
-        err_msg=f"[{s.name}] uncorrected foot should still match STILT-R.",
-    )
-    # the corrected foot does not
-    py_foot = py["foot"].to_numpy(dtype=float)
-    r_foot = r["foot"].to_numpy(dtype=float)
-    assert not np.allclose(py_foot, r_foot, rtol=1e-7, atol=1e-10), (
-        f"[{s.name}] forward HNF foot now matches STILT-R; the release-ordered "
-        "cumulative sum may have been reverted."
-    )
-    # PYSTILT's plume is smallest just after release, so its foot starts higher
-    first = py["age"].abs() == py["age"].abs().min()
-    assert py_foot[first.to_numpy()].mean() > r_foot[first.to_numpy()].mean()
-
-
 def test_msl_hnf_foot_intentionally_differs_from_r(
     scenario_outputs: dict,
     r_stilt_dir: Path,
@@ -380,7 +326,7 @@ def test_msl_hnf_foot_intentionally_differs_from_r(
     _assert_hysplit_binary_matches_r(r_stilt_dir)
 
     cols = ("particle", "age", "foot", "foot_no_hnf_dilution")
-    py = _sorted_trajectory(pd.read_parquet(scenario_outputs["traj"]), cols)
+    py = _sorted_trajectory(pd.read_parquet(scenario_outputs["traj_hnf"]), cols)
     r = _sorted_trajectory(scenario_outputs["r_traj"], cols)
 
     np.testing.assert_allclose(
@@ -430,11 +376,13 @@ def test_projected_smoothing_intentionally_differs_from_r(
         s.make_receptor(),
         s.make_grid(),
         smooth_factor=1.0,
-        time_integrate=s.time_integrate,
+        tres=s.make_footprint_config().tres,
+        hnf_plume=s.hnf_plume,
+        footprint_depth=s.veght,
     )
     py = py_foot.fillna(0).to_numpy().astype(np.float64)
     r_ds = _r_footprint_from_traj(
-        tmp_path / s.name, rscript, r_stilt_dir, scenario_outputs["traj"], smoothed
+        tmp_path / s.name, rscript, r_stilt_dir, scenario_outputs["traj_hnf"], smoothed
     )
     r_unsmoothed = _normalize_footprint_dims(xr.open_dataset(scenario_outputs["foot"]))
     r_unsmoothed.load()
@@ -473,7 +421,8 @@ def test_trajectory_matches_r(
     _assert_hysplit_binary_matches_r(r_stilt_dir)
     compare_columns = _trajectory_compare_columns(s)
 
-    py_traj = pd.read_parquet(scenario_outputs["traj"])
+    # PYSTILT's particles with the near-field correction its footprint applies.
+    py_traj = pd.read_parquet(scenario_outputs["traj_hnf"])
     r_traj = scenario_outputs["r_traj"]
 
     assert len(py_traj) == len(r_traj), (
@@ -520,8 +469,8 @@ def test_footprint_matches_r(
     """
     PYSTILT footprint matches STILT-R output when given the same particles.
 
-    Feeds the PYSTILT trajectory parquet (HNF-corrected foot column) directly
-    to R's calc_footprint helper.  Uses a deep comparison that checks coordinate
+    Feeds PYSTILT's particles, with the near-field correction its footprint
+    applies (HNF-corrected foot column), directly to R's calc_footprint helper.  Uses a deep comparison that checks coordinate
     exactness, total-mass conservation, peak agreement, nonzero cell count, and
     per-cell values — catching failures that a single all-close might miss.
     """
@@ -534,7 +483,7 @@ def test_footprint_matches_r(
         tmp_path / s.name,
         rscript,
         r_stilt_dir,
-        scenario_outputs["traj"],
+        scenario_outputs["traj_hnf"],
         s,
     )
 
@@ -559,7 +508,7 @@ def test_error_trajectory_matches_r(
 
     _assert_hysplit_binary_matches_r(r_stilt_dir)
 
-    error_traj_path = scenario_outputs.get("error_traj")
+    error_traj_path = scenario_outputs.get("error_traj_hnf")
     if error_traj_path is None:
         pytest.fail(f"[{s.name}] PYSTILT produced no trajectory for the error variant")
 

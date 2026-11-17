@@ -49,12 +49,46 @@ def _bin_edges(time_bins: pd.IntervalIndex) -> tuple[np.ndarray, np.ndarray]:
     if time_bins.closed != "left":
         raise ValueError(
             f"time_bins must be closed on the left, not {time_bins.closed!r}. "
-            "A footprint time is the start of its hour, so each bin takes "
-            "the hours that start in it. Build the bins with "
+            "A footprint time is the start of its layer, so each bin takes "
+            "the layers that start in it. Build the bins with "
             "closed='left', for example "
             "pd.interval_range(start, end, freq='1h', closed='left')."
         )
     return _naive_utc_ns(time_bins.left), _naive_utc_ns(time_bins.right)
+
+
+def _check_steps_hold_layers(
+    steps: pd.Index, layer_minutes: int, name: str = "flux"
+) -> None:
+    """
+    Raise when a step of the flux, or a time bin, is shorter than a footprint layer.
+
+    A layer is put whole in the step where it starts, so a step shorter than
+    the layer would give the rest of the layer the wrong flux. *steps* is a
+    flux's ``time`` index or the time bins: an interval index gives each
+    step's length from its bounds, and plain labels, which start their
+    steps, from the gaps between them. A single label has no gaps (a static
+    flux), so nothing is checked, and labels that do not strictly increase
+    are left for :func:`stilt.sampling.sample_field` to refuse.
+    """
+    if isinstance(steps, pd.IntervalIndex):
+        lengths = steps.right - steps.left
+    elif steps.is_monotonic_increasing and steps.is_unique:
+        lengths = steps[1:] - steps[:-1]
+    else:
+        return
+    if not len(lengths):
+        return
+    shortest = lengths.min()
+    layer = pd.Timedelta(minutes=layer_minutes)
+    if shortest < layer:
+        raise ValueError(
+            f"The footprint's layers are {layer} long but a step of the {name} "
+            f"is {shortest}, so a layer would take the flux of the one step "
+            "where it starts in place of the mean over its whole length. Make "
+            "the footprints with a tres no longer than the shortest step, or "
+            f"average the {name} onto the footprint's layers first."
+        )
 
 
 def _time_bin(times_ns: np.ndarray, left: np.ndarray, right: np.ndarray) -> np.ndarray:
@@ -159,20 +193,23 @@ def _receptor_row(
     weights: sparse.csr_matrix,
     nx: int,
     edges: tuple[np.ndarray, np.ndarray],
+    layer_minutes: int,
 ) -> sparse.csr_matrix | None:
     """
     Return a receptor's Jacobian row from the stored cells of its footprint.
 
     *table* holds the footprint's ``hour``, ``y``, ``x``, and ``foot``
-    columns. ``None`` when it has no rows: the footprint is empty.
+    columns, ``hour`` counting layers of *layer_minutes*. ``None`` when it
+    has no rows: the footprint is empty.
     """
     if not table.num_rows:
         return None
     hour = table.column("hour").to_numpy()
-    # The hours are few, so find each hour's bin once and look it up per cell.
+    # The layers are few, so find each layer's bin once and look it up per cell.
     first, last = int(hour.min()), int(hour.max())
     release = _naive_utc_ns([parse_receptor_id(receptor_id)[0]])
-    starts = release + np.arange(first, last + 1, dtype=np.int64) * 3_600_000_000_000
+    step = np.int64(layer_minutes) * 60_000_000_000
+    starts = release + np.arange(first, last + 1, dtype=np.int64) * step
     bin_idx = _time_bin(starts, *edges)[hour.astype(np.intp) - first]
     cell = (
         table.column("y").to_numpy().astype(np.int64) * nx
@@ -344,7 +381,9 @@ def jacobian(
     target : Grid, Mesh, or Zones
         Cells to sum onto.
     time_bins : pandas.IntervalIndex
-        Time intervals, closed on the left.
+        Time intervals, closed on the left and each as long as the
+        footprints' layers (``tres``) or longer. A layer that crosses a bin
+        edge still goes into the bin where it starts.
     receptors : list of str
         Receptors to give rows, in row order. Those with no cells in *table*
         are empty footprints and get none.
@@ -357,6 +396,14 @@ def jacobian(
     Returns
     -------
     Jacobian
+
+    Raises
+    ------
+    TypeError
+        If *time_bins* is not a :class:`pandas.IntervalIndex`.
+    ValueError
+        If *time_bins* is not closed on the left, or a bin is shorter than
+        the footprints' layers (use a shorter ``tres``).
     """
     cells = _by_receptor(table)
     none = table.schema.empty_table()
@@ -392,6 +439,7 @@ def _jacobian(
     """
     workers = _threads(workers)
     edges = _bin_edges(time_bins)  # raises for bins not closed on the left
+    _check_steps_hold_layers(time_bins, config.tres_minutes, "time bins")
     grid = config.grid
     if grid is None:
         raise ValueError("The footprint settings have no grid.")
@@ -400,7 +448,12 @@ def _jacobian(
 
     def one(receptor_id: str) -> sparse.csr_matrix | None:
         return _receptor_row(
-            read(receptor_id), receptor_id, weights, len(x_axis), edges
+            read(receptor_id),
+            receptor_id,
+            weights,
+            len(x_axis),
+            edges,
+            config.tres_minutes,
         )
 
     if workers <= 1 or len(receptors) <= 1:
@@ -460,9 +513,10 @@ def aggregate(
     _require_geometry(target)
     if "time" not in foot.dims:
         raise ValueError(
-            "The footprint has no time dimension, so its hours cannot be put "
+            "The footprint has no time dimension, so its layers cannot be put "
             "in time bins. Aggregate the footprint before summing it over time."
         )
+    _check_steps_hold_layers(time_bins, foot.stilt.config.tres_minutes, "time bins")
     columns = _naive_utc(time_bins.left)
     if foot.size == 0:
         return pd.DataFrame(0.0, index=target.index, columns=columns)

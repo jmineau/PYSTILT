@@ -26,7 +26,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "arlmet>=0.1.0b7",
+    "arlmet>=0.1.0b10",
     "dask[array]>=2023.6",
     "netcdf4>=1.6.5",
     "numpy>=1.24",
@@ -53,7 +53,7 @@ visualization = [
     "matplotlib>=3.7",
 ]
 download = [
-    "arlmet[archives]>=0.1.0b7",
+    "arlmet[archives]>=0.1.0b10",
 ]
 sparse = [
     "sparse>=0.15",
@@ -73,6 +73,7 @@ complete = [
 # Dev tooling and docs together; `uv sync` installs it by default.
 dev = [
     "pystilt[complete]",
+    "cf-xarray>=0.10",  # the CF trajectory export is read back with it
     "docstr-coverage>=2.3",
     "git-cliff>=2.10",  # `just changelog`
     "import-linter>=2.0",
@@ -93,6 +94,7 @@ dev = [
     "sphinx-autodoc-typehints>=3.0",
     "sphinx-copybutton>=0.5",
     "sphinx-design>=0.5",
+    "trajan>=0.12",  # the CF trajectory export is opened with it
     "twine>=6.0",  # `just dist`
     # The object-store tests run against a moto server.
     "flask>=3.0",
@@ -148,11 +150,14 @@ layers = [
     "project : execution : config",
     "check | fetch",
     "simulation",
+    "transport_error",
+    "background",
     "output",
     "footprint : identity : meteorology : transport",
     "particles",
     "receptors : visualization",
-    "transforms | sampling",
+    "transforms",
+    "sampling",
     "spatial",
     "_paths | exceptions | _transient",
 ]
@@ -196,6 +201,79 @@ forbidden_modules = [
 ]
 allow_indirect_imports = true
 
+# The core that makes particle runs (receptors and variants, settings
+# folders, completion by file, run and submit, the met catalog, the transport
+# models) is kept apart from what STILT adds on top of the particles:
+# footprints, transforms, observations, sampling fields at particles,
+# background, transport error, and the STILT-R model. Nothing is moved here:
+# the crossings below are the work a code boundary would leave, and a new one
+# fails this contract. Not seen: a package's __init__ importing its own module
+# (the transport registry imports the STILT-R model), and the near-field
+# correction (which the footprint step calls) and add_foot, functions in
+# stilt.particles.table. The package's __init__ re-exports the public names,
+# so it is not a source. stilt.check asks a variant's transforms to check
+# themselves (a check method, reads_zsfc) without importing them. Imports used
+# only for type hints do not count.
+[[tool.importlinter.contracts]]
+name = "The particle-run core does not import what STILT adds on top"
+type = "forbidden"
+source_modules = ["stilt.*"]
+forbidden_modules = [
+    "stilt.footprint",
+    "stilt.transforms",
+    "stilt.observations",
+    "stilt.sampling",
+    "stilt.transport.stilt_r",
+    "stilt.background",
+    "stilt.transport_error",
+]
+ignore_imports = [
+    # Imports within STILT's side. The observation layer sits above
+    # everything (the layers contract holds that); the STILT-R reader reads
+    # imported runs' footprints and records them under the STILT-R model;
+    # background and transport error weight particles as the footprint does.
+    "stilt.footprint.** -> stilt.footprint.**",
+    "stilt.footprint.** -> stilt.transforms",
+    "stilt.footprint.** -> stilt.sampling",
+    "stilt.transforms.** -> stilt.transforms.**",
+    "stilt.transforms.oxidation -> stilt.sampling",
+    "stilt.observations.** -> stilt.**",
+    "stilt.background -> stilt.sampling",
+    "stilt.background -> stilt.transforms",
+    "stilt.transport_error -> stilt.background",
+    "stilt.transport_error -> stilt.transforms",
+    "stilt.migration -> stilt.footprint.config",
+    "stilt.migration -> stilt.footprint.io",
+    "stilt.migration -> stilt.transport.stilt_r",
+    # Sampling fields at particles: add_foot reads the met with sample_met,
+    # and the particle accessor samples a field.
+    "stilt.particles.table -> stilt.sampling",
+    "stilt.particles.accessor -> stilt.sampling",
+    # A variant's optional footprint settings and its footprint targets.
+    "stilt.config -> stilt.footprint.config",
+    "stilt.config -> stilt.footprint.targets",
+    # The footprint settings and the transform records name a settings folder.
+    "stilt.identity -> stilt.footprint.config",
+    "stilt.identity -> stilt.transforms",
+    # Writing and listing footprint files; completion counts them.
+    "stilt.output -> stilt.footprint",
+    # sim.footprint, sim.background and sim.transport_error.
+    "stilt.simulation -> stilt.footprint.config",
+    "stilt.simulation -> stilt.footprint.gridding",
+    "stilt.simulation -> stilt.footprint.io",
+    "stilt.simulation -> stilt.background",
+    "stilt.simulation -> stilt.transport_error",
+    # The footprint step after the particles.
+    "stilt.execution.worker -> stilt.footprint",
+    # Project.footprints(), Project.jacobian() and Project.transport_error().
+    "stilt.project -> stilt.footprint",
+    "stilt.project -> stilt.footprint.aggregation",
+    "stilt.project -> stilt.footprint.config",
+    "stilt.project -> stilt.footprint.io",
+    "stilt.project -> stilt.transport_error",
+]
+allow_indirect_imports = true
+
 [tool.pyrefly]
 project-includes = ["src"]
 python-version = "3.11"  # as CI checks, against the oldest supported Python
@@ -218,7 +296,7 @@ filterwarnings = [
 ]
 markers = [
     # Disjoint: a test has at most one of these. `just test` runs none of them;
-    # CI runs -m "integration or fidelity", then -m r_only.
+    # CI runs -m integration (tests.yml), -m fidelity and -m r_only (stilt-r.yml).
     "integration: PYSTILT end to end, with real met files and HYSPLIT (slow)",
     "fidelity: PYSTILT against STILT-R, both running HYSPLIT on real met files (slow; require STILT_R_DIR and Rscript)",
     "r_only: PYSTILT against STILT-R without met files or HYSPLIT (fast; require STILT_R_DIR and Rscript)",

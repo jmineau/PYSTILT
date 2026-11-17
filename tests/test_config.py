@@ -230,7 +230,7 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
             )
         },
         grid=grid,
-        time_integrate=True,
+        tres="15min",
         variants={"hrrr": {}},
     )
     path = tmp_path / "config.yaml"
@@ -240,6 +240,87 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
     assert (
         _default_footprint(loaded).model_dump() == _default_footprint(cfg).model_dump()
     )
+
+
+@pytest.mark.parametrize("where", ["top", "variant"])
+def test_time_integrate_is_refused_saying_what_to_do_instead(tmp_path, grid, where):
+    footprint = {"time_integrate": True}
+    top = footprint if where == "top" else {}
+    variant = {} if where == "top" else footprint
+    with pytest.raises(ValueError, match=r"time_integrate was removed.*sum\('time'\)"):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            grid=grid,
+            variants={"hrrr": variant},
+            **top,
+        )
+
+
+@pytest.mark.parametrize("where", ["top", "variant"])
+def test_veght_is_refused_naming_footprint_depth(tmp_path, where):
+    top = {"veght": 0.3} if where == "top" else {}
+    variant = {} if where == "top" else {"veght": 0.3}
+    with pytest.raises(ValueError, match="veght was renamed footprint_depth"):
+        ProjectConfig(mets=_met_config(tmp_path), variants={"hrrr": variant}, **top)
+
+
+def test_footprint_depth_goes_to_hysplit_as_veght(tmp_path):
+    from stilt.transport.hysplit.driver import setup_entries
+
+    config = ProjectConfig(
+        mets=_met_config(tmp_path), footprint_depth=0.3, variants={"hrrr": {}}
+    )
+    entries = setup_entries(config.transport)
+    assert entries["veght"] == 0.3
+    assert "footprint_depth" not in entries
+
+
+def test_hnf_plume_needs_its_columns_in_varsiwant_only_with_a_footprint(tmp_path, grid):
+    varsiwant = ["time", "indx", "long", "lati", "zagl", "foot"]
+    with pytest.raises(ValueError, match=r"near-field correction \(hnf_plume\) reads"):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            grid=grid,
+            varsiwant=varsiwant,
+            variants={"hrrr": {}},
+        )
+    # Without a footprint, or with the correction off, nothing reads them.
+    ProjectConfig(
+        mets=_met_config(tmp_path), varsiwant=varsiwant, variants={"hrrr": {}}
+    )
+    ProjectConfig(
+        mets=_met_config(tmp_path),
+        grid=grid,
+        varsiwant=varsiwant,
+        hnf_plume=False,
+        variants={"hrrr": {}},
+    )
+
+
+def test_a_particles_only_variant_drops_the_footprint_settings_it_inherits(
+    tmp_path, grid
+):
+    config = ProjectConfig(
+        mets=_met_config(tmp_path),
+        grid=grid,
+        hnf_plume=False,
+        smooth_factor=0.5,
+        variants={"hrrr": {}, "hrrr-err": {"grid": None}},
+    )
+    assert config.resolve()["hrrr-err"].footprint is None
+    with pytest.raises(ValueError, match=r"sets footprint settings \(smooth_factor\)"):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            grid=grid,
+            variants={"hrrr": {}, "hrrr-err": {"grid": None, "smooth_factor": 2.0}},
+        )
+
+
+def test_a_stored_record_with_time_integrate_true_is_refused():
+    """A footprint summed over time is not read back as an hourly one."""
+    with pytest.raises(ValueError, match="time_integrate was removed"):
+        FootprintConfig.model_validate({"time_integrate": True})
+    assert FootprintConfig.model_validate({"time_integrate": False}).tres == "1h"
 
 
 def _met_config(tmp_path):

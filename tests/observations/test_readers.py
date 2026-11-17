@@ -11,9 +11,11 @@ import stilt
 from stilt.observations import (
     check_soundings,
     pressure_altitudes,
+    read_coccon,
     read_ggg_netcdf,
     read_ggg_oof,
     read_oco2,
+    read_proffast,
     read_tccon,
     read_tropomi_ch4,
     receptors_from_soundings,
@@ -31,9 +33,16 @@ BLENDED = (
     / "S5P_BLND_L2__CH4____20180430T001950_20180430T020120_02818_03_020400_20230613T235247.nc"
 )
 TCCON = DATA / "if20120823_20121201.public.qc.nc"
-OCO2 = DATA / "oco2_LtCO2_231019_B11210Ar_synthetic.nc4"
+OCO2 = DATA / "oco2_LtCO2_260208_B11300Ar_260529230202s.nc4"
+OCO3 = DATA / "oco3_LtCO2_260208_B11077Ar_260327001412s.nc4"
 OOF = DATA / "zz20230715.vav.ada.aia.oof"
 GGG_PRIVATE = DATA / "zz20230715_20230715.private.nc"
+PROFFAST_RUN = DATA / "ZZsynthetic_SN000_230715-230716"
+PROFFAST = PROFFAST_RUN / "comb_invparms_ZZsynthetic_SN000_230715-230716.csv"
+COCCON = (
+    DATA
+    / "groundbased_ftir.coccon_zz000_synthetic_20230715t160000z_20230715t161200z_001.h5"
+)
 
 REQUIRED = [
     "sounding_id",
@@ -235,27 +244,45 @@ def test_tccon_slant_recipe():
         assert len(points) == len(alts) and points[0][2] == r.surface_altitude
 
 
-# -- OCO-2 (synthetic layout) --------------------------------------------------
+# -- OCO-2 and OCO-3 Lite (slices of real granules) ----------------------------
 
 
 def test_oco2_lite_layout():
     df = read_oco2(OCO2)
     _check_common(df)
-    assert len(df) == 6
+    assert len(df) == 12
     assert (df.species == "xco2").all() and (df.units == "ppm").all()
-    assert df.good.tolist() == [True, True, False, True, False, True]
-    assert np.isnan(df.value.iloc[2])  # the product's fill value
+    assert df.good.sum() == 8 and (df.good == (df.quality_flag == 0)).all()
+    assert (df.operation_mode == 0).all()  # nadir, near Houston
     row = df.iloc[0]
+    assert row.sounding_id == "2026020819373733"
+    assert row.time.floor("s") == pd.Timestamp("2026-02-08T19:37:37")
     assert len(row.pressure_levels) == 20
-    assert row.pressure_levels[0] == pytest.approx(
-        row.surface_pressure
-    )  # level 20 first
-    assert row.ak[0] == pytest.approx(1.1) and row.ak[-1] == pytest.approx(0.3)
-    assert len(row.pressure_weight) == 20 and row.apriori_column == pytest.approx(417.0)
-    assert row.sounding_id == "2023101919480000"
-    assert row.time == pd.Timestamp("2023-10-19T19:48:00")
-    sub = read_oco2(OCO2, lat_range=(40.75, 40.85))
-    assert len(sub) == 3
+    # level 20 is the surface; the reader puts it first
+    assert row.pressure_levels[0] == pytest.approx(row.surface_pressure)
+    assert np.all(np.diff(row.pressure_levels) < 0)
+    assert row.ak[0] > 0.9 and row.ak[-1] < 0.5  # most sensitive near the surface
+    assert len(row.pressure_weight) == 20
+    assert np.sum(row.pressure_weight) == pytest.approx(1.0, abs=1e-3)
+    assert 400 < row.value < 450 and 400 < row.apriori_column < 450
+    assert len(row.longitude_bounds) == 4 and len(row.latitude_bounds) == 4
+    sub = read_oco2(OCO2, lat_range=(29.25, 29.35))
+    assert len(sub) == 2
+
+
+def test_oco3_lite_target_mode():
+    """OCO-3 Lite files share the OCO-2 layout; this slice is a target over Lamont."""
+    df = read_oco2(OCO3)
+    _check_common(df)
+    assert len(df) == 12 and df.good.all()
+    assert (df.operation_mode == 2).all()  # target mode
+    assert df.longitude.between(-97.6, -97.4).all()
+    assert df.latitude.between(36.6, 36.65).all()
+    row = df.iloc[0]
+    assert row.sounding_id == "2026020821083103"
+    assert row.surface_altitude == pytest.approx(310.8, abs=0.1)
+    assert row.pressure_levels[0] == pytest.approx(row.surface_pressure)
+    assert 0 <= row.azimuth < 360 and 0 <= row.solar_azimuth < 360
 
 
 def test_oco2_recipe_with_pressure_altitudes():
@@ -397,3 +424,117 @@ def test_read_tccon_is_the_public_ggg_layout():
     row = a.iloc[0]
     # the public prior_ch4 is in ppb; apriori is in the species' ppm
     assert 1.5 < row.apriori[0] < 2.1
+
+
+# -- COCCON GEOMS (PROFFAST; synthetic layout) ---------------------------------
+
+
+def test_coccon_geoms_columns_units_and_time():
+    df = read_coccon(COCCON, "xch4")
+    _check_common(df)
+    assert len(df) == 5 and df.good.all()  # the file holds only filtered data
+    assert (df.species == "xch4").all() and (df.units == "ppm").all()
+    # MJD2K days to five decimals, rounded to the second
+    assert df.time.tolist() == list(
+        pd.date_range("2023-07-15 16:00:00", periods=5, freq="3min")
+    )
+    assert df.sounding_id.iloc[0] == "synthetic_20230715T160000"
+    assert np.isnan(df.value.iloc[2])  # the GEOMS fill value
+    row = df.iloc[0]
+    assert row.value == pytest.approx(1.8698) and row.uncertainty > 0
+    assert row.latitude == pytest.approx(40.77) and row.longitude == pytest.approx(
+        -111.85
+    )
+    assert row.surface_altitude == pytest.approx(1450.0)  # km -> m
+    assert row.surface_pressure == pytest.approx(853.3)
+    assert row.zenith == pytest.approx(40.0) and row.azimuth == pytest.approx(110.0)
+    assert row.solar_zenith == row.zenith and row.solar_azimuth == row.azimuth
+    # levels from the surface up, the kernel on them
+    assert row.pressure_levels[0] == pytest.approx(853.3)
+    assert np.all(np.diff(row.pressure_levels) < 0)
+    assert np.array_equal(row.ak_pressure, row.pressure_levels)
+    assert row.altitude_levels[0] == pytest.approx(1450.0)
+    assert len(row.ak) == len(row.pressure_levels) == 10
+    # the CH4 prior is in ppbv in the file, the column in ppmv
+    assert row.apriori[0] == pytest.approx(1.990)
+
+
+def test_coccon_geoms_other_species_and_errors():
+    co = read_coccon(COCCON, "XCO")
+    assert (co.units == "ppb").all() and co.value.iloc[0] == pytest.approx(87.8)
+    assert co.iloc[0].apriori[0] == pytest.approx(110.0)
+    co2 = read_coccon(COCCON, "xco2")
+    assert (co2.units == "ppm").all() and co2.iloc[0].apriori[0] == pytest.approx(421.0)
+    with pytest.raises(ValueError, match="column variable"):
+        read_coccon(COCCON, "ch4")
+    with pytest.raises(ValueError, match="N2O"):
+        read_coccon(COCCON, "xn2o")
+
+
+def test_coccon_geoms_to_slant_receptors():
+    df = read_coccon(COCCON, "xch4")
+    df = df[np.isfinite(df.value)]
+    # the synthetic levels are 3 km apart, so go high enough for a line
+    receptors, kernels = receptors_from_soundings(df, "slant", top=8000)
+    assert len(receptors) == 4 and kernels is not None
+    assert all(len(r.altitudes) > 1 for r in receptors)
+    assert all(r.altitudes[0] == pytest.approx(1450.0) for r in receptors)
+    assert kernels.receptor.nunique() == 4
+
+
+# -- PROFFASTpylot results (synthetic layout) ----------------------------------
+
+
+def test_proffast_columns_units_and_screen():
+    df = read_proffast(PROFFAST, "xch4")
+    _check_common(df)
+    assert len(df) == 6  # every spectrum, screened or not
+    assert (df.species == "xch4").all() and (df.units == "ppm").all()
+    # COCCON's screen: SZA at most 75 and XAIR within 0.98 to 1.02
+    assert df.good.tolist() == [True, False, True, False, True, True]
+    assert df.uncertainty.isna().all()  # PROFFAST gives no per-spectrum error
+    row = df.iloc[0]
+    assert row.sounding_id == "230715_160000SN.BIN"
+    assert row.time == pd.Timestamp("2023-07-15 16:00:00")
+    assert row.value == pytest.approx(1.8698)
+    assert row.surface_altitude == pytest.approx(1450.0)
+    assert row.surface_pressure == pytest.approx(853.3)
+    assert row.zenith == pytest.approx(40.0)
+    assert row.azimuth == pytest.approx(110.0)  # -70 from south is 110 from north
+    # the day's prior grid, from the surface up, in hPa and m
+    assert row.pressure_levels[0] == pytest.approx(853.3)
+    assert np.all(np.diff(row.pressure_levels) < 0)
+    assert np.array_equal(row.ak_pressure, row.pressure_levels)
+    assert row.altitude_levels[0] == pytest.approx(1450.0)
+    assert len(row.ak) == 10 and row.apriori[0] == pytest.approx(1.99)
+
+
+def test_proffast_kernel_is_interpolated_in_solar_zenith_angle():
+    df = read_proffast(PROFFAST, "xch4")
+    # the synthetic CH4 table at the surface is 1.05 * (1 + 0.2 * angle) + 0.04
+    surface = [1.05 * (1.0 + 0.2 * np.radians(z)) + 0.04 for z in df.zenith]
+    assert [r[0] for r in df.ak[:3]] == pytest.approx(surface[:3], abs=2e-3)
+    # 86 degrees is past the table's last angle (1.484 rad): its last column
+    assert df.ak_extrapolated.tolist() == [False, False, False, True, False, False]
+    assert df.ak[3][0] == pytest.approx(1.05 * (1.0 + 0.2 * 1.484) + 0.04, abs=1e-3)
+
+
+def test_proffast_species_units_and_errors():
+    co = read_proffast(PROFFAST, "xco")
+    assert (co.units == "ppb").all() and co.value.iloc[0] == pytest.approx(87.8)
+    assert co.iloc[0].apriori[0] == pytest.approx(110.0)  # ppm prior -> ppb
+    s5p = read_proffast(PROFFAST, "XCH4_S5P")
+    assert s5p.value.iloc[0] == pytest.approx(1.871)
+    assert s5p.iloc[0].apriori[0] == pytest.approx(1.99)  # the CH4 prior
+    with pytest.raises(ValueError, match="xch4"):
+        read_proffast(PROFFAST, "ch4")
+    with pytest.raises(FileNotFoundError, match="colsens"):
+        read_proffast(PROFFAST, "xch4", raw_dir=PROFFAST_RUN)
+
+
+def test_proffast_to_slant_receptors():
+    df = read_proffast(PROFFAST, "xco2")
+    df = df[df.good]
+    receptors, kernels = receptors_from_soundings(df, "slant", top=8000)
+    assert len(receptors) == 4 and kernels is not None
+    assert all(r.altitudes[0] == pytest.approx(1450.0) for r in receptors)

@@ -74,11 +74,28 @@ class EmptyFootprint(StiltError):
     No particle is over the footprint grid, so there is no footprint.
 
     An empty footprint is a finished result, not a failure. The worker
-    catches it and writes a footprint file with no rows, marked empty.
+    catches it and writes a footprint file with no rows, marked empty. The
+    message says why it is empty: the particles are off the grid, no
+    particle row has a positive ``foot``, or the table has no rows.
     """
 
-    def __init__(self) -> None:
-        super().__init__("No particle is over the footprint grid.")
+    def __init__(
+        self, message: str = "No particle is over the footprint grid."
+    ) -> None:
+        super().__init__(message)
+
+
+class WorkerDied(StiltError, RuntimeError):
+    """
+    A worker process died without Python's say, and the run stopped.
+
+    A run on ``cpus`` above 1 raises it when a worker is killed outright
+    (``SIGKILL``, as the kernel's out-of-memory killer sends). The pool
+    cannot say which receptor the worker held, so the message names every
+    receptor that was in progress. What finished is kept and nothing is marked
+    failed: run again, and only what is missing runs. ``stilt run`` ends
+    with exit code 3.
+    """
 
 
 __all__ = [
@@ -87,4 +104,5 @@ __all__ = [
     "MeteorologyError",
     "SimulationError",
     "StiltError",
+    "WorkerDied",
 ]
