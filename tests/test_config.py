@@ -611,6 +611,13 @@ def test_footprint_grid_is_derived_from_windows_geometry(tmp_path):
     assert Mesh.from_spec(fc.geometry).ids == ("landfill", "wwtp")
 
 
+def test_a_negative_smooth_factor_is_refused():
+    """A negative factor later failed with a bare ZeroDivisionError (#440); 0 turns smoothing off."""
+    assert FootprintConfig(smooth_factor=0).smooth_factor == 0
+    with pytest.raises(ValidationError, match="smooth_factor"):
+        FootprintConfig(smooth_factor=-1)
+
+
 def test_cells_per_target_and_an_explicit_grid_wins(tmp_path):
     spec = {"kind": "windows", "coords": [(0.5, 0.5)], "size": 0.1}
     fc = _resolved_footprint(tmp_path, geometry=spec, cells_per_target=10)
