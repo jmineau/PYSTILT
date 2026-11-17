@@ -75,7 +75,7 @@ src/stilt/
   config.py       ProjectConfig and Variant;  identity.py  settings records, hashes
   receptors/      receptor models, receptors.csv, shared validation
   particles/      the particle table and files, release heights, foot, near-field correction
-  footprint/      FootprintConfig, calc_footprint (gridding.py), aggregation, io, targets
+  footprint/      FootprintConfig, FootprintStage, calc_footprint (gridding.py), aggregation, io, targets
   transforms/     pre-footprint particle transforms, one module each
   transport/      TransportModel/TransportConfig protocols, MODELS, get_model, run_model;
                   stilt_r.py, the stilt-r model of imported runs (runs nothing)
@@ -101,8 +101,8 @@ and runs nothing, and the core imports STILT's side only where the contract
 lists it. Slurm tasks rebuild the project in another process, so anything a worker
 needs must be in the project or the output directory.
 
-`ProjectConfig` holds the transport model (`hysplit` unless set), its
-parameters and the footprint fields as flat defaults, `mets`, and `variants`.
+`ProjectConfig` is `config.yaml`'s blocks, and no setting sits outside one: `mets`,
+`models` (`hysplit` unless set), `stages` (the footprint, by its `class`), `variants`.
 Each part owns its config class; the base `TransportConfig` gets a parameter
 only when the core reads it. Config classes do no I/O when they validate;
 `ProjectConfig.resolve` reads geometries and asks the model its version.
@@ -130,7 +130,7 @@ only when the core reads it. Config classes do no I/O when they validate;
   platform's `hycs_std`, the sdist none. A new platform needs a case in
   `bundled_build` (`setup.py`), `_bundled_exe_dir`, and `just dist`/`check-dist`.
 - **Pydantic for all configuration**: every field a plain
-  `Field(default, description=...)`, and the public config stays flat.
+  `Field(default, description=...)`, and the settings inside a block stay flat.
 
 ## Development
 

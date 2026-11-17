@@ -9,22 +9,23 @@ import sys
 import textwrap
 import types
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
+from pydantic import RootModel
 
-from stilt.config import ProjectConfig
+from stilt.config import FOOTPRINT_STAGE, ProjectConfig
 from stilt.execution.config import ExecutionConfig
+from stilt.footprint.config import FootprintConfig
+from stilt.transport import TransportConfig
 
 DOCS = Path(__file__).parent.parent / "docs"
 README = DOCS.parent / "README.md"
 
-#: Settings a config example leaves out because the page is about something
-#: else: one met, one variant, and a grid, so a fragment such as a
-#: ``transforms:`` list validates as part of a whole config.
-_BASE_CONFIG = {
-    "mets": {"hrrr": "/met"},
-    "variants": {"hrrr": {}},
+#: The footprint's block of :data:`_BASE_CONFIG`.
+_FOOTPRINT = {
+    "class": FOOTPRINT_STAGE,
     "grid": {
         "xmin": -114.0,
         "xmax": -113.0,
@@ -34,6 +35,27 @@ _BASE_CONFIG = {
         "yres": 0.1,
     },
 }
+
+#: Blocks a config example leaves out because the page is about something
+#: else: one met, a footprint with a grid, and one variant.
+_BASE_CONFIG = {
+    "mets": {"hrrr": "/met"},
+    "stages": {"footprint": _FOOTPRINT},
+    "variants": {"hrrr": {}},
+}
+
+
+def _whole(data: dict) -> dict:
+    """
+    Return a config example as a whole config, over :data:`_BASE_CONFIG`.
+
+    An example of footprint settings alone, such as a ``transforms:`` list,
+    is what a page shows of the footprint's block, so it goes there.
+    """
+    if data.keys() <= set(FootprintConfig.model_fields):
+        return {**_BASE_CONFIG, "stages": {"footprint": {**_FOOTPRINT, **data}}}
+    return {**_BASE_CONFIG, **data}
+
 
 #: YAML blocks that are not a ``config.yaml``: a Kubernetes manifest.
 _NOT_A_CONFIG = ("apiVersion:",)
@@ -148,6 +170,14 @@ def test_the_docs_show_examples():
     assert PYCON
 
 
+class _MyModel:
+    """The docs' placeholder transport model, ``mypkg.models.MyModel``: it reads any met and runs nothing."""
+
+    name = "mine"
+    config_class = TransportConfig
+    met_config_class = RootModel[Any]
+
+
 @pytest.fixture
 def mypkg(monkeypatch):
     """Make the docs' placeholder ``mypkg.transforms`` importable, from the docs' own block."""
@@ -159,6 +189,10 @@ def mypkg(monkeypatch):
     package.transforms = module  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "mypkg", package)
     monkeypatch.setitem(sys.modules, "mypkg.transforms", module)
+    # The transport model a models: block names by its import path.
+    models = types.ModuleType("mypkg.models")
+    models.MyModel = _MyModel  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "mypkg.models", models)
 
 
 @pytest.mark.parametrize("block", [b for _, b in PYTHON], ids=[n for n, _ in PYTHON])
@@ -182,7 +216,7 @@ def test_shell_examples_in_the_docs_are_valid_bash(block):
 
 @pytest.mark.parametrize("data", [d for _, d in CONFIGS], ids=[n for n, _ in CONFIGS])
 def test_config_examples_in_the_docs_are_valid(data, mypkg):
-    ProjectConfig.model_validate({**_BASE_CONFIG, **data})
+    ProjectConfig.model_validate(_whole(data))
 
 
 @pytest.mark.parametrize(

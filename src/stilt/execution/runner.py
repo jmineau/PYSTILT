@@ -258,7 +258,7 @@ def run(
 
     Each receptor with missing results runs once: the transport model once for each
     distinct set of transport settings whose particles are missing, then the
-    footprint of every variant that has a grid. With ``backend: local`` the
+    footprint of every variant that has one. With ``backend: local`` the
     receptors run in this process (``cpus`` at a time); with ``cpus`` above
     1 and a met that downloads, the met files are got first
     (:meth:`stilt.Project.fetch`, unless ``execution.fetch`` is ``false``),

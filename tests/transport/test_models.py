@@ -8,10 +8,11 @@ import textwrap
 from typing import Any, ClassVar
 
 import pytest
+import yaml
 from pydantic import BaseModel, ConfigDict
 
 from stilt import transport
-from stilt.config import ProjectConfig
+from stilt.config import FOOTPRINT_STAGE, ProjectConfig
 from stilt.identity import read_run_settings, settings_hash
 from stilt.transport import ModelInfo, TransportConfig
 
@@ -58,6 +59,10 @@ def toy(monkeypatch):
     monkeypatch.setitem(transport.MODELS, "toy", ToyModel)
 
 
+#: The toy model by its import path, as config.yaml names a model in another package.
+TOY_PATH = f"{__name__}.ToyModel"
+
+
 def _mets(tmp_path):
     return {"hrrr": make_met_config(tmp_path / "met")}
 
@@ -65,14 +70,17 @@ def _mets(tmp_path):
 def test_a_variant_may_run_another_model(tmp_path, toy):
     config = ProjectConfig(
         mets=_mets(tmp_path),
-        grid=GRID,
-        numpar=500,
-        variants={"hrrr": {}, "toy": {"model": "toy", "nparticles": 10}},
+        models={"hysplit": {"numpar": 500}, "toy": {}},
+        stages={"footprint": {"class": FOOTPRINT_STAGE, "grid": GRID}},
+        variants={
+            "hrrr": {"model": "hysplit"},
+            "toy": {"model": "toy", "met": "hrrr", "nparticles": 10},
+        },
     )
     variants = config.resolve()
     hrrr, toy_variant = variants["hrrr"], variants["toy"]
     assert hrrr.model.name == "hysplit" and hrrr.transport.numpar == 500
-    # Another model's variant gives its own parameters and inherits the footprint.
+    # Another model's variant gives its own parameters and gets the same stages.
     assert toy_variant.model.name == "toy" and toy_variant.transport.nparticles == 10
     assert toy_variant.footprint == hrrr.footprint
     assert variants["toy"].model == ModelInfo(name="toy", version="1.0")
@@ -83,60 +91,117 @@ def test_a_variant_may_run_another_model(tmp_path, toy):
     assert settings_hash(read_run_settings(recorded)) == variants["toy"].particles_hash
 
 
-def test_another_models_variant_inherits_the_shared_parameters_only(tmp_path, toy):
-    """n_hours, seed, and footprint_depth are every model's; numpar and krand are HYSPLIT's."""
+def test_each_models_block_holds_its_own_defaults(tmp_path, toy):
+    """A variant starts from its own model's block: nothing passes from one model to another."""
     config = ProjectConfig(
         mets=_mets(tmp_path),
-        n_hours=-6,
-        numpar=300,
-        krand=2,
-        variants={"hrrr": {}, "toy": {"model": "toy"}},
+        models={
+            "hysplit": {"n_hours": -6, "numpar": 300, "krand": 2},
+            "toy": {"n_hours": -12, "nparticles": 7},
+        },
+        variants={
+            "hrrr": {"model": "hysplit"},
+            "toy": {"model": "toy", "met": "hrrr"},
+            "toy-long": {"model": "toy", "met": "hrrr", "n_hours": -48},
+        },
     )
-    toy_variant = config.resolve()["toy"]
-    assert toy_variant.transport.n_hours == -6  # inherited from the defaults
-    assert "numpar" not in type(toy_variant.transport).model_fields
+    variants = config.resolve()
+    assert variants["hrrr"].transport.n_hours == -6
+    assert variants["toy"].transport.n_hours == -12
+    assert variants["toy"].transport.nparticles == 7
+    assert variants["toy-long"].transport.n_hours == -48
+    assert "numpar" not in type(variants["toy"].transport).model_fields
     for hysplits_own in ("krand", "numpar"):
         with pytest.raises(ValueError, match=f"'{hysplits_own}' is not a setting"):
             ProjectConfig(
                 mets=_mets(tmp_path),
-                variants={"toy": {"model": "toy", hysplits_own: 2}},
+                models={"toy": {}},
+                variants={"hrrr": {hysplits_own: 2}},
+            )
+        with pytest.raises(
+            ValueError, match=f"models: toy: '{hysplits_own}' is not a setting"
+        ):
+            ProjectConfig(
+                mets=_mets(tmp_path),
+                models={"toy": {hysplits_own: 2}},
+                variants={"hrrr": {}},
             )
 
 
-def test_the_projects_model_takes_its_parameters_at_the_top(tmp_path, toy):
-    config = ProjectConfig(
-        mets=_mets(tmp_path), model="toy", nparticles=7, variants={"hrrr": {}}
+def test_a_variant_names_its_model_when_there_are_several(tmp_path, toy):
+    models = {"hysplit": {}, "toy": {}}
+    with pytest.raises(
+        ValueError,
+        match=r"Variant 'hrrr' must name its model \(one of \['hysplit', 'toy'\]\)",
+    ):
+        ProjectConfig(mets=_mets(tmp_path), models=models, variants={"hrrr": {}})
+    with pytest.raises(
+        ValueError, match=r"names the model 'nope', which models: does not have"
+    ):
+        ProjectConfig(
+            mets=_mets(tmp_path), models=models, variants={"hrrr": {"model": "nope"}}
+        )
+    # With one model, a variant need not say it.
+    only = ProjectConfig(
+        mets=_mets(tmp_path), models={"toy": {}}, variants={"hrrr": {}}
     )
-    assert config.transport.nparticles == 7
-    assert config.resolve()["hrrr"].model.name == "toy"
-    assert (
+    assert only.resolve()["hrrr"].model.name == "toy"
+
+
+def test_a_models_block_must_name_a_model(tmp_path, toy):
+    with pytest.raises(
+        ValueError, match="models: nope: 'nope' is not a built-in transport model"
+    ):
+        ProjectConfig(mets=_mets(tmp_path), models={"nope": {}}, variants={"hrrr": {}})
+    with pytest.raises(ValueError, match="class must be the import path"):
         ProjectConfig(
-            mets=_mets(tmp_path), model="toy", seed=7, variants={"hrrr": {}}
-        ).transport.seed
-        == 7
-    )  # a shared parameter
-    with pytest.raises(ValueError, match="'varsiwant' is not a setting"):
+            mets=_mets(tmp_path),
+            models={"mine": {"class": "toy"}},
+            variants={"hrrr": {}},
+        )
+    with pytest.raises(ValueError, match="models: has no block"):
+        ProjectConfig(mets=_mets(tmp_path), models={}, variants={"hrrr": {}})
+
+
+def test_a_model_has_one_block(tmp_path):
+    """Two blocks that name one class are refused: the second set of settings is a variant."""
+    with pytest.raises(
+        ValueError,
+        match=f"models: a and b are both {TOY_PATH}. A model has one block",
+    ):
         ProjectConfig(
-            mets=_mets(tmp_path), model="toy", varsiwant=["time"], variants={"hrrr": {}}
+            mets=_mets(tmp_path),
+            models={"a": {"class": TOY_PATH}, "b": {"class": TOY_PATH}},
+            variants={"hrrr": {"model": "a"}},
         )
 
 
-def test_an_unknown_model_is_an_error(tmp_path):
-    with pytest.raises(ValueError, match="Unknown transport model 'nope'"):
-        ProjectConfig(mets=_mets(tmp_path), model="nope", variants={"hrrr": {}})
-    with pytest.raises(ValueError, match="Unknown transport model 'nope'"):
-        ProjectConfig(mets=_mets(tmp_path), variants={"hrrr": {"model": "nope"}})
+def test_hysplit_runs_when_no_model_is_named(tmp_path):
+    config = ProjectConfig(mets=_mets(tmp_path), variants={"hrrr": {}})
+    assert config.resolve()["hrrr"].model.name == "hysplit"
+    assert "models:" not in config.to_yaml()  # only what was given is written
 
-
-def test_hysplit_is_the_default_model_and_its_parameters_are_flat(tmp_path):
-    config = ProjectConfig(
-        mets=_mets(tmp_path), numpar=300, seed=4, krand=2, variants={"hrrr": {}}
+    given = ProjectConfig(
+        mets=_mets(tmp_path),
+        models={"hysplit": {"numpar": 300, "seed": 4, "krand": 2}},
+        variants={"hrrr": {}},
     )
-    assert config.model == "hysplit"
-    assert config.transport.numpar == 300
-    text = config.to_yaml()
-    assert "numpar: 300" in text and "model:" not in text
-    assert ProjectConfig.from_yaml(_write(tmp_path, text)).transport.seed == 4
+    text = given.to_yaml()
+    assert yaml.safe_load(text)["models"] == {
+        "hysplit": {"numpar": 300, "seed": 4, "krand": 2}
+    }
+    loaded = ProjectConfig.from_yaml(_write(tmp_path, text))
+    assert loaded.resolve()["hrrr"].transport.seed == 4
+
+
+def test_an_empty_models_block_runs_the_models_defaults(tmp_path):
+    """``hysplit:`` with nothing under it is read as no settings."""
+    path = _write(
+        tmp_path,
+        f"mets:\n  hrrr: {tmp_path / 'met'}\nmodels:\n  hysplit:\nvariants:\n  hrrr: {{}}\n",
+    )
+    variant = ProjectConfig.from_yaml(path).resolve()["hrrr"]
+    assert variant.transport == type(variant.transport)()
 
 
 def _write(tmp_path, text):
@@ -160,16 +225,18 @@ def test_a_model_config_inherits_the_recorded_settings_and_realizations():
         ToyConfig(unknown=1)
 
 
-#: The toy model by its import path, as config.yaml names a model in another package.
-TOY_PATH = f"{__name__}.ToyModel"
-
-
 def test_a_model_is_named_by_its_import_path_without_registering_it(tmp_path):
+    """The block's name is the variant's handle; ``class`` is what runs and what is recorded."""
     config = ProjectConfig(
-        mets=_mets(tmp_path), variants={"toy": {"model": TOY_PATH, "nparticles": 3}}
+        mets=_mets(tmp_path),
+        models={"mine": {"class": TOY_PATH, "nparticles": 3}},
+        variants={"toy": {"model": "mine", "met": "hrrr"}},
     )
     variant = config.resolve()["toy"]
     assert variant.transport.nparticles == 3
+    assert yaml.safe_load(config.to_yaml())["models"] == {
+        "mine": {"class": TOY_PATH, "nparticles": 3}
+    }
     # The record names the import path, so another process imports it again.
     assert variant.model == ModelInfo(name=TOY_PATH, version="1.0")
     stored = read_run_settings(variant.run_settings)

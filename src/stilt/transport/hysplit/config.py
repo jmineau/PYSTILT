@@ -88,9 +88,8 @@ class HysplitConfig(TransportConfig):
     """
     HYSPLIT's config: every setting that shapes the particles it makes.
 
-    In ``config.yaml`` they are flat, top-level keys when HYSPLIT is the
-    project's model, as it is by default, and a variant may override any of
-    them. Most are HYSPLIT ``SETUP.CFG`` entries with
+    In ``config.yaml`` they are the keys of the ``hysplit`` block under
+    ``models:``, and a variant may override any of them. Most are HYSPLIT ``SETUP.CFG`` entries with
     HYSPLIT's own names; see the HYSPLIT user guide for the full meaning of
     each. The wind-error group (``siguverr``, ``tluverr``, ``zcoruverr``,
     ``horcoruverr``) perturbs the particles' winds, and the mixed-layer group

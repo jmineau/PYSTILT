@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from stilt.config import ProjectConfig, Variant
+from stilt.config import FOOTPRINT_STAGE, ProjectConfig, Variant
 from stilt.footprint.config import FootprintConfig
 from stilt.receptors import PointReceptor
 from stilt.transport import ModelInfo, TransportConfig
@@ -135,17 +135,63 @@ def make_met_files(directory: Path, time: Any, n_hours: int) -> list[Path]:
     return files
 
 
+_CONFIG_KEYS = frozenset(ProjectConfig.model_fields)
+_FOOTPRINT_KEYS = frozenset(FootprintConfig.model_fields)
+
+
+def blocks(**settings: Any) -> dict[str, Any]:
+    """
+    Return the blocks of a :class:`~stilt.ProjectConfig` from settings given by name alone.
+
+    For a test that needs a config and is not about its layout. A footprint
+    setting goes to the ``footprint`` block under ``stages``, and any other
+    to the ``hysplit`` block under ``models``; the config's own keys
+    (``mets``, ``variants``, ``execution``, ``output``, and ``models`` and
+    ``stages`` themselves) stay as given. A variant's footprint settings
+    go under its ``stages``. A variant left with neither a grid nor a
+    geometry, or one that says ``grid: None``, makes particles only.
+    """
+    config = {k: v for k, v in settings.items() if k in _CONFIG_KEYS}
+    footprint = {k: v for k, v in settings.items() if k in _FOOTPRINT_KEYS}
+    model = {
+        k: v for k, v in settings.items() if k not in _CONFIG_KEYS | _FOOTPRINT_KEYS
+    }
+    if model:
+        config["models"] = {"hysplit": model, **config.get("models", {})}
+    variants = {
+        name: dict(spec or {}) for name, spec in config.get("variants", {}).items()
+    }
+    own = {
+        name: {k: spec.pop(k) for k in list(spec) if k in _FOOTPRINT_KEYS}
+        for name, spec in variants.items()
+    }
+    if not (footprint or any(own.values())):
+        return config
+    if footprint.get("grid") is None:
+        footprint.pop("grid", None)
+    config["stages"] = {"footprint": {"class": FOOTPRINT_STAGE, **footprint}}
+    for name, spec in variants.items():
+        merged = {**footprint, **own[name]}
+        if merged.get("grid") is None and merged.get("geometry") is None:
+            spec["stages"] = {"footprint": None}
+        elif own[name]:
+            spec["stages"] = {"footprint": own[name]}
+    config["variants"] = variants
+    return config
+
+
 def make_project_config(tmp_path: Path, **settings: Any) -> ProjectConfig:
     """
     Return a project config with one met, ``hrrr``, and one variant of the defaults.
 
     The met is :func:`make_met_config` under ``tmp_path / "met"``. *settings*
-    are other :class:`~stilt.ProjectConfig` settings, and replace the met
-    and the variant when they name ``mets`` or ``variants``.
+    are other settings, sorted into the config's blocks by :func:`blocks`,
+    and replace the met and the variant when they name ``mets`` or
+    ``variants``.
     """
     settings.setdefault("mets", {"hrrr": make_met_config(tmp_path / "met")})
     settings.setdefault("variants", {"hrrr": {}})
-    return ProjectConfig(**settings)
+    return ProjectConfig(**blocks(**settings))
 
 
 #: A met that reads no file: an archive's, enough for a variant's settings.

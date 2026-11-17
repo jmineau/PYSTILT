@@ -78,28 +78,29 @@ The workflow side by side
        as ``subgrid_bounds``: for a grid from -114 to -111 and a buffer of
        0.2, ``xmin: -114.6``, ``xmax: -110.4``.
    * - ``xmn``, ``xmx``, ``ymn``, ``ymx``
-     - ``grid: xmin``, ``xmax``, ``ymin``, ``ymax``
+     - ``grid: xmin``, ``xmax``, ``ymin``, ``ymax``, in the footprint's
+       block under ``stages:``
    * - ``xres``, ``yres``, ``projection``
      - ``grid: xres``, ``yres``, ``crs`` (``projection`` is read too)
-   * - ``smooth_factor``
-     - same name, top level
+   * - ``smooth_factor``, ``hnf_plume``
+     - same names, in the footprint's block under ``stages:``
    * - ``time_integrate``
      - none: footprints keep their time layers (``tres``, an hour by
        default), and ``foot.sum("time")`` gives the summed map. For one
        layer as long as the run, set ``tres`` to its length (``tres: 1D``
        for ``n_hours = -24``)
-   * - ``n_hours``, ``numpar``, ``hnf_plume``, ``varsiwant``
-     - same names, top level
+   * - ``n_hours``, ``numpar``, ``varsiwant``
+     - same names, under ``models: hysplit:``
    * - ``timeout``
      - ``execution: timeout``
    * - ``rm_dat``
      - no setting: a successful run's working directory is removed;
        ``execution: keep_workdir`` keeps it
    * - HYSPLIT settings (``capemin``, ``kmix0``, ``tlfrac``, …)
-     - same names, top level
+     - same names, under ``models: hysplit:``
    * - ``veght``
-     - ``footprint_depth``, top level: the same value, still written to
-       ``SETUP.CFG`` as ``VEGHT``
+     - ``footprint_depth``, under ``models: hysplit:``: the same value,
+       still written to ``SETUP.CFG`` as ``VEGHT``
    * - HYSPLIT settings that cannot change the particles (``delt``,
        ``cmass``, ``conage``, ``ichem``, ``kagl``, …)
      - no setting: PYSTILT writes STILT-R's values to ``SETUP.CFG`` in
@@ -118,7 +119,7 @@ The workflow side by side
    * - ``n_cores`` without Slurm
      - ``execution: cpus``
    * - ``before_footprint``
-     - ``transforms`` (:doc:`../transforms`)
+     - ``transforms``, in the footprint's block (:doc:`../transforms`)
    * - ``before_trajec``
      - no equivalent
    * - ``run_trajec``, ``run_foot``
@@ -290,14 +291,18 @@ STILT-R project folder:
 
    receptors = import_stilt_r("my_project/out/by-id", "output", version="1d936c1")
 
-It prints the met and the variant that name the imported folders, for
-``config.yaml``:
+It prints the blocks that name the imported folders, for ``config.yaml``:
+the met, the ``stilt-r`` model, the footprint stage, and the variant.
 
 .. code-block:: yaml
 
    mets:
      stilt-r:
        met_path: /data/hrrr
+   models:
+     stilt-r: {}
+   stages:
+     footprint: {class: stilt.footprint.FootprintStage}
    variants:
      stilt-r:
        model: stilt-r
@@ -307,17 +312,22 @@ It prints the met and the variant that name the imported folders, for
        hscale: 10800.0
        # ... every HYSPLIT setting, in name order
        ziscale: 1.0
-       grid: {xmin: -112.5, xmax: -111.5, ymin: 40.25, ymax: 41.25, xres: 0.01,
-         yres: 0.01, crs: +proj=longlat}
-       geometry: null
-       cells_per_target: 4.0
-       smooth_factor: 1.0
-       tres: 1h
-       transforms: []
+       stages:
+         footprint:
+           grid: {xmin: -112.5, xmax: -111.5, ymin: 40.25, ymax: 41.25, xres: 0.01,
+             yres: 0.01, crs: +proj=longlat}
+           geometry: null
+           cells_per_target: 4.0
+           smooth_factor: 1.0
+           tres: 1h
+           hnf_plume: true
+           transforms: []
 
 and returns the receptors, for ``receptors.csv``. Paste the printed lines into
-the ``config.yaml`` of a project whose ``output`` is that directory, then add
-the receptors:
+the ``config.yaml`` of a project whose ``output`` is that directory. In a
+project that already has blocks of those names, add the printed entries to
+them; with a ``hysplit`` block beside ``stilt-r``, each variant then names
+its ``model``. Then add the receptors:
 
 .. code-block:: python
 

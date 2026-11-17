@@ -260,6 +260,7 @@ def test_grid_refuses_an_unknown_key_in_the_config(tmp_path):
     import stilt
 
     met = {"directory": str(tmp_path), "file_format": "%Y%m%d", "file_tres": "6h"}
+    stage = "stilt.footprint.FootprintStage"
     grid = {
         "xmin": -113,
         "xmax": -110,
@@ -270,11 +271,19 @@ def test_grid_refuses_an_unknown_key_in_the_config(tmp_path):
     }
     with pytest.raises(ValueError, match="'csr' is not a grid setting"):
         stilt.ProjectConfig(
-            mets={"a": met}, variants={"a": {}}, grid={**grid, "csr": "EPSG:32612"}
+            mets={"a": met},
+            stages={
+                "footprint": {"class": stage, "grid": {**grid, "csr": "EPSG:32612"}}
+            },
+            variants={"a": {}},
         )
     with pytest.raises(ValueError, match="'xresolution' is not a grid setting"):
         stilt.ProjectConfig(
-            mets={"a": met}, variants={"a": {"grid": {**grid, "xresolution": 3}}}
+            mets={"a": met},
+            stages={"footprint": {"class": stage}},
+            variants={
+                "a": {"stages": {"footprint": {"grid": {**grid, "xresolution": 3}}}}
+            },
         )
 
 

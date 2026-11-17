@@ -71,8 +71,9 @@ class ModelInfo(BaseModel):
     name: str = Field(
         ...,
         description=(
-            "The model as ``model:`` names it: a built-in name such as "
-            "``hysplit``, or the import path of a model class."
+            "The model as its ``models`` block in ``config.yaml`` names it: "
+            "a built-in name such as ``hysplit``, or the import path of a "
+            "model class (the block's ``class``)."
         ),
     )
     version: str = Field(
@@ -97,9 +98,8 @@ class TransportConfig(BaseModel):
     for any model's particles. Everything else, the particle count included, is the
     model's own. A model's config subclasses it with its own
     parameters and is the model's ``config_class``. In ``config.yaml`` the
-    parameters are flat, top-level keys for the project's model, and a
-    variant that names another model inherits the shared ones and gives
-    that model's own. A subclass overrides :meth:`settings` or
+    parameters are the keys of the model's block under ``models:``, and a
+    variant that runs the model may override any of them. A subclass overrides :meth:`settings` or
     :meth:`realizations` only where its model differs.
     """
 
@@ -392,11 +392,11 @@ def _stilt_r() -> TransportModel:
     return StiltRModel()
 
 
-#: The transport models built into PYSTILT, by the name ``model:`` takes in
-#: ``config.yaml``: ``hysplit``, and ``stilt-r`` for runs imported from
-#: STILT-R (:func:`stilt.migration.import_stilt_r`), which cannot run. A model
-#: in its own package is named by its import path instead, as a transform's
-#: ``kind:`` is.
+#: The transport models built into PYSTILT, by the name of their block under
+#: ``models:`` in ``config.yaml``: ``hysplit``, and ``stilt-r`` for runs
+#: imported from STILT-R (:func:`stilt.migration.import_stilt_r`), which
+#: cannot run. A model in its own package is named by its import path
+#: instead, the ``class`` of its block, as a transform's ``kind:`` is.
 MODELS: dict[str, Callable[[], TransportModel]] = {
     "hysplit": _hysplit,
     "stilt-r": _stilt_r,

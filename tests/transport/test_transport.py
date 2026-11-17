@@ -13,6 +13,7 @@ from stilt.particles import particles_metadata
 from stilt.simulation import Simulation
 from stilt.transport import ModelRun, TransportConfig, get_model
 from stilt.transport.hysplit import HysplitConfig, HysplitModel, Met, MetConfig
+from tests.fixtures.factories import blocks
 
 from ..fixtures.factories import make_met_config, make_met_files, make_variant
 
@@ -83,7 +84,7 @@ def test_hysplit_model_version_is_the_bundled_build_or_exe_dirs(tmp_path):
 def test_the_settings_record_the_model_that_makes_the_particles(tmp_path):
     met = make_met_config(tmp_path)
     variant = (
-        ProjectConfig(mets={"hrrr": met}, n_hours=-1, variants={"hrrr": {}})
+        ProjectConfig(**blocks(mets={"hrrr": met}, n_hours=-1, variants={"hrrr": {}}))
     ).resolve()["hrrr"]
     model = get_model(variant.model.name)
     assert variant.model.version == model.version(variant.transport)

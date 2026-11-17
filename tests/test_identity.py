@@ -12,6 +12,7 @@ from stilt.output import Output
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig, MetConfig
 from stilt.transport.hysplit.model import hysplit_version
+from tests.fixtures.factories import blocks
 
 from .fixtures.factories import make_met_config, make_receptor, write_arl_file
 
@@ -25,7 +26,10 @@ def _met(tmp_path, **overrides) -> MetConfig:
 def _variant(tmp_path, met: MetConfig | None = None, **transport) -> Variant:
     """The resolved ``hrrr`` variant of a one-met project with these transport fields."""
     config = ProjectConfig(
-        mets={"hrrr": met or _met(tmp_path)}, **{"variants": {"hrrr": {}}, **transport}
+        **blocks(
+            mets={"hrrr": met or _met(tmp_path)},
+            **{"variants": {"hrrr": {}}, **transport},
+        )
     )
     return config.resolve()["hrrr"]
 
@@ -137,20 +141,22 @@ def test_nested_and_flat_ziscale_are_one_run(tmp_path):
 
 def test_variants_that_differ_only_in_footprint_fields_share_particles(tmp_path):
     config = ProjectConfig(
-        mets={"hrrr": _met(tmp_path)},
-        grid=GRID,
-        numpar=100,
-        variants={
-            "hrrr": {},
-            "hrrr-smooth": {"smooth_factor": 0.5},
-            "hrrr-coarse": {"grid": {"xres": 0.5, "yres": 0.5}},
-            "hrrr-err": {
-                "siguverr": 2.0,
-                "tluverr": 100.0,
-                "zcoruverr": 200.0,
-                "horcoruverr": 10.0,
+        **blocks(
+            mets={"hrrr": _met(tmp_path)},
+            grid=GRID,
+            numpar=100,
+            variants={
+                "hrrr": {},
+                "hrrr-smooth": {"smooth_factor": 0.5},
+                "hrrr-coarse": {"grid": {"xres": 0.5, "yres": 0.5}},
+                "hrrr-err": {
+                    "siguverr": 2.0,
+                    "tluverr": 100.0,
+                    "zcoruverr": 200.0,
+                    "horcoruverr": 10.0,
+                },
             },
-        },
+        )
     )
     variants = config.resolve()
     runs = {name: v.particles_hash for name, v in variants.items()}
@@ -220,10 +226,12 @@ def test_output_finds_a_run_whose_stored_settings_predate_a_field(tmp_path):
 def test_footprints_written_before_tres_are_hourly_and_still_found(tmp_path):
     """A footprints folder from before ``tres`` is an hourly variant's."""
     config = ProjectConfig(
-        mets={"hrrr": _met(tmp_path)},
-        grid=GRID,
-        numpar=100,
-        variants={"hrrr": {}, "hrrr-quarters": {"tres": "15min"}},
+        **blocks(
+            mets={"hrrr": _met(tmp_path)},
+            grid=GRID,
+            numpar=100,
+            variants={"hrrr": {}, "hrrr-quarters": {"tres": "15min"}},
+        )
     )
     variants = config.resolve()
     hourly, quarters = variants["hrrr"], variants["hrrr-quarters"]

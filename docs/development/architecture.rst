@@ -92,11 +92,11 @@ Module map
                         field sampled where the particles end (sim.background)
      transport_error.py transport_error: the transport error of the
                         enhancement, one receptor or a selection in threads
-     config.py          ProjectConfig: reads config.yaml, splits the flat keys
-                        into the model's config and the footprint's, rejects
-                        unknown keys naming the nearest setting, checks each
-                        declared variant; resolve() makes each a Variant (its
-                        configs, the model build, its two hashes)
+     config.py          ProjectConfig: reads config.yaml's blocks (mets, models,
+                        stages, variants), refuses a setting outside its
+                        block and an unknown key naming the nearest setting,
+                        checks each declared variant; resolve() makes each a
+                        Variant (its configs, the model build, its two hashes)
      identity.py        settings records and their hashes: what a run and a
                         footprint were made with, in _settings.yaml
      receptors/
@@ -353,29 +353,42 @@ module (the transport registry and the STILT-R model) is not checked.
 Configuration
 -------------
 
-``ProjectConfig`` is the root. It holds ``model`` (the transport model,
-``hysplit`` unless set), that model's parameters and the footprint
-(``FootprintConfig``) fields as flat defaults, ``mets``, and ``variants``
-(overrides of the defaults).
+``ProjectConfig`` is the root, and ``config.yaml`` is its blocks: ``mets``,
+``models``, ``stages`` and ``variants`` each map a name to a block, beside
+``execution`` and ``output``. No setting sits at the top level; one written
+there is refused with a message naming its block.
 
-- The model's parameters are checked by its own config class
-  (``stilt.transport.hysplit.HysplitConfig``; ``config.transport``), reached
-  through ``stilt.transport.get_model``. The top-level footprint fields are
-  ``config.footprint``.
-- A model is a variant axis, like a met. A variant that names another
-  ``model`` gives that model's own parameters itself, and inherits the met,
-  the footprint fields, and the parameters PYSTILT's own code reads (the base
+- A ``models`` block holds one transport model's parameters, the defaults
+  of every variant that runs it. The block's name is the handle a variant
+  uses (``model:``); the model is the block's ``class`` (an import path) or,
+  without one, the built-in model of the block's name. A class has one
+  block. The parameters are checked by the model's own config class
+  (``stilt.transport.hysplit.HysplitConfig``), reached through
+  ``stilt.transport.get_model``: by name when the file loads, and by value
+  as a variant runs them (at load for a variant that changes none, else in
+  ``resolve``), since a block need not be complete (the ``stilt-r`` model
+  has no defaults). Without ``models``, the project runs ``hysplit``.
+- A ``stages`` block names what is made from each simulation's particles
+  by its ``class``. The footprint, ``stilt.footprint.FootprintStage``, is
+  the one stage, and its block holds the ``FootprintConfig`` fields. A stage
+  runs for every variant; a variant changes its settings under its own
+  ``stages`` key (``grid`` merges field by field) or sets it to null for
+  particles only. A footprint left with neither a grid nor a geometry is an
+  error.
+- A model is a variant axis, like a met. A variant's own keys are ``met``,
+  ``model`` (needed with several models), ``realizations`` and ``stages``;
+  every other key is a setting of its model. Each model's block holds all of
+  its parameters, the ones PYSTILT's own code reads among them (the base
   ``TransportConfig``: ``n_hours``, ``seed``, ``footprint_depth``,
   ``pbl_height``, ``pbl_height_min``). ``hnf_plume`` is a footprint field:
   the near-field correction is applied when a footprint is made, so a stored
   particle file holds the model's ``foot``. A
   parameter goes on the base only when the core reads it; ``numpar`` and
   every ``SETUP.CFG`` setting are HYSPLIT's.
-- When it loads, ``ProjectConfig`` checks each declared variant against the
-  defaults (names, met, model, ``realizations``, grid merging) and rejects an
-  unknown key with the nearest known one (``difflib``), reading no other
-  file. ``from:`` is rejected. ``grid: null`` means particles only, and
-  footprint settings without a grid are an error.
+- When it loads, ``ProjectConfig`` checks each block and each declared
+  variant (names, met, model, ``realizations``, stage overrides) and rejects
+  an unknown key with the nearest known one (``difflib``), reading no other
+  file. ``from:`` is rejected.
 - ``ProjectConfig.resolve(directory)`` (behind ``project.variants``) turns
   each variant into ``Variant`` objects. It validates the variant's transport
   settings with its model's config class once, keeps ``realizations: N`` as
@@ -389,7 +402,8 @@ Configuration
   package (``met_config_class``; HYSPLIT's ``MetConfig`` is in
   ``stilt.transport.hysplit``). ``ProjectConfig.mets`` holds each met as
   written, and ``ProjectConfig.met_config(name, model)`` checks it with the
-  met config of the model that reads it. ``Bounds`` and ``Grid`` are in
+  met config of the model that reads it (``model`` a ``models`` block's
+  name). With several models, a met no variant uses is not checked. ``Bounds`` and ``Grid`` are in
   ``stilt.spatial``, which needs no shapely, since more than footprints use
   rasters. ``stilt.config`` composes them, so nothing below the project's
   layer imports ``stilt.config``.
@@ -413,7 +427,8 @@ Configuration
   with a default still matches. Stored records ignore keys this version does
   not know.
 - Every field is a plain pydantic ``Field(default, description=...)``, and
-  the public config stays flat (``ProjectConfig(numpar=..., seed=...)``).
+  the settings inside a block stay flat (``models={"hysplit": {"numpar": ...,
+  "seed": ...}}``).
   ``CONTRIBUTING.md`` explains how a HYSPLIT field is routed to
   ``SETUP.CFG``, ``CONTROL``, ``WINDERR``, or ``ZIERR``.
 - ``ExecutionConfig`` (``execution:`` in ``config.yaml``) says where

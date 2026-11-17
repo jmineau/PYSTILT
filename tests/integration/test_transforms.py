@@ -7,6 +7,7 @@ import numpy as np
 from stilt.config import ProjectConfig
 from stilt.project import Project
 from stilt.transforms import FirstOrderLifetime
+from tests.fixtures.factories import blocks
 
 from ..conftest import integration
 from .conftest import reference_met
@@ -26,16 +27,18 @@ def test_declarative_transform_config_changes_real_footprint(
 ):
     """Per-footprint transform specs should affect real footprint output."""
     config = ProjectConfig(
-        mets={"hrrr": reference_met(met_dir)},
-        n_hours=-6,
-        numpar=100,
-        grid=wbb_grid,
-        variants={
-            "hrrr": {},
-            "lifetime": {
-                "transforms": [FirstOrderLifetime(lifetime_hours=1.0)],
+        **blocks(
+            mets={"hrrr": reference_met(met_dir)},
+            n_hours=-6,
+            numpar=100,
+            grid=wbb_grid,
+            variants={
+                "hrrr": {},
+                "lifetime": {
+                    "transforms": [FirstOrderLifetime(lifetime_hours=1.0)],
+                },
             },
-        },
+        )
     )
 
     project = Project.init(

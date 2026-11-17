@@ -23,6 +23,7 @@ from stilt.receptors import (
 from stilt.spatial import Grid
 from stilt.transforms import averaging_kernel_table
 from stilt.transport.hysplit import HysplitConfig, Met
+from tests.fixtures.factories import blocks
 
 from .fixtures.factories import (
     make_met_config,
@@ -72,9 +73,7 @@ def _project(
     return Project.init(
         tmp_path / "proj",
         receptors=[_receptor()] if receptors is None else receptors,
-        mets={"hrrr": config},
-        n_hours=n_hours,
-        **settings,
+        **blocks(mets={"hrrr": config}, n_hours=n_hours, **settings),
     )
 
 
@@ -324,10 +323,9 @@ def test_receptors_are_listed_when_the_run_would_stop_for_a_missing_file(
     project = Project.init(
         tmp_path / "proj",
         receptors=receptors,
-        mets={"hrrr": config},
-        variants={"hrrr": {}},
-        n_hours=n_hours,
-        grid=GRID,
+        **blocks(
+            mets={"hrrr": config}, variants={"hrrr": {}}, n_hours=n_hours, grid=GRID
+        ),
     )
     met = Met("hrrr", project.variants["hrrr"].met_config)
 
@@ -953,6 +951,7 @@ def test_a_model_with_no_files_to_check_has_no_met_findings(tmp_path, monkeypatc
     project = _project(
         tmp_path,
         [_receptor(20)],
+        models={"toy": {}},
         variants={"toy": {"model": "toy", "met": "hrrr"}},
     )
 

@@ -30,10 +30,9 @@ receptors = [
 project = stilt.Project.init(
     "project",
     receptors=receptors,
-    model="toypool.ToyModel",
     mets={"toy": {"weather": "hrrr"}},
+    models={"toy": {"class": "toypool.ToyModel", "n_hours": -1}},
     variants={"toy": {}},
-    n_hours=-1,
     execution={"backend": "local", "cpus": 2},
 )
 project.run()

@@ -21,6 +21,7 @@ from stilt.receptors import ColumnReceptor, PointReceptor
 from stilt.spatial import Grid
 from stilt.transport.hysplit import MetConfig
 from stilt.transport.hysplit.driver import winderrtf
+from tests.fixtures.factories import blocks
 
 from .fixtures.factories import make_met_config, make_receptor
 from .fixtures.footprints import as_footprint
@@ -51,7 +52,9 @@ def _config(tmp_path, include_footprint=True, **overrides) -> ProjectConfig:
     """Minimal ProjectConfig with one met and (optionally) a footprint grid."""
     overrides.setdefault("grid", _GRID if include_footprint else None)
     return ProjectConfig(
-        mets={"hrrr": _met(tmp_path)}, **{"variants": {"hrrr": {}}, **overrides}
+        **blocks(
+            mets={"hrrr": _met(tmp_path)}, **{"variants": {"hrrr": {}}, **overrides}
+        )
     )
 
 
@@ -130,14 +133,15 @@ def test_init_writes_the_settings_given_and_the_receptors(tmp_path, point_recept
         tmp_path / "proj",
         receptors=[point_receptor],
         mets={"hrrr": _met(tmp_path)},
-        n_hours=-6,
+        models={"hysplit": {"n_hours": -6}},
         variants={"hrrr": {}},
     )
 
     text = (tmp_path / "proj" / "config.yaml").read_text()
     assert "n_hours: -6" in text and "numpar" not in text  # only what was given
     assert (tmp_path / "proj" / "receptors.csv").exists()
-    assert project.config.n_hours == -6
+    assert project.config.models == {"hysplit": {"n_hours": -6}}
+    assert project.variants["hrrr"].transport.n_hours == -6
     assert list(project.receptors["receptor"]) == [point_receptor.id]
     assert Project(tmp_path / "proj").config == project.config
 
@@ -177,7 +181,7 @@ def test_init_refuses_a_project_that_has_a_config(tmp_path):
 
 def test_init_takes_a_config_or_keywords_not_both(tmp_path):
     with pytest.raises(TypeError, match="not both"):
-        Project.init(tmp_path / "proj", config=_config(tmp_path), n_hours=-6)
+        Project.init(tmp_path / "proj", config=_config(tmp_path), **blocks(n_hours=-6))
     assert not (tmp_path / "proj").exists()
 
 
@@ -190,7 +194,7 @@ def test_init_writes_the_commented_starter_config(tmp_path):
     assert list(project.variants) == ["hrrr"]
     assert project.receptors.empty
     with pytest.raises(TypeError, match="starter"):
-        Project.init(tmp_path / "other", starter=True, numpar=10)
+        Project.init(tmp_path / "other", starter=True, **blocks(numpar=10))
     with pytest.raises(FileExistsError):
         Project.init(tmp_path / "proj", starter=True)
 
@@ -556,8 +560,10 @@ def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_rece
 def _with_unreadable_met(project, tmp_path, **overrides):
     """Open *project*'s directory again with a met whose directory does not exist."""
     config = ProjectConfig(
-        mets={"hrrr": MetConfig(directory=tmp_path / "no-such-met")},
-        **{"variants": {"hrrr": {}}, "grid": _GRID, **overrides},
+        **blocks(
+            mets={"hrrr": MetConfig(directory=tmp_path / "no-such-met")},
+            **{"variants": {"hrrr": {}}, "grid": _GRID, **overrides},
+        )
     )
     config.to_yaml(project.config_path)
     return Project(project.directory)

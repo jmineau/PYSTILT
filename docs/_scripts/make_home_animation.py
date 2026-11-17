@@ -88,19 +88,21 @@ def init(project: Path, met_dir: Path | None) -> None:
         project,
         receptors=[receptor],
         mets={"hrrr": met},
-        n_hours=-24,
-        numpar=1000,
-        krand=2,
-        seed=42,
-        grid={
-            "xmin": EXTENT[0],
-            "xmax": EXTENT[1],
-            "ymin": EXTENT[2],
-            "ymax": EXTENT[3],
-            "xres": 0.025,
-            "yres": 0.025,
+        models={"hysplit": {"n_hours": -24, "numpar": 1000, "krand": 2, "seed": 42}},
+        stages={
+            "footprint": {
+                "class": "stilt.footprint.FootprintStage",
+                "grid": {
+                    "xmin": EXTENT[0],
+                    "xmax": EXTENT[1],
+                    "ymin": EXTENT[2],
+                    "ymax": EXTENT[3],
+                    "xres": 0.025,
+                    "yres": 0.025,
+                },
+                "tres": "1h",
+            }
         },
-        tres="1h",
         variants={"hrrr": {}},
     )
     print(f"Wrote {project}. Next: stilt run {project}")

@@ -3,16 +3,44 @@ Configuration
 
 .. currentmodule:: stilt
 
-Everything you can write in ``config.yaml`` is a field of
-:class:`ProjectConfig`. That covers the mets (for HYSPLIT,
-:class:`~stilt.transport.hysplit.MetConfig`), the footprint settings
-(:class:`FootprintConfig`), the ``variants``, the ``execution`` section
-(:class:`ExecutionConfig`), and the STILT and HYSPLIT settings. Each class
-lives next to the code that uses it (``stilt.footprint.config``,
-``stilt.execution.config``, ``stilt.transport.hysplit``), and all but the
-transport model's are importable from ``stilt``.
-A key may be written once in each section: YAML would keep the last of two,
-so PYSTILT refuses the file and names the line of the second.
+``config.yaml`` is blocks, each a field of :class:`ProjectConfig`:
+
+.. code-block:: yaml
+
+   mets:
+     hrrr: /path/to/hrrr_arl
+   models:
+     hysplit: {n_hours: -24, numpar: 200}
+   stages:
+     footprint:
+       class: stilt.footprint.FootprintStage
+       grid: {xmin: -113.0, xmax: -110.5, ymin: 40.0, ymax: 42.0, xres: 0.01, yres: 0.01}
+   variants:
+     hrrr: {}
+     hrrr-long: {n_hours: -72}
+     hrrr-coarse: {stages: {footprint: {grid: {xres: 0.05, yres: 0.05}}}}
+     hrrr-particles: {stages: {footprint: null}}
+   execution:
+     backend: local
+   output: output
+
+``mets`` names the meteorology (for HYSPLIT,
+:class:`~stilt.transport.hysplit.MetConfig`). ``models`` names the transport
+models, each block with that model's settings
+(:class:`~stilt.transport.hysplit.HysplitConfig` for ``hysplit``).
+``stages`` names what is made from each simulation's particles: the
+footprint, with the footprint settings (:class:`FootprintConfig`).
+``variants`` says what runs, and ``execution`` where
+(:class:`ExecutionConfig`). Each class lives next to the code that uses it
+(``stilt.footprint.config``, ``stilt.execution.config``,
+``stilt.transport.hysplit``), and all but the transport model's are
+importable from ``stilt``.
+
+No setting sits at the top level. One written there is refused with a
+message that names its block, such as ``'n_hours' is a hysplit setting.
+Write it under models: hysplit:.`` A key may be written once in each
+block: YAML would keep the last of two, so PYSTILT refuses the file and
+names the line of the second.
 Each page below lists its fields with their defaults and is generated from
 the code.
 
@@ -29,9 +57,7 @@ installed version.
 Top level
 ~~~~~~~~~
 
-A project's own keys. Every key of the transport model and
-the footprint below is also top-level, as the defaults each variant starts
-from, and a variant may override any of them.
+The blocks, and where the results go.
 
 .. config-model:: stilt.config.ProjectConfig
    :declared-only:
@@ -39,15 +65,46 @@ from, and a variant may override any of them.
 HYSPLIT
 ~~~~~~~
 
-The transport model's parameters, top-level keys of
-``config.yaml`` (:doc:`hysplit`).
+The keys of the ``hysplit`` block under ``models:``, the transport model's
+settings (:doc:`hysplit`). They are the defaults of every variant that runs
+HYSPLIT, and a variant may override any of them by writing the key itself.
+Left out, the block is HYSPLIT with the defaults below.
 
 .. config-model:: stilt.transport.hysplit.HysplitConfig
+
+A model in another package gets a block of any name that gives the model
+class's import path as ``class``, then that model's own settings:
+
+.. code-block:: yaml
+
+   models:
+     hysplit: {n_hours: -24}
+     mine: {class: mypkg.models.MyModel, n_hours: -24}
+   variants:
+     hrrr: {model: hysplit}
+     hrrr-mine: {model: mine, met: hrrr}
+
+With two or more models, each variant names its own with ``model``. A model
+has one block: a second set of settings for it is a second variant.
 
 Footprint
 ~~~~~~~~~
 
-The footprint's settings, top-level keys too.
+The keys of the footprint's block under ``stages:``, after ``class:
+stilt.footprint.FootprintStage`` (:class:`~stilt.footprint.FootprintStage`).
+They are the defaults of every variant. A variant changes some under its
+own ``stages`` key, by the block's name, and sets the stage to null to make
+particles only:
+
+.. code-block:: yaml
+
+   variants:
+     hrrr-coarse: {stages: {footprint: {grid: {xres: 0.05, yres: 0.05}}}}
+     hrrr-particles: {stages: {footprint: null}}
+
+A ``grid`` given by a variant changes the block's grid field by field, so
+the first variant above keeps the block's bounds. Without a ``stages``
+block, a project makes particles only.
 
 .. config-model:: stilt.footprint.config.FootprintConfig
 
@@ -87,7 +144,8 @@ the same total footprint whatever ``tres`` is.
 Loading ``config.yaml`` does not read a ``geometry`` file.
 PYSTILT reads it once, when it works out the variants' settings, and picks
 the grid then (:meth:`stilt.Mesh.to_grid`), so a variant with a geometry
-cannot change only part of the grid (``grid: {xres: 0.1}``). A ``grid``
+cannot change only part of the grid (``grid: {xres: 0.1}`` under its
+``stages``). A ``grid``
 given with a ``geometry`` is used as given. Each footprint file stores a
 code for the geometry it was made for, which is how
 ``foot.stilt.aggregate`` knows when a mesh no longer matches.
@@ -131,6 +189,7 @@ can share one.
 
    ProjectConfig
    FootprintConfig
+   footprint.FootprintStage
    ExecutionConfig
    Bounds
    Grid
@@ -139,16 +198,15 @@ Parameters
 ----------
 
 The settings that shape a run's particles belong to the transport model,
-whose ``config.yaml`` name is the ``model`` field (``hysplit`` unless set).
-They are flat, top-level keys. HYSPLIT's are in
+and are written in its block under ``models:`` (``hysplit`` when the config
+has no ``models``). HYSPLIT's are in
 :class:`stilt.transport.hysplit.HysplitConfig`, under HYSPLIT's names (see
-:doc:`hysplit`). A variant that names another ``model`` gives that model's
-parameters itself, and inherits the met, the footprint settings, and the
-parameters PYSTILT reads itself (``n_hours``, ``seed``,
-``footprint_depth``, ``pbl_height``, and ``pbl_height_min``). ``hnf_plume``,
-the near-field correction, is a footprint setting: it is applied when the
-footprint is made, so it does not change the particles or their settings
-folder.
+:doc:`hysplit`). Each model's block holds all of its settings, the ones
+PYSTILT reads itself among them (``n_hours``, ``seed``,
+``footprint_depth``, ``pbl_height``, and ``pbl_height_min``): nothing passes
+from one model's block to another's. ``hnf_plume``, the near-field
+correction, is a footprint setting: it is applied when the footprint is
+made, so it does not change the particles or their settings folder.
 
 
 Geometry specifications

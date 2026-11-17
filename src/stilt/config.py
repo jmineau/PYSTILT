@@ -1,12 +1,14 @@
 """
 The project config: what ``config.yaml`` holds, and the variants it declares.
 
-``config.yaml`` names the transport model, the mets, and the variants. The
-model's parameters and the footprint settings are flat, top-level keys: the
-defaults every variant starts from. Each part has its own config class,
-next to the code that uses it: the transport model's and its met config
-(such as :class:`~stilt.transport.hysplit.HysplitConfig` and
-:class:`~stilt.transport.hysplit.MetConfig`),
+``config.yaml`` is blocks: ``mets`` names the meteorology, ``models`` the
+transport models, ``stages`` what is made from each simulation's particles
+(the footprint), and ``variants`` the settings every receptor runs under.
+A model's or a stage's block holds its settings, the defaults of every
+variant that uses it, and no setting sits at the top level. Each part has
+its own config class, next to the code that uses it: the transport model's
+and its met config (such as :class:`~stilt.transport.hysplit.HysplitConfig`
+and :class:`~stilt.transport.hysplit.MetConfig`),
 :class:`~stilt.footprint.config.FootprintConfig`, and
 :class:`~stilt.execution.ExecutionConfig`. :class:`ProjectConfig` reads the
 file and checks it without reading any other file, so a ``config.yaml``
@@ -33,6 +35,7 @@ from pydantic import (
     ConfigDict,
     Field,
     PrivateAttr,
+    TypeAdapter,
     ValidationError,
     field_validator,
     model_validator,
@@ -64,8 +67,17 @@ from stilt.transport import (
 #: Pattern for variant and met names, which become directory names.
 VARIANT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
-#: The top-level keys that belong to the footprint; every other unknown key belongs to the model.
+#: The import path of the footprint stage, the ``class`` of its ``stages:`` block.
+FOOTPRINT_STAGE = "stilt.footprint.FootprintStage"
+
+#: The settings of the footprint stage.
 _FOOTPRINT_FIELDS = frozenset(FootprintConfig.model_fields)
+
+#: Writes a block of settings given in Python (a path, a config object) as YAML can hold it.
+_JSON = TypeAdapter(dict[str, Any])
+
+#: A variant's own keys; every other key of a variant is a setting of its model.
+_VARIANT_KEYS = ("met", "model", "realizations", "stages")
 
 
 def transport_config(model: str, fields: dict[str, Any], where: str) -> Any:
@@ -93,7 +105,8 @@ class _Declared(NamedTuple):
     """
 
     met: str
-    model: str
+    block: str  # the name of its model's block under models:
+    model: str  # the model, as stilt.transport.get_model names it
     realizations: int | None
     transport: dict[str, Any]
     footprint: FootprintConfig | None
@@ -264,30 +277,42 @@ class ProjectConfig(BaseModel):
     """
     A project's configuration, as read from ``config.yaml``.
 
-    The transport model's parameters and the footprint fields are flat,
-    top-level keys, and are the defaults for every variant. ``model`` names
-    the transport model, HYSPLIT unless set; its parameters are checked by
-    its own config class and are in :attr:`transport`. The footprint fields
-    are in :attr:`footprint`. Each variant names a met and overrides some of
-    the defaults; only the declared variants run. A variant that names
-    another ``model`` gives that model's own parameters itself, and
-    inherits the parameters every model shares
-    (:class:`~stilt.transport.TransportConfig`).
-    An unknown key is an error that names the nearest setting.
+    The file is blocks. ``mets`` names the meteorology, ``models`` the
+    transport models, ``stages`` what is made from each simulation's
+    particles (the footprint), and ``variants`` what runs. A model's or a
+    stage's block holds its settings, checked by its own config class: the
+    defaults of every variant that uses it. Each variant names a met and a
+    model, when there are several, and overrides some of the defaults; only
+    the declared variants run. No setting sits at the top level: one written
+    there is refused with a message that names its block. An unknown key is
+    an error that names the nearest setting.
+
+    Examples
+    --------
+    >>> config = ProjectConfig(
+    ...     mets={"hrrr": "/path/to/hrrr_arl"},
+    ...     models={"hysplit": {"n_hours": -24, "numpar": 200}},
+    ...     stages={
+    ...         "footprint": {
+    ...             "class": "stilt.footprint.FootprintStage",
+    ...             "grid": {
+    ...                 "xmin": -113.0,
+    ...                 "xmax": -110.5,
+    ...                 "ymin": 40.0,
+    ...                 "ymax": 42.0,
+    ...                 "xres": 0.01,
+    ...                 "yres": 0.01,
+    ...             },
+    ...         }
+    ...     },
+    ...     variants={"hrrr": {}, "hrrr-long": {"n_hours": -72}},
+    ... )
+    >>> list(config.variants)
+    ['hrrr', 'hrrr-long']
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
-    model: str = Field(
-        "hysplit",
-        description=(
-            "Transport model the variants run with, unless a variant names "
-            "another: ``hysplit``, ``stilt-r`` (runs imported from STILT-R, "
-            "which cannot run), or the import path of a model class in "
-            "another package, such as ``mypkg.models.MyModel``. Its parameters "
-            "are top-level keys of the config."
-        ),
-    )
     mets: dict[str, dict[str, Any] | str] = Field(
         default_factory=dict,
         description=(
@@ -297,16 +322,44 @@ class ProjectConfig(BaseModel):
             "(:class:`stilt.transport.hysplit.MetConfig` for HYSPLIT)."
         ),
     )
-    variants: dict[str, dict[str, Any]] = Field(
+    models: dict[str, dict[str, Any] | None] = Field(
+        default_factory=lambda: {"hysplit": {}},
+        description=(
+            "Transport models by name, each a block of its settings: the "
+            "defaults of every variant that runs it. A block named "
+            "``hysplit`` or ``stilt-r`` (runs imported from STILT-R, which "
+            "cannot run) is that built-in model. A model class in another "
+            "package gets a block of any name that gives its import path as "
+            "``class``, such as ``class: mypkg.models.MyModel``. A model has "
+            "one block. Left out, the project runs HYSPLIT with its defaults."
+        ),
+    )
+    stages: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description=(
+            "What is made from each simulation's particles, by name, each a "
+            "block that gives the stage's import path as ``class`` and then "
+            "its settings. The footprint is ``class: "
+            "stilt.footprint.FootprintStage``, with the footprint settings "
+            "(:class:`~stilt.footprint.FootprintConfig`). A stage runs for "
+            "every variant, unless the variant sets it to null. Left out, the "
+            "project makes particles only."
+        ),
+    )
+    variants: dict[str, dict[str, Any] | None] = Field(
         default_factory=dict,
         description=(
             "Variants by name, each a set of overrides of the defaults. A "
-            "variant may also set ``met`` (needed with several mets unless the "
-            "variant has a met's name) and ``realizations`` (run N times, "
-            "realization k with ``seed + k``, as one ensemble). Variants with "
-            "the same transport settings share one transport model run and "
-            "differ in the footprint made from it. At least one is required: "
-            "``hrrr: {}`` runs the defaults."
+            "variant's own keys are ``met`` (needed with several mets unless "
+            "the variant has a met's name), ``model`` (the name of its "
+            "``models`` block, needed with several), ``realizations`` (run N "
+            "times, realization k with ``seed + k``, as one ensemble), and "
+            "``stages`` (a stage's settings to change, by the stage's name, "
+            "or null for a variant without it: ``stages: {footprint: null}`` "
+            "makes particles only). Every other key is a setting of its "
+            "model. Variants with the same transport settings share one "
+            "transport model run and differ in the footprint made from it. At "
+            "least one is required: ``hrrr: {}`` runs the defaults."
         ),
     )
     execution: ExecutionConfig = Field(
@@ -326,13 +379,27 @@ class ProjectConfig(BaseModel):
         ),
     )
 
-    _transport: Any = PrivateAttr(None)
-    _footprint: FootprintConfig = PrivateAttr(
-        default_factory=lambda: FootprintConfig.model_validate({})
-    )
+    # Each models: block by its name: the model, as get_model names it, and
+    # the block's settings.
+    _models: dict[str, tuple[str, dict[str, Any]]] = PrivateAttr(default_factory=dict)
+    # The name of the footprint's stages: block and its checked settings.
+    _footprint: tuple[str, FootprintConfig] | None = PrivateAttr(None)
     # Each met checked by the met config of a model that reads it, by
     # (met, model).
     _met_configs: dict[tuple[str, str], Any] = PrivateAttr(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_setting_at_the_top(cls, data: Any) -> Any:
+        """Refuse a top-level key that is not one of the config's, naming the block a setting belongs in."""
+        if isinstance(data, dict):
+            _check_keys(
+                data,
+                "config",
+                allowed=dict.fromkeys(cls.model_fields, "a config key"),
+                elsewhere=_blocks_of_settings(data.get("models")),
+            )
+        return data
 
     @field_validator("mets", mode="before")
     @classmethod
@@ -364,13 +431,16 @@ class ProjectConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def _validate_defaults_and_variants(self) -> Self:
+    def _validate_blocks_and_variants(self) -> Self:
         """
-        Check the defaults and each declared variant, so a bad config fails when it loads.
+        Check each model's and stage's block and each declared variant, so a bad config fails when it loads.
 
-        A variant's own transport settings are checked when it is resolved
-        (:meth:`resolve`), by the transport model's config class; everything
-        else is checked here.
+        A model's block is checked by name, and by value as the variants
+        that change none of its settings run it. A block need not be
+        complete (a model may have a setting with no default), so the
+        settings of a variant that adds its own are checked when it is
+        resolved (:meth:`resolve`), as its realizations and the model's
+        build are.
         """
         if not self.variants:
             first = next(iter(self.mets))
@@ -381,50 +451,49 @@ class ProjectConfig(BaseModel):
                 f"to run the defaults with met {first}, and more entries for "
                 "other settings."
             )
-        extra = dict(self.model_extra or {})
-        _check_keys(extra, self.model, "config", own=set(type(self).model_fields))
-        footprint = {k: extra.pop(k) for k in list(extra) if k in _FOOTPRINT_FIELDS}
-        try:
-            self._footprint = FootprintConfig.model_validate(footprint)
-        except ValidationError as error:
-            raise ValueError(f"config footprint settings: {error}") from None
-        self._transport = transport_config(self.model, extra, f"config ({self.model})")
+        self._models = _model_blocks(self.models)
+        self._footprint = _footprint_block(self.stages, self._models)
         used = set()
-        for group in self.declared():
+        for group in self.variants:
             declared = self._declared(group)
-            self.met_config(declared.met, declared.model)
+            if declared.transport == self._models[declared.block][1]:
+                where = f"models: {declared.block} ({declared.model})"
+                transport_config(declared.model, declared.transport, where)
+            self.met_config(declared.met, declared.block)
             used.add(declared.met)
-        for name in self.mets.keys() - used:
-            self.met_config(name)
+        # With several models, a met no variant uses has no model to check it.
+        if len(self._models) == 1:
+            for name in self.mets.keys() - used:
+                self.met_config(name)
         return self
-
-    @property
-    def transport(self) -> Any:
-        """The transport model's config from the top-level keys, which every variant starts from."""
-        return self._transport
-
-    @property
-    def footprint(self) -> FootprintConfig:
-        """The footprint settings from the top-level keys, which every variant starts from."""
-        return self._footprint
-
-    def declared(self) -> dict[str, dict[str, Any]]:
-        """Return the variants as written."""
-        return self.variants
 
     def met_config(self, name: str, model: str | None = None) -> Any:
         """
-        Return the met called *name*, checked by the met config of the transport model *model*.
+        Return the met called *name*, checked by the met config of the transport model that reads it.
 
-        *model* is the project's model unless given. A relative directory
-        stays as written; :meth:`resolve` makes it absolute.
+        *model* is the name of a ``models`` block, needed when there are
+        several. A relative directory stays as written; :meth:`resolve`
+        makes it absolute.
 
         Raises
         ------
         ValueError
-            If the met is not one the model can read.
+            If the met is not one the model can read, there is no such
+            model, or there are several models and none is named.
         """
-        model = model or self.model
+        if model is None:
+            if len(self._models) > 1:
+                raise ValueError(
+                    f"Name the model that reads met {name!r}: one of "
+                    f"{sorted(self._models)}."
+                )
+            model = next(iter(self._models))
+        if model not in self._models:
+            raise ValueError(
+                f"There is no model {model!r} under models: (it has "
+                f"{sorted(self._models)})."
+            )
+        model = self._models[model][0]
         key = (name, model)
         if key not in self._met_configs:
             met_class = get_model(model).met_config_class
@@ -436,66 +505,119 @@ class ProjectConfig(BaseModel):
 
     def _declared(self, group: str) -> _Declared:
         """
-        Return one declared variant merged with the defaults.
+        Return one declared variant merged with the defaults of its model's block and the footprint's.
 
-        A variant that names another ``model`` inherits the met, the
-        footprint fields, and the transport parameters every model shares
-        (:class:`~stilt.transport.TransportConfig`); it gives that model's
-        own fields itself. Its transport fields are merged but not
-        validated.
+        Its transport fields are merged but not validated.
 
         Raises
         ------
         ValueError
-            For a bad name, an unknown met or model, a bad ``realizations``,
-            ``from:``, or footprint settings without a grid.
+            For a bad name, an unknown met, model or stage, a bad
+            ``realizations``, ``from:``, a setting written outside its
+            block, or a footprint without a grid.
         """
         if not VARIANT_NAME_RE.fullmatch(group):
             raise ValueError(
                 f"Variant name {group!r} must match {VARIANT_NAME_RE.pattern}"
             )
-        spec = dict(self.declared()[group] or {})
+        where = f"Variant {group!r}"
+        spec = dict(self.variants[group] or {})
         if "from" in spec:
             raise ValueError(
-                f"Variant {group!r} uses 'from:', which is no longer needed: a "
+                f"{where} uses 'from:', which is no longer needed: a "
                 "variant with the same transport settings as another shares its "
                 "particles. Give the variant the transport overrides of "
                 f"{spec['from']!r} (if any) and its own footprint settings."
             )
         met = _met_name(group, spec, self.mets)
-        model = spec.pop("model", self.model)
-        if "." not in model and model not in MODELS:
-            raise ValueError(
-                f"Unknown transport model {model!r}. The built-in models are "
-                f"{sorted(MODELS)}; another is named by its import path."
-            )
-        _check_keys(spec, model, f"Variant {group!r}", own={"realizations"})
+        block = _model_name(group, spec, self._models)
+        model, defaults = self._models[block]
+        stage = self._footprint[0] if self._footprint else "footprint"
+        _check_keys(
+            spec,
+            where,
+            allowed={
+                **_model_settings(model),
+                **dict.fromkeys(_VARIANT_KEYS, "a variant key"),
+            },
+            elsewhere=dict.fromkeys(
+                _FOOTPRINT_FIELDS,
+                f"a footprint setting. Write it under the variant's stages: {stage}:.",
+            ),
+        )
         realizations = spec.pop("realizations", None)
         if realizations is not None:
             realizations = int(realizations)
             if realizations < 1:
-                raise ValueError(f"Variant {group!r}: realizations must be >= 1")
-        shared = set(TransportConfig.model_fields)
-        defaults = self._transport.model_dump(
-            include=None if model == self.model else shared
-        )
-        base = {**defaults, **self._footprint.model_dump()}
-        merged = _override(group, base, spec)
-        transport = {k: v for k, v in merged.items() if k not in _FOOTPRINT_FIELDS}
-        footprint = _footprint(
-            group,
-            {k: v for k, v in merged.items() if k in _FOOTPRINT_FIELDS},
-            # grid: null turns the footprint off, inherited settings with it.
-            own=set(spec) if "grid" in spec and spec["grid"] is None else None,
-        )
+                raise ValueError(f"{where}: realizations must be >= 1")
+        footprint = self._variant_footprint(group, spec.pop("stages", None))
+        transport = {**defaults, **spec}
         _check_near_field_columns(group, transport, footprint)
         return _Declared(
             met=met,
+            block=block,
             model=model,
             realizations=realizations,
             transport=transport,
             footprint=footprint,
         )
+
+    def _variant_footprint(self, group: str, stages: Any) -> FootprintConfig | None:
+        """
+        Return the footprint settings of a variant: the footprint's block with the variant's ``stages`` overrides.
+
+        ``None`` when the config has no footprint stage, or the variant sets
+        it to null.
+
+        Raises
+        ------
+        ValueError
+            If the variant names a stage the config does not have, sets what
+            is no footprint setting, or ends with neither a grid nor a
+            geometry.
+        """
+        where = f"Variant {group!r}"
+        stages = {} if stages is None else stages
+        if not isinstance(stages, dict):
+            raise ValueError(
+                f"{where}: stages must map a stage's name to the settings it "
+                "changes, or to null."
+            )
+        for name in stages:
+            if name not in self.stages:
+                raise ValueError(
+                    f"{where} names the stage {name!r}, which stages: does not "
+                    f"have (it has {sorted(self.stages)})."
+                )
+        if self._footprint is None:
+            return None
+        name, defaults = self._footprint
+        fields = defaults.model_dump()
+        if name in stages:
+            own = stages[name]
+            if own is None:
+                return None
+            _check_keys(
+                own,
+                f"{where}, stages: {name}",
+                allowed=dict.fromkeys(_FOOTPRINT_FIELDS, "a footprint setting"),
+                elsewhere={
+                    "class": "the stage itself, set in the stages: block and "
+                    "not by a variant."
+                },
+            )
+            fields = _override(group, fields, dict(own))
+        try:
+            config = FootprintConfig(**fields)
+        except ValidationError as error:
+            raise ValueError(f"{where}, stages: {name}: {error}") from None
+        if config.grid is None and config.geometry is None:
+            raise ValueError(
+                f"{where}: its footprint has no grid. Give stages: {name}: a "
+                f"grid or a geometry, or set the variant's stages: {{{name}: null}} "
+                "to make particles only."
+            )
+        return config
 
     def resolve(self, directory: str | Path | None = None) -> dict[str, Variant]:
         """
@@ -529,7 +651,7 @@ class ProjectConfig(BaseModel):
         builds: dict[tuple[str, str], ModelInfo] = {}
         mets: dict[tuple[str, str], Any] = {}
         variants: dict[str, Variant] = {}
-        for group in self.declared():
+        for group in self.variants:
             declared = self._declared(group)
             transport = transport_config(
                 declared.model,
@@ -560,7 +682,9 @@ class ProjectConfig(BaseModel):
                     raise ValueError(f"Variant {group!r}: {error}") from None
             met_key = (declared.met, declared.model)
             if met_key not in mets:
-                mets[met_key] = _located(self.met_config(*met_key), directory)
+                mets[met_key] = _located(
+                    self.met_config(declared.met, declared.block), directory
+                )
             variants[group] = Variant(
                 name=group,
                 met=declared.met,
@@ -578,21 +702,27 @@ class ProjectConfig(BaseModel):
         Return the config as YAML, and write it to ``path`` when given.
 
         The file is meant to be edited by hand, so it holds only the settings
-        that were given, top-level and for each met. ``mets`` and ``variants``
-        come first. The full settings of each variant are in the output
-        directory, in the ``_settings.yaml`` of each ``settings=`` folder.
+        that were given, in each block. ``mets``, ``models``, ``stages`` and
+        ``variants`` come first. The full settings of each variant are in
+        the output directory, in the ``_settings.yaml`` of each ``settings=``
+        folder.
         """
-        data = self.model_dump(mode="json", include=self.model_fields_set)
-        given = set(self.model_extra or {})
-        # Footprint keys as their class writes them (a transform by its kind).
-        data.update(
-            self._footprint.model_dump(mode="json", include=given & _FOOTPRINT_FIELDS)
-        )
+        given = self.model_fields_set
+        data = self.model_dump(mode="json", include=given - {"models", "stages"})
+        # A block's settings as its class writes them (a transform by its kind).
+        if "models" in given:
+            data["models"] = _JSON.dump_python(self.models, mode="json")
+        if "stages" in given and self._footprint is not None:
+            name, config = self._footprint
+            block = self.stages[name]
+            written = config.model_dump(mode="json", include=set(block) - {"class"})
+            data["stages"] = {name: {"class": block["class"], **written}}
         if "execution" in data:
             data["execution"] = self.execution.model_dump(
                 mode="json", exclude_unset=True
             )
-        head = {k: data.pop(k) for k in ("mets", "variants")}
+        order = ("mets", "models", "stages", "variants")
+        head = {k: data.pop(k) for k in order if k in data}
         text = yaml.safe_dump(
             {**head, **data}, default_flow_style=False, sort_keys=False
         )
@@ -644,31 +774,40 @@ mets:
   hrrr: /path/to/arl/meteorology
 
 
-# Footprint grid. Remove it (or set grid: null) to make particles only.
-grid:
-  xmin: -113.0
-  xmax: -110.5
-  ymin: 40.0
-  ymax: 42.0
-  xres: 0.01
-  yres: 0.01
-hnf_plume: true  # correct foot for the thin plume near the receptor before gridding
+# Transport models, by name, each with its settings: the defaults of every
+# variant that runs it. Negative n_hours means backward in time.
+models:
+  hysplit:
+    n_hours: -24
+    numpar: 1000
+    varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
 
 
-# Variants. Every receptor runs once per variant, with the settings in this
-# file as the defaults. An entry with no overrides runs the defaults as they
-# are; add others to run the same receptors under other settings, e.g. a
-# mixed-layer bracket or a wind-error ensemble (see the docs). Only the
-# variants listed here run.
+# Stages, by name: what is made from each simulation's particles. The footprint
+# stage grids them. Remove the stages block to make particles only.
+stages:
+  footprint:
+    class: stilt.footprint.FootprintStage
+    grid:
+      xmin: -113.0
+      xmax: -110.5
+      ymin: 40.0
+      ymax: 42.0
+      xres: 0.01
+      yres: 0.01
+    hnf_plume: true  # correct foot for the thin plume near the receptor before gridding
+
+
+# Variants. Every receptor runs once per variant, with the blocks above as
+# the defaults. An entry with no overrides runs the defaults as they are; add
+# others to run the same receptors under other settings, e.g. a mixed-layer
+# bracket or a wind-error ensemble (see the docs). A variant changes a
+# footprint setting under its own stages: key. Only the variants listed here
+# run.
 variants:
   hrrr: {}
 #  hrrr-zi08: {ziscale: 0.8}
-
-
-# Common run controls. Negative n_hours means backward in time.
-n_hours: -24
-numpar: 1000
-varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
+#  hrrr-coarse: {stages: {footprint: {grid: {xres: 0.05, yres: 0.05}}}}
 
 
 # Results go to this directory, relative to the project unless absolute.
@@ -682,6 +821,165 @@ output: ./output
 #   cpus: 1         # receptors at once (per array task on Slurm)
 #   n_workers: 1    # Slurm array tasks
 """
+
+
+def _model_blocks(
+    models: dict[str, dict[str, Any] | None],
+) -> dict[str, tuple[str, dict[str, Any]]]:
+    """
+    Return each ``models`` block's model and settings, by the block's name.
+
+    The model is as :func:`stilt.transport.get_model` names it: the block's
+    ``class``, or the block's own name for a built-in model. The settings
+    are checked by name here, and by value as a variant runs them.
+
+    Raises
+    ------
+    ValueError
+        If there is no block, a block names no model, two blocks name one
+        model, or a block holds what is no setting of its model.
+    """
+    if not models:
+        raise ValueError(
+            "models: has no block. Leave it out to run HYSPLIT with its "
+            "defaults, or write models: {hysplit: {}}."
+        )
+    blocks: dict[str, tuple[str, dict[str, Any]]] = {}
+    block_of: dict[str, str] = {}
+    for name, block in models.items():
+        if not VARIANT_NAME_RE.fullmatch(name):
+            raise ValueError(
+                f"Model name {name!r} must match {VARIANT_NAME_RE.pattern}"
+            )
+        where = f"models: {name}"
+        settings = dict(block or {})
+        model = settings.pop("class", name)
+        if "class" in (block or {}) and "." not in str(model):
+            raise ValueError(
+                f"{where}: class must be the import path of a model class, "
+                f"such as mypkg.models.MyModel, not {model!r}."
+            )
+        if "." not in model and model not in MODELS:
+            raise ValueError(
+                f"{where}: {model!r} is not a built-in transport model (they "
+                f"are {sorted(MODELS)}). A model in another package gets "
+                "class: with its import path, such as class: mypkg.models.MyModel."
+            )
+        if model in block_of:
+            raise ValueError(
+                f"models: {block_of[model]} and {name} are both {model}. A "
+                "model has one block, its defaults: write a second variant to "
+                "run it with other settings."
+            )
+        block_of[model] = name
+        _check_keys(
+            settings,
+            where,
+            allowed=_model_settings(model),
+            elsewhere=dict.fromkeys(
+                _FOOTPRINT_FIELDS,
+                "a footprint setting. Write it under stages:, in the footprint's block.",
+            ),
+        )
+        blocks[name] = (model, settings)
+    return blocks
+
+
+def _footprint_block(
+    stages: dict[str, dict[str, Any]], models: dict[str, tuple[str, dict[str, Any]]]
+) -> tuple[str, FootprintConfig] | None:
+    """
+    Return the name of the footprint's ``stages`` block and its checked settings, or ``None`` without one.
+
+    The footprint is the one stage there is, so each block must name it as
+    its ``class`` (:data:`FOOTPRINT_STAGE`), and only one can. *models* are
+    the ``models`` blocks, to say where a model's setting belongs.
+
+    Raises
+    ------
+    ValueError
+        If a block names no class or another one, two blocks name one
+        class, or a block holds a wrong setting.
+    """
+    elsewhere = {
+        field: f"a {model} setting. Write it under models: {name}:."
+        for name, (model, _) in models.items()
+        for field in _model_settings(model)
+    }
+    found: tuple[str, FootprintConfig] | None = None
+    for name, block in stages.items():
+        if not VARIANT_NAME_RE.fullmatch(name):
+            raise ValueError(
+                f"Stage name {name!r} must match {VARIANT_NAME_RE.pattern}"
+            )
+        where = f"stages: {name}"
+        settings = dict(block or {})
+        stage = settings.pop("class", None)
+        if stage is None:
+            raise ValueError(
+                f"{where} names no class. The footprint is class: {FOOTPRINT_STAGE}."
+            )
+        if stage != FOOTPRINT_STAGE:
+            raise ValueError(
+                f"{where}: {stage!r} is not a stage. The one stage is the "
+                f"footprint, class: {FOOTPRINT_STAGE}."
+            )
+        if found is not None:
+            raise ValueError(
+                f"stages: {found[0]} and {name} are both {stage}. A stage has "
+                "one block, its defaults: write a second variant for a second "
+                "footprint."
+            )
+        _check_keys(
+            settings,
+            where,
+            allowed=dict.fromkeys(_FOOTPRINT_FIELDS, "a footprint setting"),
+            elsewhere=elsewhere,
+        )
+        try:
+            found = (name, FootprintConfig.model_validate(settings))
+        except ValidationError as error:
+            raise ValueError(f"{where}: {error}") from None
+    return found
+
+
+def _model_settings(model: str) -> dict[str, str]:
+    """Return the settings of the transport model *model*, each with what to call it in a message."""
+    fields = get_model(model).config_class.model_fields
+    return dict.fromkeys(fields, f"a {model} setting")
+
+
+def _blocks_of_settings(models: Any) -> dict[str, str]:
+    """
+    Return where each setting that may not sit at the top of the config is written, by the setting's name.
+
+    *models* is the ``models`` block as written, not checked yet; HYSPLIT's
+    settings are named when it gives no model that can be read.
+    """
+    blocks = models if isinstance(models, dict) and models else {"hysplit": {}}
+    places: dict[str, str] = {}
+    for name, block in blocks.items():
+        model = block.get("class", name) if isinstance(block, dict) else name
+        try:
+            fields = _model_settings(str(model))
+        except (ImportError, ValueError):
+            continue  # reported when the models block itself is checked
+        for field in fields:
+            places.setdefault(
+                field, f"a {model} setting. Write it under models: {name}:."
+            )
+    places.update(
+        dict.fromkeys(
+            _FOOTPRINT_FIELDS,
+            "a footprint setting. Write it under stages:, in the footprint's "
+            f"block (class: {FOOTPRINT_STAGE}).",
+        )
+    )
+    places["model"] = (
+        "no longer a key. Name each transport model as a block under "
+        "models:, such as models: {hysplit: {}}."
+    )
+    return places
 
 
 def _met_name(group: str, spec: dict[str, Any], mets: dict[str, Any]) -> str:
@@ -700,6 +998,23 @@ def _met_name(group: str, spec: dict[str, Any], mets: dict[str, Any]) -> str:
     if met not in mets:
         raise ValueError(f"Variant {group!r} names unknown met {met!r}")
     return met
+
+
+def _model_name(group: str, spec: dict[str, Any], models: dict[str, Any]) -> str:
+    """Return the name of the ``models`` block a variant runs with, taking ``model`` out of *spec*."""
+    name = spec.pop("model", None)
+    if name is None:
+        if len(models) > 1:
+            raise ValueError(
+                f"Variant {group!r} must name its model (one of {sorted(models)})"
+            )
+        return next(iter(models))
+    if name not in models:
+        raise ValueError(
+            f"Variant {group!r} names the model {name!r}, which models: does "
+            f"not have (it has {sorted(models)})."
+        )
+    return name
 
 
 def _located(met: Any, directory: str | Path | None) -> Any:
@@ -721,10 +1036,11 @@ def _override(group: str, base: dict[str, Any], spec: dict[str, Any]) -> dict[st
     """
     Apply a variant's overrides to ``base``.
 
-    A ``grid`` mapping updates the base grid field by field, so a variant can
-    change only the resolution, and ``grid: null`` removes the footprint. A
-    variant that sets its own ``geometry`` drops the inherited ``grid``
-    unless it sets ``grid`` too, so the grid is derived from its geometry.
+    *base* is the footprint's block and *spec* what the variant changes of
+    it. A ``grid`` mapping updates the base grid field by field, so a
+    variant can change only the resolution. A variant that sets its own
+    ``geometry`` drops the inherited ``grid`` unless it sets ``grid`` too,
+    so the grid is derived from its geometry.
 
     Raises
     ------
@@ -746,40 +1062,6 @@ def _override(group: str, base: dict[str, Any], spec: dict[str, Any]) -> dict[st
     if spec.get("geometry") is not None and "grid" not in spec:
         merged.pop("grid", None)
     return merged
-
-
-def _footprint(
-    name: str, fields: dict[str, Any], own: set[str] | None = None
-) -> FootprintConfig | None:
-    """
-    Return the footprint settings, or ``None`` when they give no grid or geometry.
-
-    The geometry is not read here. *own* names the settings the variant gave
-    itself, when it turned the footprint off with ``grid: null``; only those
-    can be stray, and the ones it inherited are dropped.
-
-    Raises
-    ------
-    ValueError
-        If footprint settings other than the grid are set without a grid,
-        since they would otherwise be dropped without a word.
-    """
-    config = FootprintConfig(**fields)
-    if config.grid is not None or config.geometry is not None:
-        return config
-    given = config.model_dump()
-    default = FootprintConfig.model_validate({}).model_dump()
-    stray = sorted(
-        field
-        for field in given
-        if given[field] != default[field] and (own is None or field in own)
-    )
-    if stray:
-        raise ValueError(
-            f"Variant {name!r} sets footprint settings ({', '.join(stray)}) "
-            "but no grid. Add a grid or geometry, or remove them."
-        )
-    return None
 
 
 def _check_near_field_columns(
@@ -825,35 +1107,41 @@ def _mesh(spec: Any, directory: str | Path | None, meshes: dict[str, Mesh]) -> M
     return meshes[key]
 
 
-def _check_keys(keys: Iterable[str], model: str, where: str, own: set[str]) -> None:
+def _check_keys(
+    keys: Iterable[str], where: str, allowed: dict[str, str], elsewhere: dict[str, str]
+) -> None:
     """
-    Raise for the first key that is no setting, naming the nearest one and what it is.
+    Raise for the first key that may not be written at *where*, saying where it belongs or naming the nearest key.
 
-    A key may be a footprint setting, a setting of the transport *model*,
-    or one of *own*: the config's own keys at the top, or a variant's.
+    *allowed* are the keys that may be written there, each with what it is
+    (``a hysplit setting``). *elsewhere* are settings that belong in another
+    block, each with what it is and where to write it, as a sentence.
 
     Raises
     ------
     ValueError
-        If a key is none of these.
+        If a key is not one of *allowed*.
     """
-    parts = {name: "a footprint setting" for name in _FOOTPRINT_FIELDS}
-    config_class = get_model(model).config_class
-    parts.update({name: f"a {model} setting" for name in config_class.model_fields})
-    parts.update({name: f"a {where.split()[0].lower()} key" for name in own})
     for key in keys:
-        if key in parts or key == "from":  # "from:" has its own message
+        if key in allowed or key == "from":  # "from:" has its own message
             continue
         if key == "time_integrate":
             raise ValueError(f"{where}: {TIME_INTEGRATE_REMOVED}")
         if key == "veght":
             raise ValueError(f"{where}: {VEGHT_RENAMED}")
-        close = difflib.get_close_matches(key, list(parts), n=1)
-        hint = f" Did you mean {close[0]!r}, {parts[close[0]]}?" if close else ""
+        if key in elsewhere:
+            raise ValueError(f"{where}: {key!r} is {elsewhere[key]}")
+        close = difflib.get_close_matches(str(key), [*allowed, *elsewhere], n=1)
+        hint = ""
+        if close and close[0] in allowed:
+            hint = f" Did you mean {close[0]!r}, {allowed[close[0]]}?"
+        elif close:
+            hint = f" Did you mean {close[0]!r}? It is {elsewhere[close[0]]}"
         raise ValueError(f"{where}: {key!r} is not a setting.{hint}")
 
 
 __all__ = [
+    "FOOTPRINT_STAGE",
     "STARTER_CONFIG",
     "VARIANT_NAME_RE",
     "ProjectConfig",

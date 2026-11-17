@@ -26,8 +26,14 @@ tutorial:
 
 .. code-block:: yaml
 
-   grid: {xmin: -114.0, xmax: -110.0, ymin: 39.0, ymax: 42.0, xres: 0.01, yres: 0.01}
-   varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr, zsfc]
+   models:
+     hysplit:
+       varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr, zsfc]
+
+   stages:
+     footprint:
+       class: stilt.footprint.FootprintStage
+       grid: {xmin: -114.0, xmax: -110.0, ymin: 39.0, ymax: 42.0, xres: 0.01, yres: 0.01}
 
 The grid must hold the soundings' longitudes and latitudes below, or
 ``stilt check`` reports each receptor outside it. The ``varsiwant`` line is
@@ -117,7 +123,8 @@ already there as they were.
 Step 4: Weight the particles
 ----------------------------
 
-Two transforms go in ``config.yaml`` (:doc:`../guides/transforms`). The
+Two transforms go in the footprint's block of ``config.yaml``
+(:doc:`../guides/transforms`). The
 averaging kernel differs per sounding, so it reads the kernel table by
 name. Pressure weighting is worked out from the particles, so every
 receptor uses the same setting:

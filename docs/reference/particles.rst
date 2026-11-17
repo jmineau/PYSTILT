@@ -75,8 +75,10 @@ computes ``foot``; ``pbl_height`` and ``mlht`` name the same quantity.
 
 .. code-block:: yaml
 
-   pbl_height: richardson   # or met, or a height in meters
-   pbl_height_min: 150      # the lowest height, in meters
+   models:
+     hysplit:
+       pbl_height: richardson   # or met, or a height in meters
+       pbl_height_min: 150      # the lowest height, in meters
 
 - **Unset** (the default), PYSTILT stays as close to the model as its
   output allows: it keeps the model's ``foot`` (HYSPLIT's, which STILT-R

@@ -13,6 +13,7 @@ from stilt import transport
 from stilt.cli import app
 from stilt.project import Project
 from stilt.transport.hysplit import Met, MetConfig
+from tests.fixtures.factories import blocks
 
 from .fixtures.factories import (
     make_met_config,
@@ -84,9 +85,7 @@ def _project(tmp_path: Path, receptors, *, n_hours: int = -3, **met) -> Project:
     return Project.init(
         tmp_path / "proj",
         receptors=receptors,
-        mets={"hrrr": fields},
-        n_hours=n_hours,
-        variants={"hrrr": {}},
+        **blocks(mets={"hrrr": fields}, n_hours=n_hours, variants={"hrrr": {}}),
     )
 
 
@@ -277,9 +276,9 @@ def test_a_met_without_download_is_only_checked(tmp_path):
     project = Project.init(
         tmp_path / "proj",
         receptors=[receptor],
-        mets={"hrrr": make_met_config(met_dir)},
-        n_hours=-3,
-        variants={"hrrr": {}},
+        **blocks(
+            mets={"hrrr": make_met_config(met_dir)}, n_hours=-3, variants={"hrrr": {}}
+        ),
     )
     before = sorted(met_dir.iterdir())
 
@@ -302,9 +301,9 @@ def test_a_met_without_download_that_is_complete_is_ready(tmp_path):
     project = Project.init(
         tmp_path / "proj",
         receptors=[receptor],
-        mets={"hrrr": make_met_config(met_dir)},
-        n_hours=-3,
-        variants={"hrrr": {}},
+        **blocks(
+            mets={"hrrr": make_met_config(met_dir)}, n_hours=-3, variants={"hrrr": {}}
+        ),
     )
 
     files = project.fetch()
@@ -361,9 +360,11 @@ def test_a_model_with_no_fetch_adds_no_row(tmp_path, monkeypatch):
     project = Project.init(
         tmp_path / "proj",
         receptors=[_receptor(2, 3)],
-        mets={"hrrr": {"directory": tmp_path / "met", "download": "hrrr"}},
-        n_hours=-3,
-        variants={"toy": {"model": "toy", "met": "hrrr"}},
+        **blocks(
+            mets={"hrrr": {"directory": tmp_path / "met", "download": "hrrr"}},
+            models={"toy": {"n_hours": -3}},
+            variants={"toy": {"met": "hrrr"}},
+        ),
     )
 
     assert project.fetch().empty
@@ -480,9 +481,11 @@ def test_stilt_fetch_exits_with_2_for_a_met_it_cannot_read(tmp_path):
     project = Project.init(
         tmp_path / "proj",
         receptors=[receptor],
-        mets={"hrrr": make_met_config(tmp_path / "met")},
-        n_hours=-3,
-        variants={"hrrr": {}},
+        **blocks(
+            mets={"hrrr": make_met_config(tmp_path / "met")},
+            n_hours=-3,
+            variants={"hrrr": {}},
+        ),
     )
     (tmp_path / "met" / "header.arl").unlink()
 
