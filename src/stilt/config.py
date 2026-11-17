@@ -237,6 +237,29 @@ class Variant:
         return footprint_hash(self.particles_hash, self.footprint_settings)
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """
+    PyYAML's safe loader, refusing a key written twice in one mapping.
+
+    PyYAML keeps the last value of a repeated key, so ``n_hours: -24`` and
+    then ``n_hours: 24`` would run forward with no word.
+    """
+
+    def construct_mapping(self, node: yaml.MappingNode, deep: bool = False) -> dict:
+        """Build a mapping, raising for its first key seen twice."""
+        seen = set()
+        for key_node, _ in node.value:
+            if not isinstance(key_node, yaml.ScalarNode):
+                continue  # PyYAML refuses a key that is not a plain value itself
+            key = self.construct_object(key_node, deep=deep)
+            if key in seen:
+                raise yaml.constructor.ConstructorError(
+                    None, None, f"{key!r} is written twice", key_node.start_mark
+                )
+            seen.add(key)
+        return super().construct_mapping(node, deep=deep)
+
+
 class ProjectConfig(BaseModel):
     """
     A project's configuration, as read from ``config.yaml``.
@@ -581,11 +604,19 @@ class ProjectConfig(BaseModel):
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> Self:
-        """Load a project config from a YAML file."""
+        """
+        Load a project config from a YAML file.
+
+        Raises
+        ------
+        ValueError
+            If the file is not valid YAML, writes one key twice in a section
+            (YAML would keep the last value), or holds a wrong setting.
+        """
         path = Path(path)
         try:
             with path.open() as f:
-                raw: dict = yaml.safe_load(f) or {}
+                raw: dict = yaml.load(f, Loader=_UniqueKeyLoader) or {}
         except yaml.YAMLError as error:
             # PyYAML's own message spans several lines; keep where and what.
             mark = getattr(error, "problem_mark", None)

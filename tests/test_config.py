@@ -146,6 +146,29 @@ def test_model_config_reports_invalid_yaml(tmp_path):
         ProjectConfig.from_yaml(path)
 
 
+@pytest.mark.parametrize(
+    ("text", "where"),
+    [
+        ("n_hours: -24\nnumpar: 100\nn_hours: 24\n", "line 3, column 1: 'n_hours'"),
+        (
+            "variants:\n  a:\n    numpar: 10\n    numpar: 20\n",
+            "line 4, column 5: 'numpar'",
+        ),
+    ],
+    ids=["top", "variant"],
+)
+def test_model_config_refuses_a_repeated_key(tmp_path, text, where):
+    """A key written twice is refused, not read as its last value (#440)."""
+    path = tmp_path / "config.yaml"
+    path.write_text(text)
+
+    with pytest.raises(ValueError) as error:
+        ProjectConfig.from_yaml(path)
+    assert str(error.value) == (
+        f"config.yaml is not valid YAML at {where} is written twice."
+    )
+
+
 def test_model_config_yaml_roundtrip_with_execution(tmp_path):
     cfg = ProjectConfig(
         mets=_met_config(tmp_path),

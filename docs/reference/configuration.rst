@@ -11,6 +11,8 @@ Everything you can write in ``config.yaml`` is a field of
 lives next to the code that uses it (``stilt.footprint.config``,
 ``stilt.execution.config``, ``stilt.transport.hysplit``), and all but the
 transport model's are importable from ``stilt``.
+A key may be written once in each section: YAML would keep the last of two,
+so PYSTILT refuses the file and names the line of the second.
 Each page below lists its fields with their defaults and is generated from
 the code.
 
