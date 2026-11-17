@@ -178,6 +178,7 @@ class FootprintConfig(BaseModel):
         description=(
             "Factor on the width of the Gaussian smoothing kernel. 0 turns smoothing off."
         ),
+        ge=0,
     )
     tres: str = Field(
         "1h",
