@@ -1,0 +1,46 @@
+﻿stilt.MultiPointReceptor
+========================
+
+.. currentmodule:: stilt
+
+
+
+
+.. class-signature:: stilt.MultiPointReceptor
+
+
+Parameters
+----------
+
+.. config-model:: stilt.MultiPointReceptor
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~MultiPointReceptor.location_id
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~MultiPointReceptor.coords
+
+
+
+
+Inherited
+---------
+
+
+From :class:`~.Receptor`: :py:obj:`~.Receptor.from_dict`, :py:obj:`~.Receptor.from_json`, :py:obj:`~.Receptor.from_points`, :py:obj:`~.Receptor.geometry`, :py:obj:`~.Receptor.id`, :py:obj:`~.Receptor.plot`, :py:obj:`~.Receptor.points`, :py:obj:`~.Receptor.to_dict`, :py:obj:`~.Receptor.to_json`
+
+

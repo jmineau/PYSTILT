@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Meteorology &#8212; PYSTILT 0.1.0a28</title>
+    <title>Meteorology &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../_static/documentation_options.js?v=947601de"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -60,11 +60,11 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Projects And Variants" href="projects.html" />
-    <link rel="prev" title="Receptors" href="receptors.html" />
+    <link rel="prev" title="Mobile Measurements" href="tracks.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -412,9 +412,11 @@
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
 <li class="toctree-l1"><a class="reference internal" href="choosing_settings.html">Choosing Settings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Running</span></p>
 <ul class="nav bd-sidenav">
@@ -437,10 +439,10 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
 <li class="toctree-l1"><a class="reference internal" href="slant_columns.html">Slant Columns</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="hysplit_users.html">PYSTILT For HYSPLIT Users</a></li>
 <li class="toctree-l1"><a class="reference internal" href="hysplit_build.html">Your Own HYSPLIT Build And Data Tables</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
@@ -624,10 +626,10 @@ the region, which is the kind of detail a coarser product would lose:</p>
 <span class="gp">In [12]: </span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">layout</span><span class="o">=</span><span class="s2">"constrained"</span><span class="p">)</span>
 
 <span class="gp">In [13]: </span><span class="n">pblh</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s2">"lon"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">"lat"</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">cbar_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">"label"</span><span class="p">:</span> <span class="s2">"mixed-layer height (m)"</span><span class="p">})</span>
-<span class="gh">Out[13]: </span><span class="go">&lt;matplotlib.collections.QuadMesh at 0x7bb8740a11d0&gt;</span>
+<span class="gh">Out[13]: </span><span class="go">&lt;matplotlib.collections.QuadMesh at 0x784c9b4a3390&gt;</span>
 
 <span class="gp">In [14]: </span><span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="mf">111.848</span><span class="p">,</span> <span class="mf">40.766</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">"*"</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"white"</span><span class="p">,</span> <span class="n">markeredgecolor</span><span class="o">=</span><span class="s2">"black"</span><span class="p">)</span>
-<span class="gh">Out[14]: </span><span class="go">[&lt;matplotlib.lines.Line2D at 0x7bb8740e4ec0&gt;]</span>
+<span class="gh">Out[14]: </span><span class="go">[&lt;matplotlib.lines.Line2D at 0x784c9b45ee40&gt;]</span>
 
 <span class="gp">In [15]: </span><span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"HRRR, 14 January 2021, 19:00 UTC"</span><span class="p">);</span>
 </pre></div>
@@ -823,12 +825,12 @@ the exact rules for which files a run reads.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="receptors.html"
+       href="tracks.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Receptors</p>
+        <p class="prev-next-title">Mobile Measurements</p>
       </div>
     </a>
     <a class="right-next"

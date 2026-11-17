@@ -1,0 +1,6 @@
+﻿stilt.execution.task\_share
+===========================
+
+.. currentmodule:: stilt.execution
+
+.. autofunction:: task_share

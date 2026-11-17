@@ -22,6 +22,7 @@ Methods
    :toctree:
 
    ~AveragingKernel.apply
+   ~AveragingKernel.check
    ~AveragingKernel.kernel
    ~AveragingKernel.table_receptors
 

@@ -1,0 +1,6 @@
+﻿stilt.identity.read\_footprint\_settings
+========================================
+
+.. currentmodule:: stilt.identity
+
+.. autofunction:: read_footprint_settings

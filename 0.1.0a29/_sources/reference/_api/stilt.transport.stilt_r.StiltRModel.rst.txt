@@ -1,0 +1,37 @@
+﻿stilt.transport.stilt\_r.StiltRModel
+====================================
+
+.. currentmodule:: stilt.transport.stilt_r
+
+
+
+
+.. class-signature:: stilt.transport.stilt_r.StiltRModel
+
+
+.. class-parameters:: stilt.transport.stilt_r.StiltRModel
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~StiltRModel.needs_workdir
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~StiltRModel.data_files
+   ~StiltRModel.run
+   ~StiltRModel.version
+
+
+

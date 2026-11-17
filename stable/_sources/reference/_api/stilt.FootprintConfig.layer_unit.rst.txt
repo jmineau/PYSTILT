@@ -1,0 +1,6 @@
+stilt.FootprintConfig.layer\_unit
+=================================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: FootprintConfig.layer_unit

@@ -1,0 +1,6 @@
+﻿stilt.particles.write\_particles
+================================
+
+.. currentmodule:: stilt.particles
+
+.. autofunction:: write_particles

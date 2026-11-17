@@ -1,0 +1,6 @@
+stilt.transport.TransportConfig.UNRECORDED
+==========================================
+
+.. currentmodule:: stilt.transport
+
+.. autoattribute:: TransportConfig.UNRECORDED

@@ -43,6 +43,6 @@ Inherited
 ---------
 
 
-From :class:`~.TransportConfig`: :py:obj:`~.TransportConfig.settings`
+From :class:`~.TransportConfig`: :py:obj:`~.TransportConfig.RECORDED_WHEN_SET`, :py:obj:`~.TransportConfig.settings`
 
 

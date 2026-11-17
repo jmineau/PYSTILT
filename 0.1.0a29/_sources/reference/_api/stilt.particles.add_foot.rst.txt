@@ -1,0 +1,6 @@
+﻿stilt.particles.add\_foot
+=========================
+
+.. currentmodule:: stilt.particles
+
+.. autofunction:: add_foot

@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.footprint.config &#8212; PYSTILT 0.1.0a28</title>
+    <title>stilt.footprint.config &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../../../_static/documentation_options.js?v=947601de"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -559,7 +559,7 @@
 <span class="c1">#: What to do instead of ``time_integrate``, which was removed.</span>
 <span class="n">TIME_INTEGRATE_REMOVED</span> <span class="o">=</span> <span class="p">(</span>
     <span class="s2">"time_integrate was removed. Sum the layers instead: foot.sum('time'), "</span>
-    <span class="s2">"or project.footprints().foot.sum('hour'). For one layer as long as the "</span>
+    <span class="s2">"or project.footprints().foot.sum('hour') (the layer dimension is named for tres's unit). For one layer as long as the "</span>
     <span class="s2">"run, set tres to the run's length (tres: 1D for a 24-hour run)."</span>
 <span class="p">)</span>
 
@@ -597,7 +597,7 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.FootprintConfig.html#stilt.FootprintConfig">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">FootprintConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Footprint settings: the grid, smoothing, and particle transforms.</span>
+<span class="sd">    Footprint settings: the grid, smoothing, the near-field correction, and particle transforms.</span>
 
 <span class="sd">    The config and each variant hold these as their defaults and overrides,</span>
 <span class="sd">    and every footprint keeps the settings it was calculated with.</span>
@@ -638,6 +638,7 @@
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Factor on the width of the Gaussian smoothing kernel. 0 turns smoothing off."</span>
         <span class="p">),</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">tres</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="s2">"1h"</span><span class="p">,</span>
@@ -647,12 +648,26 @@
             <span class="s2">"layers, ``15min`` for 15-minute data, ``1D`` for days."</span>
         <span class="p">),</span>
     <span class="p">)</span>
+    <span class="n">hnf_plume</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">True</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Correct ``foot`` near the receptor with a vertical Gaussian plume "</span>
+            <span class="s2">"model before the footprint is computed "</span>
+            <span class="s2">"(:func:`stilt.particles.correct_near_field`). Close to the "</span>
+            <span class="s2">"receptor the plume is thinner than the layer surface fluxes are "</span>
+            <span class="s2">"mixed through, so this raises the influence of nearby fluxes. "</span>
+            <span class="s2">"Needs the particle columns ``dens``, ``tlgr``, ``sigw``, ``foot``, "</span>
+            <span class="s2">"``mlht``, and ``samt``, and ``zsfc`` for a receptor above sea "</span>
+            <span class="s2">"level; particles without them get no correction."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
     <span class="n">transforms</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Particle transforms applied in order before the footprint is "</span>
             <span class="s2">"computed. Each entry's ``kind`` is a built-in name "</span>
             <span class="s2">"(``averaging_kernel``, ``pressure_weighting``, "</span>
-            <span class="s2">"``first_order_lifetime``) or the import path of your own class."</span>
+            <span class="s2">"``first_order_lifetime``, ``dry_deposition``, ``oxidation``) or "</span>
+            <span class="s2">"the import path of your own class."</span>
         <span class="p">),</span>
         <span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span>
     <span class="p">)</span>
@@ -661,6 +676,28 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">tres_minutes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Length of each time layer of the footprint, in minutes."""</span>
         <span class="k">return</span> <span class="n">_minutes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tres</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">layer_unit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Name and length in minutes of the unit ``tres`` is written in.</span>
+
+<span class="sd">        It names the layer dimension of :meth:`stilt.Project.footprints`, which</span>
+<span class="sd">        counts in it: ``hour`` for ``1h``, ``day`` for ``1D``, ``minute`` for</span>
+<span class="sd">        ``15min``.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; FootprintConfig(tres="6h").layer_unit</span>
+<span class="sd">        ('hour', 60)</span>
+<span class="sd">        &gt;&gt;&gt; FootprintConfig(tres="90min").layer_unit</span>
+<span class="sd">        ('minute', 1)</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tres</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"D"</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s2">"day"</span><span class="p">,</span> <span class="mi">1440</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tres</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"h"</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s2">"hour"</span><span class="p">,</span> <span class="mi">60</span>
+        <span class="k">return</span> <span class="s2">"minute"</span><span class="p">,</span> <span class="mi">1</span>
 
     <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"tres"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
     <span class="nd">@classmethod</span>

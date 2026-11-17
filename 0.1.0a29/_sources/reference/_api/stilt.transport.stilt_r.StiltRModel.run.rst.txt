@@ -1,0 +1,6 @@
+stilt.transport.stilt\_r.StiltRModel.run
+========================================
+
+.. currentmodule:: stilt.transport.stilt_r
+
+.. automethod:: StiltRModel.run

@@ -10,7 +10,7 @@ background from observations for an inversion, you need both.
 Each back-trajectory ends where its air came from. Sample a mole-fraction
 field at every particle's endpoint, average over the particles, and you
 have the background the receptor saw. ``sim.background(field)`` does this
-with any field you give it (:func:`stilt.particles.background` without a
+with any field you give it (:func:`stilt.background` without a
 project). X-STILT does the same with
 CarbonTracker in ``endpts.trajfoot``. For a satellite swath you can also
 take the background from the soundings that a city's plume did not reach
@@ -42,8 +42,8 @@ average. Longitudes from 0 to 360, as in many global models, are handled.
 PYSTILT does not read a global model's files. If its levels vary in space,
 as CarbonTracker's do, sample it yourself and pass one value per particle
 instead of a field, as a Series indexed by particle number (``particle``).
-``sim.particles.stilt.endpoints()`` gives the endpoints as a table for this,
-and lair's ``CarbonTracker.sample`` takes that table directly.
+``sim.particles.stilt.endpoints()`` gives the endpoints as a table for this:
+one row per particle, with every column of the particle table.
 
 The background at a receptor
 ----------------------------
@@ -60,8 +60,8 @@ The background at a receptor
 
 The background is weighted the way the footprint is, with the variant's
 transforms: the averaging kernel (including one from a per-receptor
-table), pressure weighting, and any lifetime decay. So the background and
-the enhancement add. For a tower receptor there are no transforms, and the
+table), pressure weighting, and any loss on the way (lifetime, deposition,
+oxidation). So the background and the enhancement add. For a tower receptor there are no transforms, and the
 value is the plain mean over the particles.
 
 ``bg.per_particle`` is the field at each endpoint, and ``bg.weights`` is
@@ -79,6 +79,58 @@ means ``bg.value`` is the background over the receptor's levels only. The
 air above the receptor top saw no fluxes, so its share is the field alone.
 Take it from the same model with the same pressure weights and averaging
 kernel, and add it in your own code.
+
+At the edge of the footprint grid
+---------------------------------
+
+A footprint is zero outside its grid, so the air that entered the grid
+carried its background with it. ``particles.stilt.grid_exits(grid)`` gives
+where each particle first crossed the grid's edge, to sample a field there
+instead of at the endpoint, or to count the particles that came in by each
+side. The example is 200 particles that drift out of a 2 by 2 degree grid
+in a random walk:
+
+.. ipython:: python
+
+   import numpy as np
+   import pandas as pd
+   import stilt
+
+   rng = np.random.default_rng(0)
+   n_particles, n_steps = 200, 20
+   steps = rng.normal([-0.05, 0.02], 0.15, size=(n_steps, n_particles, 2))
+   path = np.cumsum(steps, axis=0)
+   particles = pd.DataFrame(
+       {
+           "particle": np.tile(np.arange(1, n_particles + 1), n_steps),
+           "age": np.repeat(-60.0 * np.arange(1, n_steps + 1), n_particles),
+           "lon": -111.0 + path[:, :, 0].ravel(),
+           "lat": 41.0 + path[:, :, 1].ravel(),
+           "zagl": 100.0,
+       }
+   )
+   grid = stilt.Grid(xmin=-112, xmax=-110, ymin=40, ymax=42, xres=0.1, yres=0.1)
+   exits = particles.stilt.grid_exits(grid)
+   exits.head()
+   exits.edge.value_counts()
+
+There is one row per particle that left, and none for a particle that
+stayed inside. The ``edge`` is ``n``, ``e``, ``s`` or ``w``. The position,
+height and age are on the edge, interpolated in a straight line between the
+particle's last row inside the grid and its first row outside. ``time`` is
+there too when the table has it.
+
+- The exit is the first time the particle crossed the edge. A particle that
+  came back in, or ended long after at the edge of the meteorology, has the
+  same exit; :meth:`~stilt.particles.ParticlesAccessor.endpoints` gives
+  where it ended.
+- The edge is the outer edge of the grid's cells. A projected grid is a
+  rectangle in its projection, and a grid across the dateline is read
+  modulo 360.
+- A particle whose first row is already outside the grid has no row inside
+  to interpolate from. It is reported at that row, on the edge it is
+  farthest beyond. The HYSPLIT build bundled with PYSTILT writes no row at
+  the release, so a receptor next to the edge can give such a particle.
 
 With transport error
 --------------------
@@ -103,8 +155,9 @@ Choices made here
 - Values come from the nearest cell in every dimension, without
   interpolation. Before the first or after the last time or level, the end
   value is used. Outside the grid there is no value.
-- A lifetime transform decays the background by the endpoint's age, as it
-  decays the enhancement along the trajectory.
+- A loss transform (lifetime, deposition, oxidation) scales the background
+  by the fraction that survives from the endpoint to the receptor, as it
+  scales the enhancement along the trajectory.
 - Particles without a value are left out, and the others carry their
   weight. This assumes the missing particles have the same mean as the
   rest. Check ``bg.per_particle`` when a regional field might not cover

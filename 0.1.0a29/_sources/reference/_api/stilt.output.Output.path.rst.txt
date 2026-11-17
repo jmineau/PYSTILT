@@ -1,0 +1,6 @@
+stilt.output.Output.path
+========================
+
+.. currentmodule:: stilt.output
+
+.. automethod:: Output.path

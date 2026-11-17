@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.spatial &#8212; PYSTILT 0.1.0a28</title>
+    <title>stilt.spatial &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../../_static/documentation_options.js?v=947601de"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -604,10 +604,62 @@
     <span class="k">return</span> <span class="n">xmax</span> <span class="o">+</span> <span class="mf">360.0</span> <span class="k">if</span> <span class="n">xmax</span> <span class="o">&lt;</span> <span class="n">xmin</span> <span class="k">else</span> <span class="n">xmax</span>
 
 
+<span class="c1">#: The most cells a grid may have. A footprint holds a number per cell and</span>
+<span class="c1">#: time layer, so a grid past this needs more than 8 GB a layer, which is</span>
+<span class="c1">#: most often a resolution in the wrong units (degrees on a grid in meters).</span>
+<span class="n">_MAX_GRID_CELLS</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**</span><span class="mi">9</span>
+
+
+<span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">64</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_projected_extent</span><span class="p">(</span>
+    <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return ``(xmin, xmax, ymin, ymax)`` of a longitude/latitude box in *crs* units.</span>
+
+<span class="sd">    The extent is that of the box's two corners, projected.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If pyproj cannot read *crs*.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">CRS</span><span class="p">,</span> <span class="n">Transformer</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">CRSError</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">CRS</span><span class="o">.</span><span class="n">from_user_input</span><span class="p">(</span><span class="n">crs</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">CRSError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"crs=</span><span class="si">{</span><span class="n">crs</span><span class="si">!r}</span><span class="s2"> is not a coordinate reference system pyproj can read "</span>
+            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">)."</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+    <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">corners_x</span><span class="p">,</span> <span class="n">corners_y</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">],</span> <span class="p">[</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">])</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">corners_x</span><span class="p">)),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">corners_x</span><span class="p">)),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">corners_y</span><span class="p">)),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">corners_y</span><span class="p">)),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_crs_unit</span><span class="p">(</span><span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the name of the unit of *crs*'s first axis, such as ``metre`` or ``degree``."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">CRS</span>
+
+    <span class="k">return</span> <span class="n">CRS</span><span class="o">.</span><span class="n">from_user_input</span><span class="p">(</span><span class="n">crs</span><span class="p">)</span><span class="o">.</span><span class="n">axis_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">unit_name</span>
+
+
 <div class="viewcode-block" id="Bounds">
 <a class="viewcode-back" href="../../reference/_api/stilt.Bounds.html#stilt.Bounds">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Bounds</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Longitude/latitude bounding box, in degrees."""</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Longitude/latitude bounding box, in degrees.</span>
+
+<span class="sd">    The edges are finite numbers, and ``-90 &lt;= ymin &lt; ymax &lt;= 90``.</span>
+<span class="sd">    Longitudes count modulo 360 (:meth:`contains`).</span>
+<span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -615,6 +667,25 @@
     <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Eastern edge, in degrees longitude."</span><span class="p">)</span>
     <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Southern edge, in degrees latitude."</span><span class="p">)</span>
     <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Northern edge, in degrees latitude."</span><span class="p">)</span>
+
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_on_the_globe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse an edge that is not a finite number, and latitudes off the globe or out of order, which no point is inside."""</span>
+        <span class="n">edges</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"xmin"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span>
+            <span class="s2">"xmax"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span>
+            <span class="s2">"ymin"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span>
+            <span class="s2">"ymax"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">edges</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="n">got</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">edges</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Bounds need four finite numbers; got </span><span class="si">{</span><span class="n">got</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="o">-</span><span class="mf">90.0</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span> <span class="o">&lt;=</span> <span class="mf">90.0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Bounds need -90 &lt;= ymin &lt; ymax &lt;= 90 degrees latitude; got "</span>
+                <span class="sa">f</span><span class="s2">"ymin=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">, ymax=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
 
 <div class="viewcode-block" id="Bounds.contains">
 <a class="viewcode-back" href="../../reference/_api/stilt.Bounds.contains.html#stilt.Bounds.contains">[docs]</a>
@@ -685,6 +756,23 @@
 <span class="sd">    across 180 degrees is written ``xmin=170, xmax=190`` or ``xmin=170,</span>
 <span class="sd">    xmax=-170``. A footprint on either has longitudes 170 to 190. A grid</span>
 <span class="sd">    spans at most 360 degrees of longitude.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    An ``xmax`` written west of ``xmin`` is read as crossing 180 degrees</span>
+<span class="sd">    when ``xmin`` is east of 0 and ``xmax`` west of it, as in</span>
+<span class="sd">    ``xmin=170, xmax=-170``, or when an edge is written past 180 degrees</span>
+<span class="sd">    either way (``xmin=-170, xmax=-190``). With both in one hemisphere and</span>
+<span class="sd">    within 180 degrees, such as ``xmin=-110.5, xmax=-113``, the two are</span>
+<span class="sd">    most likely swapped, and the grid is refused rather than read as one</span>
+<span class="sd">    357.5 degrees wide. To have a grid that wide, write its east edge past</span>
+<span class="sd">    its west edge: ``xmin=-110.5, xmax=247``.</span>
+
+<span class="sd">    A grid is refused when pyproj cannot read its ``crs``, when no whole</span>
+<span class="sd">    cell fits in it, or when it has more than a billion cells (8 GB for</span>
+<span class="sd">    each time layer of a footprint). The last is most often a resolution in</span>
+<span class="sd">    degrees on a projected grid, whose ``xres`` and ``yres`` are in meters</span>
+<span class="sd">    for ``EPSG:32612``.</span>
 <span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -736,29 +824,51 @@
 
     <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_latitudes_and_cells</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Refuse latitudes off the globe and, on a longitude/latitude grid, a box that holds no whole cell."""</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="o">-</span><span class="mf">90.0</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span> <span class="o">&lt;=</span> <span class="mf">90.0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"A grid needs -90 &lt;= ymin &lt; ymax &lt;= 90 degrees latitude; got "</span>
-                <span class="sa">f</span><span class="s2">"ymin=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">, ymax=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
-            <span class="p">)</span>
+<span class="w">        </span><span class="sd">"""Refuse equal or swapped longitudes, an unreadable CRS, and a box with no whole cell or too many (:class:`Bounds` checks the latitudes)."""</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"A grid needs xmin and xmax to differ; both are </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
+        <span class="n">one_hemisphere</span> <span class="o">=</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">&lt;</span> <span class="mf">0.0</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span>
+        <span class="n">written_as_a_wrap</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">),</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mf">180.0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span> <span class="ow">and</span> <span class="n">one_hemisphere</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">written_as_a_wrap</span><span class="p">:</span>
+            <span class="n">east</span> <span class="o">=</span> <span class="n">_east_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"xmax=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> is west of xmin=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">, and both are "</span>
+                <span class="s2">"between 0 and 180 degrees on one side, so this grid would go "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">east</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> degrees east around the globe. If xmin and "</span>
+                <span class="s2">"xmax are swapped, swap them back. For a grid that wide, write its "</span>
+                <span class="sa">f</span><span class="s2">"east edge past its west edge: xmax=</span><span class="si">{</span><span class="n">east</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
-            <span class="c1"># The grid's own message, with the axis it is about.</span>
-            <span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span> <span class="n">res</span> <span class="ow">in</span> <span class="p">(</span>
-                <span class="p">(</span><span class="s2">"x"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">_east_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">xres</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"y"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yres</span><span class="p">),</span>
-            <span class="p">):</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">_grid_cell_count</span><span class="p">(</span><span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
-                <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2"> The </span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s2"> axis runs </span><span class="si">{</span><span class="n">low</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">high</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> "</span>
-                        <span class="sa">f</span><span class="s2">"with </span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s2">res=</span><span class="si">{</span><span class="n">res</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
-                    <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+            <span class="n">extent</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">_east_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">extent</span> <span class="o">=</span> <span class="n">_projected_extent</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span>
+            <span class="p">)</span>
+        <span class="c1"># The grid's own message, with the axis it is about.</span>
+        <span class="n">cells</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span> <span class="n">res</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="p">(</span><span class="s2">"x"</span><span class="p">,</span> <span class="n">extent</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">extent</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">xres</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">"y"</span><span class="p">,</span> <span class="n">extent</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">extent</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">yres</span><span class="p">),</span>
+        <span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">cells</span> <span class="o">*=</span> <span class="n">_grid_cell_count</span><span class="p">(</span><span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2"> The </span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s2"> axis runs </span><span class="si">{</span><span class="n">low</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">high</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> "</span>
+                    <span class="sa">f</span><span class="s2">"with </span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s2">res=</span><span class="si">{</span><span class="n">res</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
+                <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="k">if</span> <span class="n">cells</span> <span class="o">&gt;</span> <span class="n">_MAX_GRID_CELLS</span><span class="p">:</span>
+            <span class="n">units</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">"degrees"</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span>
+                <span class="k">else</span> <span class="sa">f</span><span class="s2">"the units of crs=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="si">!r}</span><span class="s2"> (</span><span class="si">{</span><span class="n">_crs_unit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"This grid has </span><span class="si">{</span><span class="n">cells</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> cells, more than the </span><span class="si">{</span><span class="n">_MAX_GRID_CELLS</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> "</span>
+                <span class="sa">f</span><span class="s2">"a footprint can be made on. Its xres and yres are in </span><span class="si">{</span><span class="n">units</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="nd">@property</span>
@@ -787,12 +897,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
             <span class="n">xmax</span> <span class="o">=</span> <span class="n">_east_edge</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
-
-            <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="n">corners_x</span><span class="p">,</span> <span class="n">corners_y</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">],</span> <span class="p">[</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">])</span>
-            <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">corners_x</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">corners_x</span><span class="p">))</span>
-            <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">corners_y</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">corners_y</span><span class="p">))</span>
+            <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">_projected_extent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">)</span>
 
         <span class="n">x_centers</span> <span class="o">=</span> <span class="n">_grid_cell_starts</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xres</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">xres</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="n">y_centers</span> <span class="o">=</span> <span class="n">_grid_cell_starts</span><span class="p">(</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yres</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">yres</span> <span class="o">/</span> <span class="mi">2</span>

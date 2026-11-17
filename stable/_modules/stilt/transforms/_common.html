@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.transforms._common &#8212; PYSTILT 0.1.0a28</title>
+    <title>stilt.transforms._common &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../../../_static/documentation_options.js?v=947601de"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -451,7 +451,7 @@
                   
   <h1>Source code for stilt.transforms._common</h1><div class="highlight"><pre>
 <span></span><span class="sd">"""</span>
-<span class="sd">What the transforms share: a particle's value of a column at release.</span>
+<span class="sd">What the transforms share: a particle's value of a column at release, and the length of each time step.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -485,6 +485,35 @@
         <span class="n">first</span><span class="p">[</span><span class="n">coordinate</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">first</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
     <span class="p">)</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">step_minutes</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the length of the time step that ends at each row, in minutes.</span>
+
+<span class="sd">    A particle's rows are ordered by elapsed time (``|age|``); its first</span>
+<span class="sd">    row's step runs from the release (age 0).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    particles : pandas.DataFrame</span>
+<span class="sd">        The particle table, with ``particle`` and ``age`` (minutes) columns.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.Series</span>
+<span class="sd">        The step length, aligned with ``particles``' index.</span>
+<span class="sd">    """</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Particle DataFrame has no </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2"> column(s)."</span><span class="p">)</span>
+    <span class="n">elapsed</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">elapsed</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">])</span><span class="o">.</span><span class="n">rank</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">"first"</span><span class="p">)</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="p">{</span><span class="s2">"particle"</span><span class="p">:</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">],</span> <span class="s2">"elapsed"</span><span class="p">:</span> <span class="n">elapsed</span><span class="p">,</span> <span class="s2">"order"</span><span class="p">:</span> <span class="n">order</span><span class="p">}</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"order"</span><span class="p">])</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">rows</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"particle"</span><span class="p">)[</span><span class="s2">"elapsed"</span><span class="p">]</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">"elapsed"</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">step</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">particles</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
 </pre></div>
 
                 </article>

@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Architecture &#8212; PYSTILT 0.1.0a28</title>
+    <title>Architecture &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../_static/documentation_options.js?v=947601de"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -553,6 +553,10 @@ surface. Everything else is internal and can change.</p>
                      with the settings its files record
   simulation.py      Simulation: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
+  background.py      background: the mole fraction at a receptor from a
+                     field sampled where the particles end (sim.background)
+  transport_error.py transport_error: the transport error of the
+                     enhancement, one receptor or a selection in threads
   config.py          ProjectConfig: reads config.yaml, splits the flat keys
                      into the model's config and the footprint's, rejects
                      unknown keys naming the nearest setting, checks each
@@ -569,12 +573,10 @@ surface. Everything else is internal and can change.</p>
     validation.py    the checks a receptor must pass, written once for many
                      points and shared by the models and the table
   particles/         the particle table (a DataFrame)
-    table.py         its columns, particle files, release heights, and the
-                     near-field plume correction
+    table.py         its columns, particle files, release heights, foot for
+                     a model that writes none, the near-field plume correction
+                     (which calc_footprint applies)
     accessor.py      the .stilt pandas accessor
-    background.py    the background at a receptor (sim.background)
-    transport_error.py  the transport error of the enhancement, one
-                        receptor or a selection in threads
   footprint/         the footprint (a DataArray)
     config.py        FootprintConfig and the geometry specs
     gridding.py      calc_footprint, as STILT-R's (fidelity-guarded)
@@ -603,7 +605,9 @@ surface. Everything else is internal and can change.</p>
   observations/      the X-STILT port: product readers and SOUNDING_SCHEMA,
                      overpass grouping and sounding selection, slant
                      geometry and receptors_from_soundings, modelled_column,
-                     plume backgrounds; arrays in, plain values out
+                     plume backgrounds; receptors_from_track for the
+                     track of a moving platform; arrays in, plain
+                     values out
   transport/         the TransportModel and TransportConfig protocols,
                      ModelRun, ModelInfo, get_model and its MODELS table,
                      run_model and run_trajectories (__init__.py); one
@@ -642,6 +646,16 @@ the project and calls <code class="docutils literal notranslate"><span class="pr
 The parquet file holds the submitted receptors’ checked rows, which the
 task’s project takes in place of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>. <code class="docutils literal notranslate"><span class="pre">submit</span></code> returns the job
 id at once, and <code class="docutils literal notranslate"><span class="pre">run</span></code> waits by polling <code class="docutils literal notranslate"><span class="pre">sacct</span></code>.</p>
+<p>When a simulation whose particles are missing uses a met that downloads
+(the transport model’s <code class="docutils literal notranslate"><span class="pre">downloads_met</span></code>), <code class="docutils literal notranslate"><span class="pre">submit</span></code> first submits
+<code class="docutils literal notranslate"><span class="pre">fetch.sh</span></code> (<code class="docutils literal notranslate"><span class="pre">fetch_script</span></code>), one task of <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span> <span class="pre">--receptors</span>
+<span class="pre">receptors.parquet</span></code> with the resources of <code class="docutils literal notranslate"><span class="pre">execution.fetch</span></code>, and gives the
+array <code class="docutils literal notranslate"><span class="pre">--dependency=afterany:&lt;fetch</span> <span class="pre">job&gt;</span></code>. <code class="docutils literal notranslate"><span class="pre">afterany</span></code> because Slurm
+cannot tell <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span></code>’s exit 1 (some files missing) from 3 (stopped,
+archive unreachable), and in both cases the runs whose met is there should
+go. A local run with <code class="docutils literal notranslate"><span class="pre">cpus</span></code> above 1 calls <code class="docutils literal notranslate"><span class="pre">Project.fetch</span></code> before the pool
+starts, for the same reason: workers that start the same file download it
+twice. A task (<code class="docutils literal notranslate"><span class="pre">--task</span></code>) never fetches.</p>
 <p>A task that stops with work left requeues itself (<code class="docutils literal notranslate"><span class="pre">scontrol</span> <span class="pre">requeue</span></code>) when
 it got SIGUSR1, which the script asks for two minutes before the time limit
 (<code class="docutils literal notranslate"><span class="pre">--signal=B:USR1&#64;120</span></code>), or when it was preempted (Slurm set the job’s
@@ -765,6 +779,20 @@ short contracts hold what a layer cannot: only <code class="docutils literal not
 results and runs nothing. STILT-R ran HYSPLIT, so the STILT-R reader and the
 <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> model are the named exceptions: they read HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>
 and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> files and record HYSPLIT’s settings.</p>
+<p>A third short contract holds the line between the core that makes particle
+runs and what STILT adds on top of the particles: footprints, transforms,
+observations, sampling fields at particles, background, transport error and
+the STILT-R model. Outside those modules nothing imports them, except where
+the contract’s <code class="docutils literal notranslate"><span class="pre">ignore_imports</span></code> lists it, each with its reason: the
+variant’s footprint settings, the output and <code class="docutils literal notranslate"><span class="pre">Simulation</span></code> code that writes
+and reads footprint files, the worker’s footprint step, <code class="docutils literal notranslate"><span class="pre">Project</span></code>’s bulk
+reads, <code class="docutils literal notranslate"><span class="pre">check</span></code>’s look at a variant’s transforms, and <code class="docutils literal notranslate"><span class="pre">add_foot</span></code>’s use of
+<code class="docutils literal notranslate"><span class="pre">sample_met</span></code>. The list is the work a code
+boundary would leave; a new crossing fails <code class="docutils literal notranslate"><span class="pre">just</span> <span class="pre">imports</span></code>. Two crossings
+are not imports between modules, so the contract cannot see them: the
+near-field correction (which only the footprint side calls) and
+<code class="docutils literal notranslate"><span class="pre">add_foot</span></code> are functions in <code class="docutils literal notranslate"><span class="pre">stilt.particles.table</span></code>, and a package’s <code class="docutils literal notranslate"><span class="pre">__init__</span></code> importing its own
+module (the transport registry and the STILT-R model) is not checked.</p>
 </section>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">#</a></h2>
@@ -780,7 +808,10 @@ through <code class="docutils literal notranslate"><span class="pre">stilt.trans
 <li><p>A model is a variant axis, like a met. A variant that names another
 <code class="docutils literal notranslate"><span class="pre">model</span></code> gives that model’s own parameters itself, and inherits the met,
 the footprint fields, and the parameters PYSTILT’s own code reads (the base
-<code class="docutils literal notranslate"><span class="pre">TransportConfig</span></code>: <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">seed</span></code>, <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>, <code class="docutils literal notranslate"><span class="pre">veght</span></code>). A
+<code class="docutils literal notranslate"><span class="pre">TransportConfig</span></code>: <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">seed</span></code>, <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code>,
+<code class="docutils literal notranslate"><span class="pre">pbl_height</span></code>, <code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code>). <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is a footprint field:
+the near-field correction is applied when a footprint is made, so a stored
+particle file holds the model’s <code class="docutils literal notranslate"><span class="pre">foot</span></code>. A
 parameter goes on the base only when the core reads it; <code class="docutils literal notranslate"><span class="pre">numpar</span></code> and
 every <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> setting are HYSPLIT’s.</p></li>
 <li><p>When it loads, <code class="docutils literal notranslate"><span class="pre">ProjectConfig</span></code> checks each declared variant against the

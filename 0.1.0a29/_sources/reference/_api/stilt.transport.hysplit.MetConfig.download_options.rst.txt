@@ -1,0 +1,6 @@
+stilt.transport.hysplit.MetConfig.download\_options
+===================================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+.. autoproperty:: MetConfig.download_options

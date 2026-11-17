@@ -1,0 +1,6 @@
+stilt.transport.hysplit.HysplitModel.check\_met
+===============================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+.. automethod:: HysplitModel.check_met

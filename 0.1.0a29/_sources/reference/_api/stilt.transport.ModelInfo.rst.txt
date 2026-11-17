@@ -1,0 +1,19 @@
+﻿stilt.transport.ModelInfo
+=========================
+
+.. currentmodule:: stilt.transport
+
+
+
+
+.. class-signature:: stilt.transport.ModelInfo
+
+
+.. class-parameters:: stilt.transport.ModelInfo
+
+
+
+
+
+
+

@@ -1,0 +1,6 @@
+stilt.particles.ParticlesAccessor.plot
+======================================
+
+.. currentmodule:: stilt.particles
+
+.. autoproperty:: ParticlesAccessor.plot

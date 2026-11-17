@@ -88,6 +88,10 @@ Module map
                         with the settings its files record
      simulation.py      Simulation: a frozen value (receptor, variant, output)
                         that knows where its results are and whether they exist
+     background.py      background: the mole fraction at a receptor from a
+                        field sampled where the particles end (sim.background)
+     transport_error.py transport_error: the transport error of the
+                        enhancement, one receptor or a selection in threads
      config.py          ProjectConfig: reads config.yaml, splits the flat keys
                         into the model's config and the footprint's, rejects
                         unknown keys naming the nearest setting, checks each
@@ -104,12 +108,10 @@ Module map
        validation.py    the checks a receptor must pass, written once for many
                         points and shared by the models and the table
      particles/         the particle table (a DataFrame)
-       table.py         its columns, particle files, release heights, and the
-                        near-field plume correction
+       table.py         its columns, particle files, release heights, foot for
+                        a model that writes none, the near-field plume correction
+                        (which calc_footprint applies)
        accessor.py      the .stilt pandas accessor
-       background.py    the background at a receptor (sim.background)
-       transport_error.py  the transport error of the enhancement, one
-                           receptor or a selection in threads
      footprint/         the footprint (a DataArray)
        config.py        FootprintConfig and the geometry specs
        gridding.py      calc_footprint, as STILT-R's (fidelity-guarded)
@@ -138,7 +140,9 @@ Module map
      observations/      the X-STILT port: product readers and SOUNDING_SCHEMA,
                         overpass grouping and sounding selection, slant
                         geometry and receptors_from_soundings, modelled_column,
-                        plume backgrounds; arrays in, plain values out
+                        plume backgrounds; receptors_from_track for the
+                        track of a moving platform; arrays in, plain
+                        values out
      transport/         the TransportModel and TransportConfig protocols,
                         ModelRun, ModelInfo, get_model and its MODELS table,
                         run_model and run_trajectories (__init__.py); one
@@ -177,6 +181,17 @@ receptors.parquet --task $SLURM_ARRAY_TASK_ID/N --execution execution.yaml``.
 The parquet file holds the submitted receptors' checked rows, which the
 task's project takes in place of ``receptors.csv``. ``submit`` returns the job
 id at once, and ``run`` waits by polling ``sacct``.
+
+When a simulation whose particles are missing uses a met that downloads
+(the transport model's ``downloads_met``), ``submit`` first submits
+``fetch.sh`` (``fetch_script``), one task of ``stilt fetch --receptors
+receptors.parquet`` with the resources of ``execution.fetch``, and gives the
+array ``--dependency=afterany:<fetch job>``. ``afterany`` because Slurm
+cannot tell ``stilt fetch``'s exit 1 (some files missing) from 3 (stopped,
+archive unreachable), and in both cases the runs whose met is there should
+go. A local run with ``cpus`` above 1 calls ``Project.fetch`` before the pool
+starts, for the same reason: workers that start the same file download it
+twice. A task (``--task``) never fetches.
 
 A task that stops with work left requeues itself (``scontrol requeue``) when
 it got SIGUSR1, which the script asks for two minutes before the time limit
@@ -320,6 +335,21 @@ results and runs nothing. STILT-R ran HYSPLIT, so the STILT-R reader and the
 ``stilt-r`` model are the named exceptions: they read HYSPLIT's ``CONTROL``
 and ``SETUP.CFG`` files and record HYSPLIT's settings.
 
+A third short contract holds the line between the core that makes particle
+runs and what STILT adds on top of the particles: footprints, transforms,
+observations, sampling fields at particles, background, transport error and
+the STILT-R model. Outside those modules nothing imports them, except where
+the contract's ``ignore_imports`` lists it, each with its reason: the
+variant's footprint settings, the output and ``Simulation`` code that writes
+and reads footprint files, the worker's footprint step, ``Project``'s bulk
+reads, ``check``'s look at a variant's transforms, and ``add_foot``'s use of
+``sample_met``. The list is the work a code
+boundary would leave; a new crossing fails ``just imports``. Two crossings
+are not imports between modules, so the contract cannot see them: the
+near-field correction (which only the footprint side calls) and
+``add_foot`` are functions in ``stilt.particles.table``, and a package's ``__init__`` importing its own
+module (the transport registry and the STILT-R model) is not checked.
+
 Configuration
 -------------
 
@@ -335,7 +365,10 @@ Configuration
 - A model is a variant axis, like a met. A variant that names another
   ``model`` gives that model's own parameters itself, and inherits the met,
   the footprint fields, and the parameters PYSTILT's own code reads (the base
-  ``TransportConfig``: ``n_hours``, ``seed``, ``hnf_plume``, ``veght``). A
+  ``TransportConfig``: ``n_hours``, ``seed``, ``footprint_depth``,
+  ``pbl_height``, ``pbl_height_min``). ``hnf_plume`` is a footprint field:
+  the near-field correction is applied when a footprint is made, so a stored
+  particle file holds the model's ``foot``. A
   parameter goes on the base only when the core reads it; ``numpar`` and
   every ``SETUP.CFG`` setting are HYSPLIT's.
 - When it loads, ``ProjectConfig`` checks each declared variant against the

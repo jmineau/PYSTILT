@@ -37,6 +37,7 @@ Methods
    ~FootprintAccessor.aggregate
    ~FootprintAccessor.enhancement
    ~FootprintAccessor.to_netcdf
+   ~FootprintAccessor.to_paris
 
 
 

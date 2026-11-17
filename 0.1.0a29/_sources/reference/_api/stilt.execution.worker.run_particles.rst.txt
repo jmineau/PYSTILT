@@ -1,0 +1,6 @@
+﻿stilt.execution.worker.run\_particles
+=====================================
+
+.. currentmodule:: stilt.execution.worker
+
+.. autofunction:: run_particles

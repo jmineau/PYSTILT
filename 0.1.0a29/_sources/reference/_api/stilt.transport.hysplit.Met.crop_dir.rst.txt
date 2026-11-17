@@ -1,0 +1,6 @@
+stilt.transport.hysplit.Met.crop\_dir
+=====================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+.. autoproperty:: Met.crop_dir

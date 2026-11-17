@@ -1,0 +1,28 @@
+﻿stilt.footprint.Jacobian
+========================
+
+.. currentmodule:: stilt.footprint
+
+
+
+
+.. class-signature:: stilt.footprint.Jacobian
+
+
+.. class-parameters:: stilt.footprint.Jacobian
+
+
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~Jacobian.to_frame
+   ~Jacobian.to_xarray
+
+
+

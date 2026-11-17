@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Roadmap &#8212; PYSTILT 0.1.0a28</title>
+    <title>Roadmap &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../_static/documentation_options.js?v=947601de"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -63,7 +63,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -134,7 +134,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -496,6 +496,9 @@ project. Transport-error ensembles and extra footprints are variants too.</p></l
 and footprints (<a class="reference internal" href="../reference/_api/stilt.migration.read_stilt_r.html#stilt.migration.read_stilt_r" title="stilt.migration.read_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.migration.read_stilt_r()</span></code></a>), and importing it
 into an output directory, where a <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> variant reads it
 (<a class="reference internal" href="../reference/_api/stilt.migration.import_stilt_r.html#stilt.migration.import_stilt_r" title="stilt.migration.import_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.migration.import_stilt_r()</span></code></a>)</p></li>
+<li><p>Exports to other tools: the particles as CF-1.10 trajectories for trajan
+and cf-xarray (<code class="docutils literal notranslate"><span class="pre">particles.stilt.to_cf_trajectories</span></code>), and a footprint in
+openghg’s PARIS format (<code class="docutils literal notranslate"><span class="pre">foot.stilt.to_paris</span></code>)</p></li>
 </ul>
 <p>Footprints can also be summed onto other geometries. A footprint is computed
 on a rectangular grid and then summed onto a <a class="reference internal" href="../reference/_api/stilt.Grid.html#stilt.Grid" title="stilt.Grid"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Grid</span></code></a>, a
@@ -537,7 +540,7 @@ each a <code class="docutils literal notranslate"><span class="pre">stilt</span>
 <tr class="row-even"><td><p>A check of a project’s met files, grid, and kernel table before any run (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code>, <code class="docutils literal notranslate"><span class="pre">project.check()</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-odd"><td><p>Getting the met files a project’s runs need once, before many workers start (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span></code>, <code class="docutils literal notranslate"><span class="pre">project.fetch()</span></code>)</p></td>
+<tr class="row-odd"><td><p>Getting the met files a project’s runs need once, before many workers start (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span></code>, <code class="docutils literal notranslate"><span class="pre">project.fetch()</span></code>, and a fetch job before <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code>’s array)</p></td>
 <td><p>Implemented</p></td>
 </tr>
 <tr class="row-even"><td><p>Slurm job arrays, with preempted tasks resubmitted</p></td>
@@ -557,6 +560,12 @@ each a <code class="docutils literal notranslate"><span class="pre">stilt</span>
 </tr>
 <tr class="row-odd"><td><p>Met columns (<code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">dens</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code>, <code class="docutils literal notranslate"><span class="pre">zsfc</span></code>) sampled at particle positions, for a model that writes only positions (<code class="docutils literal notranslate"><span class="pre">stilt.sampling.sample_met</span></code>)</p></td>
 <td><p>Implemented (see the Meteorology guide for how closely <code class="docutils literal notranslate"><span class="pre">pres</span></code> and <code class="docutils literal notranslate"><span class="pre">dens</span></code> match HYSPLIT’s)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">foot</span></code> computed from the met files for a model that writes only positions, so its particles make footprints (<code class="docutils literal notranslate"><span class="pre">stilt.particles.add_foot</span></code>)</p></td>
+<td><p>Implemented (no near-field correction for such a model; see Validation for how far a footprint moves)</p></td>
+</tr>
+<tr class="row-odd"><td><p>The mixed-layer height for a computed <code class="docutils literal notranslate"><span class="pre">foot</span></code>: the met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code>, HYSPLIT’s Richardson-number method (<code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code>), or a fixed depth, with a minimum (<code class="docutils literal notranslate"><span class="pre">pbl_height</span></code>, <code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code>)</p></td>
+<td><p>Implemented (HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">1</span></code> and <code class="docutils literal notranslate"><span class="pre">2</span></code> are not ported)</p></td>
 </tr>
 </tbody>
 </table>
@@ -591,6 +600,12 @@ feature.</p>
 <tr class="row-odd"><td><p>First-order lifetime decay transform</p></td>
 <td><p>Implemented</p></td>
 </tr>
+<tr class="row-even"><td><p>Dry deposition transform (<code class="docutils literal notranslate"><span class="pre">dry_deposition</span></code>)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>Oxidation transform (<code class="docutils literal notranslate"><span class="pre">oxidation</span></code>) and <code class="docutils literal notranslate"><span class="pre">survival</span></code> for any loss rate</p></td>
+<td><p>Implemented</p></td>
+</tr>
 <tr class="row-even"><td><p>Declarative transforms in config YAML (default or per variant)</p></td>
 <td><p>Implemented</p></td>
 </tr>
@@ -609,7 +624,7 @@ feature.</p>
 <tr class="row-odd"><td><p>A receptor and a kernel for each sounding (<code class="docutils literal notranslate"><span class="pre">receptors_from_soundings</span></code>, <code class="docutils literal notranslate"><span class="pre">project.add_table</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>Product readers (OCO-2/3, TROPOMI, TCCON)</p></td>
+<tr class="row-even"><td><p>Product readers (OCO-2/3, TROPOMI, TCCON, EM27/SUN from GGG or PROFFAST)</p></td>
 <td><p>Implemented (see <em>Reading Retrieval Products</em>); other instruments as one module each</p></td>
 </tr>
 <tr class="row-odd"><td><p>Transport error on the modeled enhancement (<code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code>)</p></td>
@@ -639,6 +654,26 @@ correlated case is fips’s <code class="docutils literal notranslate"><span cla
 </tr>
 <tr class="row-odd"><td><p>Inventory readers</p></td>
 <td><p>Out of scope; a flux field is an xarray array</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="mobile-measurements">
+<h2>Mobile measurements<a class="headerlink" href="#mobile-measurements" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 75.0%" />
+<col style="width: 25.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Feature</p></th>
+<th class="head"><p>Status</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Receptors along the track of a car, train, aircraft, or ship, and each measurement’s receptor (<code class="docutils literal notranslate"><span class="pre">receptors_from_track</span></code>)</p></td>
+<td><p>Implemented (see the <em>Mobile Measurements</em> guide)</p></td>
 </tr>
 </tbody>
 </table>
@@ -698,6 +733,7 @@ setting can name groups of cells.</p></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#current-status">Current status</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#execution-call-path-from-stiltctl">Execution (call path from stiltctl)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#column-and-satellite-science-from-x-stilt">Column and satellite science (from X-STILT)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mobile-measurements">Mobile measurements</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#future-plans">Future plans</a></li>
 </ul>
   </nav></div>

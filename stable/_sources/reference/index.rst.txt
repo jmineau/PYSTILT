@@ -5,8 +5,8 @@ Every public class and function, grouped by what it is for. To find out how
 to do something, start with the :doc:`../guides/index` instead.
 
 :doc:`core`
-   ``Project``, receptors, simulations, particles, footprints, spatial
-   geometries, and flux sampling.
+   ``Project``, receptors, simulations, particles, footprints, the
+   background and transport error, spatial geometries, and sampling.
 
 :doc:`particles`
    The particle table a transport model run gives: its columns and units.
@@ -24,13 +24,13 @@ to do something, start with the :doc:`../guides/index` instead.
    Running simulations locally or on Slurm.
 
 :doc:`transforms`
-   Particle weighting: averaging kernels, pressure weighting, and lifetime
-   decay.
+   Particle weighting: averaging kernels, pressure weighting, and the loss
+   of a species to decay, deposition, or oxidation.
 
 :doc:`observations`
-   Column and satellite work: product readers and their columns, sounding
-   selection, receptors from soundings, slant geometry, the modeled
-   column, and plume backgrounds.
+   Column, satellite and mobile measurements: product readers and their
+   columns, sounding selection, receptors from soundings and from tracks,
+   slant geometry, the modeled column, and plume backgrounds.
 
 :doc:`project`
    The project, its simulations, and the output directory.

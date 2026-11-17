@@ -1,0 +1,6 @@
+﻿stilt.observations.receptors\_from\_track
+=========================================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: receptors_from_track

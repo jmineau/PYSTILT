@@ -54,6 +54,10 @@ stop on it.
    * - Check
      - What it found
      - What to do
+   * - ``receptors``
+     - The project has no receptors: ``receptors.csv`` is missing or holds
+       only its header, as ``stilt init`` writes it.
+     - Add receptors (:doc:`receptors`).
    * - ``met_directory``
      - A met's ``directory`` does not exist or holds no ARL file.
      - Correct ``directory`` under ``mets:``. A met with ``download`` makes
@@ -64,6 +68,11 @@ stop on it.
        two files.
      - Add the files, or keep each product in its own folder
        (:doc:`meteorology`).
+   * - ``met_domain``
+     - With the crop off, a receptor lies outside the grid of the met files
+       its run starts in, where HYSPLIT cannot start particles ("source
+       point off grid"). The grid is read from a file's header.
+     - Use met files whose domain holds the receptor, or move the receptor.
    * - ``met_crop``
      - With ``subgrid_enable`` on, a receptor lies outside
        ``subgrid_bounds``, where HYSPLIT cannot start particles.
@@ -88,6 +97,10 @@ stop on it.
      - Make the table with ``project.add_table("kernels", table)``
        (:func:`~stilt.transforms.averaging_kernel_table`). Ids that differ
        from the receptors' in a digit were made from other coordinates.
+   * - ``oxidant_file``
+     - The ``oxidation`` transform's ``oxidant`` file does not exist, cannot
+       be read, or lacks the variable it names.
+     - Correct the path (relative to the project folder) or ``variable``.
    * - ``zsfc``
      - ``varsiwant`` lacks ``zsfc``, the terrain height, and a receptor
        given above sea level (``altitude_ref="msl"``) needs it for the
@@ -96,8 +109,10 @@ stop on it.
      - Add ``zsfc`` to ``varsiwant`` before the runs. It is a run setting,
        so adding it later makes the particles again in a new folder.
 
-``stilt check`` reads the headers of the met files, not every record, so a
-file damaged in the middle passes and fails the run that opens it.
+A transform of your own can add rows of its own (:doc:`transforms`,
+"Writing your own transform"). ``stilt check`` reads the headers of the met
+files, not every record, so a file damaged in the middle passes and fails
+the run that opens it.
 
 In Python, ``project.check()`` returns the same table, one row for each
 thing found. It is empty for the sample project, which has everything its
@@ -285,8 +300,9 @@ The number of particles
 The near-field correction
    ``hnf_plume`` (on by default) corrects the footprint close to the
    receptor, where particles have not yet mixed through the boundary
-   layer. A run with it off shows how much of the footprint is near the
-   receptor.
+   layer. It is a footprint setting, so a variant with ``hnf_plume: false``
+   shares your variant's particles and runs no transport model; its
+   footprint shows how much of yours is near the receptor.
 
 The units
    Footprints are in ppm per (µmol m⁻² s⁻¹), per time layer (an hour unless

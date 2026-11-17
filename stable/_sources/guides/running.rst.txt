@@ -128,21 +128,28 @@ Commands
    ``receptors.csv``.
 
 ``stilt check <project>``
-   List what would stop the project's runs, before any run starts: a met
-   directory that does not exist, met files a receptor's run needs that
-   are not there, a receptor outside the met's crop or the footprint grid,
-   and an averaging-kernel table that does not match the receptors. Nothing
-   is run or downloaded. It exits with 0 when it finds nothing and 1 when
-   it lists anything (:doc:`checking`).
+   List what would stop the project's runs, before any run starts, such as
+   met files a receptor's run needs that are not there, a receptor outside
+   the met's crop or the footprint grid, or a transform's input that is
+   missing. Nothing is run or downloaded. It exits with 0 when it finds
+   nothing and 1 when it lists anything (:doc:`checking` lists every
+   check).
 
 ``stilt fetch <project>``
    Get the met files the unfinished simulations need, then exit. A met with
    ``download`` downloads what is missing, cropped to its subgrid, so the
    runs that follow download nothing; a met without it is only checked for
-   missing files. ``--output DIR`` is as for ``stilt run``. It exits with 0
-   when every file is there, 1 when the archive lacks some, and 3 when it
-   was stopped (Ctrl-C or SIGTERM) or the archive was busy or unreachable
-   (:ref:`fetch-once`).
+   missing files. ``--receptors FILE`` and ``--output DIR`` are as for
+   ``stilt run``. It exits with 0 when every file is there, 1 when the
+   archive lacks some, and 3 when it was stopped (Ctrl-C or SIGTERM) or the
+   archive was busy or unreachable (:ref:`fetch-once`).
+
+   ``stilt submit`` and ``stilt run`` fetch first on their own: on Slurm in
+   a job the array waits for (:ref:`slurm-fetch`), and locally before the
+   workers start when ``cpus`` is above 1. Run ``stilt fetch`` yourself to
+   see whether the archive has every file before you submit, or before you
+   start tasks with ``stilt run --task`` from another scheduler, which does
+   not fetch first (:doc:`containers`).
 
 ``stilt run <project>``
    Run every unfinished simulation and wait until they are done, here or

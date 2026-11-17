@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.transforms.lifetime &#8212; PYSTILT 0.1.0a28</title>
+    <title>stilt.transforms.lifetime &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../../../_static/documentation_options.js?v=947601de"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -451,7 +451,7 @@
                   
   <h1>Source code for stilt.transforms.lifetime</h1><div class="highlight"><pre>
 <span></span><span class="sd">"""</span>
-<span class="sd">The first-order lifetime transform: decay each particle's ``foot`` with its age.</span>
+<span class="sd">Loss along the trajectory: the surviving fraction for any rate, and the first-order lifetime transform.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -461,10 +461,83 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms._common</span><span class="w"> </span><span class="kn">import</span> <span class="n">step_minutes</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+
+
+<div class="viewcode-block" id="survival">
+<a class="viewcode-back" href="../../../reference/_api/stilt.transforms.survival.html#stilt.transforms.survival">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">survival</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
+<span class="sd">    Return the fraction of a tracer that survives from each row to the receptor.</span>
+
+<span class="sd">    Use it for a loss whose rate is known at every row and does not depend</span>
+<span class="sd">    on how much tracer the particle carries: a reaction with an oxidant,</span>
+<span class="sd">    deposition, rain-out, or a lifetime from your own chemistry model. The</span>
+<span class="sd">    fraction emitted at a row is the fraction that reaches the receptor, so</span>
+<span class="sd">    ``foot`` times it is still a footprint.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    particles : pandas.DataFrame</span>
+<span class="sd">        The particle table, with ``particle`` and ``age`` (minutes) columns.</span>
+<span class="sd">    rate : array-like</span>
+<span class="sd">        The loss rate at each row, in s⁻¹, aligned with ``particles``. Zero</span>
+<span class="sd">        where there is no loss.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.Series</span>
+<span class="sd">        The surviving fraction, between 0 and 1, aligned with</span>
+<span class="sd">        ``particles``' index.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If a column is missing, ``rate`` has the wrong length, or a rate is</span>
+<span class="sd">        negative or missing.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The fraction at a row is :math:`\exp(-\sum k \, \Delta t)` over the</span>
+<span class="sd">    steps from the release to that row, where each row stands for the step</span>
+<span class="sd">    that ends at it (a particle's first step runs from the release) and :math:`k` is that row's</span>
+<span class="sd">    rate. A rate that changes slowly between rows, such as one set by</span>
+<span class="sd">    temperature or an oxidant field, needs no particular step; a rate that</span>
+<span class="sd">    switches on and off within a step, such as deposition below a fixed</span>
+<span class="sd">    height, needs short steps (:func:`dry_deposition_survival` asks for</span>
+<span class="sd">    one-minute rows).</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import pandas as pd</span>
+<span class="sd">    &gt;&gt;&gt; from stilt.transforms import survival</span>
+<span class="sd">    &gt;&gt;&gt; p = pd.DataFrame({"particle": [1, 1, 1], "age": [-60.0, -120.0, -180.0]})</span>
+<span class="sd">    &gt;&gt;&gt; survival(p, rate=[1e-4, 1e-4, 0.0]).round(4).tolist()</span>
+<span class="sd">    [0.6977, 0.4868, 0.4868]</span>
+<span class="sd">    """</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rate</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">),):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"rate has </span><span class="si">{</span><span class="n">k</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> values for </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span><span class="si">}</span><span class="s2"> particle rows."</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">or</span> <span class="p">(</span><span class="n">k</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"rate must be zero or positive at every row, with no NaN."</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">step_minutes</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">k</span> <span class="o">*</span> <span class="n">step</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">*</span> <span class="mf">60.0</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">particles</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+    <span class="c1"># Add the losses up from the release, one particle at a time.</span>
+    <span class="n">elapsed</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">lexsort</span><span class="p">((</span><span class="n">elapsed</span><span class="p">,</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()))</span>
+    <span class="n">cumulative</span> <span class="o">=</span> <span class="n">loss</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">order</span><span class="p">]</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">order</span><span class="p">])</span><span class="o">.</span><span class="n">cumsum</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">cumulative</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()),</span> <span class="n">index</span><span class="o">=</span><span class="n">cumulative</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span>
+        <span class="n">particles</span><span class="o">.</span><span class="n">index</span>
+    <span class="p">)</span></div>
+
 
 
 <div class="viewcode-block" id="FirstOrderLifetime">

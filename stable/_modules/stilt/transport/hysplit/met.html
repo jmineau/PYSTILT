@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.transport.hysplit.met &#8212; PYSTILT 0.1.0a28</title>
+    <title>stilt.transport.hysplit.met &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../../../../_static/documentation_options.js?v=947601de"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -465,6 +465,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Self</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">PrivateAttr</span><span class="p">,</span> <span class="n">model_validator</span>
 
@@ -941,9 +942,10 @@
 <span class="sd">        The file check that :meth:`files_for` makes for each run, made for</span>
 <span class="sd">        every receptor at once: the met's ``directory`` exists and holds an</span>
 <span class="sd">        ARL file, and every file a run needs is there, holds at least two</span>
-<span class="sd">        time periods, and ends on a whole time step. With the crop on, a</span>
-<span class="sd">        receptor outside ``subgrid_bounds`` is listed too, since HYSPLIT</span>
-<span class="sd">        cannot start a particle outside the files. A met with ``download``</span>
+<span class="sd">        time periods, and ends on a whole time step. A receptor outside the</span>
+<span class="sd">        files is listed too, since HYSPLIT cannot start a particle there:</span>
+<span class="sd">        outside ``subgrid_bounds`` with the crop on, else outside the grid of</span>
+<span class="sd">        the first file its run reads. A met with ``download``</span>
 <span class="sd">        has no files to look for before a run, so only its crop is checked.</span>
 
 <span class="sd">        This brings the tables of what the files and their crops hold up to</span>
@@ -965,7 +967,7 @@
 <span class="sd">        -------</span>
 <span class="sd">        pandas.DataFrame</span>
 <span class="sd">            One row for each thing found, with ``check`` (``met_directory``,</span>
-<span class="sd">            ``met_files``, ``met_periods``, ``met_cut``, or ``met_crop``), ``receptor`` (``NA`` when the</span>
+<span class="sd">            ``met_files``, ``met_periods``, ``met_cut``, ``met_domain``, or ``met_crop``), ``receptor`` (``NA`` when the</span>
 <span class="sd">            finding is about the met), and ``message`` columns. Empty when</span>
 <span class="sd">            nothing would stop a run.</span>
 <span class="sd">        """</span>
@@ -1001,6 +1003,7 @@
         <span class="n">messages</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">single</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">cut</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">starts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">time</span> <span class="ow">in</span> <span class="n">first</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">():</span>
             <span class="n">earlier</span><span class="p">,</span> <span class="n">later</span> <span class="o">=</span> <span class="p">(</span><span class="n">_time</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">run_window</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">))</span>
             <span class="n">cover</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cover</span><span class="p">(</span><span class="n">earlier</span><span class="p">,</span> <span class="n">later</span><span class="p">)</span>
@@ -1009,6 +1012,8 @@
             <span class="p">)</span>
             <span class="n">single</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">cover</span><span class="o">.</span><span class="n">single</span><span class="p">))</span>
             <span class="n">cut</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">cover</span><span class="o">.</span><span class="n">cut</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">cover</span><span class="o">.</span><span class="n">files</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">subgrid_enable</span><span class="p">:</span>
+                <span class="n">starts</span><span class="p">[</span><span class="n">time</span><span class="p">]</span> <span class="o">=</span> <span class="n">cover</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
             <span class="p">(</span><span class="s2">"met_files"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">rid</span><span class="p">),</span> <span class="n">message</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">rid</span><span class="p">,</span> <span class="n">time</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">first</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">],</span> <span class="n">first</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -1028,6 +1033,45 @@
             <span class="p">)</span>
             <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">cut</span>
         <span class="p">]</span>
+        <span class="k">return</span> <span class="n">found</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outside_domain</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">starts</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_outside_domain</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">starts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        List the receptors with a release point outside the grid of the met files their run starts in.</span>
+
+<span class="sd">        *starts* is the first file of each release time's run. The grid is</span>
+<span class="sd">        read from one file's header for each grid the catalog lists among</span>
+<span class="sd">        them, so a large archive costs a read or two. A cropped met is not</span>
+<span class="sd">        looked at here: its crop box is (:meth:`_outside_crop`).</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">starts</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">grid_of</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="s2">"resolved"</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="s2">"grid"</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">file_of_grid</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">starts</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">file_of_grid</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">grid_of</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)),</span> <span class="n">path</span><span class="p">)</span>
+        <span class="n">file_of_time</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">time</span><span class="p">:</span> <span class="n">file_of_grid</span><span class="p">[</span><span class="n">grid_of</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))]</span>
+            <span class="k">for</span> <span class="n">time</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">starts</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">}</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">receptors</span><span class="p">[</span><span class="n">receptors</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">file_of_time</span><span class="p">))]</span>
+        <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">file_of_time</span><span class="p">),</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+            <span class="n">outside</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="o">~</span><span class="n">_on_grid</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)),</span> <span class="n">group</span><span class="p">)]</span>
+            <span class="n">found</span> <span class="o">+=</span> <span class="p">[</span>
+                <span class="p">(</span>
+                    <span class="s2">"met_domain"</span><span class="p">,</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">receptor</span><span class="p">),</span>
+                    <span class="sa">f</span><span class="s2">"longitude </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">longitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> and latitude </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">latitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> are "</span>
+                    <span class="sa">f</span><span class="s2">"outside the met's domain, the grid of </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: HYSPLIT "</span>
+                    <span class="s2">"cannot start particles there."</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">outside</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span><span class="o">.</span><span class="n">itertuples</span><span class="p">()</span>
+            <span class="p">]</span>
         <span class="k">return</span> <span class="n">found</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_outside_crop</span><span class="p">(</span>
@@ -1328,6 +1372,27 @@
         <span class="k">return</span> <span class="p">(),</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">),)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_on_grid</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">points</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return whether each point (``longitude``, ``latitude``) is within the grid of the ARL file at *path*.</span>
+
+<span class="sd">    Within means from its first grid point to its last in each direction;</span>
+<span class="sd">    a longitude/latitude grid that goes all the way round holds every</span>
+<span class="sd">    longitude.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">arlmet</span><span class="w"> </span><span class="kn">import</span> <span class="n">probe</span>
+
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">probe</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">fractional_indices</span><span class="p">(</span>
+        <span class="n">points</span><span class="p">[</span><span class="s2">"longitude"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+        <span class="n">points</span><span class="p">[</span><span class="s2">"latitude"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">inside</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y</span> <span class="o">&lt;=</span> <span class="n">grid</span><span class="o">.</span><span class="n">ny</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">grid</span><span class="o">.</span><span class="n">wraps_lon</span><span class="p">:</span>
+        <span class="n">inside</span> <span class="o">&amp;=</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">grid</span><span class="o">.</span><span class="n">nx</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">inside</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_holds_as</span><span class="p">(</span><span class="n">crop</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Whether the ARL file *crop* holds the time steps *source* holds, whole.</span>
@@ -1386,7 +1451,7 @@
 <span class="sd">    FileNotFoundError</span>
 <span class="sd">        If *directory* does not exist, or no file under it is an ARL file.</span>
 <span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">arlmet</span><span class="w"> </span><span class="kn">import</span> <span class="n">IndexRecord</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">arlmet.record</span><span class="w"> </span><span class="kn">import</span> <span class="n">IndexRecord</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">directory</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
         <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2"> does not exist."</span><span class="p">)</span>

@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Particle Weighting (Transforms) &#8212; PYSTILT 0.1.0a28</title>
+    <title>Particle Weighting (Transforms) &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../_static/documentation_options.js?v=947601de"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -53,19 +53,19 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Your Own HYSPLIT Build And Data Tables" href="hysplit_build.html" />
-    <link rel="prev" title="Slant Columns" href="slant_columns.html" />
+    <link rel="next" title="Running" href="running.html" />
+    <link rel="prev" title="Choosing Settings" href="choosing_settings.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -136,7 +136,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -411,11 +411,13 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
-<ul class="nav bd-sidenav">
+<ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
 <li class="toctree-l1"><a class="reference internal" href="choosing_settings.html">Choosing Settings</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Particle Weighting (Transforms)</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Running</span></p>
 <ul class="nav bd-sidenav">
@@ -435,13 +437,13 @@
 <li class="toctree-l1"><a class="reference internal" href="trajectory_analyses.html">Trajectory-Style Analyses</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Column and satellite measurements</span></p>
-<ul class="current nav bd-sidenav">
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
 <li class="toctree-l1"><a class="reference internal" href="slant_columns.html">Slant Columns</a></li>
-<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Particle Weighting (Transforms)</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="hysplit_users.html">PYSTILT For HYSPLIT Users</a></li>
 <li class="toctree-l1"><a class="reference internal" href="hysplit_build.html">Your Own HYSPLIT Build And Data Tables</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
@@ -514,19 +516,24 @@
 <h1>Particle Weighting (Transforms)<a class="headerlink" href="#particle-weighting-transforms" title="Link to this heading">#</a></h1>
 <p>A footprint is the mean surface influence of a simulation’s particles. A
 <em>transform</em> changes how much each particle counts in that mean, by scaling
-the <code class="docutils literal notranslate"><span class="pre">foot</span></code> column of the particle table. Column instruments need an
-averaging kernel and a pressure weighting. A species that decays during
-transport needs a lifetime.</p>
-<p>A transform is any object with an <code class="docutils literal notranslate"><span class="pre">apply</span></code> method:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
-</pre></div>
-</div>
-<p>It takes the particle table, the receptor the particles were released
-from, and the project directory, and returns a new table. List transforms in
-<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, as a default or per variant, or pass them to
-<a class="reference internal" href="../reference/_api/stilt.Simulation.calc_footprint.html#stilt.Simulation.calc_footprint" title="stilt.Simulation.calc_footprint"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Simulation.calc_footprint()</span></code></a>. They run once, in order,
-starting from the unweighted particles. Each footprint file records the
-transforms it was made with.</p>
+the <code class="docutils literal notranslate"><span class="pre">foot</span></code> column of the particle table before the footprint is made. You
+need one in two cases:</p>
+<ul class="simple">
+<li><p><strong>A column measurement</strong> (satellite, TCCON, EM27/SUN). List
+<code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> and then <code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code>, so the footprint
+weights the air the way the retrieval does.</p></li>
+<li><p><strong>A species lost on the way</strong>, which decays, deposits to the ground, or
+reacts with OH. A transform scales each particle by the fraction of the
+tracer that survives to the receptor.</p></li>
+</ul>
+<p>A tower measurement of CO2 or methane needs none: with no transforms every
+particle counts equally, which is the standard STILT footprint.</p>
+<p>List transforms in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, as a default or per variant, or pass
+them to <a class="reference internal" href="../reference/_api/stilt.Simulation.calc_footprint.html#stilt.Simulation.calc_footprint" title="stilt.Simulation.calc_footprint"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Simulation.calc_footprint()</span></code></a>. They run once, in order,
+starting from the unweighted particles. They are footprint settings, so a
+variant that adds one shares the particles of the variant without it, and
+no transport model runs again. Each footprint file records the transforms it
+was made with.</p>
 <section id="built-in-transforms">
 <h2>Built-in transforms<a class="headerlink" href="#built-in-transforms" title="Link to this heading">#</a></h2>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">transforms</span><span class="p">:</span>
@@ -536,6 +543,12 @@ transforms it was made with.</p>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pressure_weighting</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">first_order_lifetime</span>
 <span class="w">    </span><span class="nt">lifetime_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4.0</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dry_deposition</span>
+<span class="w">    </span><span class="nt">velocity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">oxidation</span>
+<span class="w">    </span><span class="nt">a</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.45e-12</span>
+<span class="w">    </span><span class="nt">e_over_r</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1775</span>
+<span class="w">    </span><span class="nt">oxidant</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">oh.nc</span>
 </pre></div>
 </div>
 <dl>
@@ -584,10 +597,60 @@ the surface unless that is what you want.</p>
 <span class="math notranslate nohighlight">\(\tau\)</span> is <code class="docutils literal notranslate"><span class="pre">lifetime_hours</span></code>. The age is the particle’s time since
 release, its <code class="docutils literal notranslate"><span class="pre">age</span></code> column.</p>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dry_deposition</span></code> (<a class="reference internal" href="../reference/_api/stilt.transforms.DryDeposition.html#stilt.transforms.DryDeposition" title="stilt.transforms.DryDeposition"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transforms.DryDeposition</span></code></a>)</dt><dd><p>Scales <code class="docutils literal notranslate"><span class="pre">foot</span></code> by the fraction of a depositing tracer that survives
+from the particle’s position to the receptor. Use it for a soluble gas
+or a fine aerosol. While a particle is below <code class="docutils literal notranslate"><span class="pre">surface_layer_depth</span></code>
+(default 50 m), the tracer is lost at the rate <code class="docutils literal notranslate"><span class="pre">velocity</span></code> (m/s)
+divided by that depth, HYSPLIT’s own dry deposition rule. HYSPLIT does
+not deposit in a STILT run, so one run serves every species.</p>
+<p>The depth is the one number to choose, and we recommend the default.
+HYSPLIT takes its lowest internal level at or below 75 m, which is 50 m
+on HRRR, and with 50 m the transform came within 0.5 % of HYSPLIT’s own
+mass loss in a forward and two backward runs. The choice matters most
+at night near the ground: with particles released at 10 m on a stable
+night, 30 m gave a surviving fraction of 0.53 after 6 h and 75 m gave
+0.62.</p>
+<p>The transform needs <code class="docutils literal notranslate"><span class="pre">zagl</span></code> at every one-minute time step, so keep
+<code class="docutils literal notranslate"><span class="pre">outdt:</span> <span class="pre">0</span></code>, the default. It refuses hourly particles, which do not say
+how long a particle stayed near the ground. Wet removal and
+gravitational settling are not included.
+<a class="reference internal" href="../reference/_api/stilt.transforms.dry_deposition_survival.html#stilt.transforms.dry_deposition_survival" title="stilt.transforms.dry_deposition_survival"><code class="xref py py-func docutils literal notranslate"><span class="pre">dry_deposition_survival()</span></code></a> gives the surviving
+fraction for each row of the particle table, if you want the particles
+rather than a footprint.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">oxidation</span></code> (<a class="reference internal" href="../reference/_api/stilt.transforms.Oxidation.html#stilt.transforms.Oxidation" title="stilt.transforms.Oxidation"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transforms.Oxidation</span></code></a>)</dt><dd><p>Scales <code class="docutils literal notranslate"><span class="pre">foot</span></code> by the fraction of the tracer that survives a reaction
+with an oxidant on its way from the particle’s position to the
+receptor. Use it for a species lost mainly to OH, such as CO or ethane.
+At each row the loss rate is <span class="math notranslate nohighlight">\(k(T) [X]\)</span>: the rate constant
+<span class="math notranslate nohighlight">\(k = a \exp(-E/R \, / \, T)\)</span>, with <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">e_over_r</span></code> as the
+JPL and IUPAC tables give them, times the oxidant’s number density
+<code class="docutils literal notranslate"><span class="pre">oxidant</span></code> in molecules cm⁻³. Give the oxidant as one number or as a
+netCDF file of a gridded field (an OH climatology or a chemistry model’s
+output) on <code class="docutils literal notranslate"><span class="pre">lat</span></code>/<code class="docutils literal notranslate"><span class="pre">lon</span></code>, with pressure levels in hPa and <code class="docutils literal notranslate"><span class="pre">time</span></code> if
+it has them. Each row takes the value of the cell it is in; a row
+outside the field has no loss there. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> reports a missing
+file or variable before the run.</p>
+<p>The temperature is the particles’ <code class="docutils literal notranslate"><span class="pre">temz</span></code> when <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> has it.
+Otherwise it comes from <code class="docutils literal notranslate"><span class="pre">pres</span></code> and <code class="docutils literal notranslate"><span class="pre">dens</span></code>, which are there by
+default, through the ideal gas law. That is within about 1 K of
+HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">temz</span></code> in dry air, about 2 % in the rate for methane and OH.</p>
+<p>For methane at regional scales you do not need it: its lifetime
+against OH is about nine years, and over a few days of trajectory the
+footprint changes by less than 0.1 %.</p>
+</dd>
 </dl>
-<p>For satellite and TCCON columns, list <code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> and then
-<code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code>. With no transforms every particle counts equally,
-which is the standard STILT footprint.</p>
+<section id="other-losses">
+<h3>Other losses<a class="headerlink" href="#other-losses" title="Link to this heading">#</a></h3>
+<p>Any loss whose rate you can compute at every row works the same way, as
+long as the rate does not depend on how much tracer the particle carries.
+<a class="reference internal" href="../reference/_api/stilt.transforms.survival.html#stilt.transforms.survival" title="stilt.transforms.survival"><code class="xref py py-func docutils literal notranslate"><span class="pre">survival()</span></code></a> takes a rate per row, in s⁻¹, and
+returns the fraction that reaches the receptor; the built-in lifetime,
+deposition and oxidation transforms are special cases of it. Use it in your
+own transform for rain-out, photolysis, or a lifetime from a chemistry
+model. A loss that depends on the tracer itself, as NOx’s lifetime depends
+on NOx, has no footprint: it needs the emissions and a chemistry model
+along each trajectory.</p>
+</section>
 </section>
 <section id="one-kernel-per-receptor">
 <h2>One kernel per receptor<a class="headerlink" href="#one-kernel-per-receptor" title="Link to this heading">#</a></h2>
@@ -634,10 +697,10 @@ Parquet or CSV file, relative to the project root.</p>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p>These replace the transforms in the variant’s own footprint settings, and
-the footprint records them. The other settings (<code class="docutils literal notranslate"><span class="pre">grid</span></code>,
-<code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>, <code class="docutils literal notranslate"><span class="pre">tres</span></code>) are replaced the
-same way, and nothing in the project changes. Without a simulation,
+<p><code class="docutils literal notranslate"><span class="pre">transforms=</span></code> takes the place of the variant’s own transforms for this
+footprint, and the footprint records them. <code class="docutils literal notranslate"><span class="pre">grid</span></code>, <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> and
+<code class="docutils literal notranslate"><span class="pre">tres</span></code> work the same way. The footprint is returned, not written, so
+nothing in the project changes. Without a simulation,
 <a class="reference internal" href="../reference/_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a> takes the same <code class="docutils literal notranslate"><span class="pre">transforms</span></code>.</p>
 <p>To see what a transform did, apply it to the particle table yourself:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">weighted</span> <span class="o">=</span> <span class="n">PressureWeighting</span><span class="p">()</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="p">)</span>
@@ -647,9 +710,14 @@ same way, and nothing in the project changes. Without a simulation,
 </section>
 <section id="writing-your-own-transform">
 <h2>Writing your own transform<a class="headerlink" href="#writing-your-own-transform" title="Link to this heading">#</a></h2>
-<p>Write a pydantic model with an <code class="docutils literal notranslate"><span class="pre">apply</span></code> method. Its fields are the keys
-you set in YAML. Return a new table and leave the one you are given
-unchanged.</p>
+<p>A transform is any object with an <code class="docutils literal notranslate"><span class="pre">apply</span></code> method:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</pre></div>
+</div>
+<p>It takes the particle table, the receptor the particles were released
+from, and the project directory, and returns a new table. To name it in
+<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, write it as a pydantic model: its fields are the keys you
+set in YAML. Return a new table and leave the one you are given unchanged.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># mypkg/transforms.py</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
@@ -706,6 +774,14 @@ level. <code class="docutils literal notranslate"><span class="pre">directory</s
 transform’s settings relative to it, as the <code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> table
 is read. Both can be <code class="docutils literal notranslate"><span class="pre">None</span></code> when a transform is applied to particles
 alone, so raise a clear error if yours needs them.</p></li>
+<li><p><strong>Let</strong> <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> <strong>see its inputs</strong> (optional). A <code class="docutils literal notranslate"><span class="pre">check(self,</span>
+<span class="pre">receptors,</span> <span class="pre">directory)</span></code> method gets the project’s receptor ids and
+directory and returns what is wrong, as <code class="docutils literal notranslate"><span class="pre">(check,</span> <span class="pre">receptor</span> <span class="pre">id</span> <span class="pre">or</span> <span class="pre">None,</span>
+<span class="pre">message)</span></code> tuples, so a missing input file shows up before any run. The
+<code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> checks its table this way. Set <code class="docutils literal notranslate"><span class="pre">reads_zsfc</span> <span class="pre">=</span> <span class="pre">True</span></code>
+on the class if it reads <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> for a receptor above sea level, as
+<code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code> does, and <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> says when <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code>
+lacks it.</p></li>
 </ul>
 <p>A transform named in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> must be a pydantic model, because
 PYSTILT writes it back out to the footprint folder’s <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code>
@@ -731,20 +807,20 @@ weighting from scratch.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="slant_columns.html"
+       href="choosing_settings.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Slant Columns</p>
+        <p class="prev-next-title">Choosing Settings</p>
       </div>
     </a>
     <a class="right-next"
-       href="hysplit_build.html"
+       href="running.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Your Own HYSPLIT Build And Data Tables</p>
+        <p class="prev-next-title">Running</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -767,7 +843,10 @@ weighting from scratch.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#built-in-transforms">Built-in transforms</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#built-in-transforms">Built-in transforms</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#other-losses">Other losses</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-kernel-per-receptor">One kernel per receptor</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#in-python">In Python</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#writing-your-own-transform">Writing your own transform</a><ul class="pst-show_toc_level nav section-nav flex-column">

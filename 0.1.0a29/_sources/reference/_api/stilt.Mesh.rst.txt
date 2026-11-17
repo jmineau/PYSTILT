@@ -1,0 +1,49 @@
+﻿stilt.Mesh
+==========
+
+.. currentmodule:: stilt
+
+
+
+
+.. class-signature:: stilt.Mesh
+
+
+Parameters
+----------
+
+.. config-model:: stilt.Mesh
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~Mesh.bounds
+   ~Mesh.hash
+   ~Mesh.index
+   ~Mesh.is_longlat
+   ~Mesh.min_cell_width
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~Mesh.from_file
+   ~Mesh.from_geodataframe
+   ~Mesh.from_grid
+   ~Mesh.from_h3
+   ~Mesh.from_spec
+   ~Mesh.from_windows
+   ~Mesh.to_crs
+   ~Mesh.to_grid
+
+
+

@@ -109,9 +109,9 @@ a selection of simulations (:doc:`outputs`), all of one variant:
 
 It reads the footprints one receptor at a time, in several threads, and
 returns a sparse matrix, so its size does not depend on the grid and
-memory stays at a few footprints whatever the selection's size. ``H.to_xarray()`` holds a sparse array
-from the optional ``sparse`` package (``pip install pystilt[sparse]``), or
-a NumPy array with ``dense=True``. Receptors whose footprint is empty are
+memory stays at a few footprints whatever the selection's size.
+``H.to_xarray()`` holds a sparse array from the optional ``sparse`` package
+(``pip install "pystilt[sparse]"``), or a NumPy array with ``dense=True``. Receptors whose footprint is empty are
 in ``H.empty``, and those not run yet in ``H.missing``.
 
 .. _jacobian-rows:
@@ -179,21 +179,25 @@ before the first label gets zero flux, and an hour after the last takes the
 last step, because the labels do not say where it ends. Add a step of zeros
 after the last to end it.
 
-A footprint layer takes the flux of the one step where it starts, so the
-layers (``tres``) must be no longer than the flux's steps. A 1-day layer
-over an hourly flux would take the flux of its first hour for the whole
-day, which can be far from the day's mean, so ``foot.stilt.enhancement``
-raises, and so do ``foot.stilt.aggregate`` and ``project.jacobian`` for a
-time bin shorter than the layers. Make the footprints with a shorter
-``tres``, or average the flux onto the layers first. A flux with steps as
-long as the layers or longer passes, and so does a flux with one time (a
-static flux), but a layer that crosses a step boundary still takes only the
-step where it starts. Layers are counted back from the receptor's time, not
-from the clock, so receptors on the hour with hourly or longer flux steps
-line up, and a receptor at 18:30 does not: its hourly layers run from :30 to
-:30, and each takes the flux of the step where it starts, half an hour
-early. The steps of a flux with CF time bounds are the bounds; without them,
-the gaps between the labels.
+A footprint layer takes the flux of the one step where it starts, so make
+the layers (``tres``) no longer than the flux's steps:
+
+- **Layers longer than the steps are refused.** A 1-day layer over an
+  hourly flux would take the flux of its first hour for the whole day, so
+  ``foot.stilt.enhancement`` raises, and so do ``foot.stilt.aggregate`` and
+  ``project.jacobian`` for a time bin shorter than the layers. Make the
+  footprints with a shorter ``tres``, or average the flux onto the layers
+  first.
+- **Layers as long as the steps or shorter pass**, and so does a static
+  flux with one time. A layer that crosses a step boundary still takes only
+  the step where it starts.
+- **Layers are counted back from the receptor time**, not from the clock.
+  Receptors on the hour line up with hourly or longer flux steps. A
+  receptor at 18:30 does not: its hourly layers run from :30 to :30, so
+  each takes the flux of the step that starts half an hour before it.
+
+The steps of a flux with CF time bounds are the bounds; without them, the
+gaps between the labels.
 
 .. _flux-step-labels:
 

@@ -1,0 +1,6 @@
+stilt.Simulation.log\_path
+==========================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Simulation.log_path

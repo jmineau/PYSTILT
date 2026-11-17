@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.receptors.table &#8212; PYSTILT 0.1.0a28</title>
+    <title>stilt.receptors.table &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../../../_static/documentation_options.js?v=947601de"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -457,7 +457,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">io</span><span class="w"> </span><span class="kn">import</span> <span class="n">StringIO</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">IO</span><span class="p">,</span> <span class="n">Any</span>
@@ -466,12 +466,14 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">_TIME_FORMS</span><span class="p">,</span>
     <span class="n">ColumnReceptor</span><span class="p">,</span>
     <span class="n">MultiPointReceptor</span><span class="p">,</span>
     <span class="n">PointReceptor</span><span class="p">,</span>
     <span class="n">Receptor</span><span class="p">,</span>
     <span class="n">_column_location</span><span class="p">,</span>
     <span class="n">_multipoint_locations</span><span class="p">,</span>
+    <span class="n">_parse_time_text</span><span class="p">,</span>
     <span class="n">_point_location</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">column_errors</span><span class="p">,</span> <span class="n">multipoint_errors</span><span class="p">,</span> <span class="n">point_errors</span>
@@ -542,8 +544,32 @@
     <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">field</span> <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">spelling</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
     <span class="k">if</span> <span class="s2">"altitude_ref"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
         <span class="n">implied</span> <span class="o">=</span> <span class="s2">"msl"</span> <span class="k">if</span> <span class="n">spelling</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"altitude"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"zmsl"</span> <span class="k">else</span> <span class="s2">"agl"</span>
+        <span class="n">_refuse_misnamed_altitude_ref</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">implied</span><span class="p">)</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">altitude_ref</span><span class="o">=</span><span class="n">implied</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">frame</span><span class="p">,</span> <span class="n">spelling</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_refuse_misnamed_altitude_ref</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">implied</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Raise if a label column holds only ``agl`` and ``msl``, as an ``altitude_ref`` column would.</span>
+
+<span class="sd">    Under another name, such as ``alt_ref``, the column would be kept as a</span>
+<span class="sd">    label and every height read as *implied*: 1500 m above sea level as</span>
+<span class="sd">    1500 m above ground.</span>
+<span class="sd">    """</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">COLUMNS</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_string_dtype</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="n">col</span><span class="p">]):</span>
+            <span class="k">continue</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">())</span>
+        <span class="n">refs</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">refs</span> <span class="ow">and</span> <span class="n">refs</span> <span class="o">&lt;=</span> <span class="p">{</span><span class="s2">"agl"</span><span class="p">,</span> <span class="s2">"msl"</span><span class="p">}:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The column </span><span class="si">{</span><span class="n">col</span><span class="si">!r}</span><span class="s2"> holds altitude references "</span>
+                <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">refs</span><span class="p">))</span><span class="si">}</span><span class="s2">), but only a column named "</span>
+                <span class="sa">f</span><span class="s2">"'altitude_ref' or 'height_ref' is read as one, so every height "</span>
+                <span class="sa">f</span><span class="s2">"would be taken as </span><span class="si">{</span><span class="n">implied</span><span class="si">}</span><span class="s2">. Did you mean 'altitude_ref'? "</span>
+                <span class="s2">"Rename the column."</span>
+            <span class="p">)</span>
 
 
 <span class="c1">#: Columns :func:`receptor_rows` adds; a receptors file may not use these names.</span>
@@ -567,10 +593,12 @@
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        For anything a receptor would refuse: a missing column, a longitude</span>
-<span class="sd">        or latitude out of range, a negative height above ground, rows of one</span>
-<span class="sd">        group that differ in time or altitude reference, a column whose two</span>
-<span class="sd">        heights are equal, a multipoint receptor with two points at one</span>
-<span class="sd">        location, or two different receptors with one id.</span>
+<span class="sd">        or latitude out of range or empty, a height that is empty or not</span>
+<span class="sd">        finite, a negative height above ground, rows of one group that</span>
+<span class="sd">        differ in time or altitude reference, a column whose two heights are</span>
+<span class="sd">        equal, a multipoint receptor with two points at one location, or two</span>
+<span class="sd">        different receptors with one id. Also for a misnamed</span>
+<span class="sd">        ``altitude_ref`` column (:func:`receptors_from_frame`).</span>
 <span class="sd">    """</span>
     <span class="n">frame</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_normalize_columns</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
     <span class="n">required</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"longitude"</span><span class="p">,</span> <span class="s2">"latitude"</span><span class="p">,</span> <span class="s2">"altitude"</span><span class="p">)</span>
@@ -583,9 +611,6 @@
             <span class="s2">"those names. Rename the column."</span>
         <span class="p">)</span>
     <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
-    <span class="n">time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"time"</span><span class="p">])</span>
-    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="s2">"tz"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="s2">"UTC"</span><span class="p">)</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
     <span class="n">lon</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"longitude"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">lat</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"latitude"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">alt</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"altitude"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
@@ -608,6 +633,7 @@
             <span class="p">)</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
+    <span class="n">time</span> <span class="o">=</span> <span class="n">_times</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">fail</span><span class="p">)</span>
     <span class="n">fail</span><span class="p">(</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="p">(</span><span class="s2">"agl"</span><span class="p">,</span> <span class="s2">"msl"</span><span class="p">)),</span> <span class="s2">"altitude_ref must be 'agl' or 'msl'."</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">bad</span><span class="p">,</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">point_errors</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">alt</span><span class="p">,</span> <span class="n">ref</span><span class="p">):</span>
         <span class="n">fail</span><span class="p">(</span><span class="n">bad</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
@@ -697,6 +723,33 @@
             <span class="n">drop</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">group</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>  <span class="c1"># the same receptor listed again</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">drop</span><span class="p">)]</span>
     <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_times</span><span class="p">(</span><span class="n">column</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">fail</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return a receptor table's times as naive UTC times, calling *fail* on a row that has none.</span>
+
+<span class="sd">    Text must be ISO 8601 or ``YYYYMMDDHHMM`` (:func:`_parse_time_text`);</span>
+<span class="sd">    datetimes are taken as they are, an aware one converted to UTC.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">column</span><span class="p">):</span>
+        <span class="n">fail</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">column</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">),</span>
+            <span class="sa">f</span><span class="s2">"time must be </span><span class="si">{</span><span class="n">_TIME_FORMS</span><span class="si">}</span><span class="s2">; got the number </span><span class="si">{</span><span class="n">column</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">."</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_string_dtype</span><span class="p">(</span><span class="n">column</span><span class="p">):</span>
+        <span class="n">time</span> <span class="o">=</span> <span class="n">_parse_time_text</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
+        <span class="n">bad</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">bad</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">column</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">bad</span><span class="p">)[</span><span class="mi">0</span><span class="p">])]</span>
+            <span class="n">what</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">"empty"</span> <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">, which is not </span><span class="si">{</span><span class="n">_TIME_FORMS</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="n">fail</span><span class="p">(</span><span class="n">bad</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"time is </span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">utc</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">fail</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="s2">"time is empty."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_build</span><span class="p">(</span>
@@ -805,7 +858,9 @@
 <span class="sd">    Without an ``altitude_ref`` column, altitudes are above mean sea level</span>
 <span class="sd">    when the column is named ``zmsl`` and above ground level otherwise. Any</span>
 <span class="sd">    other column becomes a label in each receptor's ``attrs``. For a group,</span>
-<span class="sd">    labels come from its first row.</span>
+<span class="sd">    labels come from its first row. Without an ``altitude_ref`` column, a</span>
+<span class="sd">    label column that holds only ``agl`` and ``msl``, such as ``alt_ref``,</span>
+<span class="sd">    is refused, since its heights would be read with the wrong reference.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -843,16 +898,19 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">read_receptor_frame</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">IO</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Read a receptors CSV as a table, with ``r_idx`` as text and ``time`` parsed, without building receptors."""</span>
+<span class="w">    </span><span class="sd">"""Read a receptors CSV as a table, with ``r_idx`` and ``time`` as text, without building receptors."""</span>
     <span class="n">header</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">nrows</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span>
     <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"seek"</span><span class="p">):</span>
         <span class="n">path</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
     <span class="c1"># With type inference, pandas types each chunk of a large file on its</span>
     <span class="c1"># own, so an r_idx column that mixes numbers and text would come back</span>
     <span class="c1"># part int and part str.</span>
-    <span class="n">dtype</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="nb">str</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">header</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"r_idx"</span><span class="p">}</span>
-    <span class="n">times</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">header</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"time"</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="n">times</span><span class="p">)</span>
+    <span class="c1"># Times are read as text, and parsed by receptor_rows in the forms the</span>
+    <span class="c1"># docs give, never guessed: pandas would read 05/07/2023 month-first.</span>
+    <span class="n">dtype</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">c</span><span class="p">:</span> <span class="nb">str</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">header</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"r_idx"</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="read_receptors">

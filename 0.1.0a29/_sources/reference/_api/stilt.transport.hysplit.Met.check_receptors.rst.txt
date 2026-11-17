@@ -1,0 +1,6 @@
+stilt.transport.hysplit.Met.check\_receptors
+============================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+.. automethod:: Met.check_receptors

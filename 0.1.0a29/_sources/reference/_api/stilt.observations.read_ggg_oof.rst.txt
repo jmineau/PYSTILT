@@ -1,0 +1,6 @@
+﻿stilt.observations.read\_ggg\_oof
+=================================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: read_ggg_oof

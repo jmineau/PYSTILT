@@ -1,0 +1,22 @@
+﻿stilt.ExecutionConfig
+=====================
+
+.. currentmodule:: stilt
+
+
+
+
+.. class-signature:: stilt.ExecutionConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.ExecutionConfig
+
+
+
+
+
+
+

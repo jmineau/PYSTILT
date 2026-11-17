@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Coming From STILT-R &#8212; PYSTILT 0.1.0a28</title>
+    <title>Coming From STILT-R &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../../_static/documentation_options.js?v=947601de"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -412,9 +412,11 @@
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../projects.html">Projects And Variants</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../choosing_settings.html">Choosing Settings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transforms.html">Particle Weighting (Transforms)</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Running</span></p>
 <ul class="nav bd-sidenav">
@@ -437,10 +439,10 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../readers.html">Reading Retrieval Products</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../slant_columns.html">Slant Columns</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../transforms.html">Particle Weighting (Transforms)</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../hysplit_users.html">PYSTILT For HYSPLIT Users</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../hysplit_build.html">Your Own HYSPLIT Build And Data Tables</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
@@ -511,27 +513,26 @@
                   
   <section id="coming-from-stilt-r">
 <h1>Coming From STILT-R<a class="headerlink" href="#coming-from-stilt-r" title="Link to this heading">#</a></h1>
-<p>PYSTILT does the same science as STILT-R. On longitude/latitude grids its
-footprints match STILT-R’s cell by cell, to a relative tolerance of 1e-7 in
-the 21 scenarios the tests compare. A few cases differ on purpose
-(<a class="reference internal" href="../../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a> has them all). One is in the near-field correction
-(<code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>): a receptor above sea level, whose plume PYSTILT grows from
-the ground. Two are on a projected grid: the smoothing, which PYSTILT makes
-as wide as on a longitude/latitude grid and STILT-R makes a few meters wide,
-and the early-time interpolation, which STILT-R never runs on a grid in
-meters. Three are near 180°: a particle cloud on a grid that goes all the
-way around the earth, which PYSTILT smooths as one cloud and STILT-R smooths
-far too widely, particles just across 180° from the edge of a regional
-grid, which PYSTILT smooths onto the grid and STILT-R drops, and the
-early-time interpolation of a particle that crosses 180°, which PYSTILT
-takes the short way round and STILT-R through 0°. A footprint on a
-global grid written from 0° to 360° keeps those longitudes, where STILT-R
-labels it from -180° to 180°.
-PYSTILT also takes grids that STILT-R cannot use, such as one from -10° to
+<p>If you run STILT-R, this page shows where each of its settings and steps
+is in PYSTILT. The science is the same: on longitude/latitude grids
+PYSTILT’s footprints match STILT-R’s cell by cell, to a relative tolerance
+of 1e-7 in the 21 scenarios the tests compare. What changes is where the
+settings live. Instead of editing variables in <code class="docutils literal notranslate"><span class="pre">run_stilt.r</span></code>, you write
+them in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> or pass them to <a class="reference internal" href="../../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.init()</span></code></a>, and the
+receptors go in <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p>
+<p>A few cases differ on purpose, and <a class="reference internal" href="../../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a> gives each one
+and why:</p>
+<ul class="simple">
+<li><p>the near-field correction of a receptor above sea level, whose plume
+PYSTILT grows from the ground</p></li>
+<li><p>projected grids, where PYSTILT smooths as widely as on a
+longitude/latitude grid and runs the early-time interpolation</p></li>
+<li><p>grids near or across 180°, which PYSTILT treats as one stretch of
+longitude, and global grids written from 0° to 360°, which keep those
+longitudes</p></li>
+</ul>
+<p>PYSTILT also takes grids that STILT-R cannot use, such as one from -10° to
 190°.</p>
-<p>What changes is where the settings live. Instead of editing variables in
-<code class="docutils literal notranslate"><span class="pre">run_stilt.r</span></code>, you write them in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> or pass them to
-<a class="reference internal" href="../../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.init()</span></code></a>. Receptors go in <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p>
 <section id="the-workflow-side-by-side">
 <h2>The workflow side by side<a class="headerlink" href="#the-workflow-side-by-side" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -633,9 +634,17 @@ for <code class="docutils literal notranslate"><span class="pre">n_hours</span> 
 <td><p>no setting: a successful run’s working directory is removed;
 <code class="docutils literal notranslate"><span class="pre">execution:</span> <span class="pre">keep_workdir</span></code> keeps it</p></td>
 </tr>
-<tr class="row-even"><td><p>HYSPLIT settings (<code class="docutils literal notranslate"><span class="pre">capemin</span></code>, <code class="docutils literal notranslate"><span class="pre">delt</span></code>, <code class="docutils literal notranslate"><span class="pre">kmix0</span></code>, <code class="docutils literal notranslate"><span class="pre">tlfrac</span></code>,
-<code class="docutils literal notranslate"><span class="pre">veght</span></code>, …)</p></td>
+<tr class="row-even"><td><p>HYSPLIT settings (<code class="docutils literal notranslate"><span class="pre">capemin</span></code>, <code class="docutils literal notranslate"><span class="pre">kmix0</span></code>, <code class="docutils literal notranslate"><span class="pre">tlfrac</span></code>, …)</p></td>
 <td><p>same names, top level</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">veght</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code>, top level: the same value, still written to
+<code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> as <code class="docutils literal notranslate"><span class="pre">VEGHT</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>HYSPLIT settings that cannot change the particles (<code class="docutils literal notranslate"><span class="pre">delt</span></code>,
+<code class="docutils literal notranslate"><span class="pre">cmass</span></code>, <code class="docutils literal notranslate"><span class="pre">conage</span></code>, <code class="docutils literal notranslate"><span class="pre">ichem</span></code>, <code class="docutils literal notranslate"><span class="pre">kagl</span></code>, …)</p></td>
+<td><p>no setting: PYSTILT writes STILT-R’s values to <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> in
+every run</p></td>
 </tr>
 <tr class="row-odd"><td><p>wind and mixing-depth error settings (<code class="docutils literal notranslate"><span class="pre">siguverr</span></code>, <code class="docutils literal notranslate"><span class="pre">tluverr</span></code>,
 <code class="docutils literal notranslate"><span class="pre">sigzierr</span></code>, …)</p></td>
@@ -673,8 +682,8 @@ or <code class="docutils literal notranslate"><span class="pre">stilt</span> <sp
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ziscale</span></code> as one list per receptor</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">ziscale</span></code> per variant, as one factor or one factor per hour. It is
-the same for every receptor. Per-receptor factors are not supported
-yet.</p></td>
+the same for every receptor; PYSTILT has no per-receptor
+factors.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stilt_wd</span></code>, <code class="docutils literal notranslate"><span class="pre">output_wd</span></code></p></td>
 <td><p>the project folder</p></td>
@@ -780,7 +789,8 @@ become <code class="docutils literal notranslate"><span class="pre">particle</sp
 footprint, or <code class="docutils literal notranslate"><span class="pre">None</span></code> when the folder has none. Both are kept as STILT-R
 made them: the near-field correction STILT-R applied stays in <code class="docutils literal notranslate"><span class="pre">foot</span></code>, and
 the footprint’s values are the file’s. To make a footprint on another grid,
-pass the particles to <a class="reference internal" href="../../reference/_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a>.</p>
+pass the particles to <a class="reference internal" href="../../reference/_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a> with
+<code class="docutils literal notranslate"><span class="pre">hnf_plume=False</span></code>, since their <code class="docutils literal notranslate"><span class="pre">foot</span></code> is corrected already.</p>
 <p>Some of what STILT-R saved is not read:</p>
 <ul class="simple">
 <li><p>With transport error, STILT-R saves a second set of particles in the same
@@ -826,7 +836,7 @@ STILT-R project folder:</p>
 <span class="w">    </span><span class="nt">met</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stilt-r</span>
 <span class="w">    </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1d936c1</span>
 <span class="w">    </span><span class="nt">capemin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-1.0</span>
-<span class="w">    </span><span class="nt">cmass</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<span class="w">    </span><span class="nt">hscale</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10800.0</span>
 <span class="w">    </span><span class="c1"># ... every HYSPLIT setting, in name order</span>
 <span class="w">    </span><span class="nt">ziscale</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
 <span class="w">    </span><span class="nt">grid</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="nv">-112.5</span><span class="p p-Indicator">,</span><span class="nt"> xmax</span><span class="p">:</span><span class="w"> </span><span class="nv">-111.5</span><span class="p p-Indicator">,</span><span class="nt"> ymin</span><span class="p">:</span><span class="w"> </span><span class="nv">40.25</span><span class="p p-Indicator">,</span><span class="nt"> ymax</span><span class="p">:</span><span class="w"> </span><span class="nv">41.25</span><span class="p p-Indicator">,</span><span class="nt"> xres</span><span class="p">:</span><span class="w"> </span><span class="nv">0.01</span><span class="p p-Indicator">,</span>
@@ -864,7 +874,8 @@ STILT-R projects that differ only in <code class="docutils literal notranslate">
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>HYSPLIT’s settings (<code class="docutils literal notranslate"><span class="pre">numpar</span></code>, <code class="docutils literal notranslate"><span class="pre">kmix0</span></code>, <code class="docutils literal notranslate"><span class="pre">veght</span></code>, <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code>, …)</p></td>
+<tr class="row-even"><td><p>HYSPLIT’s settings (<code class="docutils literal notranslate"><span class="pre">numpar</span></code>, <code class="docutils literal notranslate"><span class="pre">kmix0</span></code>, <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code>, …), and
+<code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code> from <code class="docutils literal notranslate"><span class="pre">VEGHT</span></code></p></td>
 <td><p>each run’s <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">w_option</span></code>, <code class="docutils literal notranslate"><span class="pre">z_top</span></code>, <code class="docutils literal notranslate"><span class="pre">emisshrs</span></code></p></td>
@@ -874,9 +885,10 @@ STILT-R projects that differ only in <code class="docutils literal notranslate">
 <td><p>the <code class="docutils literal notranslate"><span class="pre">ZICONTROL</span></code> file, when <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> says STILT-R wrote one; else
 1, no scaling</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code></p></td>
+<tr class="row-odd"><td><p>the footprint’s <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code></p></td>
 <td><p>the particles: STILT-R’s near-field correction adds
-<code class="docutils literal notranslate"><span class="pre">foot_no_hnf_dilution</span></code></p></td>
+<code class="docutils literal notranslate"><span class="pre">foot_no_hnf_dilution</span></code>. The particles are stored with it as
+<code class="docutils literal notranslate"><span class="pre">foot</span></code>, uncorrected, as PYSTILT stores its own</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code></p></td>
 <td><p>none: STILT-R sets no seed</p></td>
@@ -884,7 +896,7 @@ STILT-R projects that differ only in <code class="docutils literal notranslate">
 <tr class="row-odd"><td><p>the met</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">met_path</span></code>, the directory the <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> files name, as they name it.
 Each run’s met files are recorded in its particle file; they need not
-exist any more</p></td>
+still exist</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">grid</span></code>, <code class="docutils literal notranslate"><span class="pre">tres</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_foot.nc</span></code>. A footprint STILT-R summed over time

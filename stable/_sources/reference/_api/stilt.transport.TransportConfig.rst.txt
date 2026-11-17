@@ -22,6 +22,7 @@ Attributes
 .. autosummary::
    :toctree:
 
+   ~TransportConfig.RECORDED_WHEN_SET
    ~TransportConfig.UNRECORDED
 
 

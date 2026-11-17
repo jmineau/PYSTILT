@@ -1,0 +1,6 @@
+stilt.Simulation.background
+===========================
+
+.. currentmodule:: stilt
+
+.. automethod:: Simulation.background

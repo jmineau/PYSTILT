@@ -2,7 +2,8 @@ Reading Retrieval Products
 ==========================
 
 A column retrieval comes as a product file, such as a TROPOMI orbit, an
-OCO-2 Lite file, a TCCON site file, or a day of EM27/SUN spectra from GGG.
+OCO-2 Lite file, a TCCON site file, or a day of EM27/SUN measurements from
+GGG or PROFFAST.
 The readers in :mod:`stilt.observations` turn each of these into a table
 with one row per sounding. The columns are the same for every instrument
 (:data:`~stilt.observations.readers.schema.SOUNDING_SCHEMA`), so the rest
@@ -35,8 +36,8 @@ The readers
    * - :func:`~stilt.observations.read_oco2`
      - OCO-2 and OCO-3 L2 Lite XCO2 files (``oco2_LtCO2_*.nc4``,
        ``oco3_LtCO2_*.nc4``, Lite FP v10/v11)
-     - A synthetic file with the documented v11 layout. No real granule
-       has been read yet.
+     - OCO-2 Lite FP v11.2r and OCO-3 Lite FP v11r files of 2026-02-08
+       (nadir and target-mode soundings).
    * - :func:`~stilt.observations.read_tccon`
      - TCCON GGG2020 public site files from CaltechDATA
        (``*.public.nc``, ``*.public.qc.nc``)
@@ -50,9 +51,21 @@ The readers
        public files (``read_tccon`` calls this reader)
      - The public layout on a real TCCON file. The private layout only on
        a synthetic file.
+   * - :func:`~stilt.observations.read_coccon`
+     - COCCON GEOMS HDF5 files (``groundbased_ftir.coccon_*.h5``), one
+       site-day each: EM27/SUN retrievals from PROFFAST, as COCCON releases
+       them and as PROFFASTpylot writes them
+     - Files PROFFASTpylot wrote for KIT's example data. The committed test
+       file is synthetic.
+   * - :func:`~stilt.observations.read_proffast`
+     - A PROFFASTpylot run: its ``comb_invparms_*.csv`` and the daily
+       ``colsens.dat``, ``pT_fast_out.dat`` and ``VMR_fast_out.dat`` in
+       ``raw_output_proffast/``
+     - A run on KIT's example data, whose kernels and priors match its
+       GEOMS files. The committed test run is synthetic.
 
 The satellite readers take ``lon_range`` and ``lat_range`` to keep only the
-pixels inside a box. Use them on a whole orbit. The GGG readers take a
+pixels inside a box. Use them on a whole orbit. The GGG and EM27/SUN readers take a
 ``species`` (``xco2``, ``xch4``, ``xco``, ...), and the netCDF readers also
 take a ``time_range`` for multi-year site files. The readers do not filter
 anything else. Quality flags become the ``good`` column, and you decide
@@ -61,28 +74,46 @@ what to keep.
 EM27/SUN
 ~~~~~~~~
 
-GGG (through EGI) writes one ``.oof`` file per instrument-day and, from the
-same run, one ``*.private.nc``. The ``.oof`` has the soundings but no
-averaging kernel or prior, so :func:`~stilt.observations.read_ggg_oof`
-leaves out the ``ak``, ``ak_pressure`` and ``pressure_levels`` columns. Take
-the kernels from the private file with
-:func:`~stilt.observations.read_ggg_netcdf`, or from a site kernel table
-keyed by solar zenith angle. The :doc:`slant_columns` guide shows both.
+Which reader to use depends on how the retrievals were made:
 
-To read a campaign as one table:
+- **GGG, as EGI delivers it.** :func:`~stilt.observations.read_ggg_oof`
+  reads the soundings of one ``.oof`` file. That file has no averaging
+  kernel or prior, so the ``ak``, ``ak_pressure`` and ``pressure_levels``
+  columns are left out. Take the kernels from the same run's
+  ``*.private.nc`` with :func:`~stilt.observations.read_ggg_netcdf`, or from
+  a site kernel table keyed by solar zenith angle; :doc:`slant_columns`
+  shows both.
+- **COCCON's GEOMS files, from PROFFAST.**
+  :func:`~stilt.observations.read_coccon` reads one site-day. The kernel is
+  already interpolated to each measurement's solar zenith angle, so ``ak``
+  is per row, as for the satellites. The files hold only measurements that
+  passed COCCON's quality filter, so ``good`` is True everywhere.
+- **Your own PROFFASTpylot run.** :func:`~stilt.observations.read_proffast`
+  takes the run's ``comb_invparms`` CSV and finds each day's kernel and
+  prior files next to it. You get every spectrum, with ``good`` set by
+  COCCON's screen (solar zenith angle at most 75 degrees, ``XAIR`` between
+  0.98 and 1.02), the values before any instrument calibration, and
+  COCCON's alternative retrievals (``xco2_str``, ``xch4_s5p``). PROFFAST
+  reports no error for a single spectrum, so ``uncertainty`` is NaN.
+
+Use COCCON's release when it has your site's data, because it is
+calibrated and screened, and a PROFFASTpylot run when you need what it
+leaves out.
+
+To read a campaign as one table, read each day and concatenate:
 
 .. code-block:: python
 
    from pathlib import Path
    import pandas as pd
-   from stilt.observations import read_ggg_oof
+   from stilt.observations import read_coccon, read_ggg_oof
 
    days = sorted(Path("EM27_oof/ha").glob("ha*.vav.ada.aia.oof"))
    df = pd.concat([read_ggg_oof(p, "xch4") for p in days], ignore_index=True)
    df = df[df.good]
 
-There is no reader yet for EM27/SUN data processed with PROFFAST (the
-COCCON pipeline).
+   days = sorted(Path("coccon").glob("groundbased_ftir.coccon_*.h5"))
+   df = pd.concat([read_coccon(p, "xch4") for p in days], ignore_index=True)
 
 The columns
 -----------
@@ -228,6 +259,6 @@ Add a small slice of a real file under ``tests/observations/data/products``,
 and a test that calls :func:`~stilt.observations.check_soundings` on the
 table and checks the units and that the vertical arrays start at the
 surface. ``tests/observations/data/products/make_samples.py`` shows how
-the existing slices were cut. Readers for PROFFAST EM27/SUN output, MethaneAIR, and
-MethaneSAT are welcome. The maintainers have no files to write them
+the existing slices were cut. Readers for MethaneAIR and MethaneSAT are
+welcome. The maintainers have no files to write them
 against.

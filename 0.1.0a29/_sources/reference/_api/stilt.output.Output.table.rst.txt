@@ -1,0 +1,6 @@
+stilt.output.Output.table
+=========================
+
+.. currentmodule:: stilt.output
+
+.. automethod:: Output.table

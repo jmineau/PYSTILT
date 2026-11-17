@@ -1,0 +1,6 @@
+stilt.Receptor.from\_points
+===========================
+
+.. currentmodule:: stilt
+
+.. automethod:: Receptor.from_points

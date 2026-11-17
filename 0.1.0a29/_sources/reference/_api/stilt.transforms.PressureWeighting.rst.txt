@@ -1,0 +1,35 @@
+﻿stilt.transforms.PressureWeighting
+==================================
+
+.. currentmodule:: stilt.transforms
+
+
+
+
+.. class-signature:: stilt.transforms.PressureWeighting
+
+
+.. class-parameters:: stilt.transforms.PressureWeighting
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~PressureWeighting.reads_zsfc
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~PressureWeighting.apply
+
+
+

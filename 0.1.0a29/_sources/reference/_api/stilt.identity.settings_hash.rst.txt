@@ -1,0 +1,6 @@
+﻿stilt.identity.settings\_hash
+=============================
+
+.. currentmodule:: stilt.identity
+
+.. autofunction:: settings_hash

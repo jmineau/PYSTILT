@@ -1,0 +1,6 @@
+stilt.transforms.FirstOrderLifetime.apply
+=========================================
+
+.. currentmodule:: stilt.transforms
+
+.. automethod:: FirstOrderLifetime.apply

@@ -1,6 +1,0 @@
-﻿stilt.particles.background
-==========================
-
-.. currentmodule:: stilt.particles
-
-.. autofunction:: background

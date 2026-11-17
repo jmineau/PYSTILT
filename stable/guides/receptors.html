@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Receptors &#8212; PYSTILT 0.1.0a28</title>
+    <title>Receptors &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../_static/documentation_options.js?v=947601de"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,19 +52,19 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Meteorology" href="meteorology.html" />
+    <link rel="next" title="Mobile Measurements" href="tracks.html" />
     <link rel="prev" title="User Guide" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -412,9 +412,11 @@
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
 <li class="toctree-l1"><a class="reference internal" href="choosing_settings.html">Choosing Settings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Running</span></p>
 <ul class="nav bd-sidenav">
@@ -437,10 +439,10 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
 <li class="toctree-l1"><a class="reference internal" href="slant_columns.html">Slant Columns</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="hysplit_users.html">PYSTILT For HYSPLIT Users</a></li>
 <li class="toctree-l1"><a class="reference internal" href="hysplit_build.html">Your Own HYSPLIT Build And Data Tables</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from another STILT</span></p>
@@ -529,7 +531,7 @@ that matches how your instrument samples the air.</p>
 <tbody>
 <tr class="row-even"><td><p><a class="reference internal" href="../reference/_api/stilt.PointReceptor.html#stilt.PointReceptor" title="stilt.PointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointReceptor</span></code></a></p></td>
 <td><p>An instrument sampling at one point, such as a tower inlet, a flask,
-or an aircraft or vehicle measurement</p></td>
+or an aircraft or vehicle measurement (<a class="reference internal" href="tracks.html"><span class="doc">Mobile Measurements</span></a>)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">longitude</span></code>, <code class="docutils literal notranslate"><span class="pre">latitude</span></code>, <code class="docutils literal notranslate"><span class="pre">altitude</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="../reference/_api/stilt.ColumnReceptor.html#stilt.ColumnReceptor" title="stilt.ColumnReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnReceptor</span></code></a></p></td>
@@ -552,7 +554,8 @@ converted to UTC. Altitudes are in meters above ground level. Pass
 <section id="pointreceptor">
 <h2>PointReceptor<a class="headerlink" href="#pointreceptor" title="Link to this heading">#</a></h2>
 <p>This is the most common type. Use it for a fixed surface site or an airborne
-sample at one height.</p>
+sample at one height. For an analyzer that measures as it moves,
+<a class="reference internal" href="tracks.html"><span class="doc">Mobile Measurements</span></a> makes these receptors from its track.</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
 <span class="gp">In [2]: </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
@@ -641,11 +644,18 @@ form has one row per point receptor:</p>
 2023-07-15 19:00:00,-111.848,40.766,10
 </pre></div>
 </div>
+<p>Write times in ISO 8601, such as <code class="docutils literal notranslate"><span class="pre">2023-07-15</span> <span class="pre">18:00:00</span></code> or
+<code class="docutils literal notranslate"><span class="pre">2023-07-15T18:00:00Z</span></code>, or as <code class="docutils literal notranslate"><span class="pre">YYYYMMDDHHMM</span></code>, such as <code class="docutils literal notranslate"><span class="pre">202307151800</span></code>.
+A time with an offset, such as <code class="docutils literal notranslate"><span class="pre">2023-07-15T12:00:00-06:00</span></code>, is converted
+to UTC; one without is taken as UTC. Other forms are refused, naming the
+row: <code class="docutils literal notranslate"><span class="pre">05/07/2023</span></code> could be 5 July or 7 May.</p>
 <p>The column names from STILT-R also work. Use <code class="docutils literal notranslate"><span class="pre">long</span></code> or <code class="docutils literal notranslate"><span class="pre">lon</span></code> for
 longitude, <code class="docutils literal notranslate"><span class="pre">lati</span></code> or <code class="docutils literal notranslate"><span class="pre">lat</span></code> for latitude, and <code class="docutils literal notranslate"><span class="pre">zagl</span></code> or <code class="docutils literal notranslate"><span class="pre">zmsl</span></code> for
 altitude. A <code class="docutils literal notranslate"><span class="pre">zmsl</span></code> column means the altitudes are above sea level. To mix
-the two in one file, add an <code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code> column with <code class="docutils literal notranslate"><span class="pre">agl</span></code> or <code class="docutils literal notranslate"><span class="pre">msl</span></code>
-on each row.</p>
+the two in one file, add an <code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code> (or <code class="docutils literal notranslate"><span class="pre">height_ref</span></code>) column with
+<code class="docutils literal notranslate"><span class="pre">agl</span></code> or <code class="docutils literal notranslate"><span class="pre">msl</span></code> on each row. A column under another name that holds only
+<code class="docutils literal notranslate"><span class="pre">agl</span></code> and <code class="docutils literal notranslate"><span class="pre">msl</span></code>, such as <code class="docutils literal notranslate"><span class="pre">alt_ref</span></code>, is an error: it would be kept as a
+label, and every height read as above ground.</p>
 <p>To build a column or multipoint receptor, give its rows the same <code class="docutils literal notranslate"><span class="pre">r_idx</span></code>
 value. Rows that share an <code class="docutils literal notranslate"><span class="pre">r_idx</span></code> become one receptor, so they must also
 share the same <code class="docutils literal notranslate"><span class="pre">time</span></code>:</p>
@@ -708,8 +718,9 @@ cuts a multipoint release short fails as <code class="docutils literal notransla
 <section id="advanced-release-heights-for-multipoint-and-slant-receptors">
 <h2>Advanced: release heights for multipoint and slant receptors<a class="headerlink" href="#advanced-release-heights-for-multipoint-and-slant-receptors" title="Link to this heading">#</a></h2>
 <p>Vertical weighting needs each particle’s release height, the
-<code class="docutils literal notranslate"><span class="pre">release_height</span></code> column of the particles. HYSPLIT does not record which release point a particle came from, so PYSTILT works
-it out from the first row HYSPLIT writes for the particle. With the bundled
+<code class="docutils literal notranslate"><span class="pre">release_height</span></code> column of the particles. HYSPLIT does not record which
+release point a particle came from, so PYSTILT works it out from the first
+row HYSPLIT writes for the particle. With the bundled
 HYSPLIT build, that row comes one timestep after release. By then the wind
 has moved the particle a few hundred meters, which can be more than the
 spacing between the points of a slant column.</p>
@@ -724,8 +735,8 @@ horizontal position over one timestep, so this is accurate to about
 <li><p>Otherwise it matches by horizontal position. It warns when the release
 points are closer than 1 km, because the match cannot be trusted there.</p></li>
 </ol>
-<p>A HYSPLIT change that writes release-time rows has been sent to NOAA ARL. Until
-a published build includes it, you can point PYSTILT at your own build:</p>
+<p>To get exact release heights, run a HYSPLIT build that writes rows at
+release time (<a class="reference internal" href="hysplit_build.html"><span class="doc">Your Own HYSPLIT Build And Data Tables</span></a>):</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># config.yaml</span>
 <span class="nt">exe_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/hysplit/exec</span><span class="w">    </span><span class="c1"># directory containing hycs_std</span>
 </pre></div>
@@ -828,11 +839,11 @@ name, so a longitude cannot be passed as a latitude by mistake.</p>
       </div>
     </a>
     <a class="right-next"
-       href="meteorology.html"
+       href="tracks.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Meteorology</p>
+        <p class="prev-next-title">Mobile Measurements</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

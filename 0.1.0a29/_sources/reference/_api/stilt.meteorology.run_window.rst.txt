@@ -1,0 +1,6 @@
+﻿stilt.meteorology.run\_window
+=============================
+
+.. currentmodule:: stilt.meteorology
+
+.. autofunction:: run_window

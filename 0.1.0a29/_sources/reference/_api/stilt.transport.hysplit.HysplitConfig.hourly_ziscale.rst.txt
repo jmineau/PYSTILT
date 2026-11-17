@@ -1,0 +1,6 @@
+stilt.transport.hysplit.HysplitConfig.hourly\_ziscale
+=====================================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+.. automethod:: HysplitConfig.hourly_ziscale

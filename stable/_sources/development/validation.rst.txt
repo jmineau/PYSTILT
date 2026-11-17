@@ -59,9 +59,100 @@ HYSPLIT's own columns:
 
 On one of those runs with a 10 km top, ``z_top=10000`` gives a median
 ``pres`` difference of 0.024 hPa against 0.032 for the default 25 km, and
-about 0.29 hPa at the 95th percentile with either. Terrain-following files
-(flag 3) are read on their own levels rather than HYSPLIT's internal ones,
-so their values differ more, by an amount not measured.
+about 0.29 hPa at the 95th percentile with either.
+
+``foot`` for a model that writes only positions
+------------------------------------------------
+
+PYSTILT computes ``foot`` for particles that have none
+(:func:`stilt.particles.add_foot`): the time below ``footprint_depth`` of the mixed
+layer over the air below that depth, which it takes from the drop in
+pressure between the ground and the depth in the met files. HYSPLIT
+computes its own the same way in its turbulence steps, adding up the dry
+air over its levels, with 28.84 g/mol where PYSTILT has 28.97. Three
+6-hour HRRR runs from Salt Lake City, a winter afternoon and night and a
+summer evening, compare the two, with HYSPLIT's footprint as the reference
+(``tests/integration/test_foot.py``; runs of 200 and 1,000 particles gave
+the ranges below). "Cells" is the sum of the absolute cell differences over
+the reference's total.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30 30
+
+   * - ``foot`` from
+     - Footprint total
+     - Cells
+   * - HYSPLIT's ``samt`` and ``mlht``
+     - within 0.4 %
+     - 0.2 to 0.4 %
+   * - The whole step below the layer, in place of ``samt``
+     - within 0.6 %
+     - 0.6 to 1.3 %
+   * - Then the met's ``mlht``, against HYSPLIT's default ``kmixd: 3``
+     - 0.3 to 25 % higher
+     - 9 to 61 %
+   * - The same, against a HYSPLIT run with ``kmixd: 0`` (the met's ``PBLH``)
+     - 0.3 % lower to 10 % higher
+     - 1.5 to 20 %
+   * - The same, with the met's ``mlht`` kept at least ``kmix0``, as HYSPLIT keeps its own
+     - within 1.5 %
+     - 1.5 to 6.0 %
+
+Row by row, with HYSPLIT's ``samt`` and ``mlht``, ``foot`` agrees to a
+median of 0.4 % and within 0.8 % on nine rows in ten. Counting the whole
+step changes little because HYSPLIT's ``samt`` is almost always 0 or the
+whole minute.
+
+What is left comes from the mixed-layer height. HYSPLIT's default finds
+the mixed layer from the met's profile, by a bulk Richardson number, and
+keeps it at least ``kmix0`` (150 m), while the met's ``mlht`` is the met
+model's ``PBLH``: at night it was 1.5 to 1.8 times HYSPLIT's, and in the
+afternoon 0.84 times. Against a HYSPLIT run that reads the met's ``PBLH``
+(``kmixd: 0``) the two heights match to a few percent, and what still moves
+the night footprints is the ``kmix0`` floor: below 150 m HYSPLIT mixes the
+flux through more air than the met's boundary layer holds. A transport
+model that writes only positions has no such floor unless
+``pbl_height_min`` sets one, so by default its footprint follows the met's
+own boundary layer.
+
+Choosing the mixed layer
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``pbl_height`` setting chooses the mixed-layer height PYSTILT computes
+``foot`` with (:doc:`/reference/particles`). On the same three runs, the
+footprint of the particles' positions alone moves this far from HYSPLIT's
+with its default mixed layer (``kmixd: 3``, ``kmix0: 150``), for 200
+particles (``tests/integration/test_foot.py``):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30 30
+
+   * - ``pbl_height``
+     - Footprint total
+     - Cells
+   * - ``met`` (the default for such a model)
+     - 0.5 to 25 % higher
+     - 11 to 61 %
+   * - ``met``, ``pbl_height_min: 150``
+     - 8 % lower to 13 % higher
+     - 11 to 43 %
+   * - ``richardson``, ``pbl_height_min: 150``
+     - within 1.0 %
+     - 1.7 to 2.4 %
+   * - ``1000`` (a fixed height in meters)
+     - 48 % lower to 2 % higher
+     - 14 to 106 %
+
+``richardson`` is HYSPLIT's own method ported
+(:func:`stilt.sampling.calc_pbl_height`): the height it finds, kept at
+least 150 m, has a median ratio of 0.999 to 1.000 to the ``mlht`` HYSPLIT
+wrote, and 73 to 94 % of rows are within 2 %; the lowest 5 % of ratios
+are 0.77 to 0.94, for reasons not yet looked into. With it, what is left of the
+difference is the whole-step counting above. The same setting applied to
+HYSPLIT's own particles replaces HYSPLIT's ``foot`` and gives the same
+footprint, since PYSTILT then ignores ``samt``.
 
 Pressure weighting
 ------------------

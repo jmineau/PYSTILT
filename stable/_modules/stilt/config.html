@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.config &#8212; PYSTILT 0.1.0a28</title>
+    <title>stilt.config &#8212; PYSTILT 0.1.0a29</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=300e85c7"></script>
+    <script src="../../_static/documentation_options.js?v=947601de"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a28';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a28" />
+  <meta name="docsearch:version" content="0.1.0a29" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a28</p>
+    <p class="title logo__title">PYSTILT 0.1.0a29</p>
   
 </a></div>
     
@@ -501,7 +501,14 @@
     <span class="n">run_settings</span><span class="p">,</span>
     <span class="n">settings_hash</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport</span><span class="w"> </span><span class="kn">import</span> <span class="n">MODELS</span><span class="p">,</span> <span class="n">ModelInfo</span><span class="p">,</span> <span class="n">TransportConfig</span><span class="p">,</span> <span class="n">get_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">HNF_PLUME_COLUMNS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">MODELS</span><span class="p">,</span>
+    <span class="n">VEGHT_RENAMED</span><span class="p">,</span>
+    <span class="n">ModelInfo</span><span class="p">,</span>
+    <span class="n">TransportConfig</span><span class="p">,</span>
+    <span class="n">get_model</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="c1">#: Pattern for variant and met names, which become directory names.</span>
 <span class="n">VARIANT_NAME_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[a-z0-9][a-z0-9-]*$"</span><span class="p">)</span>
@@ -701,6 +708,29 @@
         <span class="k">return</span> <span class="n">footprint_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">particles_hash</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">footprint_settings</span><span class="p">)</span></div>
 </div>
 
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_UniqueKeyLoader</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">SafeLoader</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    PyYAML's safe loader, refusing a key written twice in one mapping.</span>
+
+<span class="sd">    PyYAML keeps the last value of a repeated key, so ``n_hours: -24`` and</span>
+<span class="sd">    then ``n_hours: 24`` would run forward with no word.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">construct_mapping</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">yaml</span><span class="o">.</span><span class="n">MappingNode</span><span class="p">,</span> <span class="n">deep</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Build a mapping, raising for its first key seen twice."""</span>
+        <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key_node</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key_node</span><span class="p">,</span> <span class="n">yaml</span><span class="o">.</span><span class="n">ScalarNode</span><span class="p">):</span>
+                <span class="k">continue</span>  <span class="c1"># PyYAML refuses a key that is not a plain value itself</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">construct_object</span><span class="p">(</span><span class="n">key_node</span><span class="p">,</span> <span class="n">deep</span><span class="o">=</span><span class="n">deep</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">yaml</span><span class="o">.</span><span class="n">constructor</span><span class="o">.</span><span class="n">ConstructorError</span><span class="p">(</span>
+                    <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2"> is written twice"</span><span class="p">,</span> <span class="n">key_node</span><span class="o">.</span><span class="n">start_mark</span>
+                <span class="p">)</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">construct_mapping</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">deep</span><span class="o">=</span><span class="n">deep</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="ProjectConfig">
@@ -932,14 +962,20 @@
         <span class="p">)</span>
         <span class="n">base</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">defaults</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_footprint</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()}</span>
         <span class="n">merged</span> <span class="o">=</span> <span class="n">_override</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">spec</span><span class="p">)</span>
+        <span class="n">transport</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_FOOTPRINT_FIELDS</span><span class="p">}</span>
+        <span class="n">footprint</span> <span class="o">=</span> <span class="n">_footprint</span><span class="p">(</span>
+            <span class="n">group</span><span class="p">,</span>
+            <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_FOOTPRINT_FIELDS</span><span class="p">},</span>
+            <span class="c1"># grid: null turns the footprint off, inherited settings with it.</span>
+            <span class="n">own</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span> <span class="k">if</span> <span class="s2">"grid"</span> <span class="ow">in</span> <span class="n">spec</span> <span class="ow">and</span> <span class="n">spec</span><span class="p">[</span><span class="s2">"grid"</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">_check_near_field_columns</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">transport</span><span class="p">,</span> <span class="n">footprint</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">_Declared</span><span class="p">(</span>
             <span class="n">met</span><span class="o">=</span><span class="n">met</span><span class="p">,</span>
             <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
             <span class="n">realizations</span><span class="o">=</span><span class="n">realizations</span><span class="p">,</span>
-            <span class="n">transport</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_FOOTPRINT_FIELDS</span><span class="p">},</span>
-            <span class="n">footprint</span><span class="o">=</span><span class="n">_footprint</span><span class="p">(</span>
-                <span class="n">group</span><span class="p">,</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_FOOTPRINT_FIELDS</span><span class="p">}</span>
-            <span class="p">),</span>
+            <span class="n">transport</span><span class="o">=</span><span class="n">transport</span><span class="p">,</span>
+            <span class="n">footprint</span><span class="o">=</span><span class="n">footprint</span><span class="p">,</span>
         <span class="p">)</span>
 
 <div class="viewcode-block" id="ProjectConfig.resolve">
@@ -1057,10 +1093,31 @@
 <a class="viewcode-back" href="../../reference/_api/stilt.ProjectConfig.from_yaml.html#stilt.ProjectConfig.from_yaml">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_yaml</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Load a project config from a YAML file."""</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Load a project config from a YAML file.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the file is not valid YAML, writes one key twice in a section</span>
+<span class="sd">            (YAML would keep the last value), or holds a wrong setting.</span>
+<span class="sd">        """</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-        <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">()</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">raw</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">()</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">raw</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">Loader</span><span class="o">=</span><span class="n">_UniqueKeyLoader</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="c1"># PyYAML's own message spans several lines; keep where and what.</span>
+            <span class="n">mark</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">"problem_mark"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">where</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">""</span>
+                <span class="k">if</span> <span class="n">mark</span> <span class="ow">is</span> <span class="kc">None</span>
+                <span class="k">else</span> <span class="sa">f</span><span class="s2">" at line </span><span class="si">{</span><span class="n">mark</span><span class="o">.</span><span class="n">line</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">, column </span><span class="si">{</span><span class="n">mark</span><span class="o">.</span><span class="n">column</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="n">problem</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">"problem"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="n">error</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> is not valid YAML</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">problem</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span></div>
 </div>
 
@@ -1086,6 +1143,7 @@
 <span class="s2">  ymax: 42.0</span>
 <span class="s2">  xres: 0.01</span>
 <span class="s2">  yres: 0.01</span>
+<span class="s2">hnf_plume: true  # correct foot for the thin plume near the receptor before gridding</span>
 
 
 <span class="s2"># Variants. Every receptor runs once per variant, with the settings in this</span>
@@ -1102,7 +1160,6 @@
 <span class="s2">n_hours: -24</span>
 <span class="s2">numpar: 1000</span>
 <span class="s2">varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]</span>
-<span class="s2">hnf_plume: true  # rescale footprints via a gaussian plume model in the hyper-near field</span>
 
 
 <span class="s2"># Results go to this directory, relative to the project unless absolute.</span>
@@ -1182,11 +1239,15 @@
     <span class="k">return</span> <span class="n">merged</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_footprint</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fields</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">FootprintConfig</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_footprint</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fields</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">own</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FootprintConfig</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the footprint settings, or ``None`` when they give no grid or geometry.</span>
 
-<span class="sd">    The geometry is not read here.</span>
+<span class="sd">    The geometry is not read here. *own* names the settings the variant gave</span>
+<span class="sd">    itself, when it turned the footprint off with ``grid: null``; only those</span>
+<span class="sd">    can be stray, and the ones it inherited are dropped.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -1199,13 +1260,44 @@
         <span class="k">return</span> <span class="n">config</span>
     <span class="n">given</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span>
     <span class="n">default</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">({})</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span>
-    <span class="n">stray</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">field</span> <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">given</span> <span class="k">if</span> <span class="n">given</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">!=</span> <span class="n">default</span><span class="p">[</span><span class="n">field</span><span class="p">])</span>
+    <span class="n">stray</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="n">field</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">given</span>
+        <span class="k">if</span> <span class="n">given</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">!=</span> <span class="n">default</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="ow">and</span> <span class="p">(</span><span class="n">own</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">own</span><span class="p">)</span>
+    <span class="p">)</span>
     <span class="k">if</span> <span class="n">stray</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> sets footprint settings (</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">stray</span><span class="p">)</span><span class="si">}</span><span class="s2">) "</span>
             <span class="s2">"but no grid. Add a grid or geometry, or remove them."</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_near_field_columns</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">transport</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">footprint</span><span class="p">:</span> <span class="n">FootprintConfig</span> <span class="o">|</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Refuse a variant whose footprint has the near-field correction and whose model is not asked for its columns.</span>
+
+<span class="sd">    Only a model with ``varsiwant`` (HYSPLIT's list of particle columns) is</span>
+<span class="sd">    checked; another model's particles are checked when the footprint is</span>
+<span class="sd">    made.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If ``hnf_plume`` is set and ``varsiwant`` lacks a column it reads.</span>
+<span class="sd">    """</span>
+    <span class="n">varsiwant</span> <span class="o">=</span> <span class="n">transport</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"varsiwant"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">footprint</span><span class="o">.</span><span class="n">hnf_plume</span> <span class="ow">or</span> <span class="n">varsiwant</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">HNF_PLUME_COLUMNS</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">varsiwant</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">: the near-field correction (hnf_plume) reads the "</span>
+            <span class="sa">f</span><span class="s2">"particle columns </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">. Add them to varsiwant, or set "</span>
+            <span class="s2">"hnf_plume: false."</span>
+        <span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_mesh</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">meshes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
@@ -1245,6 +1337,8 @@
             <span class="k">continue</span>
         <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">"time_integrate"</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">TIME_INTEGRATE_REMOVED</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">"veght"</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">VEGHT_RENAMED</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="n">close</span> <span class="o">=</span> <span class="n">difflib</span><span class="o">.</span><span class="n">get_close_matches</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">parts</span><span class="p">),</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">hint</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" Did you mean </span><span class="si">{</span><span class="n">close</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">, </span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="n">close</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="si">}</span><span class="s2">?"</span> <span class="k">if</span> <span class="n">close</span> <span class="k">else</span> <span class="s2">""</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2"> is not a setting.</span><span class="si">{</span><span class="n">hint</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>

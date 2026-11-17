@@ -1,0 +1,6 @@
+﻿stilt.exceptions.MeteorologyError
+=================================
+
+.. currentmodule:: stilt.exceptions
+
+.. autoexception:: MeteorologyError

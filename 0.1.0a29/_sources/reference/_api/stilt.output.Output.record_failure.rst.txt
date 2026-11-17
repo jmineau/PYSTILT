@@ -1,0 +1,6 @@
+stilt.output.Output.record\_failure
+===================================
+
+.. currentmodule:: stilt.output
+
+.. automethod:: Output.record_failure

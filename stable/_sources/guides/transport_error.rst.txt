@@ -116,17 +116,10 @@ The modeled enhancement
 The enhancement a footprint predicts for a surface flux field is the
 footprint times the flux, summed over the grid. ``flux`` is an
 :class:`xarray.DataArray` on ``lat`` and ``lon``, with an optional ``time``
-dimension. It is sampled at the footprint's cell centers, and footprint
-cells outside the flux field add nothing. Each footprint hour takes the
-flux step whose CF time bounds hold it, if the flux has them; without
-bounds, the ``time`` labels are read as the starts of the flux's steps, so
-each footprint hour takes the last step that starts at or before it
-(:ref:`flux-step-labels` says what to do with CF time bounds, and with
-labels not at the start of a step). A flux with finer cells than the
-footprint's must be put on the footprint grid first
-(:doc:`../tutorials/flux_inversion` says how), and one with steps shorter
-than the footprint's layers (``tres``) must be averaged onto the layers,
-or the footprints made with a shorter ``tres``.
+dimension. Footprint cells outside the flux field add nothing. Which flux
+step each footprint hour takes, and what to do with a flux on finer cells
+or shorter steps than the footprint's, is in :doc:`aggregation` ("Footprints
+times a flux").
 
 .. code-block:: python
 
@@ -156,15 +149,16 @@ units. Put it on the footprint grid and compute two limits:
 
 The first assumes the errors in all cells move together, so it is an upper
 bound. ``sigma`` can come from the spread of several inventories. The
-second assumes the cells are independent. Both values sum the footprint
-over time first, so they take each cell's flux error to be the same at
-every hour. The second is a lower bound only if that holds and no errors
-are negatively correlated: errors that vary independently from hour to
-hour, or in opposite directions in neighboring cells, can give a smaller
-value. Real inventory errors are correlated over some distance, so for
-errors that do not change with time and are never negatively correlated,
-the true value lies between the two. Computing it needs the covariance of
-the flux errors, which is the prior error covariance of an inversion. If
+second assumes the cells are independent. Real inventory errors are
+correlated over some distance, so the true value lies between the two, with
+two conditions. Both values sum the footprint over time first, so they take
+each cell's flux error to be the same at every hour. And the second is a
+lower bound only if no errors are negatively correlated: errors that vary
+independently from hour to hour, or in opposite directions in neighboring
+cells, can give a smaller value.
+
+The value between the limits needs the covariance of the flux errors, which
+is the prior error covariance of an inversion. If
 you set up the inversion with fips, ``InverseProblem.prior_obs_error`` is
 that covariance carried to every observation (the footprint matrix times
 the prior covariance times its transpose). The square root of its diagonal
@@ -217,8 +211,8 @@ keeps the per-level table described below:
 ``result.sd`` is the square root of ``result.variance``. In both calls the
 particles are weighted the way the unperturbed variant's footprint weights
 them, with its transforms: the averaging kernel (including one from a
-per-receptor table), pressure weighting, and lifetime decay.
-:func:`stilt.particles.transport_error` does the same for particle tables
+per-receptor table), pressure weighting, and any loss on the way.
+:func:`stilt.transport_error` does the same for particle tables
 you have without a project.
 
 Is the estimate meaningful?
@@ -480,8 +474,7 @@ anemometer. Sample the 10 m wind, or the lowest model level:
        "v_err": met["V10M"] - stations["v"],
    })
 
-Reading the observations is up to you. The Salt Lake Valley numbers below
-used the sonde reader in `lair <https://github.com/jmineau/lair>`_.
+Reading the observations is up to you.
 
 For radiosondes anywhere in the world, the usual source is NOAA's
 Integrated Global Radiosonde Archive (IGRA2).

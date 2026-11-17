@@ -11,6 +11,8 @@ Everything you can write in ``config.yaml`` is a field of
 lives next to the code that uses it (``stilt.footprint.config``,
 ``stilt.execution.config``, ``stilt.transport.hysplit``), and all but the
 transport model's are importable from ``stilt``.
+A key may be written once in each section: YAML would keep the last of two,
+so PYSTILT refuses the file and names the line of the second.
 Each page below lists its fields with their defaults and is generated from
 the code.
 
@@ -54,7 +56,10 @@ Footprint grids
 
 Longitudes count modulo 360, so a grid across 180° can be written
 ``xmin: 170``, ``xmax: 190`` or ``xmin: 170``, ``xmax: -170``, and the
-footprint's longitudes are then 170 to 190. A grid spans at most 360°. A
+footprint's longitudes are then 170 to 190. An ``xmax`` west of ``xmin``
+is read as crossing 180° when the two are on either side of 0° or one is
+written past 180°: with both in one hemisphere (``xmin: -110.5``,
+``xmax: -113``) they are taken to be swapped and the grid is refused. A grid spans at most 360°. A
 particle cloud on both sides of 180° is measured as one cloud for the
 smoothing. A grid that goes all the way around (``xmin: -180``,
 ``xmax: 180``, with cells that fit 360°) is a circle, so smoothing that
@@ -63,7 +68,9 @@ near 180°, particles just across 180° smooth onto the grid, as particles
 just past any other edge do.
 
 Projected grids (a ``crs`` such as ``EPSG:32612``) keep their bounds in
-degrees and take ``xres`` and ``yres`` in the projection's units. The two
+degrees and take ``xres`` and ``yres`` in the projection's units. A grid
+of more than a billion cells is refused, which catches a resolution in
+degrees on a grid in meters. The two
 steps that depend on the cell size work in the grid's units. The smoothing
 kernel's width is worked out in degrees and converted, so a footprint is
 smoothed about as much on 1 km UTM cells as on 0.01° cells. The early-time
@@ -100,6 +107,11 @@ The keys under ``execution:`` (:doc:`../guides/running`).
 
 .. config-model:: stilt.execution.config.ExecutionConfig
 
+The keys under ``execution: fetch:``, the Slurm resources of the job that
+gets the met files before a job array (:ref:`slurm-fetch`).
+
+.. config-model:: stilt.execution.config.FetchConfig
+
 Config objects
 --------------
 
@@ -132,8 +144,11 @@ They are flat, top-level keys. HYSPLIT's are in
 :class:`stilt.transport.hysplit.HysplitConfig`, under HYSPLIT's names (see
 :doc:`hysplit`). A variant that names another ``model`` gives that model's
 parameters itself, and inherits the met, the footprint settings, and the
-parameters PYSTILT reads itself (``n_hours``, ``seed``, ``hnf_plume``, and
-``veght``).
+parameters PYSTILT reads itself (``n_hours``, ``seed``,
+``footprint_depth``, ``pbl_height``, and ``pbl_height_min``). ``hnf_plume``,
+the near-field correction, is a footprint setting: it is applied when the
+footprint is made, so it does not change the particles or their settings
+folder.
 
 
 Geometry specifications
