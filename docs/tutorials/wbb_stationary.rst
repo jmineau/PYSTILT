@@ -26,14 +26,14 @@ same steps work for any fixed site, with its own coordinates.
    met = docs_examples.met()
    docs_cwd = docs_examples.temp_workdir()
 
-You need ARL meteorology for the hours of your receptors and the hours the
+You need ARL meteorology for the hours of your releases and the hours the
 runs go back into. Here that is 06:00 UTC on 14 January 2021 to 11:00 UTC on
 15 January (:doc:`../guides/meteorology`).
 
-Step 1: One receptor per hour
+Step 1: One release per hour
 -----------------------------
 
-Each measurement is a receptor. We make one for every hour from 18:00 UTC on
+Each measurement is a release. We make one for every hour from 18:00 UTC on
 14 January (11:00 in Salt Lake City) to 11:00 UTC the next morning (04:00):
 
 .. ipython:: python
@@ -42,7 +42,7 @@ Each measurement is a receptor. We make one for every hour from 18:00 UTC on
    import stilt
 
    times = pd.date_range("2021-01-14 18:00", "2021-01-15 11:00", freq="1h")
-   receptors = [
+   releases = [
        stilt.PointReceptor(
            time=t,
            latitude=40.7665,
@@ -51,27 +51,27 @@ Each measurement is a receptor. We make one for every hour from 18:00 UTC on
        )
        for t in times
    ]
-   len(receptors)
+   len(releases)
 
 If your measurement times are in a spreadsheet, save them as a CSV and read
-them with :func:`stilt.read_receptors` (:doc:`../guides/receptors`).
+them with :func:`stilt.read_releases` (:doc:`../guides/releases`).
 
 Step 2: Make the project
 ------------------------
 
-A project keeps the receptors, the settings and the results together, so
+A project keeps the releases, the settings and the results together, so
 you can stop and pick up where you left off:
 
 .. ipython:: python
 
    project = stilt.Project.init(
        "./wbb_project",
-       receptors=receptors,
+       releases=releases,
        mets={"hrrr": met},
        models={
            "hysplit": {
                "n_hours": -12,   # follow the air 12 hours back
-               "numpar": 100,    # particles per receptor
+               "numpar": 100,    # particles per release
                "krand": 2,
                "seed": 42,       # the same particles on every run
            }
@@ -87,7 +87,7 @@ you can stop and pick up where you left off:
            }
        },
        variants={"hrrr": {}},
-       execution={"backend": "local", "local": {"cpus": 4}},   # 4 receptors at a time
+       execution={"backend": "local", "local": {"cpus": 4}},   # 4 releases at a time
    )
 
 We use 100 particles and 12 hours so that this page builds quickly. For a
@@ -124,8 +124,8 @@ Step 4: Afternoon against night
 -------------------------------
 
 ``project.footprints()`` loads every footprint into one dataset, with a
-``receptor`` axis. We sum each footprint over its hours, then split the
-receptors into the afternoon (11:00 to 16:00 local time) and the night
+``release`` axis. We sum each footprint over its hours, then split the
+releases into the afternoon (11:00 to 16:00 local time) and the night
 (22:00 to 04:00):
 
 .. ipython:: python
@@ -133,10 +133,10 @@ receptors into the afternoon (11:00 to 16:00 local time) and the night
    footprints = project.footprints()
    total = footprints.foot.sum("hour").compute()
 
-   utc = project.simulations.set_index("receptor")["time"]
-   local = (utc - pd.Timedelta("7h")).dt.hour.reindex(total.receptor.values)
-   afternoon = total.sel(receptor=local.index[local.between(11, 16)])
-   night = total.sel(receptor=local.index[(local >= 22) | (local <= 4)])
+   utc = project.simulations.set_index("release")["time"]
+   local = (utc - pd.Timedelta("7h")).dt.hour.reindex(total.release.values)
+   afternoon = total.sel(release=local.index[local.between(11, 16)])
+   night = total.sel(release=local.index[(local >= 22) | (local <= 4)])
 
 Then we map the mean of each group:
 
@@ -148,10 +148,10 @@ Then we map the mean of each group:
    fig, axes = plt.subplots(1, 2, figsize=(10, 4.2), sharey=True, layout="constrained")
    norm = mcolors.LogNorm(vmin=1e-6, vmax=1e-1)
    for ax, group, name in zip(axes, [afternoon, night], ["Afternoon", "Night"]):
-       mean = group.mean("receptor")
+       mean = group.mean("release")
        mesh = mean.where(mean > 0).plot(ax=ax, norm=norm, cmap="YlOrRd", add_colorbar=False)
        ax.plot(-111.8472, 40.7665, marker="*", markersize=14, markerfacecolor="none", color="k")
-       ax.set_title(f"{name}, {group.sizes['receptor']} hours")
+       ax.set_title(f"{name}, {group.sizes['release']} hours")
 
    fig.colorbar(mesh, ax=axes, label="footprint (ppm per µmol m⁻² s⁻¹)");
 
@@ -174,8 +174,8 @@ One number sums up the difference: the share of each footprint within about
 
    near = (abs(total.lon + 111.8472) < 0.06) & (abs(total.lat - 40.7665) < 0.045)
    share = total.where(near).sum(["lat", "lon"]) / total.sum(["lat", "lon"])
-   print(f"afternoon {share.sel(receptor=afternoon.receptor).mean():.0%}, "
-         f"night {share.sel(receptor=night.receptor).mean():.0%}")
+   print(f"afternoon {share.sel(release=afternoon.release).mean():.0%}, "
+         f"night {share.sel(release=night.release).mean():.0%}")
 
 So at night the tower is mostly a measurement of its own neighborhood,
 and in the afternoon of the valley to the north. A study that compares

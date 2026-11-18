@@ -39,7 +39,7 @@ DOCS = Path(__file__).resolve().parents[1]
 #: so every clean build makes a new one; ``just docs-serve`` reuses it.
 SAMPLE = DOCS / "_build" / "sample_project"
 
-#: The sample project's receptors: one site, the four hours before 10:00 UTC.
+#: The sample project's releases: one site, the four hours before 10:00 UTC.
 SAMPLE_HOURS = (6, 7, 8, 9)
 
 #: The committed map tiles, one JPEG per tile at ``<z>/<y>/<x>.jpg``.
@@ -86,7 +86,7 @@ def sample_project() -> Path:
     marker = SAMPLE / "complete"
     if not marker.exists():
         shutil.rmtree(SAMPLE, ignore_errors=True)
-        receptors = [
+        releases = [
             stilt.PointReceptor(
                 time=f"2021-01-15 {hour:02d}:00",
                 longitude=-111.848,
@@ -100,7 +100,7 @@ def sample_project() -> Path:
         )
         stilt.Project.init(
             str(project),
-            receptors=receptors,
+            releases=releases,
             mets={"hrrr": met()},
             models={"hysplit": {"n_hours": -24, "numpar": 200, "krand": 2, "seed": 42}},
             stages={

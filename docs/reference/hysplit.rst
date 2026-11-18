@@ -50,8 +50,8 @@ and mixed-layer files when the settings call for them. It takes what
 ``CONTROL`` starts from: a release time and release locations (latitude,
 longitude and height, in ``CONTROL``'s order), with ``kmsl`` 0 for heights
 above ground and 1 above sea level, as ``SETUP.CFG``'s ``KMSL``.
-:class:`~stilt.transport.hysplit.HysplitModel` passes a receptor's time,
-release points (``receptor.coords()``) and ``altitude_ref``.
+:class:`~stilt.transport.hysplit.HysplitModel` passes a release's time,
+release points (``release.coords()``) and ``altitude_ref``.
 :func:`~stilt.transport.hysplit.run_hycs_std` runs ``hycs_std`` in the
 folder, and :func:`~stilt.transport.hysplit.read_particle_dat` reads its
 ``PARTICLE_STILT.DAT`` as a particle table. Use them to look at or change
@@ -75,16 +75,16 @@ when it makes the footprint, the near-field correction
    config = HysplitConfig(n_hours=-24, numpar=200)
    write_inputs(
        "run",
-       release_time=receptor.time,
-       locations=receptor.coords(),
+       release_time=release.time,
+       locations=release.coords(),
        config=config,
        met_files=met_files,
-       kmsl=1 if receptor.altitude_ref == "msl" else 0,
+       kmsl=1 if release.altitude_ref == "msl" else 0,
    )
    run_hycs_std(Path("run"))
    particles = read_particle_dat("run/PARTICLE_STILT.DAT", config.varsiwant)
-   particles = add_release_heights(particles, receptor)
-   particles = correct_near_field(particles, receptor, config.veght)
+   particles = add_release_heights(particles, release)
+   particles = correct_near_field(particles, release, config.veght)
 
 .. autosummary::
    :toctree: _api
@@ -120,8 +120,8 @@ Each reason, what happened, and what to do:
 
        - ``No met file ... for <hours>``: a file the run needs is missing.
          Check the met's ``directory`` against the files on disk. A backward run needs files from ``n_hours`` before
-         the receptor time to just after it, a forward run from the
-         receptor time to just after ``n_hours`` later (:doc:`/guides/meteorology`).
+         the release time to just after it, a forward run from the
+         release time to just after ``n_hours`` later (:doc:`/guides/meteorology`).
          ``stilt check`` finds these before a run.
        - ``The met file ... is damaged`` or ``The met files hold no time
          step between ...``: a file is there but cut short, written
@@ -145,10 +145,10 @@ Each reason, what happened, and what to do:
          checks this only when ``outdt`` is 0, the default: with fewer
          rows, a particle's last row can be far from where it left.
        - A HYSPLIT message, such as ``start point not within (x,y,t) any
-         data file``: the receptor is outside the files, in time or in
-         space. ``source point off grid`` says the receptor is outside the
+         data file``: the release is outside the files, in time or in
+         space. ``source point off grid`` says the release is outside the
          met's grid (check the sign of its longitude; ``stilt check``
-         lists such a receptor as ``met_domain``), and ``Start height
+         lists such a release as ``met_domain``), and ``Start height
          above mdl domain`` that it is above the met's top; the line gives the
          height and the top.
    * - ``VARYING_MET_INTERVAL``
@@ -163,15 +163,15 @@ Each reason, what happened, and what to do:
        the log and the kept workdir's ``MESSAGE`` file.
    * - ``PARTICLE_LIMIT``
      - HYSPLIT reached ``maxpar`` before every location of a multipoint
-       receptor got its particles, so the last ones would have fewer or
-       none. Leave ``maxpar`` unset, or raise it (:doc:`/guides/receptors`).
+       release got its particles, so the last ones would have fewer or
+       none. Leave ``maxpar`` unset, or raise it (:doc:`/guides/releases`).
    * - ``EXIT_STATUS``
      - ``hycs_std`` was killed by a signal, or exited with a non-zero
        status, and its log holds no other known message. The message names
        the signal or the status, and the log ends with the last lines of
        HYSPLIT's ``MESSAGE`` file. A ``SIGKILL`` that nothing in PYSTILT
        sent is often the kernel's out-of-memory killer: ask for more
-       memory per task, or run fewer receptors at once. The particles
+       memory per task, or run fewer releases at once. The particles
        HYSPLIT had written are not kept, and running again runs the
        simulation again.
    * - ``TIMEOUT``

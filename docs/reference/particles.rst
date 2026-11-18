@@ -157,8 +157,8 @@ The release row
 A model should write each particle's release as a row at ``age = 0``, with
 ``foot = 0``: a positive ``foot`` there would add a layer at hour 0 to the
 footprint. That row is where the particle started, so it says which release point of a
-multipoint receptor the particle left from, and which slab of a column
-receptor (:func:`add_release_heights`). HYSPLIT 5.1.0, STILT-R's build,
+multipoint release the particle left from, and which slab of a column
+release (:func:`add_release_heights`). HYSPLIT 5.1.0, STILT-R's build,
 writes no such row: its first row is one time step after release.
 For it, PYSTILT matches each particle to a release point from its first
 position, and takes a column's particles to be released bottom to top in
@@ -202,7 +202,7 @@ Some that PYSTILT reads:
    * - ``zsfc``
      - m
      - Terrain height above sea level. It is not in the default
-       ``varsiwant``. Add it for a receptor given above sea level
+       ``varsiwant``. Add it for a release given above sea level
        (``altitude_ref="msl"``): pressure weighting raises without it, and
        the near-field correction is skipped without it.
    * - ``zcfx``
@@ -213,7 +213,7 @@ Some that PYSTILT reads:
 
 The near-field correction reads ``dens``, ``samt``, ``sigw``, ``tlgr``,
 ``foot``, and ``mlht`` (:data:`stilt.footprint.HNF_PLUME_COLUMNS`). The plume it models
-grows from the release height above ground, so for a receptor above sea
+grows from the release height above ground, so for a release above sea
 level it also reads ``zsfc``. Without it the run's log says the correction
 was skipped.
 
@@ -241,8 +241,8 @@ Columns PYSTILT adds
 --------------------
 
 ``release_height``
-   Release height of each particle, in meters in the receptor's own
-   vertical reference, for column and multipoint receptors
+   Release height of each particle, in meters in the release's own
+   vertical reference, for column and multipoint releases
    (:func:`add_release_heights`). For a column it is the center of the
    particle's slab, the part of the column the particle stands for. STILT-R and
    X-STILT call it ``xhgt``.
@@ -258,7 +258,7 @@ Columns PYSTILT adds
    ``foot`` uncorrected, and the footprint applies the correction.
 
 ``time``
-   The time of each row, in UTC: the receptor time plus ``age``. It is
+   The time of each row, in UTC: the release time plus ``age``. It is
    not stored; reading a particle file adds it, and so does
    :func:`stilt.run_trajectories`. STILT-R's ``time`` is ``age`` here.
 

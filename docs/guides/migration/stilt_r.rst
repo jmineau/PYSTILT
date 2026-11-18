@@ -7,12 +7,12 @@ PYSTILT's footprints match STILT-R's cell by cell, to a relative tolerance
 of 1e-7 in the 21 scenarios the tests compare. What changes is where the
 settings live. Instead of editing variables in ``run_stilt.r``, you write
 them in ``config.yaml`` or pass them to :meth:`stilt.Project.init`, and the
-receptors go in ``receptors.csv``.
+releases go in ``releases.csv``.
 
 A few cases differ on purpose, and :ref:`stilt-r-parity` gives each one
 and why:
 
-- the near-field correction of a receptor above sea level, whose plume
+- the near-field correction of a release above sea level, whose plume
   PYSTILT grows from the ground
 - projected grids, where PYSTILT smooths as widely as on a
   longitude/latitude grid and runs the early-time interpolation
@@ -41,7 +41,7 @@ The workflow side by side
      - edit ``config.yaml``
    * - Define receptors
      - build a ``receptors`` data frame in ``run_stilt.r``
-     - ``receptors.csv``, or receptor objects in Python
+     - ``releases.csv``, or release objects in Python
    * - Run
      - ``Rscript r/run_stilt.r``
      - ``stilt run my_project``
@@ -126,11 +126,11 @@ The workflow side by side
        footprint settings; it shares the particles
        (:doc:`../projects`).
    * - ``simulation_id`` (run a subset)
-     - ``project.run(receptors=[...])`` with the receptor ids you want,
-       or ``stilt run --receptors ids.txt``
+     - ``project.run(releases=[...])`` with the release ids you want,
+       or ``stilt run --releases ids.txt``
    * - ``ziscale`` as one list per receptor
      - ``ziscale`` per variant, as one factor or one factor per hour. It is
-       the same for every receptor; PYSTILT has no per-receptor
+       the same for every release; PYSTILT has no per-release
        factors.
    * - ``stilt_wd``, ``output_wd``
      - the project folder
@@ -200,9 +200,9 @@ of a new project with the one STILT-R writes.
 Other differences
 -----------------
 
-A project runs its receptors under named *variants*. A variant is a
+A project runs its releases under named *variants*. A variant is a
 met plus any settings that differ from the defaults (see
-:doc:`../projects`). One project can run the same receptors with
+:doc:`../projects`). One project can run the same releases with
 several mets, a range of ``ziscale`` values, or a second
 footprint grid. Each variant gets its own folder.
 
@@ -222,11 +222,11 @@ over whenever ``run_trajec = TRUE``. In PYSTILT a variant's results live in
 new folder and the old one stays until you delete it (see
 :doc:`../projects`).
 
-Receptors
----------
+Releases (receptors)
+--------------------
 
-``receptors.csv`` holds the same information as STILT-R's ``receptors`` data
-frame. STILT-R's column names ``long``, ``lati``, and ``zagl`` work as they
+``releases.csv`` holds the same information as STILT-R's ``receptors`` data
+frame. PYSTILT says *release* where STILT-R says *receptor*. STILT-R's column names ``long``, ``lati``, and ``zagl`` work as they
 are. Rename ``run_time`` to ``time``. In the particle table, STILT-R's
 ``long``, ``lati``, ``indx``, ``time``, and ``xhgt`` are ``lon``, ``lat``,
 ``particle``, ``age``, and ``release_height``. PYSTILT's ``time`` column is
@@ -239,8 +239,8 @@ in minutes must use ``age``.
    2015-07-05 00:00:00,-111.8472,40.7665,21
 
 STILT-R makes a column receptor from a row with several ``zagl`` values. In
-``receptors.csv``, a column or multipoint receptor is several rows that share
-an ``r_idx`` value. See :doc:`../receptors`.
+``releases.csv``, a column or multipoint release is several rows that share
+a ``group`` value. See :doc:`../releases`.
 
 Outputs
 -------
@@ -250,12 +250,12 @@ in Python with pandas or :func:`stilt.read_particles`, and in R with
 ``arrow::read_parquet``. Footprints are saved as Parquet too, holding only
 the cells the particles reached. ``foot.stilt.to_netcdf(path)`` writes one
 as CF NetCDF with dimensions ``(time, lat, lon)``, as STILT-R does, and
-keeps the receptor and the settings in it.
+keeps the release and the settings in it.
 
-A point receptor's id has the same form as STILT-R's simulation ID, and
+A point release's id has the same form as STILT-R's simulation ID, and
 names its files in each variant's settings folder:
 ``date=2015-07-05/201507050000_-111.8472_40.7665_21.parquet`` (see
-:doc:`../projects`). A column receptor's id adds its bottom and top
+:doc:`../projects`). A column release's id adds its bottom and top
 after the ``X``.
 
 Reading STILT-R output
@@ -270,18 +270,18 @@ which reads R's ``.rds`` files without R:
 
    pip install "pystilt[stilt-r]"
 
-Each simulation gives its receptor, its particles, and its footprint, one
+Each simulation gives its release, its particles, and its footprint, one
 folder at a time:
 
 .. code-block:: python
 
    from stilt.migration import read_stilt_r
 
-   for receptor, particles, foot in read_stilt_r("my_project/out/by-id"):
-       print(receptor.id, len(particles), foot is not None)
+   for release, particles, foot in read_stilt_r("my_project/out/by-id"):
+       print(release.id, len(particles), foot is not None)
 
-Each run's receptor comes from two files in its folder. The release points are
-the ones in ``CONTROL``, the numbers HYSPLIT read, so a point receptor's id is
+Each run's release comes from two files in its folder. The release points are
+the ones in ``CONTROL``, the numbers HYSPLIT read, so a point release's id is
 the folder's name. The time is the one in ``<id>_traj.rds``, which keeps the
 seconds that ``CONTROL`` drops. A folder without ``CONTROL`` stops the read
 with an error that names it.
@@ -346,7 +346,7 @@ STILT-R project folder:
    import stilt
    from stilt.migration import import_stilt_r
 
-   receptors = import_stilt_r("my_project/out/by-id", "output", version="1d936c1")
+   releases = import_stilt_r("my_project/out/by-id", "output", version="1d936c1")
 
 It prints the blocks that name the imported folders, for ``config.yaml``:
 the met, the ``stilt-r`` model (PYSTILT's model of imported runs, named by
@@ -382,20 +382,20 @@ and the variant.
            hnf_plume: true
            transforms: []
 
-and returns the receptors, for ``receptors.csv``. Paste the printed lines into
+and returns the releases, for ``releases.csv``. Paste the printed lines into
 the ``config.yaml`` of a project whose ``output`` is that directory. In a
 project that already has blocks of those names, add the printed entries to
 them; with a ``hysplit`` block beside ``stilt-r``, each variant then names
-its ``model``. Then add the receptors:
+its ``model``. Then add the releases:
 
 .. code-block:: python
 
    project = stilt.Project("my_project_py")
-   project.add_receptors(receptors)
+   project.add_releases(releases)
    project.status()
 
 A ``stilt-r`` variant reads what the import wrote and runs nothing: a run of
-one fails (``NOT_RUNNABLE``), so its receptors that STILT-R did not run stay
+one fails (``NOT_RUNNABLE``), so its releases that STILT-R did not run stay
 failed. Run them with a ``hysplit`` variant instead.
 
 Runs imported with PYSTILT 0.1.0a29 or earlier name the model ``stilt-r``,
@@ -435,7 +435,7 @@ STILT-R projects that differ only in ``n_hours`` land in two folders.
      - ``<id>_foot.nc``. A footprint STILT-R summed over time
        (``time_integrate = T``) is one layer as long as the run: ``tres``
        the run's ``n_hours``, stamped at the start of the run, not at the
-       receptor time
+       release time
    * - ``smooth_factor``
      - ``params.RDS``, or the ``smooth_factor`` argument, as for
        :func:`~stilt.migration.read_stilt_r`
@@ -470,7 +470,7 @@ Moving a project over
    values, and copy your ``run_stilt.r`` settings into it using the table
    above. Start with one met and one variant that runs the defaults
    (``variants: {hrrr: {}}``).
-2. Write your receptors to ``receptors.csv``.
-3. Run a few receptors that you already have STILT-R results for, and
+2. Write your releases to ``releases.csv``.
+3. Run a few releases that you already have STILT-R results for, and
    compare the footprints.
 4. Run everything.

@@ -23,7 +23,7 @@ building, releasing), [docs/development/architecture.rst](docs/development/archi
 
 PYSTILT is a Python implementation of **STILT** (Stochastic Time-Inverted
 Lagrangian Transport). It drives **HYSPLIT** for backward (or forward) particle
-trajectories and computes gridded footprints for receptors. It is alpha
+trajectories and computes gridded footprints for releases. It is alpha
 software (`0.1.0a*`): **there are no backward-compatibility guarantees before
 v1.0**, so prefer the clean design over a compatibility shim.
 
@@ -32,6 +32,9 @@ v1.0**, so prefer the clean design over a compatibility shim.
   implementation ([uataq/stilt](https://github.com/uataq/stilt)) is
   **STILT-R**, never "R-STILT"; identifiers such as the `r_stilt` fixtures and
   `STILT_R_DIR` keep their names.
+- **Release** is what STILT-R calls a receptor: `releases.csv`, the `release`
+  column, `--releases`, `group` for `r_idx`. The classes keep their names
+  (`PointReceptor`, `Receptor`), and docs write "release (receptor)".
 - **Particle columns** get plain names for HYSPLIT's and STILT-R's `indx`,
   `time`, `long`, `lati`, `xhgt` (`docs/reference/particles.rst`).
 - **Config** is what the user writes, always a class next to the code that
@@ -45,23 +48,23 @@ v1.0**, so prefer the clean design over a compatibility shim.
 ## Architecture
 
 **There is no index, manifest, or registry.** A project is a directory of
-inputs (`Project`: `config.yaml`, `receptors.csv`) and an output directory
+inputs (`Project`: `config.yaml`, `releases.csv`) and an output directory
 (`Output`) that `config.yaml` names and several projects can share. Its
-simulations are **receptors × variants** (at least one variant). Each `Variant` (`stilt.config`) has
+simulations are **releases × variants** (at least one variant). Each `Variant` (`stilt.config`) has
 run settings, whose hash names its particles folder, and the settings of each
 stage it uses, hashed with what the stage reads (`stilt.identity`); variants
-with equal run settings share one run per receptor, and a changed setting
+with equal run settings share one run per release, and a changed setting
 hashes to a new folder (`docs/reference/layout.rst`). **A stage** makes one
-file per receptor after the model runs; the footprint is one. `config.yaml`
+file per release after the model runs; the footprint is one. `config.yaml`
 names its class by import path, in a block named for the stage, and the class provides `stilt.stages.Stage`,
 so the core handles any stage and imports none (`CONTRIBUTING.md`, "Adding a stage").
 
 **`Project` reads; the workers write results.** `Project` writes only its
-inputs (`config.yaml` once, at `Project.init`; `add_receptors` appends to
-`receptors.csv`; `add_table` writes `tables/<name>.parquet`) and knows no
+inputs (`config.yaml` once, at `Project.init`; `add_releases` appends to
+`releases.csv`; `add_table` writes `tables/<name>.parquet`) and knows no
 scheduler or compute root; `stilt.execution.run` and `submit` start the
 workers. **Tables are plain DataFrames; the verbs are on `Project`**: a
-selection of `project.simulations` (any table with `receptor` and `variant`
+selection of `project.simulations` (any table with `release` and `variant`
 columns, or a mask) goes to `status`, `incomplete`, `particles`, `footprints`,
 `jacobian`, or `transport_error`. Do not wrap the table in a class again. `Output` has no folder
 classes: its methods take the kind (`particles` or a stage's name).
@@ -82,11 +85,11 @@ src/stilt/
   migration.py    read_stilt_r, import_stilt_r: STILT-R and X-STILT by-id output, read with rdata
   stilt_r.py      StiltRModel, the stilt-r model of imported runs (runs nothing), named by import path
   output.py       Output: the output directory; `completed`, the completion rule
-  simulation.py   Simulation, the particle part: a frozen (receptor, variant, output) value
+  simulation.py   Simulation, the particle part: a frozen (release, variant, output) value
   stilt_simulation.py  stilt.Simulation: footprint, calc_footprint, background, transport_error, plot
   config.py       ProjectConfig and Variant;  identity.py  settings records, hashes
   stages.py       the Stage protocol, get_stage, check_stage;  _plugins.py  a class by import path
-  receptors/      receptor models, receptors.csv, shared validation
+  releases/       release models, releases.csv, shared validation
   particles/      the particle table and files, release heights;  stilt_particles.py  .stilt with enhancement
   footprint/      FootprintConfig, FootprintStage, calc_footprint (gridding.py), foot (add_foot,
                   the near-field correction), aggregation, io, targets
@@ -94,21 +97,21 @@ src/stilt/
   transport/      TransportModel/TransportConfig protocols, MODELS (hysplit), get_model, run_model
     hysplit/      config, met, catalog, driver, CONTROL and SETUP.CFG writers, failures
   execution/      ExecutionConfig (a block per backend), runner (plan, local run, Slurm submit), worker
-  observations/   the X-STILT port (readers, sounding selection, slant receptors, columns);
-                  receptors along a moving platform's track (tracks.py)
+  observations/   the X-STILT port (readers, sounding selection, slant releases, columns);
+                  releases along a moving platform's track (tracks.py)
   background.py, transport_error.py, meteorology.py, sampling.py, spatial.py, visualization.py
   (stilt_visualization.py: footprint and simulation plots), exceptions.py, _paths.py
 ```
 
 **A run** (`stilt run`, `Project.run()`, `submit()`) happens in this process
 or as a Slurm job array whose tasks each run `stilt run --task i/N`. The unit
-of work is a receptor: the worker runs the model once per run-settings hash,
+of work is a release: the worker runs the model once per run-settings hash,
 then each missing stage file of the variants that share the particles, a
 stage after the ones it `reads` and again when one of those was remade
-(`run_receptor`, `run_stages`); a batched model
-(`batched = True`) first runs a variant group's receptors in one call.
+(`run_release`, `run_stages`); a batched model
+(`batched = True`) first runs a variant group's releases in one call.
 **Observation-driven** work sits above the core: `stilt.observations` turns
-soundings into receptors, then a run goes as usual. Keep it out of `project.py`.
+soundings into releases, then a run goes as usual. Keep it out of `project.py`.
 
 The import contracts in `pyproject.toml` (`just imports`) hold this shape: an
 exhaustive `layers` contract (a new top-level module fails until placed), only
@@ -134,7 +137,7 @@ geometries and asks the model its version. `HysplitConfig` has HYSPLIT's own def
   output file exists, and so does the file of every stage its variant uses;
   `stilt.output.completed` is the one rule, over folder listings. Never add
   another, a completion registry, or a manifest.
-- **Bulk methods work from listings** and receptor ids, never a `Simulation`
+- **Bulk methods work from listings** and release ids, never a `Simulation`
   per row; they open a file per row only when its contents are the answer
   (`footprints`, `jacobian`).
 - **One code path for a disk and an object store, no store class.**
@@ -241,7 +244,7 @@ machine-written, is "Writing documentation" in `CONTRIBUTING.md`. Words:
 | particles (the table); run (the verb); trajectory (one particle's path) | run as a noun for the result |
 | workdir (one simulation's folder); compute root (where workdirs are made) | scratch, except the output's `scratch/` folder |
 | log, met files | provenance |
-| receptor id; simulation (a receptor under a variant) | simulation ID as a folder |
+| release id; simulation (a release under a variant) | simulation ID as a folder |
 | the settings of a variant | resolve, record, `model_copy`, frame, handle |
 
 ### Commits, releases, issues
@@ -273,7 +276,7 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
   and the footprint stage writes a no-row file marked `stilt:empty`: complete, with
   `sim.footprint` `None` and a listing in `project.footprints().attrs["empty"]`.
   Never synthesize a zero footprint for it.
-- **A failure record is a note** (`<receptor id>.failure.yaml` in the logs, its
+- **A failure record is a note** (`<release id>.failure.yaml` in the logs, its
   `stage` `particles` or a stage's name), removed when the result is written
   and never read by completion.
 - **A stage's `config_class` reads back what its `settings` wrote**: a stored
@@ -285,7 +288,7 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
   damaged met before it starts (`FAILURE_PHRASES` maps the log afterwards),
   and `check_met_stop` fails a run that stopped early with a particle more
   than 5 grid cells inside the domain (only at `outdt: 0`).
-  `stilt check` runs the file search for every receptor early; it opens one
+  `stilt check` runs the file search for every release early; it opens one
   met file per met, to count its time periods (HYSPLIT stops on a file with
   one, and `Met.check` refuses it), and one per grid the catalog lists, for
   the domain; so a damaged file still fails at run time.
@@ -296,8 +299,8 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
 - **HYSPLIT chains same-location starts into a line source**: that is how
   `ColumnReceptor` works, and why a `MultiPointReceptor` may not repeat a
   horizontal location.
-- **HYSPLIT stops releasing at `MAXPAR`** and fills a multipoint receptor's
-  locations in order. An unset `maxpar` is chosen per receptor
+- **HYSPLIT stops releasing at `MAXPAR`** and fills a multipoint release's
+  locations in order. An unset `maxpar` is chosen per release
   (`HysplitConfig.maxpar_for`), so it is recorded unset; `check_release` fails
   a multipoint run whose `WARNING` says `exceeding puff limit` (a one-location
   run writes it too, harmlessly).
@@ -313,9 +316,9 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
 - **Never name a workdir from the simulation alone**: each run gets a new path
   in the compute root (`_new_workdir`), so projects can share one. Real runs
   are heavy: on a shared HPC system use Slurm or an allocation.
-- **The pool is a `ProcessPoolExecutor`** holding at most `cpus` receptors, so
+- **The pool is a `ProcessPoolExecutor`** holding at most `cpus` releases, so
   the ones it holds are in progress. A worker killed outright breaks it:
-  `run_receptors` raises `WorkerDied` naming them, and `stilt run` exits with 3.
+  `run_releases` raises `WorkerDied` naming them, and `stilt run` exits with 3.
   Workers must exit on SIGTERM: the executor's loop catches `SystemExit`, so
   `_pool_run` ends the process itself, or a stop waits for ever.
 - **A pool with `cpus` above 1 first starts one worker that does nothing**

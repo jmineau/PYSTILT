@@ -2,7 +2,7 @@ On An HPC Cluster (Slurm)
 =========================
 
 For thousands of simulations, run them as a Slurm job array. PYSTILT splits
-the unfinished receptors among the array tasks and submits the job. You
+the unfinished releases among the array tasks and submits the job. You
 don't write any Slurm scripts yourself.
 
 Your project folder, its output directory, and the Python environment must
@@ -33,7 +33,7 @@ runs the project on this machine with it.
 
 Then check the project and submit it from the environment PYSTILT is
 installed in. ``stilt check`` finds a met folder that is not where you said,
-or met files a receptor needs that are not there, before the job array
+or met files a release needs that are not there, before the job array
 starts and its simulations fail one by one (:doc:`checking`):
 
 .. code-block:: bash
@@ -52,17 +52,17 @@ Options
 The keys of the ``slurm`` block:
 
 ``n_workers``
-   How many array tasks to split the receptors into. With 10,000 receptors
-   and ``n_workers: 200``, each task runs 50 receptors one after another.
-   Each receptor runs once per variant, so set ``time`` long enough for one
-   task's share. If fewer receptors are left than ``n_workers``, PYSTILT
-   submits one task per receptor. We size the tasks to run an hour or two,
+   How many array tasks to split the releases into. With 10,000 releases
+   and ``n_workers: 200``, each task runs 50 releases one after another.
+   Each release runs once per variant, so set ``time`` long enough for one
+   task's share. If fewer releases are left than ``n_workers``, PYSTILT
+   submits one task per release. We size the tasks to run an hour or two,
    because each task first loads Python and the project, and a shorter
    task spends more of its time on that.
 
 ``cpus``
    CPUs per array task (default 1). With more than one, each task runs that
-   many receptors at the same time. A local run has its own ``cpus``, in
+   many releases at the same time. A local run has its own ``cpus``, in
    the ``local`` block.
    Each worker is one process that uses one CPU, so the job script sets
    ``OMP_NUM_THREADS=1`` for it. Without that, NumPy's BLAS starts a thread
@@ -77,7 +77,7 @@ The keys of the ``slurm`` block:
    it. It is required: without it a task gets the partition's default
    limit, which can be days, and holds its node that long if it hangs. To
    choose it, time a few simulations in a small test project, multiply by
-   the receptors per task and the variants, and add a margin. A task that
+   the releases per task and the variants, and add a margin. A task that
    runs out of time loses nothing (below).
 
 ``mem``, ``partition``, ``account``, ``qos``
@@ -127,9 +127,9 @@ Met files that download
 
 When a met has ``download`` set, ``stilt submit`` first submits a job that
 gets the met files, and the array waits for it. Otherwise every array task
-would download the files its own receptors need, and tasks whose receptors
+would download the files its own releases need, and tasks whose releases
 share a day would download the same files at the same time. The fetch job
-is one task that runs ``stilt fetch`` over the receptors the array runs, so
+is one task that runs ``stilt fetch`` over the releases the array runs, so
 each file is downloaded once. ``stilt submit`` prints both job IDs:
 
 .. code-block:: text
@@ -179,7 +179,7 @@ Preempted and timed-out tasks
 -----------------------------
 
 A task that is preempted, or reaches its time limit, is put back in the
-queue and picks up where it stopped. Receptors it already finished are
+queue and picks up where it stopped. Releases it already finished are
 skipped. Slurm warns each task two minutes before its time limit with the
 signal ``USR1``, and stops a preempted task with ``SIGTERM``. Either way
 the task stops its runs and requeues itself with ``scontrol requeue``. The
@@ -195,16 +195,16 @@ Watch progress and rerun
    squeue -u "$USER"            # Slurm's view
    stilt status ./my_project    # finished vs remaining simulations
 
-If receptors fail, fix the cause and run the same command again once the
+If releases fail, fix the cause and run the same command again once the
 job has left the queue:
 
 .. code-block:: bash
 
    stilt run ./my_project
 
-Only unfinished receptors are submitted. Repeat until ``stilt status``
+Only unfinished releases are submitted. Repeat until ``stilt status``
 shows none remaining. Don't resubmit while the first job is still running:
-the receptors it hasn't finished yet would be submitted a second time. If
+the releases it hasn't finished yet would be submitted a second time. If
 every task fails at once, look in the tasks' logs (below) first. Use
 ``--no-skip`` to force everything to run again.
 
@@ -233,8 +233,8 @@ earlier one's logs:
    my_project/
      _slurm/<date_time>_<id>/
        job.sh            # the script given to sbatch
-       receptors.txt     # the receptors submitted, one per line
-       receptors.parquet # their rows of receptors.csv, already checked
+       releases.txt     # the releases submitted, one per line
+       releases.parquet # their rows of releases.csv, already checked
        execution.yaml    # the execution settings of this submission
        <task>.log        # each task's progress lines and errors
        fetch.sh          # the fetch job's script, when a met downloads
@@ -245,13 +245,13 @@ earlier one's logs:
 
 .. code-block:: bash
 
-   python -m stilt run my_project --receptors .../receptors.parquet \
+   python -m stilt run my_project --releases .../releases.parquet \
        --task $SLURM_ARRAY_TASK_ID/N --execution .../execution.yaml \
        --output /path/to/output
 
-with the Python that submitted it. A task reads its receptors from
-``receptors.parquet``, so it does not read and check all of
-``receptors.csv`` again. To rerun one task by hand, run that line on a
+with the Python that submitted it. A task reads its releases from
+``releases.parquet``, so it does not read and check all of
+``releases.csv`` again. To rerun one task by hand, run that line on a
 compute node with the task's number in place of ``$SLURM_ARRAY_TASK_ID``.
 
 If a task fails, look in its ``<task>.log`` for problems with the task

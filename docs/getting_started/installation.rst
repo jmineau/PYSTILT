@@ -28,7 +28,7 @@ Extras add optional features. List them in the brackets, for example
    * - Extra
      - Adds
    * - ``visualization``
-     - Plotting (``.stilt.plot.map()`` on footprints and particles, ``.plot.map()`` on receptors), with coastlines and state borders from cartopy.
+     - Plotting (``.stilt.plot.map()`` on footprints and particles, ``.plot.map()`` on releases), with coastlines and state borders from cartopy.
    * - ``geometry``
      - Adding footprints up over shapefiles, counties, or H3 hexagons, with exactextract for fast overlaps.
    * - ``download``

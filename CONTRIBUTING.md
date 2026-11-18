@@ -225,10 +225,10 @@ fails when one breaks.
   minutes). Fetch once, and keep the folder: a file already in it is not
   downloaded again.
 
-  A receptor on the page must stay inside that time window. `docs.yml`
+  A release on the page must stay inside that time window. `docs.yml`
   restores the same cache the tests use.
 - **The guides that open a project start from a sample project**
-  (`docs/_ext/docs_examples.py`): four receptors an hour apart on 15 January
+  (`docs/_ext/docs_examples.py`): four releases an hour apart on 15 January
   2021, run once per docs build (about 40 s) and copied into a temporary
   folder for each page. A page starts it from a hidden block
   (`docs_examples.temp_workdir(sample=True)`) and goes back with
@@ -275,7 +275,7 @@ those two only where the model differs. The model itself names that class as
 `sha256` (the checksum of the executable it runs, `None` for none: part of
 the run's settings), `version` (what the build reports, recorded beside
 them), `data_files`, and
-`run(receptor, config, met, window, workdir=None, timeout=None)`
+`run(release, config, met, window, workdir=None, timeout=None)`
 (`stilt.transport.TransportModel`). `sha256` raises `FileNotFoundError` when
 the executable cannot be found; the project still opens, and its status
 compares stored folders without the build. The met config is a pydantic model that
@@ -297,11 +297,11 @@ have none, and applies the near-field correction (`stilt.calc_footprint`).
 A model whose `foot` is made with a depth records it as `veght`, as
 HYSPLIT does, so the footprint corrects the near field with it. A model that writes no files sets
 `needs_workdir = False` and is handed `workdir=None`. A model that runs
-many receptors in one call, such as an emulator on a GPU, sets
-`batched = True` and gives `run_many(receptors, config, met, windows,
-workdir=None, timeout=None)`, returning one table with a `receptor` column
+many releases in one call, such as an emulator on a GPU, sets
+`batched = True` and gives `run_many(releases, config, met, windows,
+workdir=None, timeout=None)`, returning one table with a `release` column
 (`stilt.transport.BatchedTransportModel`): the worker then hands it every
-receptor of a variant that needs particles at once, and a receptor it
+release of a variant that needs particles at once, and a release it
 returns no rows for fails alone. A model in a package of its own needs no
 registration: its block under `models:` in `config.yaml` names it by import
 path (`class: mypkg.models.MyModel`), as a transform's `kind:` is, and every
@@ -316,15 +316,15 @@ how.
 ## Adding a stage
 
 A stage is what is made from each simulation's results after the transport
-model runs: one file per receptor, from the particles, from the files of
+model runs: one file per release, from the particles, from the files of
 other stages, or both. The footprint is one
 (`stilt.footprint.FootprintStage`). Write a stage when you want a product
-made for every receptor of a project, kept in the output directory beside
+made for every release of a project, kept in the output directory beside
 the particles, and counted by `stilt status`. For a calculation you run now
 and then, read the particles (`project.particles`) instead.
 
 A stage is a class with the members of `stilt.stages.Stage`; it subclasses
-nothing and holds no state. This one writes each receptor's mean particle
+nothing and holds no state. This one writes each release's mean particle
 height:
 
 ```python
@@ -346,8 +346,8 @@ class MeanHeight:
     def settings(self, config):
         return config.model_dump(mode="json")  # what names its settings folder
 
-    def check(self, config, receptors, directory):
-        return []  # (check, receptor id or None, message), for `stilt check`
+    def check(self, config, releases, directory):
+        return []  # (check, release id or None, message), for `stilt check`
 
     def run(self, config, sim, path):
         zagl = sim.particles["zagl"]
@@ -363,7 +363,7 @@ stages:
 
 - **`name`** is the name of the stage's block under `stages:`, its tree in
   the output directory
-  (`mean_height/settings=<variant>-<hash>/date=<day>/<receptor><suffix>`),
+  (`mean_height/settings=<variant>-<hash>/date=<day>/<release><suffix>`),
   its column in `project.status()`, and the `stage` of a failure record: one
   word for the stage everywhere, so a block under another name is refused.
   Lowercase letters, digits and underscores.
@@ -385,9 +385,9 @@ stages:
   `stilt.stages.check_stage(stage, config)` checks it: call it in your
   tests, once for each kind of setting.
 - **`check`** returns what would stop the stage for the project's
-  receptors, for `stilt check`. Run nothing in it.
+  releases, for `stilt check`. Run nothing in it.
 - **`run`** makes one simulation's file and writes it at `path`. It gets the
-  simulation: `sim.particles`, `sim.receptor`, `sim.variant`, and
+  simulation: `sim.particles`, `sim.release`, `sim.variant`, and
   `sim.directory`, where a relative file name in the settings starts. Do
   not change `sim.particles` in place, since variants share it. Write one
   file whatever there is to say: a simulation is complete when the model's
@@ -418,12 +418,12 @@ with a message naming the package.
 
 A project is a local directory of inputs (`stilt.project.Project`, which
 `stilt.Project` extends with STILT's reads):
-`config.yaml` and `receptors.csv`. Results go to an output directory
+`config.yaml` and `releases.csv`. Results go to an output directory
 (`stilt.output.Output`) that `config.yaml` names and that several projects
 can share. Each results folder is named by the hash of its settings, so a
 changed setting writes a new folder and never overwrites a result.
 
-`Output` knows where each result's file is (`path`), which receptors have
+`Output` knows where each result's file is (`path`), which releases have
 one (`present`, from a listing of their date folders), and the one
 definition of a finished simulation (`complete`, which applies
 `stilt.output.completed`): the model's output file exists, and so does the
@@ -435,16 +435,16 @@ check, a registry, or a manifest. Call these instead.
 
 ## Changing how work is run
 
-`stilt.execution.run` (`execution/runner.py`) finds the receptors with
-missing results. A local run calls `run_receptors` in this process. A Slurm
-run goes through `submit`, which writes `receptors.txt`,
-`receptors.parquet` (the submitted receptors' checked rows, which tasks
-read in place of `receptors.csv`), `execution.yaml`, and `job.sh`
+`stilt.execution.run` (`execution/runner.py`) finds the releases with
+missing results. A local run calls `run_releases` in this process. A Slurm
+run goes through `submit`, which writes `releases.txt`,
+`releases.parquet` (the submitted releases' checked rows, which tasks
+read in place of `releases.csv`), `execution.yaml`, and `job.sh`
 (`job_script`) into `_slurm/<stamp>/` and calls `sbatch`. When a met
 downloads, `fetch.sh` (`fetch_script`) is submitted first and the array
 waits for it.
 
-The unit of work is a command line: `stilt run <project> --receptors FILE
+The unit of work is a command line: `stilt run <project> --releases FILE
 --task I/N`. Any scheduler that can start it with an index can run a
 project; the task requeues itself on `SIGUSR1` inside a Slurm job. Another
 scheduler means another script writer, not another worker.
@@ -459,8 +459,8 @@ only `sbatch` understands do not need a field: users write them in the
 ## Adding particle transforms
 
 Particle transforms run on the particles before the footprint is made. A
-transform is any object with `apply(particles, receptor=None,
-directory=None)`: it takes a particle `DataFrame`, the receptor, and the
+transform is any object with `apply(particles, release=None,
+directory=None)`: it takes a particle `DataFrame`, the release, and the
 project directory, and returns a new `DataFrame`, leaving the input
 unchanged.
 
