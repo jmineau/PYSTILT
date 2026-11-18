@@ -40,6 +40,9 @@ if TYPE_CHECKING:
 #: What ``hycs_std`` prints on its first lines: ``HYSPLIT version: hysplit.v5.1.0``.
 _VERSION_LINE = re.compile(r"HYSPLIT version:\s*(\S+)")
 
+#: Seconds ``hycs_std`` gets to print its version; it stops at once without ``CONTROL``.
+_VERSION_TIMEOUT = 30
+
 
 def hysplit_version(exe_dir: str | Path | None = None) -> str | None:
     """
@@ -90,7 +93,7 @@ def _printed_version(path: str, mtime_ns: int, size: int) -> str | None:
         except OSError:  # not executable here, such as another platform's build
             return None
         try:
-            out, _ = proc.communicate(timeout=30)
+            out, _ = proc.communicate(timeout=_VERSION_TIMEOUT)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.communicate()
