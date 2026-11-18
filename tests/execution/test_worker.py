@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 from typer.testing import CliRunner
 
+from stilt import Project
 from stilt.cli import _exit_code, app
 from stilt.config import ProjectConfig, Variant
 from stilt.exceptions import MeteorologyError, SimulationError, WorkerDied
@@ -18,7 +19,6 @@ from stilt.execution.worker import run_receptor, run_receptors
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.stage import store_empty_footprint
 from stilt.output import Output
-from stilt.project import Project
 from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import Simulation
 from stilt.spatial import Grid
@@ -786,7 +786,7 @@ def test_a_connection_error_in_a_footprint_leaves_the_particles_and_no_record(
     problems = _run_receptor(project, receptor)
 
     assert problems[0].startswith("hrrr did not finish during footprint")
-    assert sim.has_particles and not sim.has_footprint and sim.failure is None
+    assert sim.has_particles and not sim.has("footprint") and sim.failure is None
     assert _states(project) == {sim.receptor.id: "pending"}
 
     # The next run keeps the particles and makes the footprint.

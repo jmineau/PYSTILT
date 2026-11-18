@@ -416,7 +416,8 @@ with a message naming the package.
 
 ## Output directory and completion
 
-A project is a local directory of inputs (`stilt.project.Project`):
+A project is a local directory of inputs (`stilt.project.Project`, which
+`stilt.Project` extends with STILT's reads):
 `config.yaml` and `receptors.csv`. Results go to an output directory
 (`stilt.output.Output`) that `config.yaml` names and that several projects
 can share. Each results folder is named by the hash of its settings, so a

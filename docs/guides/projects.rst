@@ -20,7 +20,7 @@ The project folder
      tables/            # other inputs, such as averaging kernels (project.add_table)
 
 ``stilt init`` writes a starter ``config.yaml`` with comments, and so does
-``Project.init(path, starter=True)`` in Python. If you pass settings to
+``stilt.Project.init(path, starter=True)`` in Python. If you pass settings to
 :meth:`Project.init <stilt.Project.init>` instead, they are written to
 ``config.yaml`` once, so it reads the same either way. ``Project.init``
 stops if the folder already has a ``config.yaml``.

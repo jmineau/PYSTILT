@@ -19,10 +19,11 @@ from typer.testing import CliRunner
 import stilt.__main__
 from stilt._transient import is_transient
 from stilt.cli import _resolve_project, app
-from stilt.config import STILT_R_HYSPLIT, ProjectConfig
+from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.project import Project
 from stilt.spatial import Grid
+from stilt.stilt_project import STILT_R_HYSPLIT
 from tests.fixtures.factories import blocks
 
 from .fixtures.factories import make_hysplit_dir, make_met_config, make_project_config

@@ -15,7 +15,6 @@ from .exceptions import StiltError
 from .execution import ExecutionConfig, task_share
 from .footprint import FootprintConfig, Mesh, Zones, calc_footprint, read_footprint
 from .particles import read_particles
-from .project import Project
 from .receptors import (
     ColumnReceptor,
     MultiPointReceptor,
@@ -23,8 +22,9 @@ from .receptors import (
     Receptor,
     read_receptors,
 )
-from .simulation import Simulation
 from .spatial import Bounds, Grid
+from .stilt_project import Project
+from .stilt_simulation import Simulation
 from .transforms import averaging_kernel_table
 from .transport import run_trajectories
 from .transport_error import TransportError, transport_error

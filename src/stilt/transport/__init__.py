@@ -555,7 +555,7 @@ def run_trajectories(
         ``numpar`` (:class:`stilt.transport.hysplit.HysplitConfig`).
         ``n_hours`` is required; the others default to the model's own
         values, which for HYSPLIT are not STILT-R's (see
-        :data:`stilt.config.STILT_R_HYSPLIT`).
+        :data:`stilt.stilt_project.STILT_R_HYSPLIT`).
 
     Returns
     -------

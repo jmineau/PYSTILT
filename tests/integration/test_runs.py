@@ -16,14 +16,15 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from stilt.config import STILT_R_HYSPLIT, ProjectConfig
+from stilt import Project
+from stilt.config import ProjectConfig
 from stilt.exceptions import SimulationError
 from stilt.execution.runner import resolve_compute_root
 from stilt.footprint.targets import Mesh
 from stilt.identity import transport_from_settings
 from stilt.particles import particles_metadata
-from stilt.project import Project
 from stilt.receptors import MultiPointReceptor
+from stilt.stilt_project import STILT_R_HYSPLIT
 from stilt.transport.hysplit import FailureReason
 from stilt.transport.hysplit.driver import winderrtf
 from tests.fixtures.factories import blocks

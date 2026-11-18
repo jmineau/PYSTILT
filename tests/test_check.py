@@ -9,11 +9,10 @@ import pandas as pd
 import pytest
 from pydantic import BaseModel, ConfigDict
 
-from stilt import transport
+from stilt import Project, transport
 from stilt.exceptions import MeteorologyError
 from stilt.meteorology import run_window
 from stilt.observations.placement import slant_points
-from stilt.project import Project
 from stilt.receptors import (
     ColumnReceptor,
     MultiPointReceptor,

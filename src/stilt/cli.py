@@ -245,9 +245,11 @@ def init(project: Path = _NEW_PROJECT_ARG) -> None:
     Edit both files before running stilt run. Stops if the directory
     already has a config.yaml.
     """
+    from stilt.stilt_project import Project as StiltProject
+
     project = (project or Path.cwd()).resolve()
     try:
-        Project.init(project, starter=True)
+        StiltProject.init(project, starter=True)
     except FileExistsError:
         typer.echo(
             f"Error: '{project}' already contains a config.yaml. Aborting.",

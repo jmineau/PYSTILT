@@ -11,6 +11,10 @@ Results go to the output directory ``config.yaml`` names
 project defines are its receptors crossed with the variants in
 ``config.yaml``. A project reads; the workers in :mod:`stilt.execution` are
 the only code that writes results.
+
+This is the particle part, which the workers use. :class:`stilt.Project`
+(:mod:`stilt.stilt_project`) adds the reads of what STILT makes from the
+particles, such as :meth:`stilt.Project.footprints`.
 """
 
 from __future__ import annotations
@@ -19,25 +23,19 @@ import re
 from collections.abc import Iterable, Iterator
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-import xarray as xr
-import yaml
 
 from stilt._paths import absolute, location, write_parquet
 from stilt.check import check_project
-from stilt.config import STARTER_CONFIG, STILT_R_HYSPLIT, ProjectConfig, Variant
+from stilt.config import ProjectConfig, Variant
 from stilt.execution.config import ExecutionConfig
 from stilt.fetch import fetch_project
-from stilt.footprint import Geometry, Jacobian
-from stilt.footprint.aggregation import _jacobian
-from stilt.footprint.io import _threads, open_footprints
-from stilt.footprint.stage import stored_particles, variant_footprint
 from stilt.output import Output, completed
-from stilt.particles import particles_from_table, read_particles
+from stilt.particles import particles_from_table
 from stilt.receptors import Receptor, read_receptors
 from stilt.receptors.table import (
     COLUMNS,
@@ -51,7 +49,6 @@ from stilt.receptors.table import (
 )
 from stilt.simulation import Simulation
 from stilt.stages import reads
-from stilt.transport_error import _transport_errors
 
 if TYPE_CHECKING:
     from stilt.visualization import ProjectPlotAccessor
@@ -62,24 +59,6 @@ RECEPTOR_COLUMNS = ("receptor", "time", "kind", "location")
 
 #: Where a simulation stands, the ``state`` column of :meth:`Project.status`.
 STATES = ("complete", "failed", "interrupted", "pending")
-
-
-def _with_stilt_r_values(config: ProjectConfig) -> ProjectConfig:
-    """
-    Return *config* with STILT-R's HYSPLIT values in its ``hysplit`` block, where it gives none.
-
-    A config that does not run the built-in HYSPLIT is returned as it is.
-    """
-    data = yaml.safe_load(config.to_yaml())
-    models = data.get("models") or {"hysplit": {}}
-    if "hysplit" not in models or "class" in (models["hysplit"] or {}):
-        return config
-    block = models["hysplit"] or {}
-    models["hysplit"] = block | {
-        name: value for name, value in STILT_R_HYSPLIT.items() if name not in block
-    }
-    data["models"] = models
-    return ProjectConfig.model_validate(data)
 
 
 def _as_receptors(
@@ -169,16 +148,19 @@ def _column(table: Any, name: str) -> list[str]:
 
 class Project:
     """
-    A STILT project: receptors, settings, and the simulations they define.
+    A project's particle runs: receptors, settings, and the simulations they define.
 
     ``Project(path)`` opens a project directory and reads it. It is every
     receptor under every variant, and a view of their results: list the
-    simulations, see which have finished, load particles and footprints.
-    The results are in the output directory ``config.yaml`` names
-    (``./output`` by default), which several projects can share.
+    simulations, see which have finished, load their particles. The results
+    are in the output directory ``config.yaml`` names (``./output`` by
+    default), which several projects can share.
 
-    Make a new project with :meth:`init` (or ``stilt init``). After that,
-    ``config.yaml`` is yours to edit; PYSTILT never rewrites it.
+    This is the part the workers use. :class:`stilt.Project`, which opens the
+    same directory, adds the reads of what STILT makes from the particles
+    (footprints, the Jacobian, the transport error); most users want that
+    one. Make a new project with :meth:`init`. After that, ``config.yaml``
+    is yours to edit; PYSTILT never rewrites it.
 
     Parameters
     ----------
@@ -200,39 +182,12 @@ class Project:
     ----------
     directory : Path
         The project directory, absolute.
-
-    Examples
-    --------
-    Make a project, run it, and load a footprint:
-
-    >>> import stilt  # doctest: +SKIP
-    >>> receptor = stilt.PointReceptor(  # doctest: +SKIP
-    ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
-    ... )
-    >>> project = stilt.Project.init(  # doctest: +SKIP
-    ...     "./my_project",
-    ...     receptors=[receptor],
-    ...     mets={"hrrr": "/data/hrrr"},
-    ...     variants={"hrrr": {}},
-    ...     n_hours=-24,
-    ...     grid={
-    ...         "xmin": -113,
-    ...         "xmax": -110.5,
-    ...         "ymin": 40,
-    ...         "ymax": 42,
-    ...         "xres": 0.01,
-    ...         "yres": 0.01,
-    ...     },
-    ... )
-    >>> project.run()  # doctest: +SKIP
-    >>> foot = project.simulation(receptor.id, "hrrr").footprint  # doctest: +SKIP
-
-    Open it again later and check a selection of simulations:
-
-    >>> project = stilt.Project("./my_project")  # doctest: +SKIP
-    >>> sims = project.simulations  # doctest: +SKIP
-    >>> project.status(sims[sims.variant == "hrrr"])  # doctest: +SKIP
     """
+
+    #: The class of the simulations :meth:`simulation` returns. A subclass
+    #: that adds reads to the simulation sets it, as :class:`stilt.Project`
+    #: does with :class:`stilt.Simulation`.
+    simulation_class: ClassVar[type[Simulation]] = Simulation
 
     def __init__(self, path: str | Path, *, output: str | Path | None = None) -> None:
         self.directory = absolute(path)
@@ -252,21 +207,16 @@ class Project:
         receptors: Receptor | Iterable[Receptor] | str | Path | None = None,
         *,
         config: ProjectConfig | None = None,
-        starter: bool = False,
         **settings: Any,
-    ) -> Project:
+    ) -> Self:
         """
         Make a new project and return it.
 
         Writes ``config.yaml``, with the settings given, and
-        ``receptors.csv`` when receptors are given. With ``starter=True`` it
-        writes the commented starter config instead, to edit by hand, as
-        ``stilt init`` does.
-
-        Either way, a project that runs HYSPLIT gets STILT-R's values where
-        they differ from HYSPLIT's own defaults
-        (:data:`stilt.config.STILT_R_HYSPLIT`) in its ``models: hysplit:``
-        block, unless the settings give them, so it runs as STILT-R does.
+        ``receptors.csv`` when receptors are given. The settings are written
+        as given: a transport model runs with its own defaults for the
+        settings they leave out. :meth:`stilt.Project.init` also writes the
+        values STILT-R runs HYSPLIT with.
 
         Parameters
         ----------
@@ -276,10 +226,6 @@ class Project:
             Receptors, or the path of a receptors CSV to copy them from.
         config : ProjectConfig, optional
             The settings. Or give them as keywords instead.
-        starter : bool, default False
-            Write the commented starter ``config.yaml``
-            (:data:`stilt.config.STARTER_CONFIG`) in place of a config.
-            Without receptors, ``receptors.csv`` gets only its header.
         **settings
             The blocks of :class:`~stilt.ProjectConfig`: ``mets``, ``models``,
             ``stages`` and ``variants``, and ``execution`` and ``output``.
@@ -290,8 +236,7 @@ class Project:
             If the directory already has a ``config.yaml``. Open it with
             ``Project(path)`` instead, and edit the file to change settings.
         TypeError
-            If both *config* and keyword settings are given, or either is
-            given with ``starter=True``.
+            If both *config* and keyword settings are given.
         ValueError
             If a variant's settings are invalid, or *receptors* is given but
             holds none (an empty list, or a CSV file with only its header).
@@ -299,10 +244,6 @@ class Project:
         """
         if config is not None and settings:
             raise TypeError("Give a ProjectConfig or keyword settings, not both.")
-        if starter and (config is not None or settings):
-            raise TypeError(
-                "A starter config takes no settings; edit its config.yaml instead."
-            )
         batch = None if receptors is None else _as_receptors(receptors)
         if batch == []:
             raise ValueError(
@@ -310,12 +251,8 @@ class Project:
                 "receptors out to make a project without them, and add them "
                 "later with project.add_receptors."
             )
-        if starter:
-            config = ProjectConfig.model_validate(yaml.safe_load(STARTER_CONFIG))
-        else:
-            if config is None:
-                config = ProjectConfig(**settings)
-            config = _with_stilt_r_values(config)
+        if config is None:
+            config = ProjectConfig(**settings)
         directory = absolute(path)
         config_path = directory / "config.yaml"
         # The config checks a variant's own transport settings only when it is
@@ -327,16 +264,10 @@ class Project:
                 "Project(path), and edit config.yaml to change its settings."
             )
         directory.mkdir(parents=True, exist_ok=True)
-        if starter:
-            config_path.write_text(STARTER_CONFIG)
-        else:
-            config.to_yaml(config_path)
+        config.to_yaml(config_path)
         project = cls(directory)
         if batch is not None:
             project.add_receptors(batch)
-        elif starter:
-            # Header only: every other line of a receptors file is a receptor.
-            project.receptors_path.write_text("time,longitude,latitude,altitude\n")
         return project
 
     def __repr__(self) -> str:
@@ -615,8 +546,9 @@ class Project:
         transport model), then the other columns of :attr:`receptors`. Rows
         run receptor by receptor, with variants in config order. Select rows as in pandas
         and pass the selection to :meth:`status`, :meth:`incomplete`,
-        :meth:`particles`, :meth:`footprints`, :meth:`jacobian`, or
-        :meth:`transport_error`.
+        or :meth:`particles`; :class:`stilt.Project` adds
+        :meth:`~stilt.Project.footprints`, :meth:`~stilt.Project.jacobian`,
+        and :meth:`~stilt.Project.transport_error`.
 
         Examples
         --------
@@ -625,7 +557,7 @@ class Project:
         ...     (sims.variant == "hrrr") & (sims.site == "WBB")
         ... ]  # doctest: +SKIP
         >>> project.status(july)  # doctest: +SKIP
-        >>> project.footprints(july)  # doctest: +SKIP
+        >>> project.particles(july)  # doctest: +SKIP
         """
         return self._simulations.copy()
 
@@ -651,7 +583,7 @@ class Project:
             raise KeyError(
                 f"No variant {variant!r}; the variants are {list(self.variants)}."
             )
-        return Simulation(
+        return self.simulation_class(
             self.receptor(receptor_id),
             self.variants[variant],
             self.output,
@@ -800,20 +732,20 @@ class Project:
             are ``True`` when the result exists, ``False`` when it is
             missing, and ``NA`` when the variant does not make it. ``state``
             is ``complete`` when every expected result exists
-            (:attr:`stilt.Simulation.is_complete`), ``failed`` when the last
+            (:attr:`stilt.simulation.Simulation.is_complete`), ``failed`` when the last
             run failed, ``interrupted`` when a run of its particles started
             and stopped before it finished (a time limit, preemption, or a
             killed process), and ``pending`` when nothing has run.
             ``stage`` (``particles``, or the stage that failed), ``reason``,
             and ``message`` say why a failed simulation failed
-            (:attr:`stilt.Simulation.failure`), and are ``NA`` for the
+            (:attr:`stilt.simulation.Simulation.failure`), and are ``NA`` for the
             others.
 
         Notes
         -----
         An empty footprint (no particle reached the grid) is complete: its
         ``sim.footprint`` is ``None`` while ``sim.has_footprint`` is true,
-        and :meth:`jacobian` lists the empty ones.
+        and :meth:`stilt.Project.jacobian` lists the empty ones.
 
         Examples
         --------
@@ -872,7 +804,7 @@ class Project:
         A simulation without particles is explained by its particles'
         record. One with particles is explained by the record of the first
         stage, in the order they run, that has no file where what it reads
-        exists and that has a record (:attr:`stilt.Simulation.failure`).
+        exists and that has a record (:attr:`stilt.simulation.Simulation.failure`).
         Only those receptors' date folders are listed, and only the records
         found are read.
         """
@@ -989,309 +921,6 @@ class Project:
         particles = pd.concat(parts, ignore_index=True)
         rest = particles.columns if columns is None else columns
         return particles.loc[:, first + [c for c in rest if c not in first]]
-
-    def footprints(self, sel: Any = None) -> xr.Dataset:
-        """
-        Open the footprints of the selected simulations as one dataset.
-
-        Footprints are stacked by their layer from the receptor time, so
-        receptors at any time share one layer axis, named for the unit
-        ``tres`` is written in and counted in it: ``hour`` with the default
-        ``tres`` of ``1h``, ``day`` for ``1D``, ``minute`` for ``15min``. The
-        ``time`` coordinate says when each layer starts. Only the files' metadata is
-        read here. The values load with dask when they are used, in blocks
-        of receptors from one date folder. The selection must hold one
-        variant, as for :meth:`jacobian`.
-
-        Parameters
-        ----------
-        sel : DataFrame or mask, optional
-            The simulations, as for :meth:`status`, all of one variant (and
-            one realization of an ensemble). All of them by default.
-
-        Returns
-        -------
-        xarray.Dataset
-            ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and
-            ``x`` on a projected grid, and ``day`` or ``minute`` in place
-            of ``hour`` when ``tres`` is written in them), in selection
-            order. A receptor with
-            an empty footprint has no row and is listed in
-            ``attrs["empty"]``; one not run yet is listed in
-            ``attrs["missing"]``.
-
-        Raises
-        ------
-        ValueError
-            If the selection holds more or fewer than one variant, or
-            several realizations of an ensemble, the variant has no grid, or
-            no selected simulation has a footprint file yet.
-
-        Notes
-        -----
-        A footprint is about 35 MB of values on a 350,000-cell grid over 24
-        hours, so a computation that loads every receptor at once suits a
-        selection of hundreds. Sums over ``hour`` or the grid run block by
-        block. :meth:`jacobian` sums any number of footprints onto a target.
-
-        Examples
-        --------
-        >>> ds = project.footprints(sims[sims.variant == "hrrr"])  # doctest: +SKIP
-        >>> ds.foot.sum("hour").mean("receptor").plot()  # doctest: +SKIP
-        """
-        frame = self._selected(sel)
-        name, k = _one_group(frame, "A footprint dataset")
-        variant = self.variants[name]
-        if "footprint" not in variant.stages:
-            raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
-        requested = list(dict.fromkeys(frame["receptor"]))
-        found = self.output.present("footprint", variant, requested, k)
-        paths = [
-            path
-            for r in requested
-            if r in found
-            and (path := self.output.path("footprint", variant, r, k)) is not None
-        ]
-        if not paths:
-            raise ValueError(
-                f"None of the {len(requested)} selected simulations of {name!r} "
-                "has a footprint yet."
-            )
-        ds = open_footprints(paths)
-        ds.attrs["missing"] = [r for r in requested if r not in found]
-        return ds
-
-    def jacobian(
-        self,
-        sel: Any,
-        target: Geometry,
-        time_bins: pd.IntervalIndex,
-        *,
-        workers: int | None = None,
-    ) -> Jacobian:
-        """
-        Sum the selected footprints onto a target, per time bin, as one sparse matrix.
-
-        The same operation as ``foot.stilt.aggregate``, for every selected
-        footprint at once. Each footprint cell is split among the target
-        cells it overlaps in proportion to area, time layers are summed
-        within each of *time_bins*, and cells or layers outside the target
-        or the bins are dropped. The selection must hold one variant, and
-        one realization of an ensemble: ``ens[ens.realization == k]``.
-
-        Footprints are read and summed one receptor at a time, in *workers*
-        threads. Each thread holds one footprint, so memory stays at a few
-        footprints whatever the selection's size; the result itself is
-        sparse.
-
-        Parameters
-        ----------
-        sel : DataFrame or mask
-            The simulations, as for :meth:`status`, all of one variant (and
-            one realization of an ensemble).
-        target : Geometry
-            Where the fluxes are: a grid, mesh, or set of zones.
-        time_bins : pandas.IntervalIndex
-            Flux time bins, such as a flux inventory's steps. They must be
-            closed on the left (``closed="left"``): each bin holds the
-            footprint layers that start in it. A layer goes whole into the
-            bin where it starts, so the bins must be as long as the
-            footprints' layers (``tres``) or longer; a layer that crosses a
-            bin edge still goes into the bin where it starts. You build these yourself;
-            ``jacobian`` does not read them from an inventory's own CF time
-            bounds, unlike ``foot.stilt.enhancement`` with a flux that has
-            them. Building the bins from an inventory's own time labels
-            (its left edges) reads each label as the start of its step, the
-            same reading ``foot.stilt.enhancement`` gives a flux with no
-            bounds. A flux not labeled at the start of its steps must be
-            relabeled first, or its bins built from the relabeled starts;
-            one with bounds can have its bins built from them directly
-            instead (see :ref:`flux-step-labels`).
-        workers : int, optional
-            Threads that read and sum batches. Defaults to the CPUs this
-            process may use (in a Slurm job, the job's), at most 8: more
-            threads add memory and stop adding speed.
-
-        Returns
-        -------
-        Jacobian
-            Rows are the selected receptors with a non-empty footprint, in
-            selection order; columns are ``(time bin, target cell)``.
-            Receptors with an empty footprint are listed in ``empty``, and
-            those not run yet in ``missing``.
-
-        Raises
-        ------
-        TypeError
-            If ``time_bins`` is not a :class:`pandas.IntervalIndex`.
-        ValueError
-            If the selection holds more or fewer than one variant, or
-            several realizations of an ensemble, the variant has no grid or
-            no footprints yet, ``time_bins`` is not closed on the left, or a
-            bin is shorter than the footprints' layers (use a shorter
-            ``tres``).
-        """
-        frame = self._selected(sel)
-        name, k = _one_group(frame, "A Jacobian")
-        variant = self.variants[name]
-        if "footprint" not in variant.stages:
-            raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
-        if self.output.folder("footprint", variant) is None:
-            raise ValueError(f"Variant {name!r} has no footprints yet.")
-        requested = list(dict.fromkeys(frame["receptor"]))
-        found = self.output.present("footprint", variant, requested, k)
-        return _jacobian(
-            lambda r: self.output.read(
-                "footprint", variant, r, k, columns=["hour", "y", "x", "foot"]
-            ),
-            [r for r in requested if r in found],
-            variant.stages["footprint"],
-            target,
-            time_bins,
-            missing=[r for r in requested if r not in found],
-            workers=workers,
-        )
-
-    def transport_error(
-        self,
-        sel: Any,
-        error: str,
-        flux: xr.DataArray,
-        *,
-        workers: int | None = None,
-        **options: Any,
-    ) -> pd.DataFrame:
-        """
-        Return the transport error of each selected simulation's modeled enhancement.
-
-        The same estimate as ``sim.transport_error``, for every selected
-        receptor at once (Lin and Gerbig, 2005; the *Transport Error* guide).
-        *sel* is the unperturbed run, and *error* names the wind-error
-        variant of the same receptors. Every realization of *error* that has
-        run is averaged, so a receptor whose ensemble is still running gets
-        an estimate from the realizations it has.
-
-        Receptors are read and estimated one at a time, in *workers*
-        threads. Each thread holds one receptor's particle tables: the
-        unperturbed one and one per realization.
-
-        Parameters
-        ----------
-        sel : DataFrame or mask
-            The simulations, as for :meth:`status`, all of one variant that
-            runs once (no ``realizations``).
-        error : str
-            The wind-error variant, such as ``"hrrr-err"``.
-        flux : xarray.DataArray
-            Surface flux field, in µmol m⁻² s⁻¹, the same for every receptor.
-        workers : int, optional
-            Threads that read and estimate receptors. Defaults to the CPUs
-            this process may use (in a Slurm job, the job's), at most 8.
-        **options
-            Passed to :func:`stilt.transport_error`: ``levels``,
-            ``length_scale``, ``percentile``, and ``background``.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The selection with six more columns, from
-            :class:`~stilt.particles.TransportError`: ``enhancement``,
-            ``enhancement_perturbed``, ``background``, ``variance``,
-            ``noise``, and ``realizations`` (how many realizations of
-            *error* were averaged). A receptor without particles in the
-            selected variant or in any realization of *error* gets NaN and
-            ``realizations`` 0.
-
-        Raises
-        ------
-        KeyError
-            If the project has no variant named *error*.
-        ValueError
-            If the selection holds more or fewer than one variant, that
-            variant is an ensemble, or it is *error* itself.
-
-        Notes
-        -----
-        Each receptor's particles are read whole. A table of 1.4 million
-        rows takes about a second to read, so a selection of hundreds of
-        receptors takes minutes. The per-level tables of
-        :class:`~stilt.particles.TransportError` are not kept; get them for
-        one receptor with ``sim.transport_error``.
-
-        Examples
-        --------
-        >>> sims = project.simulations  # doctest: +SKIP
-        >>> wbb = sims[
-        ...     (sims.variant == "hrrr") & (sims.site == "WBB")
-        ... ]  # doctest: +SKIP
-        >>> errors = project.transport_error(wbb, "hrrr-err", flux)  # doctest: +SKIP
-        >>> errors.groupby(errors.time.dt.month).variance.median()  # doctest: +SKIP
-        """
-        frame = self._selected(sel)
-        name, _ = _one_group(frame, "A transport error")
-        variant = self.variants[name]
-        if variant.realizations is not None:
-            raise ValueError(
-                f"Variant {name!r} is an ensemble (realizations: "
-                f"{variant.realizations}); the selection is the unperturbed run, "
-                "a variant that runs once."
-            )
-        if error not in self.variants:
-            raise KeyError(
-                f"No variant {error!r}; the variants are {list(self.variants)}."
-            )
-        if error == name:
-            raise ValueError(
-                f"The selection is of {error!r} itself; select the unperturbed variant."
-            )
-        perturbed = self.variants[error]
-        requested = list(dict.fromkeys(frame["receptor"]))
-        have = self.output.present("particles", variant, requested)
-        ran = {
-            k: self.output.present("particles", perturbed, requested, k)
-            for k in perturbed.realization_numbers
-        }
-        # Each receptor with both sides, and the realizations of *error* it has.
-        runs = {
-            r: ks
-            for r in requested
-            if r in have and (ks := [k for k, found in ran.items() if r in found])
-        }
-
-        footprint = variant_footprint(variant)
-
-        def particles(v: Variant, rid: str, k: int | None) -> pd.DataFrame:
-            path = self.output.path("particles", v, rid, k)
-            assert path is not None  # the listing found the file
-            return stored_particles(
-                read_particles(path),
-                footprint,
-                path,
-                z_top=getattr(v.transport, "z_top", None),
-            )
-
-        def read(rid: str) -> tuple[pd.DataFrame, list[pd.DataFrame]]:
-            return (
-                particles(variant, rid, None),
-                [particles(perturbed, rid, k) for k in runs[rid]],
-            )
-
-        found = _transport_errors(
-            read,
-            list(self._receptors(runs).values()),
-            flux,
-            transforms=footprint.transforms,
-            directory=self.directory,
-            workers=_threads(workers),
-            **{
-                "hnf_plume": footprint.hnf_plume,
-                "footprint_depth": footprint.footprint_depth,
-                **options,
-            },
-        )
-        result = found.reindex(frame["receptor"].to_numpy())
-        result["realizations"] = result["realizations"].fillna(0).astype("int64")
-        return frame.assign(**{c: result[c].to_numpy() for c in result.columns})
 
     # -- running ---------------------------------------------------------------
 

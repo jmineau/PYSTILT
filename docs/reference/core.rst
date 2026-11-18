@@ -31,11 +31,18 @@ stores the results.
 Project interface
 -----------------
 
+:class:`Project` is what you open a project with. It is the particle part,
+:class:`project.Project`, which runs the transport model and reads the
+particles, with the reads of what STILT makes from the particles added: the
+footprints, the Jacobian, and the transport error of a selection. Both open
+the same directory; the workers use the particle part.
+
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    Project
+   project.Project
 
 Receptor objects
 ----------------
@@ -62,11 +69,17 @@ met, the transport model build, and the hashes that find its results.
 ``project.variants`` holds them, and :meth:`ProjectConfig.resolve` makes
 them from a config.
 
+:class:`Simulation`, which ``project.simulation(receptor_id, variant)``
+returns, adds the footprint, the background and the transport error to the
+particle part, :class:`simulation.Simulation`, which the workers and the
+stages are given.
+
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    Simulation
+   simulation.Simulation
    config.Variant
 
 Settings and their hashes

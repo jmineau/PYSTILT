@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from stilt import Project
 from stilt.config import ProjectConfig
-from stilt.project import Project
 from stilt.transforms import FirstOrderLifetime
 from tests.fixtures.factories import blocks
 

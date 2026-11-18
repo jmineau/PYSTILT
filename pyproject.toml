@@ -147,8 +147,10 @@ layers = [
     "__main__",
     "cli",
     "observations | migration",
+    "stilt_project",
     "project : execution : config",
     "check | fetch",
+    "stilt_simulation",
     "simulation",
     "transport_error",
     "background",
@@ -229,6 +231,8 @@ forbidden_modules = [
     "stilt.transport.stilt_r",
     "stilt.background",
     "stilt.transport_error",
+    "stilt.stilt_project",
+    "stilt.stilt_simulation",
 ]
 ignore_imports = [
     # Imports within STILT's side. The observation layer sits above
@@ -253,19 +257,12 @@ ignore_imports = [
     # and the particle accessor samples a field.
     "stilt.particles.table -> stilt.sampling",
     "stilt.particles.accessor -> stilt.sampling",
-    # sim.footprint, sim.background and sim.transport_error.
-    "stilt.simulation -> stilt.footprint.config",
-    "stilt.simulation -> stilt.footprint.gridding",
-    "stilt.simulation -> stilt.footprint.io",
-    "stilt.simulation -> stilt.footprint.stage",
-    "stilt.simulation -> stilt.background",
-    "stilt.simulation -> stilt.transport_error",
-    # Project.footprints(), Project.jacobian() and Project.transport_error().
-    "stilt.project -> stilt.footprint",
-    "stilt.project -> stilt.footprint.aggregation",
-    "stilt.project -> stilt.footprint.stage",
-    "stilt.project -> stilt.footprint.io",
-    "stilt.project -> stilt.transport_error",
+    # stilt.Simulation: sim.footprint, sim.background and sim.transport_error.
+    "stilt.stilt_simulation -> stilt.**",
+    # stilt.Project: footprints(), jacobian() and transport_error().
+    "stilt.stilt_project -> stilt.**",
+    # stilt init writes a starter config with the footprint stage.
+    "stilt.cli -> stilt.stilt_project",
 ]
 allow_indirect_imports = true
 

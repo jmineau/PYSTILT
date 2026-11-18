@@ -67,15 +67,22 @@ columns, or a mask) goes to `status`, `incomplete`, `particles`, `footprints`,
 classes: its methods take the kind (`particles` or a stage's name).
 `stilt.__all__` (and each subpackage's) is the public surface.
 
+**`stilt.Project` and `stilt.Simulation` only add reads** to the particle part's
+classes (`stilt_project.py`, `stilt_simulation.py`); they override only
+`simulation_class` and `init` (`tests/test_stilt_project.py`). Workers and stages
+get the particle classes; nothing on disk names the subclasses.
+
 ```
 src/stilt/
   cli.py          Typer CLI, a thin adapter over Project and execution
-  project.py      Project: inputs, the simulations table, run/submit, bulk reads
+  project.py      Project, the particle part: inputs, the simulations table, run/submit, status
+  stilt_project.py  stilt.Project: footprints, jacobian, transport_error; init with STILT-R's values
   check.py        check_project: what would stop a project's runs, from its inputs
   fetch.py        fetch_project: gets the met files the unfinished simulations need
   migration.py    read_stilt_r, import_stilt_r: STILT-R and X-STILT by-id output, read with rdata
   output.py       Output: the output directory; `completed`, the completion rule
-  simulation.py   Simulation: a frozen (receptor, variant, output) value
+  simulation.py   Simulation, the particle part: a frozen (receptor, variant, output) value
+  stilt_simulation.py  stilt.Simulation: footprint, calc_footprint, background, transport_error, plot
   config.py       ProjectConfig and Variant;  identity.py  settings records, hashes
   stages.py       the Stage protocol, get_stage, check_stage;  _plugins.py  a class by import path
   receptors/      receptor models, receptors.csv, shared validation
@@ -113,7 +120,7 @@ needs must be in the project or the output directory.
 Each part owns its config class; the base `TransportConfig` gets a parameter only
 when the core reads it. Config classes do no I/O when they validate; `resolve` reads
 geometries and asks the model its version. `HysplitConfig` has HYSPLIT's own defaults
-(`n_hours` none); `stilt init` and `Project.init` write STILT-R's (`STILT_R_HYSPLIT`).
+(`n_hours` none); `stilt init` and `stilt.Project.init` write STILT-R's (`STILT_R_HYSPLIT`).
 
 ## Invariants
 

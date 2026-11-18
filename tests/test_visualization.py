@@ -668,7 +668,7 @@ def test_project_availability_empty():
 
 
 def test_project_availability_with_sims(tmp_path, receptor):
-    from stilt.project import Project
+    from stilt import Project
 
     config = make_project_config(tmp_path)
     project = Project.init(tmp_path, config=config, receptors=[receptor])
