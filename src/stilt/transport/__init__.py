@@ -564,8 +564,8 @@ def run_trajectories(
         ``time`` (UTC), the receptor time plus ``age``, as a table read from
         a particle file has. ``foot`` is the model's own (HYSPLIT's, made
         with ``veght``), with no near-field correction:
-        :func:`stilt.calc_footprint` applies it (``hnf_plume``), given the
-        same depth as ``footprint_depth``. STILT-R's ``calc_trajectory``
+        :func:`stilt.calc_footprint` applies it (``hnf_plume``), given
+        ``veght`` as its ``footprint_depth``. STILT-R's ``calc_trajectory``
         applies it here. A model that writes no ``foot`` returns none:
         :func:`stilt.particles.add_foot` computes one.
 

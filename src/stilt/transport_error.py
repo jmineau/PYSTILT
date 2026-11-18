@@ -328,7 +328,11 @@ def transport_error(
         (``sim.variant.stages["footprint"].hnf_plume``), so the error is of the same
         enhancement the footprint gives.
     footprint_depth : float, default 0.5
-        The run's ``footprint_depth``, which the near-field correction reads.
+        The depth ``foot`` was made with, which the near-field correction
+        reads: the run's ``veght`` for HYSPLIT's own ``foot``, the
+        footprint's ``footprint_depth`` for a ``foot`` the footprint stage
+        computes. ``sim.variant.stages["footprint"].footprint_depth`` is the
+        right one either way.
     levels : int or sequence of float, default 20
         Release-height levels to compute statistics on: a number of
         equal-width bins between the lowest and highest release height, or
