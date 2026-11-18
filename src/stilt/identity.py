@@ -111,8 +111,10 @@ def read_run_settings(stored: Mapping[str, Any]) -> dict[str, Any]:
     """
     Return the run settings a ``_settings.yaml`` records, read through the current classes.
 
-    Settings this version does not have are dropped, so a folder written
-    before a setting was removed still loads. A record of a transport model
+    A setting this version does not have is kept as written, so a folder
+    written before it was removed still loads, and hashes apart from every
+    current variant: a run made with ``footprint_depth: 0.3``, when that was
+    a run setting, is not taken for one made with HYSPLIT's ``veght: 0.5``. A record of a transport model
     that is not installed here is returned as written, with a warning. A folder of one realization,
     as realizations were written before they were partitions, keeps its
     number, so it hashes as it did and no current variant finds it.
@@ -138,7 +140,10 @@ def read_run_settings(stored: Mapping[str, Any]) -> dict[str, Any]:
     )
     if stored.get("realization") is not None:
         record["realization"] = stored["realization"]
-    return record
+    fields = get_model(name).config_class.model_fields
+    gone = set(stored) - set(fields) - set(record) - {"ensemble"}
+    record.update({key: stored[key] for key in sorted(gone)})
+    return canonical(record)
 
 
 # -- what a result file records -------------------------------------------------
