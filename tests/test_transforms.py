@@ -1149,6 +1149,22 @@ def _write_table(path, a, b):
 
 
 @pytest.mark.parametrize("filename", ["kernels.parquet", "kernels.csv"])
+def test_ak_table_with_the_old_receptor_column_says_it_is_now_release(
+    tmp_path, filename
+):
+    a, b = _two_releases()
+    table = _write_table(tmp_path / filename, a, b).rename(
+        columns={"release": "receptor"}
+    )
+    if filename.endswith(".csv"):
+        table.to_csv(tmp_path / filename, index=False)
+    else:
+        table.to_parquet(tmp_path / filename)
+    with pytest.raises(ValueError, match="now named 'release'"):
+        AveragingKernel(table=filename).apply(_make_particles(2), a, tmp_path)
+
+
+@pytest.mark.parametrize("filename", ["kernels.parquet", "kernels.csv"])
 def test_ak_table_picks_the_release_kernel_relative_to_the_directory(
     tmp_path, filename
 ):

@@ -82,6 +82,7 @@ from stilt.identity import (
     stage_hash,
 )
 from stilt.particles import write_particles
+from stilt.particles.table import OLD_FILE
 from stilt.releases import Receptor, parse_release_id
 from stilt.stages import get_stage, reads
 
@@ -277,6 +278,20 @@ _NO_PARTICLES = pa.table({"release": pa.array([], pa.string())})
 _NO_STAGE_FILES = pa.table(
     {"release": pa.array([], pa.string()), "date": pa.array([], pa.date32())}
 )
+
+
+def _old_files_message(kind: Kind, folder: Location, paths: list[Location]) -> str:
+    """Return the error for files that hold ``receptor`` where they now hold ``release``, naming the first."""
+    first = paths[0]
+    for path in paths:
+        with readable(path) as source:
+            if "release" not in pq.read_schema(source).names:
+                first = path
+                break
+    return OLD_FILE.format(
+        what=f"The {kind} file {first}, and perhaps others in {folder},"
+    )
+
 
 #: The ``date=YYYY-MM-DD`` folders, read as a ``date32`` column.
 _DATE_PARTITIONING = pads.partitioning(
@@ -964,16 +979,24 @@ class Output:
                 partitioning=_DATE_PARTITIONING,
                 partition_base_dir=folder.path,
             )
+        if "release" not in dataset.schema.names:
+            raise ValueError(_old_files_message(kind, folder, paths))
         if columns is None:
-            return dataset.to_table()
-        wanted = ["release", *(c for c in columns if c != "release")]
-        unknown = [c for c in wanted if c not in dataset.schema.names]
-        if unknown:
-            raise ValueError(
-                f"No column {unknown[0]!r} in the {kind} files; they hold "
-                f"{dataset.schema.names}."
-            )
-        return dataset.to_table(columns=wanted)
+            table = dataset.to_table()
+        else:
+            wanted = ["release", *(c for c in columns if c != "release")]
+            unknown = [c for c in wanted if c not in dataset.schema.names]
+            if unknown:
+                raise ValueError(
+                    f"No column {unknown[0]!r} in the {kind} files; they hold "
+                    f"{dataset.schema.names}."
+                )
+            table = dataset.to_table(columns=wanted)
+        # A dataset takes its columns from the first file, so a file written
+        # before the rename after a new one reads as rows with no release.
+        if table["release"].null_count:
+            raise ValueError(_old_files_message(kind, folder, paths))
+        return table
 
     # -- failure records ---------------------------------------------------
 

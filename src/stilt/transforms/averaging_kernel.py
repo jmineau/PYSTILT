@@ -156,6 +156,12 @@ def _read_kernel_table(
             f"averaging_kernel table {path!r} must be a .parquet or .csv file."
         )
     missing = [c for c in KERNEL_TABLE_COLUMNS if c not in table.columns]
+    if missing == ["release"] and "receptor" in table.columns:
+        raise ValueError(
+            f"averaging_kernel table {path!r} has a 'receptor' column, which is "
+            "now named 'release'. Rename the column in the file, or make the "
+            "table again with averaging_kernel_table."
+        )
     if missing:
         raise ValueError(
             f"averaging_kernel table {path!r} lacks columns {missing}; "

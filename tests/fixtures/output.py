@@ -94,3 +94,17 @@ def write_one(out: Output, variant: Variant = VARIANT, release=None) -> Path:
     """Write one release's particles for *variant*, making its folder."""
     release = release if release is not None else release_at()
     return out.write_particles(variant, release, fake_particles(release), [])
+
+
+def as_written_before_the_rename(path: Path) -> Path:
+    """Rewrite a particle or footprint file as PYSTILT wrote it when a release was a receptor."""
+    import pyarrow.parquet as pq
+
+    table = pq.read_table(path)
+    names = ["receptor" if n == "release" else n for n in table.column_names]
+    meta = {
+        (b"stilt:receptor" if k == b"stilt:release" else k): v
+        for k, v in (table.schema.metadata or {}).items()
+    }
+    pq.write_table(table.rename_columns(names).replace_schema_metadata(meta), path)
+    return path

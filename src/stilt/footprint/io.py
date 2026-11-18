@@ -29,6 +29,7 @@ from stilt.footprint.config import (
     footprint_settings,
     read_footprint_settings,
 )
+from stilt.particles.table import stored_release
 from stilt.releases import Receptor
 from stilt.spatial import Grid, _with_cf_grid, horizontal_dims
 
@@ -125,12 +126,14 @@ def _describe(
     )
 
 
-def _from_sparse_table(table: Any, config: FootprintConfig) -> xr.DataArray | None:
+def _from_sparse_table(
+    table: Any, config: FootprintConfig, path: str | Path | UPath = "A stored footprint"
+) -> xr.DataArray | None:
     """Return the dense footprint of a stored sparse table, or ``None`` when it is empty."""
     meta = table.schema.metadata or {}
     if _is_empty(meta):
         return None
-    release = Receptor.from_json(meta[b"stilt:release"])
+    release = stored_release(meta, path)
     hours = json.loads(meta[b"stilt:hours"])
     name = meta.get(b"stilt:name", b"").decode()
     grid = config.grid
@@ -210,7 +213,7 @@ def read_footprint(
     if stored is None:
         raise ValueError(f"{path} does not record its footprint settings.")
     config = read_footprint_settings(json.loads(stored), path.name)
-    foot = _from_sparse_table(table, config)
+    foot = _from_sparse_table(table, config, path)
     if foot is not None:
         meta = table.schema.metadata or {}
         made = {
@@ -350,7 +353,9 @@ def open_footprints(
     if grid is None:
         raise ValueError("Stored footprints need settings with a grid.")
 
-    releases = [Receptor.from_json(meta[b"stilt:release"]) for meta in footers]
+    releases = [
+        stored_release(meta, path) for meta, path in zip(footers, located, strict=True)
+    ]
     is_empty = [_is_empty(meta) for meta in footers]
     kept = [i for i, empty in enumerate(is_empty) if not empty]
     recorded = [h for i in kept for h in json.loads(footers[i][b"stilt:hours"])]
