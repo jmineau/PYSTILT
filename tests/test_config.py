@@ -283,7 +283,7 @@ def test_a_config_loads_and_resolves_without_its_hysplit_build(tmp_path):
     mc = make_met_config(directory=tmp_path / "met")
     elsewhere = tmp_path / "not-mounted"
     cfg = ProjectConfig(
-        **blocks(mets={"hrrr": mc}, exe_dir=elsewhere, variants={"hrrr": {}})
+        **blocks(mets={"hrrr": mc}, directory=elsewhere, variants={"hrrr": {}})
     )
     variant = cfg.resolve()["hrrr"]
     with pytest.raises(FileNotFoundError, match="hycs_std"):

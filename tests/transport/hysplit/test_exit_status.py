@@ -32,9 +32,9 @@ def _particle_dat(path: Path, last_minute: int) -> Path:
 
 
 def _fake_hycs_std(directory: Path, body: str) -> Path:
-    """Return a build directory whose ``hycs_std`` runs the shell commands in *body*."""
-    directory.mkdir(parents=True, exist_ok=True)
-    exe = directory / "hycs_std"
+    """Return a HYSPLIT folder whose ``exec/hycs_std`` runs the shell commands in *body*."""
+    (directory / "exec").mkdir(parents=True, exist_ok=True)
+    exe = directory / "exec" / "hycs_std"
     exe.write_text("#!/usr/bin/env bash\n" + body)
     exe.chmod(exe.stat().st_mode | stat.S_IXUSR)
     return directory
@@ -47,7 +47,7 @@ def _model_run(tmp_path: Path, build: Path, outdt: int):
         numpar=10,
         varsiwant=VARS,
         outdt=outdt,
-        exe_dir=build,
+        directory=build,
     )
     make_met_files(tmp_path / "met", RECEPTOR.time, N_HOURS)
     workdir = tmp_path / "run"
@@ -146,7 +146,7 @@ def test_a_killed_simulation_stores_no_particles_and_a_rerun_runs_it_again(tmp_p
             numpar=10,
             varsiwant=VARS,
             outdt=30,
-            exe_dir=build,
+            directory=build,
             variants={"hrrr": {}},
         )
     )

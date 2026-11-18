@@ -1,32 +1,35 @@
 Your Own HYSPLIT Build And Data Tables
 ======================================
 
-PYSTILT runs the ``hycs_std`` you give it (:doc:`../getting_started/installation`),
-and reads HYSPLIT's data tables from its own copy. You can replace either: a
-newer HYSPLIT, a build with a fix STILT-R's lacks, or a higher-resolution
-land use.
+PYSTILT runs the HYSPLIT you give it (:doc:`../getting_started/installation`):
+a newer HYSPLIT, a build with a fix STILT-R's lacks, or your own data
+tables, such as a higher-resolution land use.
 
 A HYSPLIT build
 ---------------
 
-Get ``hycs_std`` from NOAA's HYSPLIT download, a cluster's HYSPLIT module,
-or by compiling NOAA's source. Then point ``exe_dir`` at its folder, or put
-the folder on ``PATH``:
+Get HYSPLIT from NOAA's download, a cluster's HYSPLIT module, or by
+compiling NOAA's source. Then point ``directory`` at the folder, laid out
+as HYSPLIT's download is: ``exec/hycs_std``, and the data tables in
+``bdyfiles/``:
 
 .. code-block:: yaml
 
    models:
      hysplit:
-       exe_dir: /path/to/hysplit/exec
+       directory: /path/to/hysplit
 
-``exe_dir`` is a HYSPLIT setting, so a variant can set its own and
+``directory`` is a HYSPLIT setting, so a variant can set its own and
 compare two builds on the same receptors:
 
 .. code-block:: yaml
 
    variants:
      hrrr: {}
-     hrrr-v532: {exe_dir: /path/to/hysplit-5.3.2/exec}
+     hrrr-v532: {directory: /path/to/hysplit-5.3.2}
+
+Without ``directory``, PYSTILT runs the first ``hycs_std`` on ``PATH``, with
+the tables of a ``bdyfiles/`` folder beside the folder it is in.
 
 Two builds can give different particles from the same settings, so a run
 records the SHA-256 of the ``hycs_std`` it ran, and runs of different
@@ -75,16 +78,15 @@ Data tables
 
 HYSPLIT's data tables (``ASCDATA.CFG``, ``LANDUSE.ASC``, ``ROUGLEN.ASC``,
 ``TERRAIN.ASC``) set the land use, roughness, and terrain under the
-particles. PYSTILT includes a copy of HYSPLIT's tables and uses it with
-any build. To use your own, put them in a folder and set ``data_dir``. A
-table the folder does not hold comes from PYSTILT's copy:
+particles. PYSTILT reads them from the ``bdyfiles/`` folder of
+``directory``. To use your own, put them there. A table the folder does not
+hold, or all four when there is no ``bdyfiles/``, comes from PYSTILT's
+copy, which is HYSPLIT's.
 
-.. code-block:: yaml
-
-   models:
-     hysplit:
-       data_dir: /path/to/hysplit/bdyfiles
+HYSPLIT's own ``ASCDATA.CFG`` says the tables are in ``../bdyfiles/``.
+PYSTILT links them into each run's workdir instead, so it writes
+``ASCDATA.CFG`` there with that line set to ``./`` and the rest as yours.
 
 The tables change the particles, so a run records the checksum of each
 table that differs from PYSTILT's copy, and such runs are kept apart from
-the others. A folder whose tables match PYSTILT's copy changes nothing.
+the others. Tables that match PYSTILT's copy change nothing.

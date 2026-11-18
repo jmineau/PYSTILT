@@ -125,7 +125,7 @@ only when the core reads it. Config classes do no I/O when they validate;
 - **Identity is content.** PYSTILT never deletes or overwrites a results folder.
 - **The CLI stays thin.** Orchestration does not belong in `cli.py`.
 - **Meteorology I/O goes through [arlmet](https://github.com/jmineau/arl-met).**
-- **PYSTILT ships no HYSPLIT** (`find_hycs_std`: `exe_dir`, else `PATH`). The SHA-256
+- **PYSTILT ships no HYSPLIT** (`find_hycs_std`: `directory`, else `PATH`). The SHA-256
   of `hycs_std` is in the particles hash, read on first use (`Variant.build`); its
   printed version is recorded as `model_version`, never hashed. Without `hycs_std` a
   project opens and `Output` compares on `Variant.readable_run_settings`.

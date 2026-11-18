@@ -24,18 +24,21 @@ The HYSPLIT build
 -----------------
 
 PYSTILT includes no HYSPLIT. :func:`~stilt.transport.hysplit.find_hycs_std`
-returns the ``hycs_std`` a run uses: the one in ``exe_dir``, or else the
+returns the ``hycs_std`` a run uses: ``exec/hycs_std`` under ``directory``, or else the
 first on ``PATH`` (:doc:`../getting_started/installation`).
 :meth:`HysplitModel.sha256 <stilt.transport.hysplit.HysplitModel.sha256>`
 is its checksum, part of each run's settings, and
 :meth:`HysplitModel.version <stilt.transport.hysplit.HysplitModel.version>`
 the version it prints when it starts, recorded beside them.
+:func:`~stilt.transport.hysplit.data_tables` gives HYSPLIT's data tables a
+run uses, from ``directory``'s ``bdyfiles/`` or PYSTILT's copy.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    stilt.transport.hysplit.find_hycs_std
+   stilt.transport.hysplit.data_tables
 
 Running HYSPLIT
 ---------------

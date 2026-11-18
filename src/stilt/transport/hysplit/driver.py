@@ -44,6 +44,11 @@ if TYPE_CHECKING:
 CONTROL_FILE = "CONTROL"
 SETUP_FILE = "SETUP.CFG"
 HYCS_STD_FILE = "hycs_std"
+#: HYSPLIT's folders, as its download unpacks: the programs and the data tables.
+EXEC_DIR = "exec"
+BDYFILES_DIR = "bdyfiles"
+#: HYSPLIT's data tables, which a run links into its workdir.
+DATA_TABLES = ("ASCDATA.CFG", "LANDUSE.ASC", "ROUGLEN.ASC", "TERRAIN.ASC")
 PARTICLE_STILT_FILE = "PARTICLE_STILT.DAT"
 WINDERR_FILE = "WINDERR"
 ZIERR_FILE = "ZIERR"
@@ -60,7 +65,7 @@ MESSAGE_TAIL_LINES = 20
 CONTROL_SETTINGS = ("n_hours", "emisshrs", "w_option", "z_top")
 
 #: Settings PYSTILT uses itself, in no HYSPLIT input file.
-PYSTILT_SETTINGS = ("pbl_height", "pbl_height_min", "exe_dir", "data_dir")
+PYSTILT_SETTINGS = ("pbl_height", "pbl_height_min", "directory")
 
 #: Every setting that is not a ``SETUP.CFG`` entry. All other settings are.
 NOT_IN_SETUP = frozenset(
@@ -74,38 +79,93 @@ NOT_IN_SETUP = frozenset(
 )
 
 
-def find_hycs_std(exe_dir: str | Path | None = None) -> Path:
+def find_hycs_std(directory: str | Path | None = None) -> Path:
     """
-    Return the ``hycs_std`` a run uses: the one in *exe_dir*, else the first on ``PATH``.
+    Return the ``hycs_std`` a run uses: ``exec/hycs_std`` under *directory*, else the first on ``PATH``.
 
-    PYSTILT does not include HYSPLIT, so the build is yours: set ``exe_dir``
-    in ``config.yaml`` to the directory that holds ``hycs_std``, or put that
-    directory on ``PATH``. ``exe_dir`` wins when both are set.
+    PYSTILT does not include HYSPLIT, so the build is yours. *directory* is
+    the HYSPLIT folder as unpacked (``directory`` under ``models: hysplit:``
+    in ``config.yaml``), which holds ``exec/`` and ``bdyfiles/``.
 
     Raises
     ------
     HYSPLITNotFoundError
-        If *exe_dir* holds no ``hycs_std``, or, without *exe_dir*, no
-        ``hycs_std`` is on ``PATH``.
+        If *directory* has no ``exec/hycs_std``, or its ``hycs_std`` is not
+        executable; without *directory*, if no ``hycs_std`` is on ``PATH``.
     """
-    if exe_dir is not None:
-        exe = Path(exe_dir) / HYCS_STD_FILE
+    if directory is not None:
+        exe = Path(directory) / EXEC_DIR / HYCS_STD_FILE
         if not exe.is_file():
             raise HYSPLITNotFoundError(
-                f"No {HYCS_STD_FILE} in {exe_dir}. Set exe_dir (under models: "
-                f"hysplit: in config.yaml) to the directory that holds HYSPLIT's "
-                f"{HYCS_STD_FILE}."
+                f"No {EXEC_DIR}/{HYCS_STD_FILE} in {directory}. Set directory "
+                "(under models: hysplit: in config.yaml) to the HYSPLIT folder "
+                f"as unpacked, the one that holds {EXEC_DIR}/ and {BDYFILES_DIR}/."
+            )
+        if not os.access(exe, os.X_OK):
+            raise HYSPLITNotFoundError(
+                f"{exe} is not executable, so it cannot run. HYSPLIT's download "
+                f"leaves it that way; make it executable with: chmod +x {exe}"
             )
         return exe
     found = shutil.which(HYCS_STD_FILE)
     if found is None:
         raise HYSPLITNotFoundError(
             f"No {HYCS_STD_FILE} on PATH. PYSTILT does not include HYSPLIT: get "
-            f"{HYCS_STD_FILE} (the installation guide says where), then set "
-            "exe_dir (under models: hysplit: in config.yaml) to the directory "
-            "that holds it, or put that directory on PATH."
+            "it (the installation guide says where), then set directory (under "
+            "models: hysplit: in config.yaml) to the HYSPLIT folder, or put the "
+            f"folder that holds an executable {HYCS_STD_FILE} on PATH."
         )
     return Path(found)
+
+
+def data_tables(directory: str | Path | None = None) -> dict[str, Path | bytes]:
+    """
+    Return HYSPLIT's data tables a run uses, by name: a file to link, or the text to write.
+
+    They come from ``bdyfiles/`` under *directory*, or, without
+    *directory*, from a ``bdyfiles/`` folder beside the folder of the
+    ``hycs_std`` on ``PATH``, as HYSPLIT lays them out. A table that folder
+    lacks, or all four when there is no such folder, comes from PYSTILT's
+    copy. HYSPLIT's own ``ASCDATA.CFG`` names ``../bdyfiles/`` as the place
+    of the tables; PYSTILT links them into the workdir, so its sixth line,
+    that place, is written as PYSTILT's copy has it (``'./'``) and the rest
+    is kept.
+    """
+    tables: dict[str, Path | bytes] = {
+        name: _bundled_data_dir() / name for name in DATA_TABLES
+    }
+    folder = _bdyfiles(directory)
+    if folder is None:
+        return tables
+    for name in DATA_TABLES:
+        path = folder / name
+        if path.is_file():
+            tables[name] = path
+    ascdata = tables["ASCDATA.CFG"]
+    if isinstance(ascdata, Path) and ascdata.parent == folder:
+        tables["ASCDATA.CFG"] = _tables_here(ascdata)
+    return tables
+
+
+def _bdyfiles(directory: str | Path | None) -> Path | None:
+    """Return the ``bdyfiles/`` folder a run's tables come from, or ``None`` for PYSTILT's copy."""
+    if directory is not None:
+        folder = Path(directory) / BDYFILES_DIR
+    else:
+        found = shutil.which(HYCS_STD_FILE)
+        if found is None:
+            return None
+        folder = Path(found).resolve().parent.parent / BDYFILES_DIR
+    return folder if folder.is_dir() else None
+
+
+def _tables_here(path: Path) -> bytes:
+    """Return the ``ASCDATA.CFG`` at *path* with its sixth line, where the tables are, as ``'./'``."""
+    lines = path.read_bytes().splitlines(keepends=True)
+    own = (_bundled_data_dir() / "ASCDATA.CFG").read_bytes().splitlines(keepends=True)
+    if len(lines) >= 6:
+        lines[5] = own[5]
+    return b"".join(lines)
 
 
 def _bundled_data_dir() -> Path:
@@ -401,10 +461,9 @@ def write_inputs(
     """
     Write everything ``hycs_std`` reads for one run into *workdir*.
 
-    Links ``hycs_std`` (from ``config.exe_dir``, or else ``PATH``:
-    :func:`find_hycs_std`) and
-    HYSPLIT's data tables (the bundled ones, replaced by any in
-    ``config.data_dir``), and writes ``CONTROL`` and ``SETUP.CFG``, plus
+    Links ``hycs_std`` (from ``config.directory``, or else ``PATH``:
+    :func:`find_hycs_std`) and HYSPLIT's data tables
+    (:func:`data_tables`), and writes ``CONTROL`` and ``SETUP.CFG``, plus
     ``ZICONTROL``, ``WINDERR``, and ``ZIERR`` when the settings call for
     them. *workdir* is created if needed, and should be empty.
 
@@ -433,15 +492,14 @@ def write_inputs(
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
 
-    # Link the binary and the data tables, as STILT-R does. Only hycs_std is
-    # taken from exe_dir: a custom build directory usually holds a whole
-    # HYSPLIT exec/ tree.
-    links = {HYCS_STD_FILE: find_hycs_std(config.exe_dir)}
-    links.update({f.name: f for f in _bundled_data_dir().iterdir()})
-    if config.data_dir is not None:  # its tables replace the bundled ones
-        links.update(
-            {f.name: f for f in Path(config.data_dir).iterdir() if f.is_file()}
-        )
+    # Link the binary and the data tables, as STILT-R does; only hycs_std is
+    # taken from exec/, which holds dozens of other programs.
+    links = {HYCS_STD_FILE: find_hycs_std(config.directory)}
+    for name, table in data_tables(config.directory).items():
+        if isinstance(table, bytes):
+            (workdir / name).write_bytes(table)
+        else:
+            links[name] = table
     for name, target in links.items():
         (workdir / name).symlink_to(target.resolve())
 

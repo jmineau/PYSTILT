@@ -49,41 +49,47 @@ Get HYSPLIT
 
 PYSTILT runs NOAA's HYSPLIT program, ``hycs_std``, to move particles, but it
 does not include it: you get ``hycs_std`` yourself and tell PYSTILT where it
-is. We recommend STILT-R's copy, HYSPLIT 5.1.0, which is the build PYSTILT's
-comparisons with STILT-R run. Download it from STILT-R's repository and make
-it executable:
+is. Point ``directory`` at the HYSPLIT folder, in a project's
+``config.yaml``:
+
+.. code-block:: yaml
+
+   models:
+     hysplit:
+       directory: /path/to/hysplit
+
+PYSTILT runs ``exec/hycs_std`` under that folder and reads HYSPLIT's data
+tables from its ``bdyfiles/``, as NOAA's download unpacks them. Without
+``directory`` it runs the first ``hycs_std`` on ``PATH``, which a cluster's
+HYSPLIT module sets when you load it.
+
+We recommend STILT-R's copy, HYSPLIT 5.1.0, which is the build PYSTILT's
+comparisons with STILT-R run. Download it from STILT-R's repository into
+an ``exec/`` folder and make it executable:
 
 .. code-block:: bash
 
-   mkdir -p hysplit
-   curl -L -o hysplit/hycs_std \
+   mkdir -p hysplit/exec
+   curl -L -o hysplit/exec/hycs_std \
        https://raw.githubusercontent.com/uataq/stilt/main/bin/linux_x64/hycs_std
-   chmod +x hysplit/hycs_std
+   chmod +x hysplit/exec/hycs_std
 
 That is the Linux (x86_64) build. On a Mac, download
 ``bin/macos_x64/hycs_std`` instead; Apple Silicon runs it through Rosetta.
+This folder has no ``bdyfiles/``, so PYSTILT uses its own copy of HYSPLIT's
+tables, which are the same as STILT-R's.
 
-Then tell PYSTILT where it is, in one of two ways:
+NOAA's HYSPLIT download works too: unpack it and set ``directory`` to the
+folder it makes. Its ``exec/hycs_std`` comes without permission to run, so
+make it executable first (``chmod +x exec/hycs_std``). Each Linux download
+is built for one operating system release, and one built for a newer system
+stops on an older one with an error that names ``GLIBC``.
 
-- Put its folder on ``PATH``, for example in your shell's startup file:
-  ``export PATH="/path/to/hysplit:$PATH"``. A cluster's HYSPLIT module
-  does this when you load it.
-- Set ``exe_dir`` to the folder in a project's ``config.yaml``, under
-  ``models: hysplit:``. This wins over ``PATH``:
-
-  .. code-block:: yaml
-
-     models:
-       hysplit:
-         exe_dir: /path/to/hysplit
-
-``stilt check`` lists a project that can find no ``hycs_std``, and
-``stilt run`` stops with the same message before it runs anything. A
-project still opens and reads its results without one.
-
-Any other HYSPLIT build works too, such as NOAA's own download or one you
-compile (:doc:`../guides/hysplit_build`). Each run records the checksum of
-the ``hycs_std`` it ran, so runs of different builds are kept apart.
+``stilt check`` lists a project that can find no ``hycs_std``, or one that
+cannot run, and ``stilt run`` stops with the same message before it runs
+anything. A project still opens and reads its results without one. Each run
+records the checksum of the ``hycs_std`` it ran, so runs of different builds
+are kept apart (:doc:`../guides/hysplit_build`).
 
 HYSPLIT is NOAA Air Resources Laboratory software, under the
 `HYSPLIT terms of use <https://www.ready.noaa.gov/HYSPLIT_agreement.php>`_.

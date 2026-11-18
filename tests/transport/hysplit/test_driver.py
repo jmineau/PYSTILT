@@ -204,9 +204,11 @@ def _config(**overrides) -> HysplitConfig:
 
 
 def _fake_build(path: Path, marker: str = "fake binary") -> Path:
-    """Return a build directory holding a stand-in hycs_std."""
-    path.mkdir(parents=True, exist_ok=True)
-    (path / "hycs_std").write_text(marker)
+    """Return a HYSPLIT folder holding a stand-in, executable ``exec/hycs_std``."""
+    exe = path / "exec" / "hycs_std"
+    exe.parent.mkdir(parents=True, exist_ok=True)
+    exe.write_text(marker)
+    exe.chmod(0o755)
     return path
 
 
@@ -1001,13 +1003,13 @@ def test_zicontrol_repeats_a_scalar_over_the_run(tmp_path, point_receptor):
 # ---------------------------------------------------------------------------
 
 
-def test_exe_dir_is_used(tmp_path, point_receptor):
-    build = _fake_build(tmp_path / "my_build", "patched")
-    workdir = _inputs(tmp_path, point_receptor, _config(exe_dir=build))
+def test_directory_is_used(tmp_path, point_receptor):
+    build = _fake_build(tmp_path / "hysplit", "patched")
+    workdir = _inputs(tmp_path, point_receptor, _config(directory=build))
     assert (workdir / "hycs_std").read_text() == "patched"
 
 
-def test_without_exe_dir_the_hycs_std_on_path_is_used(
+def test_without_directory_the_hycs_std_on_path_is_used(
     tmp_path, point_receptor, stand_in_hycs_std
 ):
     workdir = _inputs(tmp_path, point_receptor)
@@ -1016,54 +1018,86 @@ def test_without_exe_dir_the_hycs_std_on_path_is_used(
     ).resolve()
 
 
-def test_exe_dir_comes_before_path(tmp_path, monkeypatch):
-    build = _fake_build(tmp_path / "my_build")
+def test_directory_comes_before_path(tmp_path, monkeypatch):
+    build = _fake_build(tmp_path / "hysplit")
     elsewhere = _fake_build(tmp_path / "elsewhere")
-    (elsewhere / "hycs_std").chmod(0o755)  # PATH finds only an executable
-    monkeypatch.setenv("PATH", str(elsewhere))
-    assert driver.find_hycs_std(build) == build / "hycs_std"
-    assert driver.find_hycs_std().resolve() == (elsewhere / "hycs_std").resolve()
+    monkeypatch.setenv("PATH", str(elsewhere / "exec"))
+    assert driver.find_hycs_std(build) == build / "exec" / "hycs_std"
+    assert (
+        driver.find_hycs_std().resolve() == (elsewhere / "exec" / "hycs_std").resolve()
+    )
 
 
-def test_without_exe_dir_or_hycs_std_on_path_says_what_to_set(
+def test_without_directory_or_hycs_std_on_path_says_what_to_set(
     tmp_path, point_receptor, monkeypatch
 ):
     """PYSTILT includes no HYSPLIT: the message names both places to put it."""
     monkeypatch.setenv("PATH", str(tmp_path))
-    with pytest.raises(HYSPLITNotFoundError, match="exe_dir.*PATH"):
+    with pytest.raises(HYSPLITNotFoundError, match="directory.*PATH"):
         _inputs(tmp_path, point_receptor)
 
 
-def test_exe_dir_without_hycs_std_raises(tmp_path, point_receptor):
+def test_directory_without_exec_hycs_std_raises(tmp_path, point_receptor):
     empty = tmp_path / "empty"
     empty.mkdir()
-    with pytest.raises(HYSPLITNotFoundError, match="hycs_std"):
-        _inputs(tmp_path, point_receptor, _config(exe_dir=empty))
+    with pytest.raises(HYSPLITNotFoundError, match="No exec/hycs_std in"):
+        _inputs(tmp_path, point_receptor, _config(directory=empty))
 
 
-def test_only_hycs_std_is_linked_from_a_custom_build_dir(tmp_path, point_receptor):
+def test_a_hycs_std_that_is_not_executable_says_so(tmp_path, point_receptor):
+    """HYSPLIT's download unpacks exec/ without the executable bit."""
+    build = _fake_build(tmp_path / "hysplit")
+    (build / "exec" / "hycs_std").chmod(0o644)
+    with pytest.raises(HYSPLITNotFoundError, match="not executable.*chmod \\+x"):
+        _inputs(tmp_path, point_receptor, _config(directory=build))
+
+
+def test_only_hycs_std_is_linked_from_exec(tmp_path, point_receptor):
     # A real HYSPLIT exec/ directory holds dozens of other programs.
-    build = _fake_build(tmp_path / "exec")
-    (build / "Makefile").write_text("")
-    (build / "concplot").write_text("")
-    workdir = _inputs(tmp_path, point_receptor, _config(exe_dir=build))
+    build = _fake_build(tmp_path / "hysplit")
+    (build / "exec" / "Makefile").write_text("")
+    (build / "exec" / "concplot").write_text("")
+    workdir = _inputs(tmp_path, point_receptor, _config(directory=build))
     assert (workdir / "hycs_std").exists()
     assert not (workdir / "Makefile").exists()
     assert not (workdir / "concplot").exists()
-    assert "exe_dir" not in (workdir / "SETUP.CFG").read_text().lower()
+    assert "directory" not in (workdir / "SETUP.CFG").read_text().lower()
 
 
-def test_data_dir_tables_replace_the_bundled_ones(tmp_path, point_receptor):
-    """A table in data_dir is linked in place of the bundled one; the rest are bundled."""
-    data = tmp_path / "tables"
-    data.mkdir()
-    (data / "ROUGLEN.ASC").write_text("custom roughness\n")
+def test_bdyfiles_tables_replace_pystilts(tmp_path, point_receptor):
+    """A table in bdyfiles/ is linked in place of PYSTILT's copy; the rest are PYSTILT's."""
+    build = _fake_build(tmp_path / "hysplit")
+    (build / "bdyfiles").mkdir()
+    (build / "bdyfiles" / "ROUGLEN.ASC").write_text("custom roughness\n")
+    (build / "bdyfiles" / "Makefile").write_text("")  # not a table: not linked
 
-    workdir = _inputs(tmp_path, point_receptor, _config(data_dir=data))
+    workdir = _inputs(tmp_path, point_receptor, _config(directory=build))
 
-    assert (workdir / "ROUGLEN.ASC").resolve() == (data / "ROUGLEN.ASC").resolve()
+    rouglen = (build / "bdyfiles" / "ROUGLEN.ASC").resolve()
+    assert (workdir / "ROUGLEN.ASC").resolve() == rouglen
     bundled = driver._bundled_data_dir()
     assert (workdir / "LANDUSE.ASC").resolve() == (bundled / "LANDUSE.ASC").resolve()
+    assert not (workdir / "Makefile").exists()
+
+
+def test_hysplits_ascdata_cfg_is_written_to_read_the_tables_in_the_workdir(
+    tmp_path, point_receptor
+):
+    """HYSPLIT's own ASCDATA.CFG says ../bdyfiles/; the workdir's says ./ and keeps the rest."""
+    build = _fake_build(tmp_path / "hysplit")
+    (build / "bdyfiles").mkdir()
+    own = (driver._bundled_data_dir() / "ASCDATA.CFG").read_text()
+    lines = own.splitlines(keepends=True)
+    lines[0] = "-90.0  -180.0  lat/lon of lower left corner (changed)\n"
+    lines[5] = "'../bdyfiles/' directory location of data files\n"
+    (build / "bdyfiles" / "ASCDATA.CFG").write_text("".join(lines))
+
+    workdir = _inputs(tmp_path, point_receptor, _config(directory=build))
+
+    written = (workdir / "ASCDATA.CFG").read_text().splitlines(keepends=True)
+    assert not (workdir / "ASCDATA.CFG").is_symlink()
+    assert written[0] == lines[0]
+    assert written[5] == own.splitlines(keepends=True)[5]
 
 
 def test_winderrtf_all_none():

@@ -4,7 +4,7 @@ What a result was made with, and the hash that names its folder.
 Every folder in an output directory holds the results of one set of
 settings, recorded in its ``_settings.yaml``. This module writes those
 records and hashes them. A run's settings are its transport config without
-the fields that change no particle (``exe_dir``, ``data_dir``), its met as
+the fields that change no particle (HYSPLIT's ``directory``), its met as
 the met config records it (for HYSPLIT, the weather product and the crop),
 the model build (for HYSPLIT, the SHA-256 of ``hycs_std``, not the version
 it prints), and whether it is an ensemble (the realizations of one
@@ -99,7 +99,7 @@ def transport_from_settings(stored: Mapping[str, Any]) -> TransportConfig:
 
     ``model.name`` says which model's config class reads it. Settings this
     version does not have are dropped. The fields a record leaves out
-    (``exe_dir`` and ``data_dir`` for HYSPLIT) come back unset.
+    (``directory`` for HYSPLIT) come back unset.
     """
     config_class = get_model(_model_info(stored).name).config_class
     fields = config_class.model_fields

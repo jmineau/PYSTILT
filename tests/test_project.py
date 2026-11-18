@@ -23,7 +23,7 @@ from stilt.transport.hysplit import MetConfig
 from stilt.transport.hysplit.driver import winderrtf
 from tests.fixtures.factories import blocks
 
-from .fixtures.factories import make_met_config, make_receptor
+from .fixtures.factories import make_hysplit_dir, make_met_config, make_receptor
 from .fixtures.footprints import as_footprint
 from .fixtures.particles import finished
 
@@ -657,11 +657,8 @@ def test_status_without_hycs_std_raises_when_the_variant_ran_two_builds(
     """Two folders of one variant whose settings differ only in hycs_std: which is this machine's is unknown."""
     project = _project(tmp_path, [point_receptor])
     _write_trajectory(project, point_receptor)
-    build = tmp_path / "rebuilt"
-    build.mkdir()
-    (build / "hycs_std").write_text("#!/bin/sh\n# rebuilt\nexit 2\n")
-    (build / "hycs_std").chmod(0o755)
-    _config(tmp_path, exe_dir=build).to_yaml(project.config_path)
+    build = make_hysplit_dir(tmp_path / "rebuilt", body="# rebuilt\nexit 2\n")
+    _config(tmp_path, directory=build).to_yaml(project.config_path)
     _write_trajectory(Project(project.directory), point_receptor)
     assert len(project.output.hashes("particles")) == 2
     _config(tmp_path).to_yaml(project.config_path)  # back to the hycs_std on PATH

@@ -373,7 +373,7 @@ variant runs, and you can select both when you load results, for example
 Some settings do not change a result, so changing them changes no folder:
 
 - ``execution`` (including ``timeout`` and ``keep_workdir``) and ``output``
-- the ``exe_dir`` and ``data_dir`` paths (what they hold is recorded
+- HYSPLIT's ``directory`` (what it holds is recorded
   instead: the checksum of ``hycs_std``, and of each data table that
   differs from PYSTILT's copy, so a different build or table is a new
   folder)

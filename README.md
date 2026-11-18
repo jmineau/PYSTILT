@@ -41,7 +41,7 @@ pip install "pystilt[complete]"
 
 PYSTILT runs NOAA's HYSPLIT program, `hycs_std`, but does not include it. Get the build
 STILT-R uses, HYSPLIT 5.1.0, from STILT-R's repository (`bin/macos_x64/hycs_std` on a Mac),
-and put its folder on `PATH` or set `exe_dir` under `models: hysplit:` in `config.yaml`:
+and put its folder on `PATH`, or set `directory` under `models: hysplit:` in `config.yaml` to a HYSPLIT folder:
 
 ```bash
 mkdir -p hysplit

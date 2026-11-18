@@ -25,7 +25,7 @@ from stilt.project import Project
 from stilt.spatial import Grid
 from tests.fixtures.factories import blocks
 
-from .fixtures.factories import make_met_config, make_project_config
+from .fixtures.factories import make_hysplit_dir, make_met_config, make_project_config
 
 runner = CliRunner()
 
@@ -590,12 +590,9 @@ def test_status_without_hycs_std_exits_2_when_the_variant_ran_two_builds(
 ):
     """Two folders of hrrr that differ only in hycs_std: which is this machine's is unknown."""
     _write_minimal_config(tmp_path)
-    build = tmp_path / "rebuilt"
-    build.mkdir()
-    (build / "hycs_std").write_text("#!/bin/sh\n# rebuilt\nexit 2\n")
-    (build / "hycs_std").chmod(0o755)
+    build = make_hysplit_dir(tmp_path / "rebuilt", body="# rebuilt\nexit 2\n")
     _make_results_folder(tmp_path)
-    _make_results_folder(tmp_path, exe_dir=build)
+    _make_results_folder(tmp_path, directory=build)
     monkeypatch.setenv("PATH", str(tmp_path / "no-hysplit"))
 
     result = runner.invoke(app, ["status", str(tmp_path)])

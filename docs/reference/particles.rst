@@ -118,7 +118,7 @@ writes no such row: its first row is one time step after release.
 For it, PYSTILT matches each particle to a release point from its first
 position, and takes a column's particles to be released bottom to top in
 ``particle`` order. A HYSPLIT build patched to write the release rows
-(``exe_dir``) makes the matching exact.
+(``directory``) makes the matching exact.
 
 Columns the model adds
 ----------------------

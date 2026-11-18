@@ -22,6 +22,7 @@ from .driver import (
     _bundled_data_dir,
     check_met_stop,
     check_release,
+    data_tables,
     find_hycs_std,
     read_particle_dat,
     run_hycs_std,
@@ -44,9 +45,9 @@ _VERSION_LINE = re.compile(r"HYSPLIT version:\s*(\S+)")
 _VERSION_TIMEOUT = 30
 
 
-def hysplit_version(exe_dir: str | Path | None = None) -> str | None:
+def hysplit_version(directory: str | Path | None = None) -> str | None:
     """
-    Return the version the ``hycs_std`` in *exe_dir*, or else on ``PATH``, prints when it starts.
+    Return the version the ``hycs_std`` of *directory*, or else on ``PATH``, prints when it starts.
 
     ``hycs_std`` prints a line such as ``HYSPLIT version: hysplit.v5.1.0``
     before it reads its input; this returns ``hysplit.v5.1.0``. It runs the
@@ -68,7 +69,7 @@ def hysplit_version(exe_dir: str | Path | None = None) -> str | None:
     HYSPLITNotFoundError
         If there is no ``hycs_std`` (:func:`find_hycs_std`).
     """
-    return _printed_version(*_stamp(find_hycs_std(exe_dir)))
+    return _printed_version(*_stamp(find_hycs_std(directory)))
 
 
 def _stamp(path: Path) -> tuple[str, int, int]:
@@ -138,7 +139,7 @@ class HysplitModel:
         """
         Return the SHA-256 of the ``hycs_std`` *config* runs, which tells its build from any other.
 
-        The ``hycs_std`` in ``config.exe_dir``, or else on ``PATH``
+        The ``hycs_std`` of ``config.directory``, or else on ``PATH``
         (:func:`find_hycs_std`). Read once per file.
 
         Raises
@@ -146,30 +147,27 @@ class HysplitModel:
         HYSPLITNotFoundError
             If there is no ``hycs_std``.
         """
-        return _file_sha256(*_stamp(find_hycs_std(config.exe_dir)))
+        return _file_sha256(*_stamp(find_hycs_std(config.directory)))
 
     def version(self, config: HysplitConfig) -> str | None:
         """Return the version the ``hycs_std`` *config* runs prints when it starts (:func:`hysplit_version`)."""
-        return hysplit_version(config.exe_dir)
+        return hysplit_version(config.directory)
 
     def data_files(self, config: HysplitConfig) -> dict[str, str] | None:
         """
-        Return the SHA-256 of each table in ``config.data_dir`` that differs from the bundled one.
+        Return the SHA-256 of each data table a run uses that differs from PYSTILT's copy, by name.
 
-        ``None`` when there is no ``data_dir`` or every table in it matches
-        the bundled table of the same name.
+        The tables of :func:`~stilt.transport.hysplit.data_tables`, as
+        the run gets them. ``None`` when every one matches PYSTILT's copy.
         """
-        if config.data_dir is None:
-            return None
         bundled = _bundled_data_dir()
         changed = {}
-        for path in sorted(Path(config.data_dir).iterdir()):
-            if not path.is_file():
+        for name, table in sorted(data_tables(config.directory).items()):
+            content = table if isinstance(table, bytes) else table.read_bytes()
+            own = bundled / name
+            if own.is_file() and own.read_bytes() == content:
                 continue
-            digest = _sha256(path)
-            own = bundled / path.name
-            if not own.is_file() or _sha256(own) != digest:
-                changed[path.name] = digest
+            changed[name] = hashlib.sha256(content).hexdigest()
         return changed or None
 
     def check_met(

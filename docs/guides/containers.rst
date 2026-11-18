@@ -22,7 +22,7 @@ What every container needs
 --------------------------
 
 - PYSTILT installed (``pip install pystilt``), and HYSPLIT's ``hycs_std``
-  on ``PATH`` or in the folder ``exe_dir`` names
+  on ``PATH`` or in the HYSPLIT folder ``directory`` names
   (:doc:`../getting_started/installation`). Every container needs the same
   ``hycs_std``: its checksum is part of each run's settings, so another
   build writes to another settings folder. A container that only reports
