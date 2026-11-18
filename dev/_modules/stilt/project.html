@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=5c16c938"></script>
+    <script src="../../_static/documentation_options.js?v=22dc2443"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev9+g5ba29d1e4" />
+  <meta name="docsearch:version" content="0.1.0a30.dev10+g9e08d7904" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -484,7 +484,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span><span class="p">,</span> <span class="n">location</span><span class="p">,</span> <span class="n">write_parquet</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.check</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_project</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">STARTER_CONFIG</span><span class="p">,</span> <span class="n">ProjectConfig</span><span class="p">,</span> <span class="n">Variant</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">STARTER_CONFIG</span><span class="p">,</span> <span class="n">STILT_R_HYSPLIT</span><span class="p">,</span> <span class="n">ProjectConfig</span><span class="p">,</span> <span class="n">Variant</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.fetch</span><span class="w"> </span><span class="kn">import</span> <span class="n">fetch_project</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint</span><span class="w"> </span><span class="kn">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Jacobian</span>
@@ -516,6 +516,24 @@
 
 <span class="c1">#: Where a simulation stands, the ``state`` column of :meth:`Project.status`.</span>
 <span class="n">STATES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"complete"</span><span class="p">,</span> <span class="s2">"failed"</span><span class="p">,</span> <span class="s2">"interrupted"</span><span class="p">,</span> <span class="s2">"pending"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_with_stilt_r_values</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">ProjectConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectConfig</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return *config* with STILT-R's HYSPLIT values in its ``hysplit`` block, where it gives none.</span>
+
+<span class="sd">    A config that does not run the built-in HYSPLIT is returned as it is.</span>
+<span class="sd">    """</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">to_yaml</span><span class="p">())</span>
+    <span class="n">models</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"models"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{</span><span class="s2">"hysplit"</span><span class="p">:</span> <span class="p">{}}</span>
+    <span class="k">if</span> <span class="s2">"hysplit"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">models</span> <span class="ow">or</span> <span class="s2">"class"</span> <span class="ow">in</span> <span class="p">(</span><span class="n">models</span><span class="p">[</span><span class="s2">"hysplit"</span><span class="p">]</span> <span class="ow">or</span> <span class="p">{}):</span>
+        <span class="k">return</span> <span class="n">config</span>
+    <span class="n">block</span> <span class="o">=</span> <span class="n">models</span><span class="p">[</span><span class="s2">"hysplit"</span><span class="p">]</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">models</span><span class="p">[</span><span class="s2">"hysplit"</span><span class="p">]</span> <span class="o">=</span> <span class="n">block</span> <span class="o">|</span> <span class="p">{</span>
+        <span class="n">name</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">STILT_R_HYSPLIT</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">block</span>
+    <span class="p">}</span>
+    <span class="n">data</span><span class="p">[</span><span class="s2">"models"</span><span class="p">]</span> <span class="o">=</span> <span class="n">models</span>
+    <span class="k">return</span> <span class="n">ProjectConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_as_receptors</span><span class="p">(</span>
@@ -698,10 +716,15 @@
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Make a new project and return it.</span>
 
-<span class="sd">        Writes ``config.yaml``, with only the settings given, and</span>
+<span class="sd">        Writes ``config.yaml``, with the settings given, and</span>
 <span class="sd">        ``receptors.csv`` when receptors are given. With ``starter=True`` it</span>
 <span class="sd">        writes the commented starter config instead, to edit by hand, as</span>
 <span class="sd">        ``stilt init`` does.</span>
+
+<span class="sd">        Either way, a project that runs HYSPLIT gets STILT-R's values where</span>
+<span class="sd">        they differ from HYSPLIT's own defaults</span>
+<span class="sd">        (:data:`stilt.config.STILT_R_HYSPLIT`) in its ``models: hysplit:``</span>
+<span class="sd">        block, unless the settings give them, so it runs as STILT-R does.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -747,8 +770,10 @@
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">starter</span><span class="p">:</span>
             <span class="n">config</span> <span class="o">=</span> <span class="n">ProjectConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">STARTER_CONFIG</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="n">config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">config</span> <span class="o">=</span> <span class="n">ProjectConfig</span><span class="p">(</span><span class="o">**</span><span class="n">settings</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">config</span> <span class="o">=</span> <span class="n">ProjectConfig</span><span class="p">(</span><span class="o">**</span><span class="n">settings</span><span class="p">)</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">_with_stilt_r_values</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
         <span class="n">directory</span> <span class="o">=</span> <span class="n">absolute</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="n">config_path</span> <span class="o">=</span> <span class="n">directory</span> <span class="o">/</span> <span class="s2">"config.yaml"</span>
         <span class="c1"># The config checks a variant's own transport settings only when it is</span>

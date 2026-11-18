@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=5c16c938"></script>
+    <script src="../_static/documentation_options.js?v=22dc2443"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev9+g5ba29d1e4" />
+  <meta name="docsearch:version" content="0.1.0a30.dev10+g9e08d7904" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -818,7 +818,19 @@ block. The parameters are checked by the model’s own config class
 <code class="docutils literal notranslate"><span class="pre">stilt.transport.get_model</span></code>: by name when the file loads, and by value
 as a variant runs them (at load for a variant that changes none, else in
 <code class="docutils literal notranslate"><span class="pre">resolve</span></code>), since a block need not be complete (the <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> model
-has no defaults). Without <code class="docutils literal notranslate"><span class="pre">models</span></code>, the project runs <code class="docutils literal notranslate"><span class="pre">hysplit</span></code>.</p></li>
+has no defaults, and <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> has none in any model). Without
+<code class="docutils literal notranslate"><span class="pre">models</span></code>, the project runs <code class="docutils literal notranslate"><span class="pre">hysplit</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">HysplitConfig</span></code> has HYSPLIT’s own defaults, in the STILT mode that
+<code class="docutils literal notranslate"><span class="pre">FIXED_SETUP</span></code> sets. The settings HYSPLIT decides after reading
+<code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> (<code class="docutils literal notranslate"><span class="pre">capemin</span></code>, <code class="docutils literal notranslate"><span class="pre">kblt</span></code>, <code class="docutils literal notranslate"><span class="pre">kmixd</span></code>, <code class="docutils literal notranslate"><span class="pre">krand</span></code>, <code class="docutils literal notranslate"><span class="pre">vscales</span></code>)
+default to unset and are then not written. STILT-R’s values are PYSTILT’s
+side: <code class="docutils literal notranslate"><span class="pre">stilt.config.STILT_R_HYSPLIT</span></code>, which <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code> (the starter
+config) and <code class="docutils literal notranslate"><span class="pre">Project.init</span></code> write into the <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> block where it
+gives none, so what a project runs is in its file. <code class="docutils literal notranslate"><span class="pre">run_trajectories</span></code>
+and a hand-written config get HYSPLIT’s. A run records the resolved
+values, so a config that gives STILT-R’s values names the same settings
+folder as the old defaults did, while an unset setting is recorded as
+<code class="docutils literal notranslate"><span class="pre">null</span></code>.</p></li>
 <li><p>A <code class="docutils literal notranslate"><span class="pre">stages</span></code> block names what is made from each simulation’s particles
 by its <code class="docutils literal notranslate"><span class="pre">class</span></code>. The footprint, <code class="docutils literal notranslate"><span class="pre">stilt.footprint.FootprintStage</span></code>, is
 the one stage, and its block holds the <code class="docutils literal notranslate"><span class="pre">FootprintConfig</span></code> fields. A stage

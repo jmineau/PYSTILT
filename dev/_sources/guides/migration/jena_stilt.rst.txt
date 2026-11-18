@@ -54,7 +54,8 @@ How the footprints differ
      - The total is divided by ``numpar``.
    * - Defaults
      - 240 hours and 250 particles.
-     - 24 hours and 200 particles.
+     - None for the hours: a config must give ``n_hours``. 1000 particles in
+       a new project's config (STILT-R's value), 2500 left out (HYSPLIT's).
    * - Meteorology
      - ECMWF short-term forecasts every 3 hours at about 35 km, in ARL
        format.

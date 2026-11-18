@@ -91,6 +91,15 @@ no meteorology or HYSPLIT, so they run anywhere R is installed:
 
    STILT_R_DIR=$PWD/stilt-r-src uv run pytest tests/r_stilt -m r_only
 
+The same marker holds the settings test in
+`tests/r_stilt/test_config_parity.py <https://github.com/jmineau/PYSTILT/blob/main/tests/r_stilt/test_config_parity.py>`_.
+PYSTILT's HYSPLIT block has HYSPLIT's own defaults, and a new project's
+config carries STILT-R's values where they differ
+(:doc:`/guides/migration/stilt_r`). The test has STILT-R's ``write_setup()``
+write ``SETUP.CFG`` from the values in its ``run_stilt.r`` and compares it,
+entry by entry, with the one PYSTILT writes from the starter config. It runs
+no HYSPLIT. The fidelity scenarios give their configs the same values.
+
 What does not match
 -------------------
 

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=5c16c938"></script>
+    <script src="../_static/documentation_options.js?v=22dc2443"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev9+g5ba29d1e4" />
+  <meta name="docsearch:version" content="0.1.0a30.dev10+g9e08d7904" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -709,8 +709,13 @@ of any selection of runs as one table:</p>
 <h2>Where each <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> line comes from<a class="headerlink" href="#where-each-control-and-setup-cfg-line-comes-from" title="Link to this heading">#</a></h2>
 <p>Every <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> entry that can change the particles is a setting of the
 same name in lowercase, such as <code class="docutils literal notranslate"><span class="pre">numpar</span></code>, <code class="docutils literal notranslate"><span class="pre">kmixd</span></code> or <code class="docutils literal notranslate"><span class="pre">tlfrac</span></code>
-(<a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a> lists them). PYSTILT writes the rest
-itself:</p>
+(<a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a> lists them). Each defaults to HYSPLIT’s
+own value in STILT mode. A setting HYSPLIT decides only after reading the
+file (<code class="docutils literal notranslate"><span class="pre">capemin</span></code>, <code class="docutils literal notranslate"><span class="pre">kblt</span></code>, <code class="docutils literal notranslate"><span class="pre">kmixd</span></code>, <code class="docutils literal notranslate"><span class="pre">krand</span></code>, <code class="docutils literal notranslate"><span class="pre">vscales</span></code>) is left out
+unless you give it, so HYSPLIT chooses. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code> writes STILT-R’s
+values for a few of them into a new project’s config
+(<a class="reference internal" href="migration/stilt_r.html"><span class="doc">Coming From STILT-R</span></a>); delete those lines to run HYSPLIT’s. PYSTILT
+writes the rest itself:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
 <col style="width: 40.0%" />

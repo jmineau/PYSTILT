@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=5c16c938"></script>
+    <script src="../../_static/documentation_options.js?v=22dc2443"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev9+g5ba29d1e4" />
+  <meta name="docsearch:version" content="0.1.0a30.dev10+g9e08d7904" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -593,8 +593,10 @@
     <span class="n">UNRECORDED</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">()</span>
 
     <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="o">-</span><span class="mi">24</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">"Length of each simulation, in hours. Negative runs backward in time."</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Length of each simulation, in hours. Negative runs backward in "</span>
+            <span class="s2">"time. It has no default: a config must say it."</span>
+        <span class="p">),</span>
     <span class="p">)</span>
 
     <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"n_hours"</span><span class="p">)</span>
@@ -1211,6 +1213,9 @@
 <span class="sd">    **params</span>
 <span class="sd">        The transport model's parameters, such as ``n_hours`` and</span>
 <span class="sd">        ``numpar`` (:class:`stilt.transport.hysplit.HysplitConfig`).</span>
+<span class="sd">        ``n_hours`` is required; the others default to the model's own</span>
+<span class="sd">        values, which for HYSPLIT are not STILT-R's (see</span>
+<span class="sd">        :data:`stilt.config.STILT_R_HYSPLIT`).</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>

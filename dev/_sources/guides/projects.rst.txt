@@ -187,8 +187,8 @@ three variants make 300 simulations. A variant may set:
 ``realizations``
    Run the variant ``N`` times, as realizations ``0`` to ``N - 1`` of one
    ensemble. This is how you declare a transport-error ensemble (see
-   :doc:`transport_error`). The default ``krand: 4`` gives each realization
-   different turbulence. For ensembles you can reproduce, set ``krand: 2``
+   :doc:`transport_error`). ``krand: 4``, which a new project's config sets,
+   gives each realization different turbulence. For ensembles you can reproduce, set ``krand: 2``
    and a ``seed``. Realization ``k`` then uses ``seed + k``. Raising the
    count later only adds realizations.
 

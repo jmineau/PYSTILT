@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=5c16c938"></script>
+    <script src="../../_static/documentation_options.js?v=22dc2443"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev9+g5ba29d1e4" />
+  <meta name="docsearch:version" content="0.1.0a30.dev10+g9e08d7904" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -1288,6 +1288,37 @@
 
 
 
+<span class="c1">#: STILT-R's HYSPLIT settings where they differ from what HYSPLIT does on its</span>
+<span class="c1">#: own: ``Project.init`` and ``stilt init`` write them into a new project's</span>
+<span class="c1">#: ``models: hysplit:`` block, so it runs HYSPLIT as STILT-R does. The values</span>
+<span class="c1">#: are those of STILT-R's ``run_stilt.r``. ``kblt``, ``kmixd`` and ``vscales``</span>
+<span class="c1">#: are what HYSPLIT chooses itself in STILT mode, and are written so that</span>
+<span class="c1">#: ``SETUP.CFG`` matches STILT-R's line for line. ``varsiwant`` is STILT-R's</span>
+<span class="c1">#: list with ``pres`` added, for pressure weighting.</span>
+<span class="n">STILT_R_HYSPLIT</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"numpar"</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
+    <span class="s2">"capemin"</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="s2">"kblt"</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="s2">"kmixd"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="s2">"krand"</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="s2">"vscales"</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="s2">"wvert"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s2">"varsiwant"</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">"time"</span><span class="p">,</span>
+        <span class="s2">"indx"</span><span class="p">,</span>
+        <span class="s2">"long"</span><span class="p">,</span>
+        <span class="s2">"lati"</span><span class="p">,</span>
+        <span class="s2">"zagl"</span><span class="p">,</span>
+        <span class="s2">"foot"</span><span class="p">,</span>
+        <span class="s2">"mlht"</span><span class="p">,</span>
+        <span class="s2">"pres"</span><span class="p">,</span>
+        <span class="s2">"dens"</span><span class="p">,</span>
+        <span class="s2">"samt"</span><span class="p">,</span>
+        <span class="s2">"sigw"</span><span class="p">,</span>
+        <span class="s2">"tlgr"</span><span class="p">,</span>
+    <span class="p">],</span>
+<span class="p">}</span>
+
 <span class="c1">#: The commented ``config.yaml`` that ``Project.init(path, starter=True)`` and</span>
 <span class="c1">#: ``stilt init`` write, to edit by hand.</span>
 <span class="n">STARTER_CONFIG</span> <span class="o">=</span> <span class="s2">"""# PYSTILT project configuration</span>
@@ -1305,7 +1336,15 @@
 <span class="s2">models:</span>
 <span class="s2">  hysplit:</span>
 <span class="s2">    n_hours: -24</span>
+<span class="s2">    # STILT-R's values where HYSPLIT's own defaults differ. A setting left</span>
+<span class="s2">    # out runs with HYSPLIT's default.</span>
 <span class="s2">    numpar: 1000</span>
+<span class="s2">    capemin: -1     # no convection</span>
+<span class="s2">    kblt: 5         # Hanna turbulence</span>
+<span class="s2">    kmixd: 3        # mixed-layer height from the bulk Richardson number</span>
+<span class="s2">    krand: 4        # random numbers seeded from the clock</span>
+<span class="s2">    vscales: -1     # Hanna timescale in a stable boundary layer</span>
+<span class="s2">    wvert: false</span>
 <span class="s2">    varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]</span>
 
 
@@ -1674,6 +1713,7 @@
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">"FOOTPRINT_STAGE"</span><span class="p">,</span>
     <span class="s2">"STARTER_CONFIG"</span><span class="p">,</span>
+    <span class="s2">"STILT_R_HYSPLIT"</span><span class="p">,</span>
     <span class="s2">"VARIANT_NAME_RE"</span><span class="p">,</span>
     <span class="s2">"ProjectConfig"</span><span class="p">,</span>
     <span class="s2">"Variant"</span><span class="p">,</span>
