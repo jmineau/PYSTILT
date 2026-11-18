@@ -315,7 +315,7 @@ def transport_error(
     flux : xarray.DataArray
         Surface flux field (see ``particles.stilt.enhancement``).
     transforms : sequence, optional
-        The footprint's particle transforms (``sim.variant.footprint.transforms``),
+        The footprint's particle transforms (``sim.variant.stages["footprint"].transforms``),
         applied to both tables so the error is weighted like the footprint.
     receptor : Receptor, optional
         The receptor (``sim.receptor``), for the near-field correction and
@@ -325,7 +325,7 @@ def transport_error(
     hnf_plume : bool, default True
         Apply the near-field correction to both tables first, as
         :func:`stilt.calc_footprint` does
-        (``sim.variant.footprint.hnf_plume``), so the error is of the same
+        (``sim.variant.stages["footprint"].hnf_plume``), so the error is of the same
         enhancement the footprint gives.
     footprint_depth : float, default 0.5
         The run's ``footprint_depth``, which the near-field correction reads.

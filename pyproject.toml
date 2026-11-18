@@ -153,12 +153,14 @@ layers = [
     "transport_error",
     "background",
     "output",
+    "stages",
     "footprint : identity : meteorology : transport",
     "particles",
     "receptors : visualization",
     "transforms",
     "sampling",
     "spatial",
+    "_plugins",
     "_paths | exceptions | _transient",
 ]
 
@@ -211,8 +213,9 @@ allow_indirect_imports = true
 # (the transport registry imports the STILT-R model), and the near-field
 # correction (which the footprint step calls) and add_foot, functions in
 # stilt.particles.table. The package's __init__ re-exports the public names,
-# so it is not a source. stilt.check asks a variant's transforms to check
-# themselves (a check method, reads_zsfc) without importing them. Imports used
+# so it is not a source. A stage is named in config.yaml by the import path of
+# its class (stilt.stages), so the config, the settings records and the check
+# before a run reach the footprint stage without importing it. Imports used
 # only for type hints do not count.
 [[tool.importlinter.contracts]]
 name = "The particle-run core does not import what STILT adds on top"
@@ -249,12 +252,6 @@ ignore_imports = [
     # and the particle accessor samples a field.
     "stilt.particles.table -> stilt.sampling",
     "stilt.particles.accessor -> stilt.sampling",
-    # A variant's optional footprint settings and its footprint targets.
-    "stilt.config -> stilt.footprint.config",
-    "stilt.config -> stilt.footprint.targets",
-    # The footprint settings and the transform records name a settings folder.
-    "stilt.identity -> stilt.footprint.config",
-    "stilt.identity -> stilt.transforms",
     # Writing and listing footprint files; completion counts them.
     "stilt.output -> stilt.footprint",
     # sim.footprint, sim.background and sim.transport_error.

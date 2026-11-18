@@ -69,10 +69,13 @@ them from a config.
 Settings and their hashes
 -------------------------
 
-:mod:`stilt.identity` records what a result was made with, as each output
-folder's ``_settings.yaml`` holds it, and hashes it. A stored record is read
-back through the current config classes, so a setting added since, with a
-default, still matches.
+:mod:`stilt.identity` records what a run was made with, as its folder's
+``_settings.yaml`` holds it, and hashes it. A stage records its own settings
+(:meth:`stilt.stages.Stage.settings`; the footprint's are
+:func:`~stilt.footprint.config.footprint_settings`), which are hashed with
+the particles' hash and the hash of each stage it reads. A stored record is
+read back through the current config classes, so a setting added since, with
+a default, still matches.
 
 .. autosummary::
    :toctree: _api
@@ -81,9 +84,10 @@ default, still matches.
    identity.run_settings
    identity.read_run_settings
    identity.transport_from_settings
-   identity.footprint_settings
-   identity.read_footprint_settings
+   identity.stage_hash
    identity.settings_hash
+   footprint.config.footprint_settings
+   footprint.config.read_footprint_settings
    transport.ModelInfo
 
 Particles and footprints

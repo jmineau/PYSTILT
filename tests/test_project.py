@@ -110,10 +110,10 @@ def _write_footprint(
 ) -> Path:
     """Write a footprint (or an empty one) for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant, realization)
-    assert sim.variant.footprint is not None
+    assert sim.variant.stages.get("footprint") is not None
     if empty:
         return sim.output.write_empty_footprint(sim.variant, sim.receptor, realization)
-    grid = sim.variant.footprint.grid
+    grid = sim.variant.stages.get("footprint").grid
     assert grid is not None
     x_axis, y_axis = grid.axes
     data = xr.DataArray(
@@ -122,7 +122,9 @@ def _write_footprint(
         dims=("time", "lat", "lon"),
         coords={"time": [sim.receptor.time], "lat": y_axis, "lon": x_axis},
     )
-    foot = as_footprint(data, sim.receptor, sim.variant.footprint, sim.variant.name)
+    foot = as_footprint(
+        data, sim.receptor, sim.variant.stages.get("footprint"), sim.variant.name
+    )
     return sim.output.write_footprint(sim.variant, foot, realization)
 
 
@@ -583,10 +585,13 @@ def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor)
         project.simulation(rid, "err")
     with pytest.raises(ValueError, match="realizations"):
         project.simulation(rid, "hrrr", 0)
-    assert err.variant.footprint is None
+    assert err.variant.stages.get("footprint") is None
     assert zi.variant.transport.ziscale == 0.8
-    assert zi.variant.footprint == base.variant.footprint
-    assert s2.variant.footprint is not None and s2.variant.footprint.smooth_factor == 2
+    assert zi.variant.stages.get("footprint") == base.variant.stages.get("footprint")
+    assert (
+        s2.variant.stages.get("footprint") is not None
+        and s2.variant.stages.get("footprint").smooth_factor == 2
+    )
     assert s2.variant.transport == base.variant.transport  # shares hrrr's particles
     assert project.simulation(rid, "hrrr") == base  # a value, not a handle
     with pytest.raises(KeyError, match="No variant"):

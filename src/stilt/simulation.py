@@ -175,7 +175,7 @@ class Simulation:
         rid = self.receptor.id
         mine = frozenset([rid])
         particles = mine if self.has_particles else frozenset()
-        if self.variant.footprint is None:
+        if "footprint" not in self.variant.stages:
             return rid in completed(particles, None)
         return rid in completed(particles, mine if self.has_footprint else frozenset())
 
@@ -267,7 +267,7 @@ class Simulation:
             If the footprint has not been written yet. Nothing is kept, so a
             read after the run finishes loads it.
         """
-        if self.variant.footprint is None:
+        if "footprint" not in self.variant.stages:
             return None
         path = self.footprint_path
         if path is None or not path.exists():
@@ -320,11 +320,11 @@ class Simulation:
         ...     grid=hexes.to_grid(cells_per_target=4)
         ... )  # doctest: +SKIP
         """
-        own = self.variant.footprint
+        own = self.variant.stages.get("footprint")
         if own is None:
             own = FootprintConfig.model_validate({})
         # The variant's geometry names its own grid, not another one.
-        geometry_hash = self.variant.geometry_hash if grid is None else None
+        geometry_hash = own.geometry_hash if grid is None else None
         grid = grid if grid is not None else own.grid
         if grid is None:
             raise TypeError(f"{self} has no footprint settings; give a grid.")
@@ -351,14 +351,15 @@ class Simulation:
     @property
     def _transforms(self) -> Sequence[Any]:
         """The footprint's particle transforms, which weight the particles; none without a footprint."""
-        return (
-            () if self.variant.footprint is None else self.variant.footprint.transforms
-        )
+        footprint = self.variant.stages.get("footprint")
+        return () if footprint is None else footprint.transforms
 
     @property
     def _near_field_settings(self) -> dict[str, Any]:
         """The near-field correction a footprint of this simulation gets: ``hnf_plume`` and the run's ``footprint_depth``."""
-        footprint = self.variant.footprint or FootprintConfig.model_validate({})
+        footprint = self.variant.stages.get(
+            "footprint"
+        ) or FootprintConfig.model_validate({})
         return {
             "hnf_plume": footprint.hnf_plume,
             "footprint_depth": self.variant.transport.footprint_depth,

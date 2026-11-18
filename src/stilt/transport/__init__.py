@@ -13,7 +13,6 @@ another model needs no change to the worker.
 from __future__ import annotations
 
 import datetime as dt
-import importlib
 import logging
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
@@ -23,6 +22,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, Self
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from stilt._plugins import import_class
 from stilt.exceptions import SimulationError
 from stilt.meteorology import run_window
 from stilt.particles import add_foot, add_release_heights, check_particles
@@ -450,20 +450,12 @@ def get_model(name: str) -> TransportModel:
     ------
     ValueError
         If *name* is not a built-in model and not an import path.
-    ImportError
-        If *name* is an import path that cannot be imported on this machine.
+    MissingClass
+        If *name* is an import path that cannot be imported on this machine
+        (an :class:`ImportError`).
     """
     if "." in name:
-        module_name, _, attr = name.rpartition(".")
-        try:
-            module = importlib.import_module(module_name)
-            cls = getattr(module, attr)
-        except (ImportError, AttributeError) as error:
-            raise ImportError(
-                f"Transport model {name!r} could not be imported ({error}). "
-                "Install the package that defines it on this machine."
-            ) from None
-        return cls()
+        return import_class(name)()
     factory = MODELS.get(name)
     if factory is None:
         raise ValueError(

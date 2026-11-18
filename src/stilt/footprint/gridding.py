@@ -887,7 +887,7 @@ def calc_footprint(
         an averaging-kernel table: the project directory.
     geometry_hash : str, optional
         Hash of the geometry the grid was derived for
-        (``sim.variant.geometry_hash``), recorded with the footprint so
+        (:attr:`stilt.Mesh.hash`), recorded with the footprint so
         aggregating it onto another mesh warns.
 
     Returns
@@ -936,6 +936,7 @@ def calc_footprint(
             "tres": tres,
             "hnf_plume": hnf_plume,
             "transforms": list(transforms),
+            "geometry_hash": geometry_hash,
         }
     )
     if not particles.empty:
@@ -1059,6 +1060,4 @@ def calc_footprint(
     # file has the same coordinates as the one calculated.
     x_coords = np.round(glong + xres / 2, 10)
     y_coords = np.round(glati + yres / 2, 10)
-    return _footprint_array(
-        values, layers, receptor, config, name, x_coords, y_coords, geometry_hash
-    )
+    return _footprint_array(values, layers, receptor, config, name, x_coords, y_coords)

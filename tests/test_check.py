@@ -107,6 +107,32 @@ def test_a_project_with_no_receptors_is_listed_once(tmp_path):
     assert "no receptors" in table["message"].iloc[0]
 
 
+def test_each_stage_of_a_variant_checks_its_own_inputs(tmp_path):
+    """The check asks a stage it does not import, and variants with equal settings share its findings."""
+    from .fixtures.stages import COUNT
+
+    south = _receptor(latitude=-33.9)
+    project = Project.init(
+        tmp_path / "proj",
+        receptors=[_receptor(), south],
+        mets={"hrrr": {"download": "hrrr", "directory": str(tmp_path / "met")}},
+        models={"hysplit": {"n_hours": -3}},
+        stages={"tally": {"class": COUNT}},
+        variants={
+            "hrrr": {},
+            "hrrr-zi": {"ziscale": 0.8},
+            "tripled": {"stages": {"tally": {"scale": 3}}},
+            "plain": {"stages": {"tally": None}},
+        },
+    )
+
+    table = _found(project.check(), "count")
+
+    assert list(table["receptor"]) == [south.id]
+    assert list(table["variant"]) == ["hrrr, hrrr-zi, tripled"]
+    assert list(table["message"]) == ["is south of the equator"]
+
+
 def test_check_returns_one_row_for_each_thing_found(tmp_path):
     inside, outside = _receptor(12), _receptor(12, longitude=-110.0)
     project = _project(tmp_path, [inside, outside])

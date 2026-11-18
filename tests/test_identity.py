@@ -209,7 +209,7 @@ def test_variants_that_differ_only_in_footprint_fields_share_particles(tmp_path)
     runs = {name: v.particles_hash for name, v in variants.items()}
     assert runs["hrrr"] == runs["hrrr-smooth"] == runs["hrrr-coarse"]
     assert runs["hrrr-err"] != runs["hrrr"]
-    feet = {name: v.footprint_hash for name, v in variants.items()}
+    feet = {name: v.stage_hashes.get("footprint") for name, v in variants.items()}
     assert len(set(feet.values())) == 4
 
 
@@ -283,7 +283,9 @@ def test_footprints_written_before_tres_are_hourly_and_still_found(tmp_path):
     variants = config.resolve()
     hourly, quarters = variants["hrrr"], variants["hrrr-quarters"]
     assert hourly.particles_hash == quarters.particles_hash
-    assert hourly.footprint_hash != quarters.footprint_hash
+    assert hourly.stage_hashes.get("footprint") != quarters.stage_hashes.get(
+        "footprint"
+    )
 
     out = Output(tmp_path / "out")
     out.write_empty_footprint(hourly, make_receptor())

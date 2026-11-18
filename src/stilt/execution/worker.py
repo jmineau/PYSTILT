@@ -357,7 +357,7 @@ def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | N
     ValueError
         If the variant has no grid.
     """
-    config = sim.variant.footprint
+    config = sim.variant.stages.get("footprint")
     if config is None or config.grid is None:
         raise ValueError(f"Variant {sim.variant.name!r} makes no footprints (no grid).")
     try:
@@ -372,7 +372,7 @@ def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | N
             transforms=config.transforms,
             name=sim.variant.name,
             directory=sim.directory,
-            geometry_hash=sim.variant.geometry_hash,
+            geometry_hash=config.geometry_hash,
         )
     except EmptyFootprint:
         sim.output.write_empty_footprint(sim.variant, sim.receptor, sim.realization)
@@ -559,7 +559,7 @@ def _make_footprints(
     first = sims[0]
     problems: list[str] = []
     for sim in sims:
-        if sim.variant.footprint is None or (
+        if "footprint" not in sim.variant.stages or (
             not rerun and skip_existing and sim.has_footprint
         ):
             continue

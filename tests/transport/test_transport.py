@@ -26,7 +26,11 @@ def test_get_model_returns_hysplit_by_name():
 def test_get_model_imports_a_model_by_its_path():
     model = get_model("stilt.transport.hysplit.HysplitModel")
     assert isinstance(model, HysplitModel)
-    with pytest.raises(ImportError, match="Install the package"):
+    with pytest.raises(
+        ImportError,
+        match="config.yaml names nopkg.models.Missing, but nopkg is not "
+        "installed here. Install nopkg and run this again.",
+    ):
         get_model("nopkg.models.Missing")
 
 

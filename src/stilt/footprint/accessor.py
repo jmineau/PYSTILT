@@ -14,8 +14,7 @@ import pandas as pd
 import xarray as xr
 
 from stilt._paths import atomic_path
-from stilt.footprint.config import FootprintConfig
-from stilt.identity import read_footprint_settings
+from stilt.footprint.config import FootprintConfig, read_footprint_settings
 from stilt.receptors import Receptor
 from stilt.spatial import Grid, horizontal_dims
 
@@ -118,20 +117,16 @@ class FootprintAccessor:
         return Receptor.from_json(self._attr("stilt_receptor"))
 
     @cached_property
-    def _settings(self) -> tuple[FootprintConfig, str | None]:
+    def config(self) -> FootprintConfig:
+        """The footprint settings (grid, smoothing, and particle transforms)."""
         return read_footprint_settings(
             json.loads(self._attr("stilt_footprint")), "footprint"
         )
 
     @property
-    def config(self) -> FootprintConfig:
-        """The footprint settings (grid, smoothing, and particle transforms)."""
-        return self._settings[0]
-
-    @property
     def geometry_hash(self) -> str | None:
         """Hash of the geometry the grid was derived for, or ``None`` when the footprint has no geometry."""
-        return self._settings[1]
+        return self.config.geometry_hash
 
     @property
     def grid(self) -> Grid:

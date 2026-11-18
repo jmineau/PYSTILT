@@ -62,7 +62,7 @@ from pydantic import ValidationError
 from typer.core import TyperGroup
 
 from stilt._transient import is_transient
-from stilt.exceptions import WorkerDied
+from stilt.exceptions import MissingClass, WorkerDied
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import pending, resolve_compute_root
 from stilt.project import STATES, Project
@@ -200,11 +200,17 @@ def _open(
 
 
 def _require_inputs(project: Project) -> None:
-    """Exit with 2 and the problem when ``config.yaml`` or ``receptors.csv`` is invalid."""
+    """
+    Exit with 2 and the problem when ``config.yaml`` or ``receptors.csv`` is invalid.
+
+    That includes a class the config names that is not installed here, and
+    a stage whose settings do not fit its variant's transport model.
+    """
     try:
         _ = project.config
         _ = project.receptors
-    except ValueError as error:
+        _ = project.variants
+    except (MissingClass, ValueError) as error:
         _fail(str(error))
 
 
@@ -279,7 +285,7 @@ def check(project: str | None = _PROJECT_ARG) -> None:
     opened = Project(_resolve_project(project))
     try:
         problems = opened.check()
-    except ValueError as error:
+    except (MissingClass, ValueError) as error:
         _fail(str(error))
     _print_check(opened, problems)
     raise typer.Exit(code=EXIT_FAILED if len(problems) else EXIT_COMPLETE)
@@ -787,7 +793,7 @@ def _print_check(project: Project, problems: pd.DataFrame) -> None:
     """
     typer.echo(f"Project: {project.directory}  receptors={len(project.receptors)}")
     variants = ", ".join(
-        f"{name} (met {v.met}, {'footprint' if v.footprint is not None else 'particles only'})"
+        f"{name} (met {v.met}, {', '.join(v.stages) or 'particles only'})"
         for name, v in project.variants.items()
     )
     typer.echo(f"Variants: {variants}")

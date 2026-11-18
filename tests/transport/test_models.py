@@ -85,7 +85,7 @@ def test_a_variant_may_run_another_model(tmp_path, toy):
     assert hrrr.model == "hysplit" and hrrr.transport.numpar == 500
     # Another model's variant gives its own parameters and gets the same stages.
     assert toy_variant.model == "toy" and toy_variant.transport.nparticles == 10
-    assert toy_variant.footprint == hrrr.footprint
+    assert toy_variant.stages.get("footprint") == hrrr.stages.get("footprint")
     assert variants["toy"].build == ModelInfo(name="toy", version="1.0")
     assert variants["toy"].particles_hash != variants["hrrr"].particles_hash
     recorded = variants["toy"].run_settings

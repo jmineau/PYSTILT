@@ -4,9 +4,11 @@ The check before a run: what would stop a project's simulations, found without r
 :func:`check_project` looks at the inputs of a project, never at its results:
 that it has receptors, that the transport model's
 executable is there (HYSPLIT's ``hycs_std``), the met files each receptor needs,
-whether each receptor is inside the footprint grid and the met's crop,
-whether an averaging-kernel table matches the receptors, and whether
-``varsiwant`` holds ``zsfc`` where the project needs it. ``Project.check`` and ``stilt check`` call it.
+whether each receptor is inside the met's crop, whether ``varsiwant`` holds
+``zsfc`` where the run needs it, and what each stage of a variant finds
+wrong with its own inputs (:meth:`stilt.stages.Stage.check`): for the
+footprint, a receptor outside the grid, or an averaging-kernel table that
+does not match the receptors. ``Project.check`` and ``stilt check`` call it.
 """
 
 from __future__ import annotations
@@ -22,7 +24,6 @@ from stilt.transport import get_model
 if TYPE_CHECKING:
     from stilt.config import Variant
     from stilt.project import Project
-    from stilt.spatial import Grid
 
 #: The columns of the table :func:`check_project` returns.
 CHECK_COLUMNS = ("check", "variant", "receptor", "message")
@@ -40,9 +41,8 @@ def check_project(project: Project) -> pd.DataFrame:
 
     The columns are ``check``, ``variant``, ``receptor`` (``NA`` when the
     finding is not about one receptor), and ``message``; the table is empty
-    when nothing is found. Variants that share the thing a check looks at,
-    such as a met and a run length, share its rows: ``variant`` then lists
-    them, separated by commas.
+    when nothing is found. Variants with the same finding share its row:
+    ``variant`` then lists them, separated by commas.
 
     Raises
     ------
@@ -50,27 +50,29 @@ def check_project(project: Project) -> pd.DataFrame:
         If ``config.yaml`` or ``receptors.csv`` is invalid.
     """
     rows = project._rows
-    ids = [str(r) for r in project.receptors["receptor"]]
-    found: dict[Any, tuple[list[_Finding], list[str]]] = {}
-    if not ids:
-        found["receptors"] = ([_NO_RECEPTORS], list(project.variants))
+    # Each finding with the variants it holds for, in the order found.
+    found: dict[_Finding, list[str]] = {}
+    if rows.empty:
+        found[_NO_RECEPTORS] = list(project.variants)
+    made: dict[Any, list[_Finding]] = {}  # each check's findings, made once
+    configs: list[Any] = []  # the distinct stage configs, which may not hash
     for name, variant in project.variants.items():
         checks = (
             *_build_checks(variant),
             *_met_checks(variant, rows),
-            *_grid_checks(variant, rows),
-            *_transform_checks(variant, project, ids),
+            *_stage_checks(variant, rows, project, configs),
             *_zsfc_checks(variant, rows),
         )
         for key, make in checks:
-            if key not in found:
-                found[key] = (make(), [])
-            if name not in found[key][1]:
-                found[key][1].append(name)
+            if key not in made:
+                made[key] = make()
+            for finding in made[key]:
+                names = found.setdefault(finding, [])
+                if name not in names:
+                    names.append(name)
     table = [
         (check, ", ".join(names), receptor, message)
-        for findings, names in found.values()
-        for check, receptor, message in findings
+        for (check, receptor, message), names in found.items()
     ]
     return pd.DataFrame(table, columns=list(CHECK_COLUMNS)).astype("string")
 
@@ -120,59 +122,42 @@ def _met_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
     yield ("met", variant.met, variant.model, n_hours), make
 
 
-def _grid_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
-    """Yield the receptors with a release point outside the variant's footprint grid."""
-    if variant.footprint is None or variant.footprint.grid is None:
-        return
-    grid = variant.footprint.grid
-    yield ("grid", grid), lambda: _outside(rows, grid)
-
-
-def _outside(rows: pd.DataFrame, grid: Grid) -> list[_Finding]:
-    """List the receptors with a release point outside *grid*, which is bounded in longitude and latitude."""
-    outside = rows[~grid.contains(rows["longitude"], rows["latitude"])]
-    box = (
-        f"{grid.xmin:g} to {grid.xmax:g} longitude, "
-        f"{grid.ymin:g} to {grid.ymax:g} latitude"
-    )
-    return [
-        (
-            "grid",
-            str(row.receptor),
-            f"longitude {row.longitude:g} and latitude {row.latitude:g} are "
-            f"outside the footprint grid ({box})",
-        )
-        for row in outside.drop_duplicates("receptor").itertuples()
-    ]
-
-
-def _transform_checks(
-    variant: Variant, project: Project, ids: list[str]
+def _stage_checks(
+    variant: Variant, rows: pd.DataFrame, project: Project, configs: list[Any]
 ) -> Iterator[_Check]:
     """
-    Yield what each of the variant's transforms finds wrong for the project's receptors.
+    Yield what each of the variant's stages finds wrong for the project's receptors.
 
-    A transform with a ``check(receptors, directory)`` method checks its own
-    inputs, such as an averaging kernel's table; the others have nothing to
-    check. Variants with an equal transform share its findings.
+    A stage checks its own inputs (:meth:`stilt.stages.Stage.check`): the
+    footprint stage lists the receptors outside its grid and what each of
+    its transforms finds. Variants with equal settings of a stage share its
+    check; *configs* holds the settings seen so far.
     """
-    if variant.footprint is None:
-        return
-    for transform in variant.footprint.transforms:
-        check = getattr(transform, "check", None)
-        if check is None:
-            continue
+    for name, config in variant.stages.items():
+        if not any(known == config for known in configs):
+            configs.append(config)
+        seen = next(i for i, known in enumerate(configs) if known == config)
+        stage = variant.stage(name)
         yield (
-            ("transform", repr(transform)),
-            lambda check=check: [
-                (str(name), None if receptor is None else str(receptor), str(message))
-                for name, receptor, message in check(ids, project.directory)
+            ("stage", name, seen),
+            lambda stage=stage, config=config: [
+                (str(check), None if receptor is None else str(receptor), str(message))
+                for check, receptor, message in stage.check(
+                    config, rows, project.directory
+                )
             ],
         )
 
 
 def _zsfc_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
-    """Yield the missing ``zsfc`` of a variant with receptors above sea level, which the run reads for them."""
+    """
+    Yield the missing ``zsfc`` of a variant with receptors above sea level that need it.
+
+    The run reads ``zsfc`` to match the release heights of a multipoint
+    receptor's particles. A stage that reads it too says what goes wrong
+    without it, in the ``zsfc_reasons`` of its settings, as the footprint's
+    do for the near-field correction.
+    """
     varsiwant = getattr(variant.transport, "varsiwant", None)
     if varsiwant is None or "zsfc" in varsiwant:
         return
@@ -180,11 +165,10 @@ def _zsfc_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
     n_msl = above_sea_level["receptor"].nunique()
     if n_msl == 0:
         return
-    near_field = variant.footprint is not None and variant.footprint.hnf_plume
-    zsfc_transforms = tuple(
-        _kind(t)
-        for t in (() if variant.footprint is None else variant.footprint.transforms)
-        if getattr(t, "reads_zsfc", False)
+    stage_reasons = tuple(
+        str(reason)
+        for config in variant.stages.values()
+        for reason in getattr(config, "zsfc_reasons", ())
     )
     n_by_height = sum(
         needs_height_to_match(g["longitude"], g["latitude"], g["altitude"])
@@ -192,33 +176,18 @@ def _zsfc_checks(variant: Variant, rows: pd.DataFrame) -> Iterator[_Check]:
             "receptor"
         )
     )
-    if not (near_field or n_by_height or zsfc_transforms):
+    if not (n_by_height or stage_reasons):
         return
-    key = ("zsfc", tuple(varsiwant), n_msl, n_by_height, near_field, zsfc_transforms)
-    message = _zsfc_message(varsiwant, n_msl, n_by_height, near_field, zsfc_transforms)
+    key = ("zsfc", tuple(varsiwant), n_msl, n_by_height, stage_reasons)
+    message = _zsfc_message(varsiwant, n_msl, n_by_height, stage_reasons)
     yield key, lambda: [("zsfc", None, message)]
 
 
-def _kind(transform: Any) -> str:
-    """Return the ``kind`` a config names *transform* by, as :func:`stilt.transforms.transform_kind` does."""
-    kind = getattr(transform, "kind", None)
-    if isinstance(kind, str):
-        return kind
-    cls = type(transform)
-    return f"{cls.__module__}.{cls.__qualname__}"
-
-
 def _zsfc_message(
-    varsiwant: list[str],
-    n_msl: int,
-    n_by_height: int,
-    near_field: bool,
-    zsfc_transforms: tuple[str, ...],
+    varsiwant: list[str], n_msl: int, n_by_height: int, stage_reasons: tuple[str, ...]
 ) -> str:
     """Say what needs ``zsfc`` and the line that adds it to ``varsiwant``."""
     reasons = []
-    if near_field:
-        reasons.append("the near-field correction (hnf_plume) is skipped for them")
     if n_by_height:
         reasons.append(
             f"{n_by_height} of them {'is a multipoint receptor' if n_by_height == 1 else 'are multipoint receptors'} "
@@ -226,12 +195,7 @@ def _zsfc_message(
             "so the release heights of the particles are matched by position "
             "and can come out wrong"
         )
-    if zsfc_transforms:
-        kinds = " and ".join(dict.fromkeys(zsfc_transforms))
-        noun = (
-            "transform fails" if len(set(zsfc_transforms)) == 1 else "transforms fail"
-        )
-        reasons.append(f"the {kinds} {noun} their footprints")
+    reasons += stage_reasons
     receptors = f"{n_msl} receptor is" if n_msl == 1 else f"{n_msl} receptors are"
     fix = ", ".join([*varsiwant, "zsfc"])
     return (

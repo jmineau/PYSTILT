@@ -71,6 +71,18 @@ class HYSPLITNotFoundError(StiltError, FileNotFoundError):
     """
 
 
+class MissingClass(StiltError, ImportError):
+    """
+    A class that ``config.yaml`` names cannot be imported here.
+
+    A transport model or a stage in another package is named by its import
+    path (``class: mypkg.models.MyModel``), and every machine that opens the
+    project needs that package: a settings folder is named from the class's
+    own settings, defaults included. The message names the package to
+    install. The ``stilt`` commands end with exit code 2.
+    """
+
+
 class EmptyFootprint(StiltError):
     """
     No particle is over the footprint grid, so there is no footprint.
@@ -104,6 +116,7 @@ __all__ = [
     "EmptyFootprint",
     "HYSPLITNotFoundError",
     "MeteorologyError",
+    "MissingClass",
     "SimulationError",
     "StiltError",
     "WorkerDied",

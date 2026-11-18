@@ -361,7 +361,6 @@ def jacobian(
     time_bins: pd.IntervalIndex,
     receptors: list[str],
     missing: list[str] | None = None,
-    geometry_hash: str | None = None,
 ) -> Jacobian:
     """
     Sum the footprints in *table* onto a target, per time bin, as one sparse matrix.
@@ -377,7 +376,9 @@ def jacobian(
     table : pyarrow.Table
         Footprint cells, with ``receptor``, ``hour``, ``y``, ``x``, ``foot``.
     config : FootprintConfig
-        The footprints' settings, whose grid the cells index.
+        The footprints' settings, whose grid the cells index. When it names
+        the geometry the grid was derived for (``geometry_hash``), a
+        *target* that is another mesh gets a warning.
     target : Grid, Mesh, or Zones
         Cells to sum onto.
     time_bins : pandas.IntervalIndex
@@ -389,9 +390,6 @@ def jacobian(
         are empty footprints and get none.
     missing : list of str, optional
         Receptors asked for that have no footprint file, to report.
-    geometry_hash : str, optional
-        Hash of the geometry the grid was derived for, to warn when *target*
-        is another mesh.
 
     Returns
     -------
@@ -414,7 +412,6 @@ def jacobian(
         target,
         time_bins,
         missing=missing,
-        geometry_hash=geometry_hash,
     )
 
 
@@ -426,7 +423,6 @@ def _jacobian(
     time_bins: pd.IntervalIndex,
     *,
     missing: list[str] | None = None,
-    geometry_hash: str | None = None,
     workers: int | None = None,
 ) -> Jacobian:
     """
@@ -444,7 +440,7 @@ def _jacobian(
     if grid is None:
         raise ValueError("The footprint settings have no grid.")
     x_axis, y_axis = grid.axes
-    weights = _target_weights(target, grid, geometry_hash, x_axis, y_axis)
+    weights = _target_weights(target, grid, config.geometry_hash, x_axis, y_axis)
 
     def one(receptor_id: str) -> sparse.csr_matrix | None:
         return _receptor_row(

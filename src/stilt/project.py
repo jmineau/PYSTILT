@@ -764,7 +764,7 @@ class Project:
             among = set(rows["receptor"])
             particles = self.output.present("particles", variant, among, k)
             footprints = None
-            if variant.footprint is not None:
+            if "footprint" in variant.stages:
                 footprints = self.output.present("footprints", variant, among, k)
             present[(name, k)] = (particles, footprints)
         return present
@@ -1026,7 +1026,7 @@ class Project:
         frame = self._selected(sel)
         name, k = _one_group(frame, "A footprint dataset")
         variant = self.variants[name]
-        if variant.footprint is None:
+        if "footprint" not in variant.stages:
             raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
         requested = list(dict.fromkeys(frame["receptor"]))
         found = self.output.present("footprints", variant, requested, k)
@@ -1118,7 +1118,7 @@ class Project:
         frame = self._selected(sel)
         name, k = _one_group(frame, "A Jacobian")
         variant = self.variants[name]
-        if variant.footprint is None:
+        if "footprint" not in variant.stages:
             raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
         if self.output.folder("footprints", variant) is None:
             raise ValueError(f"Variant {name!r} has no footprints yet.")
@@ -1129,11 +1129,10 @@ class Project:
                 "footprints", variant, r, k, columns=["hour", "y", "x", "foot"]
             ),
             [r for r in requested if r in found],
-            variant.footprint,
+            variant.stages["footprint"],
             target,
             time_bins,
             missing=[r for r in requested if r not in found],
-            geometry_hash=variant.geometry_hash,
             workers=workers,
         )
 
@@ -1254,7 +1253,9 @@ class Project:
                 [particles(perturbed, rid, k) for k in runs[rid]],
             )
 
-        footprint = variant.footprint or FootprintConfig.model_validate({})
+        footprint = variant.stages.get("footprint") or FootprintConfig.model_validate(
+            {}
+        )
         found = _transport_errors(
             read,
             list(self._receptors(runs).values()),

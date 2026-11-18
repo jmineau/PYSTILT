@@ -61,11 +61,18 @@ a failed simulation: nothing is recorded, and running again continues.
 Setup
 -----
 
+A project does not open on a machine where a class its ``config.yaml``
+names by import path is not installed
+(:class:`~stilt.exceptions.MissingClass`, an ``ImportError``): a transport
+model or a stage in another package. The message names the package to
+install, and the ``stilt`` commands exit with 2.
+
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    stilt.exceptions.HYSPLITNotFoundError
+   stilt.exceptions.MissingClass
 
 Empty footprints
 ----------------

@@ -20,7 +20,6 @@ def as_footprint(
     receptor: Receptor,
     config: FootprintConfig,
     name: str = "",
-    geometry_hash: str | None = None,
 ) -> xr.DataArray:
     """
     Return *data* as the footprint of *receptor*, with the attributes ``calc_footprint`` gives one.
@@ -29,7 +28,7 @@ def as_footprint(
     particles. Tests that need one with chosen values build it here, the one
     test module that reaches the private helper.
     """
-    return _describe(data, receptor, config, name, geometry_hash)
+    return _describe(data, receptor, config, name)
 
 
 def make_footprint(
@@ -82,4 +81,5 @@ def geometry_footprint() -> tuple[xr.DataArray, FootprintConfig, Mesh]:
     fc = FootprintConfig(grid=base.stilt.grid, geometry=windows_spec())
     assert fc.geometry is not None
     mesh = Mesh.from_spec(fc.geometry)
-    return as_footprint(base, base.stilt.receptor, fc, "geo", mesh.hash), fc, mesh
+    fc = fc.model_copy(update={"geometry_hash": mesh.hash})
+    return as_footprint(base, base.stilt.receptor, fc, "geo"), fc, mesh

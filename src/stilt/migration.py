@@ -37,9 +37,8 @@ import xarray as xr
 import yaml
 
 from stilt.config import FOOTPRINT_STAGE, VARIANT_NAME_RE, Variant
-from stilt.footprint.config import FootprintConfig
+from stilt.footprint.config import FootprintConfig, footprint_settings
 from stilt.footprint.io import _footprint_array
-from stilt.identity import footprint_settings
 from stilt.output import Kind, Output
 from stilt.particles import check_particles
 from stilt.receptors import Receptor
@@ -714,13 +713,13 @@ def import_stilt_r(
             foot_config = foot.stilt.config.model_copy(update={"hnf_plume": hnf_plume})
             first_foot = first_foot or (foot_config, folder)
             _agree(
-                footprint_settings(first_foot[0], None),
-                footprint_settings(foot_config, None),
+                footprint_settings(first_foot[0]),
+                footprint_settings(foot_config),
                 "footprint settings",
                 first_foot[1],
                 folder,
             )
-            with_foot = dataclasses.replace(base, footprint=first_foot[0])
+            with_foot = _with_footprint(base, first_foot[0])
             if _missing(output, "footprints", with_foot, receptor.id):
                 output.write_footprint(with_foot, foot)
         elif log.is_file() and _EMPTY_FOOTPRINT in log.read_text(errors="replace"):
@@ -749,7 +748,7 @@ def import_stilt_r(
 
     printed = [made[name][0]]
     if first_foot is not None:
-        printed[0] = dataclasses.replace(printed[0], footprint=first_foot[0])
+        printed[0] = _with_footprint(printed[0], first_foot[0])
         for receptor in empty:
             if _missing(output, "footprints", printed[0], receptor.id):
                 output.write_empty_footprint(printed[0], receptor)
@@ -759,7 +758,7 @@ def import_stilt_r(
         "mets": {name: met.settings()},
         "models": {StiltRModel.name: {}},
     }
-    footprints = any(v.footprint is not None for v in printed)
+    footprints = any("footprint" in v.stages for v in printed)
     if footprints:
         config["stages"] = {"footprint": {"class": FOOTPRINT_STAGE}}
     config["variants"] = {v.name: _variant_entry(v, footprints) for v in printed}
@@ -917,6 +916,15 @@ def _variant(
     return first
 
 
+def _with_footprint(variant: Variant, footprint: FootprintConfig) -> Variant:
+    """Return *variant* with the footprint stage, under the settings *footprint*."""
+    return dataclasses.replace(
+        variant,
+        stages={"footprint": footprint},
+        stage_classes={"footprint": FOOTPRINT_STAGE},
+    )
+
+
 def _agree(
     first: Mapping[str, Any],
     other: Mapping[str, Any],
@@ -974,8 +982,11 @@ def _variant_entry(variant: Variant, footprints: bool) -> dict[str, Any]:
         "version": settings.pop("version"),
     }
     entry.update({k: settings[k] for k in sorted(settings)})
-    if variant.footprint is not None:
-        entry["stages"] = {"footprint": variant.footprint.model_dump(mode="json")}
+    if "footprint" in variant.stages:
+        written = variant.stages["footprint"].model_dump(
+            mode="json", exclude={"geometry_hash"}
+        )
+        entry["stages"] = {"footprint": written}
     elif footprints:
         entry["stages"] = {"footprint": None}
     return entry
