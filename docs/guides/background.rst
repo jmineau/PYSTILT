@@ -183,7 +183,8 @@ Forward runs
 ~~~~~~~~~~~~
 
 A forward run is a run with a positive ``n_hours``. Everything else stays
-the same. The release is where and when the particles are released, and
+the same. The release is where and when the particles are released, here at
+the source (:ref:`the diagram <release-source-receptor>`), and
 the particle table records where they go.
 
 A plume is what the whole city puts out, so spread the release over a box
