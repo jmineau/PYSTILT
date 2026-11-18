@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import difflib
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path, PurePath
@@ -619,11 +619,16 @@ class ProjectConfig(BaseModel):
                 **_model_settings(model),
                 **dict.fromkeys(_VARIANT_KEYS, "a variant key"),
             },
-            elsewhere={
-                setting: f"a {name} setting. Write it under the variant's "
-                f"stages: {name}:."
-                for setting, (name, _) in _stage_settings(self.stages).items()
-            },
+            elsewhere=_with_depth(
+                {
+                    setting: f"a {name} setting. Write it under the variant's "
+                    f"stages: {name}:."
+                    for setting, (name, _) in _stage_settings(self.stages).items()
+                },
+                spec,
+                model,
+                "for the variant",
+            ),
         )
         realizations = spec.pop("realizations", None)
         if realizations is not None:
@@ -1007,7 +1012,7 @@ def _model_blocks(
             settings,
             where,
             allowed=_model_settings(model),
-            elsewhere=_stage_places(stages),
+            elsewhere=_with_depth(_stage_places(stages), settings, model, "here"),
         )
         blocks[name] = (model, settings)
     return blocks
@@ -1149,6 +1154,33 @@ def _stage_places(stages: Any) -> dict[str, str]:
             f"block (class: {FOOTPRINT_STAGE})."
         )
         for setting, (name, written) in _stage_settings(stages).items()
+    }
+
+
+def _with_depth(
+    places: dict[str, str], settings: Mapping[str, Any], model: str, here: str
+) -> dict[str, str]:
+    """
+    Return *places* with ``footprint_depth`` also naming ``veght``, when *settings* are a model's and the model has ``veght``.
+
+    ``footprint_depth`` written with a model's settings is most likely
+    HYSPLIT's depth under its old name, and is now ``veght``, *here*: the
+    footprint's ``footprint_depth`` is the depth of a ``foot`` the footprint
+    stage computes.
+    """
+    if "footprint_depth" not in settings or "footprint_depth" not in places:
+        return places
+    if "veght" not in _model_settings(model):
+        return places
+    depth = settings["footprint_depth"]
+    return {
+        **places,
+        "footprint_depth": (
+            f"not a {model} setting. For the depth the {model} model makes its "
+            f"foot with, write veght: {depth} {here}. The footprint's "
+            "footprint_depth, the depth of a foot PYSTILT computes "
+            "(pbl_height), is " + places["footprint_depth"]
+        ),
     }
 
 

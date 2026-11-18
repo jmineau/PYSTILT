@@ -640,13 +640,36 @@ def test_veght_is_hysplits_and_goes_to_setup_cfg(tmp_path, where):
 def test_a_foot_setting_written_for_the_model_is_refused_naming_its_stage(
     tmp_path, setting, grid
 ):
-    with pytest.raises(ValueError, match=rf"{setting}' is a footprint setting.*stages"):
+    with pytest.raises(
+        ValueError, match=rf"{setting}' is .*a footprint setting.*stages"
+    ):
         ProjectConfig(
             mets=_met_config(tmp_path),
             models={"hysplit": {"n_hours": -24, setting: 100.0}},
             stages={"footprint": {"class": FOOTPRINT_STAGE, "grid": grid}},
             variants={"hrrr": {}},
         )
+
+
+@pytest.mark.parametrize("where", ["block", "variant"])
+def test_a_leftover_footprint_depth_with_the_models_settings_names_veght(
+    tmp_path, grid, where
+):
+    """``footprint_depth`` written with HYSPLIT's settings was its name for ``veght``."""
+    block = {"n_hours": -24}
+    variant = {"footprint_depth": 0.3}
+    if where == "block":
+        block, variant = {**block, **variant}, {}
+    with pytest.raises(ValueError) as error:
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            models={"hysplit": block},
+            stages={"footprint": {"class": FOOTPRINT_STAGE, "grid": grid}},
+            variants={"hrrr": variant},
+        )
+    here = "here" if where == "block" else "for the variant"
+    assert f"write veght: 0.3 {here}" in str(error.value)
+    assert "stages: footprint:" in str(error.value)
 
 
 def test_veght_written_for_the_footprint_is_refused_naming_the_model(tmp_path, grid):
