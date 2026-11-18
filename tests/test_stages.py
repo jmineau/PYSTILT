@@ -72,6 +72,34 @@ class _Renamed(CountStage):
     """A count under a name set by the test."""
 
 
+@pytest.mark.parametrize("suffix", ["", "txt", ".", None])
+def test_a_stage_suffix_must_be_a_file_extension(suffix):
+    """With no extension every receptor id would be read from the file names as empty."""
+    _Renamed.name = "renamed"
+    _Renamed.suffix = suffix
+    get_stage.cache_clear()
+    try:
+        with pytest.raises(
+            ValueError, match="a stage's suffix must be a file extension"
+        ):
+            get_stage("tests.test_stages._Renamed")
+    finally:
+        _Renamed.suffix = ".txt"
+        get_stage.cache_clear()
+
+
+def test_a_stage_config_class_must_be_a_pydantic_model():
+    with pytest.raises(ValueError, match="config_class must be a pydantic model"):
+        get_stage("tests.test_stages._PlainConfig")
+
+
+class _PlainConfig(CountStage):
+    """A count whose config class is a dict."""
+
+    name = "plain_config"
+    config_class = dict
+
+
 def test_a_class_whose_package_is_not_installed_names_the_package():
     with pytest.raises(MissingClass) as error:
         get_stage("nopkg_for_this_test.stages.Wind")
@@ -162,7 +190,7 @@ def test_a_variant_uses_every_stage_in_the_order_they_run(tmp_path):
     assert variant.stage_classes == {"count": COUNT, "double": DOUBLE}
     assert isinstance(variant.stage("double"), DoubleStage)
     assert variant.stage_settings == {
-        "count": {"scale": 2, "fail": False, "silent": False},
+        "count": {"scale": 2, "fail": False, "silent": False, "stale": False},
         "double": {"add": 0},
     }
 
@@ -209,7 +237,7 @@ def test_a_stages_hash_takes_the_particles_and_what_it_reads(tmp_path):
     assert hrrr.stage_hashes["count"] == settings_hash(
         {
             "particles": hrrr.particles_hash,
-            "count": {"scale": 1, "fail": False, "silent": False},
+            "count": {"scale": 1, "fail": False, "silent": False, "stale": False},
         }
     )
     assert hrrr.stage_hashes["double"] == stage_hash(
@@ -232,20 +260,13 @@ def test_a_stages_block_names_its_class(tmp_path):
         _config(tmp_path, stages={"wind": {"class": "nopkg_for_this_test.Wind"}})
 
 
-def test_a_stage_class_has_one_block_and_a_stage_name_one_class(tmp_path):
-    two = {"count": {"class": COUNT}, "again": {"class": COUNT}}
-    with pytest.raises(ValueError, match="stages: count and again are both"):
-        _config(tmp_path, stages=two)
-    same_name = {
-        "count": {"class": COUNT},
-        "other": {"class": "tests.test_stages._Twin"},
-    }
-    with pytest.raises(ValueError, match="are both stages named 'count'"):
-        _config(tmp_path, stages=same_name)
-
-
-class _Twin(CountStage):
-    """Another class that calls its results ``count``."""
+def test_a_stages_block_is_named_for_its_stage(tmp_path):
+    with pytest.raises(
+        ValueError,
+        match=f"stages: tally: {COUNT} is the count stage, and a stage's block "
+        "is named for its stage. Write it as stages: count:.",
+    ):
+        _config(tmp_path, stages={"tally": {"class": COUNT}})
 
 
 def test_a_stages_setting_is_checked_by_its_config_class(tmp_path):
@@ -264,26 +285,26 @@ def test_a_stages_setting_is_checked_by_its_config_class(tmp_path):
 
 
 def test_a_stage_setting_written_elsewhere_is_sent_to_its_block(tmp_path):
-    stages = {"tally": {"class": COUNT}}
+    stages = {"count": {"class": COUNT}}
     with pytest.raises(
-        ValueError, match="'scale' is a count setting. Write it under stages: tally:"
+        ValueError, match="'scale' is a count setting. Write it under stages: count:"
     ):
         _config(
             tmp_path, stages=stages, models={"hysplit": {"n_hours": -24, "scale": 2}}
         )
     with pytest.raises(
         ValueError,
-        match="'scale' is a count setting. Write it under the variant's stages: tally:",
+        match="'scale' is a count setting. Write it under the variant's stages: count:",
     ):
         _config(tmp_path, stages=stages, variants={"hrrr": {"scale": 2}})
     with pytest.raises(
         ValueError,
-        match="stages: tally: 'numpar' is a hysplit setting. Write it under models: hysplit:",
+        match="stages: lenient: 'numpar' is a hysplit setting. Write it under models: hysplit:",
     ):
         ProjectConfig(
             mets={"hrrr": make_met_config(tmp_path / "met")},
             models={"hysplit": {"n_hours": -24}},
-            stages={"tally": {"class": "tests.test_stages._Lenient", "numpar": 5}},
+            stages={"lenient": {"class": "tests.test_stages._Lenient", "numpar": 5}},
             variants={"hrrr": {}},
         )
 
@@ -305,18 +326,18 @@ def test_a_stage_checks_that_it_fits_the_model_when_variants_are_resolved(tmp_pa
     models = {"hysplit": {"n_hours": -24}}
     variants = {"hrrr": {}, "few": {"numpar": 13}}
     config = _config(
-        tmp_path, models=models, stages={"tally": {"class": COUNT}}, variants=variants
+        tmp_path, models=models, stages={"count": {"class": COUNT}}, variants=variants
     )
     with pytest.raises(
         ValueError,
-        match="Variant 'few', stages: tally: it cannot count the particles of "
+        match="Variant 'few', stages: count: it cannot count the particles of "
         "hysplit with numpar 13",
     ):
         config.resolve()
     # The variant without the stage has nothing to fit.
-    variants["few"]["stages"] = {"tally": None}
+    variants["few"]["stages"] = {"count": None}
     resolved = _config(
-        tmp_path, models=models, stages={"tally": {"class": COUNT}}, variants=variants
+        tmp_path, models=models, stages={"count": {"class": COUNT}}, variants=variants
     ).resolve()
     assert resolved["few"].stages == {}
 

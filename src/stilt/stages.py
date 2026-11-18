@@ -73,10 +73,11 @@ class Stage(Protocol):
     Attributes
     ----------
     name : str
-        What the stage's results are called, such as ``footprint``: its tree
-        in the output directory, its column in ``project.status()``, the
-        ``stage`` of a failure record, and a part of the hash that names its
-        settings folders. Lowercase letters, digits and underscores.
+        What the stage's results are called, such as ``footprint``: the
+        name of its block under ``stages:``, its tree in the output
+        directory, its column in ``project.status()``, the ``stage`` of a
+        failure record, and a part of the hash that names its settings
+        folders. Lowercase letters, digits and underscores.
     config_class : type of pydantic.BaseModel
         Checks the stage's block of ``config.yaml`` when the file loads, and
         reads no file. It must also read back what :meth:`settings` wrote,
@@ -91,9 +92,9 @@ class Stage(Protocol):
         ``zsfc``, a clause each, for ``stilt check`` to report when the
         transport model is not asked for it.
     suffix : str
-        The extension of the stage's files, such as ``.parquet``. The file of
-        a receptor is ``<receptor id><suffix>``, and completion looks for it
-        in a listing.
+        The extension of the stage's files, such as ``.parquet``, with its
+        dot. The file of a receptor is ``<receptor id><suffix>``, and
+        completion looks for it in a listing.
     reads : tuple of str, optional
         The names of the stages whose files this one reads, none when the
         stage does not say. A stage runs after the ones it reads, and again
@@ -173,10 +174,13 @@ class Stage(Protocol):
         place), and another stage's file from ``sim.path("<its name>")``
         with that stage's own reader. Write one file at *path* and nothing
         else, whatever there is to say: a result with nothing in it is still
-        a file, as an empty footprint is. *path* is a temporary name beside
-        the file's own, which the worker moves into place when this
-        returns, so a run cut off part-way leaves no file that counts as
-        complete.
+        a file, as an empty footprint is. On a filesystem *path* is a
+        temporary name beside the file's own, ending in :attr:`suffix`,
+        which the worker moves into place when this returns; a file left
+        by a run that raises is removed. So a run cut off part-way leaves
+        no file that counts as complete. A Parquet file may carry
+        :func:`stilt.identity.file_stamp` in its metadata, as PYSTILT's own
+        files do.
 
         Parameters
         ----------
@@ -212,7 +216,8 @@ def get_stage(path: str) -> Stage:
         If the class cannot be imported on this machine.
     ValueError
         If *path* is not an import path, or the class is not a stage: it
-        lacks a member of :class:`Stage`, or its ``name`` cannot be used.
+        lacks a member of :class:`Stage`, or its ``name``, ``suffix`` or
+        ``config_class`` cannot be used.
     """
     if "." not in path:
         raise ValueError(
@@ -236,6 +241,18 @@ def get_stage(path: str) -> Stage:
         raise ValueError(
             f"{path}: a stage cannot be named {name!r}, which is a folder of "
             "the output directory or a column of project.status()."
+        )
+    suffix = stage.suffix
+    if not isinstance(suffix, str) or not suffix.startswith(".") or len(suffix) < 2:
+        raise ValueError(
+            f"{path}: a stage's suffix must be a file extension such as "
+            f"'.parquet', not {suffix!r}."
+        )
+    config_class = stage.config_class
+    if not (isinstance(config_class, type) and issubclass(config_class, BaseModel)):
+        raise ValueError(
+            f"{path}: a stage's config_class must be a pydantic model, not "
+            f"{config_class!r}."
         )
     return stage
 

@@ -53,7 +53,7 @@ stage it uses, hashed with what the stage reads (`stilt.identity`); variants
 with equal run settings share one run per receptor, and a changed setting
 hashes to a new folder (`docs/reference/layout.rst`). **A stage** makes one
 file per receptor after the model runs; the footprint is one. `config.yaml`
-names its class by import path and the class provides `stilt.stages.Stage`,
+names its class by import path, in a block named for the stage, and the class provides `stilt.stages.Stage`,
 so the core handles any stage and imports none (`CONTRIBUTING.md`, "Adding a stage").
 
 **`Project` reads; the workers write results.** `Project` writes only its
@@ -269,7 +269,8 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
   and never read by completion.
 - **A stage's `config_class` reads back what its `settings` wrote**: a stored
   folder is found that way (`stilt.stages.check_stage` in the stage's tests).
-  A stage writes its file under the temporary path `run` is given.
+  A stage writes its file under the temporary path `run` is given; its old
+  file is removed first, so a failed remake leaves none.
 - **Met that ran out is a failure; a domain exit is not.** HYSPLIT's warnings
   are unreliable, so `Met.files_for` and `Met.check` stop a run on missing or
   damaged met before it starts (`FAILURE_PHRASES` maps the log afterwards),

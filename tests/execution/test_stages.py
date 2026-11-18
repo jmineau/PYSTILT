@@ -15,13 +15,14 @@ from stilt.output import completed
 
 from ..fixtures import stages as toy
 from ..fixtures.factories import make_met_config, make_receptor
-from ..fixtures.stages import DOUBLE, chain
+from ..fixtures.stages import COUNT, DOUBLE, ECHO, chain
 
 
 @pytest.fixture(autouse=True)
 def runs():
     """The calls of the toy stages' ``run``, emptied for each test."""
     toy.RUNS.clear()
+    toy.PATHS.clear()
     return toy.RUNS
 
 
@@ -57,15 +58,18 @@ def model_runs(monkeypatch):
     return ran
 
 
-def _project(tmp_path, receptor, variants=None, **count) -> Project:
-    """Make a project of one receptor with both toy stages, whose model run is faked."""
+def _project(
+    tmp_path, receptor, variants=None, *, stages=None, output=None, **count
+) -> Project:
+    """Make a project of one receptor with both toy stages (or *stages*), whose model run is faked."""
     return Project.init(
         tmp_path / "proj",
         receptors=[receptor],
         mets={"hrrr": make_met_config(tmp_path / "met")},
         models={"hysplit": {"n_hours": -24}},
-        stages=chain(**count),
+        stages=chain(**count) if stages is None else stages,
         variants=variants or {"hrrr": {}},
+        **({} if output is None else {"output": output}),
     )
 
 
@@ -263,6 +267,80 @@ def test_a_stage_that_fails_is_recorded_and_leaves_no_file(
     assert not sim.is_complete
 
 
+def test_a_stage_writes_under_a_hidden_name_that_ends_in_its_suffix(
+    tmp_path, receptor, model_runs
+):
+    """A writer may choose its format by the extension, or append one that is missing."""
+    project = _project(tmp_path, receptor)
+    _run(project, receptor)
+
+    handed = toy.PATHS[0]
+    assert handed.startswith(f".{receptor.id}.") and handed.endswith(".txt")
+    # A file still under such a name, as a killed run leaves, is no result.
+    sim = project.simulation(str(receptor.id), "hrrr")
+    folder = sim.path("count").parent
+    sim.path("count").rename(folder / handed)
+    assert project.output.present("count", sim.variant) == frozenset()
+    assert not sim.has("count") and not sim.is_complete
+
+
+def test_a_stage_that_fails_to_remake_its_file_leaves_no_old_one(
+    tmp_path, receptor, model_runs, monkeypatch
+):
+    """A file made from what has since been made again must not count as complete."""
+    project = _project(tmp_path, receptor)
+    _run(project, receptor)
+    sim = project.simulation(str(receptor.id), "hrrr")
+    assert sim.is_complete
+    sim.path("count").unlink()  # the count is made again, so the double is too
+
+    def fails(self, config, sim, path):
+        raise RuntimeError("no double today")
+
+    monkeypatch.setattr(toy.DoubleStage, "run", fails)
+    problems = _run(project, receptor)
+
+    assert problems == ["hrrr failed during double (RuntimeError): no double today"]
+    assert sim.has("count") and not sim.has("double")
+    assert not sim.is_complete and sim.failure["stage"] == "double"
+    assert project.status()["state"].tolist() == ["failed"]
+
+
+def test_on_an_object_store_a_stage_that_fails_leaves_no_file(
+    tmp_path, receptor, model_runs
+):
+    """A store has no temporary name to discard, so what a failed stage wrote is removed."""
+    pytest.importorskip("upath")
+    import uuid
+
+    store = f"memory://pystilt-stages-{uuid.uuid4().hex}/output"
+    project = _project(tmp_path, receptor, output=store, fail=True)
+
+    problems = _run(project, receptor)
+
+    assert problems == [
+        "hrrr failed during count (RuntimeError): the count was told to fail"
+    ]
+    sim = project.simulation(str(receptor.id), "hrrr")
+    assert [f"{receptor.id}.txt"] == toy.PATHS  # the stage wrote the file's own path
+    assert sim.has("particles") and not sim.has("count")
+    assert not sim.is_complete and sim.failure["stage"] == "count"
+    assert project.status()["state"].tolist() == ["failed"]
+
+
+def test_on_an_object_store_the_stages_run_and_complete(tmp_path, receptor, model_runs):
+    pytest.importorskip("upath")
+    import uuid
+
+    store = f"memory://pystilt-stages-{uuid.uuid4().hex}/output"
+    project = _project(tmp_path, receptor, output=store, scale=2)
+
+    assert _run(project, receptor) == []
+
+    assert _text(project, receptor, "hrrr", "double") == "12"
+    assert project.status()["state"].tolist() == ["complete"]
+
+
 def test_a_failure_is_cleared_when_the_stage_succeeds(
     tmp_path, receptor, model_runs, runs
 ):
@@ -293,6 +371,49 @@ def test_a_stage_that_writes_no_file_fails(tmp_path, receptor, model_runs):
     assert "The count stage returned without writing its file" in problems[0]
     sim = project.simulation(str(receptor.id), "hrrr")
     assert sim.failure["stage"] == "count" and not sim.has("count")
+
+
+def test_a_stage_that_failed_is_named_though_an_earlier_one_is_only_unfinished(
+    tmp_path, receptor, model_runs
+):
+    """Stages that do not read one another: the one with a record explains the simulation."""
+    stages = {
+        "count": {"class": COUNT, "stale": True},  # a connection error: no record
+        "echo": {"class": ECHO, "fail": True},  # a real failure, recorded
+    }
+    project = _project(tmp_path, receptor, stages=stages)
+
+    problems = _run(project, receptor)
+
+    assert len(problems) == 2
+    assert problems[0].startswith("hrrr did not finish during count (ConnectionError)")
+    assert (
+        problems[1]
+        == "hrrr failed during echo (RuntimeError): the echo was told to fail"
+    )
+    sim = project.simulation(str(receptor.id), "hrrr")
+    assert not sim.has("count") and not sim.has("echo")
+    assert sim.failure["stage"] == "echo"
+    status = project.status().iloc[0]
+    assert (status["state"], status["stage"], status["reason"]) == (
+        "failed",
+        "echo",
+        "RuntimeError",
+    )
+
+
+def test_a_stage_whose_input_is_missing_has_not_failed(tmp_path, receptor, model_runs):
+    """An old record of a stage does not explain a simulation whose earlier stage is missing."""
+    project = _project(tmp_path, receptor)
+    _run(project, receptor)
+    sim = project.simulation(str(receptor.id), "hrrr")
+    record = {"stage": "double", "reason": "Old", "message": "from an earlier run"}
+    project.output.record_failure("double", sim.variant, receptor.id, record)
+    sim.path("double").unlink()
+    assert sim.failure == record  # the count is there, so the double could have failed
+    sim.path("count").unlink()
+    assert sim.failure is None  # nothing to read: the double did not run
+    assert project.status()["state"].tolist() == ["pending"]
 
 
 def test_failed_particles_run_no_stage(tmp_path, receptor, monkeypatch, runs):
@@ -475,3 +596,43 @@ def test_logs_and_scratch_are_not_kinds(tmp_path, receptor, model_runs):
     _run(project, receptor)
     with pytest.raises(ValueError, match="kind is 'particles' or a stage's name"):
         project.output.hashes("logs")
+
+
+def test_the_footprints_old_kind_is_refused_by_name(tmp_path, receptor, model_runs):
+    """Code written for the earlier name gets a message, not an empty answer."""
+    project = _project(tmp_path, receptor)
+    _run(project, receptor)
+    sim = project.simulation(str(receptor.id), "hrrr")
+    message = "The footprints' kind is 'footprint', the name of their stage"
+    with pytest.raises(ValueError, match=message):
+        project.output.present("footprints", sim.variant)
+    with pytest.raises(ValueError, match=message):
+        project.output.table("footprints", sim.variant)
+    with pytest.raises(ValueError, match=message):
+        sim.path("footprints")
+    with pytest.raises(ValueError, match=message):
+        sim.has("footprints")
+    # Any other name is taken for a stage this variant does not use.
+    assert sim.path("footprint") is None and not sim.has("footprint")
+
+
+def test_a_variant_without_stages_needs_no_particles_hash_to_say_so(tmp_path, receptor):
+    """Asking about a stage a variant does not use reads neither the met nor the model's build."""
+    from stilt.config import Variant
+    from stilt.output import Output
+    from stilt.transport.hysplit import HysplitConfig, MetConfig
+
+    variant = Variant(
+        name="hrrr",
+        met="hrrr",
+        met_config=MetConfig(directory=str(tmp_path / "no_such_met")),
+        transport=HysplitConfig(n_hours=-24),
+        model="hysplit",
+    )
+    with pytest.raises(FileNotFoundError):
+        _ = variant.particles_hash  # the met's files are not here
+    assert variant.stage_hashes == {}
+    output = Output(tmp_path / "output")
+    assert output.path("footprint", variant, str(receptor.id)) is None
+    assert output.present("footprint", variant) == frozenset()
+    assert output.folder("footprint", variant) is None

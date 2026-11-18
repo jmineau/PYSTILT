@@ -244,7 +244,9 @@ It is made again whenever what it reads was made again in the same call:
 new particles remake every stage file, and a stage that reads another's
 file is remade with it. ``Stage.run(config, sim, path)`` writes the file
 itself, under a temporary name the worker moves into place, and the worker
-never looks inside. A stage whose input failed is left for the next run. A batched model (``batched = True``,
+never looks inside. The stage's earlier file is removed before it runs, so
+a stage that fails leaves none, old or half-written. A stage whose input
+failed is left for the next run. A batched model (``batched = True``,
 with ``run_many``) is the exception: ``run_receptors`` first runs each of its
 variant groups once for all the receptors that need particles, then the
 per-receptor loop does the rest. HYSPLIT is not batched.

@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import functools
 import os
-from collections.abc import Mapping
+import weakref
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -22,6 +23,7 @@ from pydantic import TypeAdapter
 
 from stilt._paths import absolute
 from stilt.exceptions import EmptyFootprint
+from stilt.identity import file_stamp
 from stilt.particles import HNF_PLUME_COLUMNS
 from stilt.receptors import Receptor
 from stilt.spatial import Grid
@@ -142,6 +144,9 @@ class FootprintStage:
         """
         Return what would stop the footprints of *receptors*, found without a run.
 
+        Variants whose footprints share a grid or a transform share that
+        part of the check: each is made once for a table of receptors.
+
         The receptors with a release point outside the footprint grid
         (``grid``), and what each transform finds wrong with its own inputs,
         such as an averaging kernel's table. A missing ``zsfc`` is the
@@ -149,17 +154,21 @@ class FootprintStage:
         what needs it).
         """
         found: list[_Finding] = []
-        if config.grid is not None:
-            found += _outside(receptors, config.grid)
-        ids = list(dict.fromkeys(str(r) for r in receptors["receptor"]))
+        if (grid := config.grid) is not None:
+            found += _once(
+                receptors,
+                ("grid", grid.model_dump_json()),
+                lambda: _outside(receptors, grid),
+            )
         for transform in config.transforms:
             check = getattr(transform, "check", None)
             if check is None:
                 continue
-            found += [
-                (str(name), None if receptor is None else str(receptor), str(message))
-                for name, receptor, message in check(ids, directory)
-            ]
+            found += _once(
+                receptors,
+                ("transform", repr(transform), str(directory)),
+                lambda check=check: _transform_findings(check, receptors, directory),
+            )
         return found
 
     def run(self, config: FootprintConfig, sim: Simulation, path: Location) -> None:
@@ -192,7 +201,9 @@ class FootprintStage:
             )
         except EmptyFootprint:
             foot = None
-        _write(path, sim.variant, sim.receptor, foot, sim.realization)
+        _write(
+            path, config, sim.variant, sim.receptor, foot, sim.realization, self.name
+        )
 
 
 def store_footprint(
@@ -208,46 +219,70 @@ def store_footprint(
     reads alone.
     """
     receptor = foot.stilt.receptor
-    path = output.make_path("footprint", variant, str(receptor.id), realization)
-    return _write(path, variant, receptor, foot, realization)
+    name = FootprintStage.name
+    path = output.make_path(name, variant, str(receptor.id), realization)
+    return _write(path, variant.stages[name], variant, receptor, foot, realization)
 
 
 def store_empty_footprint(
     output: Output, variant: Variant, receptor: Receptor, realization: int | None = None
 ) -> Location:
     """Record in *variant*'s footprint folder that a receptor's footprint is empty: no particle reached the grid."""
-    path = output.make_path("footprint", variant, str(receptor.id), realization)
-    return _write(path, variant, receptor, None, realization)
+    name = FootprintStage.name
+    path = output.make_path(name, variant, str(receptor.id), realization)
+    return _write(path, variant.stages[name], variant, receptor, None, realization)
 
 
 def _write(
     path: Location,
+    config: FootprintConfig,
     variant: Variant,
     receptor: Receptor,
     foot: xr.DataArray | None,
     realization: int | None,
+    stage: str = FootprintStage.name,
 ) -> Location:
-    """Write a receptor's footprint under *variant*'s settings at *path*, the empty one when *foot* is ``None``."""
-    from importlib.metadata import PackageNotFoundError, version
+    """
+    Write a receptor's footprint, made with *config*, at *path*; the empty one when *foot* is ``None``.
 
-    config = variant.stages["footprint"]
-    try:
-        pystilt = version("pystilt")
-    except PackageNotFoundError:
-        pystilt = "0+unknown"
-    # What a footprint file records besides its contents: its folder's
-    # settings hash, the PYSTILT version, the hash of the particles it was
-    # made from, and its realization in an ensemble.
-    stamp = {
-        b"stilt:hash": variant.stage_hashes["footprint"].encode(),
-        b"stilt:pystilt": pystilt.encode(),
-        b"stilt:particles_hash": variant.particles_hash.encode(),
-    }
-    if realization is not None:
-        stamp[b"stilt:realization"] = str(realization).encode()
+    The file records what every result file does
+    (:func:`stilt.identity.file_stamp`, with the hash of *variant*'s folder
+    of *stage*), and the hash of the particles it was made from.
+    """
+    stamp = file_stamp(variant.stage_hashes[stage], realization)
+    stamp[b"stilt:particles_hash"] = variant.particles_hash.encode()
     if foot is None:
         return write_empty_footprint(path, receptor, config, variant.name, stamp)
     return write_footprint(path, foot, config, stamp)
+
+
+#: The findings of each part of a check for one table of receptors, so that
+#: variants whose footprints share a grid or a transform share its check.
+_CHECKED: dict[int, tuple[weakref.ref, dict[Any, list[_Finding]]]] = {}
+
+
+def _once(
+    receptors: pd.DataFrame, key: Any, make: Callable[[], list[_Finding]]
+) -> list[_Finding]:
+    """Return the findings *make* gives for *receptors* and *key*, made once while that table is in use."""
+    known = _CHECKED.get(id(receptors))
+    if known is None or known[0]() is not receptors:
+        _CHECKED.clear()  # one table at a time: a project's receptors
+        known = _CHECKED[id(receptors)] = (weakref.ref(receptors), {})
+    if key not in known[1]:
+        known[1][key] = make()
+    return known[1][key]
+
+
+def _transform_findings(
+    check: Callable[..., Any], receptors: pd.DataFrame, directory: Path | None
+) -> list[_Finding]:
+    """Return what a transform's own check finds for the receptors, as plain tuples."""
+    ids = list(dict.fromkeys(str(r) for r in receptors["receptor"]))
+    return [
+        (str(name), None if receptor is None else str(receptor), str(message))
+        for name, receptor, message in check(ids, directory)
+    ]
 
 
 def _mesh(spec: GeometrySpec, directory: Path | None) -> Mesh:

@@ -29,7 +29,10 @@ Configuration
 models, each block with that model's settings
 (:class:`~stilt.transport.hysplit.HysplitConfig` for ``hysplit``).
 ``stages`` names what is made from each simulation's particles: the
-footprint, with the footprint settings (:class:`FootprintConfig`).
+footprint, with the footprint settings (:class:`FootprintConfig`). A stage's
+block is named for its stage, so the footprint's is ``footprint``, the name
+of its folder in the output directory and of its column in
+``project.status()``.
 ``variants`` says what runs, and ``execution`` where
 (:class:`ExecutionConfig`). Each class lives next to the code that uses it
 (``stilt.footprint.config``, ``stilt.execution.config``,
@@ -98,7 +101,7 @@ Footprint
 The keys of the footprint's block under ``stages:``, after ``class:
 stilt.footprint.FootprintStage`` (:class:`~stilt.footprint.FootprintStage`).
 They are the defaults of every variant. A variant changes some under its
-own ``stages`` key, by the block's name, and sets the stage to null to make
+own ``stages`` key, under ``footprint``, and sets the stage to null to make
 particles only:
 
 .. code-block:: yaml

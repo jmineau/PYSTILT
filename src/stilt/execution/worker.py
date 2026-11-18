@@ -30,6 +30,7 @@ import socket
 import threading
 import traceback
 import uuid
+from collections.abc import Iterator
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
 from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
@@ -37,7 +38,6 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from stilt._paths import atomic_path
 from stilt._transient import is_transient
 from stilt.exceptions import SimulationError, WorkerDied
 from stilt.execution.config import ExecutionConfig
@@ -46,6 +46,7 @@ from stilt.stages import reads
 from stilt.transport import get_model, run_model, run_model_many
 
 if TYPE_CHECKING:
+    from stilt._paths import Location
     from stilt.project import Project
 
 logger = logging.getLogger(__name__)
@@ -337,15 +338,48 @@ def run_particles_batch(
     return written, failed
 
 
+@contextlib.contextmanager
+def _stage_file(path: Location, suffix: str) -> Iterator[Location]:
+    """
+    Yield where a stage writes *path*, and leave a whole file there or none.
+
+    A file already at *path* is removed first: it was made from what has
+    since been made again, so it must not outlive a stage that fails. On a
+    filesystem the stage writes under a temporary name beside *path*,
+    hidden by a leading dot and ending in *suffix* (a writer may choose its
+    format by the extension, or append one), which is moved into place when
+    the block ends. An object store has no rename, so the stage writes
+    *path* itself. Either way, what a block that raises has written is
+    removed.
+    """
+    path.unlink(missing_ok=True)
+    if not isinstance(path, Path):
+        try:
+            yield path
+        except BaseException:
+            path.unlink(missing_ok=True)
+            raise
+        return
+    stem = path.name[: -len(suffix)]
+    tmp = path.with_name(f".{stem}.{uuid.uuid4().hex}{suffix}")
+    try:
+        yield tmp
+        os.replace(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
 def run_stage(sim: Simulation, name: str) -> None:
     """
     Run one stage of a simulation, which writes its file to the output directory.
 
     The stage is the one the variant's ``stages`` block names
     (:meth:`stilt.stages.Stage.run`), run with the variant's settings of
-    it. It writes under a temporary name beside the file's own, which is
-    moved into place when the stage returns, so a stage cut off part-way
-    leaves no file that would count as complete.
+    it. A file the stage made before is removed first, and the stage writes
+    under a temporary name beside the file's own, which is moved into place
+    when the stage returns. So a stage that fails, or is cut off part-way,
+    leaves no file that would count as complete: neither a half-written
+    one, nor an old one made from what has since been made again.
 
     Raises
     ------
@@ -356,9 +390,10 @@ def run_stage(sim: Simulation, name: str) -> None:
     """
     variant = sim.variant
     path = sim.output.make_path(name, variant, sim.receptor.id, sim.realization)
+    stage = variant.stage(name)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with atomic_path(path) as target:
-        variant.stage(name).run(variant.stages[name], sim, target)
+    with _stage_file(path, stage.suffix) as target:
+        stage.run(variant.stages[name], sim, target)
         if not target.exists():
             raise RuntimeError(
                 f"The {name} stage returned without writing its file for {sim}. "
@@ -380,7 +415,8 @@ def run_stages(
     Each variant's stages run in the order :attr:`stilt.config.Variant.stage_order`
     gives, a stage after the ones it reads. A stage file that exists is
     kept, unless something it is made from was made again in this call:
-    the particles (*remade*), or the file of a stage it reads. Variants
+    the particles (*remade*), or the file of a stage it reads. Then the old
+    file is removed before the stage runs, so one that fails leaves none. Variants
     with equal settings of a stage, and of what it reads, share its file,
     so it is made once. A failure is recorded with the simulation, and the
     stages that read the failed one are left for the next run.

@@ -73,7 +73,14 @@ import pyarrow.parquet as pq
 import yaml
 
 from stilt._paths import atomic_path, location, readable
-from stilt.identity import canonical, read_run_settings, settings_hash, stage_hash
+from stilt.identity import (
+    canonical,
+    file_stamp,
+    pystilt_version,
+    read_run_settings,
+    settings_hash,
+    stage_hash,
+)
 from stilt.particles import write_particles
 from stilt.receptors import Receptor, parse_receptor_id
 from stilt.stages import get_stage, reads
@@ -165,7 +172,12 @@ def _list_receptor_files(
         days = sorted({_date_dir(r) for r in wanted})
 
     def names(day: str) -> list[str]:
-        return sorted(name for name in _names(root / day) if name.endswith(suffix))
+        # A name that starts with a dot is a file being written.
+        return sorted(
+            name
+            for name in _names(root / day)
+            if name.endswith(suffix) and not name.startswith(".")
+        )
 
     with ThreadPoolExecutor(max_workers=16) as pool:
         listed = list(pool.map(names, days))
@@ -208,16 +220,6 @@ def _write_settings(path: Location, record: dict[str, Any]) -> None:
     _write_yaml(path, record)
 
 
-def _pystilt_version() -> str:
-    """Return the installed PYSTILT version, as ``stilt.__version__`` does."""
-    from importlib.metadata import PackageNotFoundError, version
-
-    try:
-        return version("pystilt")
-    except PackageNotFoundError:
-        return "0+unknown"
-
-
 @functools.cache
 def _versions(stage_class: str) -> dict[str, str]:
     """
@@ -227,7 +229,7 @@ def _versions(stage_class: str) -> dict[str, str]:
     """
     from importlib.metadata import PackageNotFoundError, packages_distributions, version
 
-    versions = {"pystilt": _pystilt_version()}
+    versions = {"pystilt": pystilt_version()}
     package = stage_class.partition(".")[0]
     for distribution in packages_distributions().get(package, ()):
         try:
@@ -260,22 +262,6 @@ def _read_stage_settings(
             stacklevel=2,
         )
         return canonical(stored)
-
-
-def _stamp(digest: str, realization: int | None = None) -> dict[bytes, bytes]:
-    """
-    Return what every result file records besides its contents.
-
-    Its folder's settings hash, the PYSTILT version, and, for an ensemble,
-    its realization number.
-    """
-    stamp = {
-        b"stilt:hash": digest.encode(),
-        b"stilt:pystilt": _pystilt_version().encode(),
-    }
-    if realization is not None:
-        stamp[b"stilt:realization"] = str(realization).encode()
-    return stamp
 
 
 # -- the output directory -----------------------------------------------------
@@ -581,7 +567,9 @@ class Output:
         _check_kind(kind)
         if kind == "particles":
             return variant.particles_hash
-        return variant.stage_hashes.get(kind)
+        if kind not in variant.stages:
+            return None  # without reading the met or the build for the particles' hash
+        return variant.stage_hashes[kind]
 
     def _lookup_hash(self, kind: Kind, variant: Variant) -> str | None:
         """
@@ -644,7 +632,21 @@ class Output:
         return found
 
     def _name(self, kind: Kind, variant: Variant) -> str | None:
-        """Return the name of *variant*'s folder of *kind*, or ``None`` when it does not exist."""
+        """
+        Return the name of *variant*'s folder of *kind*, or ``None`` when it does not exist.
+
+        Raises
+        ------
+        ValueError
+            For ``footprints``, what the footprints' kind was called before
+            it took the name of their stage. Any other string is taken for
+            a stage the variant does not use.
+        """
+        if kind == "footprints" and kind not in variant.stages:
+            raise ValueError(
+                "The footprints' kind is 'footprint', the name of their stage, "
+                "not 'footprints'."
+            )
         digest = self._lookup_hash(kind, variant)
         if digest is None:
             return None
@@ -692,7 +694,7 @@ class Output:
             record: dict[str, Any] = {
                 "name": variant.name,
                 "hash": digest,
-                "pystilt": _pystilt_version(),
+                "pystilt": pystilt_version(),
                 "model_version": variant.build.version,
                 "settings": variant.run_settings,
             }
@@ -1081,7 +1083,7 @@ class Output:
             receptor,
             variant.run_settings,
             met_files,
-            metadata=_stamp(variant.particles_hash, realization),
+            metadata=file_stamp(variant.particles_hash, realization),
         )
 
     def logged(
