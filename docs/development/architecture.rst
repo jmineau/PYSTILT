@@ -52,10 +52,10 @@ polars, pyarrow) or a boolean mask over ``project.simulations``, and the
 methods read only those two columns. ``project.receptors`` is a plain
 DataFrame too. ``project.receptor(id)`` and ``project.simulation(id,
 variant)`` return values, and ``sim.particles`` and ``sim.footprint`` are
-data. ``Output`` has no folder classes: its methods (``path``, ``read``,
-``present``, ``complete``, ``table``, the failure records, and the writers)
-take the kind of result (``"particles"`` or ``"footprints"``), the variant,
-and receptor ids.
+data. ``Output`` has no folder classes: its methods (``path``,
+``make_path``, ``read``, ``present``, ``complete``, ``table``, and the
+failure records) take the kind of result (``"particles"``, or the name of a
+stage such as ``"footprint"``), the variant, and receptor ids.
 
 ``stilt.__all__``, plus the ``__all__`` of each subpackage, is the public
 surface. Everything else is internal and can change.
@@ -77,11 +77,15 @@ Module map
      fetch.py           fetch_project: gets the met files the unfinished
                         simulations need (Project.fetch, stilt fetch); a
                         transport model's fetch_met does the model's part
-     output.py          Output: the output directory, a folder per kind and
-                        settings hash; finding a variant's folder, which
-                        receptors have results (present, complete), reading
-                        one receptor's file (read) or many at once (table),
-                        failure records, writing
+     output.py          Output: the output directory, a tree per kind of
+                        result (particles, and each stage by its name) and a
+                        folder per settings hash; finding a variant's folder,
+                        which receptors have results (present, complete),
+                        where a file is and where a stage writes it (path,
+                        make_path), failure records, writing particles
+     stages.py          the Stage protocol: what a class named under stages:
+                        provides; get_stage, the order stages run in, and
+                        check_stage for the tests of a stage of your own
      migration.py       read_stilt_r: STILT-R and X-STILT by-id output as
                         receptors, particle tables, and footprints;
                         import_stilt_r writes it into an output directory
@@ -96,9 +100,12 @@ Module map
                         stages, variants), refuses a setting outside its
                         block and an unknown key naming the nearest setting,
                         checks each declared variant; resolve() makes each a
-                        Variant (its configs, the model build, its two hashes)
-     identity.py        settings records and their hashes: what a run and a
-                        footprint were made with, in _settings.yaml
+                        Variant (its configs, the model build, its stages'
+                        settings, and the hash of its particles and of each
+                        stage)
+     identity.py        settings records and their hashes: what a run was
+                        made with, in _settings.yaml, and how a stage's
+                        record is hashed with what it reads
      receptors/
        models.py        receptor types (frozen pydantic models: point, column,
                         multipoint), their times, and their ids
@@ -113,7 +120,11 @@ Module map
                         (which calc_footprint applies)
        accessor.py      the .stilt pandas accessor
      footprint/         the footprint (a DataArray)
-       config.py        FootprintConfig and the geometry specs
+       config.py        FootprintConfig and the geometry specs; the record
+                        of a footprint's settings
+       stage.py         FootprintStage, the stage a stages: block names:
+                        reads the geometry, grids the particles, and writes
+                        the footprint file
        gridding.py      calc_footprint, as STILT-R's (fidelity-guarded)
        aggregation.py   aggregate and jacobian: footprints summed onto other
                         geometries, with time binning and target weights
@@ -133,10 +144,12 @@ Module map
      exceptions.py      every exception class, all under StiltError
      visualization.py   matplotlib helpers (optional dependency)
      _paths.py          local paths and object-store paths behind one interface
+     _plugins.py        import_class: a model or a stage class named by its
+                        import path in config.yaml
      execution/         ExecutionConfig (config.py); the runner (plans what is
                         missing, runs it here or submits a Slurm job array);
-                        the worker (runs the transport model in a workdir and
-                        writes results for one or many simulations)
+                        the worker (runs the transport model in a workdir,
+                        then each stage, for one or many simulations)
      observations/      the X-STILT port: product readers and SOUNDING_SCHEMA,
                         overpass grouping and sounding selection, slant
                         geometry and receptors_from_soundings, modelled_column,
@@ -209,11 +222,29 @@ never overlap. Any scheduler that can start a command line with an index can
 run a project this way.
 
 The unit of work is a receptor. ``run_receptor`` runs the transport model
-once per distinct run-settings hash, then writes the footprint of every
-variant that shares those particles. A worker handles the variants of its
-receptor in config order. A variant whose particles are missing runs the
-model, the variants that share those particles reuse them, and their
-footprints are remade if the particles were replaced in the same call. A batched model (``batched = True``,
+once per distinct run-settings hash, then runs the stages of every variant
+that shares those particles (``run_stages``). A worker handles the variants
+of its receptor in config order. A variant whose particles are missing runs
+the model, and the variants that share those particles reuse them.
+
+A stage is what is made from a simulation's results after the model runs:
+one file per receptor, from the particles, from the files of other stages,
+or both. The footprint is the one stage PYSTILT has
+(``stilt.footprint.FootprintStage``). A ``stages`` block of ``config.yaml``
+names its stage's class by import path, and the class provides the members
+of ``stilt.stages.Stage``: a ``name``, a ``config_class``, the ``suffix`` of
+its files, the stages it ``reads``, and ``resolve``, ``settings``, ``check``
+and ``run``. So the config, the settings records, the check before a run,
+the output directory and the worker handle any stage and import none.
+
+For each variant the worker runs the stage files that are missing, a stage
+after the ones it reads. A stage's file is made once for the variants whose
+settings of it, and of what it reads, are equal, since they share the file.
+It is made again whenever what it reads was made again in the same call:
+new particles remake every stage file, and a stage that reads another's
+file is remade with it. ``Stage.run(config, sim, path)`` writes the file
+itself, under a temporary name the worker moves into place, and the worker
+never looks inside. A stage whose input failed is left for the next run. A batched model (``batched = True``,
 with ``run_many``) is the exception: ``run_receptors`` first runs each of its
 variant groups once for all the receptors that need particles, then the
 per-receptor loop does the rest. HYSPLIT is not batched.
@@ -266,14 +297,19 @@ The result files are the record
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PYSTILT keeps no separate list of which simulations have run. A simulation
-is complete when the result files its variant makes exist in the output
-directory (:attr:`stilt.Simulation.is_complete`). Today that is:
+is complete when the model's output file exists, and so does the file of
+every stage its variant uses (:attr:`stilt.Simulation.is_complete`;
+:func:`stilt.output.completed` is the one rule, for one simulation and for
+many). For a variant with a footprint that is:
 
 - the particle file,
   ``particles/settings=<variant>-<hash>/date=<day>/<receptor>.parquet``
-- the footprint file in the variant's ``footprints/`` folder, when the
-  variant has a grid. A footprint that no particle reached is a file with
-  no rows, marked ``stilt:empty: true`` in its metadata, and it counts.
+- the footprint file in the variant's ``footprint/`` folder. A footprint
+  that no particle reached is a file with no rows, marked
+  ``stilt:empty: true`` in its metadata, and it counts.
+
+A stage does not decide completion: it writes its file or it fails. A
+variant that sets a stage to null needs no file of it.
 
 Each result has one expected path, so checking one simulation is a file
 lookup. For many simulations (``stilt status``, or planning a run) PYSTILT
@@ -296,14 +332,16 @@ Settings name the folders
 :doc:`../reference/layout` lists what each ``_settings.yaml`` and result
 file holds.
 
-Each variant resolves into two records of settings (:mod:`stilt.identity`).
-Its run settings hold everything that changes the particles: the HYSPLIT
-parameters, the content of the meteorology, and the transport model's
-build. Their hash names the ``particles/`` folder. Its footprint settings
-hold the footprint config, its grid, and the hash of the geometry the grid
-was derived for. Hashed together with the run settings, they name the
-``footprints/`` folder. Each folder holds a ``_settings.yaml`` with the
-settings written out in full.
+Each variant resolves into a record of settings for its particles and one
+for each stage it uses (:mod:`stilt.identity`). Its run settings hold
+everything that changes the particles: the HYSPLIT parameters, the content
+of the meteorology, and the transport model's build. Their hash names the
+``particles/`` folder. A stage writes the record of its own settings
+(``Stage.settings``): the footprint's holds the footprint config, its grid,
+and the hash of the geometry the grid was derived for. Hashed together with
+the particles' hash, and the hash of each stage it reads, it names the
+folder in the stage's tree (``footprint/``). Each folder holds a
+``_settings.yaml`` with the settings written out in full.
 
 That is how PYSTILT knows a setting changed: the variant now hashes to a
 folder that does not exist yet, so its receptors run again into it. The old
@@ -312,7 +350,10 @@ if only their footprint fields differ, their transport settings hash the
 same and they resolve to one ``particles/`` folder.
 
 A folder is found by reading its ``_settings.yaml`` back through the current
-config classes and hashing that, rather than by comparing stored digests.
+config classes and hashing that, rather than by comparing stored digests. A
+stage's ``config_class`` reads back what its ``settings`` wrote
+(``stilt.stages.check_stage`` holds a stage to that in its tests); a record
+whose stage is not installed here is kept as written.
 So a setting added in a later version, with a default, still matches folders
 written before it existed; a default whose meaning changed does not, which
 is right, because the particles would differ.
@@ -341,11 +382,12 @@ A third short contract holds the line between the core that makes particle
 runs and what STILT adds on top of the particles: footprints, transforms,
 observations, sampling fields at particles, background, transport error and
 the STILT-R model. Outside those modules nothing imports them, except where
-the contract's ``ignore_imports`` lists it, each with its reason: the
-variant's footprint settings, the output and ``Simulation`` code that writes
-and reads footprint files, the worker's footprint step, ``Project``'s bulk
-reads, ``check``'s look at a variant's transforms, and ``add_foot``'s use of
-``sample_met``. The list is the work a code
+the contract's ``ignore_imports`` lists it, each with its reason:
+``Simulation``'s footprint, background and transport-error reads,
+``Project``'s bulk reads, and ``add_foot``'s use of ``sample_met``. The
+config, the settings records, the check, the output directory and the
+worker cross nowhere: a stage reaches them by the import path
+``config.yaml`` names. The list is the work a code
 boundary would leave; a new crossing fails ``just imports``. Two crossings
 are not imports between modules, so the contract cannot see them: the
 near-field correction (which only the footprint side calls) and
@@ -508,7 +550,7 @@ Empty footprints
 ^^^^^^^^^^^^^^^^
 
 When no particle reaches the grid, ``calc_footprint`` raises
-``EmptyFootprint`` and the worker's ``make_footprint`` writes a footprint file
+``EmptyFootprint`` and the footprint stage writes a footprint file
 with no rows, marked ``stilt:empty`` in its metadata. ``sim.is_complete`` and
 ``sim.has_footprint`` are true, ``sim.footprint`` is ``None``, and
 ``project.footprints()`` gives it no row and lists it in ``attrs["empty"]``.
@@ -518,12 +560,14 @@ would flow into a comparison or an inversion unnoticed.
 Failure records
 ^^^^^^^^^^^^^^^
 
-When a step fails, the worker writes ``<receptor id>.failure.yaml`` in the
+When the model run or a stage fails, the worker writes
+``<receptor id>.failure.yaml`` in the
 logs of the folder whose result failed (``logs/settings=<key>/date=.../``:
-the particles' folder for the run, the footprint's for one variant), and
-removes it when that result is written. Completion never reads it: a
+the particles' folder for the run, the stage's own for a stage), and
+removes it when that result is written. Its ``stage`` is ``particles`` or
+the stage's name. Completion never reads it: a
 simulation is done by its result files alone. ``sim.failure``, the
-``state``, ``step``, ``reason``, and ``message`` columns of ``status()``, and
+``state``, ``stage``, ``reason``, and ``message`` columns of ``status()``, and
 ``stilt status`` read it, only for simulations missing a result.
 
 Met that ran out

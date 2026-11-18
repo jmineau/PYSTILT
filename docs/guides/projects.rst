@@ -262,7 +262,7 @@ directory share it.
          date=2023-07-15/<receptor id>.parquet
        settings=hrrr-err-7be104/             # an ensemble: a folder per realization
          realization=0/date=2023-07-15/<receptor id>.parquet
-     footprints/
+     footprint/
        settings=hrrr-93278c/                 # one folder per variant's footprint settings
          _settings.yaml                      # names the particles folder it was made from
          date=2023-07-15/<receptor id>.parquet
@@ -282,7 +282,7 @@ settings in full, so a folder explains itself. The logs and the kept
 workdirs are explained in :doc:`checking`.
 
 The folder names are what pyarrow, DuckDB, polars, and R's ``arrow``
-package read as columns, so ``output/footprints`` opens as one table with
+package read as columns, so ``output/footprint`` opens as one table with
 ``settings`` and ``date`` columns, no PYSTILT needed. :doc:`../reference/layout`
 describes every file, for a reader written without PYSTILT.
 
@@ -356,8 +356,8 @@ footprint, so the two share particles:
    Output: /data/output
      Used by this project:
        particles   settings=hrrr-5d01e7         4,380 files  hrrr, hrrr-smooth
-       footprints  settings=hrrr-93278c         4,380 files  hrrr
-       footprints  settings=hrrr-smooth-1b7e40  4,380 files  hrrr-smooth
+       footprint   settings=hrrr-93278c         4,380 files  hrrr
+       footprint   settings=hrrr-smooth-1b7e40  4,380 files  hrrr-smooth
      Not used by this project (changed settings, a dropped variant, or another project sharing this output; PYSTILT never deletes one):
        particles   settings=hrrr-a3f9c2         4,380 files  numpar: 1000 (config: 2000)
 
@@ -432,7 +432,7 @@ one variant per geometry; they share the particles:
 To make the grid PYSTILT picks finer or coarser, change
 ``cells_per_target``. The grid is saved with each footprint, so you do not
 need the shapefile again to read one, and
-``stilt.Mesh.from_spec(sim.variant.footprint.geometry)`` gives back the
+``stilt.Mesh.from_spec(sim.variant.stages["footprint"].geometry)`` gives back the
 :class:`stilt.Mesh` to aggregate onto. ``foot.stilt.aggregate`` warns if the
 mesh you pass no longer matches the one the footprint was made for, for
 example because the shapefile was edited after the run.

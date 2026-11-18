@@ -12,6 +12,7 @@ from scipy import sparse
 
 from stilt.footprint import Jacobian, jacobian, open_footprints
 from stilt.footprint.config import FootprintConfig, footprint_settings
+from stilt.footprint.stage import store_empty_footprint, store_footprint
 from stilt.footprint.targets import Mesh
 from stilt.identity import settings_hash, stage_hash
 from stilt.output import Output
@@ -46,14 +47,14 @@ def test_footprint_files_record_the_geometry_hash(tmp_path):
         footprint=config.model_copy(update={"geometry_hash": "deadbeef00"})
     )
     receptor = receptor_at()
-    path = out.write_footprint(variant, fake_footprint(receptor))
-    out.write_empty_footprint(variant, receptor_at(hour=13))
+    path = store_footprint(out, variant, fake_footprint(receptor))
+    store_empty_footprint(out, variant, receptor_at(hour=13))
     assert read_footprint(path).stilt.geometry_hash == "deadbeef00"
-    folder = out.folder("footprints", variant)
+    folder = out.folder("footprint", variant)
     record = yaml.safe_load((folder / "_settings.yaml").read_text())
     assert record["settings"]["geometry_hash"] == "deadbeef00"
     # The same footprint config without the geometry hash is another folder.
-    assert out.folder("footprints", output_variant(footprint=config)) is None
+    assert out.folder("footprint", output_variant(footprint=config)) is None
 
 
 def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
@@ -76,7 +77,7 @@ def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
         and "directory" not in record["settings"]["met"]
     )
     assert out.hashes("particles") == {f"hrrr-{digest[:6]}": digest}
-    assert out.hashes("footprints") == {}
+    assert out.hashes("footprint") == {}
 
 
 def test_same_settings_under_another_name_share_the_folder(tmp_path):
@@ -224,7 +225,7 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     config = FootprintConfig(grid=GRID, smooth_factor=1.0)
     variant = output_variant(footprint=config)
     receptor = receptor_at()
-    out.write_footprint(variant, fake_footprint(receptor))
+    store_footprint(out, variant, fake_footprint(receptor))
     digest = stage_hash("footprint", footprint_settings(config), VARIANT.particles_hash)
     assert digest == settings_hash(
         {
@@ -232,29 +233,50 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
             "footprint": {**config.model_dump(mode="json"), "geometry_hash": None},
         }
     )
-    folder = out.folder("footprints", variant)
-    assert folder == tmp_path / "output" / "footprints" / f"settings=hrrr-{digest[:6]}"
+    folder = out.folder("footprint", variant)
+    assert folder == tmp_path / "output" / "footprint" / f"settings=hrrr-{digest[:6]}"
     particles = out.folder("particles", variant)
     assert particles is not None  # made with the footprint folder
     record = yaml.safe_load((folder / "_settings.yaml").read_text())
-    assert record["particles"] == particles.name.removeprefix("settings=")
-    assert out.hashes("footprints") == {f"hrrr-{digest[:6]}": digest}
+    assert list(record) == [
+        "name",
+        "hash",
+        "stage",
+        "class",
+        "reads",
+        "versions",
+        "settings",
+    ]
+    assert (record["name"], record["hash"], record["stage"]) == (
+        "hrrr",
+        digest,
+        "footprint",
+    )
+    assert record["class"] == "stilt.footprint.FootprintStage"
+    # What the footprints were made from: the particles folder, and its hash.
+    assert record["reads"] == {
+        "particles": {
+            "folder": particles.name.removeprefix("settings="),
+            "hash": VARIANT.particles_hash,
+        }
+    }
+    assert list(record["versions"]) == ["pystilt"]
+    assert record["settings"] == footprint_settings(config)
+    assert out.hashes("footprint") == {f"hrrr-{digest[:6]}": digest}
 
     smooth = output_variant(
         "hrrr-smooth", footprint=config.model_copy(update={"smooth_factor": 0.5})
     )
-    out.write_footprint(smooth, fake_footprint(receptor))
-    other = out.folder("footprints", smooth)
+    store_footprint(out, smooth, fake_footprint(receptor))
+    other = out.folder("footprint", smooth)
     assert other != folder and other.name.startswith("settings=hrrr-smooth-")
-    assert len(out.hashes("footprints")) == 2
+    assert len(out.hashes("footprint")) == 2
     # The same settings under another variant name reuse the folder.
     assert (
-        out.folder("footprints", output_variant("renamed", footprint=config)) == folder
+        out.folder("footprint", output_variant("renamed", footprint=config)) == folder
     )
     # The same footprint settings on other particles are another folder.
-    assert (
-        out.folder("footprints", output_variant(footprint=config, numpar=200)) is None
-    )
+    assert out.folder("footprint", output_variant(footprint=config, numpar=200)) is None
 
 
 def test_footprint_round_trip_is_exact_in_float32(tmp_path):
@@ -263,10 +285,10 @@ def test_footprint_round_trip_is_exact_in_float32(tmp_path):
     out = Output(tmp_path / "output")
     receptor = receptor_at()
     foot = fake_footprint(receptor, hours=(-3, -2, -1, 0), seed=1)
-    path = out.write_footprint(FEET, foot)
-    folder = out.folder("footprints", FEET)
+    path = store_footprint(out, FEET, foot)
+    folder = out.folder("footprint", FEET)
     assert path == folder / "date=2024-07-15" / f"{receptor.id}.parquet"
-    assert folder.parent == tmp_path / "output" / "footprints"
+    assert folder.parent == tmp_path / "output" / "footprint"
 
     back = read_footprint(path)
     assert back is not None
@@ -286,7 +308,7 @@ def test_footprint_all_zero_layer_keeps_its_shape(tmp_path):
 
     foot = fake_footprint(receptor_at(), hours=(-2, -1, 0))
     foot[1] = 0.0
-    back = read_footprint(Output(tmp_path / "output").write_footprint(FEET, foot))
+    back = read_footprint(store_footprint(Output(tmp_path / "output"), FEET, foot))
     assert back.shape == foot.shape
     assert float(back[1].sum()) == 0.0
 
@@ -303,11 +325,11 @@ def test_empty_footprint_is_a_file_with_no_rows_marked_empty(tmp_path):
 
     out = Output(tmp_path / "output")
     receptor = receptor_at()
-    path = out.write_empty_footprint(FEET, receptor)
+    path = store_empty_footprint(out, FEET, receptor)
     assert path.exists()
     assert read_footprint(path) is None
     assert _metadata(path)[b"stilt:empty"] == b"true"
-    assert out.present("footprints", FEET) == {receptor.id}
+    assert out.present("footprint", FEET) == {receptor.id}
 
 
 def test_footprint_coordinates_off_by_rounding_still_match(tmp_path):
@@ -318,7 +340,7 @@ def test_footprint_coordinates_off_by_rounding_still_match(tmp_path):
     nudged = foot.assign_coords(
         lat=foot["lat"].values + 5e-15, lon=foot["lon"].values - 5e-15
     )
-    back = read_footprint(Output(tmp_path / "output").write_footprint(FEET, nudged))
+    back = read_footprint(store_footprint(Output(tmp_path / "output"), FEET, nudged))
     np.testing.assert_array_equal(back.values, foot.values.astype(np.float32))
 
 
@@ -326,15 +348,15 @@ def test_footprint_on_another_grid_is_rejected(tmp_path):
     foot = fake_footprint(receptor_at())
     shifted = foot.assign_coords(lon=foot["lon"].values + 0.03)
     with pytest.raises(ValueError, match="not cells of the grid"):
-        Output(tmp_path / "output").write_footprint(FEET, shifted)
+        store_footprint(Output(tmp_path / "output"), FEET, shifted)
 
 
 def test_a_variant_without_a_grid_has_no_footprint_folder(tmp_path):
     out = Output(tmp_path / "output")
-    assert out.folder("footprints", VARIANT) is None
-    assert out.present("footprints", VARIANT) == frozenset()
-    with pytest.raises(ValueError, match="no grid"):
-        out.write_empty_footprint(VARIANT, receptor_at())
+    assert out.folder("footprint", VARIANT) is None
+    assert out.present("footprint", VARIANT) == frozenset()
+    with pytest.raises(ValueError, match="Variant 'hrrr' has no footprint stage"):
+        store_empty_footprint(out, VARIANT, receptor_at())
 
 
 # ---------------------------------------------------------------------------
@@ -347,8 +369,8 @@ def test_complete_is_particles_and_a_footprint_when_the_variant_has_a_grid(tmp_p
     a, b, c = receptor_at(6), receptor_at(12), receptor_at(18)
     for receptor in (a, b):
         write_one(out, FEET, receptor)
-    out.write_footprint(FEET, fake_footprint(a))
-    out.write_empty_footprint(FEET, c)  # a footprint, no particles
+    store_footprint(out, FEET, fake_footprint(a))
+    store_empty_footprint(out, FEET, c)  # a footprint, no particles
     ids = [a.id, b.id, c.id]
     assert out.complete(FEET, ids) == {a.id}
     assert out.complete(VARIANT, ids) == {a.id, b.id}  # particles alone
@@ -357,8 +379,13 @@ def test_complete_is_particles_and_a_footprint_when_the_variant_has_a_grid(tmp_p
 def test_completed_is_the_one_rule():
     from stilt.output import completed
 
-    assert completed(frozenset({"a", "b"}), None) == {"a", "b"}
-    assert completed(frozenset({"a", "b"}), frozenset({"b", "c"})) == {"b"}
+    particles = frozenset({"a", "b", "c"})
+    # A variant that makes particles only is complete with its particles.
+    assert completed(particles) == {"a", "b", "c"}
+    # With stages, a receptor needs the file of each one.
+    assert completed(particles, frozenset({"b", "c", "d"})) == {"b", "c"}
+    assert completed(particles, frozenset({"b", "c"}), frozenset({"c"})) == {"c"}
+    assert completed(frozenset(), frozenset({"a"})) == frozenset()
 
 
 # ---------------------------------------------------------------------------
@@ -370,15 +397,15 @@ def test_failure_records_live_in_the_logs_of_the_folder_that_failed(tmp_path):
     out = Output(tmp_path / "output")
     rid = receptor_at().id
     assert out.failure("particles", VARIANT, rid) is None
-    out.record_failure("particles", VARIANT, rid, {"step": "particles", "reason": "X"})
+    out.record_failure("particles", VARIANT, rid, {"stage": "particles", "reason": "X"})
     name = out.folder("particles", VARIANT).name
     assert (tmp_path / "output" / "logs" / name / "date=2024-07-15").is_dir()
     assert out.failure("particles", VARIANT, rid)["reason"] == "X"
     assert out.failures("particles", VARIANT) == {
-        rid: {"step": "particles", "reason": "X"}
+        rid: {"stage": "particles", "reason": "X"}
     }
     assert out.failures("particles", VARIANT, [receptor_at(day=20).id]) == {}
-    assert out.failure("footprints", FEET, rid) is None
+    assert out.failure("footprint", FEET, rid) is None
     out.clear_failure("particles", VARIANT, rid)
     assert out.failure("particles", VARIANT, rid) is None
 
@@ -410,10 +437,10 @@ def written_footprints(tmp_path):
     for k, hour in enumerate([6, 12, 18]):
         receptor = receptor_at(hour=hour)
         foot = fake_footprint(receptor, hours=(-3, -2, -1, 0), seed=10 + k)
-        out.write_footprint(FEET, foot)
+        store_footprint(out, FEET, foot)
         feet_by_id[str(receptor.id)] = foot
     empty = receptor_at(hour=23)
-    out.write_empty_footprint(FEET, empty)
+    store_empty_footprint(out, FEET, empty)
     return out, feet_by_id, str(empty.id)
 
 
@@ -433,7 +460,7 @@ def _bins():
 def test_jacobian_matches_footprint_aggregate(written_footprints, target):
     out, feet_by_id, empty_id = written_footprints
     bins = _bins()
-    table = out.table("footprints", FEET)
+    table = out.table("footprint", FEET)
     H = jacobian(
         table, FEET.stages.get("footprint"), target, bins, [*feet_by_id, empty_id]
     )
@@ -461,13 +488,13 @@ def test_jacobian_of_fifteen_minute_layers_matches_footprint_aggregate(tmp_path)
     out = Output(tmp_path / "output")
     receptor = receptor_at(hour=12)
     foot = fake_footprint(receptor, hours=(-5, -4, -3, -2, -1), tres="15min")
-    out.write_footprint(QUARTERS, foot)
+    store_footprint(out, QUARTERS, foot)
     edges = pd.date_range("2024-07-15 10:30", "2024-07-15 12:00", freq="30min")
     bins = pd.IntervalIndex.from_breaks(edges, closed="left")
     target = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.25, yres=0.25)
 
     H = jacobian(
-        out.table("footprints", QUARTERS),
+        out.table("footprint", QUARTERS),
         QUARTERS.stages.get("footprint"),
         target,
         bins,
@@ -487,7 +514,7 @@ def test_jacobian_sparse_row_matches_dense(written_footprints, monkeypatch):
 
     out, feet_by_id, empty_id = written_footprints
     target = Mesh.from_windows([(-111.85, 40.75), (-111.65, 40.9)], (0.3, 0.3))
-    table = out.table("footprints", FEET)
+    table = out.table("footprint", FEET)
     dense = jacobian(
         table, FEET.stages.get("footprint"), target, _bins(), [*feet_by_id, empty_id]
     )
@@ -508,7 +535,7 @@ def test_jacobian_takes_a_plain_receptor_column(written_footprints):
     import pyarrow as pa
 
     out, feet_by_id, _ = written_footprints
-    table = out.table("footprints", FEET)
+    table = out.table("footprint", FEET)
     plain = table.set_column(
         table.schema.get_field_index("receptor"),
         "receptor",
@@ -524,30 +551,30 @@ def test_jacobian_takes_a_plain_receptor_column(written_footprints):
 def test_read_returns_one_receptors_stored_columns(written_footprints):
     out, feet_by_id, empty_id = written_footprints
     one = next(iter(feet_by_id))
-    table = out.read("footprints", FEET, one)
+    table = out.read("footprint", FEET, one)
     assert table.column_names == ["receptor", "hour", "y", "x", "foot"]
     assert set(table.column("receptor").to_pylist()) == {one}
-    many = out.table("footprints", FEET, [one])
+    many = out.table("footprint", FEET, [one])
     assert table.num_rows == many.num_rows == np.count_nonzero(feet_by_id[one].values)
-    cells = out.read("footprints", FEET, one, columns=["hour", "foot"])
+    cells = out.read("footprint", FEET, one, columns=["hour", "foot"])
     assert cells.column_names == ["hour", "foot"]
-    assert out.read("footprints", FEET, empty_id).num_rows == 0
+    assert out.read("footprint", FEET, empty_id).num_rows == 0
     with pytest.raises(FileNotFoundError):
-        out.read("footprints", FEET, "202407150000_-111.9_40.8_5")
+        out.read("footprint", FEET, "202407150000_-111.9_40.8_5")
 
 
 def test_table_reads_the_date_folder_as_a_date32_column(written_footprints):
     import pyarrow as pa
 
     out, feet_by_id, empty_id = written_footprints
-    table = out.table("footprints", FEET)
+    table = out.table("footprint", FEET)
     assert table.schema.field("date").type == pa.date32()
     assert set(table.column("date").to_pylist()) == {dt.date(2024, 7, 15)}
     assert set(table.column("receptor").to_pylist()) == set(feet_by_id)
-    assert out.table("footprints", FEET, []).num_rows == 0
-    assert out.table("footprints", FEET, []).schema.field("date").type == pa.date32()
+    assert out.table("footprint", FEET, []).num_rows == 0
+    assert out.table("footprint", FEET, []).schema.field("date").type == pa.date32()
     one = next(iter(feet_by_id))
-    assert set(out.table("footprints", FEET, [one]).column("receptor").to_pylist()) == {
+    assert set(out.table("footprint", FEET, [one]).column("receptor").to_pylist()) == {
         one
     }
 
@@ -557,12 +584,12 @@ def test_jacobian_rows_are_the_requested_receptors(written_footprints):
     out, feet_by_id, empty_id = written_footprints
     ids = list(feet_by_id)
     target = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.25, yres=0.25)
-    table = out.table("footprints", FEET)
+    table = out.table("footprint", FEET)
     H = jacobian(
         table, FEET.stages.get("footprint"), target, _bins(), [ids[1], empty_id]
     )
     alone = jacobian(
-        out.table("footprints", FEET, [ids[1]]),
+        out.table("footprint", FEET, [ids[1]]),
         FEET.stages.get("footprint"),
         target,
         _bins(),
@@ -582,12 +609,12 @@ def test_jacobian_rejects_bins_not_closed_on_the_left(written_footprints, closed
     bins = pd.IntervalIndex.from_arrays(left.left, left.right, closed=closed)
     with pytest.raises(ValueError, match="closed on the left"):
         jacobian(
-            out.table("footprints", FEET), FEET.stages.get("footprint"), GRID, bins, []
+            out.table("footprint", FEET), FEET.stages.get("footprint"), GRID, bins, []
         )
 
 
 def test_jacobian_with_no_footprints_is_empty(tmp_path):
-    table = Output(tmp_path / "output").table("footprints", FEET)
+    table = Output(tmp_path / "output").table("footprint", FEET)
     H = jacobian(table, FEET.stages.get("footprint"), GRID, _bins(), [])
     assert H.data.shape == (0, len(_bins()) * len(GRID.index))
     assert list(H.receptors) == []
@@ -598,7 +625,7 @@ def test_jacobian_to_xarray_holds_the_matrix(written_footprints):
     target = Mesh.from_windows([(-111.85, 40.75), (-111.65, 40.9)], (0.3, 0.3))
     bins = _bins()
     H = jacobian(
-        out.table("footprints", FEET),
+        out.table("footprint", FEET),
         FEET.stages.get("footprint"),
         target,
         bins,
@@ -628,7 +655,7 @@ def test_a_grid_jacobian_names_its_cell_levels(written_footprints):
     target = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.25, yres=0.25)
     bins = _bins()
     H = jacobian(
-        out.table("footprints", FEET),
+        out.table("footprint", FEET),
         FEET.stages.get("footprint"),
         target,
         bins,
@@ -687,9 +714,9 @@ def test_open_footprints_stacks_receptors_on_the_hour(tmp_path):
         for k, r in enumerate((early, late))
     }
     for foot in feet.values():
-        out.write_footprint(FEET, foot)
-    out.write_empty_footprint(FEET, empty)
-    paths = [out.path("footprints", FEET, r.id) for r in (late, empty, early)]
+        store_footprint(out, FEET, foot)
+    store_empty_footprint(out, FEET, empty)
+    paths = [out.path("footprint", FEET, r.id) for r in (late, empty, early)]
 
     ds = open_footprints(paths)
 
@@ -713,9 +740,9 @@ def test_open_footprints_times_fifteen_minute_layers(tmp_path):
     out = Output(tmp_path / "output")
     receptor = receptor_at(hour=12)
     foot = fake_footprint(receptor, hours=(-3, -1), tres="15min")
-    out.write_footprint(QUARTERS, foot)
+    store_footprint(out, QUARTERS, foot)
 
-    ds = open_footprints([out.path("footprints", QUARTERS, receptor.id)])
+    ds = open_footprints([out.path("footprint", QUARTERS, receptor.id)])
 
     assert ds.foot.dims == ("receptor", "minute", "lat", "lon")
     assert list(ds.minute.values) == [-45, -30, -15]
@@ -744,9 +771,9 @@ def test_open_footprints_counts_layers_in_the_unit_of_tres(
 ):
     out = Output(tmp_path / "output")
     receptor = receptor_at(hour=12)
-    out.write_footprint(variant, fake_footprint(receptor, hours=(-2, -1), tres=tres))
+    store_footprint(out, variant, fake_footprint(receptor, hours=(-2, -1), tres=tres))
 
-    ds = open_footprints([out.path("footprints", variant, receptor.id)])
+    ds = open_footprints([out.path("footprint", variant, receptor.id)])
 
     assert ds.foot.dims == ("receptor", dim, "lat", "lon")
     assert list(ds[dim].values) == values
@@ -761,8 +788,8 @@ def test_open_footprints_reads_in_blocks_by_date_folder(tmp_path):
         receptor_at(6, day=16),
     ]
     for k, r in enumerate(receptors):
-        out.write_footprint(FEET, fake_footprint(r, seed=k))
-    ds = open_footprints(out.path("footprints", FEET, r.id) for r in receptors)
+        store_footprint(out, FEET, fake_footprint(r, seed=k))
+    ds = open_footprints(out.path("footprint", FEET, r.id) for r in receptors)
     assert ds.foot.chunks[0] == (2, 1)
     assert float(ds.foot.sum()) > 0
 
@@ -771,9 +798,9 @@ def test_open_footprints_refuses_mixed_settings(tmp_path):
     out = Output(tmp_path / "output")
     other = output_variant("fine", FootprintConfig(grid=GRID, smooth_factor=0.5))
     r = receptor_at()
-    out.write_footprint(FEET, fake_footprint(r))
-    out.write_footprint(other, fake_footprint(r, name="fine"))
-    paths = [out.path("footprints", v, r.id) for v in (FEET, other)]
+    store_footprint(out, FEET, fake_footprint(r))
+    store_footprint(out, other, fake_footprint(r, name="fine"))
+    paths = [out.path("footprint", v, r.id) for v in (FEET, other)]
     with pytest.raises(ValueError, match="different settings"):
         open_footprints(paths)
     with pytest.raises(ValueError, match="No footprint files"):
@@ -932,8 +959,8 @@ def test_each_result_file_names_its_settings_and_the_version_that_wrote_it(tmp_p
     receptor = receptor_at()
     out = Output(tmp_path / "output")
     particles = out.write_particles(FEET, receptor, fake_particles(receptor), [])
-    footprint = out.write_footprint(FEET, fake_footprint(receptor))
-    empty = out.write_empty_footprint(FEET, receptor_at(13))
+    footprint = store_footprint(out, FEET, fake_footprint(receptor))
+    empty = store_empty_footprint(out, FEET, receptor_at(13))
 
     meta = pq.read_schema(particles).metadata
     assert meta[b"stilt:hash"].decode() == FEET.particles_hash
@@ -951,8 +978,8 @@ def test_a_stored_footprint_file_opens_on_its_own(tmp_path):
     from stilt.footprint import read_footprint
 
     receptor = receptor_at()
-    path = Output(tmp_path / "output").write_footprint(
-        FEET, fake_footprint(receptor, seed=3)
+    path = store_footprint(
+        Output(tmp_path / "output"), FEET, fake_footprint(receptor, seed=3)
     )
 
     copied = tmp_path / "elsewhere.parquet"  # away from the folder's _settings.yaml
@@ -970,8 +997,8 @@ def test_a_footprint_file_without_its_settings_is_refused(tmp_path):
 
     from stilt.footprint import read_footprint
 
-    path = Output(tmp_path / "output").write_footprint(
-        FEET, fake_footprint(receptor_at(), seed=3)
+    path = store_footprint(
+        Output(tmp_path / "output"), FEET, fake_footprint(receptor_at(), seed=3)
     )
     table = pq.ParquetFile(path).read()
     meta = {k: v for k, v in table.schema.metadata.items() if k != b"stilt:footprint"}
@@ -985,15 +1012,15 @@ def test_a_footprint_folder_stored_with_projection_is_found_by_crs(tmp_path):
     """Folders written when the grid said ``projection`` are found by a ``crs`` config."""
     variant = output_variant(footprint=FootprintConfig(grid=GRID))
     out = Output(tmp_path / "output")
-    out.write_empty_footprint(variant, receptor_at())
-    folder = out.folder("footprints", variant)
+    store_empty_footprint(out, variant, receptor_at())
+    folder = out.folder("footprint", variant)
     record_path = folder / "_settings.yaml"
     record = yaml.safe_load(record_path.read_text())
     grid = record["settings"]["grid"]
     grid["projection"] = grid.pop("crs")
     record_path.write_text(yaml.safe_dump(record))
 
-    assert Output(tmp_path / "output").folder("footprints", variant) == folder
+    assert Output(tmp_path / "output").folder("footprint", variant) == folder
 
 
 def test_a_lookup_reads_each_folder_once(tmp_path, monkeypatch):
@@ -1027,7 +1054,7 @@ def test_a_lookup_reads_each_folder_once(tmp_path, monkeypatch):
 
 def test_a_footprint_folder_reads_its_particles_folder_once(tmp_path, monkeypatch):
     out = Output(tmp_path / "output")
-    out.write_empty_footprint(FEET, receptor_at())
+    store_empty_footprint(out, FEET, receptor_at())
 
     import stilt.output
 
@@ -1037,7 +1064,7 @@ def test_a_footprint_folder_reads_its_particles_folder_once(tmp_path, monkeypatc
         stilt.output, "read_run_settings", lambda s: reads.append(1) or real(s)
     )
     fresh = Output(tmp_path / "output")
-    assert fresh.folder("footprints", FEET) == out.folder("footprints", FEET)
+    assert fresh.folder("footprint", FEET) == out.folder("footprint", FEET)
     assert fresh.folder("particles", FEET) == out.folder("particles", FEET)
     assert len(reads) == 1
 
@@ -1076,7 +1103,7 @@ def test_a_stored_footprint_says_what_made_it(tmp_path):
 
     out = Output(tmp_path / "output")
     receptor = receptor_at()
-    path = out.write_footprint(FEET, fake_footprint(receptor))
+    path = store_footprint(out, FEET, fake_footprint(receptor))
 
     foot = read_footprint(path)
 

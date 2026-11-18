@@ -231,10 +231,10 @@ def test_status_counts_full_simulation_completion(tmp_path):
     assert "total=1  complete=0  failed=0  interrupted=0  pending=1" in result.output
 
     # Once the footprint is present too, the simulation counts as complete.
-    from stilt.execution.worker import make_footprint
+    from .fixtures.footprints import run_footprint
 
     sim = project.simulation(receptor.id, "hrrr")  # a fresh value
-    make_footprint(sim, sim.particles)
+    run_footprint(sim, sim.particles)
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -1655,7 +1655,7 @@ def test_status_counts_failures_by_reason(tmp_path):
             "particles",
             sim.variant,
             sim.receptor.id,
-            {"step": "particles", "reason": reason or "ValueError", "message": "m"},
+            {"stage": "particles", "reason": reason or "ValueError", "message": "m"},
         )
 
     result = runner.invoke(app, ["status", str(tmp_path)])

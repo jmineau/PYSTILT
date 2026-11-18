@@ -17,6 +17,7 @@ pytest.importorskip("s3fs")
 moto_server = pytest.importorskip("moto.server")
 
 from stilt.footprint import open_footprints, read_footprint  # noqa: E402
+from stilt.footprint.stage import store_empty_footprint, store_footprint  # noqa: E402
 from stilt.output import Output  # noqa: E402
 from stilt.particles import read_particles  # noqa: E402
 
@@ -84,18 +85,18 @@ def test_output_on_an_object_store_writes_lists_and_reads(store):
     assert out.table("particles", VARIANT).num_rows == len(particles)
 
     foot = fake_footprint(receptor)
-    out.write_footprint(FEET, foot)
-    assert out.present("footprints", FEET) == {rid}
-    back = read_footprint(out.path("footprints", FEET, rid))  # type: ignore[arg-type]
+    store_footprint(out, FEET, foot)
+    assert out.present("footprint", FEET) == {rid}
+    back = read_footprint(out.path("footprint", FEET, rid))  # type: ignore[arg-type]
     assert back is not None
     assert float(abs(back - foot).max()) < 1e-6
-    ds = open_footprints([out.path("footprints", FEET, rid)])  # type: ignore[list-item]
+    ds = open_footprints([out.path("footprint", FEET, rid)])  # type: ignore[list-item]
     assert float(ds.foot.sum()) == pytest.approx(float(foot.sum()), rel=1e-6)
 
     later = receptor_at(hour=18)
-    out.write_empty_footprint(FEET, later)
-    assert out.present("footprints", FEET) == {rid, str(later.id)}
-    assert read_footprint(out.path("footprints", FEET, str(later.id))) is None  # type: ignore[arg-type]
+    store_empty_footprint(out, FEET, later)
+    assert out.present("footprint", FEET) == {rid, str(later.id)}
+    assert read_footprint(out.path("footprint", FEET, str(later.id))) is None  # type: ignore[arg-type]
 
 
 def test_logs_and_failure_records_on_an_object_store(store):
@@ -103,7 +104,7 @@ def test_logs_and_failure_records_on_an_object_store(store):
     rid = str(receptor_at().id)
     log = out.write_log(VARIANT, rid, "hycs_std ran\n")
     assert log.read_text() == "hycs_std ran\n"
-    record = {"step": "particles", "reason": "MET_COVERAGE", "message": "boom"}
+    record = {"stage": "particles", "reason": "MET_COVERAGE", "message": "boom"}
     out.record_failure("particles", VARIANT, rid, record)
     assert out.failure("particles", VARIANT, rid) == record
     out.clear_failure("particles", VARIANT, rid)

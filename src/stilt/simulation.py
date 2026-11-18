@@ -39,9 +39,10 @@ class Simulation:
 
     A simulation is a value: its receptor, its variant, and the output
     directory its results are in. From those it knows where its particles,
-    footprint, and log are, whether they exist (:meth:`is_complete`), and how
-    to read them. It runs nothing itself; the workers in
-    :mod:`stilt.execution` run the transport model and write the results.
+    the file of each stage (:meth:`path`), and its log are, whether they
+    exist (:meth:`has`, :attr:`is_complete`), and how to read them. It runs
+    nothing itself; the workers in :mod:`stilt.execution` run the transport
+    model and the stages.
 
     You rarely build one yourself. Get it from a project instead, as in
     ``project.simulation(receptor_id, "hrrr")``.
@@ -112,19 +113,41 @@ class Simulation:
 
     # -- where the results are ---------------------------------------------
 
+    def path(self, kind: str) -> Location | None:
+        """
+        Return the path of this simulation's file of *kind* in the output directory.
+
+        *kind* is ``"particles"`` or the name of a stage, such as
+        ``"footprint"``. ``None`` before the variant's folder of that kind
+        exists, and for a stage the variant does not use. The file may not
+        exist yet (:meth:`has`). A stage that reads another stage's file
+        finds it here, and reads it with that stage's own reader.
+
+        Examples
+        --------
+        >>> sim.path("footprint")  # doctest: +SKIP
+        """
+        return self.output.path(kind, self.variant, self.receptor.id, self.realization)
+
+    def has(self, kind: str) -> bool:
+        """
+        Return whether this simulation's file of *kind* exists.
+
+        *kind* is ``"particles"`` or the name of a stage. A stage's file is
+        a finished result whatever it holds: an empty footprint is one.
+        """
+        path = self.path(kind)
+        return path is not None and path.exists()
+
     @property
     def particles_path(self) -> Location | None:
         """Path of the particle file in the output directory, or ``None`` before its folder exists."""
-        return self.output.path(
-            "particles", self.variant, self.receptor.id, self.realization
-        )
+        return self.path("particles")
 
     @property
     def footprint_path(self) -> Location | None:
         """Path of the footprint file in the output directory, or ``None`` before its folder exists."""
-        return self.output.path(
-            "footprints", self.variant, self.receptor.id, self.realization
-        )
+        return self.path("footprint")
 
     @property
     def log_path(self) -> Location | None:
@@ -150,8 +173,7 @@ class Simulation:
     @property
     def has_particles(self) -> bool:
         """Whether the particle file exists."""
-        path = self.particles_path
-        return path is not None and path.exists()
+        return self.has("particles")
 
     @property
     def has_footprint(self) -> bool:
@@ -160,24 +182,23 @@ class Simulation:
 
         An empty footprint (no particles over the grid) is a finished result.
         """
-        path = self.footprint_path
-        return path is not None and path.exists()
+        return self.has("footprint")
 
     @property
     def is_complete(self) -> bool:
         """
         Whether every expected result exists.
 
-        That is the particles, and the footprint when the variant has a grid.
-        It is :func:`stilt.output.completed`, the one definition of done,
-        for one receptor, from two file checks.
+        That is the particles, and the file of every stage the variant
+        uses, such as the footprint. It is :func:`stilt.output.completed`,
+        the one definition of done, for one receptor, from a file check for
+        each.
         """
         rid = self.receptor.id
-        mine = frozenset([rid])
-        particles = mine if self.has_particles else frozenset()
-        if "footprint" not in self.variant.stages:
-            return rid in completed(particles, None)
-        return rid in completed(particles, mine if self.has_footprint else frozenset())
+        mine: frozenset[str] = frozenset([rid])
+        none: frozenset[str] = frozenset()
+        kinds = ("particles", *self.variant.stage_order)
+        return rid in completed(*(mine if self.has(k) else none for k in kinds))
 
     # -- status ------------------------------------------------------------
 
@@ -186,11 +207,12 @@ class Simulation:
         """
         Why this simulation is not complete, as the worker recorded it, or ``None``.
 
-        ``None`` when it is complete, or has not run, or the step that
-        failed has since succeeded. Otherwise a dict with ``step``
-        (``"particles"`` or ``"footprint"``), ``reason`` (a short cause
-        such as ``"MET_COVERAGE"``, or the error's class when it has
-        none), ``message``, and ``time``. An unexpected error also has a
+        ``None`` when it is complete, or has not run, or what failed has
+        since succeeded. Otherwise a dict with ``stage`` (``"particles"``
+        for the transport model run, or the name of the stage that failed,
+        such as ``"footprint"``), ``reason`` (a short cause such as
+        ``"MET_COVERAGE"``, or the error's class when it has none),
+        ``message``, and ``time``. An unexpected error also has a
         ``traceback``. A failed transport model run fails every variant
         that shares its particles. :attr:`log` reads the model's log and
         :attr:`kept_workdir` is where its workdir was kept.
@@ -198,15 +220,16 @@ class Simulation:
         Examples
         --------
         >>> sim.failure  # doctest: +SKIP
-        {'step': 'particles', 'reason': 'MET_COVERAGE',
+        {'stage': 'particles', 'reason': 'MET_COVERAGE',
          'message': 'HYSPLIT: start point not within (x,y,t) any data file', ...}
         """
-        if self.is_complete:
-            return None
-        kind = "footprints" if self.has_particles else "particles"
-        return self.output.failure(
-            kind, self.variant, self.receptor.id, self.realization
-        )
+        for kind in ("particles", *self.variant.stage_order):
+            if not self.has(kind):
+                # The first result that is missing is the one that failed.
+                return self.output.failure(
+                    kind, self.variant, self.receptor.id, self.realization
+                )
+        return None
 
     # -- reading the results -----------------------------------------------
 

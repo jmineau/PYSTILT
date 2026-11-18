@@ -8,8 +8,11 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from stilt.execution.worker import (
+    run_stage as _run_stage,  # the worker's own, whatever a test puts in its place
+)
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.io import _describe
+from stilt.footprint.io import _describe, read_footprint
 from stilt.footprint.targets import Mesh
 from stilt.receptors import PointReceptor, Receptor
 from stilt.spatial import Grid
@@ -29,6 +32,19 @@ def as_footprint(
     test module that reaches the private helper.
     """
     return _describe(data, receptor, config, name)
+
+
+def run_footprint(sim, particles: pd.DataFrame) -> xr.DataArray | None:
+    """
+    Make the footprint of *sim* from *particles* as the worker does, and return it as stored.
+
+    The footprint stage runs through the worker's own ``run_stage``, with
+    *particles* in memory in place of a particle file. ``None`` for an empty
+    footprint, whose file is written all the same.
+    """
+    sim.__dict__["particles"] = particles
+    _run_stage(sim, "footprint")
+    return read_footprint(sim.path("footprint"))
 
 
 def make_footprint(

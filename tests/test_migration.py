@@ -561,7 +561,7 @@ def test_the_settings_are_what_the_files_record(tmp_path, capsys):
     assert {k: v for k, v in error.items() if not k.endswith("err")} == {
         k: v for k, v in run.items() if not k.endswith("err")
     }
-    foot = _settings(output, "footprints", "stilt-r")
+    foot = _settings(output, "footprint", "stilt-r")
     assert foot["smooth_factor"] == 0.5
     assert foot["tres"] == "1h"
     assert foot["grid"]["yres"] == 0.025

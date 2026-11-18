@@ -313,6 +313,98 @@ PYSTILT goes in `stilt.transport.MODELS` under a short name instead. Keep
 its package out of the core: the import contracts in `pyproject.toml` say
 how.
 
+## Adding a stage
+
+A stage is what is made from each simulation's results after the transport
+model runs: one file per receptor, from the particles, from the files of
+other stages, or both. The footprint is one
+(`stilt.footprint.FootprintStage`). Write a stage when you want a product
+made for every receptor of a project, kept in the output directory beside
+the particles, and counted by `stilt status`. For a calculation you run now
+and then, read the particles (`project.particles`) instead.
+
+A stage is a class with the members of `stilt.stages.Stage`; it subclasses
+nothing and holds no state. This one writes each receptor's mean particle
+height:
+
+```python
+from pydantic import BaseModel
+
+
+class MeanHeightConfig(BaseModel):
+    below: float = 5000.0  # meters above ground
+
+
+class MeanHeight:
+    name = "mean_height"  # its tree in the output, and its status() column
+    config_class = MeanHeightConfig
+    suffix = ".txt"  # the extension of its files
+
+    def resolve(self, config, model, model_settings, directory):
+        return config  # read files, and refuse a model that does not fit, here
+
+    def settings(self, config):
+        return config.model_dump(mode="json")  # what names its settings folder
+
+    def check(self, config, receptors, directory):
+        return []  # (check, receptor id or None, message), for `stilt check`
+
+    def run(self, config, sim, path):
+        zagl = sim.particles["zagl"]
+        path.write_text(str(zagl[zagl < config.below].mean()))
+```
+
+```yaml
+stages:
+  mean_height:
+    class: mypkg.stages.MeanHeight
+    below: 3000
+```
+
+- **`name`** is the stage's tree in the output directory
+  (`mean_height/settings=<variant>-<hash>/date=<day>/<receptor><suffix>`),
+  its column in `project.status()`, and the `stage` of a failure record.
+  Lowercase letters, digits and underscores.
+- **`config_class`** is a pydantic model that checks the block's settings
+  when `config.yaml` loads, without reading a file. A variant changes a
+  setting under its own `stages:` key, and the variant's keys replace the
+  block's; give the class an `override(block, own)` classmethod to merge
+  them another way, as `FootprintConfig` changes a grid field by field.
+- **`resolve`** runs once for each variant when the project reads its
+  variants. Read the files the settings name there, and raise `ValueError`
+  for a transport model whose particles the stage cannot use (`model` is
+  its name and `model_settings` what a run of it records). Return the
+  config the runs use.
+- **`settings`** returns the record that names the stage's settings folder,
+  as plain data. A changed value is a new folder, so leave out what changes
+  no result, such as a path. `config_class` must read the record back to a
+  config with the same record, because a stored folder is found that way.
+  `stilt.stages.check_stage(stage, config)` checks it: call it in your
+  tests, once for each kind of setting.
+- **`check`** returns what would stop the stage for the project's
+  receptors, for `stilt check`. Run nothing in it.
+- **`run`** makes one simulation's file and writes it at `path`. It gets the
+  simulation: `sim.particles`, `sim.receptor`, `sim.variant`, and
+  `sim.directory`, where a relative file name in the settings starts. Do
+  not change `sim.particles` in place, since variants share it. Write one
+  file whatever there is to say: a simulation is complete when the model's
+  output file exists, and so does the file of every stage its variant uses,
+  so a stage that writes nothing leaves its simulations unfinished. Write a
+  file that says "nothing here", as an empty footprint does. An error
+  fails the simulation at this stage, and the worker records it.
+- **`reads`** (optional) names the stages whose files this one reads, such
+  as `reads = ("footprint",)`. The stage runs after them and again whenever
+  one was made again, and its settings folder is named from theirs too.
+  Find a file with `sim.path("footprint")` and read it with the reader of
+  the package that wrote it (`stilt.read_footprint`). A variant that sets a
+  stage to null while another of its stages reads it is refused.
+
+The stage's package must be installed wherever the project is opened, the
+login node that reports status included: a settings folder is named from
+the stage's settings, defaults included, and only its config class knows
+them. A project whose config names a class that is not installed stops
+with a message naming the package.
+
 ## Output directory and completion
 
 A project is a local directory of inputs (`stilt.project.Project`):
@@ -324,9 +416,12 @@ changed setting writes a new folder and never overwrites a result.
 `Output` knows where each result's file is (`path`), which receptors have
 one (`present`, from a listing of their date folders), and the one
 definition of a finished simulation (`complete`, which applies
-`stilt.output.completed`). `Simulation.is_complete()` and `status()` use
-it. Don't add another "does this output exist" check, a registry, or a
-manifest. Call these instead.
+`stilt.output.completed`): the model's output file exists, and so does the
+file of every stage the variant uses. `Simulation.is_complete` and
+`status()` use it. Every method takes the kind of result, `"particles"` or
+a stage's name, so a stage needs no method of its own; it writes its file
+at the path `make_path` gives. Don't add another "does this output exist"
+check, a registry, or a manifest. Call these instead.
 
 ## Changing how work is run
 

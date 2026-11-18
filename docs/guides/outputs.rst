@@ -305,7 +305,7 @@ To see what is left to do:
 .. ipython:: python
 
    project.incomplete()       # the simulations that are not complete
-   st = project.status()      # every simulation, with six more columns
+   st = project.status()      # every simulation, with what it has and where it stands
    st.state.value_counts()
    st[st.state == "failed"]   # the failed simulations, and why
    project.status(morning)    # the same, for a selection
@@ -315,7 +315,7 @@ None failed here, so the table of failed simulations is empty.
 ``status()`` adds a ``particles`` and a ``footprint`` column that say
 whether each result exists, and a ``state`` column: ``complete``,
 ``failed``, ``interrupted``, or ``pending``. For a failed simulation,
-``step``, ``reason``, and ``message`` say why. :doc:`checking` explains
+``stage``, ``reason``, and ``message`` say why. :doc:`checking` explains
 each state and reason. ``status()`` opens no result file, so it is quick
 on a large project.
 
@@ -510,13 +510,13 @@ question about thousands of simulations is one query:
 
    -- footprints per settings folder and day
    SELECT settings, date, count(DISTINCT receptor) AS footprints
-   FROM read_parquet('output/footprints/*/*/*.parquet', hive_partitioning = true)
+   FROM read_parquet('output/footprint/*/*/*.parquet', hive_partitioning = true)
    GROUP BY settings, date
    ORDER BY settings, date;
 
    -- the total influence of each receptor's footprint
    SELECT receptor, sum(foot) AS total
-   FROM read_parquet('output/footprints/settings=hrrr-93278c/*/*.parquet', hive_partitioning = true)
+   FROM read_parquet('output/footprint/settings=hrrr-93278c/*/*.parquet', hive_partitioning = true)
    GROUP BY receptor;
 
    -- where each particle of one day's receptors ended up

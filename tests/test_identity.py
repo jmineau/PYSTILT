@@ -8,6 +8,7 @@ import yaml
 
 from stilt.config import ProjectConfig, Variant
 from stilt.exceptions import HYSPLITNotFoundError
+from stilt.footprint.stage import store_empty_footprint
 from stilt.identity import read_run_settings, run_settings, settings_hash
 from stilt.output import Output
 from stilt.transport import ModelInfo
@@ -288,13 +289,13 @@ def test_footprints_written_before_tres_are_hourly_and_still_found(tmp_path):
     )
 
     out = Output(tmp_path / "out")
-    out.write_empty_footprint(hourly, make_receptor())
-    folder = out.folder("footprints", hourly)
+    store_empty_footprint(out, hourly, make_receptor())
+    folder = out.folder("footprint", hourly)
     _rewrite_record(folder, lambda s: s.pop("tres"))
 
     out = Output(tmp_path / "out")
-    assert out.folder("footprints", hourly) == folder
-    assert out.folder("footprints", quarters) is None
+    assert out.folder("footprint", hourly) == folder
+    assert out.folder("footprint", quarters) is None
 
 
 # ---------------------------------------------------------------------------

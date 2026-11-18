@@ -5,7 +5,6 @@ import pytest
 import xarray as xr
 
 from stilt.config import Variant
-from stilt.execution.worker import make_footprint
 from stilt.footprint.config import FootprintConfig
 from stilt.output import Output
 from stilt.particles import particles_metadata
@@ -15,6 +14,7 @@ from stilt.transforms import FirstOrderLifetime, transform_kind
 from stilt.transport.hysplit import MetConfig
 
 from .fixtures.factories import make_met_config, make_variant
+from .fixtures.footprints import run_footprint
 from .fixtures.particles import finished
 
 GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
@@ -108,8 +108,8 @@ def test_paths_are_none_until_the_run_exists(point_receptor, tmp_path):
     assert sim.particles_path is not None and not sim.particles_path.exists()
     assert sim.log_path == sim.output.log_path(sim.variant, rid)
     assert sim.footprint_path is None  # no footprint folder yet
-    sim.output.record_failure("footprints", sim.variant, rid, {})
-    assert sim.footprint_path == sim.output.path("footprints", sim.variant, rid)
+    sim.output.record_failure("footprint", sim.variant, rid, {})
+    assert sim.footprint_path == sim.output.path("footprint", sim.variant, rid)
 
 
 def test_log_property_raises_when_missing(point_receptor, tmp_path):
@@ -150,7 +150,7 @@ def test_results_read_before_the_run_are_read_again_after_it(point_receptor, tmp
     with pytest.raises(FileNotFoundError):
         _ = sim.footprint
 
-    make_footprint(sim, traj)
+    run_footprint(sim, traj)
     assert sim.footprint is not None
     assert sim.footprint is sim.footprint  # kept once read
 
@@ -183,7 +183,7 @@ def test_completion_needs_particles_and_the_footprint_when_configured(
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     traj = _write_particles(sim)
     assert sim.has_particles and not sim.is_complete
-    make_footprint(sim, traj)
+    run_footprint(sim, traj)
     assert sim.is_complete
     assert sim.footprint_path is not None
     assert sim.footprint_path.parent.parent.name.startswith("settings=hrrr-")
@@ -199,7 +199,7 @@ def test_particles_only_variant_is_complete_with_particles(point_receptor, tmp_p
 def test_written_footprint_reads_back(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     traj = _write_particles(sim)
-    foot = make_footprint(sim, traj)
+    foot = run_footprint(sim, traj)
     assert foot is not None and foot.stilt.name == "hrrr"
 
     again = _sim(tmp_path, point_receptor, footprint=FOOT)
@@ -217,7 +217,7 @@ def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, footprint=far)
     traj = _write_particles(sim)
 
-    assert make_footprint(sim, traj) is None
+    assert run_footprint(sim, traj) is None
 
     assert sim.footprint is None
     assert sim.has_footprint and sim.is_complete
@@ -227,10 +227,10 @@ def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
 def test_failure_reads_the_record_for_the_missing_step(point_receptor, tmp_path):
     grid = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.1, yres=0.1)
     sim = _sim(tmp_path, point_receptor, footprint=FootprintConfig(grid=grid))
-    particles = {"step": "particles", "reason": "MET_COVERAGE"}
-    footprint = {"step": "footprint", "reason": "ValueError"}
+    particles = {"stage": "particles", "reason": "MET_COVERAGE"}
+    footprint = {"stage": "footprint", "reason": "ValueError"}
     sim.output.record_failure("particles", sim.variant, sim.receptor.id, particles)
-    sim.output.record_failure("footprints", sim.variant, sim.receptor.id, footprint)
+    sim.output.record_failure("footprint", sim.variant, sim.receptor.id, footprint)
     # The particles are missing, so the particles step is why.
     assert sim.failure == particles
     # Once they exist, a stale particles record does not count; the footprint's does.

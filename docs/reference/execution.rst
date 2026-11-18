@@ -15,11 +15,15 @@ work underneath.
   returns the job id at once.
 - :func:`~stilt.execution.worker.run_particles` runs the transport model for one
   :class:`~stilt.Simulation` and writes its particles and log.
-- :func:`~stilt.execution.worker.make_footprint` makes the footprint from those
-  particles and writes it.
+- :func:`~stilt.execution.worker.run_stages` runs the stages of the variants
+  that share those particles, the footprint among them: each stage file
+  that is missing, in the order the stages read one another, and each
+  again when what it reads was made again.
+  :func:`~stilt.execution.worker.run_stage` runs one, which writes its own
+  file.
 - :func:`~stilt.execution.worker.run_receptor` runs every variant of one receptor,
   skipping what exists. Variants that share particles run the transport model once and
-  make their footprints from the particles in memory. A failure is recorded
+  run their stages on the particles in memory. A failure is recorded
   with the simulation (:attr:`stilt.Simulation.failure`). Workers are
   always handed receptors.
 - :func:`~stilt.execution.worker.run_receptors` runs a list of receptors, in this
@@ -57,7 +61,8 @@ Internal: importable from their modules, and free to change.
 
    stilt.execution.runner.resolve_compute_root
    stilt.execution.worker.run_particles
-   stilt.execution.worker.make_footprint
+   stilt.execution.worker.run_stage
+   stilt.execution.worker.run_stages
    stilt.execution.worker.run_receptor
    stilt.execution.worker.run_receptors
 

@@ -14,8 +14,9 @@ from stilt.config import ProjectConfig, Variant
 from stilt.exceptions import MeteorologyError, SimulationError, WorkerDied
 from stilt.execution import worker
 from stilt.execution.config import ExecutionConfig
-from stilt.execution.worker import make_footprint, run_receptor, run_receptors
+from stilt.execution.worker import run_receptor, run_receptors
 from stilt.footprint.config import FootprintConfig
+from stilt.footprint.stage import store_empty_footprint
 from stilt.output import Output
 from stilt.project import Project
 from stilt.receptors import PointReceptor, Receptor
@@ -25,6 +26,7 @@ from stilt.transport import ModelRun, TransportConfig
 from stilt.transport.hysplit import FailureReason, HysplitConfig, Met, MetConfig
 
 from ..fixtures.factories import make_met_config, make_project_config, make_variant
+from ..fixtures.footprints import run_footprint
 
 # ---------------------------------------------------------------------------
 # Fixtures and helpers
@@ -134,9 +136,10 @@ def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
     """Record a footprint (or an empty one) for *sim* in the output directory."""
     assert sim.variant.stages.get("footprint") is not None
     if empty:
-        sim.output.write_empty_footprint(sim.variant, sim.receptor)
+        store_empty_footprint(sim.output, sim.variant, sim.receptor)
     else:
-        make_footprint(sim, _particles(sim.receptor))
+        # The particles the worker gave the simulation, or a small table.
+        run_footprint(sim, sim.__dict__.get("particles", _particles(sim.receptor)))
 
 
 def _model_config(tmp_path, **kwargs) -> ProjectConfig:
@@ -273,13 +276,14 @@ def _fake_run_particles(monkeypatch, calls: list[str]):
 
 
 def _fake_make_footprint(monkeypatch, calls: list[tuple[str, int]]):
-    """Replace make_footprint with one that records the variant and which particle table it got."""
+    """Replace the worker's run of a stage with one that records the variant and which particle table it read."""
 
-    def fake(sim, particles):
-        calls.append((sim.variant.name, id(particles)))
+    def fake(sim, name):
+        assert name == "footprint"
+        calls.append((sim.variant.name, id(sim.particles)))
         _write_footprint(sim)
 
-    monkeypatch.setattr(worker, "make_footprint", fake)
+    monkeypatch.setattr(worker, "run_stage", fake)
 
 
 def _run_receptor(project, receptor, **kwargs):
@@ -388,7 +392,7 @@ def test_a_particles_only_variant_runs_hysplit_and_completes(
     hysplit: list[str] = []
     _fake_run_particles(monkeypatch, hysplit)
     monkeypatch.setattr(
-        worker, "make_footprint", lambda *a, **k: pytest.fail("no footprint")
+        worker, "run_stage", lambda *a, **k: pytest.fail("no footprint")
     )
 
     assert _run_receptor(project, receptor) == []
@@ -450,7 +454,7 @@ def test_existing_footprints_are_kept_and_empty_ones_count_as_done(
     monkeypatch.setattr(
         worker, "run_particles", lambda *a, **k: pytest.fail("no HYSPLIT")
     )
-    monkeypatch.setattr(worker, "make_footprint", lambda *a, **k: pytest.fail("kept"))
+    monkeypatch.setattr(worker, "run_stage", lambda *a, **k: pytest.fail("kept"))
 
     assert _run_receptor(project, receptor) == []
     assert project.incomplete().empty
@@ -571,7 +575,7 @@ def test_a_failed_hysplit_run_fails_its_whole_group_once_and_is_recorded(
     for name in ("hrrr", "hrrr-s2"):
         failure = project.simulation(str(receptor.id), name).failure
         assert failure is not None
-        assert failure["step"] == "particles"
+        assert failure["stage"] == "particles"
         assert failure["reason"] == "MET_COVERAGE"
         assert failure["message"] == "HYSPLIT failed (MET_COVERAGE)."
         assert "traceback" not in failure
@@ -590,13 +594,13 @@ def test_a_failed_footprint_is_the_variants_own_and_the_others_still_run(
     _fake_run_particles(monkeypatch, [])
     made: list[str] = []
 
-    def fake(sim, particles):
+    def fake(sim, name):
         if sim.variant.name == "hrrr":
             raise ValueError("bad grid")
         made.append(sim.variant.name)
         _write_footprint(sim)
 
-    monkeypatch.setattr(worker, "make_footprint", fake)
+    monkeypatch.setattr(worker, "run_stage", fake)
 
     problems = _run_receptor(project, receptor)
 
@@ -604,13 +608,13 @@ def test_a_failed_footprint_is_the_variants_own_and_the_others_still_run(
     assert made == ["hrrr-s2"]
     failure = project.simulation(str(receptor.id), "hrrr").failure
     assert failure is not None
-    assert failure["step"] == "footprint" and failure["reason"] == "ValueError"
+    assert failure["stage"] == "footprint" and failure["reason"] == "ValueError"
     assert failure["message"] == "bad grid"
     assert "ValueError: bad grid" in failure["traceback"]
     assert project.simulation(str(receptor.id), "hrrr-s2").failure is None
     # The record belongs to the footprint folder, found by its settings hash.
     sim = project.simulation(str(receptor.id), "hrrr")
-    assert project.output.failure("footprints", sim.variant, sim.receptor.id) == failure
+    assert project.output.failure("footprint", sim.variant, sim.receptor.id) == failure
 
 
 def test_a_success_clears_the_failure_it_replaces(tmp_path, receptor, monkeypatch):
@@ -723,7 +727,7 @@ def test_an_error_that_a_retry_would_repeat_is_still_a_recorded_failure(
     problems = _run_receptor(project, receptor)
 
     assert problems[0].startswith("hrrr failed during particles")
-    assert sim.failure is not None and sim.failure["step"] == "particles"
+    assert sim.failure is not None and sim.failure["stage"] == "particles"
     assert _states(project) == {sim.receptor.id: "failed"}
 
 
@@ -776,7 +780,7 @@ def test_a_connection_error_in_a_footprint_leaves_the_particles_and_no_record(
     sim = project.simulation(str(receptor.id), "hrrr")
     _fake_run_particles(monkeypatch, [])
     monkeypatch.setattr(
-        worker, "make_footprint", _fails_with(OSError(errno.ESTALE, "stale"))
+        worker, "run_stage", _fails_with(OSError(errno.ESTALE, "stale"))
     )
 
     problems = _run_receptor(project, receptor)
@@ -932,7 +936,7 @@ def test_a_failed_run_keeps_its_log_and_working_directory(
 
     failure = sim.failure
     assert failure is not None and failure["reason"] == "FORTRAN_RUNTIME_ERROR"
-    assert set(failure) == {"step", "reason", "message", "time"}
+    assert set(failure) == {"stage", "reason", "message", "time"}
     assert "hycs_std said" in sim.log
     assert sim.kept_workdir is not None
     assert (sim.kept_workdir / "CONTROL").exists()
