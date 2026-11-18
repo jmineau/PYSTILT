@@ -64,9 +64,11 @@ are the particle part's ``stilt.project.Project`` and
 ``jacobian`` and ``transport_error`` on the project; ``footprint``,
 ``has_footprint``, ``calc_footprint``, ``background``, ``transport_error``
 and ``plot`` on a simulation. They change nothing they inherit, which a test
-holds, with two exceptions: ``simulation_class``, the one hook, makes
-``stilt.Project.simulation`` return a ``stilt.Simulation``, and
-``stilt.Project.init`` writes STILT-R's HYSPLIT values into a new project.
+holds, with two exceptions, both on the project and neither a read:
+``stilt.Project.simulation`` returns a ``stilt.Simulation`` (the particle
+part's, with the reads; the two compare equal), and ``stilt.Project.init``
+writes STILT-R's HYSPLIT values into a new project. The particle part has
+no hook for a subclass.
 The workers and the stages use the particle part, and nothing on disk names
 the subclasses, so ``stilt.project.Project(path)`` opens the same project.
 

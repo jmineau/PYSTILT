@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Self
+from typing import Any, Self
 
 import pandas as pd
 import xarray as xr
@@ -170,8 +170,10 @@ class Project(project.Project):
     It is :class:`stilt.project.Project`, the particle part the workers use,
     and it adds the reads of what STILT makes from the particles:
     :meth:`footprints`, :meth:`jacobian`, :meth:`transport_error`, and
-    simulations that read their footprint (:class:`stilt.Simulation`). It
-    changes nothing it inherits, and nothing on disk names it.
+    simulations that read their footprint (:class:`stilt.Simulation`). Of
+    what it inherits it changes only :meth:`simulation`, which returns that
+    class, and :meth:`init`, which writes STILT-R's values; nothing on disk
+    names it.
 
     Make a new project with :meth:`init` (or ``stilt init``). After that,
     ``config.yaml`` is yours to edit; PYSTILT never rewrites it.
@@ -235,16 +237,33 @@ class Project(project.Project):
     >>> project.status(sims[sims.variant == "hrrr"])  # doctest: +SKIP
     """
 
-    simulation_class = Simulation
+    def simulation(
+        self, receptor_id: str, variant: str, realization: int | None = None
+    ) -> Simulation:
+        """
+        Return one simulation, with STILT's reads: a :class:`stilt.Simulation`.
 
-    if TYPE_CHECKING:
-        # Not defined at run time: simulation_class makes the inherited
-        # method return a stilt.Simulation, and this says so to editors.
-        def simulation(
-            self, receptor_id: str, variant: str, realization: int | None = None
-        ) -> Simulation:
-            """Return one simulation, as :meth:`stilt.project.Project.simulation`, with STILT's reads."""
-            ...
+        It is :meth:`stilt.project.Project.simulation`, which finds the
+        receptor and the variant, as the subclass that reads the footprint,
+        the background, and the transport error. The two compare equal.
+
+        Raises
+        ------
+        KeyError
+            If the project has no such receptor or variant.
+        ValueError
+            If *realization* is not one the variant runs as: ``0`` to
+            ``N - 1`` for ``realizations: N``, ``None`` otherwise.
+
+        Examples
+        --------
+        >>> sim = project.simulation(receptor_id, "hrrr")  # doctest: +SKIP
+        >>> sim.footprint  # doctest: +SKIP
+        """
+        sim = super().simulation(receptor_id, variant, realization)
+        return Simulation(
+            sim.receptor, sim.variant, sim.output, sim.directory, sim.realization
+        )
 
     @classmethod
     def init(
