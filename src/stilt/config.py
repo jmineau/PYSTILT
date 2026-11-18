@@ -52,6 +52,7 @@ from stilt.transport import (
     MODELS,
     ModelInfo,
     TransportConfig,
+    _named_by_path,
     get_model,
 )
 
@@ -896,6 +897,7 @@ def _model_blocks(
                 f"{where}: {model!r} is not a built-in transport model (they "
                 f"are {sorted(MODELS)}). A model in another package gets "
                 "class: with its import path, such as class: mypkg.models.MyModel."
+                f"{_named_by_path(model)}"
             )
         if model in block_of:
             raise ValueError(

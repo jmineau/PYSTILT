@@ -398,6 +398,11 @@ A ``stilt-r`` variant reads what the import wrote and runs nothing: a run of
 one fails (``NOT_RUNNABLE``), so its receptors that STILT-R did not run stay
 failed. Run them with a ``hysplit`` variant instead.
 
+Runs imported with PYSTILT 0.1.0a29 or earlier name the model ``stilt-r``,
+from before it was named by its class, so a project does not find them:
+listing their folders warns that the model could not be loaded. Run
+``import_stilt_r`` again, and use the blocks it prints.
+
 Every folder of an output directory is named by the hash of its settings
 (:doc:`../projects`), so an imported run's settings hold only what STILT-R's
 files record, never a default in place of a value they do not give. Two

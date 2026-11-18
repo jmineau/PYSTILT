@@ -296,6 +296,33 @@ def test_a_record_of_a_model_not_installed_still_reads(tmp_path):
         assert read_run_settings(stored) == stored
 
 
+def test_a_stilt_r_block_without_its_class_says_which_class_to_write(tmp_path):
+    # stilt-r was built in; it is named by its import path now.
+    with pytest.raises(
+        ValueError,
+        match=r"models: stilt-r: .*write class: stilt\.stilt_r\.StiltRModel.*"
+        r"import them again",
+    ):
+        ProjectConfig(
+            mets=_mets(tmp_path), models={"stilt-r": {}}, variants={"hrrr": {}}
+        )
+
+
+def test_a_run_imported_under_the_old_stilt_r_name_says_to_import_it_again():
+    # Every listing of an output directory holding such a folder warns once.
+    stored = {
+        "n_hours": -6,
+        "model": {"name": "stilt-r", "sha256": None, "data_files": None},
+        "met": {"met_path": "/data/hrrr"},
+    }
+    with pytest.warns(
+        UserWarning,
+        match=r"'stilt-r' of a stored run could not be loaded.*"
+        r"class: stilt\.stilt_r\.StiltRModel.*import_stilt_r",
+    ):
+        assert read_run_settings(stored) == stored
+
+
 def test_a_model_in_its_own_package_runs_from_a_fresh_interpreter(tmp_path):
     """No registration in the process: the import path alone finds the model."""
     package = tmp_path / "toypkg"
