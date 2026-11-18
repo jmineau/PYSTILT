@@ -16,9 +16,11 @@ folder:
 
 .. code-block:: yaml
 
-   exe_dir: /path/to/hysplit/exec
+   models:
+     hysplit:
+       exe_dir: /path/to/hysplit/exec
 
-``exe_dir`` is a top-level setting, so a variant can set its own and
+``exe_dir`` is a HYSPLIT setting, so a variant can set its own and
 compare two builds on the same receptors:
 
 .. code-block:: yaml
@@ -68,7 +70,9 @@ table the folder does not hold comes from the bundled set:
 
 .. code-block:: yaml
 
-   data_dir: /path/to/hysplit/bdyfiles
+   models:
+     hysplit:
+       data_dir: /path/to/hysplit/bdyfiles
 
 The tables change the particles, so a run records the checksum of each
 table that differs from the bundled one, and such runs are kept apart from

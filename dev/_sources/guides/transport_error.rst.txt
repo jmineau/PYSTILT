@@ -27,14 +27,15 @@ The names are the same as in STILT-R.
        tluverr: 260           # its correlation time, min
        zcoruverr: 450         # its vertical correlation length, m
        horcoruverr: 14        # its horizontal correlation length, km
-       grid: null             # particles only
+       stages: {footprint: null}   # particles only
 
 Every receptor then has a second simulation,
 ``project.simulation(rid, "hrrr-err")``, whose particles saw the perturbed
 winds. You can add the error variant to a finished project, and only the
 new simulations run. The error run costs as much as the original.
-``grid: null`` skips the footprint, which the error calculation does not
-need. Keep a grid if you want to plot a perturbed footprint.
+``stages: {footprint: null}`` skips the footprint, which the error
+calculation does not need. Leave the line out if you want to plot a
+perturbed footprint.
 
 Choosing the settings
 ~~~~~~~~~~~~~~~~~~~~~
@@ -371,7 +372,8 @@ project:
 
 Before you run them:
 
-- Set ``krand: 2`` and a ``seed`` in the defaults. Every variant then draws
+- Set ``krand: 2`` and a ``seed`` under ``models: hysplit:``. Every variant
+  then draws
   the same turbulence, and the difference between variants is the mixed
   layer alone. Without a seed each run adds its own sampling noise.
 - HYSPLIT applies the minimum mixing depth ``kmix0`` (150 m by default)

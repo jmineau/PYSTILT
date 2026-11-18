@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.footprint.config &#8212; PYSTILT 0.1.0a29</title>
+    <title>stilt.footprint.config &#8212; PYSTILT dev</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=947601de"></script>
+    <script src="../../../_static/documentation_options.js?v=9cf7e2c3"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30.dev2+gdce324c84" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT dev</p>
   
 </a></div>
     
@@ -462,16 +462,21 @@
 
 <span class="sd">.. code-block:: yaml</span>
 
-<span class="sd">   geometry:                     # the default footprint's geometry</span>
-<span class="sd">     kind: file</span>
-<span class="sd">     path: counties.shp</span>
-<span class="sd">     ids: NAME</span>
+<span class="sd">   stages:</span>
+<span class="sd">     footprint:</span>
+<span class="sd">       class: stilt.footprint.FootprintStage</span>
+<span class="sd">       geometry:                   # the default footprint's geometry</span>
+<span class="sd">         kind: file</span>
+<span class="sd">         path: counties.shp</span>
+<span class="sd">         ids: NAME</span>
 
 <span class="sd">   variants:</span>
 <span class="sd">     hrrr: {}</span>
 <span class="sd">     hrrr-hexes:                   # a second footprint from the same particles</span>
-<span class="sd">       geometry: {kind: h3, resolution: 8, bounds: {xmin: -112.3, xmax: -111.6, ymin: 40.4, ymax: 41.0}}</span>
-<span class="sd">       cells_per_target: 4</span>
+<span class="sd">       stages:</span>
+<span class="sd">         footprint:</span>
+<span class="sd">           geometry: {kind: h3, resolution: 8, bounds: {xmin: -112.3, xmax: -111.6, ymin: 40.4, ymax: 41.0}}</span>
+<span class="sd">           cells_per_target: 4</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>

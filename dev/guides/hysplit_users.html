@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>PYSTILT For HYSPLIT Users &#8212; PYSTILT 0.1.0a29</title>
+    <title>PYSTILT For HYSPLIT Users &#8212; PYSTILT dev</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=9cf7e2c3"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30.dev2+gdce324c84" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT dev</p>
   
 </a></div>
     
@@ -662,19 +662,21 @@ locations: HYSPLIT gives each location one particle.</p>
 <section id="many-runs-a-project">
 <h2>Many runs: a project<a class="headerlink" href="#many-runs-a-project" title="Link to this heading">#</a></h2>
 <p>A project runs every starting point under every variant, and runs again
-only what is missing. A <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> with no <code class="docutils literal notranslate"><span class="pre">grid</span></code> makes particles
-and no footprints. Here every start runs on HRRR with two vertical motion
+only what is missing. A <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> with no <code class="docutils literal notranslate"><span class="pre">stages</span></code> block makes
+particles and no footprints. Here every start runs on HRRR with two vertical motion
 options, each kept in its own folder:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/arl/hrrr</span>
 
-<span class="nt">variants</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                 </span><span class="c1"># the settings below</span>
-<span class="w">  </span><span class="nt">hrrr-w6</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">w_option</span><span class="p">:</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># the same runs with another vertical motion</span>
+<span class="nt">models</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hysplit</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24</span>
+<span class="w">    </span><span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
+<span class="w">    </span><span class="nt">emisshrs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
 
-<span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24</span>
-<span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
-<span class="nt">emisshrs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
+<span class="nt">variants</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                 </span><span class="c1"># the settings above</span>
+<span class="w">  </span><span class="nt">hrrr-w6</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">w_option</span><span class="p">:</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># the same runs with another vertical motion</span>
 </pre></div>
 </div>
 <p>The starting points go in <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>, one row each:</p>

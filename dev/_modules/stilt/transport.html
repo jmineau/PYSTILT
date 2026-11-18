@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.transport &#8212; PYSTILT 0.1.0a29</title>
+    <title>stilt.transport &#8212; PYSTILT dev</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=947601de"></script>
+    <script src="../../_static/documentation_options.js?v=9cf7e2c3"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30.dev2+gdce324c84" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -132,7 +132,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT dev</p>
   
 </a></div>
     
@@ -525,8 +525,9 @@
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="o">...</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">"The model as ``model:`` names it: a built-in name such as "</span>
-            <span class="s2">"``hysplit``, or the import path of a model class."</span>
+            <span class="s2">"The model as its ``models`` block in ``config.yaml`` names it: "</span>
+            <span class="s2">"a built-in name such as ``hysplit``, or the import path of a "</span>
+            <span class="s2">"model class (the block's ``class``)."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -554,9 +555,8 @@
 <span class="sd">    for any model's particles. Everything else, the particle count included, is the</span>
 <span class="sd">    model's own. A model's config subclasses it with its own</span>
 <span class="sd">    parameters and is the model's ``config_class``. In ``config.yaml`` the</span>
-<span class="sd">    parameters are flat, top-level keys for the project's model, and a</span>
-<span class="sd">    variant that names another model inherits the shared ones and gives</span>
-<span class="sd">    that model's own. A subclass overrides :meth:`settings` or</span>
+<span class="sd">    parameters are the keys of the model's block under ``models:``, and a</span>
+<span class="sd">    variant that runs the model may override any of them. A subclass overrides :meth:`settings` or</span>
 <span class="sd">    :meth:`realizations` only where its model differs.</span>
 <span class="sd">    """</span>
 
@@ -874,11 +874,11 @@
     <span class="k">return</span> <span class="n">StiltRModel</span><span class="p">()</span>
 
 
-<span class="c1">#: The transport models built into PYSTILT, by the name ``model:`` takes in</span>
-<span class="c1">#: ``config.yaml``: ``hysplit``, and ``stilt-r`` for runs imported from</span>
-<span class="c1">#: STILT-R (:func:`stilt.migration.import_stilt_r`), which cannot run. A model</span>
-<span class="c1">#: in its own package is named by its import path instead, as a transform's</span>
-<span class="c1">#: ``kind:`` is.</span>
+<span class="c1">#: The transport models built into PYSTILT, by the name of their block under</span>
+<span class="c1">#: ``models:`` in ``config.yaml``: ``hysplit``, and ``stilt-r`` for runs</span>
+<span class="c1">#: imported from STILT-R (:func:`stilt.migration.import_stilt_r`), which</span>
+<span class="c1">#: cannot run. A model in its own package is named by its import path</span>
+<span class="c1">#: instead, the ``class`` of its block, as a transform's ``kind:`` is.</span>
 <span class="n">MODELS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">TransportModel</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">"hysplit"</span><span class="p">:</span> <span class="n">_hysplit</span><span class="p">,</span>
     <span class="s2">"stilt-r"</span><span class="p">:</span> <span class="n">_stilt_r</span><span class="p">,</span>

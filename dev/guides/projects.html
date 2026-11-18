@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Projects And Variants &#8212; PYSTILT 0.1.0a29</title>
+    <title>Projects And Variants &#8212; PYSTILT dev</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=9cf7e2c3"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30.dev2+gdce324c84" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT dev</p>
   
 </a></div>
     
@@ -523,7 +523,7 @@ below, and <a class="reference internal" href="../reference/configuration.html">
 <section id="the-project-folder">
 <h2>The project folder<a class="headerlink" href="#the-project-folder" title="Link to this heading">#</a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>my_project/
-  config.yaml        # your settings: meteorology, variants, footprint, run options
+  config.yaml        # your settings: meteorology, transport model, footprint, variants
   receptors.csv      # your receptors: where and when to release particles
   tables/            # other inputs, such as averaging kernels (project.add_table)
 </pre></div>
@@ -544,21 +544,33 @@ its job scripts and logs (<a class="reference internal" href="slurm.html"><span 
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/arl/hrrr</span>
 
+<span class="nt">models</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hysplit</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-24</span>
+<span class="w">    </span><span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span>
+
+<span class="nt">stages</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">footprint</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">class</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stilt.footprint.FootprintStage</span>
+<span class="w">    </span><span class="nt">grid</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-114.0</span>
+<span class="w">      </span><span class="nt">xmax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-111.0</span>
+<span class="w">      </span><span class="nt">ymin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">39.0</span>
+<span class="w">      </span><span class="nt">ymax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42.0</span>
+<span class="w">      </span><span class="nt">xres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<span class="w">      </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+
 <span class="nt">variants</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">            </span><span class="c1"># every receptor runs once, with these settings</span>
-
-<span class="nt">grid</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-114.0</span>
-<span class="w">  </span><span class="nt">xmax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-111.0</span>
-<span class="w">  </span><span class="nt">ymin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">39.0</span>
-<span class="w">  </span><span class="nt">ymax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42.0</span>
-<span class="w">  </span><span class="nt">xres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
-<span class="w">  </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
-
-<span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-24</span>
-<span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span>
 </pre></div>
 </div>
+<p>The file is four blocks, and each names its entries. <code class="docutils literal notranslate"><span class="pre">mets</span></code> is your
+meteorology. <code class="docutils literal notranslate"><span class="pre">models</span></code> is the transport model that makes the particles,
+with its settings. <code class="docutils literal notranslate"><span class="pre">stages</span></code> is what is made from each simulation’s
+particles: the footprint, which <code class="docutils literal notranslate"><span class="pre">class</span></code> names, with its settings.
+<code class="docutils literal notranslate"><span class="pre">variants</span></code> is what runs. No setting sits outside a block: one written at
+the top of the file is refused with a message that names the block it
+belongs in.</p>
 <p>A key PYSTILT does not know is an error that names the nearest setting, so
 a typo such as <code class="docutils literal notranslate"><span class="pre">smooth_factr</span></code> is caught when the file loads, before
 anything runs. The one exception is inside a <code class="docutils literal notranslate"><span class="pre">mets</span></code> entry: extra keys
@@ -585,31 +597,31 @@ check their spelling yourself.</p>
 <a class="reference internal" href="meteorology.html"><span class="doc">Meteorology</span></a>.</p></td>
 <td><p>one entry</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">variants</span></code></p></td>
-<td><p>The variants that run. <code class="docutils literal notranslate"><span class="pre">hrrr:</span> <span class="pre">{}</span></code> runs the defaults (see
-<a class="reference internal" href="#variants">Variants</a>).</p></td>
-<td><p>one entry</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">grid</span></code></p></td>
-<td><p>The map grid for the footprint: the longitude range
-(<code class="docutils literal notranslate"><span class="pre">xmin</span></code>/<code class="docutils literal notranslate"><span class="pre">xmax</span></code>), the latitude range (<code class="docutils literal notranslate"><span class="pre">ymin</span></code>/<code class="docutils literal notranslate"><span class="pre">ymax</span></code>), and the
-cell size in degrees (<code class="docutils literal notranslate"><span class="pre">xres</span></code>/<code class="docutils literal notranslate"><span class="pre">yres</span></code>). Make it cover where the
-air comes from over the whole run. Leave it out, or set it to
-<code class="docutils literal notranslate"><span class="pre">null</span></code>, to make particles but no footprint.</p></td>
-<td><p>0.01° (about 1 km) for a city, 0.1° for a region</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">n_hours</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, under <code class="docutils literal notranslate"><span class="pre">models:</span> <span class="pre">hysplit:</span></code></p></td>
 <td><p>How many hours to follow the particles. Negative values run backward
 in time, which is what footprints need. Positive values run forward
 from the receptor (see <a class="reference internal" href="background.html#plume-background"><span class="std std-ref">A background from a satellite swath</span></a>).</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">-24</span></code> to <code class="docutils literal notranslate"><span class="pre">-72</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">numpar</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">numpar</span></code>, under <code class="docutils literal notranslate"><span class="pre">models:</span> <span class="pre">hysplit:</span></code></p></td>
 <td><p>Particles released per simulation. More particles give a smoother
 footprint and take longer. The default is 200, enough to try a
 project; we use 1000 for results, as the config <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code>
 writes does.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">1000</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">grid</span></code>, under <code class="docutils literal notranslate"><span class="pre">stages:</span> <span class="pre">footprint:</span></code></p></td>
+<td><p>The map grid for the footprint: the longitude range
+(<code class="docutils literal notranslate"><span class="pre">xmin</span></code>/<code class="docutils literal notranslate"><span class="pre">xmax</span></code>), the latitude range (<code class="docutils literal notranslate"><span class="pre">ymin</span></code>/<code class="docutils literal notranslate"><span class="pre">ymax</span></code>), and the
+cell size in degrees (<code class="docutils literal notranslate"><span class="pre">xres</span></code>/<code class="docutils literal notranslate"><span class="pre">yres</span></code>). Make it cover where the
+air comes from over the whole run. Leave the <code class="docutils literal notranslate"><span class="pre">stages</span></code> block out to
+make particles but no footprint.</p></td>
+<td><p>0.01° (about 1 km) for a city, 0.1° for a region</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">variants</span></code></p></td>
+<td><p>The variants that run. <code class="docutils literal notranslate"><span class="pre">hrrr:</span> <span class="pre">{}</span></code> runs the defaults (see
+<a class="reference internal" href="#variants">Variants</a>).</p></td>
+<td><p>one entry</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
 <td><p>Where results go (<a class="reference internal" href="#the-output-directory">The output directory</a>).</p></td>
@@ -623,7 +635,7 @@ writes does.</p></td>
 </tbody>
 </table>
 </div>
-<p>These footprint settings sit next to <code class="docutils literal notranslate"><span class="pre">grid</span></code> at the top level:</p>
+<p>These footprint settings sit next to <code class="docutils literal notranslate"><span class="pre">grid</span></code>, in the footprint’s block:</p>
 <dl class="simple">
 <dt><code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code></dt><dd><p>Scales the Gaussian smoothing applied to each particle’s influence,
 which widens as the particles spread and age. Leave it at <code class="docutils literal notranslate"><span class="pre">1.0</span></code>,
@@ -653,18 +665,19 @@ loss of a species that decays, deposits, or reacts on the way. See
 cross 180° (<code class="docutils literal notranslate"><span class="pre">xmin:</span> <span class="pre">170</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax:</span> <span class="pre">-170</span></code>).
 <a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a> (“Footprint grids”) says how the smoothing
 and the time layers work on such grids.</p>
-<p><code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> also takes the lower-level HYSPLIT and STILT settings, such
-as turbulence, time step, and output variables, by the names STILT-R uses.
+<p>The <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> block also takes the lower-level HYSPLIT and STILT settings,
+such as turbulence, time step, and output variables, by the names STILT-R
+uses.
 Most projects never change them; <a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a>
 describes each one.</p>
 </section>
 <section id="variants">
 <h2>Variants<a class="headerlink" href="#variants" title="Link to this heading">#</a></h2>
 <p>Every receptor runs once per variant. A variant has a name, a met, and any
-settings that differ from the top level of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, which are the
-defaults. Every config lists its variants, and only those run. An entry with
-no overrides (<code class="docutils literal notranslate"><span class="pre">hrrr:</span> <span class="pre">{}</span></code> below) runs the defaults unchanged. Add more
-entries to run the same receptors under other settings:</p>
+settings that differ from the blocks above, which are the defaults: its
+model’s block and the footprint’s. Every config lists its variants, and only
+those run. An entry with no overrides (<code class="docutils literal notranslate"><span class="pre">hrrr:</span> <span class="pre">{}</span></code> below) runs the defaults
+unchanged. Add more entries to run the same receptors under other settings:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">variants</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                     </span><span class="c1"># the defaults with the hrrr met</span>
 <span class="w">  </span><span class="nt">hrrr-zi08</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ziscale</span><span class="p">:</span><span class="w"> </span><span class="nv">0.8</span><span class="p p-Indicator">}</span><span class="w">    </span><span class="c1"># a mixed-layer sensitivity</span>
@@ -674,7 +687,7 @@ entries to run the same receptors under other settings:</p>
 <span class="w">    </span><span class="nt">tluverr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">260</span>
 <span class="w">    </span><span class="nt">zcoruverr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">450</span>
 <span class="w">    </span><span class="nt">horcoruverr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">14</span>
-<span class="w">    </span><span class="nt">grid</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span><span class="w">                 </span><span class="c1"># particles only</span>
+<span class="w">    </span><span class="nt">stages</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">footprint</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">}</span><span class="w">  </span><span class="c1"># particles only</span>
 </pre></div>
 </div>
 <p>Each variant of each receptor is one simulation, so 100 receptors and
@@ -690,13 +703,20 @@ different turbulence. For ensembles you can reproduce, set <code class="docutils
 and a <code class="docutils literal notranslate"><span class="pre">seed</span></code>. Realization <code class="docutils literal notranslate"><span class="pre">k</span></code> then uses <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>. Raising the
 count later only adds realizations.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">model</span></code></dt><dd><p>The transport model, <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> unless set. A model from another
-package is named by its import path (<a class="reference internal" href="../reference/execution.html"><span class="doc">Execution</span></a>).</p>
+<dt><code class="docutils literal notranslate"><span class="pre">model</span></code></dt><dd><p>Which block under <code class="docutils literal notranslate"><span class="pre">models</span></code> it runs, by the block’s name. You need it
+only when <code class="docutils literal notranslate"><span class="pre">models</span></code> has more than one entry
+(<a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a> says how a model from another package
+gets a block).</p>
 </dd>
-<dt>Any other setting</dt><dd><p>Transport settings (<code class="docutils literal notranslate"><span class="pre">numpar</span></code>, <code class="docutils literal notranslate"><span class="pre">ziscale</span></code>, turbulence, wind errors)
-and footprint settings (<code class="docutils literal notranslate"><span class="pre">grid</span></code>, <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>, <code class="docutils literal notranslate"><span class="pre">tres</span></code>,
-<code class="docutils literal notranslate"><span class="pre">transforms</span></code>) override the defaults for that variant
-only.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">stages</span></code></dt><dd><p>The footprint settings this variant changes (<code class="docutils literal notranslate"><span class="pre">grid</span></code>,
+<code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>, <code class="docutils literal notranslate"><span class="pre">tres</span></code>, <code class="docutils literal notranslate"><span class="pre">transforms</span></code>), under the footprint
+block’s name: <code class="docutils literal notranslate"><span class="pre">stages:</span> <span class="pre">{footprint:</span> <span class="pre">{smooth_factor:</span> <span class="pre">2}}</span></code>. Set the stage
+to null, <code class="docutils literal notranslate"><span class="pre">stages:</span> <span class="pre">{footprint:</span> <span class="pre">null}</span></code>, for a variant that makes
+particles only.</p>
+</dd>
+<dt>Any other key</dt><dd><p>A setting of the variant’s transport model (<code class="docutils literal notranslate"><span class="pre">numpar</span></code>, <code class="docutils literal notranslate"><span class="pre">ziscale</span></code>,
+turbulence, wind errors), which replaces the model block’s value for
+that variant only.</p>
 </dd>
 </dl>
 <p>Variant names may use lowercase letters, digits, and hyphens, because they
@@ -710,9 +730,13 @@ from them:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">variants</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
 <span class="w">  </span><span class="nt">hrrr-regional</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">grid</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="nv">-125.0</span><span class="p p-Indicator">,</span><span class="nt"> xmax</span><span class="p">:</span><span class="w"> </span><span class="nv">-100.0</span><span class="p p-Indicator">,</span><span class="nt"> ymin</span><span class="p">:</span><span class="w"> </span><span class="nv">30.0</span><span class="p p-Indicator">,</span><span class="nt"> ymax</span><span class="p">:</span><span class="w"> </span><span class="nv">50.0</span><span class="p p-Indicator">,</span><span class="nt"> xres</span><span class="p">:</span><span class="w"> </span><span class="nv">0.1</span><span class="p p-Indicator">,</span><span class="nt"> yres</span><span class="p">:</span><span class="w"> </span><span class="nv">0.1</span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">stages</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">footprint</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">grid</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="nv">-125.0</span><span class="p p-Indicator">,</span><span class="nt"> xmax</span><span class="p">:</span><span class="w"> </span><span class="nv">-100.0</span><span class="p p-Indicator">,</span><span class="nt"> ymin</span><span class="p">:</span><span class="w"> </span><span class="nv">30.0</span><span class="p p-Indicator">,</span><span class="nt"> ymax</span><span class="p">:</span><span class="w"> </span><span class="nv">50.0</span><span class="p p-Indicator">,</span><span class="nt"> xres</span><span class="p">:</span><span class="w"> </span><span class="nv">0.1</span><span class="p p-Indicator">,</span><span class="nt"> yres</span><span class="p">:</span><span class="w"> </span><span class="nv">0.1</span><span class="p p-Indicator">}</span>
 <span class="w">  </span><span class="nt">hrrr-ak</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">transforms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="nv">averaging_kernel</span><span class="p p-Indicator">,</span><span class="nt"> table</span><span class="p">:</span><span class="w"> </span><span class="nv">kernels</span><span class="p p-Indicator">}]</span>
+<span class="w">    </span><span class="nt">stages</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">footprint</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">transforms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="nv">averaging_kernel</span><span class="p p-Indicator">,</span><span class="nt"> table</span><span class="p">:</span><span class="w"> </span><span class="nv">kernels</span><span class="p p-Indicator">}]</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">hrrr-regional</span></code> and <code class="docutils literal notranslate"><span class="pre">hrrr-ak</span></code> have the same transport settings as
@@ -721,7 +745,8 @@ nothing to declare: PYSTILT sees that the settings that decide the particles
 are equal. Add such a variant to a finished project and run again, and
 PYSTILT makes only the new footprints, from the stored particles.</p>
 <p>A <code class="docutils literal notranslate"><span class="pre">grid</span></code> in a variant changes only the fields it names. A coarser version
-of the default domain is just <code class="docutils literal notranslate"><span class="pre">grid:</span> <span class="pre">{xres:</span> <span class="pre">0.1,</span> <span class="pre">yres:</span> <span class="pre">0.1}</span></code>. You may not
+of the default domain is just <code class="docutils literal notranslate"><span class="pre">stages:</span> <span class="pre">{footprint:</span> <span class="pre">{grid:</span> <span class="pre">{xres:</span> <span class="pre">0.1,</span>
+<span class="pre">yres:</span> <span class="pre">0.1}}}</span></code>. You may not
 need a variant at all: <code class="docutils literal notranslate"><span class="pre">foot.stilt.aggregate</span></code> sums a fine footprint onto
 coarser cells or irregular areas after the run.</p>
 </section>
@@ -790,7 +815,7 @@ project is slower.</p>
 <p>Before running, PYSTILT checks which simulations are finished and runs only
 the rest. A simulation is complete when the result files its variant makes
 exist in the output directory: the particle file, and the footprint file
-when the variant has a grid. If the particle file is missing, HYSPLIT runs
+when the variant has a footprint. If the particle file is missing, HYSPLIT runs
 again, and the footprints of every variant that shares those particles are
 remade from the new particles.</p>
 <p>So after an interruption, a failed Slurm task, or adding a variant, run the
@@ -849,14 +874,18 @@ output directory. When you are sure, delete a folder by hand.</p>
 <h2>Footprints for shapefiles, hexagons, or point sources<a class="headerlink" href="#footprints-for-shapefiles-hexagons-or-point-sources" title="Link to this heading">#</a></h2>
 <p>You may plan to add footprints up over irregular areas, such as counties
 from a shapefile, H3 hexagons, or small windows around point sources. You
-can then name those areas in <code class="docutils literal notranslate"><span class="pre">geometry</span></code> instead of giving a grid. PYSTILT
+can then name those areas in the footprint’s <code class="docutils literal notranslate"><span class="pre">geometry</span></code> instead of giving a
+grid. PYSTILT
 picks a grid fine enough to resolve them (see
 <a class="reference internal" href="../reference/_api/stilt.Mesh.to_grid.html#stilt.Mesh.to_grid" title="stilt.Mesh.to_grid"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Mesh.to_grid()</span></code></a>). This needs the <code class="docutils literal notranslate"><span class="pre">geometry</span></code> extra
 (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;pystilt[geometry]&quot;</span></code>).</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">geometry</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">file</span><span class="w">          </span><span class="c1"># a shapefile, GeoPackage, or GeoJSON</span>
-<span class="w">  </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">counties.shp</span>
-<span class="w">  </span><span class="nt">ids</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NAME</span><span class="w">           </span><span class="c1"># attribute column used as cell ids</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">stages</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">footprint</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">class</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stilt.footprint.FootprintStage</span>
+<span class="w">    </span><span class="nt">geometry</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">file</span><span class="w">          </span><span class="c1"># a shapefile, GeoPackage, or GeoJSON</span>
+<span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">counties.shp</span>
+<span class="w">      </span><span class="nt">ids</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NAME</span><span class="w">           </span><span class="c1"># attribute column used as cell ids</span>
 </pre></div>
 </div>
 <p>The other kinds are <code class="docutils literal notranslate"><span class="pre">h3</span></code> hexagons and <code class="docutils literal notranslate"><span class="pre">windows</span></code> around point sources.
@@ -865,17 +894,21 @@ one variant per geometry; they share the particles:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">variants</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
 <span class="w">  </span><span class="nt">hrrr-hexes</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">geometry</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">h3</span>
-<span class="w">      </span><span class="nt">resolution</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
-<span class="w">      </span><span class="nt">bounds</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="nv">-112.3</span><span class="p p-Indicator">,</span><span class="nt"> xmax</span><span class="p">:</span><span class="w"> </span><span class="nv">-111.6</span><span class="p p-Indicator">,</span><span class="nt"> ymin</span><span class="p">:</span><span class="w"> </span><span class="nv">40.4</span><span class="p p-Indicator">,</span><span class="nt"> ymax</span><span class="p">:</span><span class="w"> </span><span class="nv">41.0</span><span class="p p-Indicator">}</span>
-<span class="w">    </span><span class="nt">cells_per_target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span><span class="w">   </span><span class="c1"># grid cells across the smallest hexagon (default)</span>
+<span class="w">    </span><span class="nt">stages</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">footprint</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">geometry</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">h3</span>
+<span class="w">          </span><span class="nt">resolution</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<span class="w">          </span><span class="nt">bounds</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="nv">-112.3</span><span class="p p-Indicator">,</span><span class="nt"> xmax</span><span class="p">:</span><span class="w"> </span><span class="nv">-111.6</span><span class="p p-Indicator">,</span><span class="nt"> ymin</span><span class="p">:</span><span class="w"> </span><span class="nv">40.4</span><span class="p p-Indicator">,</span><span class="nt"> ymax</span><span class="p">:</span><span class="w"> </span><span class="nv">41.0</span><span class="p p-Indicator">}</span>
+<span class="w">        </span><span class="nt">cells_per_target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span><span class="w">   </span><span class="c1"># grid cells across the smallest hexagon (default)</span>
 <span class="w">  </span><span class="nt">hrrr-sources</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">geometry</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">windows</span>
-<span class="w">      </span><span class="nt">coords</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[[</span><span class="nv">-111.97</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">40.515</span><span class="p p-Indicator">],</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">-112.015</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">40.779</span><span class="p p-Indicator">]]</span>
-<span class="w">      </span><span class="nt">size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
-<span class="w">      </span><span class="nt">ids</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">landfill</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">wwtp</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">stages</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">footprint</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">geometry</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">windows</span>
+<span class="w">          </span><span class="nt">coords</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[[</span><span class="nv">-111.97</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">40.515</span><span class="p p-Indicator">],</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">-112.015</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">40.779</span><span class="p p-Indicator">]]</span>
+<span class="w">          </span><span class="nt">size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<span class="w">          </span><span class="nt">ids</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">landfill</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">wwtp</span><span class="p p-Indicator">]</span>
 </pre></div>
 </div>
 <p>To make the grid PYSTILT picks finer or coarser, change
@@ -932,37 +965,45 @@ Receptors already in the file are left as they are.</p>
 </section>
 <section id="the-same-settings-in-python">
 <h2>The same settings in Python<a class="headerlink" href="#the-same-settings-in-python" title="Link to this heading">#</a></h2>
-<p>You can pass any <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> key to
+<p>You can pass the blocks of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> to
 <a class="reference internal" href="../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Project.init</span></code></a> directly, as plain dictionaries:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
 <span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
     <span class="s2">"./my_project"</span><span class="p">,</span>
     <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="s2">"/data/arl/hrrr"</span><span class="p">},</span>
-    <span class="n">grid</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">"xmin"</span><span class="p">:</span> <span class="o">-</span><span class="mf">114.0</span><span class="p">,</span> <span class="s2">"xmax"</span><span class="p">:</span> <span class="o">-</span><span class="mf">111.0</span><span class="p">,</span>
-        <span class="s2">"ymin"</span><span class="p">:</span> <span class="mf">39.0</span><span class="p">,</span> <span class="s2">"ymax"</span><span class="p">:</span> <span class="mf">42.0</span><span class="p">,</span>
-        <span class="s2">"xres"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s2">"yres"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">models</span><span class="o">=</span><span class="p">{</span><span class="s2">"hysplit"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"n_hours"</span><span class="p">:</span> <span class="o">-</span><span class="mi">24</span><span class="p">,</span> <span class="s2">"numpar"</span><span class="p">:</span> <span class="mi">500</span><span class="p">}},</span>
+    <span class="n">stages</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">"footprint"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"class"</span><span class="p">:</span> <span class="s2">"stilt.footprint.FootprintStage"</span><span class="p">,</span>
+            <span class="s2">"grid"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"xmin"</span><span class="p">:</span> <span class="o">-</span><span class="mf">114.0</span><span class="p">,</span> <span class="s2">"xmax"</span><span class="p">:</span> <span class="o">-</span><span class="mf">111.0</span><span class="p">,</span>
+                <span class="s2">"ymin"</span><span class="p">:</span> <span class="mf">39.0</span><span class="p">,</span> <span class="s2">"ymax"</span><span class="p">:</span> <span class="mf">42.0</span><span class="p">,</span>
+                <span class="s2">"xres"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s2">"yres"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">}</span>
     <span class="p">},</span>
     <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{},</span> <span class="s2">"hrrr-zi08"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"ziscale"</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">}},</span>
-    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>
-    <span class="n">numpar</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p>You can also use the config classes, which your editor can autocomplete and
-check:</p>
+<p>You can also build the config first, with the classes for a met and a grid,
+which your editor can autocomplete and check:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetConfig</span>
 
 <span class="n">config</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">ProjectConfig</span><span class="p">(</span>
     <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="n">MetConfig</span><span class="p">(</span><span class="n">directory</span><span class="o">=</span><span class="s2">"/data/arl/hrrr"</span><span class="p">)},</span>
-    <span class="n">grid</span><span class="o">=</span><span class="n">stilt</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span>
-        <span class="n">xmin</span><span class="o">=-</span><span class="mf">114.0</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=-</span><span class="mf">111.0</span><span class="p">,</span>
-        <span class="n">ymin</span><span class="o">=</span><span class="mf">39.0</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mf">42.0</span><span class="p">,</span>
-        <span class="n">xres</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">yres</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
-    <span class="p">),</span>
-    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">24</span><span class="p">,</span>
-    <span class="n">numpar</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+    <span class="n">models</span><span class="o">=</span><span class="p">{</span><span class="s2">"hysplit"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"n_hours"</span><span class="p">:</span> <span class="o">-</span><span class="mi">24</span><span class="p">,</span> <span class="s2">"numpar"</span><span class="p">:</span> <span class="mi">500</span><span class="p">}},</span>
+    <span class="n">stages</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">"footprint"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"class"</span><span class="p">:</span> <span class="s2">"stilt.footprint.FootprintStage"</span><span class="p">,</span>
+            <span class="s2">"grid"</span><span class="p">:</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span>
+                <span class="n">xmin</span><span class="o">=-</span><span class="mf">114.0</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=-</span><span class="mf">111.0</span><span class="p">,</span>
+                <span class="n">ymin</span><span class="o">=</span><span class="mf">39.0</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mf">42.0</span><span class="p">,</span>
+                <span class="n">xres</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">yres</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
     <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{}},</span>
 <span class="p">)</span>
 <span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="s2">"./my_project"</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>

@@ -1,0 +1,19 @@
+﻿stilt.footprint.FootprintStage
+==============================
+
+.. currentmodule:: stilt.footprint
+
+
+
+
+.. class-signature:: stilt.footprint.FootprintStage
+
+
+.. class-parameters:: stilt.footprint.FootprintStage
+
+
+
+
+
+
+

@@ -69,16 +69,22 @@ near-field correction, and use the same grid:
 
 .. code-block:: yaml
 
-   n_hours: -240
-   numpar: 250
-   hnf_plume: false
-   grid:
-     xmin: -15.0      # lon_ll
-     xmax: 35.0       # lon_ll + numpix_x * lon_res
-     ymin: 33.0       # lat_ll
-     ymax: 72.0       # lat_ll + numpix_y * lat_res
-     xres: 0.2        # lon_res
-     yres: 0.1        # lat_res
+   models:
+     hysplit:
+       n_hours: -240
+       numpar: 250
+
+   stages:
+     footprint:
+       class: stilt.footprint.FootprintStage
+       hnf_plume: false
+       grid:
+         xmin: -15.0      # lon_ll
+         xmax: 35.0       # lon_ll + numpix_x * lon_res
+         ymin: 33.0       # lat_ll
+         ymax: 72.0       # lat_ll + numpix_y * lat_res
+         xres: 0.2        # lon_res
+         yres: 0.1        # lat_res
 
 The coarsening grids, the ``dmass`` weighting, and the western-edge rule
 have no PYSTILT setting. Footprints from the two will not match cell by

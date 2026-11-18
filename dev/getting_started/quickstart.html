@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Your First Footprint &#8212; PYSTILT 0.1.0a29</title>
+    <title>Your First Footprint &#8212; PYSTILT dev</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=9cf7e2c3"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30.dev2+gdce324c84" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT dev</p>
   
 </a></div>
     
@@ -630,17 +630,20 @@ xarray:</p>
 <p>Two calls are enough for one receptor. For many receptors, make a
 <a class="reference internal" href="../reference/_api/stilt.Project.html#stilt.Project" title="stilt.Project"><code class="xref py py-class docutils literal notranslate"><span class="pre">Project</span></code></a>: a folder that holds your receptors and settings,
 runs every receptor, and keeps the results. <a class="reference internal" href="../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Project.init</span></code></a> creates the folder and writes both to it. The
-settings are the ones above:</p>
+settings are the ones above, each in the block of what it belongs to: the
+transport model’s under <code class="docutils literal notranslate"><span class="pre">models</span></code>, and the footprint’s under <code class="docutils literal notranslate"><span class="pre">stages</span></code>,
+in a block that names the footprint stage as its <code class="docutils literal notranslate"><span class="pre">class</span></code>:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [12]: </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
 <span class="gp">   ....: </span>    <span class="s2">"./my_first_project"</span><span class="p">,</span>
 <span class="gp">   ....: </span>    <span class="n">receptors</span><span class="o">=</span><span class="p">[</span><span class="n">receptor</span><span class="p">],</span>
 <span class="gp">   ....: </span>    <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="n">met</span><span class="p">},</span>          <span class="c1"># "hrrr" is a name you choose</span>
+<span class="gp">   ....: </span>    <span class="n">models</span><span class="o">=</span><span class="p">{</span>
+<span class="gp">   ....: </span>        <span class="s2">"hysplit"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"n_hours"</span><span class="p">:</span> <span class="o">-</span><span class="mi">12</span><span class="p">,</span> <span class="s2">"numpar"</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span> <span class="s2">"krand"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"seed"</span><span class="p">:</span> <span class="mi">42</span><span class="p">}</span>
+<span class="gp">   ....: </span>    <span class="p">},</span>
+<span class="gp">   ....: </span>    <span class="n">stages</span><span class="o">=</span><span class="p">{</span>
+<span class="gp">   ....: </span>        <span class="s2">"footprint"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"class"</span><span class="p">:</span> <span class="s2">"stilt.footprint.FootprintStage"</span><span class="p">,</span> <span class="s2">"grid"</span><span class="p">:</span> <span class="n">grid</span><span class="p">}</span>
+<span class="gp">   ....: </span>    <span class="p">},</span>
 <span class="gp">   ....: </span>    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{}},</span>       <span class="c1"># one variant: these settings, met hrrr</span>
-<span class="gp">   ....: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">12</span><span class="p">,</span>
-<span class="gp">   ....: </span>    <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
-<span class="gp">   ....: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-<span class="gp">   ....: </span>    <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
-<span class="gp">   ....: </span>    <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span>
 <span class="gp">   ....: </span><span class="p">)</span>
 <span class="gp">   ....: </span>
 </pre></div>
@@ -725,26 +728,31 @@ outputs already exist and skips them. If you add receptors with
 </pre></div>
 </div>
 <p>Open <code class="docutils literal notranslate"><span class="pre">my_first_project/config.yaml</span></code> and set the meteorology folder and the
-footprint grid. The keys are the same as in the Python example
+footprint grid. The blocks are the same as in the Python example
 above:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/arl/hrrr</span>
 
+<span class="nt">models</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hysplit</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-12</span>
+<span class="w">    </span><span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
+<span class="w">    </span><span class="nt">krand</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">    </span><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42</span>
+
+<span class="nt">stages</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">footprint</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">class</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stilt.footprint.FootprintStage</span>
+<span class="w">    </span><span class="nt">grid</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-113.0</span>
+<span class="w">      </span><span class="nt">xmax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-110.5</span>
+<span class="w">      </span><span class="nt">ymin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">40.0</span>
+<span class="w">      </span><span class="nt">ymax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42.0</span>
+<span class="w">      </span><span class="nt">xres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<span class="w">      </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+
 <span class="nt">variants</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
-
-<span class="nt">grid</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-113.0</span>
-<span class="w">  </span><span class="nt">xmax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-110.5</span>
-<span class="w">  </span><span class="nt">ymin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">40.0</span>
-<span class="w">  </span><span class="nt">ymax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42.0</span>
-<span class="w">  </span><span class="nt">xres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
-<span class="w">  </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
-
-<span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-12</span>
-<span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
-<span class="nt">krand</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-<span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42</span>
 </pre></div>
 </div>
 <p>Add your receptor to <code class="docutils literal notranslate"><span class="pre">my_first_project/receptors.csv</span></code> below the header

@@ -72,7 +72,7 @@ each a ``stilt run --task`` command line.
      - Removed
    * - Cloud object store outputs (GCS, S3)
      - Implemented
-   * - Transport models other than HYSPLIT, named by import path (``model: mypkg.MyModel``), including models that run many receptors per call
+   * - Transport models other than HYSPLIT, named by import path (``class: mypkg.MyModel`` in a ``models`` block), including models that run many receptors per call
      - Implemented (the interface; HYSPLIT is the one model)
    * - Met columns (``mlht``, ``dens``, ``pres``, ``zsfc``) sampled at particle positions, for a model that writes only positions (``stilt.sampling.sample_met``)
      - Implemented (see the Meteorology guide for how closely ``pres`` and ``dens`` match HYSPLIT's)

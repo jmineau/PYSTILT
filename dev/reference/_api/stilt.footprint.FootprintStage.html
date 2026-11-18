@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.ProjectConfig.footprint &#8212; PYSTILT 0.1.0a29</title>
+    <title>stilt.footprint.FootprintStage &#8212; PYSTILT dev</title>
   
   
   
@@ -42,29 +42,29 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=947601de"></script>
+    <script src="../../_static/documentation_options.js?v=9cf7e2c3"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/_api/stilt.ProjectConfig.footprint';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/_api/stilt.footprint.FootprintStage';</script>
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="stilt.ProjectConfig.transport" href="stilt.ProjectConfig.transport.html" />
-    <link rel="prev" title="stilt.ProjectConfig" href="stilt.ProjectConfig.html" />
+    <link rel="next" title="stilt.ExecutionConfig" href="stilt.ExecutionConfig.html" />
+    <link rel="prev" title="stilt.FootprintConfig.tres_minutes" href="stilt.FootprintConfig.tres_minutes.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30.dev2+gdce324c84" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT dev</p>
   
 </a></div>
     
@@ -601,10 +601,7 @@
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../layout.html">Output Layout</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../configuration.html">Configuration</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
-<li class="toctree-l2 current active has-children"><a class="reference internal" href="stilt.ProjectConfig.html">stilt.ProjectConfig</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
-<li class="toctree-l3 current active"><a aria-current="page" class="current reference internal" href="#">stilt.ProjectConfig.footprint</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.transport.html">stilt.ProjectConfig.transport</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.declared.html">stilt.ProjectConfig.declared</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.ProjectConfig.html">stilt.ProjectConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.from_yaml.html">stilt.ProjectConfig.from_yaml</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.met_config.html">stilt.ProjectConfig.met_config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.model_post_init.html">stilt.ProjectConfig.model_post_init</a></li>
@@ -617,7 +614,18 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.tres_minutes.html">stilt.FootprintConfig.tres_minutes</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.ExecutionConfig.html">stilt.ExecutionConfig</a></li>
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">stilt.footprint.FootprintStage</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.ExecutionConfig.html">stilt.ExecutionConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.ExecutionConfig.cpus.html">stilt.ExecutionConfig.cpus</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.ExecutionConfig.fetch.html">stilt.ExecutionConfig.fetch</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.execution.LocalConfig.html">stilt.execution.LocalConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.execution.SlurmConfig.html">stilt.execution.SlurmConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.execution.SlurmConfig.options.html">stilt.execution.SlurmConfig.options</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.execution.FetchConfig.html">stilt.execution.FetchConfig</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Bounds.html">stilt.Bounds</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Bounds.contains.html">stilt.Bounds.contains</a></li>
 </ul>
@@ -894,10 +902,7 @@
     
     <li class="breadcrumb-item"><a href="../configuration.html" class="nav-link">Configuration</a></li>
     
-    
-    <li class="breadcrumb-item"><a href="stilt.ProjectConfig.html" class="nav-link">stilt.ProjectConfig</a></li>
-    
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.ProjectConfig.footprint</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.footprint.FootprintStage</span></li>
   </ul>
 </nav>
 </div>
@@ -914,12 +919,28 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="stilt-projectconfig-footprint">
-<h1>stilt.ProjectConfig.footprint<a class="headerlink" href="#stilt-projectconfig-footprint" title="Link to this heading">#</a></h1>
-<dl class="py property">
-<dt class="sig sig-object py" id="stilt.ProjectConfig.footprint">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ProjectConfig.</span></span><span class="sig-name descname"><span class="pre">footprint</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">FootprintConfig</span></span><a class="headerlink" href="#stilt.ProjectConfig.footprint" title="Link to this definition">#</a></dt>
-<dd><p>The footprint settings from the top-level keys, which every variant starts from.</p>
+  <section id="stilt-footprint-footprintstage">
+<h1>stilt.footprint.FootprintStage<a class="headerlink" href="#stilt-footprint-footprintstage" title="Link to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="stilt.footprint.FootprintStage">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.footprint.</span></span><span class="sig-name descname"><span class="pre">FootprintStage</span></span><a class="reference internal" href="../../_modules/stilt/footprint/stage.html#FootprintStage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.footprint.FootprintStage" title="Link to this definition">#</a></dt>
+<dd><p>The stage that grids each simulation’s particles into its footprint.</p>
+<p>Name it as the <code class="docutils literal notranslate"><span class="pre">class</span></code> of a block under <code class="docutils literal notranslate"><span class="pre">stages:</span></code> in
+<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>. The block’s other keys are the footprint settings
+(<code class="xref py py-class docutils literal notranslate"><span class="pre">FootprintConfig</span></code>), the defaults of every variant; a variant
+changes some under its own <code class="docutils literal notranslate"><span class="pre">stages</span></code> key, or sets the stage to null to
+make particles only.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">stages</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">footprint</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">class</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stilt.footprint.FootprintStage</span>
+<span class="w">    </span><span class="nt">grid</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="nv">-113.0</span><span class="p p-Indicator">,</span><span class="nt"> xmax</span><span class="p">:</span><span class="w"> </span><span class="nv">-110.5</span><span class="p p-Indicator">,</span><span class="nt"> ymin</span><span class="p">:</span><span class="w"> </span><span class="nv">40.0</span><span class="p p-Indicator">,</span><span class="nt"> ymax</span><span class="p">:</span><span class="w"> </span><span class="nv">42.0</span><span class="p p-Indicator">,</span><span class="nt"> xres</span><span class="p">:</span><span class="w"> </span><span class="nv">0.01</span><span class="p p-Indicator">,</span><span class="nt"> yres</span><span class="p">:</span><span class="w"> </span><span class="nv">0.01</span><span class="p p-Indicator">}</span>
+
+<span class="nt">variants</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
+<span class="w">  </span><span class="nt">hrrr-coarse</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">stages</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">footprint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">grid</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">xres</span><span class="p">:</span><span class="w"> </span><span class="nv">0.05</span><span class="p p-Indicator">,</span><span class="nt"> yres</span><span class="p">:</span><span class="w"> </span><span class="nv">0.05</span><span class="p p-Indicator">}}}}</span>
+<span class="w">  </span><span class="nt">hrrr-particles</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">stages</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">footprint</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">}}</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>
@@ -935,20 +956,20 @@
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="stilt.ProjectConfig.html"
+       href="stilt.FootprintConfig.tres_minutes.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">stilt.ProjectConfig</p>
+        <p class="prev-next-title">stilt.FootprintConfig.tres_minutes</p>
       </div>
     </a>
     <a class="right-next"
-       href="stilt.ProjectConfig.transport.html"
+       href="stilt.ExecutionConfig.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">stilt.ProjectConfig.transport</p>
+        <p class="prev-next-title">stilt.ExecutionConfig</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -971,14 +992,14 @@
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.ProjectConfig.footprint"><code class="docutils literal notranslate"><span class="pre">ProjectConfig.footprint</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.footprint.FootprintStage"><code class="docutils literal notranslate"><span class="pre">FootprintStage</span></code></a></li>
 </ul>
   </nav></div>
 
   <div class="sidebar-secondary-item">
 
   <div class="tocsection sourcelink">
-    <a href="../../_sources/reference/_api/stilt.ProjectConfig.footprint.rst.txt">
+    <a href="../../_sources/reference/_api/stilt.footprint.FootprintStage.rst.txt">
       <i class="fa-solid fa-file-lines"></i> Show Source
     </a>
   </div>

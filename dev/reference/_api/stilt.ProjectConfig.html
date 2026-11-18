@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.ProjectConfig &#8212; PYSTILT 0.1.0a29</title>
+    <title>stilt.ProjectConfig &#8212; PYSTILT dev</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=947601de"></script>
+    <script src="../../_static/documentation_options.js?v=9cf7e2c3"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,19 +52,19 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="stilt.ProjectConfig.footprint" href="stilt.ProjectConfig.footprint.html" />
+    <link rel="next" title="stilt.ProjectConfig.from_yaml" href="stilt.ProjectConfig.from_yaml.html" />
     <link rel="prev" title="Configuration" href="../configuration.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30.dev2+gdce324c84" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT dev</p>
   
 </a></div>
     
@@ -602,9 +602,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../layout.html">Output Layout</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../configuration.html">Configuration</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2 current active has-children"><a aria-current="page" class="current reference internal" href="#">stilt.ProjectConfig</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.footprint.html">stilt.ProjectConfig.footprint</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.transport.html">stilt.ProjectConfig.transport</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.declared.html">stilt.ProjectConfig.declared</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.from_yaml.html">stilt.ProjectConfig.from_yaml</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.met_config.html">stilt.ProjectConfig.met_config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.model_post_init.html">stilt.ProjectConfig.model_post_init</a></li>
@@ -617,7 +614,18 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.tres_minutes.html">stilt.FootprintConfig.tres_minutes</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.ExecutionConfig.html">stilt.ExecutionConfig</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.footprint.FootprintStage.html">stilt.footprint.FootprintStage</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.ExecutionConfig.html">stilt.ExecutionConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.ExecutionConfig.cpus.html">stilt.ExecutionConfig.cpus</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.ExecutionConfig.fetch.html">stilt.ExecutionConfig.fetch</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.execution.LocalConfig.html">stilt.execution.LocalConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.execution.SlurmConfig.html">stilt.execution.SlurmConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.execution.SlurmConfig.options.html">stilt.execution.SlurmConfig.options</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.execution.FetchConfig.html">stilt.execution.FetchConfig</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Bounds.html">stilt.Bounds</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Bounds.contains.html">stilt.Bounds.contains</a></li>
 </ul>
@@ -915,18 +923,17 @@
 <h1>stilt.ProjectConfig<a class="headerlink" href="#stilt-projectconfig" title="Link to this heading">#</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="stilt.ProjectConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.</span></span><span class="sig-name descname"><span class="pre">ProjectConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'hysplit'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typing.Any]</span> <span class="pre">|</span> <span class="pre">str]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variants</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typing.Any]]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">execution</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">stilt.execution.config.ExecutionConfig</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'output'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**extra_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/stilt/config.html#ProjectConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.ProjectConfig" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.</span></span><span class="sig-name descname"><span class="pre">ProjectConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typing.Any]</span> <span class="pre">|</span> <span class="pre">str]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">models</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typing.Any]</span> <span class="pre">|</span> <span class="pre">None]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stages</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typing.Any]]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variants</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typing.Any]</span> <span class="pre">|</span> <span class="pre">None]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">execution</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">stilt.execution.config.ExecutionConfig</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'output'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/stilt/config.html#ProjectConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.ProjectConfig" title="Link to this definition">#</a></dt>
 <dd><p>A project’s configuration, as read from <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p>
-<p>The transport model’s parameters and the footprint fields are flat,
-top-level keys, and are the defaults for every variant. <code class="docutils literal notranslate"><span class="pre">model</span></code> names
-the transport model, HYSPLIT unless set; its parameters are checked by
-its own config class and are in <a class="reference internal" href="stilt.ProjectConfig.transport.html#stilt.ProjectConfig.transport" title="stilt.ProjectConfig.transport"><code class="xref py py-attr docutils literal notranslate"><span class="pre">transport</span></code></a>. The footprint fields
-are in <a class="reference internal" href="stilt.ProjectConfig.footprint.html#stilt.ProjectConfig.footprint" title="stilt.ProjectConfig.footprint"><code class="xref py py-attr docutils literal notranslate"><span class="pre">footprint</span></code></a>. Each variant names a met and overrides some of
-the defaults; only the declared variants run. A variant that names
-another <code class="docutils literal notranslate"><span class="pre">model</span></code> gives that model’s own parameters itself, and
-inherits the parameters every model shares
-(<a class="reference internal" href="stilt.transport.TransportConfig.html#stilt.transport.TransportConfig" title="stilt.transport.TransportConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">TransportConfig</span></code></a>).
-An unknown key is an error that names the nearest setting.</p>
+<p>The file is blocks. <code class="docutils literal notranslate"><span class="pre">mets</span></code> names the meteorology, <code class="docutils literal notranslate"><span class="pre">models</span></code> the
+transport models, <code class="docutils literal notranslate"><span class="pre">stages</span></code> what is made from each simulation’s
+particles (the footprint), and <code class="docutils literal notranslate"><span class="pre">variants</span></code> what runs. A model’s or a
+stage’s block holds its settings, checked by its own config class: the
+defaults of every variant that uses it. Each variant names a met and a
+model, when there are several, and overrides some of the defaults; only
+the declared variants run. No setting sits at the top level: one written
+there is refused with a message that names its block. An unknown key is
+an error that names the nearest setting.</p>
 </dd></dl>
 
 <section id="parameters">
@@ -944,39 +951,29 @@ An unknown key is an error that names the nearest setting.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">model</span></code></p></td>
-<td><p>Transport model the variants run with, unless a variant names another: <code class="docutils literal notranslate"><span class="pre">hysplit</span></code>, <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> (runs imported from STILT-R, which cannot run), or the import path of a model class in another package, such as <code class="docutils literal notranslate"><span class="pre">mypkg.models.MyModel</span></code>. Its parameters are top-level keys of the config.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">'hysplit'</span></code></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mets</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mets</span></code></p></td>
 <td><p>Meteorology by name, such as <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>: the folder of its files, or a mapping of its settings. At least one is required. Each is checked by the met config of the transport model that reads it (<a class="reference internal" href="stilt.transport.hysplit.MetConfig.html#stilt.transport.hysplit.MetConfig" title="stilt.transport.hysplit.MetConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transport.hysplit.MetConfig</span></code></a> for HYSPLIT).</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">{}</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">variants</span></code></p></td>
-<td><p>Variants by name, each a set of overrides of the defaults. A variant may also set <code class="docutils literal notranslate"><span class="pre">met</span></code> (needed with several mets unless the variant has a met’s name) and <code class="docutils literal notranslate"><span class="pre">realizations</span></code> (run N times, realization k with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>, as one ensemble). Variants with the same transport settings share one transport model run and differ in the footprint made from it. At least one is required: <code class="docutils literal notranslate"><span class="pre">hrrr:</span> <span class="pre">{}</span></code> runs the defaults.</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">models</span></code></p></td>
+<td><p>Transport models by name, each a block of its settings: the defaults of every variant that runs it. A block named <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> or <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> (runs imported from STILT-R, which cannot run) is that built-in model. A model class in another package gets a block of any name that gives its import path as <code class="docutils literal notranslate"><span class="pre">class</span></code>, such as <code class="docutils literal notranslate"><span class="pre">class:</span> <span class="pre">mypkg.models.MyModel</span></code>. A model has one block. Left out, the project runs HYSPLIT with its defaults.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">{'hysplit':</span> <span class="pre">{}}</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stages</span></code></p></td>
+<td><p>What is made from each simulation’s particles, by name, each a block that gives the stage’s import path as <code class="docutils literal notranslate"><span class="pre">class</span></code> and then its settings. The footprint is <code class="docutils literal notranslate"><span class="pre">class:</span> <span class="pre">stilt.footprint.FootprintStage</span></code>, with the footprint settings (<code class="xref py py-class docutils literal notranslate"><span class="pre">FootprintConfig</span></code>). A stage runs for every variant, unless the variant sets it to null. Left out, the project makes particles only.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">{}</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">execution</span></code></p></td>
-<td><p>Where the receptors run and with what resources, such as <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">slurm</span></code> and its options.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">ExecutionConfig(backend='local',</span> <span class="pre">n_workers=1,</span> <span class="pre">cpus=1,</span> <span class="pre">time=None,</span> <span class="pre">mem=None,</span> <span class="pre">partition=...</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">variants</span></code></p></td>
+<td><p>Variants by name, each a set of overrides of the defaults. A variant’s own keys are <code class="docutils literal notranslate"><span class="pre">met</span></code> (needed with several mets unless the variant has a met’s name), <code class="docutils literal notranslate"><span class="pre">model</span></code> (the name of its <code class="docutils literal notranslate"><span class="pre">models</span></code> block, needed with several), <code class="docutils literal notranslate"><span class="pre">realizations</span></code> (run N times, realization k with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>, as one ensemble), and <code class="docutils literal notranslate"><span class="pre">stages</span></code> (a stage’s settings to change, by the stage’s name, or null for a variant without it: <code class="docutils literal notranslate"><span class="pre">stages:</span> <span class="pre">{footprint:</span> <span class="pre">null}</span></code> makes particles only). Every other key is a setting of its model. Variants with the same transport settings share one transport model run and differ in the footprint made from it. At least one is required: <code class="docutils literal notranslate"><span class="pre">hrrr:</span> <span class="pre">{}</span></code> runs the defaults.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">{}</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">execution</span></code></p></td>
+<td><p>Where the receptors run and with what resources, such as <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">slurm</span></code> and its options.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ExecutionConfig(backend='local',</span> <span class="pre">local=LocalConfig(cpus=1,</span> <span class="pre">fetch=True),</span> <span class="pre">slurm=SlurmCo...</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
 <td><p>Directory the results go to, relative to the project directory unless absolute. A URL such as <code class="docutils literal notranslate"><span class="pre">s3://bucket/output</span></code> puts it on an object store. Several projects can name the same directory and share runs.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">'output'</span></code></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-<section id="attributes">
-<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading">#</a></h2>
-<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="stilt.ProjectConfig.footprint.html#stilt.ProjectConfig.footprint" title="stilt.ProjectConfig.footprint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">footprint</span></code></a></p></td>
-<td><p>The footprint settings from the top-level keys, which every variant starts from.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="stilt.ProjectConfig.transport.html#stilt.ProjectConfig.transport" title="stilt.ProjectConfig.transport"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transport</span></code></a></p></td>
-<td><p>The transport model's config from the top-level keys, which every variant starts from.</p></td>
 </tr>
 </tbody>
 </table>
@@ -986,22 +983,19 @@ An unknown key is an error that names the nearest setting.</p>
 <h2>Methods<a class="headerlink" href="#methods" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="stilt.ProjectConfig.declared.html#stilt.ProjectConfig.declared" title="stilt.ProjectConfig.declared"><code class="xref py py-obj docutils literal notranslate"><span class="pre">declared</span></code></a>()</p></td>
-<td><p>Return the variants as written.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="stilt.ProjectConfig.from_yaml.html#stilt.ProjectConfig.from_yaml" title="stilt.ProjectConfig.from_yaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_yaml</span></code></a>(path)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.ProjectConfig.from_yaml.html#stilt.ProjectConfig.from_yaml" title="stilt.ProjectConfig.from_yaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_yaml</span></code></a>(path)</p></td>
 <td><p>Load a project config from a YAML file.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="stilt.ProjectConfig.met_config.html#stilt.ProjectConfig.met_config" title="stilt.ProjectConfig.met_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">met_config</span></code></a>(name[, model])</p></td>
-<td><p>Return the met called <em>name</em>, checked by the met config of the transport model <em>model</em>.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="stilt.ProjectConfig.met_config.html#stilt.ProjectConfig.met_config" title="stilt.ProjectConfig.met_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">met_config</span></code></a>(name[, model])</p></td>
+<td><p>Return the met called <em>name</em>, checked by the met config of the transport model that reads it.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="stilt.ProjectConfig.model_post_init.html#stilt.ProjectConfig.model_post_init" title="stilt.ProjectConfig.model_post_init"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model_post_init</span></code></a>(context, /)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.ProjectConfig.model_post_init.html#stilt.ProjectConfig.model_post_init" title="stilt.ProjectConfig.model_post_init"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model_post_init</span></code></a>(context, /)</p></td>
 <td><p>This function is meant to behave like a BaseModel method to initialize private attributes.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="stilt.ProjectConfig.resolve.html#stilt.ProjectConfig.resolve" title="stilt.ProjectConfig.resolve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve</span></code></a>([directory])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="stilt.ProjectConfig.resolve.html#stilt.ProjectConfig.resolve" title="stilt.ProjectConfig.resolve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve</span></code></a>([directory])</p></td>
 <td><p>Return one <code class="xref py py-class docutils literal notranslate"><span class="pre">Variant</span></code> per declared variant, in declared order.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="stilt.ProjectConfig.to_yaml.html#stilt.ProjectConfig.to_yaml" title="stilt.ProjectConfig.to_yaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_yaml</span></code></a>([path])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.ProjectConfig.to_yaml.html#stilt.ProjectConfig.to_yaml" title="stilt.ProjectConfig.to_yaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_yaml</span></code></a>([path])</p></td>
 <td><p>Return the config as YAML, and write it to <code class="docutils literal notranslate"><span class="pre">path</span></code> when given.</p></td>
 </tr>
 </tbody>
@@ -1030,11 +1024,11 @@ An unknown key is an error that names the nearest setting.</p>
       </div>
     </a>
     <a class="right-next"
-       href="stilt.ProjectConfig.footprint.html"
+       href="stilt.ProjectConfig.from_yaml.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">stilt.ProjectConfig.footprint</p>
+        <p class="prev-next-title">stilt.ProjectConfig.from_yaml</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -1059,7 +1053,6 @@ An unknown key is an error that names the nearest setting.</p>
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.ProjectConfig"><code class="docutils literal notranslate"><span class="pre">ProjectConfig</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parameters">Parameters</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#attributes">Attributes</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#methods">Methods</a></li>
 </ul>
   </nav></div>

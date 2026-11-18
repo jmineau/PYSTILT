@@ -67,18 +67,27 @@ you can stop and pick up where you left off:
    project = stilt.Project.init(
        "./wbb_project",
        receptors=receptors,
-       n_hours=-12,              # follow the air 12 hours back
-       numpar=100,               # particles per receptor
-       krand=2,
-       seed=42,                  # the same particles on every run
        mets={"hrrr": met},
-       grid={
-           "xmin": -113.0, "xmax": -110.5,
-           "ymin": 40.0,   "ymax": 42.0,
-           "xres": 0.01,   "yres": 0.01,
+       models={
+           "hysplit": {
+               "n_hours": -12,   # follow the air 12 hours back
+               "numpar": 100,    # particles per receptor
+               "krand": 2,
+               "seed": 42,       # the same particles on every run
+           }
+       },
+       stages={
+           "footprint": {
+               "class": "stilt.footprint.FootprintStage",
+               "grid": {
+                   "xmin": -113.0, "xmax": -110.5,
+                   "ymin": 40.0,   "ymax": 42.0,
+                   "xres": 0.01,   "yres": 0.01,
+               },
+           }
        },
        variants={"hrrr": {}},
-       execution={"backend": "local", "cpus": 4},   # 4 receptors at a time
+       execution={"backend": "local", "local": {"cpus": 4}},   # 4 receptors at a time
    )
 
 We use 100 particles and 12 hours so that this page builds quickly. For a

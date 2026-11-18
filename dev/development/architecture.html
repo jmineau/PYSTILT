@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Architecture &#8212; PYSTILT 0.1.0a29</title>
+    <title>Architecture &#8212; PYSTILT dev</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=9cf7e2c3"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30.dev2+gdce324c84" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -135,7 +135,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT dev</p>
   
 </a></div>
     
@@ -557,11 +557,11 @@ surface. Everything else is internal and can change.</p>
                      field sampled where the particles end (sim.background)
   transport_error.py transport_error: the transport error of the
                      enhancement, one receptor or a selection in threads
-  config.py          ProjectConfig: reads config.yaml, splits the flat keys
-                     into the model's config and the footprint's, rejects
-                     unknown keys naming the nearest setting, checks each
-                     declared variant; resolve() makes each a Variant (its
-                     configs, the model build, its two hashes)
+  config.py          ProjectConfig: reads config.yaml's blocks (mets, models,
+                     stages, variants), refuses a setting outside its
+                     block and an unknown key naming the nearest setting,
+                     checks each declared variant; resolve() makes each a
+                     Variant (its configs, the model build, its two hashes)
   identity.py        settings records and their hashes: what a run and a
                      footprint were made with, in _settings.yaml
   receptors/
@@ -642,14 +642,16 @@ job array (<code class="docutils literal notranslate"><span class="pre">backend:
 <p>For Slurm, <code class="docutils literal notranslate"><span class="pre">submit</span></code> writes
 <code class="docutils literal notranslate"><span class="pre">_slurm/&lt;stamp&gt;/{receptors.txt,receptors.parquet,execution.yaml,job.sh}</span></code> in
 the project and calls <code class="docutils literal notranslate"><span class="pre">sbatch</span></code>. Each task runs <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--receptors</span>
-<span class="pre">receptors.parquet</span> <span class="pre">--task</span> <span class="pre">$SLURM_ARRAY_TASK_ID/N</span> <span class="pre">--execution</span> <span class="pre">execution.yaml</span></code>.
+<span class="pre">receptors.parquet</span> <span class="pre">--task</span> <span class="pre">$SLURM_ARRAY_TASK_ID/N</span> <span class="pre">--execution</span> <span class="pre">execution.yaml</span>
+<span class="pre">--cpus</span> <span class="pre">&lt;cpus&gt;</span></code>: a task runs its share in its own process, as a local run
+does, so the script hands it the array’s <code class="docutils literal notranslate"><span class="pre">cpus</span></code>.
 The parquet file holds the submitted receptors’ checked rows, which the
 task’s project takes in place of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>. <code class="docutils literal notranslate"><span class="pre">submit</span></code> returns the job
 id at once, and <code class="docutils literal notranslate"><span class="pre">run</span></code> waits by polling <code class="docutils literal notranslate"><span class="pre">sacct</span></code>.</p>
 <p>When a simulation whose particles are missing uses a met that downloads
 (the transport model’s <code class="docutils literal notranslate"><span class="pre">downloads_met</span></code>), <code class="docutils literal notranslate"><span class="pre">submit</span></code> first submits
 <code class="docutils literal notranslate"><span class="pre">fetch.sh</span></code> (<code class="docutils literal notranslate"><span class="pre">fetch_script</span></code>), one task of <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span> <span class="pre">--receptors</span>
-<span class="pre">receptors.parquet</span></code> with the resources of <code class="docutils literal notranslate"><span class="pre">execution.fetch</span></code>, and gives the
+<span class="pre">receptors.parquet</span></code> with the resources of <code class="docutils literal notranslate"><span class="pre">execution.slurm.fetch</span></code>, and gives the
 array <code class="docutils literal notranslate"><span class="pre">--dependency=afterany:&lt;fetch</span> <span class="pre">job&gt;</span></code>. <code class="docutils literal notranslate"><span class="pre">afterany</span></code> because Slurm
 cannot tell <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span></code>’s exit 1 (some files missing) from 3 (stopped,
 archive unreachable), and in both cases the runs whose met is there should
@@ -796,29 +798,42 @@ module (the transport registry and the STILT-R model) is not checked.</p>
 </section>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">ProjectConfig</span></code> is the root. It holds <code class="docutils literal notranslate"><span class="pre">model</span></code> (the transport model,
-<code class="docutils literal notranslate"><span class="pre">hysplit</span></code> unless set), that model’s parameters and the footprint
-(<code class="docutils literal notranslate"><span class="pre">FootprintConfig</span></code>) fields as flat defaults, <code class="docutils literal notranslate"><span class="pre">mets</span></code>, and <code class="docutils literal notranslate"><span class="pre">variants</span></code>
-(overrides of the defaults).</p>
+<p><code class="docutils literal notranslate"><span class="pre">ProjectConfig</span></code> is the root, and <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> is its blocks: <code class="docutils literal notranslate"><span class="pre">mets</span></code>,
+<code class="docutils literal notranslate"><span class="pre">models</span></code>, <code class="docutils literal notranslate"><span class="pre">stages</span></code> and <code class="docutils literal notranslate"><span class="pre">variants</span></code> each map a name to a block, beside
+<code class="docutils literal notranslate"><span class="pre">execution</span></code> and <code class="docutils literal notranslate"><span class="pre">output</span></code>. No setting sits at the top level; one written
+there is refused with a message naming its block.</p>
 <ul class="simple">
-<li><p>The model’s parameters are checked by its own config class
-(<code class="docutils literal notranslate"><span class="pre">stilt.transport.hysplit.HysplitConfig</span></code>; <code class="docutils literal notranslate"><span class="pre">config.transport</span></code>), reached
-through <code class="docutils literal notranslate"><span class="pre">stilt.transport.get_model</span></code>. The top-level footprint fields are
-<code class="docutils literal notranslate"><span class="pre">config.footprint</span></code>.</p></li>
-<li><p>A model is a variant axis, like a met. A variant that names another
-<code class="docutils literal notranslate"><span class="pre">model</span></code> gives that model’s own parameters itself, and inherits the met,
-the footprint fields, and the parameters PYSTILT’s own code reads (the base
+<li><p>A <code class="docutils literal notranslate"><span class="pre">models</span></code> block holds one transport model’s parameters, the defaults
+of every variant that runs it. The block’s name is the handle a variant
+uses (<code class="docutils literal notranslate"><span class="pre">model:</span></code>); the model is the block’s <code class="docutils literal notranslate"><span class="pre">class</span></code> (an import path) or,
+without one, the built-in model of the block’s name. A class has one
+block. The parameters are checked by the model’s own config class
+(<code class="docutils literal notranslate"><span class="pre">stilt.transport.hysplit.HysplitConfig</span></code>), reached through
+<code class="docutils literal notranslate"><span class="pre">stilt.transport.get_model</span></code>: by name when the file loads, and by value
+as a variant runs them (at load for a variant that changes none, else in
+<code class="docutils literal notranslate"><span class="pre">resolve</span></code>), since a block need not be complete (the <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> model
+has no defaults). Without <code class="docutils literal notranslate"><span class="pre">models</span></code>, the project runs <code class="docutils literal notranslate"><span class="pre">hysplit</span></code>.</p></li>
+<li><p>A <code class="docutils literal notranslate"><span class="pre">stages</span></code> block names what is made from each simulation’s particles
+by its <code class="docutils literal notranslate"><span class="pre">class</span></code>. The footprint, <code class="docutils literal notranslate"><span class="pre">stilt.footprint.FootprintStage</span></code>, is
+the one stage, and its block holds the <code class="docutils literal notranslate"><span class="pre">FootprintConfig</span></code> fields. A stage
+runs for every variant; a variant changes its settings under its own
+<code class="docutils literal notranslate"><span class="pre">stages</span></code> key (<code class="docutils literal notranslate"><span class="pre">grid</span></code> merges field by field) or sets it to null for
+particles only. A footprint left with neither a grid nor a geometry is an
+error.</p></li>
+<li><p>A model is a variant axis, like a met. A variant’s own keys are <code class="docutils literal notranslate"><span class="pre">met</span></code>,
+<code class="docutils literal notranslate"><span class="pre">model</span></code> (needed with several models), <code class="docutils literal notranslate"><span class="pre">realizations</span></code> and <code class="docutils literal notranslate"><span class="pre">stages</span></code>;
+every other key is a setting of its model. Each model’s block holds all of
+its parameters, the ones PYSTILT’s own code reads among them (the base
 <code class="docutils literal notranslate"><span class="pre">TransportConfig</span></code>: <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">seed</span></code>, <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code>,
 <code class="docutils literal notranslate"><span class="pre">pbl_height</span></code>, <code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code>). <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is a footprint field:
 the near-field correction is applied when a footprint is made, so a stored
 particle file holds the model’s <code class="docutils literal notranslate"><span class="pre">foot</span></code>. A
 parameter goes on the base only when the core reads it; <code class="docutils literal notranslate"><span class="pre">numpar</span></code> and
 every <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> setting are HYSPLIT’s.</p></li>
-<li><p>When it loads, <code class="docutils literal notranslate"><span class="pre">ProjectConfig</span></code> checks each declared variant against the
-defaults (names, met, model, <code class="docutils literal notranslate"><span class="pre">realizations</span></code>, grid merging) and rejects an
-unknown key with the nearest known one (<code class="docutils literal notranslate"><span class="pre">difflib</span></code>), reading no other
-file. <code class="docutils literal notranslate"><span class="pre">from:</span></code> is rejected. <code class="docutils literal notranslate"><span class="pre">grid:</span> <span class="pre">null</span></code> means particles only, and
-footprint settings without a grid are an error.</p></li>
+<li><p>When it loads, <code class="docutils literal notranslate"><span class="pre">ProjectConfig</span></code> checks each block and each declared
+variant (names, met, model, <code class="docutils literal notranslate"><span class="pre">realizations</span></code>, stage overrides) and rejects
+an unknown key with the nearest known one (<code class="docutils literal notranslate"><span class="pre">difflib</span></code>), reading no other
+file. <code class="docutils literal notranslate"><span class="pre">from:</span></code> is rejected.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ProjectConfig.resolve(directory)</span></code> (behind <code class="docutils literal notranslate"><span class="pre">project.variants</span></code>) turns
 each variant into <code class="docutils literal notranslate"><span class="pre">Variant</span></code> objects. It validates the variant’s transport
 settings with its model’s config class once, keeps <code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">N</span></code> as
@@ -832,7 +847,8 @@ grid, and asks the transport model its version once per build.
 package (<code class="docutils literal notranslate"><span class="pre">met_config_class</span></code>; HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">MetConfig</span></code> is in
 <code class="docutils literal notranslate"><span class="pre">stilt.transport.hysplit</span></code>). <code class="docutils literal notranslate"><span class="pre">ProjectConfig.mets</span></code> holds each met as
 written, and <code class="docutils literal notranslate"><span class="pre">ProjectConfig.met_config(name,</span> <span class="pre">model)</span></code> checks it with the
-met config of the model that reads it. <code class="docutils literal notranslate"><span class="pre">Bounds</span></code> and <code class="docutils literal notranslate"><span class="pre">Grid</span></code> are in
+met config of the model that reads it (<code class="docutils literal notranslate"><span class="pre">model</span></code> a <code class="docutils literal notranslate"><span class="pre">models</span></code> block’s
+name). With several models, a met no variant uses is not checked. <code class="docutils literal notranslate"><span class="pre">Bounds</span></code> and <code class="docutils literal notranslate"><span class="pre">Grid</span></code> are in
 <code class="docutils literal notranslate"><span class="pre">stilt.spatial</span></code>, which needs no shapely, since more than footprints use
 rasters. <code class="docutils literal notranslate"><span class="pre">stilt.config</span></code> composes them, so nothing below the project’s
 layer imports <code class="docutils literal notranslate"><span class="pre">stilt.config</span></code>.</p></li>
@@ -856,12 +872,18 @@ config classes (<code class="docutils literal notranslate"><span class="pre">sti
 with a default still matches. Stored records ignore keys this version does
 not know.</p></li>
 <li><p>Every field is a plain pydantic <code class="docutils literal notranslate"><span class="pre">Field(default,</span> <span class="pre">description=...)</span></code>, and
-the public config stays flat (<code class="docutils literal notranslate"><span class="pre">ProjectConfig(numpar=...,</span> <span class="pre">seed=...)</span></code>).
+the settings inside a block stay flat (<code class="docutils literal notranslate"><span class="pre">models={&quot;hysplit&quot;:</span> <span class="pre">{&quot;numpar&quot;:</span> <span class="pre">...,</span>
+<span class="pre">&quot;seed&quot;:</span> <span class="pre">...}}</span></code>).
 <code class="docutils literal notranslate"><span class="pre">CONTRIBUTING.md</span></code> explains how a HYSPLIT field is routed to
 <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code>, <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>, <code class="docutils literal notranslate"><span class="pre">WINDERR</span></code>, or <code class="docutils literal notranslate"><span class="pre">ZIERR</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ExecutionConfig</span></code> (<code class="docutils literal notranslate"><span class="pre">execution:</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>) says where
-receptors run and with what Slurm resources. It forbids unknown keys; other
-<code class="docutils literal notranslate"><span class="pre">sbatch</span></code> options go under its <code class="docutils literal notranslate"><span class="pre">slurm:</span></code> mapping.</p></li>
+receptors run. <code class="docutils literal notranslate"><span class="pre">backend</span></code> names the place, and each backend’s settings
+are in the block of its name (<code class="docutils literal notranslate"><span class="pre">LocalConfig</span></code>, <code class="docutils literal notranslate"><span class="pre">SlurmConfig</span></code>), <code class="docutils literal notranslate"><span class="pre">cpus</span></code>
+included; only <code class="docutils literal notranslate"><span class="pre">timeout</span></code> and <code class="docutils literal notranslate"><span class="pre">keep_workdir</span></code> sit beside <code class="docutils literal notranslate"><span class="pre">backend</span></code>.
+<code class="docutils literal notranslate"><span class="pre">ExecutionConfig.cpus</span></code> and <code class="docutils literal notranslate"><span class="pre">.fetch</span></code> read the block <code class="docutils literal notranslate"><span class="pre">backend</span></code> names.
+A backend’s setting written outside its block is refused. The <code class="docutils literal notranslate"><span class="pre">slurm</span></code>
+block takes any other key as an <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> option, and refuses one that
+reads as a misspelled setting.</p></li>
 <li><p>Particle transforms are declared as a default or per variant
 (<code class="docutils literal notranslate"><span class="pre">transforms:</span> <span class="pre">[{kind:</span> <span class="pre">...}]</span></code>); <code class="docutils literal notranslate"><span class="pre">kind</span></code> may also be the import path of a
 user class.</p></li>

@@ -11,8 +11,8 @@ Config
 ------
 
 :class:`stilt.transport.hysplit.HysplitConfig` holds every setting that
-shapes the particles HYSPLIT makes. In ``config.yaml`` they are flat,
-top-level keys.
+shapes the particles HYSPLIT makes. In ``config.yaml`` they are the keys
+of the ``hysplit`` block under ``models:``.
 
 .. autosummary::
    :toctree: _api

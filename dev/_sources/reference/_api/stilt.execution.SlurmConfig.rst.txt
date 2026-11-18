@@ -1,0 +1,30 @@
+﻿stilt.execution.SlurmConfig
+===========================
+
+.. currentmodule:: stilt.execution
+
+
+
+
+.. class-signature:: stilt.execution.SlurmConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.execution.SlurmConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~SlurmConfig.options
+
+
+
+
+

@@ -16,6 +16,15 @@ Parameters
 
 
 
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~ExecutionConfig.cpus
+   ~ExecutionConfig.fetch
+
 
 
 

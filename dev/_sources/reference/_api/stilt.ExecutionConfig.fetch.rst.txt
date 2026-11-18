@@ -1,0 +1,6 @@
+stilt.ExecutionConfig.fetch
+===========================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: ExecutionConfig.fetch

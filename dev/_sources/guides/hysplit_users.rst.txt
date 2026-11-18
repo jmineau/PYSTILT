@@ -126,8 +126,8 @@ Many runs: a project
 --------------------
 
 A project runs every starting point under every variant, and runs again
-only what is missing. A ``config.yaml`` with no ``grid`` makes particles
-and no footprints. Here every start runs on HRRR with two vertical motion
+only what is missing. A ``config.yaml`` with no ``stages`` block makes
+particles and no footprints. Here every start runs on HRRR with two vertical motion
 options, each kept in its own folder:
 
 .. code-block:: yaml
@@ -135,13 +135,15 @@ options, each kept in its own folder:
    mets:
      hrrr: /data/arl/hrrr
 
-   variants:
-     hrrr: {}                 # the settings below
-     hrrr-w6: {w_option: 6}   # the same runs with another vertical motion
+   models:
+     hysplit:
+       n_hours: 24
+       numpar: 1000
+       emisshrs: 1.0
 
-   n_hours: 24
-   numpar: 1000
-   emisshrs: 1.0
+   variants:
+     hrrr: {}                 # the settings above
+     hrrr-w6: {w_option: 6}   # the same runs with another vertical motion
 
 The starting points go in ``receptors.csv``, one row each:
 

@@ -1,6 +1,0 @@
-stilt.ProjectConfig.transport
-=============================
-
-.. currentmodule:: stilt
-
-.. autoproperty:: ProjectConfig.transport
