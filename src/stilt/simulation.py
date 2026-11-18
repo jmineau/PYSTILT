@@ -9,7 +9,7 @@ project gives you, adds the reads of what STILT makes from the particles.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -93,6 +93,14 @@ class Simulation:
     def __str__(self) -> str:
         name = f"{self.receptor.id}/{self.variant.name}"
         return name if self.realization is None else f"{name}/{self.realization}"
+
+    def __eq__(self, other: object) -> bool:
+        # One simulation whatever its class: the workers build this class and
+        # stilt.Project the subclass, which adds only reads.
+        if not isinstance(other, Simulation):
+            return NotImplemented
+        mine = tuple(getattr(self, f.name) for f in fields(self))
+        return mine == tuple(getattr(other, f.name) for f in fields(other))
 
     def __hash__(self) -> int:
         return hash((self.id, self.output))

@@ -6,6 +6,7 @@ inherit, and are what a STILT user holds.
 """
 
 import inspect
+from dataclasses import replace
 
 import pytest
 import yaml
@@ -99,6 +100,18 @@ def test_each_project_returns_its_own_simulation_of_the_same_files(
     assert sim.id == plain.id
     assert sim.path("footprint") == plain.path("footprint") == sim.footprint_path
     assert sim.has("footprint") is plain.has("footprint") is sim.has_footprint
+
+
+def test_one_simulation_is_equal_whichever_class_holds_it(made, point_receptor):
+    # The workers build the particle class; stilt.Project the subclass.
+    sim = made.simulation(point_receptor.id, "hrrr")
+    plain = project.Project(made.directory).simulation(point_receptor.id, "hrrr")
+    other = made.simulation(point_receptor.id, "hrrr")
+
+    assert sim == plain and plain == sim and sim == other
+    assert hash(sim) == hash(plain)
+    assert len({sim, plain}) == 1
+    assert plain != replace(plain, directory=None)
 
 
 def test_the_particle_part_writes_the_settings_as_given(tmp_path):
