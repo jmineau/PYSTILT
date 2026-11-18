@@ -141,6 +141,38 @@ def read_run_settings(stored: Mapping[str, Any]) -> dict[str, Any]:
     return record
 
 
+# -- what a result file records -------------------------------------------------
+
+
+def pystilt_version() -> str:
+    """Return the installed PYSTILT version, as ``stilt.__version__`` does."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return version("pystilt")
+    except PackageNotFoundError:
+        return "0+unknown"
+
+
+def file_stamp(digest: str, realization: int | None = None) -> dict[bytes, bytes]:
+    """
+    Return what a result file records besides its contents, as Parquet file metadata.
+
+    Its folder's settings hash (*digest*: ``variant.particles_hash``, or
+    ``variant.stage_hashes[name]`` for a stage's file), the PYSTILT
+    version, and, for an ensemble, its realization number. A particle file
+    carries it, and so does a footprint; a stage of your own may write it
+    too, so that its files say what made them.
+    """
+    stamp = {
+        b"stilt:hash": digest.encode(),
+        b"stilt:pystilt": pystilt_version().encode(),
+    }
+    if realization is not None:
+        stamp[b"stilt:realization"] = str(realization).encode()
+    return stamp
+
+
 # -- stages -------------------------------------------------------------------
 
 
@@ -172,6 +204,8 @@ def stage_hash(
 
 __all__ = [
     "canonical",
+    "file_stamp",
+    "pystilt_version",
     "read_run_settings",
     "run_settings",
     "settings_hash",

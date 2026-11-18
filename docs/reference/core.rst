@@ -86,6 +86,7 @@ a default, still matches.
    identity.transport_from_settings
    identity.stage_hash
    identity.settings_hash
+   identity.file_stamp
    footprint.config.footprint_settings
    footprint.config.read_footprint_settings
    transport.ModelInfo

@@ -6,6 +6,7 @@ from dataclasses import replace
 import pytest
 import yaml
 
+import stilt
 from stilt.config import ProjectConfig, Variant
 from stilt.exceptions import HYSPLITNotFoundError
 from stilt.footprint.stage import store_empty_footprint
@@ -363,3 +364,14 @@ def test_a_hysplit_folder_without_its_tables_says_where_they_go(tmp_path):
     variant = _variant(tmp_path, numpar=100, directory=folder)
     with pytest.raises(HYSPLITNotFoundError, match="bdyfiles/ folder"):
         _ = variant.build
+
+
+def test_a_file_stamp_says_which_folder_and_version_made_a_file():
+    from stilt.identity import file_stamp, pystilt_version
+
+    assert file_stamp("abc123") == {
+        b"stilt:hash": b"abc123",
+        b"stilt:pystilt": pystilt_version().encode(),
+    }
+    assert file_stamp("abc123", 2)[b"stilt:realization"] == b"2"
+    assert pystilt_version() == stilt.__version__

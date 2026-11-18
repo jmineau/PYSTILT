@@ -19,8 +19,13 @@ from pydantic import BaseModel, ConfigDict
 COUNT = "tests.fixtures.stages.CountStage"
 DOUBLE = "tests.fixtures.stages.DoubleStage"
 
+ECHO = "tests.fixtures.stages.EchoStage"
+
 #: Each call of a toy stage's ``run``, as (stage, receptor id, variant), in order.
 RUNS: list[tuple[str, str, str]] = []
+
+#: The name of the path each call of a toy stage's ``run`` was handed.
+PATHS: list[str] = []
 
 
 class CountConfig(BaseModel):
@@ -31,6 +36,7 @@ class CountConfig(BaseModel):
     scale: int = 1
     fail: bool = False
     silent: bool = False
+    stale: bool = False
 
 
 class CountStage:
@@ -72,11 +78,15 @@ class CountStage:
         Write the count of *sim*'s particle rows to *path*.
 
         With ``fail`` it writes half a file and raises; with ``silent`` it
-        returns without writing one.
+        returns without writing one; with ``stale`` it raises an error a
+        retry may get past.
         """
         RUNS.append((self.name, sim.receptor.id, sim.variant.name))
+        PATHS.append(path.name)
         if config.silent:
             return
+        if config.stale:
+            raise ConnectionError("the count lost its connection")
         if config.fail:
             path.write_text("half a")
             raise RuntimeError("the count was told to fail")
@@ -123,6 +133,49 @@ class DoubleStage:
         """Write twice what the ``count`` stage wrote for *sim*, plus ``add``, to *path*."""
         RUNS.append((self.name, sim.receptor.id, sim.variant.name))
         path.write_text(str(2 * int(sim.path("count").read_text()) + config.add))
+
+
+class EchoConfig(BaseModel):
+    """Settings of :class:`EchoStage`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    fail: bool = False
+
+
+class EchoStage:
+    """Writes the receptor id as text; it reads no other stage."""
+
+    name = "echo"
+    config_class = EchoConfig
+    suffix = ".txt"
+
+    def resolve(
+        self,
+        config: EchoConfig,
+        model: str,
+        model_settings: Mapping[str, Any],
+        directory: Path | None,
+    ) -> EchoConfig:
+        """Return the settings as given."""
+        return config
+
+    def settings(self, config: EchoConfig) -> dict[str, Any]:
+        """Return the record of an echo's settings."""
+        return config.model_dump(mode="json")
+
+    def check(
+        self, config: EchoConfig, receptors: pd.DataFrame, directory: Path | None
+    ) -> list[tuple[str, str | None, str]]:
+        """Find nothing."""
+        return []
+
+    def run(self, config: EchoConfig, sim: Any, path: Any) -> None:
+        """Write *sim*'s receptor id to *path*, or raise with ``fail``."""
+        RUNS.append((self.name, sim.receptor.id, sim.variant.name))
+        if config.fail:
+            raise RuntimeError("the echo was told to fail")
+        path.write_text(sim.receptor.id)
 
 
 class Forgetful:

@@ -308,6 +308,8 @@ class Variant:
         A stage's hash is of the particles' hash, the hash of each stage it
         reads, and its own settings (:func:`stilt.identity.stage_hash`).
         """
+        if not self.stages:
+            return {}  # without the particles' hash, which reads the met and the build
         return self.stage_hashes_on(self.particles_hash)
 
     def stage_hashes_on(self, particles_hash: str) -> dict[str, str]:
@@ -417,12 +419,12 @@ class ProjectConfig(BaseModel):
         description=(
             "What is made from each simulation's results after the transport "
             "model runs, by name, each a block that gives the stage's import "
-            "path as ``class`` and then its settings. The footprint is "
-            "``class: stilt.footprint.FootprintStage``, with the footprint "
-            "settings (:class:`~stilt.footprint.FootprintConfig`). A stage "
-            "runs for every variant, unless the variant sets it to null. A "
-            "stage class has one block. Left out, the project makes "
-            "particles only."
+            "path as ``class`` and then its settings. A block is named for "
+            "its stage: the footprint's is ``footprint``, with ``class: "
+            "stilt.footprint.FootprintStage`` and the footprint settings "
+            "(:class:`~stilt.footprint.FootprintConfig`). A stage runs for "
+            "every variant, unless the variant sets it to null. Left out, "
+            "the project makes particles only."
         ),
     )
     variants: dict[str, dict[str, Any] | None] = Field(
@@ -461,7 +463,7 @@ class ProjectConfig(BaseModel):
     # Each models: block by its name: the model, as get_model names it, and
     # the block's settings.
     _models: dict[str, tuple[str, dict[str, Any]]] = PrivateAttr(default_factory=dict)
-    # Each stages: block by its name, in the order the stages run.
+    # Each stages: block by its stage's name, in the order the stages run.
     _stages: dict[str, _StageBlock] = PrivateAttr(default_factory=dict)
     # Each met checked by the met config of a model that reads it, by
     # (met, model).
@@ -620,8 +622,8 @@ class ProjectConfig(BaseModel):
             },
             elsewhere={
                 setting: f"a {name} setting. Write it under the variant's "
-                f"stages: {handle or name}:."
-                for setting, (name, handle) in _stage_settings(self.stages).items()
+                f"stages: {name}:."
+                for setting, (name, _) in _stage_settings(self.stages).items()
             },
         )
         realizations = spec.pop("realizations", None)
@@ -670,30 +672,29 @@ class ProjectConfig(BaseModel):
                     f"have (it has {sorted(self.stages)})."
                 )
         configs: dict[str, Any] = {}
-        for handle, block in self._stages.items():
+        for name, block in self._stages.items():
             config = block.config
-            if handle in own:
-                changes = own[handle]
+            if name in own:
+                changes = own[name]
                 if changes is None:
                     continue
                 if not isinstance(changes, dict):
                     raise ValueError(
-                        f"{where}, stages: {handle}: give the settings the "
+                        f"{where}, stages: {name}: give the settings the "
                         "variant changes as a mapping, or null for a variant "
                         "without the stage."
                     )
                 config = _stage_config(
                     block.stage,
-                    _overridden(block, dict(changes), f"{where}, stages: {handle}"),
-                    f"{where}, stages: {handle}",
+                    _overridden(block, dict(changes), f"{where}, stages: {name}"),
+                    f"{where}, stages: {name}",
                     elsewhere={
                         "class": "the stage itself, set in the stages: block and "
                         "not by a variant."
                     },
                 )
-            configs[block.stage.name] = config
-        for block in self._stages.values():
-            name = block.stage.name
+            configs[name] = config
+        for name, block in self._stages.items():
             for read in reads(block.stage):
                 if name in configs and read not in configs:
                     raise ValueError(
@@ -734,8 +735,6 @@ class ProjectConfig(BaseModel):
             not fit the variant's model.
         """
         start = None if directory is None else Path(directory)
-        paths = {block.stage.name: block.path for block in self._stages.values()}
-        handles = {block.stage.name: handle for handle, block in self._stages.items()}
         mets: dict[tuple[str, str], Any] = {}
         variants: dict[str, Variant] = {}
         for group in self.variants:
@@ -747,14 +746,14 @@ class ProjectConfig(BaseModel):
             )
             stages: dict[str, Any] = {}
             for name, config in declared.stages.items():
-                stage = self._stages[handles[name]].stage
+                stage = self._stages[name].stage
                 try:
                     stages[name] = stage.resolve(
                         config, declared.model, transport.settings(), start
                     )
                 except ValueError as error:
                     raise ValueError(
-                        f"Variant {group!r}, stages: {handles[name]}: {error}"
+                        f"Variant {group!r}, stages: {name}: {error}"
                     ) from None
             if declared.realizations is not None:
                 try:
@@ -774,7 +773,7 @@ class ProjectConfig(BaseModel):
                 model=declared.model,
                 realizations=declared.realizations,
                 stages=stages,
-                stage_classes={name: paths[name] for name in stages},
+                stage_classes={name: self._stages[name].path for name in stages},
             )
         return variants
 
@@ -1019,20 +1018,21 @@ def _stage_blocks(
     stages: dict[str, dict[str, Any]], models: dict[str, tuple[str, dict[str, Any]]]
 ) -> dict[str, _StageBlock]:
     """
-    Return each ``stages`` block's stage and checked settings, by the block's name, in the order the stages run.
+    Return each ``stages`` block's stage and checked settings, by the stage's name, in the order the stages run.
 
     A block names its stage by the import path of the stage's class
-    (``class``), which is imported here. *models* are the ``models`` blocks,
-    to say where a model's setting belongs.
+    (``class``), which is imported here, and is itself named for the stage:
+    the footprint's block is ``footprint``. *models* are the ``models``
+    blocks, to say where a model's setting belongs.
 
     Raises
     ------
     MissingClass
         If a block's class cannot be imported on this machine.
     ValueError
-        If a block names no class or one that is not a stage, two blocks
-        name one class or two stages of one name, a block holds a wrong
-        setting, or a stage reads one the config does not have.
+        If a block names no class or one that is not a stage, is not named
+        for its stage, holds a wrong setting, or names a stage that reads
+        one the config does not have.
     """
     elsewhere = {
         setting: f"a {model} setting. Write it under models: {name}:."
@@ -1040,12 +1040,7 @@ def _stage_blocks(
         for setting in _model_settings(model)
     }
     blocks: dict[str, _StageBlock] = {}
-    block_of: dict[str, str] = {}
     for name, block in stages.items():
-        if not VARIANT_NAME_RE.fullmatch(name):
-            raise ValueError(
-                f"Stage name {name!r} must match {VARIANT_NAME_RE.pattern}"
-            )
         where = f"stages: {name}"
         settings = dict(block or {})
         path = settings.pop("class", None)
@@ -1057,25 +1052,17 @@ def _stage_blocks(
             stage = get_stage(str(path))
         except ValueError as error:
             raise ValueError(f"{where}: {error}") from None
-        for other, known in blocks.items():
-            if known.path == path:
-                raise ValueError(
-                    f"stages: {other} and {name} are both {path}. A stage has "
-                    "one block, its defaults: write a second variant to run "
-                    "it with other settings."
-                )
-        if stage.name in block_of:
+        if stage.name != name:
+            # One name for the block, the stage's folder and its status column.
             raise ValueError(
-                f"stages: {block_of[stage.name]} and {name} are both stages "
-                f"named {stage.name!r}, so their results would share a folder. "
-                "Keep one of them."
+                f"{where}: {path} is the {stage.name} stage, and a stage's "
+                f"block is named for its stage. Write it as stages: {stage.name}:."
             )
-        block_of[stage.name] = name
         blocks[name] = _StageBlock(
             str(path), stage, _stage_config(stage, settings, where, elsewhere)
         )
-    order = ordered({block.stage.name: block.stage for block in blocks.values()})
-    return {block_of[name]: blocks[block_of[name]] for name in order}
+    order = ordered({name: block.stage for name, block in blocks.items()})
+    return {name: blocks[name] for name in order}
 
 
 def _stage_config(
@@ -1131,25 +1118,25 @@ def _overridden(block: _StageBlock, own: dict[str, Any], where: str) -> dict[str
         raise ValueError(f"{where}: {error}") from None
 
 
-def _stage_settings(stages: Any) -> dict[str, tuple[str, str | None]]:
+def _stage_settings(stages: Any) -> dict[str, tuple[str, bool]]:
     """
-    Return each stage setting a config could hold, with its stage's name and the name of its block.
+    Return each stage setting a config could hold, with its stage's name and whether the config has that stage.
 
     *stages* is the ``stages`` block as written, not checked yet. A config
-    without one gets the footprint's settings, with no block name, so that
-    a footprint setting written elsewhere is still recognized. A stage that
-    cannot be imported names none: its own block reports that.
+    without one gets the footprint's settings, so that a footprint setting
+    written elsewhere is still recognized. A stage that cannot be imported
+    names none: its own block reports that.
     """
-    written = stages if isinstance(stages, dict) and stages else None
-    blocks = written or {None: {"class": FOOTPRINT_STAGE}}
-    found: dict[str, tuple[str, str | None]] = {}
-    for handle, block in blocks.items():
+    written = isinstance(stages, dict) and bool(stages)
+    blocks = stages.values() if written else [{"class": FOOTPRINT_STAGE}]
+    found: dict[str, tuple[str, bool]] = {}
+    for block in blocks:
         try:
             stage = get_stage(str(block["class"]))
         except (ImportError, KeyError, TypeError, ValueError):
             continue
         for setting in stage.config_class.model_fields:
-            found.setdefault(setting, (stage.name, handle))
+            found.setdefault(setting, (stage.name, written))
     return found
 
 
@@ -1157,12 +1144,12 @@ def _stage_places(stages: Any) -> dict[str, str]:
     """Return where each stage setting is written, as a sentence, by the setting's name."""
     return {
         setting: (
-            f"a {name} setting. Write it under stages: {handle}:."
-            if handle is not None
+            f"a {name} setting. Write it under stages: {name}:."
+            if written
             else f"a {name} setting. Write it under stages:, in the {name}'s "
             f"block (class: {FOOTPRINT_STAGE})."
         )
-        for setting, (name, handle) in _stage_settings(stages).items()
+        for setting, (name, written) in _stage_settings(stages).items()
     }
 
 

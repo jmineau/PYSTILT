@@ -191,63 +191,59 @@ def test_a_stage_block_names_the_footprint_stage_as_its_class(tmp_path, grid):
             stages={"wind": {"class": "WindRose"}},
             variants={"hrrr": {}},
         )
+
+
+def test_a_stage_block_is_named_for_its_stage(tmp_path, grid):
+    """One name for the block, the output folder and the status column: the stage's own."""
     stage = {"class": FOOTPRINT_STAGE, "grid": grid}
-    with pytest.raises(
-        ValueError,
-        match="stages: fine and coarse are both stilt.footprint.FootprintStage. "
-        "A stage has one block",
-    ):
-        ProjectConfig(
-            models={"hysplit": {"n_hours": -24}},
-            mets=mets,
-            stages={"fine": stage, "coarse": stage},
-            variants={"hrrr": {}},
-        )
-
-
-def test_a_stage_blocks_name_is_what_a_variant_calls_it(tmp_path, grid):
-    """The block's name is a handle: the class says what the stage is."""
     config = ProjectConfig(
         models={"hysplit": {"n_hours": -24}},
         mets=_met_config(tmp_path),
-        stages={"foot": {"class": FOOTPRINT_STAGE, "grid": grid}},
+        stages={"footprint": stage},
         variants={
             "hrrr": {},
-            "smooth": {"stages": {"foot": {"smooth_factor": 2}}},
-            "particles": {"stages": {"foot": None}},
+            "smooth": {"stages": {"footprint": {"smooth_factor": 2}}},
+            "particles": {"stages": {"footprint": None}},
         },
     )
     variants = config.resolve()
-    assert variants["hrrr"].stages.get("footprint").smooth_factor == 1
-    assert variants["smooth"].stages.get("footprint").smooth_factor == 2
-    assert variants["smooth"].stages.get("footprint").grid == grid
-    assert variants["particles"].stages.get("footprint") is None
+    assert variants["hrrr"].stages["footprint"].smooth_factor == 1
+    assert variants["smooth"].stages["footprint"].smooth_factor == 2
+    assert variants["smooth"].stages["footprint"].grid == grid
+    assert variants["particles"].stages == {}
+    for name in ("foot", "fine", "Not_Plain"):
+        with pytest.raises(
+            ValueError,
+            match=f"stages: {name}: stilt.footprint.FootprintStage is the footprint "
+            "stage, and a stage's block is named for its stage. Write it as "
+            "stages: footprint:.",
+        ):
+            ProjectConfig(
+                models={"hysplit": {"n_hours": -24}},
+                mets=_met_config(tmp_path),
+                stages={name: stage},
+                variants={"hrrr": {}},
+            )
     with pytest.raises(
         ValueError,
-        match=r"Variant 'hrrr' names the stage 'footprint', which stages: does "
-        r"not have \(it has \['foot'\]\)",
+        match=r"Variant 'hrrr' names the stage 'foot', which stages: does "
+        r"not have \(it has \['footprint'\]\)",
     ):
         ProjectConfig(
             models={"hysplit": {"n_hours": -24}},
             mets=_met_config(tmp_path),
-            stages={"foot": {"class": FOOTPRINT_STAGE, "grid": grid}},
-            variants={"hrrr": {"stages": {"footprint": None}}},
+            stages={"footprint": stage},
+            variants={"hrrr": {"stages": {"foot": None}}},
         )
 
 
-@pytest.mark.parametrize(
-    ("block", "what"),
-    [("models", "Model"), ("stages", "Stage")],
-    ids=["model", "stage"],
-)
-def test_a_blocks_name_is_plain_as_a_variants_is(tmp_path, grid, block, what):
-    """A model's or a stage's name is what a variant writes, so it follows the variants' rule."""
-    settings = {"class": FOOTPRINT_STAGE, "grid": grid} if block == "stages" else {}
-    with pytest.raises(ValueError, match=f"{what} name 'Not_Plain' must match"):
+def test_a_models_block_name_is_plain_as_a_variants_is(tmp_path):
+    """A model's block name is what a variant writes, so it follows the variants' rule."""
+    with pytest.raises(ValueError, match="Model name 'Not_Plain' must match"):
         ProjectConfig(
             mets=_met_config(tmp_path),
             variants={"hrrr": {}},
-            **{block: {"Not_Plain": settings}},
+            models={"Not_Plain": {}},
         )
 
 

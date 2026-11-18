@@ -22,6 +22,7 @@ from stilt.output import Output, completed
 from stilt.particles import read_particles
 from stilt.receptors import Receptor
 from stilt.spatial import Grid
+from stilt.stages import reads
 from stilt.transport_error import TransportError, transport_error
 
 if TYPE_CHECKING:
@@ -214,7 +215,8 @@ class Simulation:
         ``"MET_COVERAGE"``, or the error's class when it has none),
         ``message``, and ``time``. An unexpected error also has a
         ``traceback``. A failed transport model run fails every variant
-        that shares its particles. :attr:`log` reads the model's log and
+        that shares its particles. Of several stages that failed, the
+        first in the order they run is given. :attr:`log` reads the model's log and
         :attr:`kept_workdir` is where its workdir was kept.
 
         Examples
@@ -223,12 +225,19 @@ class Simulation:
         {'stage': 'particles', 'reason': 'MET_COVERAGE',
          'message': 'HYSPLIT: start point not within (x,y,t) any data file', ...}
         """
-        for kind in ("particles", *self.variant.stage_order):
-            if not self.has(kind):
-                # The first result that is missing is the one that failed.
-                return self.output.failure(
-                    kind, self.variant, self.receptor.id, self.realization
-                )
+        variant, rid = self.variant, self.receptor.id
+        if not self.has("particles"):
+            return self.output.failure("particles", variant, rid, self.realization)
+        # A stage can have failed only where what it reads exists: the first
+        # such stage with a record, in the order the stages run.
+        there = {"particles"}
+        for name in variant.stage_order:
+            if self.has(name):
+                there.add(name)
+            elif there.issuperset(reads(variant.stage(name))):
+                record = self.output.failure(name, variant, rid, self.realization)
+                if record is not None:
+                    return record
         return None
 
     # -- reading the results -----------------------------------------------

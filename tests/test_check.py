@@ -117,12 +117,12 @@ def test_each_stage_of_a_variant_checks_its_own_inputs(tmp_path):
         receptors=[_receptor(), south],
         mets={"hrrr": {"download": "hrrr", "directory": str(tmp_path / "met")}},
         models={"hysplit": {"n_hours": -3}},
-        stages={"tally": {"class": COUNT}},
+        stages={"count": {"class": COUNT}},
         variants={
             "hrrr": {},
             "hrrr-zi": {"ziscale": 0.8},
-            "tripled": {"stages": {"tally": {"scale": 3}}},
-            "plain": {"stages": {"tally": None}},
+            "tripled": {"stages": {"count": {"scale": 3}}},
+            "plain": {"stages": {"count": None}},
         },
     )
 

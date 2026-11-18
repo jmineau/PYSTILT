@@ -361,10 +361,13 @@ stages:
     below: 3000
 ```
 
-- **`name`** is the stage's tree in the output directory
+- **`name`** is the name of the stage's block under `stages:`, its tree in
+  the output directory
   (`mean_height/settings=<variant>-<hash>/date=<day>/<receptor><suffix>`),
-  its column in `project.status()`, and the `stage` of a failure record.
+  its column in `project.status()`, and the `stage` of a failure record: one
+  word for the stage everywhere, so a block under another name is refused.
   Lowercase letters, digits and underscores.
+- **`suffix`** is the extension of the stage's files, with its dot.
 - **`config_class`** is a pydantic model that checks the block's settings
   when `config.yaml` loads, without reading a file. A variant changes a
   setting under its own `stages:` key, and the variant's keys replace the
@@ -391,7 +394,13 @@ stages:
   output file exists, and so does the file of every stage its variant uses,
   so a stage that writes nothing leaves its simulations unfinished. Write a
   file that says "nothing here", as an empty footprint does. An error
-  fails the simulation at this stage, and the worker records it.
+  fails the simulation at this stage, and the worker records it. On a
+  filesystem `path` is a hidden temporary name ending in `suffix`, moved
+  into place when `run` returns; the stage's earlier file is removed before
+  it runs, and so is what a `run` that raises has written. So no file made
+  from other inputs, and no half-written one, counts as complete. A Parquet
+  file may carry `stilt.identity.file_stamp(...)` in its metadata, the
+  folder's hash and the PYSTILT version, as particle and footprint files do.
 - **`reads`** (optional) names the stages whose files this one reads, such
   as `reads = ("footprint",)`. The stage runs after them and again whenever
   one was made again, and its settings folder is named from theirs too.

@@ -50,6 +50,7 @@ from stilt.receptors.table import (
     receptors_to_csv,
 )
 from stilt.simulation import Simulation
+from stilt.stages import reads
 from stilt.transport_error import _transport_errors
 
 if TYPE_CHECKING:
@@ -868,22 +869,31 @@ class Project:
         """
         Return the failure record of each selected simulation missing a result, by ``(receptor, variant, realization)``.
 
-        A simulation is explained by the record of the first result it is
-        missing: its particles', or else that of the first stage without a
-        file (:attr:`stilt.Simulation.failure`). Only those receptors' date
-        folders are listed, and only the records found are read.
+        A simulation without particles is explained by its particles'
+        record. One with particles is explained by the record of the first
+        stage, in the order they run, that has no file where what it reads
+        exists and that has a record (:attr:`stilt.Simulation.failure`).
+        Only those receptors' date folders are listed, and only the records
+        found are read.
         """
         found: dict[tuple[str, str, int | None], dict[str, Any]] = {}
         for name, k, rows in _groups(frame):
             variant = self.variants[name]
-            so_far = set(rows["receptor"])  # the receptors with every result before
-            for kind, have in present[(name, k)].items():
-                missing = so_far - have
+            have = present[(name, k)]
+            receptors = set(rows["receptor"])
+            for kind in have:
+                # Where a stage could have run: its inputs are there.
+                inputs = (
+                    ()
+                    if kind == "particles"
+                    else ("particles", *reads(variant.stage(kind)))
+                )
+                ready = receptors.intersection(*(have[i] for i in inputs))
+                missing = ready - have[kind]
                 if missing:
                     failures = self.output.failures(kind, variant, missing, k)
                     for rid, record in failures.items():
-                        found[(rid, name, k)] = record
-                so_far &= have
+                        found.setdefault((rid, name, k), record)
         return found
 
     def _started(

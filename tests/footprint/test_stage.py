@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 
 import pandas as pd
@@ -261,3 +262,96 @@ def test_the_settings_say_what_needs_zsfc_above_sea_level():
     assert weighted.zsfc_reasons == [
         "the pressure_weighting transform fails their footprints"
     ]
+
+
+def test_check_runs_once_for_footprints_that_share_a_grid_or_a_transform(monkeypatch):
+    """Twenty variants that differ in smoothing check their one grid once, not twenty times."""
+    from stilt.footprint import stage as stage_module
+
+    calls = []
+    real = stage_module._outside
+
+    def counting(rows, grid):
+        calls.append(grid)
+        return real(rows, grid)
+
+    monkeypatch.setattr(stage_module, "_outside", counting)
+
+    class Checked:
+        kind = "tests.footprint.test_stage.Checked"
+        checks: list = []
+
+        def apply(self, particles, receptor=None, directory=None):
+            return particles
+
+        def check(self, ids, directory):
+            self.checks.append(len(ids))
+            return [("checked", None, "the table is missing")]
+
+        def __repr__(self):
+            return "Checked()"
+
+    stage = FootprintStage()
+    rows = _rows()
+    transform = Checked()
+    configs = [
+        FootprintConfig(grid=GRID, smooth_factor=factor, transforms=[transform])
+        for factor in (0.5, 1.0, 2.0)
+    ]
+    found = [stage.check(config, rows, None) for config in configs]
+
+    assert len(calls) == 1 and Checked.checks == [2]
+    assert found[0] == found[1] == found[2]
+    assert [check for check, _, _ in found[0]] == ["grid", "checked"]
+    # Another grid, or another table of receptors, is checked for itself.
+    other = GRID.model_copy(update={"xmax": -95.0})
+    assert stage.check(FootprintConfig(grid=other), rows, None) == []
+    assert len(calls) == 2
+    stage.check(configs[0], _rows(), None)
+    assert len(calls) == 3 and Checked.checks == [2, 2]
+
+
+class CoarseFootprint(FootprintStage):
+    """The footprint stage under another name, as a package that builds on it would have."""
+
+    name = "coarse_footprint"
+
+
+def test_a_footprint_stage_under_another_name_writes_its_own_files(tmp_path):
+    """The file records the settings the stage was handed and the hash of its own folder."""
+    import pyarrow.parquet as pq
+
+    from stilt.footprint import read_footprint
+    from stilt.identity import file_stamp
+    from stilt.output import Output
+    from stilt.simulation import Simulation
+
+    from ..fixtures.factories import make_receptor
+    from ..fixtures.particles import finished, random_walk
+
+    config = FootprintConfig(grid=GRID, smooth_factor=0.5)
+    variant = make_variant()
+    variant = type(variant)(
+        **{
+            **{f: getattr(variant, f) for f in variant.__dataclass_fields__},
+            "stages": {"coarse_footprint": config},
+            "stage_classes": {
+                "coarse_footprint": "tests.footprint.test_stage.CoarseFootprint"
+            },
+        }
+    )
+    receptor = make_receptor(dt.datetime(2024, 1, 15, 18))  # where the walk starts
+    sim = Simulation(receptor, variant, Output(tmp_path / "output"))
+    sim.__dict__["particles"] = finished(random_walk(), receptor)
+    path = sim.output.make_path("coarse_footprint", variant, receptor.id)
+    path.parent.mkdir(parents=True)
+
+    CoarseFootprint().run(config, sim, path)
+
+    assert path.parent.parent.parent.name == "coarse_footprint"
+    meta = pq.read_metadata(path).metadata
+    stamp = file_stamp(variant.stage_hashes["coarse_footprint"])
+    assert {key: meta[key] for key in stamp} == stamp
+    assert meta[b"stilt:particles_hash"].decode() == variant.particles_hash
+    foot = read_footprint(path)
+    assert foot is not None and foot.stilt.config.smooth_factor == 0.5
