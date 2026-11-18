@@ -6,17 +6,20 @@ Glossary
 
    release
    receptor
-      Where and when particles start. A release placed at a measurement and
-      followed backward in time is what STILT calls a receptor, so PYSTILT
-      writes *release (receptor)*. A :class:`~stilt.PointReceptor` is one
+      Where and when particles start, in either direction: at the receptor
+      in a backward run, at the source in a forward run (see the
+      :ref:`diagram <release-source-receptor>`). A release placed at a
+      measurement and followed backward in time is what STILT calls a
+      receptor, so PYSTILT writes *release (receptor)*. A :class:`~stilt.PointReceptor` is one
       point (a tower inlet), a :class:`~stilt.ColumnReceptor` is a vertical
       column, and a :class:`~stilt.MultiPointReceptor` is a set of points,
       such as a slanted line of sight. See :doc:`../guides/releases` and
       :doc:`../guides/slant_columns`.
 
    particle
-      An imaginary parcel of air that starts at a release and moves backward
-      in time with the winds, plus random turbulence. STILT releases many
+      An imaginary parcel of air that starts at a release and moves with the
+      winds, plus random turbulence: backward in time in a backward run, the
+      usual one, and forward in time in a forward run. STILT releases many
       (:term:`numpar`) and treats them together as a sample of where the air
       could have come from.
 

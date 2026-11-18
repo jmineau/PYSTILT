@@ -1,11 +1,30 @@
 Releases (receptors)
 ====================
 
-A :term:`release` is a place and time that particles start from. A
-release placed at a measurement and followed backward in time is what
-STILT calls a *receptor*, so in these docs *release (receptor)* is the same
-thing, and the classes keep the name :class:`PointReceptor`. Pick the release
-type that matches how your instrument samples the air.
+A :term:`release` is a place and time that particles start from, in either
+direction. In a backward run, the usual one, the particles start at the
+receptor, the place you measured, and are followed back in time toward the
+sources that influenced it. In a forward run they start at the source and
+are followed forward toward where the air goes. A release placed at a
+measurement and followed backward is what STILT calls a *receptor*, so in
+these docs *release (receptor)* is the same thing, and the classes keep the
+name :class:`PointReceptor`. Pick the release type that matches how your
+instrument samples the air.
+
+.. _release-source-receptor:
+
+.. figure:: ../_static/release_source_receptor.svg
+   :alt: A factory, the source, sits upwind on the left and a measurement
+         tower, the receptor, downwind on the right. A backward run releases
+         particles at the top of the tower and follows them back in time
+         toward the factory. A forward run releases particles at the factory
+         chimney and follows them forward in time toward the tower.
+   :align: center
+   :width: 100%
+
+   A release is where the particles start. Filled dots: a backward run is
+   released at the receptor. Hollow dots: a forward run is released at the
+   source.
 
 .. currentmodule:: stilt
 
