@@ -18,7 +18,7 @@ the simulation id. X-STILT runs STILT-R's code and writes the same layout::
 :func:`read_stilt_r` reads these folders as PYSTILT's receptors, particle
 tables, and footprints. :func:`import_stilt_r` writes them into an output
 directory, in folders named by the settings the files record, so a project
-reads them as its own (:class:`stilt.transport.stilt_r.StiltRModel`). The
+reads them as its own (:class:`stilt.stilt_r.StiltRModel`). The
 ``.rds`` files are read with the `rdata <https://github.com/vnmabus/rdata>`_
 package, which needs no R (``pip install "pystilt[stilt-r]"``).
 """
@@ -44,13 +44,13 @@ from stilt.output import Output
 from stilt.particles import check_particles
 from stilt.receptors import Receptor
 from stilt.spatial import Grid
+from stilt.stilt_r import STILT_R_MODEL, StiltRConfig, StiltRMetConfig, StiltRModel
 from stilt.transport.hysplit.config import (
     FIXED_SETUP,
     WIND_ERROR_SETTINGS,
     ZI_ERROR_SETTINGS,
 )
 from stilt.transport.hysplit.namelist import read_namelist
-from stilt.transport.stilt_r import StiltRConfig, StiltRMetConfig, StiltRModel
 
 if TYPE_CHECKING:
     from stilt.transport.hysplit.control import ControlFile
@@ -567,8 +567,9 @@ def import_stilt_r(
     Write the runs of a STILT-R or X-STILT ``by-id`` folder into a PYSTILT output directory.
 
     Each run's particles and footprint, as :func:`read_stilt_r` reads them,
-    go to the folders of a variant with ``model: stilt-r``
-    (:class:`~stilt.transport.stilt_r.StiltRModel`). A project whose
+    go to the folders of a variant whose model is ``stilt-r``, a ``models:``
+    block with ``class: stilt.stilt_r.StiltRModel``
+    (:class:`~stilt.stilt_r.StiltRModel`). A project whose
     ``config.yaml`` has that variant reads them as its own results:
     ``project.status``, ``project.particles``, ``project.footprints``, and
     ``project.jacobian``. The import prints the variant and its met, to paste
@@ -656,7 +657,8 @@ def import_stilt_r(
       stilt-r:
         met_path: /data/hrrr
     models:
-      stilt-r: {}
+      stilt-r:
+        class: stilt.stilt_r.StiltRModel
     variants:
       stilt-r:
         model: stilt-r
@@ -760,7 +762,7 @@ def import_stilt_r(
         printed.append(made[f"{name}-err"][0])
     config: dict[str, Any] = {
         "mets": {name: met.settings()},
-        "models": {StiltRModel.name: {}},
+        "models": {StiltRModel.name: {"class": STILT_R_MODEL}},
     }
     footprints = any("footprint" in v.stages for v in printed)
     if footprints:
@@ -909,7 +911,7 @@ def _variant(
         met=met_name,
         met_config=met,
         transport=config,
-        model=StiltRModel.name,
+        model=STILT_R_MODEL,
     )
     if name not in made:
         made[name] = (variant, folder)
@@ -979,7 +981,7 @@ def _variant_entry(variant: Variant, footprints: bool) -> dict[str, Any]:
     """
     settings = variant.transport.settings()
     entry: dict[str, Any] = {
-        "model": variant.model,
+        "model": StiltRModel.name,
         "met": variant.met,
         "version": settings.pop("version"),
     }

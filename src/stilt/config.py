@@ -406,10 +406,11 @@ class ProjectConfig(BaseModel):
         description=(
             "Transport models by name, each a block of its settings: the "
             "defaults of every variant that runs it. A block named "
-            "``hysplit`` or ``stilt-r`` (runs imported from STILT-R, which "
-            "cannot run) is that built-in model. A model class in another "
-            "package gets a block of any name that gives its import path as "
-            "``class``, such as ``class: mypkg.models.MyModel``. A model has "
+            "``hysplit`` is that built-in model. Any other model class gets a "
+            "block of any name that gives its import path as ``class``, such "
+            "as ``class: mypkg.models.MyModel``, or ``class: "
+            "stilt.stilt_r.StiltRModel`` for runs imported from STILT-R, "
+            "which cannot run. A model has "
             "one block. Left out, the project runs HYSPLIT with its defaults."
         ),
     )

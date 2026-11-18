@@ -79,7 +79,11 @@ Module map
 .. code-block:: text
 
    src/stilt/
-     cli.py             Typer CLI; a thin adapter over Project and execution
+     cli.py             Typer CLI, the particle commands (check, fetch, run,
+                        submit, status); a thin adapter over Project and
+                        execution
+     stilt_cli.py       the stilt command: stilt init, which writes the
+                        starter config, and cli.py's commands
      project.py         Project, the particle part: the project directory,
                         its receptors and simulations (DataFrames),
                         run/submit, and a selection's status and particles
@@ -105,6 +109,8 @@ Module map
                         receptors, particle tables, and footprints;
                         import_stilt_r writes it into an output directory
                         with the settings its files record
+     stilt_r.py         StiltRModel, the stilt-r model of imported STILT-R
+                        runs, named by its import path; it runs nothing
      simulation.py      Simulation, the particle part: a frozen value
                         (receptor, variant, output) that knows where its
                         results are and whether they exist (path, has)
@@ -133,10 +139,10 @@ Module map
        validation.py    the checks a receptor must pass, written once for many
                         points and shared by the models and the table
      particles/         the particle table (a DataFrame)
-       table.py         its columns, particle files, release heights, foot for
-                        a model that writes none, the near-field plume correction
-                        (which calc_footprint applies)
-       accessor.py      the .stilt pandas accessor
+       table.py         its columns, particle files, release heights
+       accessor.py      the particle part of the .stilt pandas accessor
+     stilt_particles.py the .stilt pandas accessor, registered: the particle
+                        part's methods and enhancement
      footprint/         the footprint (a DataArray)
        config.py        FootprintConfig and the geometry specs; the record
                         of a footprint's settings
@@ -147,6 +153,9 @@ Module map
        aggregation.py   aggregate and jacobian: footprints summed onto other
                         geometries, with time binning and target weights
        io.py            footprint files and CF-1.8 NetCDF; open_footprints
+       foot.py          add_foot (foot for a model that writes none, or
+                        with pbl_height) and the near-field plume correction,
+                        which the stage applies before gridding
        targets.py       the geometries footprints are summed onto (Mesh,
                         Zones), the overlap weights, and to_grid
        accessor.py      the .stilt xarray accessor
@@ -160,7 +169,9 @@ Module map
                         (averaging_kernel, pressure_weighting, lifetime); the
                         loader, YAML I/O, and apply_transforms in __init__.py
      exceptions.py      every exception class, all under StiltError
-     visualization.py   matplotlib helpers (optional dependency)
+     visualization.py   matplotlib plots of particles, receptors and
+                        projects, and their helpers (optional dependency)
+     stilt_visualization.py the plots of a footprint and of a simulation
      _paths.py          local paths and object-store paths behind one interface
      _plugins.py        import_class: a model or a stage class named by its
                         import path in config.yaml
@@ -177,9 +188,7 @@ Module map
      transport/         the TransportModel and TransportConfig protocols,
                         ModelRun, ModelInfo, get_model and its MODELS table,
                         run_model and run_trajectories (__init__.py); one
-                        subpackage per transport model, which owns its config;
-                        stilt_r.py, the stilt-r model of imported STILT-R
-                        runs, which runs nothing
+                        subpackage per transport model, which owns its config
        hysplit/         HYSPLIT: HysplitConfig (config.py); MetConfig and Met,
                         finding, downloading, and cropping ARL files through
                         arlmet (met.py); Catalog, what a folder's files hold,
@@ -399,20 +408,19 @@ results and runs nothing. STILT-R ran HYSPLIT, so the STILT-R reader and the
 and ``SETUP.CFG`` files and record HYSPLIT's settings.
 
 A third short contract holds the line between the core that makes particle
-runs and what STILT adds on top of the particles: footprints, transforms,
-observations, sampling fields at particles, background, transport error and
-the STILT-R model. Outside those modules nothing imports them, except where
-the contract's ``ignore_imports`` lists it, each with its reason:
-``Simulation``'s footprint, background and transport-error reads,
-``Project``'s bulk reads, and ``add_foot``'s use of ``sample_met``. The
-config, the settings records, the check, the output directory and the
-worker cross nowhere: a stage reaches them by the import path
-``config.yaml`` names. The list is the work a code
-boundary would leave; a new crossing fails ``just imports``. Two crossings
-are not imports between modules, so the contract cannot see them: the
-near-field correction (which only the footprint side calls) and
-``add_foot`` are functions in ``stilt.particles.table``, and a package's ``__init__`` importing its own
-module (the transport registry and the STILT-R model) is not checked.
+runs and what STILT adds on top of the particles: footprints (``foot`` and
+the near-field correction among them), transforms, observations, sampling
+fields at particles, background, transport error, the STILT-R model and
+reader, and the classes and commands a STILT user holds (``stilt.Project``,
+``stilt.Simulation``, the registered particle accessor, the footprint and
+simulation plots, ``stilt init`` and ``python -m stilt``). The core imports
+none of it, and its ``ignore_imports`` lists only imports within STILT's
+side. The config, the settings records, the check, the output directory and
+the worker reach a stage or a model by the import path ``config.yaml``
+names. A new crossing fails ``just imports``. The modules of STILT's side
+that extend a module of the core take its name with ``stilt_`` in front
+(``stilt_project`` over ``project``). A package's ``__init__`` importing its
+own modules is not checked.
 
 Configuration
 -------------

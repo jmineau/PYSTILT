@@ -30,7 +30,7 @@ from stilt.transport_error import TransportError, transport_error
 
 if TYPE_CHECKING:
     from stilt._paths import Location
-    from stilt.visualization import SimulationPlotAccessor
+    from stilt.stilt_visualization import SimulationPlotAccessor
 
 
 class Simulation(simulation.Simulation):
@@ -114,7 +114,7 @@ class Simulation(simulation.Simulation):
     @cached_property
     def plot(self) -> SimulationPlotAccessor:
         """Plotting methods, such as ``sim.plot.map()``."""
-        from stilt.visualization import SimulationPlotAccessor
+        from stilt.stilt_visualization import SimulationPlotAccessor
 
         return SimulationPlotAccessor(self)
 

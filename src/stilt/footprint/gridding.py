@@ -29,8 +29,8 @@ import xarray as xr
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
+from stilt.footprint.foot import _near_field
 from stilt.particles import FOOTPRINT_COLUMNS, check_particles
-from stilt.particles.table import _near_field
 from stilt.receptors import Receptor
 from stilt.spatial import Grid, _east_edge, _grid_cell_starts, haversine_km, is_longlat
 from stilt.transforms import apply_transforms
@@ -870,7 +870,7 @@ def calc_footprint(
         row at ``age`` minutes falls in layer ``floor(age / minutes)``.
     hnf_plume : bool, default True
         Correct ``foot`` for the thin plume near the receptor first
-        (:func:`stilt.particles.correct_near_field`), as STILT-R does by
+        (:func:`stilt.footprint.correct_near_field`), as STILT-R does by
         default. Particles without the columns it reads get no correction,
         and a warning is logged.
     footprint_depth : float, default 0.5

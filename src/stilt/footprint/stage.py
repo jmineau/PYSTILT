@@ -25,8 +25,9 @@ from pydantic import TypeAdapter
 
 from stilt._paths import absolute
 from stilt.exceptions import EmptyFootprint
+from stilt.footprint.foot import HNF_PLUME_COLUMNS, add_foot
 from stilt.identity import file_stamp
-from stilt.particles import HNF_PLUME_COLUMNS, add_foot, particles_metadata
+from stilt.particles import particles_metadata
 from stilt.receptors import Receptor
 from stilt.spatial import Grid
 
@@ -210,6 +211,16 @@ class FootprintStage:
         finished result, which ``sim.footprint`` reads as ``None``.
         :meth:`stilt.Simulation.calc_footprint` makes footprints with other
         settings, without writing them.
+
+        Parameters
+        ----------
+        config : FootprintConfig
+            The variant's footprint settings, as :meth:`resolve` returned them.
+        sim : stilt.simulation.Simulation
+            The simulation, as the worker gives it: the particle part, which
+            reads the particles.
+        path : Path or UPath
+            Where to write the footprint file.
         """
         if config.grid is None:  # resolve gives every footprint its grid
             raise ValueError(f"The footprint of {sim} has no grid.")
@@ -247,7 +258,7 @@ def footprint_particles(
     The particles are returned as they are when they have ``foot`` and
     ``pbl_height`` is unset: the transport model's own ``foot``, such as
     HYSPLIT's. Otherwise PYSTILT computes ``foot`` with ``footprint_depth``,
-    ``pbl_height`` and ``pbl_height_min`` (:func:`stilt.particles.add_foot`),
+    ``pbl_height`` and ``pbl_height_min`` (:func:`stilt.footprint.add_foot`),
     in place of the model's, and returns a copy with it. The particles
     passed in are not changed, and the computed ``foot`` is stored
     nowhere: each footprint computes it again.
@@ -315,7 +326,7 @@ def footprint_particles(
     )
     logger.info(
         "foot computed by PYSTILT from %s and the air below it in the met files "
-        "(stilt.particles.add_foot)%s",
+        "(stilt.footprint.add_foot)%s",
         _mixed_layer(particles, config),
         " in place of the model's foot" if had_foot else "",
     )

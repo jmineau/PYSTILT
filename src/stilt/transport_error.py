@@ -33,7 +33,7 @@ import pandas as pd
 import xarray as xr
 
 from stilt.background import _background, _fill_missing
-from stilt.particles.table import _near_field
+from stilt.footprint.foot import _near_field
 from stilt.receptors import Receptor
 from stilt.transforms import apply_transforms, release_coordinate
 

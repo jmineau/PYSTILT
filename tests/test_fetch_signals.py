@@ -47,7 +47,7 @@ DRIVER = textwrap.dedent(
     shutil.copyfileobj = copy
     archives.get_archive = lambda name, **options: Local()
     sys.argv = ["stilt", "fetch", project]
-    from stilt.cli import app
+    from stilt.stilt_cli import app
 
     app()
     """

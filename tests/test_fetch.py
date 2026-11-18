@@ -10,8 +10,8 @@ from arlmet.archives import HRRRArchive
 from typer.testing import CliRunner
 
 from stilt import transport
-from stilt.cli import app
 from stilt.project import Project
+from stilt.stilt_cli import app
 from stilt.transport.hysplit import Met, MetConfig
 from tests.fixtures.factories import blocks
 

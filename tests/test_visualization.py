@@ -18,13 +18,8 @@ from matplotlib.layout_engine import ConstrainedLayoutEngine
 from stilt.footprint.config import FootprintConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.spatial import Grid
-from stilt.visualization import (
-    ProjectPlotAccessor,
-    SimulationPlotAccessor,
-    _draw_bounds_box,
-    _log10_safe,
-    _make_ax,
-)
+from stilt.stilt_visualization import SimulationPlotAccessor, _log10_safe
+from stilt.visualization import ProjectPlotAccessor, _draw_bounds_box, _make_ax
 
 from .fixtures.factories import make_project_config
 from .fixtures.footprints import as_footprint

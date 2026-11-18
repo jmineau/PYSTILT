@@ -25,6 +25,9 @@ from .receptors import (
 from .spatial import Bounds, Grid
 from .stilt_project import Project
 from .stilt_simulation import Simulation
+
+# Registers particles.stilt, with STILT's methods (stilt_particles.ParticlesAccessor).
+from . import stilt_particles  # noqa: F401  # isort: skip
 from .transforms import averaging_kernel_table
 from .transport import run_trajectories
 from .transport_error import TransportError, transport_error

@@ -349,7 +349,9 @@ STILT-R project folder:
    receptors = import_stilt_r("my_project/out/by-id", "output", version="1d936c1")
 
 It prints the blocks that name the imported folders, for ``config.yaml``:
-the met, the ``stilt-r`` model, the footprint stage, and the variant.
+the met, the ``stilt-r`` model (PYSTILT's model of imported runs, named by
+its import path, :class:`stilt.stilt_r.StiltRModel`), the footprint stage,
+and the variant.
 
 .. code-block:: yaml
 
@@ -357,7 +359,7 @@ the met, the ``stilt-r`` model, the footprint stage, and the variant.
      stilt-r:
        met_path: /data/hrrr
    models:
-     stilt-r: {}
+     stilt-r: {class: stilt.stilt_r.StiltRModel}
    stages:
      footprint: {class: stilt.footprint.FootprintStage}
    variants:
