@@ -11,6 +11,7 @@ import pandas as pd
 import xarray as xr
 
 from stilt.particles._cf import to_cf_trajectories
+from stilt.particles.table import _need_foot
 from stilt.sampling import sample_field
 from stilt.spatial import _grid_cell_starts
 
@@ -360,9 +361,20 @@ class ParticlesAccessor:
         ------
         ValueError
             If the flux varies in time and the particles have no
-            ``time`` column.
+            ``time`` column, or the particles have no ``foot``.
+
+        Notes
+        -----
+        ``foot`` is the table's own. ``sim.particles`` holds the transport
+        model's ``foot`` (HYSPLIT's, made with ``veght``), or none from a
+        model that writes only positions. With ``pbl_height`` set the footprint
+        stage computes its own ``foot``, so this enhancement differs from
+        ``sim.footprint``'s. For the same one, pass the particles through
+        :func:`stilt.footprint.footprint_particles` first, with the met files
+        the run read; they must still be where the run read them.
         """
         p = self._particles
+        _need_foot(p)
         times = p["time"].to_numpy() if "time" in p.columns else None
         if "time" in flux.dims and times is None:
             raise ValueError(

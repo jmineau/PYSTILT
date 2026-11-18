@@ -253,6 +253,12 @@ class ParticlesPlotAccessor:
             raise ValueError(
                 f"color_by must be one of {list(_color_labels)!r}, got {color_by!r}"
             )
+        if color_by == "foot" and "foot" not in p.columns:
+            raise ValueError(
+                "The particles have no 'foot' column to color by: the transport "
+                "model wrote none. stilt.footprint.footprint_particles adds "
+                "the one the footprint uses."
+            )
         c: np.ndarray = p[color_by].to_numpy(dtype=float)
         cbar_label = _color_labels[color_by]
 

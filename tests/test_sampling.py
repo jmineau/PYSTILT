@@ -222,6 +222,12 @@ def test_particles_enhancement_time_varying_needs_time():
         _particles().drop(columns="time").stilt.enhancement(flux)
 
 
+def test_particles_enhancement_without_foot_says_how_to_get_one():
+    """A positions-only model's ``sim.particles`` has no ``foot``: the footprint stage stores its own nowhere."""
+    with pytest.raises(ValueError, match="no 'foot' column.*footprint_particles"):
+        _particles().drop(columns="foot").stilt.enhancement(_flux())
+
+
 def _footprint(point_receptor, values):
     grid = Grid(xmin=-112.5, xmax=-109.5, ymin=39.5, ymax=41.5, xres=1.0, yres=1.0)
     times = pd.to_datetime(["2023-01-01 12:00", "2023-01-01 11:00"])

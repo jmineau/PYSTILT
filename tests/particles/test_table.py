@@ -803,7 +803,7 @@ def test_check_particles_names_the_missing_columns():
 
     table = pd.DataFrame({name: [1.0] for name in PARTICLE_SCHEMA.names})
     check_particles(table)
-    with pytest.raises(ValueError, match="no 'foot' column"):
+    with pytest.raises(ValueError, match="no 'foot' column.*footprint_particles"):
         check_particles(table, need=("foot",))
     with pytest.raises(ValueError, match="no 'lon', 'lat' columns"):
         check_particles(table.drop(columns=["lon", "lat"]))
