@@ -81,6 +81,28 @@ def test_hysplit_version_is_none_when_hycs_std_prints_none(tmp_path):
     assert hysplit_version(build) is None
 
 
+def test_hysplit_version_is_none_for_a_hycs_std_that_cannot_run_here(tmp_path):
+    """Another platform's build: the version is recorded only, so it does not stop a run."""
+    build = tmp_path / "b"
+    build.mkdir()
+    (build / "hycs_std").write_bytes(b"\x00not a program for this machine")
+    (build / "hycs_std").chmod(0o755)
+    assert hysplit_version(build) is None
+
+
+def test_hysplit_version_is_none_for_a_hycs_std_that_does_not_stop(
+    tmp_path, monkeypatch
+):
+    from stilt.transport.hysplit import model
+
+    monkeypatch.setattr(model, "_VERSION_TIMEOUT", 0.5)
+    build = tmp_path / "b"
+    build.mkdir()
+    (build / "hycs_std").write_text("#!/bin/sh\nexec sleep 30\n")
+    (build / "hycs_std").chmod(0o755)
+    assert hysplit_version(build) is None
+
+
 def test_without_hycs_std_hysplit_version_says_what_to_set(monkeypatch, tmp_path):
     monkeypatch.setenv("PATH", str(tmp_path))
     with pytest.raises(HYSPLITNotFoundError, match="exe_dir"):
