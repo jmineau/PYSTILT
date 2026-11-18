@@ -174,8 +174,13 @@ Where each ``CONTROL`` and ``SETUP.CFG`` line comes from
 
 Every ``SETUP.CFG`` entry that can change the particles is a setting of the
 same name in lowercase, such as ``numpar``, ``kmixd`` or ``tlfrac``
-(:doc:`../reference/configuration` lists them). PYSTILT writes the rest
-itself:
+(:doc:`../reference/configuration` lists them). Each defaults to HYSPLIT's
+own value in STILT mode. A setting HYSPLIT decides only after reading the
+file (``capemin``, ``kblt``, ``kmixd``, ``krand``, ``vscales``) is left out
+unless you give it, so HYSPLIT chooses. ``stilt init`` writes STILT-R's
+values for a few of them into a new project's config
+(:doc:`migration/stilt_r`); delete those lines to run HYSPLIT's. PYSTILT
+writes the rest itself:
 
 .. list-table::
    :header-rows: 1

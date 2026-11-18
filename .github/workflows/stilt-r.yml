@@ -67,14 +67,18 @@ jobs:
       #   r/src/calc_plume_dilution.r — HNF plume dilution
       #   r/src/permute.f90        — inner Gaussian scatter loop
       #   r/src/write_footprint.r  — output format / precision (float32 assumption)
+      #   r/src/write_setup.r, r/run_stilt.r — the HYSPLIT settings STILT-R runs
+      #                              with, which a new project's SETUP.CFG must
+      #                              match (test_config_parity.py, r_only)
       #
-      # The R helpers in tests/fixtures/r_helpers/ source every file in r/src/, and
-      # STILT-R's HYSPLIT run uses bin/linux_x64/hycs_std and exe/ (PYSTILT's tests,
-      # docs and parity runs take that hycs_std too), so once a month
-      # the Upgrade STILT-R workflow (stilt-r-upgrade.yml) opens a pull request that
-      # bumps STILT_R_SHA when a new upstream commit touches any of those.
+      # The R helpers in tests/fixtures/r_helpers/ source every file in r/src/ and
+      # read r/run_stilt.r's HYSPLIT settings, and STILT-R's HYSPLIT run uses
+      # bin/linux_x64/hycs_std and exe/ (PYSTILT's tests, docs and parity runs take
+      # that hycs_std too), so once a month the Upgrade STILT-R workflow
+      # (stilt-r-upgrade.yml) opens a pull request that bumps STILT_R_SHA when a
+      # new upstream commit touches any of those.
       #
-      # IGNORE: run_stilt.r, stilt_cli.r, docs, R package scaffolding.
+      # IGNORE: stilt_cli.r, docs, R package scaffolding.
       STILT_R_SHA: 278b1ef6d542efd21c6ccab2a85b796acd9812a6
 
     steps:

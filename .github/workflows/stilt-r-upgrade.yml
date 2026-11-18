@@ -3,8 +3,8 @@ name: Upgrade STILT-R
 # Once a month, look for uataq/stilt commits after the pinned STILT_R_SHA (in
 # stilt-r.yml) and open one pull request that moves the pin to uataq/stilt's newest
 # commit when any of them touches a file the STILT-R comparison runs (WATCH below).
-# Commits that touch only other files (run_stilt.r, stilt_cli.r, docs, tests, the
-# Dockerfile) open nothing: the pin moves past them with the next real change.
+# Commits that touch only other files (stilt_cli.r, docs, tests, the Dockerfile)
+# open nothing: the pin moves past them with the next real change.
 #
 # The pull request also moves the pin in docs/development/stilt_r_parity.rst and
 # sets its "Last verified" date. Merge it when the STILT-R parity workflow passes; when it
@@ -30,10 +30,11 @@ env:
   BRANCH: chore/stilt-r-upgrade
   UPSTREAM: uataq/stilt
   # Path prefixes in uataq/stilt that the comparison runs: the R helpers in
-  # tests/fixtures/r_helpers/ source every file in r/src/, and STILT-R's HYSPLIT
-  # run uses bin/linux_x64/hycs_std with the files in exe/ (PYSTILT's tests and
-  # docs run that hycs_std too: .github/scripts/install_hysplit.sh).
-  WATCH: "r/src/ bin/linux_x64/hycs_std exe/"
+  # tests/fixtures/r_helpers/ source every file in r/src/ and read the HYSPLIT
+  # settings in r/run_stilt.r, and STILT-R's HYSPLIT run uses
+  # bin/linux_x64/hycs_std with the files in exe/ (PYSTILT's tests and docs run
+  # that hycs_std too: .github/scripts/install_hysplit.sh).
+  WATCH: "r/src/ r/run_stilt.r bin/linux_x64/hycs_std exe/"
 
 jobs:
   upgrade:

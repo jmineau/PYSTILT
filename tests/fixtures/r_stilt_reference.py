@@ -239,7 +239,7 @@ class ReferenceScenario:
 
     def make_model_config(self, met_dir):
         """Return a :class:`~stilt.config.ProjectConfig` configured for this scenario."""
-        from stilt.config import FOOTPRINT_STAGE, ProjectConfig
+        from stilt.config import FOOTPRINT_STAGE, STILT_R_HYSPLIT, ProjectConfig
 
         config: dict = {
             "mets": {
@@ -249,6 +249,9 @@ class ReferenceScenario:
             },
             "models": {
                 "hysplit": {
+                    # STILT-R's values where HYSPLIT's own differ, as
+                    # Project.init writes them, then the scenario's.
+                    **STILT_R_HYSPLIT,
                     "n_hours": self.n_hours,
                     "numpar": self.numpar,
                     "krand": self.krand,

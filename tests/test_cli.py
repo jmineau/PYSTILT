@@ -19,7 +19,7 @@ from typer.testing import CliRunner
 import stilt.__main__
 from stilt._transient import is_transient
 from stilt.cli import _resolve_project, app
-from stilt.config import ProjectConfig
+from stilt.config import STILT_R_HYSPLIT, ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.project import Project
 from stilt.spatial import Grid
@@ -358,12 +358,25 @@ def test_check_lists_what_would_stop_a_run_and_exits_1(tmp_path, calls):
 
 def test_check_tells_a_receptor_above_sea_level_to_add_zsfc_and_exits_1(tmp_path):
     _write_checkable_config(tmp_path)
-    # A footprint, whose near-field correction reads zsfc for this receptor.
-    with (tmp_path / "config.yaml").open("a") as config:
-        config.write(
-            "stages:\n  footprint:\n    class: stilt.footprint.FootprintStage\n"
-            "    grid: {xmin: -113, xmax: -110, ymin: 40, ymax: 42, xres: 0.1, yres: 0.1}\n"
-        )
+    # A footprint, whose near-field correction reads zsfc for this receptor,
+    # and STILT-R's varsiwant, which has no zsfc (HYSPLIT's own list has it).
+    config = tmp_path / "config.yaml"
+    settings = yaml.safe_load(config.read_text())
+    settings["models"]["hysplit"]["varsiwant"] = STILT_R_HYSPLIT["varsiwant"]
+    settings["stages"] = {
+        "footprint": {
+            "class": "stilt.footprint.FootprintStage",
+            "grid": {
+                "xmin": -113,
+                "xmax": -110,
+                "ymin": 40,
+                "ymax": 42,
+                "xres": 0.1,
+                "yres": 0.1,
+            },
+        }
+    }
+    config.write_text(yaml.safe_dump(settings))
     (tmp_path / "receptors.csv").write_text(
         "time,longitude,latitude,altitude,altitude_ref\n"
         "2023-01-01 12:00:00,-111.85,40.77,1500.0,msl\n"
@@ -460,10 +473,15 @@ def test_check_exits_2_for_a_varsiwant_name_hycs_std_stops_on(tmp_path):
     """`zfx1` passed validation and stopped hycs_std; now check names the spelling it reads (#324)."""
     _write_checkable_config(tmp_path)
     config = tmp_path / "config.yaml"
-    config.write_text(
-        config.read_text()
-        + "models:\n  hysplit:\n    varsiwant: [time, indx, long, lati, zfx1]\n"
-    )
+    settings = yaml.safe_load(config.read_text())
+    settings["models"]["hysplit"]["varsiwant"] = [
+        "time",
+        "indx",
+        "long",
+        "lati",
+        "zfx1",
+    ]
+    config.write_text(yaml.safe_dump(settings))
 
     result = runner.invoke(app, ["check", str(tmp_path)])
 
@@ -1494,7 +1512,7 @@ def test_init_writes_science_first_commented_config(tmp_path):
     assert list(parsed) == ["mets", "models", "stages", "variants", "output"]
     assert parsed["output"] == "./output"
     assert list(parsed["models"]) == ["hysplit"]
-    assert list(parsed["models"]["hysplit"]) == ["n_hours", "numpar", "varsiwant"]
+    assert parsed["models"]["hysplit"] == {"n_hours": -24, **STILT_R_HYSPLIT}
     footprint = parsed["stages"]["footprint"]
     assert footprint["class"] == "stilt.footprint.FootprintStage"
     assert footprint["grid"]["xmin"] == -113.0
@@ -1561,6 +1579,7 @@ def test_status_counts_failures_by_reason(tmp_path):
         tmp_path,
         mets={"hrrr": make_met_config(tmp_path / "met")},
         receptors=receptors,
+        models={"hysplit": {"n_hours": -24}},
         variants={"hrrr": {}},
     )
     reasons = ["MET_COVERAGE", "MET_COVERAGE", None]

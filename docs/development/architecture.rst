@@ -369,7 +369,19 @@ there is refused with a message naming its block.
   ``stilt.transport.get_model``: by name when the file loads, and by value
   as a variant runs them (at load for a variant that changes none, else in
   ``resolve``), since a block need not be complete (the ``stilt-r`` model
-  has no defaults). Without ``models``, the project runs ``hysplit``.
+  has no defaults, and ``n_hours`` has none in any model). Without
+  ``models``, the project runs ``hysplit``.
+- ``HysplitConfig`` has HYSPLIT's own defaults, in the STILT mode that
+  ``FIXED_SETUP`` sets. The settings HYSPLIT decides after reading
+  ``SETUP.CFG`` (``capemin``, ``kblt``, ``kmixd``, ``krand``, ``vscales``)
+  default to unset and are then not written. STILT-R's values are PYSTILT's
+  side: ``stilt.config.STILT_R_HYSPLIT``, which ``stilt init`` (the starter
+  config) and ``Project.init`` write into the ``hysplit`` block where it
+  gives none, so what a project runs is in its file. ``run_trajectories``
+  and a hand-written config get HYSPLIT's. A run records the resolved
+  values, so a config that gives STILT-R's values names the same settings
+  folder as the old defaults did, while an unset setting is recorded as
+  ``null``.
 - A ``stages`` block names what is made from each simulation's particles
   by its ``class``. The footprint, ``stilt.footprint.FootprintStage``, is
   the one stage, and its block holds the ``FootprintConfig`` fields. A stage

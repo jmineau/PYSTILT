@@ -106,9 +106,13 @@ follows them back in time through the meteorology:
 ``krand`` and ``seed``
    HYSPLIT draws random numbers for the turbulence that moves each particle.
    ``krand=2`` with a ``seed`` makes the draws the same on every run, so your
-   particles match the ones on this page. Without them (``krand=4``, the
-   default) every run draws its own, and the particles and the footprint
-   change a little from run to run.
+   particles match the ones on this page. A project's config sets
+   ``krand: 4``, STILT-R's value, under which every run draws its own, and the
+   particles and the footprint change a little from run to run.
+
+Every other HYSPLIT setting takes HYSPLIT's own default here. A few of those
+differ from the values STILT-R runs HYSPLIT with, such as whether particles
+mix by convection. A project, below, writes STILT-R's values into its config.
 
 This runs HYSPLIT, the transport model, and usually takes a minute or two.
 The particles are a :class:`pandas.DataFrame`, one row per particle per
@@ -228,8 +232,11 @@ the variant name:
    @savefig quickstart_sim_footprint.png width=6in
    sim.footprint.stilt.plot.map();
 
-This is the same footprint as in Step 3, because the settings and the seed
-are the same.
+This footprint can differ a little from the one in Step 3. The seed is the
+same, but ``Project.init`` wrote STILT-R's HYSPLIT values into the project's
+``config.yaml`` where they differ from HYSPLIT's own defaults, which
+``run_trajectories`` used in Step 2. Open the file to see them;
+:doc:`../guides/migration/stilt_r` lists them.
 
 What PYSTILT wrote
 ------------------

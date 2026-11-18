@@ -103,9 +103,10 @@ needs must be in the project or the output directory.
 
 `ProjectConfig` is `config.yaml`'s blocks, and no setting sits outside one: `mets`,
 `models` (`hysplit` unless set), `stages` (the footprint, by its `class`), `variants`.
-Each part owns its config class; the base `TransportConfig` gets a parameter
-only when the core reads it. Config classes do no I/O when they validate;
-`ProjectConfig.resolve` reads geometries and asks the model its version.
+Each part owns its config class; the base `TransportConfig` gets a parameter only
+when the core reads it. Config classes do no I/O when they validate; `resolve` reads
+geometries and asks the model its version. `HysplitConfig` has HYSPLIT's own defaults
+(`n_hours` none); `stilt init` and `Project.init` write STILT-R's (`STILT_R_HYSPLIT`).
 
 ## Invariants
 

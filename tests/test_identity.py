@@ -124,7 +124,9 @@ def test_moving_the_hysplit_folder_keeps_the_hash(tmp_path):
 
 def test_a_runs_met_is_its_product_and_crop(tmp_path):
     met = _met(tmp_path, subgrid_dir=tmp_path / "sub")
-    recorded = run_settings(HysplitConfig(), met.settings(), ModelInfo(name="hysplit"))
+    recorded = run_settings(
+        HysplitConfig(n_hours=-24), met.settings(), ModelInfo(name="hysplit")
+    )
     assert recorded["met"] == {"source": "HRRR", "crop": None}
 
 
@@ -181,7 +183,7 @@ def test_nested_and_flat_ziscale_are_one_run(tmp_path):
     assert nested.transport.ziscale == [0.8, 0.9]
     assert nested.particles_hash == flat.particles_hash
     with pytest.raises(ValueError, match="Per-simulation"):
-        HysplitConfig(ziscale=[[0.8], [0.9]])
+        HysplitConfig(n_hours=-24, ziscale=[[0.8], [0.9]])
 
 
 def test_variants_that_differ_only_in_footprint_fields_share_particles(tmp_path):

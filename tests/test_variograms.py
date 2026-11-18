@@ -189,6 +189,10 @@ def test_recipe_recovers_known_scales():
     assert tluverr == pytest.approx(l_t, rel=0.2)
     assert horcoruverr == pytest.approx(l_x, rel=0.25)
     params = HysplitConfig(
-        siguverr=siguverr, tluverr=tluverr, zcoruverr=zcoruverr, horcoruverr=horcoruverr
+        n_hours=-24,
+        siguverr=siguverr,
+        tluverr=tluverr,
+        zcoruverr=zcoruverr,
+        horcoruverr=horcoruverr,
     )
     assert winderrtf(params) == 1

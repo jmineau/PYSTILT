@@ -54,7 +54,7 @@ def test_stilt_r_is_a_built_in_model_that_cannot_run(point_receptor):
 def test_stilt_r_settings_have_no_defaults():
     from stilt.transport.stilt_r import StiltRConfig
 
-    settings = HysplitConfig().settings()
+    settings = HysplitConfig(n_hours=-24).settings()
     with pytest.raises(ValueError, match="missing: numpar"):
         StiltRConfig.model_validate(
             {k: v for k, v in settings.items() if k != "numpar"}
@@ -249,7 +249,7 @@ def test_run_trajectories_returns_the_particles_and_removes_its_workdir(
     from stilt import run_trajectories
 
     particles = run_trajectories(
-        point_receptor, _met(tmp_path), model="echo", numpar=50, timeout=9
+        point_receptor, _met(tmp_path), model="echo", n_hours=-24, numpar=50, timeout=9
     )
     # The footprint applies the near-field correction, not the run.
     assert "foot_no_hnf_dilution" not in particles.columns
@@ -272,12 +272,20 @@ def test_run_trajectories_keeps_a_workdir_it_was_given(tmp_path, point_receptor,
     from stilt import run_trajectories
 
     run_trajectories(
-        point_receptor, _met(tmp_path), model="echo", workdir=tmp_path / "w"
+        point_receptor,
+        _met(tmp_path),
+        model="echo",
+        n_hours=-24,
+        workdir=tmp_path / "w",
     )
     assert (tmp_path / "w" / "CONTROL").exists()
     with pytest.raises(ValueError, match="not empty"):
         run_trajectories(
-            point_receptor, _met(tmp_path), model="echo", workdir=tmp_path / "w"
+            point_receptor,
+            _met(tmp_path),
+            model="echo",
+            n_hours=-24,
+            workdir=tmp_path / "w",
         )
 
 
@@ -285,7 +293,11 @@ def test_run_trajectories_checks_the_models_parameters(tmp_path, point_receptor,
     from stilt import run_trajectories
 
     with pytest.raises(ValueError, match="nparticles"):
-        run_trajectories(point_receptor, _met(tmp_path), model="echo", nparticles=5)
+        run_trajectories(
+            point_receptor, _met(tmp_path), model="echo", n_hours=-24, nparticles=5
+        )
+    with pytest.raises(ValueError, match="n_hours"):
+        run_trajectories(point_receptor, _met(tmp_path), model="echo")
 
 
 def test_finish_leaves_foot_for_the_footprint_to_correct():
@@ -295,7 +307,9 @@ def test_finish_leaves_foot_for_the_footprint_to_correct():
     particles = _positions_only().assign(
         foot=[1e-5, 2e-5], dens=1.2, samt=1.0, sigw=0.1, tlgr=10.0, mlht=500.0
     )
-    run = _finish(ModelRun(particles, met_files=[]), _receptor(), TransportConfig())
+    run = _finish(
+        ModelRun(particles, met_files=[]), _receptor(), TransportConfig(n_hours=-24)
+    )
 
     assert run.particles["foot"].tolist() == [1e-5, 2e-5]
     assert "foot_no_hnf_dilution" not in run.particles.columns
@@ -337,7 +351,7 @@ def test_finish_computes_foot_from_the_met_files_the_run_read(
         run = _finish(
             ModelRun(_positions_only(), log="model log\n", met_files=met_files),
             _receptor(),
-            TransportConfig(footprint_depth=0.3),
+            TransportConfig(n_hours=-24, footprint_depth=0.3),
         )
 
     assert seen["met_files"] == met_files
@@ -369,7 +383,7 @@ def test_finish_keeps_the_time_and_mlht_a_model_wrote(monkeypatch, tmp_path):
     run = _finish(
         ModelRun(particles, met_files=[tmp_path / "met"]),
         _receptor(),
-        TransportConfig(),
+        TransportConfig(n_hours=-24),
     )
 
     assert run.particles["time"].tolist() == [time, time]
@@ -382,7 +396,7 @@ def test_finish_says_why_there_is_no_foot_without_met_files():
     run = _finish(
         ModelRun(_positions_only(), met_files=[]),
         _receptor(),
-        TransportConfig(),
+        TransportConfig(n_hours=-24),
     )
 
     assert "foot" not in run.particles.columns
@@ -397,7 +411,9 @@ def test_finish_keeps_the_foot_a_model_wrote(monkeypatch):
         transport, "add_foot", lambda *a, **k: pytest.fail("computed foot")
     )
     particles = _positions_only().assign(foot=[1e-3, 2e-3])
-    run = _finish(ModelRun(particles, met_files=[]), _receptor(), TransportConfig())
+    run = _finish(
+        ModelRun(particles, met_files=[]), _receptor(), TransportConfig(n_hours=-24)
+    )
 
     assert run.particles["foot"].tolist() == [1e-3, 2e-3]
     assert run.log == ""
@@ -420,7 +436,7 @@ def test_finish_with_pbl_height_set_replaces_the_foot_and_mlht_a_model_wrote(
     run = _finish(
         ModelRun(particles, met_files=[tmp_path / "met"]),
         _receptor(),
-        TransportConfig(pbl_height="richardson", pbl_height_min=150),
+        TransportConfig(n_hours=-24, pbl_height="richardson", pbl_height_min=150),
     )
 
     assert "foot" not in seen["columns"]
@@ -449,7 +465,7 @@ def test_finish_gives_add_foot_the_top_of_a_hysplit_runs_domain(monkeypatch, tmp
     _finish(
         ModelRun(_positions_only().assign(foot=1e-3), met_files=[tmp_path / "met"]),
         _receptor(),
-        HysplitConfig(pbl_height="richardson", z_top=10000.0),
+        HysplitConfig(n_hours=-24, pbl_height="richardson", z_top=10000.0),
     )
 
     assert seen["z_top"] == 10000.0
@@ -468,7 +484,7 @@ def test_finish_with_pbl_height_set_keeps_the_models_foot_without_met_files(
     run = _finish(
         ModelRun(particles, met_files=[]),
         _receptor(),
-        TransportConfig(pbl_height=500),
+        TransportConfig(n_hours=-24, pbl_height=500),
     )
 
     assert run.particles["foot"].tolist() == [1e-3, 2e-3]
@@ -482,7 +498,7 @@ def test_pbl_height_refuses_a_height_that_is_not_above_the_ground(value):
     from stilt.transport import TransportConfig
 
     with pytest.raises(ValidationError, match="pbl_height"):
-        TransportConfig(pbl_height=value)
+        TransportConfig(n_hours=-24, pbl_height=value)
 
 
 def test_pbl_height_min_refuses_a_negative_height():
@@ -491,17 +507,22 @@ def test_pbl_height_min_refuses_a_negative_height():
     from stilt.transport import TransportConfig
 
     with pytest.raises(ValidationError, match="pbl_height_min"):
-        TransportConfig(pbl_height_min=-1)
+        TransportConfig(n_hours=-24, pbl_height_min=-1)
 
 
 def test_pbl_height_is_recorded_only_when_set():
     from stilt.transport import TransportConfig
 
-    unset = TransportConfig().settings()
+    unset = TransportConfig(n_hours=-24).settings()
     assert "pbl_height" not in unset
     assert "pbl_height_min" not in unset
-    assert TransportConfig(pbl_height="met").settings()["pbl_height"] == "met"
-    assert TransportConfig(pbl_height_min=150).settings()["pbl_height_min"] == 150
+    assert (
+        TransportConfig(n_hours=-24, pbl_height="met").settings()["pbl_height"] == "met"
+    )
+    assert (
+        TransportConfig(n_hours=-24, pbl_height_min=150).settings()["pbl_height_min"]
+        == 150
+    )
 
 
 def _receptor():
@@ -514,4 +535,4 @@ def _receptor():
 
 def test_a_transport_config_refuses_veght_naming_footprint_depth():
     with pytest.raises(ValueError, match="veght was renamed footprint_depth"):
-        TransportConfig(veght=0.5)
+        TransportConfig(n_hours=-24, veght=0.5)
