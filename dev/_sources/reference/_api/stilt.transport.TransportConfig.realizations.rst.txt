@@ -2,5 +2,4 @@ stilt.transport.TransportConfig.realizations
 ============================================
 
 .. currentmodule:: stilt.transport
-
 .. automethod:: TransportConfig.realizations

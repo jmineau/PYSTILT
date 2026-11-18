@@ -2,5 +2,4 @@ stilt.output.Output.folder
 ==========================
 
 .. currentmodule:: stilt.output
-
 .. automethod:: Output.folder

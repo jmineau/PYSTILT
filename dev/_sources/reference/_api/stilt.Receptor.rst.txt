@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.Receptor
 
 
@@ -21,6 +23,7 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
    ~Receptor.geometry
    ~Receptor.id

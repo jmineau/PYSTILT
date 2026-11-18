@@ -2,5 +2,4 @@ stilt.output.Output.write\_empty\_footprint
 ===========================================
 
 .. currentmodule:: stilt.output
-
 .. automethod:: Output.write_empty_footprint

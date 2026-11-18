@@ -2,5 +2,4 @@ stilt.ProjectConfig.to\_yaml
 ============================
 
 .. currentmodule:: stilt
-
 .. automethod:: ProjectConfig.to_yaml

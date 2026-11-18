@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.Grid
 
 
@@ -21,6 +23,7 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
    ~Grid.axes
    ~Grid.cells

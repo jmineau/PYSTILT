@@ -2,5 +2,4 @@ stilt.transport.TransportModel.data\_files
 ==========================================
 
 .. currentmodule:: stilt.transport
-
 .. automethod:: TransportModel.data_files

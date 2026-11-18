@@ -2,5 +2,4 @@ stilt.Mesh.from\_h3
 ===================
 
 .. currentmodule:: stilt
-
 .. automethod:: Mesh.from_h3

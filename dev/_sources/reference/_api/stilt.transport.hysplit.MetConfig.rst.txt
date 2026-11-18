@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.transport.hysplit.MetConfig
 
 
@@ -21,6 +23,7 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
    ~MetConfig.download_options
 

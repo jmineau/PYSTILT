@@ -2,5 +2,4 @@ stilt.ProjectConfig.resolve
 ===========================
 
 .. currentmodule:: stilt
-
 .. automethod:: ProjectConfig.resolve

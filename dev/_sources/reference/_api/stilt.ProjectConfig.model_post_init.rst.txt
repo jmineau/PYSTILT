@@ -2,5 +2,4 @@ stilt.ProjectConfig.model\_post\_init
 =====================================
 
 .. currentmodule:: stilt
-
 .. automethod:: ProjectConfig.model_post_init

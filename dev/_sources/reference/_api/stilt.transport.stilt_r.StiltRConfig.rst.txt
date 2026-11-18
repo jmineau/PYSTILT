@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.transport.stilt_r.StiltRConfig
 
 
@@ -21,6 +23,7 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
    ~StiltRConfig.UNRECORDED
 

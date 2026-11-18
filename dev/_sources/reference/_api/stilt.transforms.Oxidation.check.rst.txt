@@ -2,5 +2,4 @@ stilt.transforms.Oxidation.check
 ================================
 
 .. currentmodule:: stilt.transforms
-
 .. automethod:: Oxidation.check

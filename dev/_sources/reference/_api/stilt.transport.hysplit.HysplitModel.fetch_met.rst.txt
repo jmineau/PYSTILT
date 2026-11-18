@@ -2,5 +2,4 @@ stilt.transport.hysplit.HysplitModel.fetch\_met
 ===============================================
 
 .. currentmodule:: stilt.transport.hysplit
-
 .. automethod:: HysplitModel.fetch_met

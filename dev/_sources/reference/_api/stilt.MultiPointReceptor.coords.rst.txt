@@ -2,5 +2,4 @@ stilt.MultiPointReceptor.coords
 ===============================
 
 .. currentmodule:: stilt
-
 .. automethod:: MultiPointReceptor.coords

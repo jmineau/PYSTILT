@@ -2,5 +2,4 @@ stilt.transport.TransportModel.version
 ======================================
 
 .. currentmodule:: stilt.transport
-
 .. automethod:: TransportModel.version

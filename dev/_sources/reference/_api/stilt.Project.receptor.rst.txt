@@ -2,5 +2,4 @@ stilt.Project.receptor
 ======================
 
 .. currentmodule:: stilt
-
 .. automethod:: Project.receptor

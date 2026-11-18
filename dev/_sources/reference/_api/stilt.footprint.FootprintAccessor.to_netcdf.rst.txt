@@ -2,5 +2,4 @@ stilt.footprint.FootprintAccessor.to\_netcdf
 ============================================
 
 .. currentmodule:: stilt.footprint
-
 .. automethod:: FootprintAccessor.to_netcdf

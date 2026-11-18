@@ -2,5 +2,4 @@ stilt.footprint.FootprintAccessor.to\_paris
 ===========================================
 
 .. currentmodule:: stilt.footprint
-
 .. automethod:: FootprintAccessor.to_paris

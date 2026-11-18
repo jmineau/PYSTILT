@@ -2,5 +2,4 @@ stilt.Project.table\_path
 =========================
 
 .. currentmodule:: stilt
-
 .. automethod:: Project.table_path

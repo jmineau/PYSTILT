@@ -2,5 +2,4 @@ stilt.transport.hysplit.HysplitModel.version
 ============================================
 
 .. currentmodule:: stilt.transport.hysplit
-
 .. automethod:: HysplitModel.version

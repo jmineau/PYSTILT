@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.FootprintConfig
 
 
@@ -21,6 +23,7 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
    ~FootprintConfig.layer_unit
    ~FootprintConfig.tres_minutes

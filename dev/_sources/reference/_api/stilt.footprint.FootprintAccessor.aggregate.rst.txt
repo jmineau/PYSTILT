@@ -2,5 +2,4 @@ stilt.footprint.FootprintAccessor.aggregate
 ===========================================
 
 .. currentmodule:: stilt.footprint
-
 .. automethod:: FootprintAccessor.aggregate

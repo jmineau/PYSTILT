@@ -2,5 +2,4 @@ stilt.transport.hysplit.HysplitConfig.maxpar\_for
 =================================================
 
 .. currentmodule:: stilt.transport.hysplit
-
 .. automethod:: HysplitConfig.maxpar_for

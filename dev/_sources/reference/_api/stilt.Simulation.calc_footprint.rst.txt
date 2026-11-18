@@ -2,5 +2,4 @@ stilt.Simulation.calc\_footprint
 ================================
 
 .. currentmodule:: stilt
-
 .. automethod:: Simulation.calc_footprint

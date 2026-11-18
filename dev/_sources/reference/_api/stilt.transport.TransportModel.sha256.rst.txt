@@ -2,5 +2,4 @@ stilt.transport.TransportModel.sha256
 =====================================
 
 .. currentmodule:: stilt.transport
-
 .. automethod:: TransportModel.sha256

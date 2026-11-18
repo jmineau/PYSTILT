@@ -2,5 +2,4 @@ stilt.transport.hysplit.HysplitModel.sha256
 ===========================================
 
 .. currentmodule:: stilt.transport.hysplit
-
 .. automethod:: HysplitModel.sha256

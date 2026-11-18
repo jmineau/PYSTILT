@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.execution.SlurmConfig
 
 
@@ -21,6 +23,7 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
    ~SlurmConfig.options
 

@@ -2,5 +2,4 @@ stilt.transport.stilt\_r.StiltRMetConfig.settings
 =================================================
 
 .. currentmodule:: stilt.transport.stilt_r
-
 .. automethod:: StiltRMetConfig.settings

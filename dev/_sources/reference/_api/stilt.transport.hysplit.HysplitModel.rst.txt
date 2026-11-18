@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.transport.hysplit.HysplitModel
 
 
@@ -18,6 +20,7 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
    ~HysplitModel.batched
    ~HysplitModel.needs_workdir

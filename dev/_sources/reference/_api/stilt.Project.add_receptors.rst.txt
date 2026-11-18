@@ -2,5 +2,4 @@ stilt.Project.add\_receptors
 ============================
 
 .. currentmodule:: stilt
-
 .. automethod:: Project.add_receptors

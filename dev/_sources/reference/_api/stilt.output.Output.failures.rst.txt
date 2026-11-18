@@ -2,5 +2,4 @@ stilt.output.Output.failures
 ============================
 
 .. currentmodule:: stilt.output
-
 .. automethod:: Output.failures

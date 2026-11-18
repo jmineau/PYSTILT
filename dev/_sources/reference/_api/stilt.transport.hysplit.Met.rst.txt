@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.transport.hysplit.Met
 
 
@@ -18,6 +20,7 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
    ~Met.crop_dir
 

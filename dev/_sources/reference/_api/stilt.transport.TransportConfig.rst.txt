@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.transport.TransportConfig
 
 
@@ -21,6 +23,7 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
    ~TransportConfig.RECORDED_WHEN_SET
    ~TransportConfig.UNRECORDED

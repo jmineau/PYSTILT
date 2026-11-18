@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.MultiPointReceptor
 
 
@@ -21,6 +23,7 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
    ~MultiPointReceptor.location_id
 

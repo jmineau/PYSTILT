@@ -2,5 +2,4 @@ stilt.Receptor.to\_json
 =======================
 
 .. currentmodule:: stilt
-
 .. automethod:: Receptor.to_json

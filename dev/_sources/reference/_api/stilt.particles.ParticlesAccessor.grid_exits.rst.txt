@@ -2,5 +2,4 @@ stilt.particles.ParticlesAccessor.grid\_exits
 =============================================
 
 .. currentmodule:: stilt.particles
-
 .. automethod:: ParticlesAccessor.grid_exits

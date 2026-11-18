@@ -2,5 +2,4 @@ stilt.Project.check
 ===================
 
 .. currentmodule:: stilt
-
 .. automethod:: Project.check
