@@ -47,10 +47,13 @@ such as ``s3fs`` for ``s3://`` or ``gcsfs`` for ``gs://``
 Get HYSPLIT
 -----------
 
-PYSTILT runs NOAA's HYSPLIT program, ``hycs_std``, to move particles, but it
-does not include it: you get ``hycs_std`` yourself and tell PYSTILT where it
-is. Point ``directory`` at the HYSPLIT folder, in a project's
-``config.yaml``:
+PYSTILT runs NOAA's HYSPLIT program, ``hycs_std``, but does not include it.
+Download HYSPLIT from
+`NOAA's Air Resources Laboratory <https://www.ready.noaa.gov/HYSPLIT.php>`_,
+which asks you to accept the
+`HYSPLIT terms of use <https://www.ready.noaa.gov/HYSPLIT_agreement.php>`_
+first. Unpack it, and point ``directory`` at the folder it makes, in a
+project's ``config.yaml``:
 
 .. code-block:: yaml
 
@@ -59,32 +62,17 @@ is. Point ``directory`` at the HYSPLIT folder, in a project's
        directory: /path/to/hysplit
 
 PYSTILT runs ``exec/hycs_std`` under that folder and reads HYSPLIT's data
-tables from its ``bdyfiles/``, as NOAA's download unpacks them. Without
-``directory`` it runs the first ``hycs_std`` on ``PATH``, which a cluster's
-HYSPLIT module sets when you load it.
+tables from its ``bdyfiles/``. Without ``directory`` it runs the first
+``hycs_std`` on ``PATH``, which a cluster's HYSPLIT module sets when you
+load it.
 
-Download HYSPLIT from
-`NOAA's Air Resources Laboratory <https://www.ready.noaa.gov/HYSPLIT.php>`_.
-The download asks you to accept the
-`HYSPLIT terms of use <https://www.ready.noaa.gov/HYSPLIT_agreement.php>`_
-first, which is why PYSTILT does not hand you a copy. Unpack it on the
-machine that runs PYSTILT (``tar -xzf``) and set ``directory`` to the folder
-it makes. Unpacked on Windows and copied over, ``exec/hycs_std`` loses its
-permission to run; ``chmod +x exec/hycs_std`` gives it back.
+.. tip::
 
-Each Linux download is built for one operating system release: choose yours
-(a Rocky Linux 8 cluster takes the RHEL 8 build), or the one built for all
-Linux distributions. One built for a newer system stops on an older one with
-an error that names ``GLIBC``.
+   Make sure ``hycs_std`` has permission to run:
+   ``chmod +x exec/hycs_std``.
 
-PYSTILT's comparisons with STILT-R run HYSPLIT 5.1.0
-(:doc:`../development/stilt_r_parity`). Another HYSPLIT version can give
-different particles from the same settings.
-
-``stilt check`` lists a project that can find no ``hycs_std``, or one that
-cannot run, and ``stilt run`` stops with the same message before it runs
-anything. A project still opens and reads its results without one. Each run
-records the checksum of the ``hycs_std`` it ran, so runs of different builds
-are kept apart (:doc:`../guides/hysplit_build`).
+``stilt check`` says when a project can find no ``hycs_std``, or one that
+cannot run. :doc:`../guides/hysplit_build` has more on choosing a download
+and on using more than one build.
 
 Next: :doc:`quickstart`.
