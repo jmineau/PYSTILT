@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=ea654bdf"></script>
+    <script src="../../_static/documentation_options.js?v=70c92553"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev12+g5a6460240" />
+  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -457,21 +457,24 @@
 <span class="sd">The project config: what ``config.yaml`` holds, and the variants it declares.</span>
 
 <span class="sd">``config.yaml`` is blocks: ``mets`` names the meteorology, ``models`` the</span>
-<span class="sd">transport models, ``stages`` what is made from each simulation's particles</span>
+<span class="sd">transport models, ``stages`` what is made from each simulation's results</span>
 <span class="sd">(the footprint), and ``variants`` the settings every receptor runs under.</span>
 <span class="sd">A model's or a stage's block holds its settings, the defaults of every</span>
 <span class="sd">variant that uses it, and no setting sits at the top level. Each part has</span>
 <span class="sd">its own config class, next to the code that uses it: the transport model's</span>
 <span class="sd">and its met config (such as :class:`~stilt.transport.hysplit.HysplitConfig`</span>
-<span class="sd">and :class:`~stilt.transport.hysplit.MetConfig`),</span>
-<span class="sd">:class:`~stilt.footprint.config.FootprintConfig`, and</span>
-<span class="sd">:class:`~stilt.execution.ExecutionConfig`. :class:`ProjectConfig` reads the</span>
-<span class="sd">file and checks it without reading any other file, so a ``config.yaml``</span>
-<span class="sd">loads offline. :meth:`ProjectConfig.resolve` turns each declared variant</span>
-<span class="sd">into a :class:`Variant`, what its simulations run with; that reads each</span>
-<span class="sd">footprint geometry and asks the transport model for its build. Which</span>
-<span class="sd">weather each met is, read from its files, is read when a variant's</span>
-<span class="sd">hash is first needed.</span>
+<span class="sd">and :class:`~stilt.transport.hysplit.MetConfig`), a stage's (the</span>
+<span class="sd">footprint's :class:`~stilt.footprint.config.FootprintConfig`), and</span>
+<span class="sd">:class:`~stilt.execution.ExecutionConfig`. A stage is named by the import</span>
+<span class="sd">path of its class (:mod:`stilt.stages`), so this module imports none.</span>
+<span class="sd">:class:`ProjectConfig` reads the file and checks it without reading any</span>
+<span class="sd">other file, so a ``config.yaml`` loads offline.</span>
+<span class="sd">:meth:`ProjectConfig.resolve` turns each declared variant into a</span>
+<span class="sd">:class:`Variant`, what its simulations run with; that has each stage read</span>
+<span class="sd">the files its settings name (a footprint geometry) and check that it fits</span>
+<span class="sd">the variant's model, and asks the transport model for its build. Which</span>
+<span class="sd">weather each met is, read from its files, is read when a variant's hash is</span>
+<span class="sd">first needed.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -479,7 +482,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">difflib</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span><span class="p">,</span> <span class="n">PurePath</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Self</span>
@@ -498,19 +501,8 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">TIME_INTEGRATE_REMOVED</span><span class="p">,</span>
-    <span class="n">FileGeometrySpec</span><span class="p">,</span>
-    <span class="n">FootprintConfig</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.targets</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mesh</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">footprint_hash</span><span class="p">,</span>
-    <span class="n">footprint_settings</span><span class="p">,</span>
-    <span class="n">run_settings</span><span class="p">,</span>
-    <span class="n">settings_hash</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">HNF_PLUME_COLUMNS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">canonical</span><span class="p">,</span> <span class="n">run_settings</span><span class="p">,</span> <span class="n">settings_hash</span><span class="p">,</span> <span class="n">stage_hash</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stage</span><span class="p">,</span> <span class="n">get_stage</span><span class="p">,</span> <span class="n">ordered</span><span class="p">,</span> <span class="n">reads</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">MODELS</span><span class="p">,</span>
     <span class="n">VEGHT_RENAMED</span><span class="p">,</span>
@@ -524,9 +516,6 @@
 
 <span class="c1">#: The import path of the footprint stage, the ``class`` of its ``stages:`` block.</span>
 <span class="n">FOOTPRINT_STAGE</span> <span class="o">=</span> <span class="s2">"stilt.footprint.FootprintStage"</span>
-
-<span class="c1">#: The settings of the footprint stage.</span>
-<span class="n">_FOOTPRINT_FIELDS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_fields</span><span class="p">)</span>
 
 <span class="c1">#: Writes a block of settings given in Python (a path, a config object) as YAML can hold it.</span>
 <span class="n">_JSON</span> <span class="o">=</span> <span class="n">TypeAdapter</span><span class="p">(</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span>
@@ -564,7 +553,15 @@
     <span class="n">model</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># the model, as stilt.transport.get_model names it</span>
     <span class="n">realizations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
     <span class="n">transport</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
-    <span class="n">footprint</span><span class="p">:</span> <span class="n">FootprintConfig</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">stages</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>  <span class="c1"># each stage's checked settings, by the stage's name</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_StageBlock</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""One ``stages`` block of ``config.yaml``: the stage its ``class`` names, and its settings, checked."""</span>
+
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># the import path of the stage's class, as written</span>
+    <span class="n">stage</span><span class="p">:</span> <span class="n">Stage</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">BaseModel</span>
 
 
 <div class="viewcode-block" id="Variant">
@@ -580,9 +577,10 @@
 <span class="sd">    results share one folder, a ``realization=k`` partition each.</span>
 
 <span class="sd">    Variants with equal :attr:`particles_hash` share one run of the</span>
-<span class="sd">    transport model per receptor (and realization) and differ only in their</span>
-<span class="sd">    footprints. The hashes are computed once. Change a variant with</span>
-<span class="sd">    :func:`dataclasses.replace`, which computes them again.</span>
+<span class="sd">    transport model per receptor (and realization) and differ only in what</span>
+<span class="sd">    their stages make of it, such as their footprints. The hashes are</span>
+<span class="sd">    computed once. Change a variant with :func:`dataclasses.replace`, which</span>
+<span class="sd">    computes them again.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
@@ -602,11 +600,13 @@
 <span class="sd">        Its build is :attr:`build`.</span>
 <span class="sd">    realizations : int or None</span>
 <span class="sd">        Number of realizations of an ensemble, or ``None`` for a single run.</span>
-<span class="sd">    footprint : FootprintConfig or None</span>
-<span class="sd">        Footprint config, with its grid, or ``None`` for particles only.</span>
-<span class="sd">    geometry_hash : str or None</span>
-<span class="sd">        Hash of the geometry the footprint grid was derived for</span>
-<span class="sd">        (``Mesh.hash``), or ``None`` when the footprint has no geometry.</span>
+<span class="sd">    stages : dict</span>
+<span class="sd">        The settings of each stage the variant uses, by the stage's name, as</span>
+<span class="sd">        the stage resolved them: ``stages["footprint"]`` is a</span>
+<span class="sd">        :class:`~stilt.footprint.FootprintConfig` with its grid. Empty for a</span>
+<span class="sd">        variant that makes particles only.</span>
+<span class="sd">    stage_classes : dict of str to str</span>
+<span class="sd">        The import path of each stage's class, by the stage's name.</span>
 <span class="sd">    """</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
@@ -615,8 +615,8 @@
     <span class="n">transport</span><span class="p">:</span> <span class="n">TransportConfig</span>
     <span class="n">model</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">realizations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">footprint</span><span class="p">:</span> <span class="n">FootprintConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">stages</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">stage_classes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">realization_numbers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
@@ -751,24 +751,72 @@
         <span class="k">return</span> <span class="n">settings_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_settings</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="Variant.footprint_settings">
-<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.footprint_settings.html#stilt.Variant.footprint_settings">[docs]</a>
-    <span class="nd">@cached_property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">footprint_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The settings that identify this variant's footprints, or ``None`` for particles only."""</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">return</span> <span class="n">footprint_settings</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">footprint</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry_hash</span><span class="p">)</span></div>
+<div class="viewcode-block" id="Variant.stage">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.stage.html#stilt.Variant.stage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Stage</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the stage called *name*, one of :attr:`stages`.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        KeyError</span>
+<span class="sd">            If the variant does not use a stage of that name.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">get_stage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stage_classes</span><span class="p">[</span><span class="n">name</span><span class="p">])</span></div>
 
 
-<div class="viewcode-block" id="Variant.footprint_hash">
-<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.footprint_hash.html#stilt.Variant.footprint_hash">[docs]</a>
+<div class="viewcode-block" id="Variant.stage_order">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.stage_order.html#stilt.Variant.stage_order">[docs]</a>
     <span class="nd">@cached_property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">footprint_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Hash of the particles and :attr:`footprint_settings`, which finds the footprint folder."""</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">footprint_settings</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">return</span> <span class="n">footprint_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">particles_hash</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">footprint_settings</span><span class="p">)</span></div>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stage_order</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""The names of the variant's stages in the order they run, each after the stages it reads."""</span>
+        <span class="k">return</span> <span class="n">ordered</span><span class="p">({</span><span class="n">name</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stages</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="Variant.stage_settings">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.stage_settings.html#stilt.Variant.stage_settings">[docs]</a>
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stage_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""The settings that identify each stage's results, by the stage's name, as its ``_settings.yaml`` records them."""</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">name</span><span class="p">:</span> <span class="n">canonical</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">settings</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stages</span><span class="p">[</span><span class="n">name</span><span class="p">]))</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_order</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Variant.stage_hashes">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.stage_hashes.html#stilt.Variant.stage_hashes">[docs]</a>
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stage_hashes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        The hash that finds each stage's settings folder, by the stage's name.</span>
+
+<span class="sd">        A stage's hash is of the particles' hash, the hash of each stage it</span>
+<span class="sd">        reads, and its own settings (:func:`stilt.identity.stage_hash`).</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">stages</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{}</span>  <span class="c1"># without the particles' hash, which reads the met and the build</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_hashes_on</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">particles_hash</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Variant.stage_hashes_on">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.stage_hashes_on.html#stilt.Variant.stage_hashes_on">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stage_hashes_on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particles_hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the hash of each stage's settings folder for particles hashed *particles_hash*.</span>
+
+<span class="sd">        :attr:`stage_hashes` for the variant's own particles. Given the hash</span>
+<span class="sd">        of a stored particles folder, it finds the stage folders made from</span>
+<span class="sd">        it where :attr:`particles_hash` cannot be computed, as on a machine</span>
+<span class="sd">        without the model's executable.</span>
+<span class="sd">        """</span>
+        <span class="n">hashes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_order</span><span class="p">:</span>
+            <span class="n">read</span> <span class="o">=</span> <span class="p">{</span><span class="n">r</span><span class="p">:</span> <span class="n">hashes</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="n">name</span><span class="p">))}</span>
+            <span class="n">hashes</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">stage_hash</span><span class="p">(</span>
+                <span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_settings</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">particles_hash</span><span class="p">,</span> <span class="n">read</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">hashes</span></div>
 </div>
 
 
@@ -804,7 +852,7 @@
 
 <span class="sd">    The file is blocks. ``mets`` names the meteorology, ``models`` the</span>
 <span class="sd">    transport models, ``stages`` what is made from each simulation's</span>
-<span class="sd">    particles (the footprint), and ``variants`` what runs. A model's or a</span>
+<span class="sd">    results (the footprint), and ``variants`` what runs. A model's or a</span>
 <span class="sd">    stage's block holds its settings, checked by its own config class: the</span>
 <span class="sd">    defaults of every variant that uses it. Each variant names a met and a</span>
 <span class="sd">    model, when there are several, and overrides some of the defaults; only</span>
@@ -862,13 +910,14 @@
     <span class="n">stages</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">"What is made from each simulation's particles, by name, each a "</span>
-            <span class="s2">"block that gives the stage's import path as ``class`` and then "</span>
-            <span class="s2">"its settings. The footprint is ``class: "</span>
-            <span class="s2">"stilt.footprint.FootprintStage``, with the footprint settings "</span>
+            <span class="s2">"What is made from each simulation's results after the transport "</span>
+            <span class="s2">"model runs, by name, each a block that gives the stage's import "</span>
+            <span class="s2">"path as ``class`` and then its settings. A block is named for "</span>
+            <span class="s2">"its stage: the footprint's is ``footprint``, with ``class: "</span>
+            <span class="s2">"stilt.footprint.FootprintStage`` and the footprint settings "</span>
             <span class="s2">"(:class:`~stilt.footprint.FootprintConfig`). A stage runs for "</span>
-            <span class="s2">"every variant, unless the variant sets it to null. Left out, the "</span>
-            <span class="s2">"project makes particles only."</span>
+            <span class="s2">"every variant, unless the variant sets it to null. Left out, "</span>
+            <span class="s2">"the project makes particles only."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">variants</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -907,8 +956,8 @@
     <span class="c1"># Each models: block by its name: the model, as get_model names it, and</span>
     <span class="c1"># the block's settings.</span>
     <span class="n">_models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="n">PrivateAttr</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
-    <span class="c1"># The name of the footprint's stages: block and its checked settings.</span>
-    <span class="n">_footprint</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">FootprintConfig</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">PrivateAttr</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+    <span class="c1"># Each stages: block by its stage's name, in the order the stages run.</span>
+    <span class="n">_stages</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">_StageBlock</span><span class="p">]</span> <span class="o">=</span> <span class="n">PrivateAttr</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
     <span class="c1"># Each met checked by the met config of a model that reads it, by</span>
     <span class="c1"># (met, model).</span>
     <span class="n">_met_configs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">PrivateAttr</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
@@ -922,7 +971,7 @@
                 <span class="n">data</span><span class="p">,</span>
                 <span class="s2">"config"</span><span class="p">,</span>
                 <span class="n">allowed</span><span class="o">=</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">model_fields</span><span class="p">,</span> <span class="s2">"a config key"</span><span class="p">),</span>
-                <span class="n">elsewhere</span><span class="o">=</span><span class="n">_blocks_of_settings</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"models"</span><span class="p">)),</span>
+                <span class="n">elsewhere</span><span class="o">=</span><span class="n">_blocks_of_settings</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"models"</span><span class="p">),</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"stages"</span><span class="p">)),</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span>
 
@@ -976,8 +1025,8 @@
                 <span class="sa">f</span><span class="s2">"to run the defaults with met </span><span class="si">{</span><span class="n">first</span><span class="si">}</span><span class="s2">, and more entries for "</span>
                 <span class="s2">"other settings."</span>
             <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_models</span> <span class="o">=</span> <span class="n">_model_blocks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_footprint</span> <span class="o">=</span> <span class="n">_footprint_block</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_models</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_models</span> <span class="o">=</span> <span class="n">_model_blocks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stages</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_stages</span> <span class="o">=</span> <span class="n">_stage_blocks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_models</span><span class="p">)</span>
         <span class="n">used</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">:</span>
             <span class="n">declared</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_declared</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
@@ -1033,7 +1082,7 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_declared</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Declared</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return one declared variant merged with the defaults of its model's block and the footprint's.</span>
+<span class="sd">        Return one declared variant merged with the defaults of its model's block and of each stage's.</span>
 
 <span class="sd">        Its transport fields are merged but not validated.</span>
 
@@ -1042,7 +1091,7 @@
 <span class="sd">        ValueError</span>
 <span class="sd">            For a bad name, an unknown met, model or stage, a bad</span>
 <span class="sd">            ``realizations``, ``from:``, a setting written outside its</span>
-<span class="sd">            block, or a footprint without a grid.</span>
+<span class="sd">            block, or a stage set to null that another of its stages reads.</span>
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">VARIANT_NAME_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">group</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -1060,7 +1109,6 @@
         <span class="n">met</span> <span class="o">=</span> <span class="n">_met_name</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mets</span><span class="p">)</span>
         <span class="n">block</span> <span class="o">=</span> <span class="n">_model_name</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_models</span><span class="p">)</span>
         <span class="n">model</span><span class="p">,</span> <span class="n">defaults</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_models</span><span class="p">[</span><span class="n">block</span><span class="p">]</span>
-        <span class="n">stage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint</span> <span class="k">else</span> <span class="s2">"footprint"</span>
         <span class="n">_check_keys</span><span class="p">(</span>
             <span class="n">spec</span><span class="p">,</span>
             <span class="n">where</span><span class="p">,</span>
@@ -1068,84 +1116,89 @@
                 <span class="o">**</span><span class="n">_model_settings</span><span class="p">(</span><span class="n">model</span><span class="p">),</span>
                 <span class="o">**</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">_VARIANT_KEYS</span><span class="p">,</span> <span class="s2">"a variant key"</span><span class="p">),</span>
             <span class="p">},</span>
-            <span class="n">elsewhere</span><span class="o">=</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span>
-                <span class="n">_FOOTPRINT_FIELDS</span><span class="p">,</span>
-                <span class="sa">f</span><span class="s2">"a footprint setting. Write it under the variant's stages: </span><span class="si">{</span><span class="n">stage</span><span class="si">}</span><span class="s2">:."</span><span class="p">,</span>
-            <span class="p">),</span>
+            <span class="n">elsewhere</span><span class="o">=</span><span class="p">{</span>
+                <span class="n">setting</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"a </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> setting. Write it under the variant's "</span>
+                <span class="sa">f</span><span class="s2">"stages: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">:."</span>
+                <span class="k">for</span> <span class="n">setting</span><span class="p">,</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">_stage_settings</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stages</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">},</span>
         <span class="p">)</span>
         <span class="n">realizations</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"realizations"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">realizations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">realizations</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">realizations</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">realizations</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: realizations must be &gt;= 1"</span><span class="p">)</span>
-        <span class="n">footprint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variant_footprint</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"stages"</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+        <span class="n">stages</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variant_stages</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"stages"</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
         <span class="n">transport</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">defaults</span><span class="p">,</span> <span class="o">**</span><span class="n">spec</span><span class="p">}</span>
-        <span class="n">_check_near_field_columns</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">transport</span><span class="p">,</span> <span class="n">footprint</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">_Declared</span><span class="p">(</span>
             <span class="n">met</span><span class="o">=</span><span class="n">met</span><span class="p">,</span>
             <span class="n">block</span><span class="o">=</span><span class="n">block</span><span class="p">,</span>
             <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
             <span class="n">realizations</span><span class="o">=</span><span class="n">realizations</span><span class="p">,</span>
             <span class="n">transport</span><span class="o">=</span><span class="n">transport</span><span class="p">,</span>
-            <span class="n">footprint</span><span class="o">=</span><span class="n">footprint</span><span class="p">,</span>
+            <span class="n">stages</span><span class="o">=</span><span class="n">stages</span><span class="p">,</span>
         <span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_variant_footprint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">stages</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FootprintConfig</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_variant_stages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">own</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return the footprint settings of a variant: the footprint's block with the variant's ``stages`` overrides.</span>
+<span class="sd">        Return the settings of each stage a variant uses, by the stage's name, in the order the stages run.</span>
 
-<span class="sd">        ``None`` when the config has no footprint stage, or the variant sets</span>
-<span class="sd">        it to null.</span>
+<span class="sd">        Each is the stage's block with the variant's ``stages`` overrides:</span>
+<span class="sd">        the variant's keys replace the block's, unless the stage's config</span>
+<span class="sd">        class merges them itself (its ``override``, as the footprint's does</span>
+<span class="sd">        for a grid). A stage the variant sets to null is left out.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
 <span class="sd">            If the variant names a stage the config does not have, sets what</span>
-<span class="sd">            is no footprint setting, or ends with neither a grid nor a</span>
-<span class="sd">            geometry.</span>
+<span class="sd">            is no setting of a stage, or sets a stage to null that another</span>
+<span class="sd">            of its stages reads.</span>
 <span class="sd">        """</span>
         <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2">"</span>
-        <span class="n">stages</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">stages</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">stages</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stages</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">own</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">own</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">own</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">own</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: stages must map a stage's name to the settings it "</span>
                 <span class="s2">"changes, or to null."</span>
             <span class="p">)</span>
-        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">stages</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">own</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stages</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2"> names the stage </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">, which stages: does not "</span>
                     <span class="sa">f</span><span class="s2">"have (it has </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stages</span><span class="p">)</span><span class="si">}</span><span class="s2">)."</span>
                 <span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span>
-        <span class="n">name</span><span class="p">,</span> <span class="n">defaults</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint</span>
-        <span class="n">fields</span> <span class="o">=</span> <span class="n">defaults</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">stages</span><span class="p">:</span>
-            <span class="n">own</span> <span class="o">=</span> <span class="n">stages</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">own</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">None</span>
-            <span class="n">_check_keys</span><span class="p">(</span>
-                <span class="n">own</span><span class="p">,</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">, stages: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-                <span class="n">allowed</span><span class="o">=</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">_FOOTPRINT_FIELDS</span><span class="p">,</span> <span class="s2">"a footprint setting"</span><span class="p">),</span>
-                <span class="n">elsewhere</span><span class="o">=</span><span class="p">{</span>
-                    <span class="s2">"class"</span><span class="p">:</span> <span class="s2">"the stage itself, set in the stages: block and "</span>
-                    <span class="s2">"not by a variant."</span>
-                <span class="p">},</span>
-            <span class="p">)</span>
-            <span class="n">fields</span> <span class="o">=</span> <span class="n">_override</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">fields</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">own</span><span class="p">))</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">config</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="p">(</span><span class="o">**</span><span class="n">fields</span><span class="p">)</span>
-        <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">, stages: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
-        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: its footprint has no grid. Give stages: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">: a "</span>
-                <span class="sa">f</span><span class="s2">"grid or a geometry, or set the variant's stages: </span><span class="se">{{</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">: null</span><span class="se">}}</span><span class="s2"> "</span>
-                <span class="s2">"to make particles only."</span>
-            <span class="p">)</span>
-        <span class="k">return</span> <span class="n">config</span>
+        <span class="n">configs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">block</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stages</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">config</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">own</span><span class="p">:</span>
+                <span class="n">changes</span> <span class="o">=</span> <span class="n">own</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">changes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">changes</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">, stages: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">: give the settings the "</span>
+                        <span class="s2">"variant changes as a mapping, or null for a variant "</span>
+                        <span class="s2">"without the stage."</span>
+                    <span class="p">)</span>
+                <span class="n">config</span> <span class="o">=</span> <span class="n">_stage_config</span><span class="p">(</span>
+                    <span class="n">block</span><span class="o">.</span><span class="n">stage</span><span class="p">,</span>
+                    <span class="n">_overridden</span><span class="p">(</span><span class="n">block</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">changes</span><span class="p">),</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">, stages: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">),</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">, stages: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                    <span class="n">elsewhere</span><span class="o">=</span><span class="p">{</span>
+                        <span class="s2">"class"</span><span class="p">:</span> <span class="s2">"the stage itself, set in the stages: block and "</span>
+                        <span class="s2">"not by a variant."</span>
+                    <span class="p">},</span>
+                <span class="p">)</span>
+            <span class="n">configs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">block</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stages</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">read</span> <span class="ow">in</span> <span class="n">reads</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">stage</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">configs</span> <span class="ow">and</span> <span class="n">read</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">configs</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2"> sets the stage </span><span class="si">{</span><span class="n">read</span><span class="si">!r}</span><span class="s2"> to null, and its stage "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> reads that stage's files. Set </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> to "</span>
+                        <span class="sa">f</span><span class="s2">"null too, or keep </span><span class="si">{</span><span class="n">read</span><span class="si">!r}</span><span class="s2">."</span>
+                    <span class="p">)</span>
+        <span class="k">return</span> <span class="n">configs</span>
 
 <div class="viewcode-block" id="ProjectConfig.resolve">
 <a class="viewcode-back" href="../../reference/_api/stilt.ProjectConfig.resolve.html#stilt.ProjectConfig.resolve">[docs]</a>
@@ -1157,9 +1210,11 @@
 <span class="sd">        class, as are its realizations (``realizations: N`` runs it N</span>
 <span class="sd">        times, realization ``k`` with ``seed + k``). Each met's directories</span>
 <span class="sd">        are made absolute; what a run records of the met is read on first</span>
-<span class="sd">        use (:attr:`Variant.met_settings`). Each geometry is read</span>
-<span class="sd">        once, however many variants use it, and the grid of a footprint</span>
-<span class="sd">        given only by a geometry is derived from it</span>
+<span class="sd">        use (:attr:`Variant.met_settings`). Each stage resolves the settings</span>
+<span class="sd">        a variant gives it (:meth:`stilt.stages.Stage.resolve`): it reads the</span>
+<span class="sd">        files they name and checks that they fit the variant's model. The</span>
+<span class="sd">        footprint stage reads each geometry once, however many variants use</span>
+<span class="sd">        it, and derives the grid of a footprint given only by a geometry</span>
 <span class="sd">        (:meth:`stilt.Mesh.to_grid`). The transport model's build is read</span>
 <span class="sd">        on first use too (:attr:`Variant.build`).</span>
 <span class="sd">        ``project.variants`` holds the result.</span>
@@ -1173,10 +1228,11 @@
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If a variant's transport settings are invalid for its model, or its</span>
-<span class="sd">            realizations would repeat one another.</span>
+<span class="sd">            If a variant's transport settings are invalid for its model, its</span>
+<span class="sd">            realizations would repeat one another, or a stage's settings do</span>
+<span class="sd">            not fit the variant's model.</span>
 <span class="sd">        """</span>
-        <span class="n">meshes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">directory</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
         <span class="n">mets</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">variants</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Variant</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">:</span>
@@ -1186,13 +1242,17 @@
                 <span class="n">declared</span><span class="o">.</span><span class="n">transport</span><span class="p">,</span>
                 <span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2"> (</span><span class="si">{</span><span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="si">}</span><span class="s2">)"</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="n">footprint</span><span class="p">,</span> <span class="n">geometry_hash</span> <span class="o">=</span> <span class="n">declared</span><span class="o">.</span><span class="n">footprint</span><span class="p">,</span> <span class="kc">None</span>
-            <span class="k">if</span> <span class="n">footprint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">footprint</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">mesh</span> <span class="o">=</span> <span class="n">_mesh</span><span class="p">(</span><span class="n">footprint</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">directory</span><span class="p">,</span> <span class="n">meshes</span><span class="p">)</span>
-                <span class="n">geometry_hash</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">hash</span>
-                <span class="k">if</span> <span class="n">footprint</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">grid</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">to_grid</span><span class="p">(</span><span class="n">cells_per_target</span><span class="o">=</span><span class="n">footprint</span><span class="o">.</span><span class="n">cells_per_target</span><span class="p">)</span>
-                    <span class="n">footprint</span> <span class="o">=</span> <span class="n">footprint</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">"grid"</span><span class="p">:</span> <span class="n">grid</span><span class="p">})</span>
+            <span class="n">stages</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">config</span> <span class="ow">in</span> <span class="n">declared</span><span class="o">.</span><span class="n">stages</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">stage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stages</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">stage</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">stages</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">stage</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span>
+                        <span class="n">config</span><span class="p">,</span> <span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">transport</span><span class="o">.</span><span class="n">settings</span><span class="p">(),</span> <span class="n">start</span>
+                    <span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2">, stages: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span>
+                    <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
             <span class="k">if</span> <span class="n">declared</span><span class="o">.</span><span class="n">realizations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">transport</span><span class="o">.</span><span class="n">realizations</span><span class="p">(</span><span class="n">declared</span><span class="o">.</span><span class="n">realizations</span><span class="p">)</span>
@@ -1210,8 +1270,8 @@
                 <span class="n">transport</span><span class="o">=</span><span class="n">transport</span><span class="p">,</span>
                 <span class="n">model</span><span class="o">=</span><span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
                 <span class="n">realizations</span><span class="o">=</span><span class="n">declared</span><span class="o">.</span><span class="n">realizations</span><span class="p">,</span>
-                <span class="n">footprint</span><span class="o">=</span><span class="n">footprint</span><span class="p">,</span>
-                <span class="n">geometry_hash</span><span class="o">=</span><span class="n">geometry_hash</span><span class="p">,</span>
+                <span class="n">stages</span><span class="o">=</span><span class="n">stages</span><span class="p">,</span>
+                <span class="n">stage_classes</span><span class="o">=</span><span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stages</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">path</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">stages</span><span class="p">},</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">variants</span></div>
 
@@ -1233,11 +1293,16 @@
         <span class="c1"># A block's settings as its class writes them (a transform by its kind).</span>
         <span class="k">if</span> <span class="s2">"models"</span> <span class="ow">in</span> <span class="n">given</span><span class="p">:</span>
             <span class="n">data</span><span class="p">[</span><span class="s2">"models"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_JSON</span><span class="o">.</span><span class="n">dump_python</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">)</span>
-        <span class="k">if</span> <span class="s2">"stages"</span> <span class="ow">in</span> <span class="n">given</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">name</span><span class="p">,</span> <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint</span>
-            <span class="n">block</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stages</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
-            <span class="n">written</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">block</span><span class="p">)</span> <span class="o">-</span> <span class="p">{</span><span class="s2">"class"</span><span class="p">})</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">"stages"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="p">{</span><span class="s2">"class"</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="s2">"class"</span><span class="p">],</span> <span class="o">**</span><span class="n">written</span><span class="p">}}</span>
+        <span class="k">if</span> <span class="s2">"stages"</span> <span class="ow">in</span> <span class="n">given</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"stages"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">name</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">"class"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stages</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">path</span><span class="p">,</span>
+                    <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_stages</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span>
+                        <span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">block</span><span class="p">)</span> <span class="o">-</span> <span class="p">{</span><span class="s2">"class"</span><span class="p">}</span>
+                    <span class="p">),</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">block</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stages</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">}</span>
         <span class="k">if</span> <span class="s2">"execution"</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
             <span class="n">data</span><span class="p">[</span><span class="s2">"execution"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execution</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span>
                 <span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">,</span> <span class="n">exclude_unset</span><span class="o">=</span><span class="kc">True</span>
@@ -1394,10 +1459,13 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_model_blocks</span><span class="p">(</span>
-    <span class="n">models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span>
+    <span class="n">models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="n">stages</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return each ``models`` block's model and settings, by the block's name.</span>
+
+<span class="sd">    *stages* is the ``stages`` block as written, to say where a stage's</span>
+<span class="sd">    setting belongs.</span>
 
 <span class="sd">    The model is as :func:`stilt.transport.get_model` names it: the block's</span>
 <span class="sd">    ``class``, or the block's own name for a built-in model. The settings</span>
@@ -1446,71 +1514,149 @@
             <span class="n">settings</span><span class="p">,</span>
             <span class="n">where</span><span class="p">,</span>
             <span class="n">allowed</span><span class="o">=</span><span class="n">_model_settings</span><span class="p">(</span><span class="n">model</span><span class="p">),</span>
-            <span class="n">elsewhere</span><span class="o">=</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span>
-                <span class="n">_FOOTPRINT_FIELDS</span><span class="p">,</span>
-                <span class="s2">"a footprint setting. Write it under stages:, in the footprint's block."</span><span class="p">,</span>
-            <span class="p">),</span>
+            <span class="n">elsewhere</span><span class="o">=</span><span class="n">_stage_places</span><span class="p">(</span><span class="n">stages</span><span class="p">),</span>
         <span class="p">)</span>
         <span class="n">blocks</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">settings</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">blocks</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_footprint_block</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_stage_blocks</span><span class="p">(</span>
     <span class="n">stages</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="n">models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">FootprintConfig</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">_StageBlock</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the name of the footprint's ``stages`` block and its checked settings, or ``None`` without one.</span>
+<span class="sd">    Return each ``stages`` block's stage and checked settings, by the stage's name, in the order the stages run.</span>
 
-<span class="sd">    The footprint is the one stage there is, so each block must name it as</span>
-<span class="sd">    its ``class`` (:data:`FOOTPRINT_STAGE`), and only one can. *models* are</span>
-<span class="sd">    the ``models`` blocks, to say where a model's setting belongs.</span>
+<span class="sd">    A block names its stage by the import path of the stage's class</span>
+<span class="sd">    (``class``), which is imported here, and is itself named for the stage:</span>
+<span class="sd">    the footprint's block is ``footprint``. *models* are the ``models``</span>
+<span class="sd">    blocks, to say where a model's setting belongs.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    MissingClass</span>
+<span class="sd">        If a block's class cannot be imported on this machine.</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If a block names no class or one that is not a stage, is not named</span>
+<span class="sd">        for its stage, holds a wrong setting, or names a stage that reads</span>
+<span class="sd">        one the config does not have.</span>
+<span class="sd">    """</span>
+    <span class="n">elsewhere</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">setting</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"a </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2"> setting. Write it under models: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">:."</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">models</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">setting</span> <span class="ow">in</span> <span class="n">_model_settings</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="n">blocks</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">_StageBlock</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">stages</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"stages: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">block</span> <span class="ow">or</span> <span class="p">{})</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"class"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2"> names no class. The footprint is class: </span><span class="si">{</span><span class="n">FOOTPRINT_STAGE</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">stage</span> <span class="o">=</span> <span class="n">get_stage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="k">if</span> <span class="n">stage</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">name</span><span class="p">:</span>
+            <span class="c1"># One name for the block, the stage's folder and its status column.</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is the </span><span class="si">{</span><span class="n">stage</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> stage, and a stage's "</span>
+                <span class="sa">f</span><span class="s2">"block is named for its stage. Write it as stages: </span><span class="si">{</span><span class="n">stage</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">:."</span>
+            <span class="p">)</span>
+        <span class="n">blocks</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">_StageBlock</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">stage</span><span class="p">,</span> <span class="n">_stage_config</span><span class="p">(</span><span class="n">stage</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">elsewhere</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">ordered</span><span class="p">({</span><span class="n">name</span><span class="p">:</span> <span class="n">block</span><span class="o">.</span><span class="n">stage</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">blocks</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">blocks</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">order</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stage_config</span><span class="p">(</span>
+    <span class="n">stage</span><span class="p">:</span> <span class="n">Stage</span><span class="p">,</span> <span class="n">settings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">where</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">elsewhere</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return *settings* checked by the config class of *stage*.</span>
+
+<span class="sd">    The class checks the values first, so that it can refuse a setting it</span>
+<span class="sd">    once had with what to do instead; then a key that is no setting of the</span>
+<span class="sd">    stage is refused, saying where it belongs (*elsewhere*) or naming the</span>
+<span class="sd">    nearest setting.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If a block names no class or another one, two blocks name one</span>
-<span class="sd">        class, or a block holds a wrong setting.</span>
+<span class="sd">        If a setting is unknown to the stage or invalid.</span>
 <span class="sd">    """</span>
-    <span class="n">elsewhere</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="n">field</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"a </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2"> setting. Write it under models: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">:."</span>
-        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">models</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">_model_settings</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="n">found</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">FootprintConfig</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">stages</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">VARIANT_NAME_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Stage name </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> must match </span><span class="si">{</span><span class="n">VARIANT_NAME_RE</span><span class="o">.</span><span class="n">pattern</span><span class="si">}</span><span class="s2">"</span>
-            <span class="p">)</span>
-        <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"stages: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
-        <span class="n">settings</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">block</span> <span class="ow">or</span> <span class="p">{})</span>
-        <span class="n">stage</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"class"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">stage</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2"> names no class. The footprint is class: </span><span class="si">{</span><span class="n">FOOTPRINT_STAGE</span><span class="si">}</span><span class="s2">."</span>
-            <span class="p">)</span>
-        <span class="k">if</span> <span class="n">stage</span> <span class="o">!=</span> <span class="n">FOOTPRINT_STAGE</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">stage</span><span class="si">!r}</span><span class="s2"> is not a stage. The one stage is the "</span>
-                <span class="sa">f</span><span class="s2">"footprint, class: </span><span class="si">{</span><span class="n">FOOTPRINT_STAGE</span><span class="si">}</span><span class="s2">."</span>
-            <span class="p">)</span>
-        <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"stages: </span><span class="si">{</span><span class="n">found</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> are both </span><span class="si">{</span><span class="n">stage</span><span class="si">}</span><span class="s2">. A stage has "</span>
-                <span class="s2">"one block, its defaults: write a second variant for a second "</span>
-                <span class="s2">"footprint."</span>
-            <span class="p">)</span>
-        <span class="n">_check_keys</span><span class="p">(</span>
-            <span class="n">settings</span><span class="p">,</span>
-            <span class="n">where</span><span class="p">,</span>
-            <span class="n">allowed</span><span class="o">=</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">_FOOTPRINT_FIELDS</span><span class="p">,</span> <span class="s2">"a footprint setting"</span><span class="p">),</span>
-            <span class="n">elsewhere</span><span class="o">=</span><span class="n">elsewhere</span><span class="p">,</span>
-        <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">stage</span><span class="o">.</span><span class="n">config_class</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+    <span class="n">fields</span> <span class="o">=</span> <span class="n">stage</span><span class="o">.</span><span class="n">config_class</span><span class="o">.</span><span class="n">model_fields</span>
+    <span class="n">_check_keys</span><span class="p">(</span>
+        <span class="n">settings</span><span class="p">,</span>
+        <span class="n">where</span><span class="p">,</span>
+        <span class="n">allowed</span><span class="o">=</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">fields</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"a </span><span class="si">{</span><span class="n">stage</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> setting"</span><span class="p">),</span>
+        <span class="n">elsewhere</span><span class="o">=</span><span class="n">elsewhere</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_overridden</span><span class="p">(</span><span class="n">block</span><span class="p">:</span> <span class="n">_StageBlock</span><span class="p">,</span> <span class="n">own</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">where</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return a variant's settings of a stage: the block's, changed by the variant's *own*.</span>
+
+<span class="sd">    The variant's keys replace the block's. A stage whose config class has</span>
+<span class="sd">    an ``override(block, own)`` classmethod merges them itself: the</span>
+<span class="sd">    footprint's changes a grid field by field.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the config class refuses the variant's changes.</span>
+<span class="sd">    """</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span>
+    <span class="n">override</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">config_class</span><span class="p">,</span> <span class="s2">"override"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">override</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="o">**</span><span class="n">base</span><span class="p">,</span> <span class="o">**</span><span class="n">own</span><span class="p">}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">override</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">own</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stage_settings</span><span class="p">(</span><span class="n">stages</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return each stage setting a config could hold, with its stage's name and whether the config has that stage.</span>
+
+<span class="sd">    *stages* is the ``stages`` block as written, not checked yet. A config</span>
+<span class="sd">    without one gets the footprint's settings, so that a footprint setting</span>
+<span class="sd">    written elsewhere is still recognized. A stage that cannot be imported</span>
+<span class="sd">    names none: its own block reports that.</span>
+<span class="sd">    """</span>
+    <span class="n">written</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stages</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="n">stages</span><span class="p">)</span>
+    <span class="n">blocks</span> <span class="o">=</span> <span class="n">stages</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">written</span> <span class="k">else</span> <span class="p">[{</span><span class="s2">"class"</span><span class="p">:</span> <span class="n">FOOTPRINT_STAGE</span><span class="p">}]</span>
+    <span class="n">found</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">blocks</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">found</span> <span class="o">=</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">settings</span><span class="p">))</span>
-        <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+            <span class="n">stage</span> <span class="o">=</span> <span class="n">get_stage</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">block</span><span class="p">[</span><span class="s2">"class"</span><span class="p">]))</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">for</span> <span class="n">setting</span> <span class="ow">in</span> <span class="n">stage</span><span class="o">.</span><span class="n">config_class</span><span class="o">.</span><span class="n">model_fields</span><span class="p">:</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">setting</span><span class="p">,</span> <span class="p">(</span><span class="n">stage</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">written</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">found</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stage_places</span><span class="p">(</span><span class="n">stages</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return where each stage setting is written, as a sentence, by the setting's name."""</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">setting</span><span class="p">:</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"a </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> setting. Write it under stages: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">:."</span>
+            <span class="k">if</span> <span class="n">written</span>
+            <span class="k">else</span> <span class="sa">f</span><span class="s2">"a </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> setting. Write it under stages:, in the </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">'s "</span>
+            <span class="sa">f</span><span class="s2">"block (class: </span><span class="si">{</span><span class="n">FOOTPRINT_STAGE</span><span class="si">}</span><span class="s2">)."</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">setting</span><span class="p">,</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">written</span><span class="p">)</span> <span class="ow">in</span> <span class="n">_stage_settings</span><span class="p">(</span><span class="n">stages</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">}</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_model_settings</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
@@ -1519,12 +1665,13 @@
     <span class="k">return</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">fields</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"a </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2"> setting"</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_blocks_of_settings</span><span class="p">(</span><span class="n">models</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_blocks_of_settings</span><span class="p">(</span><span class="n">models</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">stages</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return where each setting that may not sit at the top of the config is written, by the setting's name.</span>
 
-<span class="sd">    *models* is the ``models`` block as written, not checked yet; HYSPLIT's</span>
-<span class="sd">    settings are named when it gives no model that can be read.</span>
+<span class="sd">    *models* and *stages* are those blocks as written, not checked yet;</span>
+<span class="sd">    HYSPLIT's settings are named when the config gives no model that can be</span>
+<span class="sd">    read, and the footprint's when it gives no stage.</span>
 <span class="sd">    """</span>
     <span class="n">blocks</span> <span class="o">=</span> <span class="n">models</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">models</span> <span class="k">else</span> <span class="p">{</span><span class="s2">"hysplit"</span><span class="p">:</span> <span class="p">{}}</span>
     <span class="n">places</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -1534,17 +1681,11 @@
             <span class="n">fields</span> <span class="o">=</span> <span class="n">_model_settings</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
         <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
             <span class="k">continue</span>  <span class="c1"># reported when the models block itself is checked</span>
-        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">setting</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
             <span class="n">places</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
-                <span class="n">field</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"a </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2"> setting. Write it under models: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">:."</span>
+                <span class="n">setting</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"a </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2"> setting. Write it under models: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">:."</span>
             <span class="p">)</span>
-    <span class="n">places</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
-        <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span>
-            <span class="n">_FOOTPRINT_FIELDS</span><span class="p">,</span>
-            <span class="s2">"a footprint setting. Write it under stages:, in the footprint's "</span>
-            <span class="sa">f</span><span class="s2">"block (class: </span><span class="si">{</span><span class="n">FOOTPRINT_STAGE</span><span class="si">}</span><span class="s2">)."</span><span class="p">,</span>
-        <span class="p">)</span>
-    <span class="p">)</span>
+    <span class="n">places</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_stage_places</span><span class="p">(</span><span class="n">stages</span><span class="p">))</span>
     <span class="n">places</span><span class="p">[</span><span class="s2">"model"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
         <span class="s2">"no longer a key. Name each transport model as a block under "</span>
         <span class="s2">"models:, such as models: {hysplit: </span><span class="si">{}</span><span class="s2">}."</span>
@@ -1602,81 +1743,6 @@
     <span class="k">return</span> <span class="n">met</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">update</span><span class="o">=</span><span class="n">paths</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_override</span><span class="p">(</span><span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">base</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">spec</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Apply a variant's overrides to ``base``.</span>
-
-<span class="sd">    *base* is the footprint's block and *spec* what the variant changes of</span>
-<span class="sd">    it. A ``grid`` mapping updates the base grid field by field, so a</span>
-<span class="sd">    variant can change only the resolution. A variant that sets its own</span>
-<span class="sd">    ``geometry`` drops the inherited ``grid`` unless it sets ``grid`` too,</span>
-<span class="sd">    so the grid is derived from its geometry.</span>
-
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    ValueError</span>
-<span class="sd">        If a variant changes part of a grid that is derived from the</span>
-<span class="sd">        default ``geometry``. That grid is not known until the geometry is</span>
-<span class="sd">        built.</span>
-<span class="sd">    """</span>
-    <span class="n">merged</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">base</span><span class="p">,</span> <span class="o">**</span><span class="n">spec</span><span class="p">}</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"grid"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"grid"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="n">merged</span><span class="p">[</span><span class="s2">"grid"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">base</span><span class="p">[</span><span class="s2">"grid"</span><span class="p">],</span> <span class="o">**</span><span class="n">spec</span><span class="p">[</span><span class="s2">"grid"</span><span class="p">]}</span>
-        <span class="k">elif</span> <span class="n">base</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"geometry"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">"geometry"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2"> changes part of a grid that is derived from "</span>
-                <span class="s2">"the default geometry. Give a full grid, or set cells_per_target "</span>
-                <span class="s2">"to change its resolution."</span>
-            <span class="p">)</span>
-    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"geometry"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">"grid"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
-        <span class="n">merged</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"grid"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">merged</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_check_near_field_columns</span><span class="p">(</span>
-    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">transport</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">footprint</span><span class="p">:</span> <span class="n">FootprintConfig</span> <span class="o">|</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Refuse a variant whose footprint has the near-field correction and whose model is not asked for its columns.</span>
-
-<span class="sd">    Only a model with ``varsiwant`` (HYSPLIT's list of particle columns) is</span>
-<span class="sd">    checked; another model's particles are checked when the footprint is</span>
-<span class="sd">    made.</span>
-
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    ValueError</span>
-<span class="sd">        If ``hnf_plume`` is set and ``varsiwant`` lacks a column it reads.</span>
-<span class="sd">    """</span>
-    <span class="n">varsiwant</span> <span class="o">=</span> <span class="n">transport</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"varsiwant"</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">footprint</span><span class="o">.</span><span class="n">hnf_plume</span> <span class="ow">or</span> <span class="n">varsiwant</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span>
-    <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">HNF_PLUME_COLUMNS</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">varsiwant</span><span class="p">))</span>
-    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">: the near-field correction (hnf_plume) reads the "</span>
-            <span class="sa">f</span><span class="s2">"particle columns </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">. Add them to varsiwant, or set "</span>
-            <span class="s2">"hnf_plume: false."</span>
-        <span class="p">)</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_mesh</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">meshes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the mesh a geometry spec describes, reading each spec once.</span>
-
-<span class="sd">    A relative file starts from *directory*. The spec in the settings keeps</span>
-<span class="sd">    the path as written, and a mesh's hash is of its polygons, so moving</span>
-<span class="sd">    the project changes no hash.</span>
-<span class="sd">    """</span>
-    <span class="n">key</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">model_dump_json</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">meshes</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">FileGeometrySpec</span><span class="p">)</span> <span class="ow">and</span> <span class="n">directory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">spec</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">"path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">absolute</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">directory</span><span class="p">))})</span>
-        <span class="n">meshes</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Mesh</span><span class="o">.</span><span class="n">from_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">meshes</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-
-
 <span class="k">def</span><span class="w"> </span><span class="nf">_check_keys</span><span class="p">(</span>
     <span class="n">keys</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">where</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">allowed</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">elsewhere</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -1695,8 +1761,6 @@
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">allowed</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">"from"</span><span class="p">:</span>  <span class="c1"># "from:" has its own message</span>
             <span class="k">continue</span>
-        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">"time_integrate"</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">TIME_INTEGRATE_REMOVED</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">"veght"</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">VEGHT_RENAMED</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">elsewhere</span><span class="p">:</span>

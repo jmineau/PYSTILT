@@ -1,0 +1,5 @@
+stilt.config.Variant.stage
+==========================
+
+.. currentmodule:: stilt.config
+.. automethod:: Variant.stage

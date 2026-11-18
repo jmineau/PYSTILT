@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=ea654bdf"></script>
+    <script src="../_static/documentation_options.js?v=70c92553"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev12+g5a6460240" />
+  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -629,7 +629,7 @@ whole run. Use xarray as you would on any other array:</p>
 <span class="gh">Out[16]: </span><span class="go">Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat')</span>
 
 <span class="gp">In [17]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">config</span>        <span class="c1"># all the footprint settings</span>
-<span class="gh">Out[17]: </span><span class="go">FootprintConfig(grid=Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat'), geometry=None, cells_per_target=4.0, smooth_factor=1.0, tres='1h', hnf_plume=True, transforms=[])</span>
+<span class="gh">Out[17]: </span><span class="go">FootprintConfig(grid=Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat'), geometry=None, cells_per_target=4.0, smooth_factor=1.0, tres='1h', hnf_plume=True, transforms=[], geometry_hash=None)</span>
 </pre></div>
 </div>
 <p>The receptor id is also a coordinate, <code class="docutils literal notranslate"><span class="pre">foot.receptor</span></code>. It stays on the
@@ -869,7 +869,7 @@ site:</p>
 <span class="go">Columns: [receptor, variant, realization, model, time, kind, location]</span>
 <span class="go">Index: []</span>
 
-<span class="gp">In [35]: </span><span class="n">st</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">()</span>      <span class="c1"># every simulation, with six more columns</span>
+<span class="gp">In [35]: </span><span class="n">st</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">()</span>      <span class="c1"># every simulation, with what it has and where it stands</span>
 
 <span class="gp">In [36]: </span><span class="n">st</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
 <span class="gh">Out[36]: </span>
@@ -883,7 +883,7 @@ site:</p>
 <span class="gp">In [37]: </span><span class="n">st</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">"failed"</span><span class="p">]</span>   <span class="c1"># the failed simulations, and why</span>
 <span class="gh">Out[37]: </span>
 <span class="go">Empty DataFrame</span>
-<span class="go">Columns: [receptor, variant, realization, model, time, kind, location, particles, footprint, state, step, reason, message]</span>
+<span class="go">Columns: [receptor, variant, realization, model, time, kind, location, particles, footprint, state, stage, reason, message]</span>
 <span class="go">Index: []</span>
 
 <span class="gp">In [38]: </span><span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">morning</span><span class="p">)</span>    <span class="c1"># the same, for a selection</span>
@@ -901,7 +901,7 @@ site:</p>
 <p><code class="docutils literal notranslate"><span class="pre">status()</span></code> adds a <code class="docutils literal notranslate"><span class="pre">particles</span></code> and a <code class="docutils literal notranslate"><span class="pre">footprint</span></code> column that say
 whether each result exists, and a <code class="docutils literal notranslate"><span class="pre">state</span></code> column: <code class="docutils literal notranslate"><span class="pre">complete</span></code>,
 <code class="docutils literal notranslate"><span class="pre">failed</span></code>, <code class="docutils literal notranslate"><span class="pre">interrupted</span></code>, or <code class="docutils literal notranslate"><span class="pre">pending</span></code>. For a failed simulation,
-<code class="docutils literal notranslate"><span class="pre">step</span></code>, <code class="docutils literal notranslate"><span class="pre">reason</span></code>, and <code class="docutils literal notranslate"><span class="pre">message</span></code> say why. <a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a> explains
+<code class="docutils literal notranslate"><span class="pre">stage</span></code>, <code class="docutils literal notranslate"><span class="pre">reason</span></code>, and <code class="docutils literal notranslate"><span class="pre">message</span></code> say why. <a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a> explains
 each state and reason. <code class="docutils literal notranslate"><span class="pre">status()</span></code> opens no result file, so it is quick
 on a large project.</p>
 </section>
@@ -1130,13 +1130,13 @@ reader in another language.</p>
 question about thousands of simulations is one query:</p>
 <div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="c1">-- footprints per settings folder and day</span>
 <span class="k">SELECT</span><span class="w"> </span><span class="n">settings</span><span class="p">,</span><span class="w"> </span><span class="nb">date</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">receptor</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">footprints</span>
-<span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">'output/footprints/*/*/*.parquet'</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">'output/footprint/*/*/*.parquet'</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
 <span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">settings</span><span class="p">,</span><span class="w"> </span><span class="nb">date</span>
 <span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">settings</span><span class="p">,</span><span class="w"> </span><span class="nb">date</span><span class="p">;</span>
 
 <span class="c1">-- the total influence of each receptor's footprint</span>
 <span class="k">SELECT</span><span class="w"> </span><span class="n">receptor</span><span class="p">,</span><span class="w"> </span><span class="k">sum</span><span class="p">(</span><span class="n">foot</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span>
-<span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">'output/footprints/settings=hrrr-93278c/*/*.parquet'</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">'output/footprint/settings=hrrr-93278c/*/*.parquet'</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
 <span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">receptor</span><span class="p">;</span>
 
 <span class="c1">-- where each particle of one day's receptors ended up</span>

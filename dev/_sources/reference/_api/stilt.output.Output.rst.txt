@@ -32,15 +32,15 @@ Methods
    ~Output.hashes
    ~Output.keep_workdir
    ~Output.kept_workdir
+   ~Output.kinds
    ~Output.log_path
    ~Output.logged
+   ~Output.make_path
    ~Output.path
    ~Output.present
    ~Output.read
    ~Output.record_failure
    ~Output.table
-   ~Output.write_empty_footprint
-   ~Output.write_footprint
    ~Output.write_log
    ~Output.write_particles
 

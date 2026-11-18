@@ -71,7 +71,7 @@ Glossary
       Where a project's results go, named by ``output:`` in ``config.yaml``
       (``./output`` by default, or a URL such as ``s3://bucket/output``). It
       holds one :term:`settings folder` per set of settings under
-      ``particles/``, ``footprints/``, and ``logs/``, and several projects
+      ``particles/``, ``footprint/``, and ``logs/``, and several projects
       can share it. See :doc:`../guides/projects`.
 
    settings folder

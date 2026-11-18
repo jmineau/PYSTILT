@@ -47,6 +47,8 @@ Methods
 
    ~Simulation.background
    ~Simulation.calc_footprint
+   ~Simulation.has
+   ~Simulation.path
    ~Simulation.transport_error
 
 

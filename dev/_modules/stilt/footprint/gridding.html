@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=ea654bdf"></script>
+    <script src="../../../_static/documentation_options.js?v=70c92553"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev12+g5a6460240" />
+  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -1344,7 +1344,7 @@
 <span class="sd">        an averaging-kernel table: the project directory.</span>
 <span class="sd">    geometry_hash : str, optional</span>
 <span class="sd">        Hash of the geometry the grid was derived for</span>
-<span class="sd">        (``sim.variant.geometry_hash``), recorded with the footprint so</span>
+<span class="sd">        (:attr:`stilt.Mesh.hash`), recorded with the footprint so</span>
 <span class="sd">        aggregating it onto another mesh warns.</span>
 
 <span class="sd">    Returns</span>
@@ -1393,6 +1393,7 @@
             <span class="s2">"tres"</span><span class="p">:</span> <span class="n">tres</span><span class="p">,</span>
             <span class="s2">"hnf_plume"</span><span class="p">:</span> <span class="n">hnf_plume</span><span class="p">,</span>
             <span class="s2">"transforms"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">transforms</span><span class="p">),</span>
+            <span class="s2">"geometry_hash"</span><span class="p">:</span> <span class="n">geometry_hash</span><span class="p">,</span>
         <span class="p">}</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">particles</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
@@ -1516,9 +1517,7 @@
     <span class="c1"># file has the same coordinates as the one calculated.</span>
     <span class="n">x_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">glong</span> <span class="o">+</span> <span class="n">xres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
     <span class="n">y_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">glati</span> <span class="o">+</span> <span class="n">yres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">_footprint_array</span><span class="p">(</span>
-        <span class="n">values</span><span class="p">,</span> <span class="n">layers</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">x_coords</span><span class="p">,</span> <span class="n">y_coords</span><span class="p">,</span> <span class="n">geometry_hash</span>
-    <span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">_footprint_array</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">layers</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">x_coords</span><span class="p">,</span> <span class="n">y_coords</span><span class="p">)</span></div>
 
 </pre></div>
 

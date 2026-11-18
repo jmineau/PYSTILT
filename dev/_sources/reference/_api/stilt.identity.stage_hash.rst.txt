@@ -1,0 +1,6 @@
+﻿stilt.identity.stage\_hash
+==========================
+
+.. currentmodule:: stilt.identity
+
+.. autofunction:: stage_hash

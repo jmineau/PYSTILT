@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=ea654bdf"></script>
+    <script src="../_static/documentation_options.js?v=70c92553"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev12+g5a6460240" />
+  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -664,8 +664,8 @@ failed ones by reason:</p>
 Project: /data/my_project  total=1200  complete=1150  failed=42  interrupted=0  pending=8
 failed: MET_COVERAGE 34, TIMEOUT 8  (why: each one's .failure.yaml, under /data/output/logs)
 Output: /data/output
-  particles   settings=hrrr-5d01e7  1,150 files  hrrr
-  footprints  settings=hrrr-93278c  1,150 files  hrrr
+  particles  settings=hrrr-5d01e7  1,150 files  hrrr
+  footprint  settings=hrrr-93278c  1,150 files  hrrr
 </pre></div>
 </div>
 <p>In Python, <code class="docutils literal notranslate"><span class="pre">project.status()</span></code> has one row per simulation, so you can
@@ -737,12 +737,12 @@ can rerun on 3 and stop to look on 1 (<a class="reference internal" href="contai
 record beside the run’s log and goes on, and <code class="docutils literal notranslate"><span class="pre">sim.failure</span></code> reads it:</p>
 <div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">,</span> <span class="s2">"hrrr"</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">sim</span><span class="o">.</span><span class="n">failure</span>
-<span class="go">{'step': 'particles', 'reason': 'MET_COVERAGE',</span>
+<span class="go">{'stage': 'particles', 'reason': 'MET_COVERAGE',</span>
 <span class="go"> 'message': 'HYSPLIT: start point not within (x,y,t) any data file',</span>
 <span class="go"> 'time': '2026-10-03T21:14:05+00:00'}</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">step</span></code> says whether the transport model failed (<code class="docutils literal notranslate"><span class="pre">particles</span></code>, which fails
+<p><code class="docutils literal notranslate"><span class="pre">stage</span></code> says whether the transport model failed (<code class="docutils literal notranslate"><span class="pre">particles</span></code>, which fails
 every variant that shares those particles) or only this variant’s footprint
 (<code class="docutils literal notranslate"><span class="pre">footprint</span></code>). <code class="docutils literal notranslate"><span class="pre">message</span></code> is the line of the log that says what went
 wrong. Three reasons cover most failures:</p>

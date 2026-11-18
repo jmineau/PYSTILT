@@ -1,6 +1,0 @@
-﻿stilt.execution.worker.make\_footprint
-======================================
-
-.. currentmodule:: stilt.execution.worker
-
-.. autofunction:: make_footprint

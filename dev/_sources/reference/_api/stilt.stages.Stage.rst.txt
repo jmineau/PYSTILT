@@ -1,0 +1,32 @@
+﻿stilt.stages.Stage
+==================
+
+.. currentmodule:: stilt.stages
+
+
+
+
+
+
+.. class-signature:: stilt.stages.Stage
+
+
+.. class-parameters:: stilt.stages.Stage
+
+
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~Stage.check
+   ~Stage.resolve
+   ~Stage.run
+   ~Stage.settings
+
+
+

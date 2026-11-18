@@ -1,0 +1,5 @@
+stilt.Simulation.path
+=====================
+
+.. currentmodule:: stilt
+.. automethod:: Simulation.path

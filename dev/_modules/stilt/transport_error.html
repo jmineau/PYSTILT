@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=ea654bdf"></script>
+    <script src="../../_static/documentation_options.js?v=70c92553"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev12+g5a6460240" />
+  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -775,7 +775,7 @@
 <span class="sd">    flux : xarray.DataArray</span>
 <span class="sd">        Surface flux field (see ``particles.stilt.enhancement``).</span>
 <span class="sd">    transforms : sequence, optional</span>
-<span class="sd">        The footprint's particle transforms (``sim.variant.footprint.transforms``),</span>
+<span class="sd">        The footprint's particle transforms (``sim.variant.stages["footprint"].transforms``),</span>
 <span class="sd">        applied to both tables so the error is weighted like the footprint.</span>
 <span class="sd">    receptor : Receptor, optional</span>
 <span class="sd">        The receptor (``sim.receptor``), for the near-field correction and</span>
@@ -785,7 +785,7 @@
 <span class="sd">    hnf_plume : bool, default True</span>
 <span class="sd">        Apply the near-field correction to both tables first, as</span>
 <span class="sd">        :func:`stilt.calc_footprint` does</span>
-<span class="sd">        (``sim.variant.footprint.hnf_plume``), so the error is of the same</span>
+<span class="sd">        (``sim.variant.stages["footprint"].hnf_plume``), so the error is of the same</span>
 <span class="sd">        enhancement the footprint gives.</span>
 <span class="sd">    footprint_depth : float, default 0.5</span>
 <span class="sd">        The run's ``footprint_depth``, which the near-field correction reads.</span>

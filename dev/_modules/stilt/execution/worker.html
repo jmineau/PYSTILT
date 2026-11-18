@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=ea654bdf"></script>
+    <script src="../../../_static/documentation_options.js?v=70c92553"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev12+g5a6460240" />
+  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -459,8 +459,11 @@
 <span class="sd">Workers are handed receptors. :func:`run_receptor` runs every variant of</span>
 <span class="sd">one receptor. Variants with the same transport settings share one set of</span>
 <span class="sd">particles, so it groups them: the transport model runs once per group where the</span>
-<span class="sd">particles are missing (:func:`run_particles`), then each variant's</span>
-<span class="sd">footprint is made from the particles in memory (:func:`make_footprint`).</span>
+<span class="sd">particles are missing (:func:`run_particles`), then each variant's stages</span>
+<span class="sd">make their files from the particles in memory (:func:`run_stages`). A stage</span>
+<span class="sd">is the class its ``stages`` block of ``config.yaml`` names</span>
+<span class="sd">(:class:`stilt.stages.Stage`), the footprint among them, so this module</span>
+<span class="sd">imports none.</span>
 <span class="sd">A failure is recorded with the simulation and the worker goes on, except</span>
 <span class="sd">a connection or I/O error that a retry may get past, which is not recorded as a</span>
 <span class="sd">failure: the simulation stays unfinished and the next run does it again.</span>
@@ -482,23 +485,23 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">FIRST_COMPLETED</span><span class="p">,</span> <span class="n">Future</span><span class="p">,</span> <span class="n">ProcessPoolExecutor</span><span class="p">,</span> <span class="n">wait</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures.process</span><span class="w"> </span><span class="kn">import</span> <span class="n">BrokenProcessPool</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._transient</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_transient</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyFootprint</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">,</span> <span class="n">WorkerDied</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimulationError</span><span class="p">,</span> <span class="n">WorkerDied</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint</span><span class="w"> </span><span class="kn">import</span> <span class="n">calc_footprint</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.output</span><span class="w"> </span><span class="kn">import</span> <span class="n">Kind</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Simulation</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">reads</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_model</span><span class="p">,</span> <span class="n">run_model</span><span class="p">,</span> <span class="n">run_model_many</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.project</span><span class="w"> </span><span class="kn">import</span> <span class="n">Project</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -543,24 +546,19 @@
         <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">previous</span><span class="p">)</span>
 
 
-<span class="c1">#: The step of a simulation that failed, its particles or its footprint.</span>
-<span class="n">Step</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"particles"</span><span class="p">,</span> <span class="s2">"footprint"</span><span class="p">]</span>
-
-<span class="c1">#: The output folder each step writes to.</span>
-<span class="n">_KIND</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Step</span><span class="p">,</span> <span class="n">Kind</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"particles"</span><span class="p">:</span> <span class="s2">"particles"</span><span class="p">,</span> <span class="s2">"footprint"</span><span class="p">:</span> <span class="s2">"footprints"</span><span class="p">}</span>
-
-
 <span class="c1"># -- failure records ---------------------------------------------------------</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_failed</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_failed</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">stage</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Record why *sim* failed at *step*, and return one line saying so.</span>
+<span class="sd">    Record why *sim* failed at *stage*, and return one line saying so.</span>
 
-<span class="sd">    The record goes in the logs of the folder whose result failed</span>
-<span class="sd">    (:meth:`stilt.output.Output.record_failure`): a particles failure</span>
-<span class="sd">    covers every variant on those particles, a footprint failure is the</span>
-<span class="sd">    variant's own. ``reason`` is the error's short cause, or its class</span>
+<span class="sd">    *stage* is ``particles`` for the transport model run, or the name of</span>
+<span class="sd">    the stage that failed. The record goes in the logs of the folder whose</span>
+<span class="sd">    result failed (:meth:`stilt.output.Output.record_failure`): a particles</span>
+<span class="sd">    failure covers every variant on those particles, a stage's failure</span>
+<span class="sd">    every variant with that stage's settings on them. ``reason`` is the</span>
+<span class="sd">    error's short cause, or its class</span>
 <span class="sd">    for an error without one. An expected failure (a</span>
 <span class="sd">    :class:`~stilt.exceptions.SimulationError`) logs one line; any other</span>
 <span class="sd">    error logs, and records, its traceback.</span>
@@ -571,17 +569,17 @@
 <span class="sd">    nothing is recorded (:func:`_unfinished`). A ``SimulationError`` always is one.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">)</span> <span class="ow">and</span> <span class="n">is_transient</span><span class="p">(</span><span class="n">error</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">_unfinished</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_unfinished</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">stage</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
     <span class="n">expected</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">)</span>
     <span class="n">reason</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">"reason"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
     <span class="k">if</span> <span class="n">expected</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-            <span class="s2">"simulation </span><span class="si">%s</span><span class="s2"> failed during </span><span class="si">%s</span><span class="s2"> (</span><span class="si">%s</span><span class="s2">): </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">sim</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">error</span>
+            <span class="s2">"simulation </span><span class="si">%s</span><span class="s2"> failed during </span><span class="si">%s</span><span class="s2"> (</span><span class="si">%s</span><span class="s2">): </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">sim</span><span class="p">,</span> <span class="n">stage</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">error</span>
         <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"simulation </span><span class="si">%s</span><span class="s2"> failed during </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">sim</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"simulation </span><span class="si">%s</span><span class="s2"> failed during </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">sim</span><span class="p">,</span> <span class="n">stage</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
     <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">"step"</span><span class="p">:</span> <span class="n">step</span><span class="p">,</span>
+        <span class="s2">"stage"</span><span class="p">:</span> <span class="n">stage</span><span class="p">,</span>
         <span class="s2">"reason"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">reason</span><span class="p">),</span>
         <span class="s2">"message"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span>
         <span class="s2">"time"</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">UTC</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
@@ -590,16 +588,16 @@
         <span class="n">record</span><span class="p">[</span><span class="s2">"traceback"</span><span class="p">]</span> <span class="o">=</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">record_failure</span><span class="p">(</span>
-            <span class="n">_KIND</span><span class="p">[</span><span class="n">step</span><span class="p">],</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">record</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span>
+            <span class="n">stage</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">record</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"simulation </span><span class="si">%s</span><span class="s2">: could not record the failure"</span><span class="p">,</span> <span class="n">sim</span><span class="p">)</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> failed during </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> failed during </span><span class="si">{</span><span class="n">stage</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_unfinished</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_unfinished</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">stage</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Leave *sim* unfinished after a connection or I/O error at *step*, and return one line saying so.</span>
+<span class="sd">    Leave *sim* unfinished after a connection or I/O error at *stage*, and return one line saying so.</span>
 
 <span class="sd">    No failure record is written, so the simulation is ``pending``, or</span>
 <span class="sd">    ``interrupted`` once its particles run started, and ``stilt run`` exits</span>
@@ -611,13 +609,13 @@
     <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
         <span class="s2">"simulation </span><span class="si">%s</span><span class="s2"> did not finish during </span><span class="si">%s</span><span class="s2">, a retry may finish it: </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
         <span class="n">sim</span><span class="p">,</span>
-        <span class="n">step</span><span class="p">,</span>
+        <span class="n">stage</span><span class="p">,</span>
         <span class="n">name</span><span class="p">,</span>
         <span class="n">error</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"simulation </span><span class="si">%s</span><span class="s2">: the error"</span><span class="p">,</span> <span class="n">sim</span><span class="p">,</span> <span class="n">exc_info</span><span class="o">=</span><span class="n">error</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">_succeeded</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+        <span class="n">_succeeded</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">stage</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">cleanup</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
             <span class="s2">"simulation </span><span class="si">%s</span><span class="s2">: could not remove its earlier failure record: </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
@@ -625,12 +623,12 @@
             <span class="nb">type</span><span class="p">(</span><span class="n">cleanup</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
             <span class="n">cleanup</span><span class="p">,</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> did not finish during </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">), a retry may finish it: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> did not finish during </span><span class="si">{</span><span class="n">stage</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">), a retry may finish it: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_succeeded</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="n">Step</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Remove *sim*'s failure record for *step*, whose result is now written."""</span>
-    <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">clear_failure</span><span class="p">(</span><span class="n">_KIND</span><span class="p">[</span><span class="n">step</span><span class="p">],</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_succeeded</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">stage</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Remove *sim*'s failure record for *stage*, whose result is now written."""</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">clear_failure</span><span class="p">(</span><span class="n">stage</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="run_particles">
@@ -798,47 +796,147 @@
     <span class="k">return</span> <span class="n">written</span><span class="p">,</span> <span class="n">failed</span>
 
 
-<div class="viewcode-block" id="make_footprint">
-<a class="viewcode-back" href="../../../reference/_api/stilt.execution.worker.make_footprint.html#stilt.execution.worker.make_footprint">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">make_footprint</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_stage_file</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Location</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Calculate a simulation's footprint from *particles* and write it to its folder.</span>
+<span class="sd">    Yield where a stage writes *path*, and leave a whole file there or none.</span>
 
-<span class="sd">    The settings are the variant's own, and the near-field correction</span>
-<span class="sd">    reads the run's ``footprint_depth``. A relative file name in a</span>
-<span class="sd">    transform's settings starts from the project directory</span>
-<span class="sd">    (``sim.directory``). When no particle reaches the grid,</span>
-<span class="sd">    an empty footprint is recorded, marked empty, and ``None`` is returned.</span>
-<span class="sd">    :meth:`stilt.Simulation.calc_footprint` makes footprints with other</span>
-<span class="sd">    settings, without writing them.</span>
+<span class="sd">    A file already at *path* is removed first: it was made from what has</span>
+<span class="sd">    since been made again, so it must not outlive a stage that fails. On a</span>
+<span class="sd">    filesystem the stage writes under a temporary name beside *path*,</span>
+<span class="sd">    hidden by a leading dot and ending in *suffix* (a writer may choose its</span>
+<span class="sd">    format by the extension, or append one), which is moved into place when</span>
+<span class="sd">    the block ends. An object store has no rename, so the stage writes</span>
+<span class="sd">    *path* itself. Either way, what a block that raises has written is</span>
+<span class="sd">    removed.</span>
+<span class="sd">    """</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">Path</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">path</span>
+        <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
+            <span class="n">path</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">raise</span>
+        <span class="k">return</span>
+    <span class="n">stem</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="p">[:</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">suffix</span><span class="p">)]</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">".</span><span class="si">{</span><span class="n">stem</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">tmp</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">tmp</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="run_stage">
+<a class="viewcode-back" href="../../../reference/_api/stilt.execution.worker.run_stage.html#stilt.execution.worker.run_stage">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_stage</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Run one stage of a simulation, which writes its file to the output directory.</span>
+
+<span class="sd">    The stage is the one the variant's ``stages`` block names</span>
+<span class="sd">    (:meth:`stilt.stages.Stage.run`), run with the variant's settings of</span>
+<span class="sd">    it. A file the stage made before is removed first, and the stage writes</span>
+<span class="sd">    under a temporary name beside the file's own, which is moved into place</span>
+<span class="sd">    when the stage returns. So a stage that fails, or is cut off part-way,</span>
+<span class="sd">    leaves no file that would count as complete: neither a half-written</span>
+<span class="sd">    one, nor an old one made from what has since been made again.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If the variant has no grid.</span>
+<span class="sd">        If the variant does not use a stage of that name.</span>
+<span class="sd">    RuntimeError</span>
+<span class="sd">        If the stage returned without writing its file.</span>
 <span class="sd">    """</span>
-    <span class="n">config</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">footprint</span>
-    <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> makes no footprints (no grid)."</span><span class="p">)</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">foot</span> <span class="o">=</span> <span class="n">calc_footprint</span><span class="p">(</span>
-            <span class="n">particles</span><span class="p">,</span>
-            <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span>
-            <span class="n">config</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span>
-            <span class="n">smooth_factor</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">smooth_factor</span><span class="p">,</span>
-            <span class="n">tres</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">tres</span><span class="p">,</span>
-            <span class="n">hnf_plume</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">hnf_plume</span><span class="p">,</span>
-            <span class="n">footprint_depth</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">,</span>
-            <span class="n">transforms</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-            <span class="n">directory</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span>
-            <span class="n">geometry_hash</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">geometry_hash</span><span class="p">,</span>
-        <span class="p">)</span>
-    <span class="k">except</span> <span class="n">EmptyFootprint</span><span class="p">:</span>
-        <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write_empty_footprint</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">)</span>
-        <span class="k">return</span> <span class="kc">None</span>
-    <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write_footprint</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">foot</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">foot</span></div>
+    <span class="n">variant</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">make_path</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">)</span>
+    <span class="n">stage</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">_stage_file</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">stage</span><span class="o">.</span><span class="n">suffix</span><span class="p">)</span> <span class="k">as</span> <span class="n">target</span><span class="p">:</span>
+        <span class="n">stage</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">variant</span><span class="o">.</span><span class="n">stages</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">sim</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">target</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> stage returned without writing its file for </span><span class="si">{</span><span class="n">sim</span><span class="si">}</span><span class="s2">. "</span>
+                <span class="s2">"A stage writes one file at the path it is given, whatever it "</span>
+                <span class="s2">"has to say."</span>
+            <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_stages">
+<a class="viewcode-back" href="../../../reference/_api/stilt.execution.worker.run_stages.html#stilt.execution.worker.run_stages">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_stages</span><span class="p">(</span>
+    <span class="n">sims</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Simulation</span><span class="p">],</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">remade</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Run the stages of the simulations of one receptor that share particles, and return what failed.</span>
+
+<span class="sd">    Each variant's stages run in the order :attr:`stilt.config.Variant.stage_order`</span>
+<span class="sd">    gives, a stage after the ones it reads. A stage file that exists is</span>
+<span class="sd">    kept, unless something it is made from was made again in this call:</span>
+<span class="sd">    the particles (*remade*), or the file of a stage it reads. Then the old</span>
+<span class="sd">    file is removed before the stage runs, so one that fails leaves none. Variants</span>
+<span class="sd">    with equal settings of a stage, and of what it reads, share its file,</span>
+<span class="sd">    so it is made once. A failure is recorded with the simulation, and the</span>
+<span class="sd">    stages that read the failed one are left for the next run.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sims : list of Simulation</span>
+<span class="sd">        One receptor under each variant that shares its particles, as one</span>
+<span class="sd">        realization.</span>
+<span class="sd">    particles : pandas.DataFrame, optional</span>
+<span class="sd">        The particles, when they are in memory. Without them a stage reads</span>
+<span class="sd">        the stored ones, once for all the simulations.</span>
+<span class="sd">    remade : bool, default False</span>
+<span class="sd">        Whether the particles were just made, so every stage file is made</span>
+<span class="sd">        again.</span>
+<span class="sd">    skip_existing : bool, default True</span>
+<span class="sd">        Keep the stage files that already exist.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list of str</span>
+<span class="sd">        One line per failure.</span>
+<span class="sd">    """</span>
+    <span class="n">problems</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">seen</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>  <span class="c1"># each (stage, hash) is looked at once</span>
+    <span class="n">made</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>  <span class="c1"># the files written in this call</span>
+    <span class="n">failed</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>  <span class="c1"># and those that could not be</span>
+    <span class="k">for</span> <span class="n">sim</span> <span class="ow">in</span> <span class="n">sims</span><span class="p">:</span>
+        <span class="n">variant</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">variant</span><span class="o">.</span><span class="n">stage_order</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">stage_hashes</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">read</span> <span class="o">=</span> <span class="p">[(</span><span class="n">r</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">stage_hashes</span><span class="p">[</span><span class="n">r</span><span class="p">])</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reads</span><span class="p">(</span><span class="n">variant</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="n">name</span><span class="p">))]</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span> <span class="ow">in</span> <span class="n">failed</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">read</span><span class="p">):</span>
+                <span class="n">failed</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>  <span class="c1"># nothing to read; the failure above is recorded</span>
+                <span class="k">continue</span>
+            <span class="n">again</span> <span class="o">=</span> <span class="n">remade</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span> <span class="ow">in</span> <span class="n">made</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">read</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">again</span> <span class="ow">and</span> <span class="n">skip_existing</span> <span class="ow">and</span> <span class="n">sim</span><span class="o">.</span><span class="n">has</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">particles</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># Give the simulation the particles in memory, so that the</span>
+                <span class="c1"># stage's sim.particles reads no file (a cached property).</span>
+                <span class="n">sim</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">particles</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">run_stage</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_failed</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>
+                <span class="n">failed</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="c1"># What this stage read from the file serves the next one.</span>
+                <span class="n">particles</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">particles</span><span class="p">)</span>
+            <span class="n">_succeeded</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="n">made</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">problems</span></div>
 
 
 
@@ -861,8 +959,9 @@
 <span class="sd">    (per realization), so they run as a group: the transport model runs</span>
 <span class="sd">    once for the group when the</span>
 <span class="sd">    particles are missing (or always, without ``skip_existing``), and each</span>
-<span class="sd">    variant's footprint is made from those particles in memory. A footprint</span>
-<span class="sd">    is made again whenever its particles were, so it always matches them.</span>
+<span class="sd">    variant's stages make their files from those particles in memory</span>
+<span class="sd">    (:func:`run_stages`), the footprint among them. A stage's file is made</span>
+<span class="sd">    again whenever what it is made from was, so it always matches it.</span>
 <span class="sd">    A failure is recorded with the simulation (:attr:`stilt.Simulation.failure`)</span>
 <span class="sd">    and does not stop the others; a failed transport model run fails every variant</span>
 <span class="sd">    of its group. A ``KeyboardInterrupt``, such as a preempted job, stops</span>
@@ -881,7 +980,7 @@
 <span class="sd">        Execution settings, for ``timeout`` and ``keep_workdir``. Defaults</span>
 <span class="sd">        to the project's.</span>
 <span class="sd">    skip_existing : bool, default True</span>
-<span class="sd">        Keep particles and footprints that already exist.</span>
+<span class="sd">        Keep particles and stage files that already exist.</span>
 <span class="sd">    batched : bool, default True</span>
 <span class="sd">        Also run the variants of a batched transport model, one receptor</span>
 <span class="sd">        per call. :func:`run_receptors` runs those for all its receptors at</span>
@@ -916,8 +1015,8 @@
 <span class="sd">    Return the variants that share particles, by particles hash and realization.</span>
 
 <span class="sd">    Each group's transport model runs once per receptor (or once for many</span>
-<span class="sd">    receptors, when it is batched), and each variant in it makes its own</span>
-<span class="sd">    footprint from those particles.</span>
+<span class="sd">    receptors, when it is batched), and each variant in it runs its stages</span>
+<span class="sd">    on those particles.</span>
 <span class="sd">    """</span>
     <span class="n">groups</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">variant</span> <span class="ow">in</span> <span class="n">project</span><span class="o">.</span><span class="n">variants</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -944,8 +1043,8 @@
 
 <span class="sd">    For each group of variants that share particles, the receptors whose</span>
 <span class="sd">    particles are missing (all of them, without *skip_existing*) run in one</span>
-<span class="sd">    call (:func:`run_particles_batch`); then each variant's footprint is</span>
-<span class="sd">    made per receptor. Returns the failures by receptor id.</span>
+<span class="sd">    call (:func:`run_particles_batch`); then each variant's stages run</span>
+<span class="sd">    per receptor. Returns the failures by receptor id.</span>
 <span class="sd">    """</span>
     <span class="n">problems</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="n">rid</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">receptor_ids</span><span class="p">}</span>
     <span class="k">for</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span> <span class="n">names</span> <span class="ow">in</span> <span class="n">_groups</span><span class="p">(</span><span class="n">project</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -961,10 +1060,10 @@
         <span class="n">ran</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">todo</span><span class="p">}</span>
         <span class="k">for</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">receptor_ids</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">ran</span> <span class="ow">and</span> <span class="n">rid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">written</span><span class="p">:</span>
-                <span class="k">continue</span>  <span class="c1"># its particles failed, and so did every footprint</span>
+                <span class="k">continue</span>  <span class="c1"># its particles failed, so no stage has any to read</span>
             <span class="n">sims</span> <span class="o">=</span> <span class="p">[</span><span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span><span class="p">]</span>
-            <span class="n">problems</span><span class="p">[</span><span class="n">rid</span><span class="p">]</span> <span class="o">+=</span> <span class="n">_make_footprints</span><span class="p">(</span>
-                <span class="n">sims</span><span class="p">,</span> <span class="n">written</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">rid</span><span class="p">),</span> <span class="n">rerun</span><span class="o">=</span><span class="n">rid</span> <span class="ow">in</span> <span class="n">ran</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span>
+            <span class="n">problems</span><span class="p">[</span><span class="n">rid</span><span class="p">]</span> <span class="o">+=</span> <span class="n">run_stages</span><span class="p">(</span>
+                <span class="n">sims</span><span class="p">,</span> <span class="n">written</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">rid</span><span class="p">),</span> <span class="n">remade</span><span class="o">=</span><span class="n">rid</span> <span class="ow">in</span> <span class="n">ran</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span>
             <span class="p">)</span>
     <span class="k">return</span> <span class="n">problems</span>
 
@@ -989,7 +1088,7 @@
     <span class="n">execution</span><span class="p">:</span> <span class="n">ExecutionConfig</span><span class="p">,</span>
     <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Run the simulations of one receptor that share particles: the transport model at most once, then each footprint."""</span>
+<span class="w">    </span><span class="sd">"""Run the simulations of one receptor that share particles: the transport model at most once, then each variant's stages."""</span>
     <span class="n">first</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">rerun</span> <span class="o">=</span> <span class="ow">not</span> <span class="p">(</span><span class="n">skip_existing</span> <span class="ow">and</span> <span class="n">first</span><span class="o">.</span><span class="n">has_particles</span><span class="p">)</span>
@@ -1004,38 +1103,7 @@
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[</span><span class="n">_failed</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="s2">"particles"</span><span class="p">,</span> <span class="n">error</span><span class="p">)]</span>
         <span class="n">_succeeded</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="s2">"particles"</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">_make_footprints</span><span class="p">(</span><span class="n">sims</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">rerun</span><span class="o">=</span><span class="n">rerun</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_make_footprints</span><span class="p">(</span>
-    <span class="n">sims</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Simulation</span><span class="p">],</span>
-    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="o">*</span><span class="p">,</span>
-    <span class="n">rerun</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
-    <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Make the footprint of each simulation that shares *particles*, and return what failed.</span>
-
-<span class="sd">    *particles* are the ones just made (*rerun*), or ``None`` to read the</span>
-<span class="sd">    stored ones once, when a footprint needs them.</span>
-<span class="sd">    """</span>
-    <span class="n">first</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">problems</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">sim</span> <span class="ow">in</span> <span class="n">sims</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span>
-            <span class="ow">not</span> <span class="n">rerun</span> <span class="ow">and</span> <span class="n">skip_existing</span> <span class="ow">and</span> <span class="n">sim</span><span class="o">.</span><span class="n">has_footprint</span>
-        <span class="p">):</span>
-            <span class="k">continue</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">particles</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">particles</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">particles</span>  <span class="c1"># read once for the group</span>
-            <span class="n">make_footprint</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">particles</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-            <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_failed</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="s2">"footprint"</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>
-            <span class="k">continue</span>
-        <span class="n">_succeeded</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="s2">"footprint"</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">problems</span>
+    <span class="k">return</span> <span class="n">run_stages</span><span class="p">(</span><span class="n">sims</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">remade</span><span class="o">=</span><span class="n">rerun</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_log_progress</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">problems</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">done</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">total</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -1312,7 +1380,7 @@
 <span class="sd">        runs in this process), and ``timeout`` and ``keep_workdir`` apply</span>
 <span class="sd">        to each run. Defaults to the project's.</span>
 <span class="sd">    skip_existing : bool, default True</span>
-<span class="sd">        Keep particles and footprints that already exist.</span>
+<span class="sd">        Keep particles and stage files that already exist.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">receptor_ids</span><span class="p">:</span>
         <span class="k">return</span>
@@ -1363,11 +1431,12 @@
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">"make_footprint"</span><span class="p">,</span>
     <span class="s2">"run_particles"</span><span class="p">,</span>
     <span class="s2">"run_particles_batch"</span><span class="p">,</span>
     <span class="s2">"run_receptor"</span><span class="p">,</span>
     <span class="s2">"run_receptors"</span><span class="p">,</span>
+    <span class="s2">"run_stage"</span><span class="p">,</span>
+    <span class="s2">"run_stages"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 

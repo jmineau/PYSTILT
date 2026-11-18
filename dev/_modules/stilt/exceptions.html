@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=ea654bdf"></script>
+    <script src="../../_static/documentation_options.js?v=70c92553"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev12+g5a6460240" />
+  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -538,6 +538,21 @@
 
 
 
+<div class="viewcode-block" id="MissingClass">
+<a class="viewcode-back" href="../../reference/_api/stilt.exceptions.MissingClass.html#stilt.MissingClass">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MissingClass</span><span class="p">(</span><span class="n">StiltError</span><span class="p">,</span> <span class="ne">ImportError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    A class that ``config.yaml`` names cannot be imported here.</span>
+
+<span class="sd">    A transport model or a stage in another package is named by its import</span>
+<span class="sd">    path (``class: mypkg.models.MyModel``), and every machine that opens the</span>
+<span class="sd">    project needs that package: a settings folder is named from the class's</span>
+<span class="sd">    own settings, defaults included. The message names the package to</span>
+<span class="sd">    install. The ``stilt`` commands end with exit code 2.</span>
+<span class="sd">    """</span></div>
+
+
+
 <div class="viewcode-block" id="EmptyFootprint">
 <a class="viewcode-back" href="../../reference/_api/stilt.exceptions.EmptyFootprint.html#stilt.EmptyFootprint">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">EmptyFootprint</span><span class="p">(</span><span class="n">StiltError</span><span class="p">):</span>
@@ -577,6 +592,7 @@
     <span class="s2">"EmptyFootprint"</span><span class="p">,</span>
     <span class="s2">"HYSPLITNotFoundError"</span><span class="p">,</span>
     <span class="s2">"MeteorologyError"</span><span class="p">,</span>
+    <span class="s2">"MissingClass"</span><span class="p">,</span>
     <span class="s2">"SimulationError"</span><span class="p">,</span>
     <span class="s2">"StiltError"</span><span class="p">,</span>
     <span class="s2">"WorkerDied"</span><span class="p">,</span>

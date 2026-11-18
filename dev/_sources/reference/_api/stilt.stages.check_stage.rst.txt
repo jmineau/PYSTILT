@@ -1,0 +1,6 @@
+﻿stilt.stages.check\_stage
+=========================
+
+.. currentmodule:: stilt.stages
+
+.. autofunction:: check_stage

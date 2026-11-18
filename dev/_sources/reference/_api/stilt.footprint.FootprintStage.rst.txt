@@ -17,5 +17,16 @@
 
 
 
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~FootprintStage.check
+   ~FootprintStage.resolve
+   ~FootprintStage.run
+   ~FootprintStage.settings
+
 
 

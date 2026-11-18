@@ -1,6 +1,0 @@
-﻿stilt.identity.footprint\_settings
-==================================
-
-.. currentmodule:: stilt.identity
-
-.. autofunction:: footprint_settings

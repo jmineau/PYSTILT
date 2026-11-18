@@ -1,0 +1,5 @@
+stilt.output.Output.make\_path
+==============================
+
+.. currentmodule:: stilt.output
+.. automethod:: Output.make_path

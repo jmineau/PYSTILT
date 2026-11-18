@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=ea654bdf"></script>
+    <script src="../../../_static/documentation_options.js?v=70c92553"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev12+g5a6460240" />
+  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -456,15 +456,53 @@
 <span></span><span class="sd">"""</span>
 <span class="sd">The footprint stage: what a ``stages`` block of ``config.yaml`` names.</span>
 
-<span class="sd">A stage is what is made from each simulation's particles. A project lists</span>
-<span class="sd">its stages by name under ``stages:``, each block giving the stage's import</span>
-<span class="sd">path as ``class`` and then the stage's settings. :class:`FootprintStage` is</span>
-<span class="sd">the one stage PYSTILT has.</span>
+<span class="sd">A stage is what is made from each simulation's results after the transport</span>
+<span class="sd">model runs (:class:`stilt.stages.Stage`). A project lists its stages by name</span>
+<span class="sd">under ``stages:``, each block giving the stage's import path as ``class``</span>
+<span class="sd">and then the stage's settings. :class:`FootprintStage` is the one stage</span>
+<span class="sd">PYSTILT has.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FootprintConfig</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">weakref</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">TypeAdapter</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyFootprint</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">file_stamp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">HNF_PLUME_COLUMNS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">FileGeometrySpec</span><span class="p">,</span>
+    <span class="n">FootprintConfig</span><span class="p">,</span>
+    <span class="n">GeometrySpec</span><span class="p">,</span>
+    <span class="n">footprint_settings</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.gridding</span><span class="w"> </span><span class="kn">import</span> <span class="n">calc_footprint</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_empty_footprint</span><span class="p">,</span> <span class="n">write_footprint</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.targets</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mesh</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">Variant</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.output</span><span class="w"> </span><span class="kn">import</span> <span class="n">Output</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Simulation</span>
+
+<span class="c1">#: One thing :meth:`FootprintStage.check` found: the check, the receptor it is about (or ``None``), and what is wrong.</span>
+<span class="n">_Finding</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+
+<span class="n">_GEOMETRY_SPEC</span><span class="p">:</span> <span class="n">TypeAdapter</span><span class="p">[</span><span class="n">GeometrySpec</span><span class="p">]</span> <span class="o">=</span> <span class="n">TypeAdapter</span><span class="p">(</span><span class="n">GeometrySpec</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="FootprintStage">
@@ -497,14 +535,270 @@
 <span class="sd">        ``footprint``, what its results are called.</span>
 <span class="sd">    config_class : type</span>
 <span class="sd">        :class:`FootprintConfig`, which checks the block's settings.</span>
+<span class="sd">    suffix : str</span>
+<span class="sd">        ``.parquet``, the extension of a stored footprint.</span>
+<span class="sd">    reads : tuple of str</span>
+<span class="sd">        Empty: a footprint is made from the particles alone.</span>
 <span class="sd">    """</span>
 
     <span class="n">name</span> <span class="o">=</span> <span class="s2">"footprint"</span>
-    <span class="n">config_class</span> <span class="o">=</span> <span class="n">FootprintConfig</span></div>
+    <span class="n">config_class</span> <span class="o">=</span> <span class="n">FootprintConfig</span>
+    <span class="n">suffix</span> <span class="o">=</span> <span class="s2">".parquet"</span>
+    <span class="n">reads</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+
+<div class="viewcode-block" id="FootprintStage.resolve">
+<a class="viewcode-back" href="../../../reference/_api/stilt.footprint.FootprintStage.resolve.html#stilt.footprint.FootprintStage.resolve">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">model_settings</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+        <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FootprintConfig</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the footprint settings a variant's simulations run with.</span>
+
+<span class="sd">        The geometry is read, once however many variants name it, and its</span>
+<span class="sd">        hash recorded (``geometry_hash``); the grid of a footprint given</span>
+<span class="sd">        only by a geometry is derived from it (:meth:`stilt.Mesh.to_grid`).</span>
+<span class="sd">        A relative geometry file starts from *directory*.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the settings have neither a grid nor a geometry, or the</span>
+<span class="sd">            near-field correction is on and the transport model is not</span>
+<span class="sd">            asked for a particle column it reads (HYSPLIT's ``varsiwant``).</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"the footprint has no grid. Give it a grid or a geometry, or "</span>
+                <span class="s2">"set the stage to null under the variant's stages: to make "</span>
+                <span class="s2">"particles only."</span>
+            <span class="p">)</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="n">model_settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"varsiwant"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">hnf_plume</span> <span class="ow">and</span> <span class="n">columns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">HNF_PLUME_COLUMNS</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">columns</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">"the near-field correction (hnf_plume) reads the particle "</span>
+                    <span class="sa">f</span><span class="s2">"columns </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">. Add them to varsiwant, or set "</span>
+                    <span class="s2">"hnf_plume: false."</span>
+                <span class="p">)</span>
+        <span class="n">update</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"geometry_hash"</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mesh</span> <span class="o">=</span> <span class="n">_mesh</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
+            <span class="n">update</span><span class="p">[</span><span class="s2">"geometry_hash"</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">hash</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">update</span><span class="p">[</span><span class="s2">"grid"</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">to_grid</span><span class="p">(</span><span class="n">cells_per_target</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">cells_per_target</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">update</span><span class="o">=</span><span class="n">update</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FootprintStage.settings">
+<a class="viewcode-back" href="../../../reference/_api/stilt.footprint.FootprintStage.settings.html#stilt.footprint.FootprintStage.settings">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return the settings that identify a footprint, besides its particles (:func:`~stilt.footprint.config.footprint_settings`)."""</span>
+        <span class="k">return</span> <span class="n">footprint_settings</span><span class="p">(</span><span class="n">config</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FootprintStage.check">
+<a class="viewcode-back" href="../../../reference/_api/stilt.footprint.FootprintStage.check.html#stilt.footprint.FootprintStage.check">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return what would stop the footprints of *receptors*, found without a run.</span>
+
+<span class="sd">        Variants whose footprints share a grid or a transform share that</span>
+<span class="sd">        part of the check: each is made once for a table of receptors.</span>
+
+<span class="sd">        The receptors with a release point outside the footprint grid</span>
+<span class="sd">        (``grid``), and what each transform finds wrong with its own inputs,</span>
+<span class="sd">        such as an averaging kernel's table. A missing ``zsfc`` is the</span>
+<span class="sd">        project check's to find (:attr:`FootprintConfig.zsfc_reasons` says</span>
+<span class="sd">        what needs it).</span>
+<span class="sd">        """</span>
+        <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">grid</span> <span class="o">:=</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">found</span> <span class="o">+=</span> <span class="n">_once</span><span class="p">(</span>
+                <span class="n">receptors</span><span class="p">,</span>
+                <span class="p">(</span><span class="s2">"grid"</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">model_dump_json</span><span class="p">()),</span>
+                <span class="k">lambda</span><span class="p">:</span> <span class="n">_outside</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">grid</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">for</span> <span class="n">transform</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">:</span>
+            <span class="n">check</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">transform</span><span class="p">,</span> <span class="s2">"check"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">check</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">found</span> <span class="o">+=</span> <span class="n">_once</span><span class="p">(</span>
+                <span class="n">receptors</span><span class="p">,</span>
+                <span class="p">(</span><span class="s2">"transform"</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">transform</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">directory</span><span class="p">)),</span>
+                <span class="k">lambda</span> <span class="n">check</span><span class="o">=</span><span class="n">check</span><span class="p">:</span> <span class="n">_transform_findings</span><span class="p">(</span><span class="n">check</span><span class="p">,</span> <span class="n">receptors</span><span class="p">,</span> <span class="n">directory</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">found</span></div>
+
+
+<div class="viewcode-block" id="FootprintStage.run">
+<a class="viewcode-back" href="../../../reference/_api/stilt.footprint.FootprintStage.run.html#stilt.footprint.FootprintStage.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span> <span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Location</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Calculate a simulation's footprint from its particles and write it at *path*.</span>
+
+<span class="sd">        The near-field correction reads the run's ``footprint_depth``. A</span>
+<span class="sd">        relative file name in a transform's settings starts from the</span>
+<span class="sd">        project directory (``sim.directory``). When no particle reaches the</span>
+<span class="sd">        grid, the file written has no rows and is marked ``stilt:empty``: a</span>
+<span class="sd">        finished result, which ``sim.footprint`` reads as ``None``.</span>
+<span class="sd">        :meth:`stilt.Simulation.calc_footprint` makes footprints with other</span>
+<span class="sd">        settings, without writing them.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># resolve gives every footprint its grid</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The footprint of </span><span class="si">{</span><span class="n">sim</span><span class="si">}</span><span class="s2"> has no grid."</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">foot</span> <span class="o">=</span> <span class="n">calc_footprint</span><span class="p">(</span>
+                <span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span>
+                <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span>
+                <span class="n">config</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span>
+                <span class="n">smooth_factor</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">smooth_factor</span><span class="p">,</span>
+                <span class="n">tres</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">tres</span><span class="p">,</span>
+                <span class="n">hnf_plume</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">hnf_plume</span><span class="p">,</span>
+                <span class="n">footprint_depth</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">,</span>
+                <span class="n">transforms</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">directory</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span>
+                <span class="n">geometry_hash</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">geometry_hash</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">EmptyFootprint</span><span class="p">:</span>
+            <span class="n">foot</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">_write</span><span class="p">(</span>
+            <span class="n">path</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span> <span class="n">foot</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+        <span class="p">)</span></div>
+</div>
 
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"FootprintStage"</span><span class="p">]</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">store_footprint</span><span class="p">(</span>
+    <span class="n">output</span><span class="p">:</span> <span class="n">Output</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">foot</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Write a footprint into *variant*'s footprint folder of an output directory, without calculating it.</span>
+
+<span class="sd">    For a footprint made elsewhere, as one imported from STILT-R is; a run</span>
+<span class="sd">    calculates its own (:meth:`FootprintStage.run`). The footprint must be</span>
+<span class="sd">    on the variant's grid. The file records the footprint settings, the</span>
+<span class="sd">    folder's hash, and the hash of the particles it was made from, so it</span>
+<span class="sd">    reads alone.</span>
+<span class="sd">    """</span>
+    <span class="n">receptor</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">receptor</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">FootprintStage</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">make_path</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">realization</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_write</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">stages</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">foot</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">store_empty_footprint</span><span class="p">(</span>
+    <span class="n">output</span><span class="p">:</span> <span class="n">Output</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Record in *variant*'s footprint folder that a receptor's footprint is empty: no particle reached the grid."""</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">FootprintStage</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">make_path</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">realization</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_write</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">stages</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_write</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span>
+    <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">foot</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">stage</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">FootprintStage</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Write a receptor's footprint, made with *config*, at *path*; the empty one when *foot* is ``None``.</span>
+
+<span class="sd">    The file records what every result file does</span>
+<span class="sd">    (:func:`stilt.identity.file_stamp`, with the hash of *variant*'s folder</span>
+<span class="sd">    of *stage*), and the hash of the particles it was made from.</span>
+<span class="sd">    """</span>
+    <span class="n">stamp</span> <span class="o">=</span> <span class="n">file_stamp</span><span class="p">(</span><span class="n">variant</span><span class="o">.</span><span class="n">stage_hashes</span><span class="p">[</span><span class="n">stage</span><span class="p">],</span> <span class="n">realization</span><span class="p">)</span>
+    <span class="n">stamp</span><span class="p">[</span><span class="sa">b</span><span class="s2">"stilt:particles_hash"</span><span class="p">]</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">particles_hash</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">foot</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">write_empty_footprint</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">stamp</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">write_footprint</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">foot</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">stamp</span><span class="p">)</span>
+
+
+<span class="c1">#: The findings of each part of a check for one table of receptors, so that</span>
+<span class="c1">#: variants whose footprints share a grid or a transform share its check.</span>
+<span class="n">_CHECKED</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]]]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_once</span><span class="p">(</span>
+    <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">make</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the findings *make* gives for *receptors* and *key*, made once while that table is in use."""</span>
+    <span class="n">known</span> <span class="o">=</span> <span class="n">_CHECKED</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">receptors</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">known</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">known</span><span class="p">[</span><span class="mi">0</span><span class="p">]()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">receptors</span><span class="p">:</span>
+        <span class="n">_CHECKED</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>  <span class="c1"># one table at a time: a project's receptors</span>
+        <span class="n">known</span> <span class="o">=</span> <span class="n">_CHECKED</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">receptors</span><span class="p">)]</span> <span class="o">=</span> <span class="p">(</span><span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">receptors</span><span class="p">),</span> <span class="p">{})</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">known</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">known</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">make</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">known</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_transform_findings</span><span class="p">(</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return what a transform's own check finds for the receptors, as plain tuples."""</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">receptor</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">check</span><span class="p">(</span><span class="n">ids</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
+    <span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_mesh</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">GeometrySpec</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the mesh a geometry spec describes, reading each spec once.</span>
+
+<span class="sd">    A relative file starts from *directory*. A file is read again when it</span>
+<span class="sd">    has changed. The spec in the settings keeps the path as written, and a</span>
+<span class="sd">    mesh's hash is of its polygons, so moving the project changes no hash.</span>
+<span class="sd">    """</span>
+    <span class="n">modified</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">FileGeometrySpec</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">directory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">spec</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">"path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">absolute</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">directory</span><span class="p">))})</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">modified</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">st_mtime_ns</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="n">modified</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># reading it says what is wrong</span>
+    <span class="k">return</span> <span class="n">_read_mesh</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">model_dump_json</span><span class="p">(),</span> <span class="n">modified</span><span class="p">)</span>
+
+
+<span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_read_mesh</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">modified</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the mesh of a geometry spec given as JSON; *modified* is its file's time, so a changed file is read again."""</span>
+    <span class="k">return</span> <span class="n">Mesh</span><span class="o">.</span><span class="n">from_spec</span><span class="p">(</span><span class="n">_GEOMETRY_SPEC</span><span class="o">.</span><span class="n">validate_json</span><span class="p">(</span><span class="n">spec</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_outside</span><span class="p">(</span><span class="n">rows</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">grid</span><span class="p">:</span> <span class="n">Grid</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""List the receptors with a release point outside *grid*, which is bounded in longitude and latitude."""</span>
+    <span class="n">outside</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="o">~</span><span class="n">grid</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">"longitude"</span><span class="p">],</span> <span class="n">rows</span><span class="p">[</span><span class="s2">"latitude"</span><span class="p">])]</span>
+    <span class="n">box</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">xmin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">xmax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> longitude, "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">ymin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">ymax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> latitude"</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="p">(</span>
+            <span class="s2">"grid"</span><span class="p">,</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">receptor</span><span class="p">),</span>
+            <span class="sa">f</span><span class="s2">"longitude </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">longitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> and latitude </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">latitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> are "</span>
+            <span class="sa">f</span><span class="s2">"outside the footprint grid (</span><span class="si">{</span><span class="n">box</span><span class="si">}</span><span class="s2">)"</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">outside</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span><span class="o">.</span><span class="n">itertuples</span><span class="p">()</span>
+    <span class="p">]</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"FootprintStage"</span><span class="p">,</span> <span class="s2">"store_empty_footprint"</span><span class="p">,</span> <span class="s2">"store_footprint"</span><span class="p">]</span>
 </pre></div>
 
                 </article>

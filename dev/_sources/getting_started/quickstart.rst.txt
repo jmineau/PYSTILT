@@ -251,7 +251,7 @@ folder:
      receptors.csv      # your receptors
      output/
        particles/       # where each particle went, one file per simulation
-       footprints/      # the footprints, one file per simulation
+       footprint/       # the footprints, one file per simulation
        logs/            # HYSPLIT's log of each run
 
 Each result is kept under the settings it was made with. Change a setting and

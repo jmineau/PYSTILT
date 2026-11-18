@@ -1,0 +1,6 @@
+﻿stilt.execution.worker.run\_stages
+==================================
+
+.. currentmodule:: stilt.execution.worker
+
+.. autofunction:: run_stages

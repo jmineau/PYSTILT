@@ -1,0 +1,5 @@
+stilt.footprint.FootprintStage.run
+==================================
+
+.. currentmodule:: stilt.footprint
+.. automethod:: FootprintStage.run

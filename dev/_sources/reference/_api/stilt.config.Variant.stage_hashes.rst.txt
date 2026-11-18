@@ -1,0 +1,6 @@
+stilt.config.Variant.stage\_hashes
+==================================
+
+.. currentmodule:: stilt.config
+
+.. autoproperty:: Variant.stage_hashes

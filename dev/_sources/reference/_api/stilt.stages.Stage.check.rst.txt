@@ -1,0 +1,5 @@
+stilt.stages.Stage.check
+========================
+
+.. currentmodule:: stilt.stages
+.. automethod:: Stage.check

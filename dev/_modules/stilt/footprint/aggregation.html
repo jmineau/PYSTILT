@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=ea654bdf"></script>
+    <script src="../../../_static/documentation_options.js?v=70c92553"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev12+g5a6460240" />
+  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -825,7 +825,6 @@
     <span class="n">time_bins</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="p">,</span>
     <span class="n">receptors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
     <span class="n">missing</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Jacobian</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Sum the footprints in *table* onto a target, per time bin, as one sparse matrix.</span>
@@ -841,7 +840,9 @@
 <span class="sd">    table : pyarrow.Table</span>
 <span class="sd">        Footprint cells, with ``receptor``, ``hour``, ``y``, ``x``, ``foot``.</span>
 <span class="sd">    config : FootprintConfig</span>
-<span class="sd">        The footprints' settings, whose grid the cells index.</span>
+<span class="sd">        The footprints' settings, whose grid the cells index. When it names</span>
+<span class="sd">        the geometry the grid was derived for (``geometry_hash``), a</span>
+<span class="sd">        *target* that is another mesh gets a warning.</span>
 <span class="sd">    target : Grid, Mesh, or Zones</span>
 <span class="sd">        Cells to sum onto.</span>
 <span class="sd">    time_bins : pandas.IntervalIndex</span>
@@ -853,9 +854,6 @@
 <span class="sd">        are empty footprints and get none.</span>
 <span class="sd">    missing : list of str, optional</span>
 <span class="sd">        Receptors asked for that have no footprint file, to report.</span>
-<span class="sd">    geometry_hash : str, optional</span>
-<span class="sd">        Hash of the geometry the grid was derived for, to warn when *target*</span>
-<span class="sd">        is another mesh.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -878,7 +876,6 @@
         <span class="n">target</span><span class="p">,</span>
         <span class="n">time_bins</span><span class="p">,</span>
         <span class="n">missing</span><span class="o">=</span><span class="n">missing</span><span class="p">,</span>
-        <span class="n">geometry_hash</span><span class="o">=</span><span class="n">geometry_hash</span><span class="p">,</span>
     <span class="p">)</span>
 
 
@@ -890,7 +887,6 @@
     <span class="n">time_bins</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">missing</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Jacobian</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
@@ -908,7 +904,7 @@
     <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The footprint settings have no grid."</span><span class="p">)</span>
     <span class="n">x_axis</span><span class="p">,</span> <span class="n">y_axis</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">axes</span>
-    <span class="n">weights</span> <span class="o">=</span> <span class="n">_target_weights</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">,</span> <span class="n">x_axis</span><span class="p">,</span> <span class="n">y_axis</span><span class="p">)</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">_target_weights</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">geometry_hash</span><span class="p">,</span> <span class="n">x_axis</span><span class="p">,</span> <span class="n">y_axis</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">one</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">_receptor_row</span><span class="p">(</span>

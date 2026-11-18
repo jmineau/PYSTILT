@@ -9,8 +9,11 @@ R, Julia, DuckDB, or plain pyarrow can read them without PYSTILT. In Python,
 The folders
 -----------
 
-Each kind of result has its own tree. Inside it, each settings folder holds
-the results of one set of settings, split by the receptor's date:
+Each kind of result has its own tree: ``particles/`` for what the transport
+model wrote, and one named for each stage of the project, which is what is
+made from a simulation's results afterward. The footprint is a stage, and
+its tree is ``footprint/``. Inside a tree, each settings folder holds the
+results of one set of settings, split by the receptor's date:
 
 .. code-block:: text
 
@@ -23,7 +26,7 @@ the results of one set of settings, split by the receptor's date:
          _settings.yaml
          realization=0/date=2024-07-15/<receptor id>.parquet
          realization=1/date=2024-07-15/<receptor id>.parquet
-     footprints/
+     footprint/
        settings=hrrr-f82d40/
          _settings.yaml
          date=2024-07-15/<receptor id>.parquet
@@ -44,17 +47,25 @@ The ``logs/`` tree follows the folders of the results:
 
 - ``<receptor id>.log`` is the transport model's log, under the particles'
   settings folder.
-- ``<receptor id>.failure.yaml`` says why a result failed. A failed run
-  writes it under the particles' settings folder. A failed footprint
-  writes it under the footprint's own settings folder, since the
+- ``<receptor id>.failure.yaml`` says why a result failed, and at which
+  ``stage``. A failed run writes it under the particles' settings folder,
+  with ``stage: particles``. A failed footprint writes it under the
+  footprint's own settings folder, with ``stage: footprint``, since the
   particles were fine. It is removed when the result is written.
 
 ``scratch/`` holds kept workdirs, one folder per simulation, under the
 particles' settings folder. A failed run's workdir is kept, and with
 ``keep_workdir: true`` under ``execution:`` every run's is.
 
-The results trees hold only Parquet files and ``_settings.yaml``, so each
-reads as one dataset.
+The ``particles/`` and ``footprint/`` trees hold only Parquet files and
+``_settings.yaml``, so each reads as one dataset. A stage from another
+package has a tree under its own name, with files in the format and with
+the extension that stage chooses.
+
+A simulation is complete when the model's output file exists, and so does
+the file of every stage its variant uses: for a variant with a footprint,
+the particle file and the footprint file. A footprint with no cells is
+still a file (below), so it is complete.
 
 ``_settings.yaml``
 ------------------
@@ -84,15 +95,21 @@ Every settings folder holds a ``_settings.yaml``. A particles folder's:
      n_hours: -24
      # ...
 
-A footprints folder's adds the particles folder it was made from:
+A stage's folder, such as a footprint's, names its stage and what its files
+were made from:
 
 .. code-block:: yaml
 
    name: hrrr
    hash: f82d40aea8c29b2a30b99b1c5a74166937ee4eef5df20aa80407bfb69a3ab7a0
-   particles: hrrr-7d36c8
-   particles_hash: 7d36c80b3b5a1a33cc355998f5755de469f61c53151a9d1b953fa698c81cd51f
-   pystilt: 0.1.0a23
+   stage: footprint
+   class: stilt.footprint.FootprintStage
+   reads:
+     particles:
+       folder: hrrr-7d36c8
+       hash: 7d36c80b3b5a1a33cc355998f5755de469f61c53151a9d1b953fa698c81cd51f
+   versions:
+     pystilt: 0.1.0a30
    settings:
      cells_per_target: 4
      geometry: null
@@ -115,7 +132,7 @@ A footprints folder's adds the particles folder it was made from:
    The folder's settings hash, a SHA-256 in hex. The folder name ends in
    its first six characters.
 ``pystilt``
-   The PYSTILT version that wrote the folder.
+   In a particles folder, the PYSTILT version that wrote the folder.
 ``model_version``
    In a particles folder only: the version the transport model's build
    reports, such as what ``hycs_std`` prints when it starts. It is not in
@@ -126,15 +143,24 @@ A footprints folder's adds the particles folder it was made from:
    ``model`` (the transport model and its build: the SHA-256 of
    ``hycs_std``, and of each of HYSPLIT's data tables). An ensemble adds
    ``ensemble: true``, and realization ``k`` ran with ``seed + k``. In a
-   footprints folder, the footprint settings, with the grid.
-``particles``, ``particles_hash``
-   In a footprints folder only: the name and hash of the particles folder.
+   stage's folder, the stage's own settings: for a footprint, the
+   footprint settings, with the grid.
+``stage``, ``class``
+   In a stage's folder only: the stage's name, which is also its tree, and
+   the import path of its class, as ``config.yaml`` names it.
+``reads``
+   In a stage's folder only: what its files were made from, each with the
+   name and the hash of its settings folder. ``particles`` is always there;
+   a stage that reads another stage's files lists that stage too.
+``versions``
+   In a stage's folder only: the PYSTILT version that wrote the folder,
+   and the version of the stage's own package when it is another one.
 
-A particles folder's hash covers its ``settings`` block. A footprints
-folder's hash covers its ``settings`` block together with
-``particles_hash``, so the same footprint settings on other particles give
-another folder. Every result file records its folder's full hash as
-``stilt:hash``.
+A particles folder's hash covers its ``settings`` block. A stage folder's
+hash covers its ``settings`` block together with the hash of each thing
+under ``reads``, so the same footprint settings on other particles give
+another folder. The versions are not part of a hash. Every particle and
+footprint file records its folder's full hash as ``stilt:hash``.
 
 Particle files
 --------------
@@ -386,7 +412,7 @@ Which rules a file follows
 
 A file follows the rules of the PYSTILT version that wrote it:
 ``stilt:pystilt`` in a result file, and ``pystilt`` in a
-``_settings.yaml``. There is no separate format number. This page
+``_settings.yaml`` (under ``versions`` in a stage's folder). There is no separate format number. This page
 describes the files of the current version, and the list below says when
 a rule changed.
 
@@ -395,13 +421,20 @@ a rule changed.
   are Parquet files in settings folders, and an empty footprint is marked
   ``stilt:empty``. Files from development builds before it carry a
   version ending in ``.dev...``, and may differ.
+- **After 0.1.0a29**: footprints are in ``footprint/`` (it was
+  ``footprints/``), the tree named for their stage. A stage folder's
+  ``_settings.yaml`` has ``stage``, ``class``, ``reads`` and ``versions``
+  in place of ``particles``, ``particles_hash`` and ``pystilt``, and a
+  failure record says ``stage`` where it said ``step``. The footprint
+  files themselves are unchanged. Footprints stored by an earlier version
+  are not found, and a run makes them again from the stored particles.
 
 Why the output has separate trees
 ---------------------------------
 
 The output directory keeps results, logs, and kept workdirs in separate
-trees (``particles/``, ``footprints/``, ``logs/``, ``scratch/``). Each
-results tree holds Parquet files only, so pyarrow, DuckDB, polars, and R
-read it as one table, and a log or a failure record beside a result would
-break that. Whether a simulation is complete is read from the results
+trees (``particles/``, ``footprint/``, ``logs/``, ``scratch/``). Each
+results tree holds result files only, so pyarrow, DuckDB, polars, and R
+read ``particles/`` or ``footprint/`` as one table, and a log or a failure
+record beside a result would break that. Whether a simulation is complete is read from the results
 trees alone; the logs tree only explains the ones that are not.
