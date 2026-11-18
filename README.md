@@ -40,19 +40,16 @@ pip install "pystilt[complete]"
 ```
 
 PYSTILT runs NOAA's HYSPLIT program, `hycs_std`, but does not include it or its data tables.
-Get the build STILT-R uses, HYSPLIT 5.1.0, from STILT-R's repository (`bin/macos_x64/hycs_std`
-on a Mac), laid out as HYSPLIT's own folder, and put its `exec/` on `PATH`, or set `directory`
-under `models: hysplit:` in `config.yaml` to the folder:
+Download HYSPLIT from [NOAA's Air Resources Laboratory](https://www.ready.noaa.gov/HYSPLIT.php),
+which asks you to accept the
+[HYSPLIT terms of use](https://www.ready.noaa.gov/HYSPLIT_agreement.php) first. Unpack it, then
+set `directory` under `models: hysplit:` in `config.yaml` to the folder it makes, or put that
+folder's `exec/` on `PATH`:
 
-```bash
-stilt_r=https://raw.githubusercontent.com/uataq/stilt/main
-mkdir -p hysplit/exec hysplit/bdyfiles
-curl -L -o hysplit/exec/hycs_std "$stilt_r/bin/linux_x64/hycs_std"
-for table in ASCDATA.CFG LANDUSE.ASC ROUGLEN.ASC TERRAIN.ASC; do
-    curl -L -o "hysplit/bdyfiles/$table" "$stilt_r/exe/$table"
-done
-chmod +x hysplit/exec/hycs_std
-export PATH="$PWD/hysplit/exec:$PATH"
+```yaml
+models:
+  hysplit:
+    directory: /path/to/hysplit
 ```
 
 [Installation](https://jmineau.github.io/PYSTILT/stable/getting_started/installation.html)
