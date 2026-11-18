@@ -12,7 +12,12 @@ import pytest
 import yaml
 
 from stilt.execution import runner
-from stilt.execution.config import ExecutionConfig, FetchConfig, slurm_minutes
+from stilt.execution.config import (
+    ExecutionConfig,
+    FetchConfig,
+    SlurmConfig,
+    slurm_minutes,
+)
 from stilt.execution.runner import _project_slug, job_script, task_share
 from stilt.project import Project
 
@@ -45,16 +50,20 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
     folder = tmp_path / "My_Project" / "_slurm" / "stamp"
     execution = ExecutionConfig(
         backend="slurm",
-        n_workers=50,
-        cpus=4,
-        time="02:00:00",
-        mem="8G",
-        partition="lin-np",
-        account="lin-np",
-        qos="lin-np",
-        array_parallelism=10,
-        setup=["module load gcc", "export OMP_NUM_THREADS=2"],
-        slurm={"exclude": "notch345", "signal": "B:USR1@300", "exclusive": True},
+        slurm={
+            "n_workers": 50,
+            "cpus": 4,
+            "time": "02:00:00",
+            "mem": "8G",
+            "partition": "lin-np",
+            "account": "lin-np",
+            "qos": "lin-np",
+            "array_parallelism": 10,
+            "setup": ["module load gcc", "export OMP_NUM_THREADS=2"],
+            "exclude": "notch345",
+            "signal": "B:USR1@300",
+            "exclusive": True,
+        },
     )
 
     script = job_script(project, execution, folder, 7)
@@ -89,6 +98,8 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
     assert f"--receptors {folder / 'receptors.parquet'}" in last
     assert '--task "$SLURM_ARRAY_TASK_ID/7"' in last
     assert f"--execution {folder / 'execution.yaml'}" in last
+    # A task runs its share here, so the script tells it the array's cpus.
+    assert "--cpus 4" in last
     # Each task writes where the submitting process does, not to config.yaml's output.
     assert f"--output {(tmp_path / 'out').resolve()}" in last
     assert "--no-skip" not in script
@@ -98,7 +109,7 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
 def test_job_script_leaves_out_what_was_not_set(tmp_path):
     script = job_script(
         _project_at(tmp_path, output=tmp_path / "out"),
-        ExecutionConfig(backend="slurm", time="01:00:00"),
+        ExecutionConfig(backend="slurm", slurm={"time": "01:00:00"}),
         tmp_path,
         1,
     )
@@ -114,7 +125,7 @@ def test_job_script_runs_again_only_on_the_first_start_and_names_a_compute_root(
 ):
     script = job_script(
         _project_at(tmp_path, output=tmp_path / "out"),
-        ExecutionConfig(backend="slurm", time="01:00:00"),
+        ExecutionConfig(backend="slurm", slurm={"time": "01:00:00"}),
         tmp_path,
         2,
         skip_existing=False,
@@ -143,7 +154,7 @@ def test_job_script_gives_each_worker_one_thread_of_the_tasks_cpus(tmp_path):
     # Four workers on four CPUs: without this a worker's BLAS sizes its pool by the node.
     script = job_script(
         _project_at(tmp_path, output=tmp_path / "out"),
-        ExecutionConfig(backend="slurm", time="01:00:00", cpus=4),
+        ExecutionConfig(backend="slurm", slurm={"time": "01:00:00", "cpus": 4}),
         tmp_path,
         1,
     )
@@ -156,10 +167,7 @@ def test_job_script_shares_cpus_a_slurm_option_adds_among_the_workers(tmp_path):
     script = job_script(
         _project_at(tmp_path, output=tmp_path / "out"),
         ExecutionConfig(
-            backend="slurm",
-            time="01:00:00",
-            cpus=2,
-            slurm={"cpus_per_task": 8},
+            backend="slurm", slurm={"time": "01:00:00", "cpus": 2, "cpus_per_task": 8}
         ),
         tmp_path,
         1,
@@ -172,7 +180,7 @@ def test_job_script_gives_one_thread_when_cpus_per_task_is_not_a_number(tmp_path
     script = job_script(
         _project_at(tmp_path, output=tmp_path / "out"),
         ExecutionConfig(
-            backend="slurm", time="01:00:00", slurm={"cpus_per_task": "many"}
+            backend="slurm", slurm={"time": "01:00:00", "cpus_per_task": "many"}
         ),
         tmp_path,
         1,
@@ -185,9 +193,11 @@ def test_job_script_leaves_the_thread_count_to_a_setup_line(tmp_path):
         _project_at(tmp_path, output=tmp_path / "out"),
         ExecutionConfig(
             backend="slurm",
-            time="01:00:00",
-            cpus=4,
-            setup=["export OMP_NUM_THREADS=3"],
+            slurm={
+                "time": "01:00:00",
+                "cpus": 4,
+                "setup": ["export OMP_NUM_THREADS=3"],
+            },
         ),
         tmp_path,
         1,
@@ -200,7 +210,9 @@ def test_job_script_is_valid_bash(tmp_path):
     script.write_text(
         job_script(
             _project_at(tmp_path / "with space", output=tmp_path / "out"),
-            ExecutionConfig(backend="slurm", time="01:00:00", setup=["echo ready"]),
+            ExecutionConfig(
+                backend="slurm", slurm={"time": "01:00:00", "setup": ["echo ready"]}
+            ),
             tmp_path / "with space" / "_slurm",
             3,
             skip_existing=False,
@@ -254,7 +266,9 @@ def test_submit_writes_a_submission_and_hands_it_to_sbatch(pending, commands, tm
     ids = list(project.receptors["receptor"])
     pending.extend([ids[2], ids[0], ids[3]])  # the order a run gives
     execution = ExecutionConfig(
-        backend="slurm", time="01:00:00", n_workers=2, cpus=4, timeout=600
+        backend="slurm",
+        timeout=600,
+        slurm={"time": "01:00:00", "n_workers": 2, "cpus": 4},
     )
     commands.answers["sbatch"] = [_out("777;cluster\n")]
 
@@ -283,7 +297,9 @@ def test_submit_uses_no_more_tasks_than_receptors(pending, commands, tmp_path):
     commands.answers["sbatch"] = [_out("5\n")]
     runner.submit(
         project,
-        execution=ExecutionConfig(backend="slurm", time="01:00:00", n_workers=8),
+        execution=ExecutionConfig(
+            backend="slurm", slurm={"time": "01:00:00", "n_workers": 8}
+        ),
     )
     assert _sbatch(Path(commands.ran[0][2]).read_text())["array"] == "0-0"
 
@@ -292,7 +308,7 @@ def test_submit_with_nothing_to_do_submits_nothing(pending, commands, tmp_path):
     assert (
         runner.submit(
             _project_at(tmp_path, output=tmp_path / "out"),
-            execution=ExecutionConfig(backend="slurm", time="01:00:00"),
+            execution=ExecutionConfig(backend="slurm", slurm={"time": "01:00:00"}),
         )
         is None
     )
@@ -306,7 +322,7 @@ def test_submit_says_why_sbatch_refused(pending, commands, tmp_path):
     with pytest.raises(RuntimeError, match="Invalid account"):
         runner.submit(
             project,
-            execution=ExecutionConfig(backend="slurm", time="01:00:00"),
+            execution=ExecutionConfig(backend="slurm", slurm={"time": "01:00:00"}),
         )
 
 
@@ -350,7 +366,7 @@ def test_a_job_on_another_cluster_is_followed_there(
     ]
     monkeypatch.setattr(runner.time, "sleep", lambda seconds: None)
     execution = ExecutionConfig(
-        backend="slurm", time="01:00:00", slurm={"clusters": "kingspeak"}
+        backend="slurm", slurm={"time": "01:00:00", "clusters": "kingspeak"}
     )
 
     runner.run(project, execution=execution)
@@ -378,7 +394,7 @@ def test_a_run_lists_once_more_when_the_files_look_late(
     commands.answers["sbatch"] = [_out("5\n")]
 
     table = runner.run(
-        project, execution=ExecutionConfig(backend="slurm", time="01:00:00")
+        project, execution=ExecutionConfig(backend="slurm", slurm={"time": "01:00:00"})
     )
 
     assert slept == [runner.RELIST_SECONDS]
@@ -537,11 +553,11 @@ def test_time_limits_are_read_the_way_sbatch_reads_them(time, minutes):
 @pytest.mark.parametrize("time", ["soon", "1:2:3:4", "-5", "0", "00:00:00", "1-"])
 def test_a_time_limit_sbatch_would_not_take_is_an_error(time):
     with pytest.raises(ValueError, match="time limit"):
-        ExecutionConfig(time=time)
+        ExecutionConfig(slurm={"time": time})
 
 
 def test_a_slurm_run_needs_a_time_limit():
-    with pytest.raises(ValueError, match="execution.time is required"):
+    with pytest.raises(ValueError, match="execution.slurm.time is required"):
         ExecutionConfig(backend="slurm")
     ExecutionConfig()  # a local run has none
     ExecutionConfig(backend="slurm", slurm={"time": "1-00"})
@@ -656,7 +672,7 @@ def test_a_task_runs_here_whatever_the_backend(tmp_path, monkeypatch, commands):
     table = runner.run(
         project,
         task=(1, 2),
-        execution=ExecutionConfig(backend="slurm", time="01:00:00"),
+        execution=ExecutionConfig(backend="slurm", slurm={"time": "01:00:00"}),
     )
 
     assert commands.ran == []  # no sbatch
@@ -695,17 +711,25 @@ def _downloading_project(tmp_path, n: int) -> Project:
 
 @pytest.mark.parametrize("value", [True, None, {}])
 def test_fetch_is_on_with_the_arrays_resources_unless_given(value):
-    config = ExecutionConfig.model_validate({"fetch": value})
-    assert config.fetch == FetchConfig()
-    assert ExecutionConfig().fetch == FetchConfig()
+    assert SlurmConfig.model_validate({"fetch": value}).fetch == FetchConfig()
+    assert SlurmConfig().fetch == FetchConfig()
 
 
 def test_fetch_false_turns_it_off_and_a_bad_fetch_setting_is_an_error():
-    assert ExecutionConfig.model_validate({"fetch": False}).fetch is False
+    assert SlurmConfig.model_validate({"fetch": False}).fetch is False
     with pytest.raises(ValueError, match="partiton"):
-        ExecutionConfig.model_validate({"fetch": {"partiton": "dtn"}})
+        SlurmConfig.model_validate({"fetch": {"partiton": "dtn"}})
     with pytest.raises(ValueError, match="Not a Slurm time limit"):
-        ExecutionConfig.model_validate({"fetch": {"time": "soon"}})
+        SlurmConfig.model_validate({"fetch": {"time": "soon"}})
+
+
+def test_fetch_is_the_setting_of_the_backend_that_runs():
+    """A local run's fetch is on or off; a Slurm run's also holds the fetch job's resources."""
+    settings = {"local": {"fetch": False}, "slurm": {"time": "01:00:00"}}
+    assert ExecutionConfig.model_validate(settings).fetch is False
+    slurm = ExecutionConfig.model_validate({"backend": "slurm", **settings})
+    assert slurm.fetch == FetchConfig()
+    assert ExecutionConfig().fetch is True
 
 
 def test_submit_sends_a_fetch_job_first_and_the_array_waits_for_it(
@@ -716,13 +740,15 @@ def test_submit_sends_a_fetch_job_first_and_the_array_waits_for_it(
     execution = ExecutionConfig.model_validate(
         {
             "backend": "slurm",
-            "time": "01:00:00",
-            "account": "lin-np",
-            "partition": "lin-np",
-            "mem": "8G",
-            "setup": ["module load gcc"],
-            "slurm": {"exclude": "notch345"},
-            "fetch": {"partition": "notchpeak-dtn", "time": "12:00:00"},
+            "slurm": {
+                "time": "01:00:00",
+                "account": "lin-np",
+                "partition": "lin-np",
+                "mem": "8G",
+                "setup": ["module load gcc"],
+                "exclude": "notch345",
+                "fetch": {"partition": "notchpeak-dtn", "time": "12:00:00"},
+            },
         }
     )
     commands.answers["sbatch"] = [_out("41\n"), _out("42\n")]
@@ -766,7 +792,7 @@ def test_the_array_goes_to_the_cluster_its_fetch_job_went_to(
     project = _downloading_project(tmp_path, 1)
     pending.extend(project.receptors["receptor"])
     execution = ExecutionConfig(
-        backend="slurm", time="01:00:00", slurm={"clusters": "kingspeak,notchpeak"}
+        backend="slurm", slurm={"time": "01:00:00", "clusters": "kingspeak,notchpeak"}
     )
     commands.answers["sbatch"] = [_out("41;kingspeak\n"), _out("42;kingspeak\n")]
 
@@ -782,7 +808,9 @@ def test_a_met_without_download_gets_no_fetch_job(pending, commands, tmp_path):
     pending.extend(project.receptors["receptor"])
     commands.answers["sbatch"] = [_out("42\n")]
 
-    runner.submit(project, execution=ExecutionConfig(backend="slurm", time="01:00:00"))
+    runner.submit(
+        project, execution=ExecutionConfig(backend="slurm", slurm={"time": "01:00:00"})
+    )
 
     [array] = commands.ran
     assert Path(array[-1]).name == "job.sh"
@@ -796,7 +824,9 @@ def test_fetch_false_sends_no_fetch_job(pending, commands, tmp_path):
 
     runner.submit(
         project,
-        execution=ExecutionConfig(backend="slurm", time="01:00:00", fetch=False),
+        execution=ExecutionConfig(
+            backend="slurm", slurm={"time": "01:00:00", "fetch": False}
+        ),
     )
 
     [array] = commands.ran
@@ -818,7 +848,9 @@ def test_no_fetch_job_when_the_particles_are_there(
     )
     commands.answers["sbatch"] = [_out("42\n")]
 
-    runner.submit(project, execution=ExecutionConfig(backend="slurm", time="01:00:00"))
+    runner.submit(
+        project, execution=ExecutionConfig(backend="slurm", slurm={"time": "01:00:00"})
+    )
 
     assert len(commands.ran) == 1
 
@@ -845,12 +877,12 @@ def test_a_local_run_on_several_cpus_fetches_before_the_workers_start(
         runner, "_status", lambda project, ids: pd.DataFrame({"state": ["pending"]})
     )
 
-    runner.run(project, execution=ExecutionConfig(cpus=2))
+    runner.run(project, execution=ExecutionConfig(local={"cpus": 2}))
     assert steps == ["fetch 3", "run"]
 
     steps.clear()
-    runner.run(project, execution=ExecutionConfig(cpus=1))
-    runner.run(project, execution=ExecutionConfig(cpus=2, fetch=False))
+    runner.run(project, execution=ExecutionConfig(local={"cpus": 1}))
+    runner.run(project, execution=ExecutionConfig(local={"cpus": 2, "fetch": False}))
     assert steps == ["run", "run"]
 
 
@@ -876,21 +908,20 @@ def test_a_local_fetch_that_cannot_reach_the_archive_lets_the_run_go(
     )
 
     with caplog.at_level("WARNING", logger="stilt.execution.runner"):
-        runner.run(project, execution=ExecutionConfig(cpus=2))
+        runner.run(project, execution=ExecutionConfig(local={"cpus": 2}))
 
     assert ran == ["run"]
     assert "archive busy" in caplog.text
 
 
-def test_the_fetch_job_takes_the_arrays_resources_from_its_slurm_options(
+def test_the_fetch_job_takes_the_arrays_resources_and_none_of_its_other_options(
     pending, commands, tmp_path
 ):
-    """A ``slurm`` option replaces the named setting for the fetch job, as for the array."""
+    """With no ``fetch`` settings, the fetch job runs with the array's resources."""
     project = _downloading_project(tmp_path, 1)
     pending.extend(project.receptors["receptor"])
     execution = ExecutionConfig(
         backend="slurm",
-        time="01:00:00",
         slurm={
             "account": "lin-np",
             "partition": "lin-np",
@@ -907,7 +938,7 @@ def test_the_fetch_job_takes_the_arrays_resources_from_its_slurm_options(
     assert options["account"] == "lin-np"
     assert options["partition"] == "lin-np"
     assert options["time"] == "24:00:00"  # the array's, as job.sh has it
-    assert "constraint" not in options
+    assert "constraint" not in options  # another sbatch option is the array's alone
     assert _sbatch(Path(array[-1]).read_text())["time"] == "24:00:00"
 
 
@@ -931,7 +962,7 @@ def test_a_no_skip_submission_fetches_for_every_run_it_makes_again(
 
     runner.submit(
         project,
-        execution=ExecutionConfig(backend="slurm", time="01:00:00"),
+        execution=ExecutionConfig(backend="slurm", slurm={"time": "01:00:00"}),
         skip_existing=False,
     )
 
@@ -944,7 +975,7 @@ def test_a_refused_array_cancels_its_fetch_job(pending, commands, tmp_path):
     project = _downloading_project(tmp_path, 1)
     pending.extend(project.receptors["receptor"])
     execution = ExecutionConfig(
-        backend="slurm", time="01:00:00", slurm={"clusters": "kingspeak,notchpeak"}
+        backend="slurm", slurm={"time": "01:00:00", "clusters": "kingspeak,notchpeak"}
     )
     commands.answers["sbatch"] = [
         _out("41;notchpeak\n"),
@@ -972,7 +1003,7 @@ def test_a_local_fetch_raises_an_error_a_retry_would_repeat(tmp_path, monkeypatc
     )
 
     with pytest.raises(PermissionError):
-        runner.run(project, execution=ExecutionConfig(cpus=2))
+        runner.run(project, execution=ExecutionConfig(local={"cpus": 2}))
     assert ran == []
 
 
@@ -1003,7 +1034,7 @@ def test_a_local_fetch_lets_the_run_go_after_a_dropped_ftp_connection(
     )
 
     with caplog.at_level("WARNING", logger="stilt.execution.runner"):
-        runner.run(project, execution=ExecutionConfig(cpus=2))
+        runner.run(project, execution=ExecutionConfig(local={"cpus": 2}))
 
     assert ran == ["run"]
     assert "The fetch stopped" in caplog.text

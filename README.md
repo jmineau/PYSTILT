@@ -149,11 +149,12 @@ unfinished receptors among the tasks of one Slurm job array and submits it:
 ```yaml
 execution:
   backend: slurm
-  n_workers: 200          # array tasks
-  account: my-account
-  partition: my-partition
-  time: "02:00:00"
-  mem: 4G
+  slurm:
+    n_workers: 200        # array tasks
+    account: my-account
+    partition: my-partition
+    time: "02:00:00"
+    mem: 4G
 ```
 
 ```bash

@@ -33,7 +33,7 @@ project = stilt.Project.init(
     mets={"toy": {"weather": "hrrr"}},
     models={"toy": {"class": "toypool.ToyModel", "n_hours": -1}},
     variants={"toy": {}},
-    execution={"backend": "local", "cpus": 2},
+    execution={"backend": "local", "local": {"cpus": 2}},
 )
 project.run()
 print("RAN")

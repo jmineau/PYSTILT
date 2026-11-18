@@ -177,7 +177,9 @@ job array (``backend: slurm``).
 For Slurm, ``submit`` writes
 ``_slurm/<stamp>/{receptors.txt,receptors.parquet,execution.yaml,job.sh}`` in
 the project and calls ``sbatch``. Each task runs ``stilt run --receptors
-receptors.parquet --task $SLURM_ARRAY_TASK_ID/N --execution execution.yaml``.
+receptors.parquet --task $SLURM_ARRAY_TASK_ID/N --execution execution.yaml
+--cpus <cpus>``: a task runs its share in its own process, as a local run
+does, so the script hands it the array's ``cpus``.
 The parquet file holds the submitted receptors' checked rows, which the
 task's project takes in place of ``receptors.csv``. ``submit`` returns the job
 id at once, and ``run`` waits by polling ``sacct``.
@@ -185,7 +187,7 @@ id at once, and ``run`` waits by polling ``sacct``.
 When a simulation whose particles are missing uses a met that downloads
 (the transport model's ``downloads_met``), ``submit`` first submits
 ``fetch.sh`` (``fetch_script``), one task of ``stilt fetch --receptors
-receptors.parquet`` with the resources of ``execution.fetch``, and gives the
+receptors.parquet`` with the resources of ``execution.slurm.fetch``, and gives the
 array ``--dependency=afterany:<fetch job>``. ``afterany`` because Slurm
 cannot tell ``stilt fetch``'s exit 1 (some files missing) from 3 (stopped,
 archive unreachable), and in both cases the runs whose met is there should
@@ -432,8 +434,13 @@ there is refused with a message naming its block.
   ``CONTRIBUTING.md`` explains how a HYSPLIT field is routed to
   ``SETUP.CFG``, ``CONTROL``, ``WINDERR``, or ``ZIERR``.
 - ``ExecutionConfig`` (``execution:`` in ``config.yaml``) says where
-  receptors run and with what Slurm resources. It forbids unknown keys; other
-  ``sbatch`` options go under its ``slurm:`` mapping.
+  receptors run. ``backend`` names the place, and each backend's settings
+  are in the block of its name (``LocalConfig``, ``SlurmConfig``), ``cpus``
+  included; only ``timeout`` and ``keep_workdir`` sit beside ``backend``.
+  ``ExecutionConfig.cpus`` and ``.fetch`` read the block ``backend`` names.
+  A backend's setting written outside its block is refused. The ``slurm``
+  block takes any other key as an ``sbatch`` option, and refuses one that
+  reads as a misspelled setting.
 - Particle transforms are declared as a default or per variant
   (``transforms: [{kind: ...}]``); ``kind`` may also be the import path of a
   user class.

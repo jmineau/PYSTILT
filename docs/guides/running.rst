@@ -56,18 +56,21 @@ again.
 Use several CPU cores
 ---------------------
 
-To run several receptors at once, set ``cpus``:
+To run several receptors at once, set ``cpus`` in the ``local`` block of
+``execution``, which holds the settings of a run on this machine:
 
 .. code-block:: yaml
 
    execution:
      backend: local
-     cpus: 4
+     local:
+       cpus: 4
 
 or, for one run, ``stilt run ./my_project --cpus 4``. Each of the ``cpus``
 processes runs one receptor at a time, with all of that receptor's
 variants. Set it to the number of CPU cores you can spare, because each
-HYSPLIT run uses one core. ``cpus`` means the same on Slurm, per array task.
+HYSPLIT run uses one core. A Slurm run has its own ``cpus``, per array task,
+in the ``slurm`` block (:doc:`slurm`).
 
 A Python script that calls ``project.run()`` with ``cpus`` above 1 needs its
 code under ``if __name__ == "__main__":``. Python 3.14, macOS, and Windows

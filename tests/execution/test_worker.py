@@ -860,7 +860,7 @@ def test_a_mixed_run_is_3_until_the_connection_error_is_mended_and_then_1(
         project,
         [transient, real],
         compute_root=tmp_path / "compute",
-        execution=ExecutionConfig(cpus=1),
+        execution=ExecutionConfig(local={"cpus": 1}),
     )
     assert _states(project) == {transient: "pending", real: "failed"}
     assert _exit_code(project.status()) == 3
@@ -875,7 +875,7 @@ def test_a_mixed_run_is_3_until_the_connection_error_is_mended_and_then_1(
         project,
         [transient, real],
         compute_root=tmp_path / "compute",
-        execution=ExecutionConfig(cpus=1),
+        execution=ExecutionConfig(local={"cpus": 1}),
     )
     assert _states(project) == {transient: "complete", real: "failed"}
     assert _exit_code(project.status()) == 1
@@ -991,7 +991,7 @@ def test_run_receptors_inline_runs_in_order_and_logs_progress(
             model,
             ids,
             compute_root=tmp_path / "scratch",
-            execution=ExecutionConfig(cpus=1),
+            execution=ExecutionConfig(local={"cpus": 1}),
             skip_existing=True,
         )
 
@@ -1008,7 +1008,10 @@ def test_run_receptors_empty_ids_runs_nothing(tmp_path, receptor, monkeypatch):
         worker, "run_receptor", lambda *a, **k: pytest.fail("must not run")
     )
     run_receptors(
-        model, [], compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=1)
+        model,
+        [],
+        compute_root=tmp_path / "scratch",
+        execution=ExecutionConfig(local={"cpus": 1}),
     )
 
 
@@ -1023,13 +1026,13 @@ def test_run_receptors_inline_skips_existing_by_default(
         model,
         [str(receptor.id)],
         compute_root=tmp_path / "scratch",
-        execution=ExecutionConfig(cpus=1),
+        execution=ExecutionConfig(local={"cpus": 1}),
     )
     run_receptors(
         model,
         [str(receptor.id)],
         compute_root=tmp_path / "scratch",
-        execution=ExecutionConfig(cpus=1),
+        execution=ExecutionConfig(local={"cpus": 1}),
         skip_existing=False,
     )
 
@@ -1047,7 +1050,10 @@ def test_run_receptors_inline_stops_after_interrupt(
     )
 
     run_receptors(
-        model, ids, compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=1)
+        model,
+        ids,
+        compute_root=tmp_path / "scratch",
+        execution=ExecutionConfig(local={"cpus": 1}),
     )
 
     assert [c["receptor"] for c in calls] == [ids[0]]
@@ -1117,7 +1123,7 @@ def test_run_receptors_pool_rebuilds_the_project_in_each_worker(
         model,
         ids,
         compute_root=tmp_path / "scratch",
-        execution=ExecutionConfig(cpus=2),
+        execution=ExecutionConfig(local={"cpus": 2}),
         skip_existing=False,
     )
 
@@ -1131,7 +1137,7 @@ def test_run_receptors_pool_rebuilds_the_project_in_each_worker(
     assert worker._POOL_PROJECT.directory == model.directory
     assert tmp_path / "scratch" == worker._POOL_COMPUTE_ROOT
     assert worker._POOL_SKIP is False
-    assert ExecutionConfig(cpus=2) == worker._POOL_EXECUTION
+    assert ExecutionConfig(local={"cpus": 2}) == worker._POOL_EXECUTION
     assert sorted(c["receptor"] for c in calls) == sorted(ids)
     assert [c["skip_existing"] for c in calls] == [False, False]
 
@@ -1150,7 +1156,7 @@ def test_run_receptors_pool_logs_every_receptor_once(
             model,
             ids,
             compute_root=tmp_path / "scratch",
-            execution=ExecutionConfig(cpus=2),
+            execution=ExecutionConfig(local={"cpus": 2}),
         )
 
     # Receptors are logged as they finish, in either order, counted 1 then 2.
@@ -1179,7 +1185,7 @@ def test_run_receptors_pool_stops_its_workers_and_says_how_far_it_got(
             model,
             ids,
             compute_root=tmp_path / "scratch",
-            execution=ExecutionConfig(cpus=2),
+            execution=ExecutionConfig(local={"cpus": 2}),
         )
 
     [pool] = fake_pool.instances
@@ -1207,7 +1213,7 @@ def test_a_pool_worker_exits_on_sigterm_and_ignores_ctrl_c(
         str(model.directory),
         str(model.output.directory),
         str(tmp_path / "scratch"),
-        ExecutionConfig(cpus=2),
+        ExecutionConfig(local={"cpus": 2}),
         True,
     )
 
@@ -1241,7 +1247,7 @@ def test_run_receptors_pool_worker_error_stops_the_workers_and_is_not_masked(
             model,
             ids,
             compute_root=tmp_path / "scratch",
-            execution=ExecutionConfig(cpus=2),
+            execution=ExecutionConfig(local={"cpus": 2}),
         )
 
     [pool] = fake_pool.instances
@@ -1267,7 +1273,7 @@ def test_run_receptors_pool_dead_worker_stops_the_run_and_names_what_was_running
             model,
             ids,
             compute_root=tmp_path / "scratch",
-            execution=ExecutionConfig(cpus=2),
+            execution=ExecutionConfig(local={"cpus": 2}),
         )
 
     message = str(stopped.value)

@@ -1309,7 +1309,7 @@ def test_jacobian_of_an_ensemble_is_one_realization_at_a_time(tmp_path):
 
 def test_jacobian_in_threads_is_the_same_matrix(tmp_path):
     receptors = [_receptor(h) for h in range(8, 16)]
-    project = _project(tmp_path, receptors, execution={"cpus": 3})
+    project = _project(tmp_path, receptors, execution={"local": {"cpus": 3}})
     for r in receptors[:-1]:
         _write_footprint(project, r)
     _write_footprint(project, receptors[-1], empty=True)
@@ -1395,7 +1395,10 @@ def ran(monkeypatch):
 def test_run_hands_the_incomplete_receptors_to_the_workers(tmp_path, ran):
     done, todo = _receptor(12), _receptor(13)
     project = _project(
-        tmp_path, [done, todo], include_footprint=False, execution={"cpus": 3}
+        tmp_path,
+        [done, todo],
+        include_footprint=False,
+        execution={"local": {"cpus": 3}},
     )
     _write_trajectory(project, done)
 
@@ -1432,9 +1435,9 @@ def test_run_without_skip_runs_every_receptor_once(tmp_path, ran):
 
 
 def test_run_takes_execution_settings_in_place_of_the_configs(tmp_path, ran):
-    project = _project(tmp_path, [_receptor(12)], execution={"cpus": 3})
+    project = _project(tmp_path, [_receptor(12)], execution={"local": {"cpus": 3}})
 
-    override = ExecutionConfig(cpus=8, timeout=600, keep_workdir=True)
+    override = ExecutionConfig(local={"cpus": 8}, timeout=600, keep_workdir=True)
     project.run(execution=override)
 
     # The whole override reaches the workers, not only its cpus.
@@ -1498,7 +1501,9 @@ def test_submit_needs_slurm(tmp_path, point_receptor):
 
 def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_receptor):
     project = _project(
-        tmp_path, [point_receptor], execution={"backend": "slurm", "time": "01:00:00"}
+        tmp_path,
+        [point_receptor],
+        execution={"backend": "slurm", "slurm": {"time": "01:00:00"}},
     )
     waited = []
     submitted = []

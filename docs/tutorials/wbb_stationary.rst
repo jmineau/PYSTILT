@@ -87,7 +87,7 @@ you can stop and pick up where you left off:
            }
        },
        variants={"hrrr": {}},
-       execution={"backend": "local", "cpus": 4},   # 4 receptors at a time
+       execution={"backend": "local", "local": {"cpus": 4}},   # 4 receptors at a time
    )
 
 We use 100 particles and 12 hours so that this page builds quickly. For a

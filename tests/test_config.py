@@ -322,35 +322,86 @@ def test_model_config_yaml_roundtrip_with_execution(tmp_path):
         mets=_met_config(tmp_path),
         execution={
             "backend": "slurm",
-            "n_workers": 8,
-            "time": "02:00:00",
-            "partition": "compute",
-            "account": "lin-group",
-            "slurm": {"exclude": "node1"},
+            "slurm": {
+                "n_workers": 8,
+                "time": "02:00:00",
+                "partition": "compute",
+                "account": "lin-group",
+                "exclude": "node1",
+            },
         },
         variants={"hrrr": {}},
     )
     path = tmp_path / "config.yaml"
     text = cfg.to_yaml(path)
     assert "cpus" not in text and "array_parallelism" not in text  # unset stays out
+    assert "local:" not in text
     loaded = ProjectConfig.from_yaml(path)
     assert loaded.execution == cfg.execution
     assert loaded.execution.backend == "slurm"
-    assert loaded.execution.n_workers == 8
-    assert loaded.execution.slurm == {"exclude": "node1"}
+    assert loaded.execution.slurm.n_workers == 8
+    assert loaded.execution.slurm.options == {"exclude": "node1"}
 
 
 def test_execution_defaults_to_one_local_process(tmp_path):
     execution = ProjectConfig(
         mets=_met_config(tmp_path), variants={"hrrr": {}}
     ).execution
-    assert (execution.backend, execution.n_workers, execution.cpus) == ("local", 1, 1)
+    assert (execution.backend, execution.cpus) == ("local", 1)
+    assert (execution.slurm.n_workers, execution.slurm.cpus) == (1, 1)
     assert (
         "execution:"
         not in ProjectConfig(
             mets=_met_config(tmp_path), variants={"hrrr": {}}
         ).to_yaml()
     )
+
+
+def test_each_backends_settings_are_in_its_own_block():
+    """``cpus`` is the block's that ``backend`` names; the other block is not read."""
+    from stilt.execution.config import ExecutionConfig
+
+    settings = {
+        "local": {"cpus": 2},
+        "slurm": {"cpus": 8, "n_workers": 40, "time": "04:00:00"},
+        "timeout": 600,
+    }
+    local = ExecutionConfig.model_validate(settings)
+    slurm = ExecutionConfig.model_validate({"backend": "slurm", **settings})
+    assert (local.backend, local.cpus) == ("local", 2)
+    assert (slurm.backend, slurm.cpus) == ("slurm", 8)
+    assert local.timeout == slurm.timeout == 600
+    # A config may hold a slurm block with no time and run locally.
+    assert ExecutionConfig.model_validate({"slurm": {"n_workers": 4}}).cpus == 1
+    with pytest.raises(ValueError, match="execution.slurm.time is required"):
+        ExecutionConfig.model_validate({"backend": "slurm", "slurm": {"n_workers": 4}})
+
+
+@pytest.mark.parametrize(
+    ("setting", "blocks"),
+    [
+        (
+            {"cpus": 4},
+            "execution: local: or execution: slurm:, for the backend it is for.",
+        ),
+        ({"n_workers": 8}, "execution: slurm:."),
+        ({"time": "02:00:00"}, "execution: slurm:."),
+        ({"partition": "compute"}, "execution: slurm:."),
+        (
+            {"fetch": False},
+            "execution: local: or execution: slurm:, for the backend it is for.",
+        ),
+    ],
+)
+def test_a_backends_setting_beside_backend_is_refused_naming_its_block(
+    tmp_path, setting, blocks
+):
+    (key,) = setting
+    message = f"'{key}' is a setting of a backend. Write it under {blocks}"
+    with pytest.raises(ValueError, match=re.escape(message)):
+        ProjectConfig(
+            mets=_met_config(tmp_path), execution=setting, variants={"hrrr": {}}
+        )
 
 
 def test_unknown_execution_setting_is_an_error(tmp_path):
@@ -382,16 +433,37 @@ def test_unknown_execution_setting_is_an_error(tmp_path):
     with pytest.raises(ValueError, match="n_workers"):
         ProjectConfig(
             mets=_met_config(tmp_path),
-            execution={"n_workers": 0},
+            execution={"slurm": {"n_workers": 0}},
+            variants={"hrrr": {}},
+        )
+    with pytest.raises(ValueError, match=r"execution\.local\.n_workers\s+Extra inputs"):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            execution={"local": {"n_workers": 2}},
             variants={"hrrr": {}},
         )
 
 
-def test_execution_accepts_one_setup_line():
-    from stilt.execution.config import ExecutionConfig
+def test_a_misspelled_slurm_setting_is_not_sent_to_sbatch(tmp_path):
+    """Any other key of the slurm block is an sbatch option, so a near miss of a setting is refused."""
+    from stilt.execution.config import SlurmConfig
 
-    execution = ExecutionConfig.model_validate({"setup": "module load hysplit"})
-    assert execution.setup == ["module load hysplit"]
+    for typo, setting in (("partion", "partition"), ("n_worker", "n_workers")):
+        with pytest.raises(
+            ValueError,
+            match=f"'{typo}' is not a setting of execution.slurm. Did you mean '{setting}'",
+        ):
+            SlurmConfig.model_validate({typo: 1})
+    options = {"exclude": "node1", "constraint": "skl", "cpus-per-task": 8}
+    assert SlurmConfig.model_validate(options).options == options
+
+
+def test_execution_accepts_one_setup_line():
+    from stilt.execution.config import SlurmConfig
+
+    assert SlurmConfig.model_validate({"setup": "module load hysplit"}).setup == [
+        "module load hysplit"
+    ]
 
 
 def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
