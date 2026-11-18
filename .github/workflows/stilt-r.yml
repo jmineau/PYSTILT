@@ -146,13 +146,15 @@ jobs:
           git -C stilt-r-src fetch --depth 1 https://github.com/uataq/stilt "$STILT_R_SHA"
           git -C stilt-r-src checkout FETCH_HEAD
 
-      # PYSTILT runs the same hycs_std, from PATH: it includes no HYSPLIT.
       - name: Populate STILT-R exe directory from its bundled binaries
         run: |
           mkdir -p stilt-r-src/exe
           cp stilt-r-src/bin/linux_x64/hycs_std stilt-r-src/exe/hycs_std
           chmod +x stilt-r-src/exe/hycs_std
-          sudo install -m 755 stilt-r-src/exe/hycs_std /usr/local/bin/hycs_std
+
+      # PYSTILT runs the same hycs_std and tables, from PATH: it includes no HYSPLIT.
+      - name: Install HYSPLIT
+        run: .github/scripts/install_hysplit.sh
 
       - name: Build permute.so
         run: |

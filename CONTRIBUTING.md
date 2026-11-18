@@ -22,10 +22,12 @@ relies on.
    uv run pre-commit install
    ```
 4. For the tests that run HYSPLIT (`integration`, `fidelity`) and the docs
-   build, put a `hycs_std` on `PATH`: STILT-R's `bin/linux_x64/hycs_std`
+   build, put a HYSPLIT folder's `exec/` on `PATH`: STILT-R's
+   `bin/linux_x64/hycs_std` in `exec/` and its `exe/` tables in `bdyfiles/`,
    at the commit `.github/workflows/stilt-r.yml` pins, as CI does
-   (`.github/scripts/install_hycs_std.sh`). Without one those tests are skipped. The
-   unit tests need none: they put a stand-in `hycs_std` first on `PATH`.
+   (`.github/scripts/install_hysplit.sh`). Without one those tests are
+   skipped. The unit tests need none: they put a stand-in HYSPLIT first on
+   `PATH`.
 
 ## Making a change
 

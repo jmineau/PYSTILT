@@ -157,8 +157,8 @@ Module map
                         (driver.py: write_inputs, read_particle_dat); the
                         CONTROL file (control.py) and SETUP.CFG namelist
                         (namelist.py) writers and readers; failure reasons read from its
-                        log (failures.py); HYSPLIT's data tables (data/).
-                        No hycs_std: find_hycs_std takes directory, else PATH
+                        log (failures.py). No HYSPLIT file: find_hycs_std
+                        and data_tables take directory, else PATH
 
    tests/               pytest; folders follow src/stilt (execution/,
                         footprint/, observations/, particles/,

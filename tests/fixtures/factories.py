@@ -245,21 +245,44 @@ def make_receptor(
     )
 
 
+#: Stand-ins for HYSPLIT's data tables, which PYSTILT does not include. The
+#: sixth line of ASCDATA.CFG says where the tables are, as HYSPLIT's own does.
+STAND_IN_TABLES = {
+    "ASCDATA.CFG": (
+        "-90.0  -180.0  lat/lon of lower left corner\n"
+        "1.0     1.0     lat/lon spacing in degrees\n"
+        "180     360     lat/lon number of data points\n"
+        "2               default land use category\n"
+        "0.2             default roughness length (m)\n"
+        "'../bdyfiles/'  directory location of data files\n"
+    ),
+    "LANDUSE.ASC": "stand-in land use\n",
+    "ROUGLEN.ASC": "stand-in roughness\n",
+    "TERRAIN.ASC": "stand-in terrain\n",
+}
+
+
 def make_hysplit_dir(
     directory: Path,
     version: str | None = "hysplit.v5.1.0",
     body: str = "exit 2\n",
     executable: bool = True,
+    tables: bool = True,
 ) -> Path:
     """
     Make a HYSPLIT folder as its download unpacks, with a stand-in ``exec/hycs_std``, and return it.
 
     The stand-in prints ``HYSPLIT version: <version>`` as ``hycs_std`` does
     when it starts (nothing for ``None``), then runs the shell lines *body*.
+    With *tables*, ``bdyfiles/`` holds :data:`STAND_IN_TABLES`.
     """
     exe = directory / "exec" / "hycs_std"
     exe.parent.mkdir(parents=True, exist_ok=True)
     said = "" if version is None else f"echo ' HYSPLIT version: {version}'\n"
     exe.write_text(f"#!/bin/sh\n{said}{body}")
     exe.chmod(0o755 if executable else 0o644)
+    if tables:
+        (directory / "bdyfiles").mkdir(exist_ok=True)
+        for name, text in STAND_IN_TABLES.items():
+            (directory / "bdyfiles" / name).write_text(text)
     return directory

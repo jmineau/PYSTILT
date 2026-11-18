@@ -74,7 +74,11 @@ Every settings folder holds a ``_settings.yaml``. A particles folder's:
        crop: null
        source: HRRR
      model:
-       data_files: null
+       data_files:
+         ASCDATA.CFG: fd489592654bf600fd96b08d2ccde76f90f0672b7e872fb9fa33dd363fbaa643
+         LANDUSE.ASC: de63b2e3f405cdecbe2f4599ba276bf21b5bb05d786cd54e9c24a051c42b8511
+         ROUGLEN.ASC: a8503953877b09e906e85364e4081c43ffb5d7353e3ffdb259094acbb95588b1
+         TERRAIN.ASC: 0608b518d39ca63fe8774aef887f71f451b1c698c4b708bead36eb926ab86268
        name: hysplit
        sha256: 37346bee81a62f31d2f273c9813d53a76c54d59cfd5adbf3f76a7f870e3f49f9
      n_hours: -24
@@ -120,7 +124,7 @@ A footprints folder's adds the particles folder it was made from:
    What the results were made with. In a particles folder, the transport
    model's parameters, ``met`` (the weather product and its crop), and
    ``model`` (the transport model and its build: the SHA-256 of
-   ``hycs_std``, and of any data table that differs from PYSTILT's copy). An ensemble adds
+   ``hycs_std``, and of each of HYSPLIT's data tables). An ensemble adds
    ``ensemble: true``, and realization ``k`` ran with ``seed + k``. In a
    footprints folder, the footprint settings, with the grid.
 ``particles``, ``particles_hash``

@@ -195,7 +195,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
     The case that used to fail silently.
 
     Ten release points 173 m apart (a 30-degree viewing zenith over a 3 km
-    column) climbing 300 m per level. The bundled HYSPLIT build writes no t=0
+    column) climbing 300 m per level. HYSPLIT 5.1.0 (STILT-R's) writes no t=0
     row, and in the first minute the wind carries particles hundreds of
     metres, past several neighbouring release points. Matching on horizontal
     position put the assigned release height off by ~240 m RMS; matching on

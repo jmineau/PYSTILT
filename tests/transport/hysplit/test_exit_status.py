@@ -14,7 +14,7 @@ from stilt.receptors import PointReceptor
 from stilt.transport.hysplit import FailureReason, HysplitConfig, HysplitModel
 from tests.fixtures.factories import blocks
 
-from ...fixtures.factories import make_met_config, make_met_files
+from ...fixtures.factories import make_hysplit_dir, make_met_config, make_met_files
 
 VARS = ["time", "indx", "long", "lati", "zagl", "foot"]
 N_HOURS = -24
@@ -32,8 +32,8 @@ def _particle_dat(path: Path, last_minute: int) -> Path:
 
 
 def _fake_hycs_std(directory: Path, body: str) -> Path:
-    """Return a HYSPLIT folder whose ``exec/hycs_std`` runs the shell commands in *body*."""
-    (directory / "exec").mkdir(parents=True, exist_ok=True)
+    """Return a HYSPLIT folder, with its tables, whose ``exec/hycs_std`` runs the shell commands in *body*."""
+    make_hysplit_dir(directory)
     exe = directory / "exec" / "hycs_std"
     exe.write_text("#!/usr/bin/env bash\n" + body)
     exe.chmod(exe.stat().st_mode | stat.S_IXUSR)

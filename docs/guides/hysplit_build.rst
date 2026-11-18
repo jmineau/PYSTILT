@@ -79,14 +79,16 @@ Data tables
 HYSPLIT's data tables (``ASCDATA.CFG``, ``LANDUSE.ASC``, ``ROUGLEN.ASC``,
 ``TERRAIN.ASC``) set the land use, roughness, and terrain under the
 particles. PYSTILT reads them from the ``bdyfiles/`` folder of
-``directory``. To use your own, put them there. A table the folder does not
-hold, or all four when there is no ``bdyfiles/``, comes from PYSTILT's
-copy, which is HYSPLIT's.
+``directory``, or, without ``directory``, from a ``bdyfiles/`` beside the
+folder of the ``hycs_std`` on ``PATH``. It includes none, and a run stops
+before it starts when one of the four is missing. To use your own, put them
+there.
 
 HYSPLIT's own ``ASCDATA.CFG`` says the tables are in ``../bdyfiles/``.
 PYSTILT links them into each run's workdir instead, so it writes
 ``ASCDATA.CFG`` there with that line set to ``./`` and the rest as yours.
 
-The tables change the particles, so a run records the checksum of each
-table that differs from PYSTILT's copy, and such runs are kept apart from
-the others. Tables that match PYSTILT's copy change nothing.
+The tables change the particles, so a run records the checksum of each,
+and runs with other tables are kept apart from the others. The checksum of
+``ASCDATA.CFG`` is of the file the run reads, so where a HYSPLIT folder says
+its tables are changes nothing.

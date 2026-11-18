@@ -30,7 +30,7 @@ says nothing about STILT-R's current ``main`` branch.
 Both sides run the same ``hycs_std``: STILT-R's ``bin/linux_x64/hycs_std``
 at the pin, HYSPLIT 5.1.0. PYSTILT includes no HYSPLIT, so CI puts that
 file on ``PATH`` for PYSTILT's runs, and for the integration tests and the
-docs build too (``.github/scripts/install_hycs_std.sh``). The fidelity tests check that
+docs build too (``.github/scripts/install_hysplit.sh``). The fidelity tests check that
 the ``hycs_std`` PYSTILT finds and STILT-R's are the same file.
 
 What matches

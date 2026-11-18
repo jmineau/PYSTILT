@@ -15,7 +15,6 @@ import signal
 import subprocess
 import warnings
 from collections.abc import Sequence
-from importlib.resources import files as pkg_files
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -103,8 +102,9 @@ def find_hycs_std(directory: str | Path | None = None) -> Path:
             )
         if not os.access(exe, os.X_OK):
             raise HYSPLITNotFoundError(
-                f"{exe} is not executable, so it cannot run. HYSPLIT's download "
-                f"leaves it that way; make it executable with: chmod +x {exe}"
+                f"{exe} is not executable, so it cannot run. A HYSPLIT folder "
+                "unpacked on Windows, or copied from there, loses that permission; "
+                f"make it executable with: chmod +x {exe}"
             )
         return exe
     found = shutil.which(HYCS_STD_FILE)
@@ -124,53 +124,46 @@ def data_tables(directory: str | Path | None = None) -> dict[str, Path | bytes]:
 
     They come from ``bdyfiles/`` under *directory*, or, without
     *directory*, from a ``bdyfiles/`` folder beside the folder of the
-    ``hycs_std`` on ``PATH``, as HYSPLIT lays them out. A table that folder
-    lacks, or all four when there is no such folder, comes from PYSTILT's
-    copy. HYSPLIT's own ``ASCDATA.CFG`` names ``../bdyfiles/`` as the place
-    of the tables; PYSTILT links them into the workdir, so its sixth line,
-    that place, is written as PYSTILT's copy has it (``'./'``) and the rest
-    is kept.
+    ``hycs_std`` on ``PATH``, as HYSPLIT's download lays them out. PYSTILT
+    includes none. HYSPLIT's own ``ASCDATA.CFG`` says the tables are in
+    ``../bdyfiles/``; a run links them into its workdir, so its
+    ``ASCDATA.CFG`` is returned as text with that line, the sixth, set to
+    ``'./'`` and the rest kept.
+
+    Raises
+    ------
+    HYSPLITNotFoundError
+        If the folder is missing or lacks one of the four tables, or,
+        without *directory*, no ``hycs_std`` is on ``PATH``.
     """
-    tables: dict[str, Path | bytes] = {
-        name: _bundled_data_dir() / name for name in DATA_TABLES
-    }
-    folder = _bdyfiles(directory)
-    if folder is None:
-        return tables
-    for name in DATA_TABLES:
-        path = folder / name
-        if path.is_file():
-            tables[name] = path
-    ascdata = tables["ASCDATA.CFG"]
-    if isinstance(ascdata, Path) and ascdata.parent == folder:
-        tables["ASCDATA.CFG"] = _tables_here(ascdata)
-    return tables
-
-
-def _bdyfiles(directory: str | Path | None) -> Path | None:
-    """Return the ``bdyfiles/`` folder a run's tables come from, or ``None`` for PYSTILT's copy."""
     if directory is not None:
         folder = Path(directory) / BDYFILES_DIR
     else:
-        found = shutil.which(HYCS_STD_FILE)
-        if found is None:
-            return None
-        folder = Path(found).resolve().parent.parent / BDYFILES_DIR
-    return folder if folder.is_dir() else None
+        folder = find_hycs_std().resolve().parent.parent / BDYFILES_DIR
+    missing = [name for name in DATA_TABLES if not (folder / name).is_file()]
+    if missing:
+        raise HYSPLITNotFoundError(
+            f"No {', '.join(missing)} in {folder}. PYSTILT includes no HYSPLIT "
+            f"data tables: they are in the {BDYFILES_DIR}/ folder of HYSPLIT's "
+            f"download, beside its {EXEC_DIR}/. Set directory (under models: "
+            "hysplit: in config.yaml) to a HYSPLIT folder that has both."
+        )
+    tables: dict[str, Path | bytes] = {name: folder / name for name in DATA_TABLES}
+    tables["ASCDATA.CFG"] = _tables_here(folder / "ASCDATA.CFG")
+    return tables
+
+
+#: The sixth line of ``ASCDATA.CFG``, where HYSPLIT reads the tables: the
+#: workdir, where a run links them.
+_TABLES_HERE = b"'./'           directory location of data files\n"
 
 
 def _tables_here(path: Path) -> bytes:
     """Return the ``ASCDATA.CFG`` at *path* with its sixth line, where the tables are, as ``'./'``."""
     lines = path.read_bytes().splitlines(keepends=True)
-    own = (_bundled_data_dir() / "ASCDATA.CFG").read_bytes().splitlines(keepends=True)
     if len(lines) >= 6:
-        lines[5] = own[5]
+        lines[5] = _TABLES_HERE
     return b"".join(lines)
-
-
-def _bundled_data_dir() -> Path:
-    """Return the directory of HYSPLIT's bundled data tables."""
-    return Path(str(pkg_files("stilt.transport.hysplit") / "data"))
 
 
 #: HYSPLIT's names for the columns the particle table names otherwise
