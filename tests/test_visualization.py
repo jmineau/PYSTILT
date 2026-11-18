@@ -282,6 +282,14 @@ def test_trajectories_map_color_by_foot(minimal_trajectories):
     assert ax is not None
 
 
+def test_trajectories_map_color_by_foot_without_foot_says_how_to_get_one(
+    minimal_trajectories,
+):
+    particles = minimal_trajectories.drop(columns="foot")
+    with pytest.raises(ValueError, match="no 'foot' column.*footprint_particles"):
+        particles.stilt.plot.map(color_by="foot")
+
+
 def test_trajectories_map_invalid_color_by_raises(minimal_trajectories):
     with pytest.raises(ValueError, match="color_by"):
         minimal_trajectories.stilt.plot.map(color_by="bad_col")

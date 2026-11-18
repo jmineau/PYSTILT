@@ -113,12 +113,39 @@ def check_particles(particles: pd.DataFrame, need: Iterable[str] = ()) -> None:
     """
     wanted = dict.fromkeys([*PARTICLE_SCHEMA.names, *need])
     missing = [name for name in wanted if name not in particles.columns]
+    if missing == ["foot"]:
+        _need_foot(particles)
     if missing:
         raise ValueError(
             f"The particle table has no {', '.join(repr(m) for m in missing)} "
             f"column{'s' if len(missing) > 1 else ''}. Every particle table has "
             f"{', '.join(PARTICLE_SCHEMA.names)} (stilt.particles.PARTICLE_SCHEMA)."
         )
+
+
+def _need_foot(particles: pd.DataFrame) -> None:
+    """
+    Raise unless *particles* have a ``foot`` column, saying how to get one.
+
+    A particle file holds what the transport model wrote, and a model that
+    writes only positions writes no ``foot``: the footprint stage computes
+    one when it needs it and stores it nowhere.
+
+    Raises
+    ------
+    ValueError
+        If there is no ``foot`` column.
+    """
+    if "foot" in particles.columns:
+        return
+    raise ValueError(
+        "The particle table has no 'foot' column: the transport model wrote "
+        "none, and the footprint stage stores the foot it computes nowhere. "
+        "stilt.footprint.footprint_particles(particles, config, met_files) adds "
+        "the one the footprint uses, from the met files the run read "
+        "(stilt.particles.particles_metadata(path).met_files), with the "
+        "variant's footprint settings (sim.variant.stages['footprint'])."
+    )
 
 
 def particles_metadata(path: str | Path | UPath) -> ParticleMetadata:

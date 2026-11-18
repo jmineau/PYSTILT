@@ -71,8 +71,38 @@ Where ``foot`` comes from:
 A ``foot`` PYSTILT computes is stored nowhere: the particle file keeps what
 the model wrote, and each footprint computes it again. It reads the met
 files at the paths the particle file records (``stilt:met_files``), so
-they must still be there when the footprint is made; a footprint made from
-HYSPLIT's own ``foot`` needs no met files.
+they must still be there when the footprint is made, and when
+``sim.calc_footprint`` or the transport error makes one later. Keep the
+met files where the run read them for as long as you may remake a
+footprint from those particles. A footprint made from HYSPLIT's own
+``foot`` needs no met files.
+
+So ``sim.particles`` has the model's ``foot``, not the one the footprint
+used, whenever PYSTILT computed one:
+
+- From a model that writes only positions, ``sim.particles`` has no
+  ``foot``, and ``sim.particles.stilt.enhancement(flux)`` says so.
+- With ``pbl_height`` set on a HYSPLIT run,
+  ``sim.particles.stilt.enhancement(flux)`` uses HYSPLIT's ``foot`` and
+  differs from the enhancement of ``sim.footprint``.
+
+For the ``foot`` the footprint used, pass the particles through
+:func:`stilt.footprint.footprint_particles` with the variant's footprint
+settings and the met files the run read:
+
+.. code-block:: python
+
+   from stilt.footprint import footprint_particles
+   from stilt.particles import particles_metadata
+
+   meta = particles_metadata(sim.particles_path)
+   particles = footprint_particles(
+       sim.particles,
+       sim.variant.stages["footprint"],
+       meta.met_files,
+       z_top=sim.variant.transport.z_top,  # HYSPLIT's, for pbl_height: richardson
+   )
+   particles.stilt.enhancement(flux)
 
 The mixed-layer height
 ~~~~~~~~~~~~~~~~~~~~~~
