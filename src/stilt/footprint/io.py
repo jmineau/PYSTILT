@@ -1,7 +1,7 @@
 """
 A footprint as an array, and as a file.
 
-A footprint is an :class:`xarray.DataArray` that carries its receptor and
+A footprint is an :class:`xarray.DataArray` that carries its release and
 settings in its attributes. This module builds that array, records the
 settings as JSON, and reads and writes footprint files: the sparse Parquet
 files of an output directory, and CF-1.8 NetCDF. :func:`open_footprints`
@@ -29,7 +29,7 @@ from stilt.footprint.config import (
     footprint_settings,
     read_footprint_settings,
 )
-from stilt.receptors import Receptor
+from stilt.releases import Receptor
 from stilt.spatial import Grid, _with_cf_grid, horizontal_dims
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ def _naive_utc_ns(values: Any) -> np.ndarray:
 def _footprint_array(
     values: np.ndarray,
     hours: Any,
-    receptor: Receptor,
+    release: Receptor,
     config: FootprintConfig,
     name: str,
     x: np.ndarray,
@@ -61,7 +61,7 @@ def _footprint_array(
     Return a footprint: *values* in ``(time, y, x)`` order, at cell centers *x* and *y*.
 
     Layer ``k`` starts ``hours[k]`` layers of ``config.tres`` after the
-    receptor time, and is stamped there, as in STILT-R; a backward run's
+    release time, and is stamped there, as in STILT-R; a backward run's
     first layer is -1. With the default ``tres`` of ``1h``, ``hours`` are
     hours. This is the one place a footprint array is made, for
     :func:`calc_footprint` and for :func:`read_footprint` alike.
@@ -69,14 +69,14 @@ def _footprint_array(
     if config.grid is None:
         raise ValueError("Footprint settings need a grid.")
     step = pd.Timedelta(minutes=config.tres_minutes)
-    times = _naive_utc([receptor.time + int(h) * step for h in hours])
+    times = _naive_utc([release.time + int(h) * step for h in hours])
     y_dim, x_dim = config.grid.dims
     data = xr.DataArray(
         values,
         dims=["time", y_dim, x_dim],
         coords={"time": times, y_dim: y, x_dim: x},
     )
-    return _describe(data, receptor, config, name)
+    return _describe(data, release, config, name)
 
 
 def _with_cf_metadata(ds: xr.Dataset, *, grid: Grid) -> xr.Dataset:
@@ -99,26 +99,26 @@ def _settings_json(config: FootprintConfig) -> str:
 
 def _describe(
     data: xr.DataArray,
-    receptor: Receptor,
+    release: Receptor,
     config: FootprintConfig,
     name: str,
 ) -> xr.DataArray:
     """
     Name a footprint array and attach what it belongs to.
 
-    The receptor id is a scalar coordinate, which xarray keeps through
-    arithmetic in every version. The full receptor and the settings are
+    The release id is a scalar coordinate, which xarray keeps through
+    arithmetic in every version. The full release and the settings are
     attributes, which the ``.stilt`` accessor reads.
     """
     return (
         data.rename("foot")
-        .assign_coords(receptor=str(receptor.id))
+        .assign_coords(release=str(release.id))
         .assign_attrs(
             {
                 "units": UNITS,
                 "long_name": "footprint",
                 "stilt_name": name,
-                "stilt_receptor": receptor.to_json(),
+                "stilt_release": release.to_json(),
                 "stilt_footprint": _settings_json(config),
             }
         )
@@ -130,7 +130,7 @@ def _from_sparse_table(table: Any, config: FootprintConfig) -> xr.DataArray | No
     meta = table.schema.metadata or {}
     if _is_empty(meta):
         return None
-    receptor = Receptor.from_json(meta[b"stilt:receptor"])
+    release = Receptor.from_json(meta[b"stilt:release"])
     hours = json.loads(meta[b"stilt:hours"])
     name = meta.get(b"stilt:name", b"").decode()
     grid = config.grid
@@ -150,7 +150,7 @@ def _from_sparse_table(table: Any, config: FootprintConfig) -> xr.DataArray | No
             "foot"
         ].to_numpy()
 
-    return _footprint_array(values, hours, receptor, config, name, x_axis, y_axis)
+    return _footprint_array(values, hours, release, config, name, x_axis, y_axis)
 
 
 def read_footprint(
@@ -161,7 +161,7 @@ def read_footprint(
     """
     Read a footprint file, NetCDF or the Parquet files PYSTILT stores.
 
-    Each file holds its receptor and settings, so it needs nothing else.
+    Each file holds its release and settings, so it needs nothing else.
 
     Parameters
     ----------
@@ -184,7 +184,7 @@ def read_footprint(
     Examples
     --------
     >>> foot = stilt.read_footprint(sim.footprint_path)  # doctest: +SKIP
-    >>> foot.stilt.receptor  # doctest: +SKIP
+    >>> foot.stilt.release  # doctest: +SKIP
     """
     import pyarrow.parquet as pq
 
@@ -261,7 +261,7 @@ def _footer(path: Location) -> dict[bytes, bytes]:
 def _dense_block(
     paths: list[Location], hours: np.ndarray, ny: int, nx: int
 ) -> np.ndarray:
-    """Read stored footprints into one ``(receptor, hour, y, x)`` block of ``float32``."""
+    """Read stored footprints into one ``(release, hour, y, x)`` block of ``float32``."""
     import pyarrow.parquet as pq
 
     block = np.zeros((len(paths), len(hours), ny, nx), dtype=np.float32)
@@ -281,12 +281,12 @@ def open_footprints(
     paths: Iterable[str | Path | UPath], *, workers: int | None = None
 ) -> xr.Dataset:
     """
-    Open stored footprints as one dataset, stacked on the layer from each receptor's time.
+    Open stored footprints as one dataset, stacked on the layer from each release's time.
 
-    Footprints of many receptors are stacked by their layer offset rather
-    than by absolute time, so receptors at different times share one
+    Footprints of many releases are stacked by their layer offset rather
+    than by absolute time, so releases at different times share one
     layer axis (``hour`` for hourly layers). Only the files' metadata is read here. The values are
-    read with dask when they are used, a block of receptors from one date
+    read with dask when they are used, a block of releases from one date
     folder at a time. :meth:`stilt.Project.footprints` opens a selection
     of a project's footprints this way.
 
@@ -302,14 +302,14 @@ def open_footprints(
     Returns
     -------
     xarray.Dataset
-        ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and ``x``
+        ``foot`` with dims ``(release, hour, lat, lon)`` (``y`` and ``x``
         on a projected grid), as ``float32`` like the stored values. The
         layer dimension is named for the unit ``tres`` is written in and
-        counts each layer's start from the receptor time in it: ``hour``
+        counts each layer's start from the release time in it: ``hour``
         -1, -2, ... for ``1h``; ``hour`` -6, -12, ... for ``6h``; ``day`` -1,
         -2, ... for ``1D``; ``minute`` -15, -30, ... for ``15min``. The
-        ``time`` coordinate, with dims ``(receptor, <unit>)``, is that start
-        as a date and time. A receptor whose footprint is empty has no
+        ``time`` coordinate, with dims ``(release, <unit>)``, is that start
+        as a date and time. A release whose footprint is empty has no
         row; ``attrs["empty"]`` lists them.
 
     Raises
@@ -322,7 +322,7 @@ def open_footprints(
     >>> ds = open_footprints(
     ...     sorted(folder.glob("date=2024-07-*/*.parquet"))
     ... )  # doctest: +SKIP
-    >>> ds.foot.sum("hour").mean("receptor").plot()  # doctest: +SKIP
+    >>> ds.foot.sum("hour").mean("release").plot()  # doctest: +SKIP
     """
     import dask.array as da
     from dask.delayed import delayed
@@ -350,7 +350,7 @@ def open_footprints(
     if grid is None:
         raise ValueError("Stored footprints need settings with a grid.")
 
-    receptors = [Receptor.from_json(meta[b"stilt:receptor"]) for meta in footers]
+    releases = [Receptor.from_json(meta[b"stilt:release"]) for meta in footers]
     is_empty = [_is_empty(meta) for meta in footers]
     kept = [i for i, empty in enumerate(is_empty) if not empty]
     recorded = [h for i in kept for h in json.loads(footers[i][b"stilt:hours"])]
@@ -378,20 +378,20 @@ def open_footprints(
         else np.zeros((0, len(hours), ny, nx), dtype=np.float32)
     )
 
-    start_times = _naive_utc([receptors[i].time for i in kept])
+    start_times = _naive_utc([releases[i].time for i in kept])
     offsets = (hours * config.tres_minutes).astype("timedelta64[m]")
     times = start_times.to_numpy()[:, None] + offsets[None, :]
     # The layer dimension is named for tres's unit and counts in it.
     unit, unit_minutes = config.layer_unit
     foot = xr.DataArray(
         values,
-        dims=("receptor", unit, y_dim, x_dim),
+        dims=("release", unit, y_dim, x_dim),
         coords={
-            "receptor": [str(receptors[i].id) for i in kept],
+            "release": [str(releases[i].id) for i in kept],
             unit: hours * (config.tres_minutes // unit_minutes),
             y_dim: y_axis,
             x_dim: x_axis,
-            "time": (("receptor", unit), times),
+            "time": (("release", unit), times),
         },
         name="foot",
         attrs={"units": UNITS, "long_name": "footprint"},
@@ -402,7 +402,7 @@ def open_footprints(
             "stilt_name": footers[0].get(b"stilt:name", b"").decode(),
             "stilt_footprint": _settings_json(config),
             "empty": [
-                str(r.id) for r, empty in zip(receptors, is_empty, strict=True) if empty
+                str(r.id) for r, empty in zip(releases, is_empty, strict=True) if empty
             ],
         }
     )
@@ -415,7 +415,7 @@ def open_footprints(
 #: The columns of a stored footprint, whose rows are its non-zero cells, indexed into its grid.
 FOOTPRINT_SCHEMA = pa.schema(
     [
-        ("receptor", pa.dictionary(pa.int32(), pa.string())),
+        ("release", pa.dictionary(pa.int32(), pa.string())),
         ("hour", pa.int16()),
         ("y", pa.int16()),
         ("x", pa.int16()),
@@ -438,7 +438,7 @@ def _cell_indices(coords: np.ndarray, axis: np.ndarray, name: str) -> np.ndarray
 
 
 def _file_metadata(
-    receptor: Receptor,
+    release: Receptor,
     config: FootprintConfig,
     name: str,
     hours: list[int],
@@ -447,7 +447,7 @@ def _file_metadata(
 ) -> dict[bytes, bytes]:
     """Return what a footprint file records so that it reads alone."""
     return {
-        b"stilt:receptor": receptor.to_json().encode(),
+        b"stilt:release": release.to_json().encode(),
         b"stilt:name": name.encode(),
         b"stilt:hours": json.dumps(hours).encode(),
         b"stilt:empty": b"true" if empty else b"false",
@@ -466,11 +466,11 @@ def write_footprint(
     Write a footprint to a Parquet file that :func:`read_footprint` reads alone.
 
     Only the non-zero cells are stored, as ``hour`` (the offset of the time
-    layer from the receptor time, in layers of ``tres``: hours by
+    layer from the release time, in layers of ``tres``: hours by
     default), ``y`` and ``x`` (the cell's place on the grid), and ``foot``
     in float32. Every layer is recorded in the metadata, so the dense array
     reads back with the same shape. The metadata also
-    holds the receptor and the footprint settings.
+    holds the release and the footprint settings.
 
     Parameters
     ----------
@@ -494,14 +494,14 @@ def write_footprint(
     ValueError
         If the footprint is not on the grid, the grid has more cells along
         an axis than ``x`` and ``y`` can hold (32,767), a time layer is
-        not a whole number of layers (``tres``) from the receptor
-        time, or more layers from the receptor time than ``hour`` can hold
+        not a whole number of layers (``tres``) from the release
+        time, or more layers from the release time than ``hour`` can hold
         (32,767).
     """
     settings = foot.stilt.config if config is None else config
     if settings.grid is None:
         raise ValueError("Footprint settings need a grid.")
-    receptor = foot.stilt.receptor
+    release = foot.stilt.release
     y_dim, x_dim = horizontal_dims(foot)
     x_axis, y_axis = settings.grid.axes
     most = int(np.iinfo(np.int16).max)
@@ -516,16 +516,16 @@ def write_footprint(
 
     times = _naive_utc(foot["time"].values)
     step = pd.Timedelta(minutes=settings.tres_minutes)
-    layers = np.asarray((times - pd.Timestamp(receptor.time)) / step, dtype=float)
+    layers = np.asarray((times - pd.Timestamp(release.time)) / step, dtype=float)
     if not np.allclose(layers, np.round(layers)):
         raise ValueError(
             "Footprint time layers are not whole layers of "
-            f"{settings.tres} (tres) from the receptor time."
+            f"{settings.tres} (tres) from the release time."
         )
     if layers.size and np.abs(layers).max() > most:
         raise ValueError(
             f"The footprint has a layer {int(np.abs(layers).max())} layers of "
-            f"{settings.tres} from the receptor time, and a stored footprint "
+            f"{settings.tres} from the release time, and a stored footprint "
             f"holds at most {most}. Use longer layers (tres)."
         )
     hours = np.round(layers).astype(np.int16)
@@ -534,7 +534,7 @@ def write_footprint(
     t, y, x = np.nonzero(np.nan_to_num(values, nan=0.0))
     table = pa.table(
         {
-            "receptor": pa.array([str(receptor.id)] * len(t)).dictionary_encode(),
+            "release": pa.array([str(release.id)] * len(t)).dictionary_encode(),
             "hour": pa.array(hours[t]),
             "y": pa.array(yi[y].astype(np.int16)),
             "x": pa.array(xi[x].astype(np.int16)),
@@ -543,7 +543,7 @@ def write_footprint(
         schema=FOOTPRINT_SCHEMA,
     )
     meta = _file_metadata(
-        receptor,
+        release,
         settings,
         foot.stilt.name,
         hours.tolist(),
@@ -555,17 +555,17 @@ def write_footprint(
 
 def write_empty_footprint(
     path: str | Path | UPath,
-    receptor: Receptor,
+    release: Receptor,
     config: FootprintConfig,
     name: str = "",
     metadata: dict[bytes, bytes] | None = None,
 ) -> Location:
     """
-    Record in a footprint file that a receptor's footprint is empty: no particle reached the grid.
+    Record in a footprint file that a release's footprint is empty: no particle reached the grid.
 
     The file has no rows and is marked ``stilt:empty``;
     :func:`read_footprint` returns ``None`` for it.
     """
-    meta = _file_metadata(receptor, config, name, [], True, metadata)
+    meta = _file_metadata(release, config, name, [], True, metadata)
     table = FOOTPRINT_SCHEMA.empty_table().replace_schema_metadata(meta)
     return write_parquet(table, location(path))

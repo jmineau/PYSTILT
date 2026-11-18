@@ -1,5 +1,5 @@
 """
-A simulation, one receptor run under one variant, and where its results are.
+A simulation, one release run under one variant, and where its results are.
 
 This is the particle part, which the workers and the stages use.
 :class:`stilt.Simulation` (:mod:`stilt.stilt_simulation`), which a STILT
@@ -18,7 +18,7 @@ import pandas as pd
 
 from stilt.output import Output, completed
 from stilt.particles import read_particles
-from stilt.receptors import Receptor
+from stilt.releases import Receptor
 from stilt.stages import reads
 
 if TYPE_CHECKING:
@@ -31,9 +31,9 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class Simulation:
     """
-    One receptor run under one variant, as one realization of an ensemble or alone.
+    One release run under one variant, as one realization of an ensemble or alone.
 
-    A simulation is a value: its receptor, its variant, and the output
+    A simulation is a value: its release, its variant, and the output
     directory its results are in. From those it knows where its particles,
     the file of each stage (:meth:`path`), and its log are, whether they
     exist (:meth:`has`, :attr:`is_complete`), and how to read them. It runs
@@ -43,11 +43,11 @@ class Simulation:
     :class:`stilt.Simulation` subclasses it with the reads of what STILT
     makes from the particles: the footprint, the background, and the
     transport error. You rarely build one yourself. Get it from a project instead, as in
-    ``project.simulation(receptor_id, "hrrr")``.
+    ``project.simulation(release_id, "hrrr")``.
 
     Parameters
     ----------
-    receptor : Receptor
+    release : Receptor
         Where and when particles are released.
     variant : Variant
         The variant, resolved: its configs, and the hashes that find its
@@ -68,7 +68,7 @@ class Simulation:
         If *realization* is not one the variant runs as.
     """
 
-    receptor: Receptor
+    release: Receptor
     variant: Variant
     output: Output
     directory: Path | None = None
@@ -86,12 +86,12 @@ class Simulation:
             "" if self.realization is None else f", realization={self.realization}"
         )
         return (
-            f"Simulation(receptor={self.receptor.id!r}, "
+            f"Simulation(release={self.release.id!r}, "
             f"variant={self.variant.name!r}{realization})"
         )
 
     def __str__(self) -> str:
-        name = f"{self.receptor.id}/{self.variant.name}"
+        name = f"{self.release.id}/{self.variant.name}"
         return name if self.realization is None else f"{name}/{self.realization}"
 
     def __eq__(self, other: object) -> bool:
@@ -109,8 +109,8 @@ class Simulation:
 
     @property
     def id(self) -> tuple[str, str, int | None]:
-        """``(receptor.id, variant.name, realization)``, the row of ``project.simulations`` it is."""
-        return (self.receptor.id, self.variant.name, self.realization)
+        """``(release.id, variant.name, realization)``, the row of ``project.simulations`` it is."""
+        return (self.release.id, self.variant.name, self.realization)
 
     @property
     def transport(self) -> Any:
@@ -133,7 +133,7 @@ class Simulation:
         --------
         >>> sim.path("footprint")  # doctest: +SKIP
         """
-        return self.output.path(kind, self.variant, self.receptor.id, self.realization)
+        return self.output.path(kind, self.variant, self.release.id, self.realization)
 
     def has(self, kind: str) -> bool:
         """
@@ -153,7 +153,7 @@ class Simulation:
     @property
     def log_path(self) -> Location | None:
         """Path of the transport model's log in the output directory, or ``None`` before its folder exists."""
-        return self.output.log_path(self.variant, self.receptor.id, self.realization)
+        return self.output.log_path(self.variant, self.release.id, self.realization)
 
     @property
     def kept_workdir(self) -> Location | None:
@@ -165,9 +165,7 @@ class Simulation:
         CONTROL, SETUP.CFG, and its own output. It exists only after a
         failed run, or after any run with ``keep_workdir`` set.
         """
-        return self.output.kept_workdir(
-            self.variant, self.receptor.id, self.realization
-        )
+        return self.output.kept_workdir(self.variant, self.release.id, self.realization)
 
     # -- presence and completion -------------------------------------------
 
@@ -183,10 +181,10 @@ class Simulation:
 
         That is the particles, and the file of every stage the variant
         uses, such as the footprint. It is :func:`stilt.output.completed`,
-        the one definition of done, for one receptor, from a file check for
+        the one definition of done, for one release, from a file check for
         each.
         """
-        rid = self.receptor.id
+        rid = self.release.id
         mine: frozenset[str] = frozenset([rid])
         none: frozenset[str] = frozenset()
         kinds = ("particles", *self.variant.stage_order)
@@ -216,7 +214,7 @@ class Simulation:
         {'stage': 'particles', 'reason': 'MET_COVERAGE',
          'message': 'HYSPLIT: start point not within (x,y,t) any data file', ...}
         """
-        variant, rid = self.variant, self.receptor.id
+        variant, rid = self.variant, self.release.id
         if not self.has("particles"):
             return self.output.failure("particles", variant, rid, self.realization)
         # A stage can have failed only where what it reads exists: the first
@@ -256,7 +254,7 @@ class Simulation:
         The columns are the variables in ``varsiwant``, under the particle
         table's names (``particle``, ``age`` in minutes since release,
         ``lon``, ``lat``, ``zagl``, ``foot``, ...), plus ``time`` (UTC)
-        and ``release_height`` (for column and multipoint receptors). Read from the output directory on first
+        and ``release_height`` (for column and multipoint releases). Read from the output directory on first
         access and kept. Check
         :attr:`has_particles` first when the run may not have finished.
 

@@ -2,7 +2,7 @@
 Plotting for footprints and simulations: STILT's plots, which draw the footprint.
 
 ``foot.stilt.plot`` (:class:`FootprintPlotAccessor`) and ``sim.plot``
-(:class:`SimulationPlotAccessor`). The plots of particles, receptors and
+(:class:`SimulationPlotAccessor`). The plots of particles, releases and
 projects are in :mod:`stilt.visualization`.
 """
 
@@ -24,7 +24,7 @@ from stilt.visualization import (
     _extent,
     _legend,
     _make_ax,
-    _receptor_points,
+    _release_points,
 )
 
 if TYPE_CHECKING:
@@ -72,7 +72,7 @@ class FootprintPlotAccessor:
         ax: Axes | None = None,
         cmap: str = "cool",
         show_grid: bool = False,
-        show_receptor: bool = True,
+        show_release: bool = True,
         met_bounds: Bounds | None = None,
         tiler: GoogleTiles | None = None,
         tiler_zoom: int = 8,
@@ -94,8 +94,8 @@ class FootprintPlotAccessor:
             Colormap name.
         show_grid : bool, default False
             Outline the footprint grid with a dashed line.
-        show_receptor : bool, default True
-            Mark the receptor the footprint was made for.
+        show_release : bool, default True
+            Mark the release the footprint was made for.
         met_bounds : Bounds, optional
             Outline the meteorology domain with a dotted blue line.
         tiler : cartopy.io.img_tiles.GoogleTiles, optional
@@ -142,8 +142,8 @@ class FootprintPlotAccessor:
         if met_bounds is not None:
             _draw_met_box(ax, met_bounds)
 
-        if show_receptor and "stilt_receptor" in foot.attrs:
-            foot.stilt.receptor.plot.map(ax=ax)  # also makes the legend
+        if show_release and "stilt_release" in foot.attrs:
+            foot.stilt.release.plot.map(ax=ax)  # also makes the legend
         elif show_grid or met_bounds is not None:
             _legend(ax)
         title = "Footprint" if time is None else f"Footprint — {pd.Timestamp(time)}"
@@ -228,7 +228,7 @@ class SimulationPlotAccessor:
     def map(
         self,
         show_particles: bool = True,
-        show_receptor: bool = True,
+        show_release: bool = True,
         log: bool = True,
         foot_cmap: str = "YlOrRd",
         particles_cmap: str = "viridis_r",
@@ -242,17 +242,17 @@ class SimulationPlotAccessor:
         tiler_zoom: int = 8,
     ) -> Axes:
         """
-        Map the footprint, the particles, and the receptor together.
+        Map the footprint, the particles, and the release together.
 
-        The footprint is drawn first, then the particles, then the receptor.
+        The footprint is drawn first, then the particles, then the release.
         A layer the simulation has no output for is skipped.
 
         Parameters
         ----------
         show_particles : bool, default True
             Draw the particle positions.
-        show_receptor : bool, default True
-            Mark the receptor.
+        show_release : bool, default True
+            Mark the release.
         log : bool, default True
             Plot log10 of the footprint.
         foot_cmap : str, default "YlOrRd"
@@ -284,25 +284,25 @@ class SimulationPlotAccessor:
         foot = sim.footprint if sim.has_footprint else None
         particles = sim.particles if sim.has_particles else None
 
-        # Map extent: the footprint grid, else the particles, else the receptor
+        # Map extent: the footprint grid, else the particles, else the release
         if foot is not None:
             extent = _bounds_extent(foot.stilt.grid, pad=0.1)
         elif particles is not None:
             extent = _extent(particles["lon"], particles["lat"], pad=0.5)
         else:
-            lons, lats, _ = _receptor_points(sim.receptor)
+            lons, lats, _ = _release_points(sim.release)
             extent = _extent(lons, lats, pad=2.0)
 
         _, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
 
         if foot is not None:
-            # The receptor is marked once, below, whatever the footprint records.
+            # The release is marked once, below, whatever the footprint records.
             foot.stilt.plot.map(
                 ax=ax,
                 log=log,
                 cmap=foot_cmap,
                 show_grid=show_grid,
-                show_receptor=False,
+                show_release=False,
             )
 
         if show_particles and particles is not None:
@@ -316,8 +316,8 @@ class SimulationPlotAccessor:
                 alpha=particles_alpha,
             )
 
-        if show_receptor:
-            sim.receptor.plot.map(ax=ax, color="red")
+        if show_release:
+            sim.release.plot.map(ax=ax, color="red")
 
         if met_bounds is not None:
             _draw_met_box(ax, met_bounds)

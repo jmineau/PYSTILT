@@ -1,5 +1,5 @@
 """
-Running a project: finding the receptors with missing results and handing them to workers.
+Running a project: finding the releases with missing results and handing them to workers.
 
 With ``backend: slurm``, :func:`submit` writes a job array script into
 ``_slurm/<stamp>/`` in the project and submits it with ``sbatch``. Each task
@@ -74,15 +74,15 @@ _ACTIVE = frozenset(
 
 
 # ---------------------------------------------------------------------------
-# Shares of the receptors
+# Shares of the releases
 # ---------------------------------------------------------------------------
 
 
-def task_share(receptor_ids: list[str], task: int, n_tasks: int) -> list[str]:
+def task_share(release_ids: list[str], task: int, n_tasks: int) -> list[str]:
     """
-    Return task *task*'s share of *receptor_ids*, split *n_tasks* ways.
+    Return task *task*'s share of *release_ids*, split *n_tasks* ways.
 
-    The share is every *n_tasks*-th receptor, starting at *task*, which runs
+    The share is every *n_tasks*-th release, starting at *task*, which runs
     from 0 to ``n_tasks - 1`` as the index of a job array does.
 
     Raises
@@ -94,7 +94,7 @@ def task_share(receptor_ids: list[str], task: int, n_tasks: int) -> list[str]:
         raise ValueError(
             f"A task runs from 0 to n_tasks - 1; got task {task} of {n_tasks}."
         )
-    return receptor_ids[task::n_tasks]
+    return release_ids[task::n_tasks]
 
 
 # ---------------------------------------------------------------------------
@@ -132,64 +132,64 @@ def resolve_compute_root(
 def pending(
     project: Project,
     *,
-    receptors: Iterable[str] | None = None,
+    releases: Iterable[str] | None = None,
     task: tuple[int, int] | None = None,
     skip_existing: bool = True,
 ) -> list[str]:
     """
-    Return the ids of the receptors a run would run, each once, in project order.
+    Return the ids of the releases a run would run, each once, in project order.
 
-    A driver that starts tasks itself writes these to the ``receptors.txt``
-    each task reads (``stilt run --receptors``).
+    A driver that starts tasks itself writes these to the ``releases.txt``
+    each task reads (``stilt run --releases``).
 
     Parameters
     ----------
     project : Project
         The project.
-    receptors : iterable of str, optional
-        Only these receptors, in this order.
+    releases : iterable of str, optional
+        Only these releases, in this order.
     task : tuple of (int, int), optional
         ``(i, n)``: share ``i`` of ``n`` (:func:`task_share`), taken from
-        all the receptors (or all of *receptors*) before the complete ones
-        are dropped, so the tasks of a job array split the receptors the
+        all the releases (or all of *releases*) before the complete ones
+        are dropped, so the tasks of a job array split the releases the
         same way whenever each starts.
     skip_existing : bool, default True
-        Leave out receptors whose simulations are all complete.
+        Leave out releases whose simulations are all complete.
 
     Raises
     ------
     ValueError
-        If a receptor in *receptors* is not in the project.
+        If a release in *releases* is not in the project.
     """
     sims = project.simulations
-    every = list(dict.fromkeys(sims["receptor"]))
-    if receptors is None:
+    every = list(dict.fromkeys(sims["release"]))
+    if releases is None:
         chosen = every
     else:
-        chosen = list(dict.fromkeys(str(r) for r in receptors))
+        chosen = list(dict.fromkeys(str(r) for r in releases))
         known = set(every)
         unknown = [r for r in chosen if r not in known]
         if unknown:
             raise ValueError(
-                f"{len(unknown)} receptor ids are not in this project, such as "
+                f"{len(unknown)} release ids are not in this project, such as "
                 f"{unknown[:3]}."
             )
     if task is not None:
         chosen = task_share(chosen, *task)
     if skip_existing and chosen:
-        left = set(project.incomplete(sims[sims["receptor"].isin(chosen)])["receptor"])
+        left = set(project.incomplete(sims[sims["release"].isin(chosen)])["release"])
         chosen = [r for r in chosen if r in left]
     return chosen
 
 
 def _to_fetch(
     project: Project,
-    receptor_ids: list[str],
+    release_ids: list[str],
     execution: ExecutionConfig,
     skip_existing: bool,
 ) -> pd.DataFrame | None:
     """
-    Return the simulations of *receptor_ids* whose met files are got once before they run, or ``None``.
+    Return the simulations of *release_ids* whose met files are got once before they run, or ``None``.
 
     ``None`` when the backend's ``fetch`` is off, when no met of theirs
     downloads (:func:`stilt.fetch.downloads`), or when none of them runs
@@ -200,7 +200,7 @@ def _to_fetch(
     if execution.fetch is False:
         return None
     sims = project.simulations
-    chosen = sims[sims["receptor"].isin(receptor_ids)]
+    chosen = sims[sims["release"].isin(release_ids)]
     if not downloads(project, chosen["variant"].unique()):
         return None
     unrun = project._unrun(chosen, skip_existing=skip_existing)
@@ -233,10 +233,10 @@ def _fetch_here(project: Project, unrun: pd.DataFrame) -> None:
         )
 
 
-def _status(project: Project, receptor_ids: list[str]) -> pd.DataFrame:
-    """Return the status table of the simulations of *receptor_ids*."""
+def _status(project: Project, release_ids: list[str]) -> pd.DataFrame:
+    """Return the status table of the simulations of *release_ids*."""
     sims = project.simulations
-    return project.status(sims[sims["receptor"].isin(receptor_ids)])
+    return project.status(sims[sims["release"].isin(release_ids)])
 
 
 def _unfinished(table: pd.DataFrame) -> bool:
@@ -247,7 +247,7 @@ def _unfinished(table: pd.DataFrame) -> bool:
 def run(
     project: Project,
     *,
-    receptors: Iterable[str] | None = None,
+    releases: Iterable[str] | None = None,
     task: tuple[int, int] | None = None,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
@@ -256,10 +256,10 @@ def run(
     """
     Run every simulation of a project that has not finished, and wait for it.
 
-    Each receptor with missing results runs once: the transport model once for each
+    Each release with missing results runs once: the transport model once for each
     distinct set of transport settings whose particles are missing, then the
     footprint of every variant that has one. With ``backend: local`` the
-    receptors run in this process (``cpus`` at a time); with ``cpus`` above
+    releases run in this process (``cpus`` at a time); with ``cpus`` above
     1 and a met that downloads, the met files are got first
     (:meth:`stilt.Project.fetch`, unless ``execution.local.fetch`` is ``false``),
     so the workers do not download the same file at once. With
@@ -272,16 +272,16 @@ def run(
     ----------
     project : Project
         Project to run.
-    receptors : iterable of str, optional
-        Run only these receptors (their ids), in this order.
+    releases : iterable of str, optional
+        Run only these releases (their ids), in this order.
     task : tuple of (int, int), optional
-        ``(i, n)``: run share ``i`` of ``n`` of the receptors here, in this
+        ``(i, n)``: run share ``i`` of ``n`` of the releases here, in this
         process, whatever the backend. The share is every ``n``-th
-        receptor in project order (or in *receptors* order), starting at
+        release in project order (or in *releases* order), starting at
         ``i`` (:func:`task_share`), whether it is complete or not, and the
         complete ones are then skipped. Each task of a job array or a
         Kubernetes indexed Job runs one share, and every task splits the
-        receptors the same way whenever it starts.
+        releases the same way whenever it starts.
     execution : ExecutionConfig, optional
         Where to run and with what resources. Defaults to the ``execution``
         settings of the project's config.
@@ -303,7 +303,7 @@ def run(
     Raises
     ------
     ValueError
-        If a receptor id is not in the project, or *task* is not from 0 to
+        If a release id is not in the project, or *task* is not from 0 to
         ``n - 1``.
 
     Notes
@@ -316,7 +316,7 @@ def run(
     stopped by ``scancel`` is not requeued.
     """
     execution = execution if execution is not None else project.config.execution
-    todo = pending(project, receptors=receptors, task=task, skip_existing=skip_existing)
+    todo = pending(project, releases=releases, task=task, skip_existing=skip_existing)
     if not todo:
         logger.info("run: every simulation is complete; nothing to do")
     elif execution.backend == "slurm" and task is None:
@@ -333,13 +333,13 @@ def run(
             table = _status(project, todo)
         return table
     else:
-        logger.info("run(%s): %d receptors", ", ".join(project.variants), len(todo))
+        logger.info("run(%s): %d releases", ", ".join(project.variants), len(todo))
         # In this process, so Ctrl-C and SIGTERM stop the workers cleanly
         # and progress prints as it happens.
-        from .worker import run_receptors
+        from .worker import run_releases
 
         def work() -> None:
-            run_receptors(
+            run_releases(
                 project,
                 todo,
                 compute_root=resolve_compute_root(project, compute_root),
@@ -364,7 +364,7 @@ def run(
 def submit(
     project: Project,
     *,
-    receptors: Iterable[str] | None = None,
+    releases: Iterable[str] | None = None,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
     compute_root: str | Path | None = None,
@@ -372,21 +372,21 @@ def submit(
     """
     Submit every simulation of a project that has not finished to Slurm.
 
-    The receptors with missing results are split among up to ``n_workers``
+    The releases with missing results are split among up to ``n_workers``
     tasks of one job array, and this returns once it is submitted. The
     submission is a folder ``_slurm/<date_time>_<id>/`` in the project:
-    ``receptors.txt`` lists the receptors to run, ``receptors.parquet``
-    holds their checked rows from ``receptors.csv``, ``execution.yaml``
+    ``releases.txt`` lists the releases to run, ``releases.parquet``
+    holds their checked rows from ``releases.csv``, ``execution.yaml``
     holds the execution settings, ``job.sh`` is the script given to
     ``sbatch``, and ``<task>.log`` is each task's log. Task ``i`` runs
-    ``stilt run <project> --receptors receptors.parquet --task i/N``, so it
-    does not read and check all of ``receptors.csv`` again. A task
+    ``stilt run <project> --releases releases.parquet --task i/N``, so it
+    does not read and check all of ``releases.csv`` again. A task
     that is preempted or nears its time limit requeues itself and skips
     what it finished (see :func:`run`).
 
     When a met the unfinished simulations use downloads its files, a
     fetch job goes first: one task that runs ``stilt fetch <project>
-    --receptors receptors.parquet`` (:func:`fetch_script`), written to
+    --releases releases.parquet`` (:func:`fetch_script`), written to
     ``fetch.sh`` with its log in ``fetch.log``, with the resources of
     ``execution.slurm.fetch``. The array waits for it to end
     (``--dependency=afterany``), however it ended, so the runs whose met it
@@ -397,7 +397,7 @@ def submit(
 
     Parameters
     ----------
-    project, receptors, execution, skip_existing, compute_root
+    project, releases, execution, skip_existing, compute_root
         As for :func:`run`.
 
     Returns
@@ -419,7 +419,7 @@ def submit(
             f"submit sends work to Slurm, and this run's backend is "
             f"{execution.backend!r}. Use run(), or set execution.backend to slurm."
         )
-    todo = pending(project, receptors=receptors, skip_existing=skip_existing)
+    todo = pending(project, releases=releases, skip_existing=skip_existing)
     if not todo:
         logger.info("submit: every simulation is complete; nothing to do")
         return None
@@ -463,12 +463,12 @@ def job_script(
     compute_root: str | Path | None = None,
 ) -> str:
     """
-    Return the ``sbatch`` script of a job array whose tasks each run a share of the receptors.
+    Return the ``sbatch`` script of a job array whose tasks each run a share of the releases.
 
-    Task ``i`` runs ``stilt run <project> --receptors <folder>/receptors.parquet
+    Task ``i`` runs ``stilt run <project> --releases <folder>/releases.parquet
     --task i/n_tasks --execution <folder>/execution.yaml --cpus <cpus>`` with
     the Python that called this: a task runs its share here, ``cpus``
-    receptors at once. The ``#SBATCH`` lines come from *execution*'s
+    releases at once. The ``#SBATCH`` lines come from *execution*'s
     ``slurm`` block: its resources, ``--requeue``, ``--signal=B:USR1@120``
     (see :func:`run`), and its other ``sbatch`` options, which can replace
     any of them. Its ``setup`` commands run before the task, after the
@@ -503,8 +503,8 @@ def job_script(
         "stilt",
         "run",
         str(project.directory),
-        "--receptors",
-        str(folder / "receptors.parquet"),
+        "--releases",
+        str(folder / "releases.parquet"),
         "--task",
         f"$SLURM_ARRAY_TASK_ID/{n_tasks}",
         "--execution",
@@ -560,7 +560,7 @@ def fetch_script(
     """
     Return the ``sbatch`` script of the job that gets the met files before a job array.
 
-    It runs ``stilt fetch <project> --receptors <folder>/receptors.parquet``
+    It runs ``stilt fetch <project> --releases <folder>/releases.parquet``
     (with ``--no-skip`` when not *skip_existing*) with the Python that
     called this, as one task, after the ``setup`` commands. Its
     ``partition``, ``account``, ``qos``, ``time`` and ``mem`` are those of
@@ -587,8 +587,8 @@ def fetch_script(
         "stilt",
         "fetch",
         str(project.directory),
-        "--receptors",
-        str(folder / "receptors.parquet"),
+        "--releases",
+        str(folder / "releases.parquet"),
         "--output",
         str(project.output.directory),
     ]
@@ -631,7 +631,7 @@ def _submit(
     compute_root: str | Path | None,
 ) -> tuple[str, str | None]:
     """
-    Write a submission folder for *pending* receptors, submit its job array, and return its job id and cluster.
+    Write a submission folder for *pending* releases, submit its job array, and return its job id and cluster.
 
     The cluster is the one ``sbatch`` sent the job to when it is not the
     default (``clusters`` in the Slurm options), else ``None``. When the
@@ -643,11 +643,11 @@ def _submit(
     stamp = f"{datetime.now():%Y%m%d_%H%M%S}_{uuid4().hex[:6]}"
     folder = project.directory / "_slurm" / stamp
     folder.mkdir(parents=True)
-    (folder / "receptors.txt").write_text("\n".join(pending) + "\n")
+    (folder / "releases.txt").write_text("\n".join(pending) + "\n")
     # The checked rows, in the order the tasks split them (task_share).
     rows = project._rows_of(pending)
     write_parquet(
-        pa.Table.from_pandas(rows, preserve_index=False), folder / "receptors.parquet"
+        pa.Table.from_pandas(rows, preserve_index=False), folder / "releases.parquet"
     )
     (folder / "execution.yaml").write_text(
         yaml.safe_dump(execution.model_dump(exclude_unset=True), sort_keys=False)
@@ -835,7 +835,7 @@ def _run_task(
     project: Project, pending: list[str], work: Callable[[], None]
 ) -> pd.DataFrame:
     """
-    Run a task's receptors and return their status table; requeue the task when Slurm stopped it.
+    Run a task's releases and return their status table; requeue the task when Slurm stopped it.
 
     A task that stops with simulations left is requeued when it got
     SIGUSR1 (the time limit is near) or was preempted.

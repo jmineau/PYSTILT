@@ -9,12 +9,12 @@ import datetime as dt
 
 import pytest
 
-from stilt.receptors import PointReceptor
+from stilt.releases import PointReceptor
 
 
 @pytest.fixture
-def point_receptor():
-    """A simple single-point receptor."""
+def point_release():
+    """A simple single-point release."""
     return PointReceptor(
         time=dt.datetime(2023, 1, 1, 12, 0),
         longitude=-111.85,

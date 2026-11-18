@@ -17,14 +17,14 @@ from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
 from stilt.footprint.stage import store_empty_footprint, store_footprint
 from stilt.output import Output
-from stilt.receptors import ColumnReceptor, PointReceptor
+from stilt.releases import ColumnReceptor, PointReceptor
 from stilt.spatial import Grid
 from stilt.stilt_project import STILT_R_HYSPLIT
 from stilt.transport.hysplit import MetConfig
 from stilt.transport.hysplit.driver import winderrtf
 from tests.fixtures.factories import blocks
 
-from .fixtures.factories import make_hysplit_dir, make_met_config, make_receptor
+from .fixtures.factories import make_hysplit_dir, make_met_config, make_release
 from .fixtures.footprints import as_footprint
 from .fixtures.particles import finished
 
@@ -66,15 +66,15 @@ def _config(tmp_path, include_footprint=True, **overrides) -> ProjectConfig:
     )
 
 
-def _project(tmp_path, receptors=None, name="proj", **overrides) -> Project:
+def _project(tmp_path, releases=None, name="proj", **overrides) -> Project:
     """Make a project in ``tmp_path / name`` with the minimal config."""
     return Project.init(
-        tmp_path / name, config=_config(tmp_path, **overrides), receptors=receptors
+        tmp_path / name, config=_config(tmp_path, **overrides), releases=releases
     )
 
 
-def _receptor(hour: int, longitude: float = -111.85, **attrs) -> PointReceptor:
-    return make_receptor(dt.datetime(2023, 1, 1, hour), longitude, **attrs)
+def _release(hour: int, longitude: float = -111.85, **attrs) -> PointReceptor:
+    return make_release(dt.datetime(2023, 1, 1, hour), longitude, **attrs)
 
 
 def _particles() -> pd.DataFrame:
@@ -96,24 +96,24 @@ def _particles() -> pd.DataFrame:
 
 
 def _write_trajectory(
-    project: Project, receptor, variant="hrrr", realization=None
+    project: Project, release, variant="hrrr", realization=None
 ) -> Path:
     """Write a small particle file for one simulation into the output directory."""
-    sim = project.simulation(receptor.id, variant, realization)
-    particles = finished(_particles(), sim.receptor)
+    sim = project.simulation(release.id, variant, realization)
+    particles = finished(_particles(), sim.release)
     return sim.output.write_particles(
-        sim.variant, sim.receptor, particles, [], realization
+        sim.variant, sim.release, particles, [], realization
     )
 
 
 def _write_footprint(
-    project: Project, receptor, variant="hrrr", realization=None, *, empty=False
+    project: Project, release, variant="hrrr", realization=None, *, empty=False
 ) -> Path:
     """Write a footprint (or an empty one) for one simulation into the output directory."""
-    sim = project.simulation(receptor.id, variant, realization)
+    sim = project.simulation(release.id, variant, realization)
     assert sim.variant.stages.get("footprint") is not None
     if empty:
-        return store_empty_footprint(sim.output, sim.variant, sim.receptor, realization)
+        return store_empty_footprint(sim.output, sim.variant, sim.release, realization)
     grid = sim.variant.stages.get("footprint").grid
     assert grid is not None
     x_axis, y_axis = grid.axes
@@ -121,16 +121,16 @@ def _write_footprint(
         # Each realization gets its own values.
         np.random.default_rng(realization or 0).random((1, len(y_axis), len(x_axis))),
         dims=("time", "lat", "lon"),
-        coords={"time": [sim.receptor.time], "lat": y_axis, "lon": x_axis},
+        coords={"time": [sim.release.time], "lat": y_axis, "lon": x_axis},
     )
     foot = as_footprint(
-        data, sim.receptor, sim.variant.stages.get("footprint"), sim.variant.name
+        data, sim.release, sim.variant.stages.get("footprint"), sim.variant.name
     )
     return store_footprint(sim.output, sim.variant, foot, realization)
 
 
 def _pairs(frame: pd.DataFrame) -> list[tuple[str, str]]:
-    return list(zip(frame["receptor"], frame["variant"], strict=True))
+    return list(zip(frame["release"], frame["variant"], strict=True))
 
 
 # ---------------------------------------------------------------------------
@@ -138,10 +138,10 @@ def _pairs(frame: pd.DataFrame) -> list[tuple[str, str]]:
 # ---------------------------------------------------------------------------
 
 
-def test_init_writes_the_settings_given_and_the_receptors(tmp_path, point_receptor):
+def test_init_writes_the_settings_given_and_the_releases(tmp_path, point_release):
     project = Project.init(
         tmp_path / "proj",
-        receptors=[point_receptor],
+        releases=[point_release],
         mets={"hrrr": _met(tmp_path)},
         models={"hysplit": {"n_hours": -6}},
         variants={"hrrr": {}},
@@ -149,36 +149,36 @@ def test_init_writes_the_settings_given_and_the_receptors(tmp_path, point_recept
 
     text = (tmp_path / "proj" / "config.yaml").read_text()
     assert "n_hours: -6" in text and "kmix0" not in text  # no other defaults
-    assert (tmp_path / "proj" / "receptors.csv").exists()
+    assert (tmp_path / "proj" / "releases.csv").exists()
     assert project.config.models == {"hysplit": {"n_hours": -6, **STILT_R_HYSPLIT}}
     assert project.variants["hrrr"].transport.n_hours == -6
-    assert list(project.receptors["receptor"]) == [point_receptor.id]
+    assert list(project.releases["release"]) == [point_release.id]
     assert Project(tmp_path / "proj").config == project.config
 
 
-def test_an_output_given_when_opening_replaces_the_configs(tmp_path, point_receptor):
-    project = _project(tmp_path, [point_receptor])
+def test_an_output_given_when_opening_replaces_the_configs(tmp_path, point_release):
+    project = _project(tmp_path, [point_release])
     assert project.output.directory == project.directory / "output"
 
     elsewhere = Project(project.directory, output=tmp_path / "bucket")
 
     assert elsewhere.output.directory == tmp_path / "bucket"
-    _write_trajectory(elsewhere, point_receptor)
-    assert elsewhere.simulation(point_receptor.id, "hrrr").has_particles
-    assert not project.simulation(point_receptor.id, "hrrr").has_particles
+    _write_trajectory(elsewhere, point_release)
+    assert elsewhere.simulation(point_release.id, "hrrr").has_particles
+    assert not project.simulation(point_release.id, "hrrr").has_particles
 
 
-def test_init_takes_the_receptors_second(tmp_path, point_receptor):
-    # The quickstart's order: a project directory, then its receptors.
+def test_init_takes_the_releases_second(tmp_path, point_release):
+    # The quickstart's order: a project directory, then its releases.
     project = Project.init(
         tmp_path / "proj",
-        [point_receptor],
+        [point_release],
         mets={"hrrr": _met(tmp_path)},
         models={"hysplit": {"n_hours": -24}},
         variants={"hrrr": {}},
     )
 
-    assert list(project.receptors["receptor"]) == [point_receptor.id]
+    assert list(project.releases["release"]) == [point_release.id]
 
 
 def test_init_writes_stilt_rs_hysplit_values_where_none_are_given(tmp_path):
@@ -247,22 +247,22 @@ def test_init_writes_the_commented_starter_config(tmp_path):
 
     assert project.config_path.read_text() == STARTER_CONFIG
     assert list(project.variants) == ["hrrr"]
-    assert project.receptors.empty
+    assert project.releases.empty
     with pytest.raises(TypeError, match="starter"):
         Project.init(tmp_path / "other", starter=True, **blocks(numpar=10))
     with pytest.raises(FileExistsError):
         Project.init(tmp_path / "proj", starter=True)
 
 
-def test_init_copies_receptors_from_a_csv(tmp_path):
+def test_init_copies_releases_from_a_csv(tmp_path):
     csv = tmp_path / "mine.csv"
     csv.write_text(
         "time,longitude,latitude,altitude,site\n"
         "2023-01-01 12:00:00,-111.85,40.77,5,WBB\n"
     )
-    project = Project.init(tmp_path / "proj", config=_config(tmp_path), receptors=csv)
+    project = Project.init(tmp_path / "proj", config=_config(tmp_path), releases=csv)
 
-    assert project.receptors["site"].tolist() == ["WBB"]
+    assert project.releases["site"].tolist() == ["WBB"]
 
 
 def test_opening_reads_nothing_but_looks_for_config_yaml(tmp_path):
@@ -280,12 +280,12 @@ def test_opening_reads_nothing_but_looks_for_config_yaml(tmp_path):
 
 
 def test_a_path_that_is_not_a_project_is_refused_when_opened(tmp_path):
-    """A mistyped path read as a project with no receptors, with no warning (#440)."""
+    """A mistyped path read as a project with no releases, with no warning (#440)."""
     with pytest.raises(FileNotFoundError, match=r"No config.yaml.*Project\.init"):
         Project(tmp_path / "my_projcet")
     assert not (tmp_path / "my_projcet").exists()
     (tmp_path / "loose").mkdir()
-    (tmp_path / "loose" / "receptors.csv").write_text(
+    (tmp_path / "loose" / "releases.csv").write_text(
         "time,longitude,latitude,altitude\n2023-01-01 12:00,-111.85,40.77,5\n"
     )
     with pytest.raises(FileNotFoundError, match="No config.yaml"):
@@ -293,13 +293,13 @@ def test_a_path_that_is_not_a_project_is_refused_when_opened(tmp_path):
 
 
 @pytest.mark.parametrize("empty", [[], "header.csv"])
-def test_init_refuses_receptors_that_hold_none_and_writes_nothing(tmp_path, empty):
+def test_init_refuses_releases_that_hold_none_and_writes_nothing(tmp_path, empty):
     """An empty list or a header-only file made an empty project, with no warning (#440)."""
     (tmp_path / "header.csv").write_text("time,longitude,latitude,altitude\n")
-    receptors = tmp_path / empty if isinstance(empty, str) else empty
+    releases = tmp_path / empty if isinstance(empty, str) else empty
 
-    with pytest.raises(ValueError, match="No receptors were given"):
-        Project.init(tmp_path / "proj", receptors, config=_config(tmp_path))
+    with pytest.raises(ValueError, match="No releases were given"):
+        Project.init(tmp_path / "proj", releases, config=_config(tmp_path))
     assert not (tmp_path / "proj").exists()
 
 
@@ -317,7 +317,7 @@ def test_views_are_cached(tmp_path):
     project = _project(tmp_path)
 
     assert project.config is project.config
-    assert project.receptors is project.receptors
+    assert project.releases is project.releases
     assert project._simulations is project._simulations
     assert project.variants is project.variants
     assert project.plot is project.plot
@@ -344,14 +344,14 @@ def test_output_is_relative_to_the_project_unless_absolute(tmp_path):
     assert absolute.output.directory == tmp_path / "abs"
 
 
-def test_output_can_be_shared_between_projects(tmp_path, point_receptor):
+def test_output_can_be_shared_between_projects(tmp_path, point_release):
     shared = str(tmp_path / "shared")
-    a = _project(tmp_path, [point_receptor], name="a", output=shared)
-    b = _project(tmp_path, [point_receptor], name="b", output=shared)
+    a = _project(tmp_path, [point_release], name="a", output=shared)
+    b = _project(tmp_path, [point_release], name="b", output=shared)
 
-    _write_trajectory(a, point_receptor)
+    _write_trajectory(a, point_release)
 
-    rid = point_receptor.id
+    rid = point_release.id
     assert a.output.directory == b.output.directory
     assert b.simulation(rid, "hrrr").has_particles
     assert (
@@ -401,86 +401,103 @@ def test_an_empty_compute_root_variable_is_unset(tmp_path, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Receptors
+# Releases
 # ---------------------------------------------------------------------------
 
 
-def test_receptors_are_a_table_with_the_files_labels(tmp_path):
-    a, b = _receptor(12, site="WBB"), _receptor(13, longitude=-112.0, site="UOU")
+def test_releases_are_a_table_with_the_files_labels(tmp_path):
+    a, b = _release(12, site="WBB"), _release(13, longitude=-112.0, site="UOU")
     project = _project(tmp_path, [a, b])
 
-    frame = project.receptors
+    frame = project.releases
 
-    assert list(frame.columns) == ["receptor", "time", "kind", "location", "site"]
-    assert frame["receptor"].tolist() == [a.id, b.id]
+    assert list(frame.columns) == ["release", "time", "kind", "location", "site"]
+    assert frame["release"].tolist() == [a.id, b.id]
     assert frame["kind"].tolist() == ["point", "point"]
     assert frame["location"].tolist() == [a.location_id, b.location_id]
     assert str(frame["time"].dtype).startswith("datetime64")
     assert frame["site"].tolist() == ["WBB", "UOU"]
-    assert project.receptor(b.id) == b
-    with pytest.raises(KeyError, match="No receptor"):
-        project.receptor("202301011200_0_0_0")
+    assert project.release(b.id) == b
+    with pytest.raises(KeyError, match="No release"):
+        project.release("202301011200_0_0_0")
 
 
-def test_a_project_without_receptors_is_empty(tmp_path):
+def test_a_project_without_releases_is_empty(tmp_path):
     project = _project(tmp_path)
 
-    assert project.receptors.empty
-    assert list(project.receptors.columns) == ["receptor", "time", "kind", "location"]
+    assert project.releases.empty
+    assert list(project.releases.columns) == ["release", "time", "kind", "location"]
     assert len(project.simulations) == 0
     assert project.status().empty
     assert project.run().empty
 
 
-def test_add_receptors_appends_only_new_ones_and_refreshes_the_views(
-    tmp_path, point_receptor, column_receptor, multipoint_receptor
+def test_add_releases_appends_only_new_ones_and_refreshes_the_views(
+    tmp_path, point_release, column_release, multipoint_release
 ):
-    project = _project(tmp_path, [point_receptor])
+    project = _project(tmp_path, [point_release])
     assert len(project.simulations) == 1
 
-    added = project.add_receptors(
-        [point_receptor, column_receptor, multipoint_receptor]
-    )
+    added = project.add_releases([point_release, column_release, multipoint_release])
 
-    assert added == [column_receptor.id, multipoint_receptor.id]
-    assert project.receptors["kind"].tolist() == ["point", "column", "multipoint"]
+    assert added == [column_release.id, multipoint_release.id]
+    assert project.releases["kind"].tolist() == ["point", "column", "multipoint"]
     assert len(project.simulations) == 3
-    assert project.receptor(multipoint_receptor.id) == multipoint_receptor
-    reopened = Project(project.directory).receptors["receptor"].tolist()
-    assert reopened == project.receptors["receptor"].tolist()
-    assert project.add_receptors(point_receptor) == []
+    assert project.release(multipoint_release.id) == multipoint_release
+    reopened = Project(project.directory).releases["release"].tolist()
+    assert reopened == project.releases["release"].tolist()
+    assert project.add_releases(point_release) == []
 
 
-def test_add_receptors_appends_in_the_files_own_columns(
-    tmp_path, point_receptor, column_receptor
+def test_add_releases_appends_in_the_files_own_columns(
+    tmp_path, point_release, column_release
 ):
-    """A hand-written file keeps its columns, its r_idx values, and extra columns."""
+    """A hand-written file keeps its columns, its group values, and extra columns."""
     project = _project(tmp_path)
     text = (
-        "r_idx,time,lati,long,zagl,scene\n"
+        "group,time,lati,long,zagl,scene\n"
         "1155,2023-01-01 12:00:00,40.77,-111.85,5.0,A\n"
     )
-    project.receptors_path.write_text(text)
+    project.releases_path.write_text(text)
 
-    added = project.add_receptors([point_receptor, column_receptor])
+    added = project.add_releases([point_release, column_release])
 
-    assert added == [column_receptor.id]
-    stored = project.receptors_path.read_text()
+    assert added == [column_release.id]
+    stored = project.releases_path.read_text()
     assert stored.startswith(text)  # the original bytes are untouched
     lines = stored.splitlines()
     assert lines[2].split(",")[0] == "1156" and lines[2].endswith(",")
 
 
-def test_add_receptors_refuses_a_group_without_r_idx(tmp_path, column_receptor):
+def test_add_releases_refuses_a_group_without_a_group_column(tmp_path, column_release):
     project = _project(tmp_path)
-    project.receptors_path.write_text("time,lati,long,zagl\n")
-    with pytest.raises(ValueError, match="r_idx"):
-        project.add_receptors([column_receptor])
+    project.releases_path.write_text("time,lati,long,zagl\n")
+    with pytest.raises(ValueError, match="group"):
+        project.add_releases([column_release])
 
 
-def test_receptors_that_would_share_result_files_are_refused(tmp_path):
-    """Two receptors with one id would overwrite each other's results."""
-    from stilt.receptors import MultiPointReceptor
+def test_add_releases_refuses_a_file_with_the_old_group_column(tmp_path, point_release):
+    project = _project(tmp_path)
+    project.releases_path.write_text("r_idx,time,lati,long,zagl\n")
+    with pytest.raises(ValueError, match="Rename it to 'group'"):
+        project.add_releases([point_release])
+
+
+def test_a_project_with_the_old_receptors_csv_is_refused(tmp_path):
+    """Nothing reads ``receptors.csv`` any more, so it must not pass for no releases."""
+    project = _project(tmp_path)
+    project.releases_path.unlink(missing_ok=True)
+    (project.directory / "receptors.csv").write_text("r_idx,time,lati,long,zagl\n")
+    with pytest.raises(ValueError, match="rename the file"):
+        Project(project.directory)
+    # releases.csv wins once it exists.
+    project.releases_path.write_text("time,lati,long,zagl\n")
+    assert Project(project.directory).simulations.empty
+
+
+def test_releases_that_would_share_result_files_are_refused(tmp_path):
+    """Two releases with one id would overwrite each other's results."""
+    from stilt.releases import MultiPointReceptor
 
     def slant(alt):
         return MultiPointReceptor(
@@ -497,14 +514,14 @@ def test_receptors_that_would_share_result_files_are_refused(tmp_path):
 
     project = _project(tmp_path, [a])
     with pytest.raises(ValueError, match="share the id"):
-        project.add_receptors([b])
-    assert project.add_receptors([slant(10.001)]) == []  # the same receptor again
+        project.add_releases([b])
+    assert project.add_releases([slant(10.001)]) == []  # the same release again
 
 
-def test_add_receptors_takes_receptors_or_a_csv(tmp_path):
+def test_add_releases_takes_releases_or_a_csv(tmp_path):
     project = _project(tmp_path)
     with pytest.raises(TypeError, match="Receptor"):
-        project.add_receptors([1, 2])
+        project.add_releases([1, 2])
 
 
 # ---------------------------------------------------------------------------
@@ -519,8 +536,8 @@ def test_variants_default_to_one_per_met(tmp_path):
     assert project.variants["hrrr"].met == "hrrr"
 
 
-def test_simulations_are_receptors_times_variants(tmp_path):
-    a, b = _receptor(12, site="WBB"), _receptor(13, site="UOU")
+def test_simulations_are_releases_times_variants(tmp_path):
+    a, b = _release(12, site="WBB"), _release(13, site="UOU")
     project = _project(
         tmp_path,
         [a, b],
@@ -530,7 +547,7 @@ def test_simulations_are_receptors_times_variants(tmp_path):
 
     sims = project.simulations
 
-    assert list(sims.columns[:4]) == ["receptor", "variant", "realization", "model"]
+    assert list(sims.columns[:4]) == ["release", "variant", "realization", "model"]
     assert set(sims["model"]) == {"hysplit"}
     assert _pairs(sims) == [
         (a.id, "hrrr"),
@@ -545,9 +562,9 @@ def test_simulations_are_receptors_times_variants(tmp_path):
 
 
 def test_simulations_select_with_pandas(tmp_path):
-    a = _receptor(12, site="WBB")
-    b = _receptor(13, site="UOU")
-    c = _receptor(14, site="WBB")
+    a = _release(12, site="WBB")
+    b = _release(13, site="UOU")
+    c = _release(14, site="WBB")
     project = _project(
         tmp_path, [a, b, c], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
     )
@@ -556,14 +573,14 @@ def test_simulations_select_with_pandas(tmp_path):
     wbb = sims[(sims.site == "WBB") & (sims.variant == "zi08")]
     assert _pairs(wbb) == [(a.id, "zi08"), (c.id, "zi08")]
     later = sims[sims.time.between("2023-01-01 13:00", "2023-01-01 14:00")]
-    assert sorted(set(later["receptor"])) == sorted([b.id, c.id])
+    assert sorted(set(later["release"])) == sorted([b.id, c.id])
     assert len(project.status(wbb)) == 2
 
 
-def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor):
+def test_simulation_handles_carry_the_variant_settings(tmp_path, point_release):
     project = _project(
         tmp_path,
-        [point_receptor],
+        [point_release],
         krand=4,
         variants={
             "hrrr": {},
@@ -572,7 +589,7 @@ def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor)
             "s2": {"smooth_factor": 2},
         },
     )
-    rid = point_receptor.id
+    rid = point_release.id
 
     base = project.simulation(rid, "hrrr")
     err = project.simulation(rid, "err", 1)
@@ -599,19 +616,19 @@ def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor)
         project.simulation(rid, "nope")
 
 
-def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_receptor):
+def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_release):
     project = _project(
         tmp_path,
-        [point_receptor],
+        [point_release],
         variants={"hrrr": {}, "s2": {"smooth_factor": 2}, "zi08": {"ziscale": 0.8}},
     )
 
     hrrr, s2, zi = (project.variants[v] for v in ("hrrr", "s2", "zi08"))
     assert hrrr.particles_hash == s2.particles_hash != zi.particles_hash
 
-    _write_trajectory(project, point_receptor)
-    assert project.simulation(point_receptor.id, "s2").has_particles
-    assert not project.simulation(point_receptor.id, "zi08").has_particles
+    _write_trajectory(project, point_release)
+    assert project.simulation(point_release.id, "s2").has_particles
+    assert not project.simulation(point_release.id, "zi08").has_particles
     assert len(project.output.hashes("particles")) == 1
 
 
@@ -628,11 +645,11 @@ def _with_unreadable_met(project, tmp_path, **overrides):
 
 
 def test_status_without_a_readable_met_is_pending_when_no_folder_can_hold_results(
-    tmp_path, point_receptor
+    tmp_path, point_release
 ):
     """The weather product is the only part of the hash that needs the met (#377)."""
-    project = _project(tmp_path, [point_receptor], variants={"hrrr": {"ziscale": 0.8}})
-    _write_trajectory(project, point_receptor)
+    project = _project(tmp_path, [point_release], variants={"hrrr": {"ziscale": 0.8}})
+    _write_trajectory(project, point_release)
 
     # The settings differ from the folder's in more than the met: nothing is there.
     unread = _with_unreadable_met(project, tmp_path)
@@ -646,14 +663,14 @@ def test_status_without_a_readable_met_is_pending_when_no_folder_can_hold_result
 
 
 def test_status_without_a_readable_met_raises_when_a_folder_may_hold_results(
-    tmp_path, point_receptor
+    tmp_path, point_release
 ):
     """Same settings but the met's: the folder, whatever it is named, may be this variant's."""
-    project = _project(tmp_path, [point_receptor])
-    sim = project.simulation(point_receptor.id, "hrrr")
-    particles = finished(_particles(), sim.receptor)
+    project = _project(tmp_path, [point_release])
+    sim = project.simulation(point_release.id, "hrrr")
+    particles = finished(_particles(), sim.release)
     renamed = replace(sim.variant, name="renamed")
-    sim.output.write_particles(renamed, sim.receptor, particles, [])
+    sim.output.write_particles(renamed, sim.release, particles, [])
 
     unread = _with_unreadable_met(project, tmp_path)
 
@@ -664,9 +681,9 @@ def test_status_without_a_readable_met_raises_when_a_folder_may_hold_results(
 
 
 def test_status_without_a_readable_met_and_an_empty_output_is_pending(
-    tmp_path, point_receptor
+    tmp_path, point_release
 ):
-    project = _project(tmp_path, [point_receptor])
+    project = _project(tmp_path, [point_release])
 
     unread = _with_unreadable_met(project, tmp_path)
 
@@ -681,12 +698,12 @@ def _without_hycs_std(project, monkeypatch, tmp_path):
 
 
 def test_status_without_hycs_std_finds_the_folder_the_variant_made(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     """The build is the only part of the hash that needs hycs_std; the variant's name settles the rest."""
-    project = _project(tmp_path, [point_receptor])
-    _write_trajectory(project, point_receptor)
-    _write_footprint(project, point_receptor)
+    project = _project(tmp_path, [point_release])
+    _write_trajectory(project, point_release)
+    _write_footprint(project, point_release)
 
     status = _without_hycs_std(project, monkeypatch, tmp_path)
     with pytest.raises(FileNotFoundError, match="hycs_std"):
@@ -696,13 +713,13 @@ def test_status_without_hycs_std_finds_the_folder_the_variant_made(
 
 
 def test_status_without_hycs_std_leaves_a_folder_another_variant_made(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
-    project = _project(tmp_path, [point_receptor])
-    sim = project.simulation(point_receptor.id, "hrrr")
-    particles = finished(_particles(), sim.receptor)
+    project = _project(tmp_path, [point_release])
+    sim = project.simulation(point_release.id, "hrrr")
+    particles = finished(_particles(), sim.release)
     other = replace(sim.variant, name="other")
-    sim.output.write_particles(other, sim.receptor, particles, [])
+    sim.output.write_particles(other, sim.release, particles, [])
 
     status = _without_hycs_std(project, monkeypatch, tmp_path)
     assert list(status.status()["state"]) == ["pending"]
@@ -710,14 +727,14 @@ def test_status_without_hycs_std_leaves_a_folder_another_variant_made(
 
 
 def test_status_without_hycs_std_raises_when_the_variant_ran_two_builds(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     """Two folders of one variant whose settings differ only in hycs_std: which is this machine's is unknown."""
-    project = _project(tmp_path, [point_receptor])
-    _write_trajectory(project, point_receptor)
+    project = _project(tmp_path, [point_release])
+    _write_trajectory(project, point_release)
     build = make_hysplit_dir(tmp_path / "rebuilt", body="# rebuilt\nexit 2\n")
     _config(tmp_path, directory=build).to_yaml(project.config_path)
-    _write_trajectory(Project(project.directory), point_receptor)
+    _write_trajectory(Project(project.directory), point_release)
     assert len(project.output.hashes("particles")) == 2
     _config(tmp_path).to_yaml(project.config_path)  # back to the hycs_std on PATH
 
@@ -726,13 +743,13 @@ def test_status_without_hycs_std_raises_when_the_variant_ran_two_builds(
         status.status()
 
 
-def test_folders_say_which_the_config_no_longer_uses(tmp_path, point_receptor):
+def test_folders_say_which_the_config_no_longer_uses(tmp_path, point_release):
     project = _project(
-        tmp_path, [point_receptor], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
+        tmp_path, [point_release], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
     )
     for variant in ("hrrr", "zi08"):
-        _write_trajectory(project, point_receptor, variant)
-        _write_footprint(project, point_receptor, variant)
+        _write_trajectory(project, point_release, variant)
+        _write_footprint(project, point_release, variant)
     assert (project.folders()["variant"] != "").all()
 
     # The user drops zi08 and changes hrrr's smoothing in config.yaml.
@@ -747,7 +764,7 @@ def test_folders_say_which_the_config_no_longer_uses(tmp_path, point_receptor):
     }
     assert by_kind == {"particles": ["zi08"], "footprint": ["hrrr", "zi08"]}
     # Nothing was deleted.
-    assert project.simulation(point_receptor.id, "zi08").is_complete
+    assert project.simulation(point_release.id, "zi08").is_complete
 
 
 # ---------------------------------------------------------------------------
@@ -755,10 +772,10 @@ def test_folders_say_which_the_config_no_longer_uses(tmp_path, point_receptor):
 # ---------------------------------------------------------------------------
 
 
-def test_incomplete_follows_each_variant_outputs(tmp_path, point_receptor):
+def test_incomplete_follows_each_variant_outputs(tmp_path, point_release):
     project = _project(
         tmp_path,
-        [point_receptor],
+        [point_release],
         variants={"hrrr": {}, "traj": {"grid": None}, "s2": {"smooth_factor": 2}},
     )
 
@@ -768,19 +785,19 @@ def test_incomplete_follows_each_variant_outputs(tmp_path, point_receptor):
         "s2",
     ]
 
-    _write_trajectory(project, point_receptor)  # shared by hrrr, traj, and s2
+    _write_trajectory(project, point_release)  # shared by hrrr, traj, and s2
     assert project.incomplete()["variant"].tolist() == ["hrrr", "s2"]
 
-    _write_footprint(project, point_receptor)
-    _write_footprint(project, point_receptor, "s2", empty=True)
+    _write_footprint(project, point_release)
+    _write_footprint(project, point_release, "s2", empty=True)
     assert project.incomplete().empty
 
 
-def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_receptor):
+def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_release):
     project = _project(
-        tmp_path, [point_receptor], variants={"hrrr": {}, "traj": {"grid": None}}
+        tmp_path, [point_release], variants={"hrrr": {}, "traj": {"grid": None}}
     )
-    _write_trajectory(project, point_receptor)
+    _write_trajectory(project, point_release)
 
     status = project.status()
 
@@ -803,7 +820,7 @@ def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_recepto
 
 def test_status_tells_an_interrupted_run_from_one_never_run(tmp_path):
     """A log with no particles and no failure record is a run that was cut off."""
-    a, b, c = _receptor(12), _receptor(13), _receptor(14)
+    a, b, c = _release(12), _release(13), _release(14)
     project = _project(tmp_path, [a, b, c])
     variant = project.variants["hrrr"]
     project.output.write_log(variant, a.id, "started\n")
@@ -813,11 +830,11 @@ def test_status_tells_an_interrupted_run_from_one_never_run(tmp_path):
     status = project.status()
 
     assert status["state"].tolist() == ["interrupted", "failed", "pending"]
-    assert project.incomplete()["receptor"].tolist() == [a.id, b.id, c.id]
+    assert project.incomplete()["release"].tolist() == [a.id, b.id, c.id]
 
 
 def test_status_counts_an_empty_footprint_as_complete(tmp_path):
-    a, b = _receptor(12), _receptor(13)
+    a, b = _release(12), _release(13)
     project = _project(tmp_path, [a, b])
     assert project.status()["state"].tolist() == ["pending", "pending"]
 
@@ -831,11 +848,11 @@ def test_status_counts_an_empty_footprint_as_complete(tmp_path):
     assert empty.has_footprint and empty.footprint is None
 
 
-def test_status_opens_no_result_file_and_builds_no_receptor(tmp_path, monkeypatch):
-    """#141: on a large project, opening files or building receptors per row took minutes."""
+def test_status_opens_no_result_file_and_builds_no_release(tmp_path, monkeypatch):
+    """#141: on a large project, opening files or building releases per row took minutes."""
     import pyarrow.parquet as pq
 
-    a, b = _receptor(12), _receptor(13)
+    a, b = _release(12), _release(13)
     project = _project(tmp_path, [a, b])
     _write_trajectory(project, a)
     _write_footprint(project, a)
@@ -847,24 +864,24 @@ def test_status_opens_no_result_file_and_builds_no_receptor(tmp_path, monkeypatc
 
     for name in ("read_schema", "read_metadata", "read_table", "ParquetFile"):
         monkeypatch.setattr(pq, name, refuse)
-    monkeypatch.setattr(Project, "_receptors", None)
+    monkeypatch.setattr(Project, "_releases", None)
 
     assert project.status(sims)["state"].tolist() == ["complete", "pending"]
 
 
 def _mixed_state_project(tmp_path):
-    """Six receptors under three variants, in every state a simulation can be in."""
-    receptors = [_receptor(h) for h in range(10, 16)]
+    """Six releases under three variants, in every state a simulation can be in."""
+    releases = [_release(h) for h in range(10, 16)]
     project = _project(
         tmp_path,
-        receptors,
+        releases,
         variants={
             "hrrr": {},
             "smooth": {"smooth_factor": 2},  # shares hrrr's particles
             "zi08": {"ziscale": 0.8, "grid": None},  # particles only
         },
     )
-    a, b, c, d, e, _ = receptors
+    a, b, c, d, e, _ = releases
     _write_trajectory(project, a)  # particles, no footprint
     _write_trajectory(project, b)
     _write_footprint(project, b)  # complete for hrrr, not for smooth
@@ -895,7 +912,7 @@ def test_status_and_incomplete_in_every_state(tmp_path):
         )
     }
     na = pd.NA
-    # By receptor hour: 10 is a, 11 b, ..., 15 f.
+    # By release hour: 10 is a, 11 b, ..., 15 f.
     expected = {
         "10": [
             ("pending", True, False),
@@ -944,7 +961,7 @@ def test_status_and_incomplete_in_every_state(tmp_path):
 
 
 def test_incomplete_of_a_project_with_no_results_is_everything(tmp_path):
-    project = _project(tmp_path, [_receptor(12)])
+    project = _project(tmp_path, [_release(12)])
     assert _pairs(project.incomplete()) == _pairs(project.simulations)
     assert not project.output.directory.exists()  # looking creates nothing
 
@@ -955,7 +972,7 @@ def test_incomplete_of_a_project_with_no_results_is_everything(tmp_path):
 
 
 def test_particles_of_a_selection_is_one_table(tmp_path):
-    a, b = _receptor(12), _receptor(13)
+    a, b = _release(12), _release(13)
     project = _project(tmp_path, [a, b], variants={"hrrr": {}, "fine": {"grid": None}})
     assert project.particles().empty
 
@@ -964,49 +981,49 @@ def test_particles_of_a_selection_is_one_table(tmp_path):
     folder = project.output.folder("particles", project.variants["hrrr"])
     assert path.parent == folder / "date=2023-01-01"
     particles = project.particles()
-    assert list(particles.columns[:2]) == ["receptor", "variant"]
+    assert list(particles.columns[:2]) == ["release", "variant"]
     one = project.simulation(a.id, "hrrr").particles
     # Both variants share the run, so each gets its own copy of its rows.
     assert particles["variant"].value_counts().to_dict() == {
         "hrrr": len(one),
         "fine": len(one),
     }
-    assert set(particles["receptor"]) == {a.id}
-    hrrr = particles[particles.variant == "hrrr"].drop(columns=["receptor", "variant"])
+    assert set(particles["release"]) == {a.id}
+    hrrr = particles[particles.variant == "hrrr"].drop(columns=["release", "variant"])
     pd.testing.assert_frame_equal(
         hrrr.reset_index(drop=True)[one.columns], one, check_dtype=False
     )
     sims = project.simulations
-    assert project.particles(sims[sims.receptor == b.id]).empty
+    assert project.particles(sims[sims.release == b.id]).empty
 
 
 def test_particles_come_in_the_order_of_the_selection(tmp_path):
     """Python hashes strings differently in each process; the rows must not follow it."""
-    receptors = [_receptor(hour) for hour in range(8, 20)]
-    project = _project(tmp_path, receptors)
-    for receptor in receptors:
-        _write_trajectory(project, receptor)
+    releases = [_release(hour) for hour in range(8, 20)]
+    project = _project(tmp_path, releases)
+    for release in releases:
+        _write_trajectory(project, release)
     sims = project.simulations
 
     for selected in (sims, sims.iloc[::-1], sims.iloc[[5, 2, 9, 0, 11, 7]]):
         got = project.particles(selected, ["particle"])
-        assert list(dict.fromkeys(got["receptor"])) == list(selected["receptor"])
-        # Each receptor's rows stay together, in the file's order.
+        assert list(dict.fromkeys(got["release"])) == list(selected["release"])
+        # Each release's rows stay together, in the file's order.
         assert got["particle"].tolist() == [1.0] * len(got)
 
 
 def test_particles_name_their_variant_and_realization(tmp_path):
-    receptor = _receptor(12)
+    release = _release(12)
     project = _project(
         tmp_path,
-        [receptor],
+        [release],
         grid=None,
         krand=4,
         variants={"hrrr": {}, "err": {**_XYERR, "realizations": 2}},
     )
-    _write_trajectory(project, receptor)
+    _write_trajectory(project, release)
     for k in (1, 0):
-        _write_trajectory(project, receptor, "err", k)
+        _write_trajectory(project, release, "err", k)
 
     got = project.particles(columns=["particle"])
 
@@ -1018,14 +1035,14 @@ def test_particles_name_their_variant_and_realization(tmp_path):
 
 def test_particles_reads_only_the_columns_asked_for(tmp_path):
     """A day of a site was 12 GB with every column (#191)."""
-    a = _receptor(12)
+    a = _release(12)
     project = _project(tmp_path, [a])
     _write_trajectory(project, a)
     every = project.particles()
 
     some = project.particles(columns=["lon", "lat", "foot"])
     assert list(some.columns) == [
-        "receptor",
+        "release",
         "variant",
         "realization",
         "lon",
@@ -1036,7 +1053,7 @@ def test_particles_reads_only_the_columns_asked_for(tmp_path):
 
     timed = project.particles(columns=["time", "foot"])
     assert list(timed.columns) == [
-        "receptor",
+        "release",
         "variant",
         "realization",
         "time",
@@ -1049,24 +1066,24 @@ def test_particles_reads_only_the_columns_asked_for(tmp_path):
 
 
 def _write_spread_particles(
-    project: Project, receptor, variant, realization, spread, seed
+    project: Project, release, variant, realization, spread, seed
 ) -> None:
-    """Write 300 particles scattered *spread* degrees around the receptor, with the same footprint value each."""
-    sim = project.simulation(receptor.id, variant, realization)
+    """Write 300 particles scattered *spread* degrees around the release, with the same footprint value each."""
+    sim = project.simulation(release.id, variant, realization)
     rng = np.random.default_rng(seed)
     n = 300
     particles = pd.DataFrame(
         {
             "age": np.full(n, -60.0),
             "particle": np.arange(1, n + 1, dtype=float),
-            "lon": receptor.longitude + rng.normal(0, spread, n),
-            "lat": receptor.latitude + rng.normal(0, spread, n),
+            "lon": release.longitude + rng.normal(0, spread, n),
+            "lat": release.latitude + rng.normal(0, spread, n),
             "zagl": np.full(n, 10.0),
             "foot": np.full(n, 1e-3),
         }
     )
-    particles = finished(particles, sim.receptor)
-    sim.output.write_particles(sim.variant, sim.receptor, particles, [], realization)
+    particles = finished(particles, sim.release)
+    sim.output.write_particles(sim.variant, sim.release, particles, [], realization)
 
 
 def _run_docstring_examples(func, **names):
@@ -1085,7 +1102,7 @@ def test_transport_error_docstring_recipe_gives_the_realizations_of_sim_transpor
     tmp_path,
 ):
     """The docstring's recipe passes one table per realization, as ``sim.transport_error`` does (#239)."""
-    a, b = _receptor(12), _receptor(13)
+    a, b = _release(12), _release(13)
     project = _project(
         tmp_path,
         [a, b],
@@ -1093,15 +1110,13 @@ def test_transport_error_docstring_recipe_gives_the_realizations_of_sim_transpor
         krand=4,
         variants={"hrrr": {}, "hrrr-err": {**_XYERR, "realizations": 4}},
     )
-    # Every receptor and realization scatters its particles differently, so
+    # Every release and realization scatters its particles differently, so
     # merging any of them changes the answer.
-    for i, receptor in enumerate((a, b)):
-        _write_spread_particles(project, receptor, "hrrr", None, 0.05, 10 * i)
+    for i, release in enumerate((a, b)):
+        _write_spread_particles(project, release, "hrrr", None, 0.05, 10 * i)
         for k in range(4):
             spread = 0.08 * (1 + i) + 0.04 * k
-            _write_spread_particles(
-                project, receptor, "hrrr-err", k, spread, 10 * i + k
-            )
+            _write_spread_particles(project, release, "hrrr-err", k, spread, 10 * i + k)
     lat, lon = np.linspace(39.5, 42.0, 101), np.linspace(-113.0, -110.5, 101)
     flux = xr.DataArray(
         np.add.outer(np.sin(7 * lat), np.cos(5 * lon)) + 2,
@@ -1111,8 +1126,8 @@ def test_transport_error_docstring_recipe_gives_the_realizations_of_sim_transpor
     sims = project.simulations
     assert len(sims[sims.variant == "hrrr-err"]) == 8
 
-    for receptor in (a, b):
-        rid = receptor.id
+    for release in (a, b):
+        rid = release.id
         names = _run_docstring_examples(
             transport_error, project=project, rid=rid, flux=flux
         )
@@ -1127,36 +1142,36 @@ def test_transport_error_docstring_recipe_gives_the_realizations_of_sim_transpor
         )
 
         # The old recipe: one variant is one table, so one realization.
-        ensemble = sims[(sims.variant == "hrrr-err") & (sims.receptor == rid)]
+        ensemble = sims[(sims.variant == "hrrr-err") & (sims.release == rid)]
         merged = transport_error(
             sim.particles,
             [rows for _, rows in project.particles(ensemble).groupby("variant")],
             flux,
-            receptor=sim.receptor,
+            release=sim.release,
         )
         assert merged.realizations == 1
         assert merged.variance != pytest.approx(expected.variance, rel=0.2)
 
 
 def _write_aged_particles(
-    project: Project, receptor, variant, realization, spread, seed
+    project: Project, release, variant, realization, spread, seed
 ):
-    """Write 300 particles scattered *spread* degrees around the receptor, each of a random age."""
-    sim = project.simulation(receptor.id, variant, realization)
+    """Write 300 particles scattered *spread* degrees around the release, each of a random age."""
+    sim = project.simulation(release.id, variant, realization)
     rng = np.random.default_rng(seed)
     n = 300
     particles = pd.DataFrame(
         {
             "age": -rng.integers(1, 12, n) * 60.0,
             "particle": np.arange(1, n + 1, dtype=float),
-            "lon": receptor.longitude + rng.normal(0, spread, n),
-            "lat": receptor.latitude + rng.normal(0, spread, n),
+            "lon": release.longitude + rng.normal(0, spread, n),
+            "lat": release.latitude + rng.normal(0, spread, n),
             "zagl": np.full(n, 10.0),
             "foot": np.full(n, 1e-3),
         }
     )
-    particles = finished(particles, sim.receptor)
-    sim.output.write_particles(sim.variant, sim.receptor, particles, [], realization)
+    particles = finished(particles, sim.release)
+    sim.output.write_particles(sim.variant, sim.release, particles, [], realization)
 
 
 def _flux() -> xr.DataArray:
@@ -1180,20 +1195,20 @@ _ERROR_COLUMNS = [
 
 @pytest.mark.parametrize("kind", ["point", "column"])
 @pytest.mark.parametrize("realizations", [None, 2])
-def test_transport_error_of_a_selection_is_sim_transport_error_per_receptor(
+def test_transport_error_of_a_selection_is_sim_transport_error_per_release(
     tmp_path, kind, realizations
 ):
-    """Each row is ``sim.transport_error`` of its receptor, with the realizations it has run."""
+    """Each row is ``sim.transport_error`` of its release, with the realizations it has run."""
 
-    def receptor(hour):
+    def release(hour):
         time = dt.datetime(2023, 1, 1, hour)
         if kind == "point":
-            return make_receptor(time)
+            return make_release(time)
         return ColumnReceptor(
             time=time, longitude=-111.85, latitude=40.77, bottom=5.0, top=500.0
         )
 
-    a, b, c, d = (receptor(h) for h in (12, 13, 14, 15))
+    a, b, c, d = (release(h) for h in (12, 13, 14, 15))
     error = {**_XYERR, "grid": None}
     if realizations is not None:
         error["realizations"] = realizations
@@ -1207,8 +1222,8 @@ def test_transport_error_of_a_selection_is_sim_transport_error_per_receptor(
         variants={"hrrr": {"transforms": [lifetime]}, "hrrr-err": error},
     )
     ks = project.variants["hrrr-err"].realization_numbers
-    # Every receptor and realization scatters its particles differently, so
-    # pairing the wrong receptor or realization changes the answer.
+    # Every release and realization scatters its particles differently, so
+    # pairing the wrong release or realization changes the answer.
     for i, r in enumerate((a, b, c)):
         _write_aged_particles(project, r, "hrrr", None, 0.05 + 0.01 * i, 10 * i)
     for i, r in enumerate((a, b, d)):
@@ -1225,7 +1240,7 @@ def test_transport_error_of_a_selection_is_sim_transport_error_per_receptor(
 
     assert list(errors.columns) == list(sel.columns) + _ERROR_COLUMNS
     pd.testing.assert_frame_equal(errors[list(sel.columns)], sel)
-    rows = errors.set_index("receptor")
+    rows = errors.set_index("release")
     for r in (a, b):
         sim = project.simulation(r.id, "hrrr")
         ran = ks[:1] if r is b else ks
@@ -1251,7 +1266,7 @@ def test_transport_error_of_a_selection_is_sim_transport_error_per_receptor(
 
 
 def test_transport_error_takes_the_unperturbed_run_and_an_error_variant(tmp_path):
-    a = _receptor(12)
+    a = _release(12)
     project = _project(
         tmp_path,
         [a],
@@ -1282,7 +1297,7 @@ def test_transport_error_takes_the_unperturbed_run_and_an_error_variant(tmp_path
 
 
 def test_footprints_open_one_variant_as_a_dataset(tmp_path, monkeypatch):
-    done, empty, missing = _receptor(12), _receptor(13), _receptor(14)
+    done, empty, missing = _release(12), _release(13), _release(14)
     project = _project(
         tmp_path,
         [done, empty, missing],
@@ -1293,17 +1308,17 @@ def test_footprints_open_one_variant_as_a_dataset(tmp_path, monkeypatch):
     _write_trajectory(project, done, "traj")
 
     foot = project.simulation(done.id, "hrrr").footprint
-    # Footprints are read from the folder listing; no receptor is built.
+    # Footprints are read from the folder listing; no release is built.
     sims = project.simulations
-    monkeypatch.setattr(Project, "_receptors", None)
+    monkeypatch.setattr(Project, "_releases", None)
     ds = project.footprints(sims[sims.variant == "hrrr"])
 
     assert isinstance(ds, xr.Dataset)
-    assert list(ds.receptor.values) == [done.id]
+    assert list(ds.release.values) == [done.id]
     assert ds.attrs["empty"] == [empty.id]
     assert ds.attrs["missing"] == [missing.id]
     np.testing.assert_allclose(
-        ds.foot.sel(receptor=done.id, hour=0).values,
+        ds.foot.sel(release=done.id, hour=0).values,
         foot.isel(time=0).values,
         rtol=1e-6,
     )
@@ -1311,27 +1326,27 @@ def test_footprints_open_one_variant_as_a_dataset(tmp_path, monkeypatch):
         project.footprints(sims[sims.variant == "traj"])
     with pytest.raises(ValueError, match="has a footprint yet"):
         project.footprints(
-            sims[(sims.receptor == missing.id) & (sims.variant == "hrrr")]
+            sims[(sims.release == missing.id) & (sims.variant == "hrrr")]
         )
 
 
-def test_footprints_take_one_variant(tmp_path, point_receptor):
+def test_footprints_take_one_variant(tmp_path, point_release):
     project = _project(
-        tmp_path, [point_receptor], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
+        tmp_path, [point_release], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
     )
     for variant in ("hrrr", "zi08"):
-        _write_footprint(project, point_receptor, variant)
+        _write_footprint(project, point_release, variant)
     sims = project.simulations
 
     with pytest.raises(ValueError, match="one variant"):
         project.footprints()
     ds = project.footprints(sims[sims.variant == "zi08"])
     assert ds.attrs["stilt_name"] == "zi08"
-    assert list(ds.receptor.values) == [point_receptor.id]
+    assert list(ds.release.values) == [point_release.id]
 
 
 def test_jacobian_of_a_variant(tmp_path):
-    a, b, c = _receptor(12), _receptor(13), _receptor(14)
+    a, b, c = _release(12), _release(13), _release(14)
     project = _project(
         tmp_path,
         [a, b, c],
@@ -1349,7 +1364,7 @@ def test_jacobian_of_a_variant(tmp_path):
     hrrr = sims[sims.variant == "hrrr"]
     H = project.jacobian(hrrr, target, bins)
 
-    assert list(H.receptors) == [a.id]
+    assert list(H.releases) == [a.id]
     assert H.empty == [b.id]
     assert H.missing == [c.id]
     assert H.data.shape == (1, len(bins) * len(target.index))
@@ -1359,8 +1374,8 @@ def test_jacobian_of_a_variant(tmp_path):
         expected.to_numpy(),
         rtol=1e-6,
     )
-    some = project.jacobian(hrrr[hrrr.receptor.isin([b.id, a.id])], target, bins)
-    assert list(some.receptors) == [a.id]
+    some = project.jacobian(hrrr[hrrr.release.isin([b.id, a.id])], target, bins)
+    assert list(some.releases) == [a.id]
     right_closed = pd.IntervalIndex.from_breaks(
         bins.left.append(bins.right[-1:]), closed="right"
     )
@@ -1375,7 +1390,7 @@ def test_jacobian_of_a_variant(tmp_path):
 
 
 def test_jacobian_of_an_ensemble_is_one_realization_at_a_time(tmp_path):
-    a, b = _receptor(12), _receptor(13)
+    a, b = _release(12), _release(13)
     project = _project(
         tmp_path,
         [a, b],
@@ -1393,7 +1408,7 @@ def test_jacobian_of_an_ensemble_is_one_realization_at_a_time(tmp_path):
     ens = sims[sims.variant == "err"]
 
     # Several realizations: the error names the column and says to pick one.
-    for several in (ens, ens[ens.receptor == a.id]):
+    for several in (ens, ens[ens.release == a.id]):
         with pytest.raises(ValueError, match="realization column") as error:
             project.jacobian(several, target, bins)
         assert "ens[ens.realization == 0]" in str(error.value)
@@ -1403,7 +1418,7 @@ def test_jacobian_of_an_ensemble_is_one_realization_at_a_time(tmp_path):
 
     # The documented loop: one Jacobian per realization, from that realization's files.
     H = {k: project.jacobian(ens[ens.realization == k], target, bins) for k in range(3)}
-    assert [list(H[k].receptors) for k in range(3)] == [[a.id, b.id], [a.id], [a.id]]
+    assert [list(H[k].releases) for k in range(3)] == [[a.id, b.id], [a.id], [a.id]]
     assert H[1].missing == [b.id]
     for k in range(3):
         expected = project.simulation(a.id, "err", k).footprint.stilt.aggregate(
@@ -1418,11 +1433,11 @@ def test_jacobian_of_an_ensemble_is_one_realization_at_a_time(tmp_path):
 
 
 def test_jacobian_in_threads_is_the_same_matrix(tmp_path):
-    receptors = [_receptor(h) for h in range(8, 16)]
-    project = _project(tmp_path, receptors, execution={"local": {"cpus": 3}})
-    for r in receptors[:-1]:
+    releases = [_release(h) for h in range(8, 16)]
+    project = _project(tmp_path, releases, execution={"local": {"cpus": 3}})
+    for r in releases[:-1]:
         _write_footprint(project, r)
-    _write_footprint(project, receptors[-1], empty=True)
+    _write_footprint(project, releases[-1], empty=True)
     target = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.5, yres=0.5)
     bins = pd.IntervalIndex.from_breaks(
         pd.date_range("2023-01-01 00:00", "2023-01-02 00:00", freq="3h"),
@@ -1432,15 +1447,13 @@ def test_jacobian_in_threads_is_the_same_matrix(tmp_path):
     batched = project.jacobian(project.simulations, target, bins, workers=3)
 
     assert (
-        list(batched.receptors)
-        == list(whole.receptors)
-        == [r.id for r in receptors[:-1]]
+        list(batched.releases) == list(whole.releases) == [r.id for r in releases[:-1]]
     )
-    assert batched.empty == whole.empty == [receptors[-1].id]
+    assert batched.empty == whole.empty == [releases[-1].id]
     assert (batched.data != whole.data).nnz == 0
     expected = [
         project.simulation(r.id, "hrrr").footprint.stilt.aggregate(target, bins)
-        for r in receptors[:-1]
+        for r in releases[:-1]
     ]
     np.testing.assert_allclose(
         batched.data.toarray(),
@@ -1452,7 +1465,7 @@ def test_jacobian_in_threads_is_the_same_matrix(tmp_path):
 def test_jacobian_lists_each_date_folder_once(tmp_path, monkeypatch):
     import stilt.output as output_module
 
-    a = _receptor(12)
+    a = _release(12)
     project = _project(tmp_path, [a])
     _write_footprint(project, a)
     target = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.5, yres=0.5)
@@ -1470,14 +1483,14 @@ def test_jacobian_lists_each_date_folder_once(tmp_path, monkeypatch):
     monkeypatch.setattr(output_module.os, "scandir", scandir)
     H = project.jacobian(project.simulations, target, bins)
 
-    assert list(H.receptors) == [a.id]
+    assert list(H.releases) == [a.id]
     assert listed.count("date=2023-01-01") == 1
 
 
-def test_plot_availability_returns_axes(tmp_path, point_receptor):
+def test_plot_availability_returns_axes(tmp_path, point_release):
     import matplotlib.pyplot as plt
 
-    project = _project(tmp_path, [point_receptor])
+    project = _project(tmp_path, [point_release])
 
     ax = project.plot.availability()
 
@@ -1495,15 +1508,15 @@ def ran(monkeypatch):
     """Record what a local run hands to the workers, and run nothing."""
     calls: list[dict] = []
 
-    def run_receptors(project, receptor_ids, **kwargs):
-        calls.append({"project": project, "ids": list(receptor_ids), **kwargs})
+    def run_releases(project, release_ids, **kwargs):
+        calls.append({"project": project, "ids": list(release_ids), **kwargs})
 
-    monkeypatch.setattr("stilt.execution.worker.run_receptors", run_receptors)
+    monkeypatch.setattr("stilt.execution.worker.run_releases", run_releases)
     return calls
 
 
-def test_run_hands_the_incomplete_receptors_to_the_workers(tmp_path, ran):
-    done, todo = _receptor(12), _receptor(13)
+def test_run_hands_the_incomplete_releases_to_the_workers(tmp_path, ran):
+    done, todo = _release(12), _release(13)
     project = _project(
         tmp_path,
         [done, todo],
@@ -1514,7 +1527,7 @@ def test_run_hands_the_incomplete_receptors_to_the_workers(tmp_path, ran):
 
     status = project.run()
 
-    assert list(status["receptor"]) == [todo.id]  # what ran, and where it stands
+    assert list(status["release"]) == [todo.id]  # what ran, and where it stands
     assert list(status["state"]) == ["pending"]  # the fake ran nothing
     [call] = ran
     assert call["ids"] == [todo.id]
@@ -1526,8 +1539,8 @@ def test_run_hands_the_incomplete_receptors_to_the_workers(tmp_path, ran):
     assert call["skip_existing"] is True
 
 
-def test_run_without_skip_runs_every_receptor_once(tmp_path, ran):
-    done, todo = _receptor(12), _receptor(13)
+def test_run_without_skip_runs_every_release_once(tmp_path, ran):
+    done, todo = _release(12), _release(13)
     project = _project(
         tmp_path, [done, todo], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
     )
@@ -1539,13 +1552,13 @@ def test_run_without_skip_runs_every_receptor_once(tmp_path, ran):
     assert call["ids"] == [
         done.id,
         todo.id,
-    ]  # each receptor once, whatever its variants
+    ]  # each release once, whatever its variants
     assert call["skip_existing"] is False
     assert call["compute_root"] == tmp_path / "scratch"
 
 
 def test_run_takes_execution_settings_in_place_of_the_configs(tmp_path, ran):
-    project = _project(tmp_path, [_receptor(12)], execution={"local": {"cpus": 3}})
+    project = _project(tmp_path, [_release(12)], execution={"local": {"cpus": 3}})
 
     override = ExecutionConfig(local={"cpus": 8}, timeout=600, keep_workdir=True)
     project.run(execution=override)
@@ -1554,22 +1567,22 @@ def test_run_takes_execution_settings_in_place_of_the_configs(tmp_path, ran):
     assert ran[0]["execution"] == override
 
 
-def test_run_with_nothing_to_do_starts_nothing(tmp_path, ran, point_receptor):
-    project = _project(tmp_path, [point_receptor])
-    _write_trajectory(project, point_receptor)
-    _write_footprint(project, point_receptor, empty=True)
+def test_run_with_nothing_to_do_starts_nothing(tmp_path, ran, point_release):
+    project = _project(tmp_path, [point_release])
+    _write_trajectory(project, point_release)
+    _write_footprint(project, point_release, empty=True)
 
     assert project.run().empty
     assert ran == []
 
 
-def test_run_after_adding_a_variant_runs_the_receptor_again(
-    tmp_path, ran, point_receptor
+def test_run_after_adding_a_variant_runs_the_release_again(
+    tmp_path, ran, point_release
 ):
     """A finished project grows a variant: only that variant is incomplete."""
-    project = _project(tmp_path, [point_receptor])
-    _write_trajectory(project, point_receptor)
-    _write_footprint(project, point_receptor)
+    project = _project(tmp_path, [point_release])
+    _write_trajectory(project, point_release)
+    _write_footprint(project, point_release)
     assert project.run().empty
 
     # The user adds a variant to config.yaml.
@@ -1577,42 +1590,42 @@ def test_run_after_adding_a_variant_runs_the_receptor_again(
         project.config_path
     )
     grown = Project(project.directory)
-    assert _pairs(grown.incomplete()) == [(point_receptor.id, "zi08")]
+    assert _pairs(grown.incomplete()) == [(point_release.id, "zi08")]
 
     grown.run()
 
-    assert ran[0]["ids"] == [point_receptor.id]
+    assert ran[0]["ids"] == [point_release.id]
 
 
-def test_run_finds_a_missing_realization(tmp_path, ran, point_receptor):
+def test_run_finds_a_missing_realization(tmp_path, ran, point_release):
     project = _project(
         tmp_path,
-        [point_receptor],
+        [point_release],
         grid=None,
         krand=4,
         variants={"hrrr": {}, "err": {**_XYERR, "realizations": 2}},
     )
-    _write_trajectory(project, point_receptor)
-    _write_trajectory(project, point_receptor, "err", 0)
+    _write_trajectory(project, point_release)
+    _write_trajectory(project, point_release, "err", 0)
 
     project.run()
 
-    assert ran[0]["ids"] == [point_receptor.id]
+    assert ran[0]["ids"] == [point_release.id]
     missing = project.incomplete()
-    assert _pairs(missing) == [(point_receptor.id, "err")]
+    assert _pairs(missing) == [(point_release.id, "err")]
     assert missing["realization"].tolist() == [1]
 
 
-def test_submit_needs_slurm(tmp_path, point_receptor):
-    project = _project(tmp_path, [point_receptor])
+def test_submit_needs_slurm(tmp_path, point_release):
+    project = _project(tmp_path, [point_release])
     with pytest.raises(ValueError, match="slurm"):
         project.submit()
 
 
-def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_receptor):
+def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_release):
     project = _project(
         tmp_path,
-        [point_receptor],
+        [point_release],
         execution={"backend": "slurm", "slurm": {"time": "01:00:00"}},
     )
     waited = []
@@ -1636,46 +1649,46 @@ def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_receptor):
     assert waited == [("777", "kingspeak")]
     # Nothing ran, so it listed once more before saying so.
     assert slept == [60]
-    assert submitted[0]["pending"] == [point_receptor.id]
+    assert submitted[0]["pending"] == [point_release.id]
     assert submitted[0]["compute_root"] == "/s"
     assert submitted[0]["execution"].backend == "slurm"
     # The status of what was submitted; nothing ran here.
-    assert list(status["receptor"]) == [point_receptor.id]
+    assert list(status["release"]) == [point_release.id]
     assert list(status["state"]) == ["pending"]
 
 
-def test_receptors_are_built_only_when_asked_for(tmp_path, monkeypatch):
+def test_releases_are_built_only_when_asked_for(tmp_path, monkeypatch):
     import stilt.project
 
-    a, b = _receptor(12, site="WBB"), _receptor(13, site="UOU")
+    a, b = _release(12, site="WBB"), _release(13, site="UOU")
     _project(tmp_path, [a, b])
     project = Project(tmp_path / "proj")
     built = []
-    build = stilt.project.receptors_from_rows
+    build = stilt.project.releases_from_rows
 
     def counting(rows):
-        receptors = build(rows)
-        built.extend(r.id for r in receptors)
-        return receptors
+        releases = build(rows)
+        built.extend(r.id for r in releases)
+        return releases
 
-    monkeypatch.setattr(stilt.project, "receptors_from_rows", counting)
+    monkeypatch.setattr(stilt.project, "releases_from_rows", counting)
 
-    assert len(project.receptors) == 2
+    assert len(project.releases) == 2
     project.status()
     assert built == []  # listing, selecting, and status build nothing
 
-    assert project.receptor(b.id) == b
+    assert project.release(b.id) == b
     assert built == [b.id]
 
 
-def test_a_bad_receptors_file_fails_when_the_project_is_read(tmp_path):
+def test_a_bad_releases_file_fails_when_the_project_is_read(tmp_path):
     project = _project(tmp_path)
-    project.receptors_path.write_text(
+    project.releases_path.write_text(
         "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,95.0,5\n"
     )
 
     with pytest.raises(ValueError, match="latitude must be a number within"):
-        _ = Project(project.directory).receptors
+        _ = Project(project.directory).releases
 
 
 # ---------------------------------------------------------------------------
@@ -1684,7 +1697,7 @@ def test_a_bad_receptors_file_fails_when_the_project_is_read(tmp_path):
 
 
 def test_simulations_is_a_dataframe_and_a_copy(tmp_path):
-    project = _project(tmp_path, [_receptor(12)])
+    project = _project(tmp_path, [_release(12)])
     sims = project.simulations
     assert isinstance(sims, pd.DataFrame)
     sims["mine"] = 1  # the user's copy
@@ -1694,7 +1707,7 @@ def test_simulations_is_a_dataframe_and_a_copy(tmp_path):
 def test_a_selection_may_be_a_frame_a_mask_or_another_table(tmp_path):
     import pyarrow as pa
 
-    a, b = _receptor(12, site="WBB"), _receptor(13, site="UOU")
+    a, b = _release(12, site="WBB"), _release(13, site="UOU")
     project = _project(
         tmp_path, [a, b], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
     )
@@ -1704,7 +1717,7 @@ def test_a_selection_may_be_a_frame_a_mask_or_another_table(tmp_path):
 
     wbb = sims[(sims.site == "WBB") & (sims.variant == "zi08")]
     mask = (sims.site == "WBB") & (sims.variant == "zi08")
-    table = pa.table({"receptor": [a.id], "variant": ["zi08"]})
+    table = pa.table({"release": [a.id], "variant": ["zi08"]})
     for sel in (wbb, mask, mask.to_numpy(), table):
         st = project.status(sel)
         assert _pairs(st) == expected
@@ -1712,41 +1725,41 @@ def test_a_selection_may_be_a_frame_a_mask_or_another_table(tmp_path):
         assert st["site"].tolist() == ["WBB"]  # the rest of the row, from the project
         assert _pairs(project.incomplete(sel)) == expected  # no footprint yet
     polars = pytest.importorskip("polars")
-    st = project.status(polars.DataFrame({"receptor": [a.id], "variant": ["zi08"]}))
+    st = project.status(polars.DataFrame({"release": [a.id], "variant": ["zi08"]}))
     assert _pairs(st) == expected
 
 
 def test_a_pandas_selection_keeps_its_own_columns(tmp_path):
-    a, b = _receptor(12), _receptor(13)
+    a, b = _release(12), _release(13)
     project = _project(tmp_path, [a, b])
-    mine = pd.DataFrame({"receptor": [b.id], "obs": [1.9]})
-    merged = project.simulations.merge(mine, on="receptor")
+    mine = pd.DataFrame({"release": [b.id], "obs": [1.9]})
+    merged = project.simulations.merge(mine, on="release")
 
     st = project.status(merged)
     assert _pairs(st) == [(b.id, "hrrr")]
     assert st.obs.tolist() == [1.9]
 
 
-def test_a_selection_needs_receptor_and_variant_columns(tmp_path):
-    project = _project(tmp_path, [_receptor(12)])
-    with pytest.raises(ValueError, match="'receptor' and 'variant'"):
-        project.status(project.receptors)
-    unknown = pd.DataFrame({"receptor": [_receptor(12).id], "variant": ["nope"]})
+def test_a_selection_needs_release_and_variant_columns(tmp_path):
+    project = _project(tmp_path, [_release(12)])
+    with pytest.raises(ValueError, match="'release' and 'variant'"):
+        project.status(project.releases)
+    unknown = pd.DataFrame({"release": [_release(12).id], "variant": ["nope"]})
     with pytest.raises(KeyError, match="nope"):
         project.status(unknown)
-    with pytest.raises(KeyError, match="No receptor"):
-        project.receptor("202301011200_-1_1_1")
+    with pytest.raises(KeyError, match="No release"):
+        project.release("202301011200_-1_1_1")
 
 
 def test_relative_paths_start_from_the_project_not_the_working_directory(
-    tmp_path, monkeypatch, point_receptor
+    tmp_path, monkeypatch, point_release
 ):
     monkeypatch.setenv("MET_ROOT", str(tmp_path / "archive"))
     (tmp_path / "real_output").mkdir()
     (tmp_path / "output_link").symlink_to(tmp_path / "real_output")
     Project.init(
         tmp_path / "proj",
-        receptors=[point_receptor],
+        releases=[point_release],
         mets={
             "local": "met",
             "shared": {"directory": "$MET_ROOT/hrrr"},
@@ -1768,7 +1781,7 @@ def test_relative_paths_start_from_the_project_not_the_working_directory(
     # Reached through a link, the output is the directory it points to.
     assert project.output == Output((tmp_path / "real_output").resolve())
     # A simulation finds relative file names in its settings from the project.
-    assert project.simulation(point_receptor.id, "local").directory == project.directory
+    assert project.simulation(point_release.id, "local").directory == project.directory
 
 
 def test_init_refuses_a_variant_with_bad_settings_and_writes_nothing(tmp_path):
@@ -1781,35 +1794,35 @@ def test_init_refuses_a_variant_with_bad_settings_and_writes_nothing(tmp_path):
     assert not (tmp_path / "proj" / "config.yaml").exists()
 
 
-def test_status_says_why_the_failed_simulations_failed(tmp_path, point_receptor):
+def test_status_says_why_the_failed_simulations_failed(tmp_path, point_release):
     other = PointReceptor(
         time="2023-07-15 19:00", longitude=-111.848, latitude=40.766, altitude=10
     )
     project = _project(
-        tmp_path, [point_receptor, other], variants={"traj": {"grid": None}}
+        tmp_path, [point_release, other], variants={"traj": {"grid": None}}
     )
-    sim = project.simulation(str(point_receptor.id), "traj")
+    sim = project.simulation(str(point_release.id), "traj")
     sim.output.record_failure(
         "particles",
         sim.variant,
-        sim.receptor.id,
+        sim.release.id,
         {"stage": "particles", "reason": "MET_COVERAGE", "message": "m"},
     )
 
     status = project.status()
     failed = status[status.state == "failed"]
 
-    assert failed[["receptor", "variant", "stage", "reason"]].to_dict("records") == [
+    assert failed[["release", "variant", "stage", "reason"]].to_dict("records") == [
         {
-            "receptor": str(point_receptor.id),
+            "release": str(point_release.id),
             "variant": "traj",
             "stage": "particles",
             "reason": "MET_COVERAGE",
         }
     ]
-    by_receptor = status.set_index("receptor")
-    assert by_receptor.loc[str(other.id), "state"] == "pending"
-    assert pd.isna(by_receptor.loc[str(other.id), "reason"])
+    by_release = status.set_index("release")
+    assert by_release.loc[str(other.id), "state"] == "pending"
+    assert pd.isna(by_release.loc[str(other.id), "reason"])
 
 
 # ---------------------------------------------------------------------------
@@ -1817,10 +1830,10 @@ def test_status_says_why_the_failed_simulations_failed(tmp_path, point_receptor)
 # ---------------------------------------------------------------------------
 
 
-def test_add_table_keeps_a_receptor_table_and_adds_only_new_receptors(tmp_path):
+def test_add_table_keeps_a_release_table_and_adds_only_new_releases(tmp_path):
     from stilt.transforms import averaging_kernel_table
 
-    a, b = _receptor(12), _receptor(13)
+    a, b = _release(12), _release(13)
     project = _project(tmp_path, [a, b])
     first = averaging_kernel_table([a], levels=[0.0, 3000.0], values=[[1.0, 1.0]])
     both = averaging_kernel_table(
@@ -1833,9 +1846,9 @@ def test_add_table_keeps_a_receptor_table_and_adds_only_new_receptors(tmp_path):
     project.add_table("kernels", both)  # and adding them again changes nothing
 
     held = pd.read_parquet(path)
-    assert list(held.receptor) == [a.id, a.id, b.id, b.id]
+    assert list(held.release) == [a.id, a.id, b.id, b.id]
     assert list(held.value) == [1.0, 1.0, 0.5, 0.5]
     with pytest.raises(ValueError, match="columns"):
-        project.add_table("kernels", pd.DataFrame({"receptor": [b.id]}))
+        project.add_table("kernels", pd.DataFrame({"release": [b.id]}))
     with pytest.raises(ValueError, match="table name"):
         project.add_table("../kernels", first)

@@ -106,10 +106,10 @@ class ReferenceScenario:
         Short slug used as a scenario identifier (e.g. ``"point"``).
     description
         Human-readable label shown in pytest output.
-    receptor_type
+    release_type
         ``"point"`` | ``"column"`` | ``"multipoint"``.
     longitude, latitude
-        Scalar for point/column receptors; tuple for multipoint.
+        Scalar for point/column releases; tuple for multipoint.
     altitude
         Scalar for point; ``(bottom, top)`` tuple for column;
         tuple of per-point altitudes for multipoint.
@@ -135,7 +135,7 @@ class ReferenceScenario:
     name: str
     description: str
     # The rest default to the reference point case; a scenario sets what differs.
-    receptor_type: Literal["point", "column", "multipoint"] = "point"
+    release_type: Literal["point", "column", "multipoint"] = "point"
     longitude: float | tuple[float, ...] = REFERENCE_LONGITUDE
     latitude: float | tuple[float, ...] = REFERENCE_LATITUDE
     altitude: float | tuple[float, ...] = REFERENCE_ALTITUDE
@@ -162,7 +162,7 @@ class ReferenceScenario:
     shares_trajectory_with: str | None = field(default=None)
     # Footprint grid projection (PROJ string); "+proj=longlat" is geographic lon/lat.
     projection: str = field(default="+proj=longlat")
-    # Receptor vertical reference: "agl" (default) or "msl".
+    # Release vertical reference: "agl" (default) or "msl".
     altitude_ref: str = field(default="agl")
     # Particle columns PYSTILT asks HYSPLIT for beyond REFERENCE_VARSIWANT
     # (STILT-R's run keeps its own varsiwant).
@@ -177,11 +177,11 @@ class ReferenceScenario:
     # PYSTILT object factories (lazy imports to avoid circular load)
     # ------------------------------------------------------------------
 
-    def make_receptor(self):
-        """Return the appropriate Receptor subtype for this scenario."""
-        from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
+    def make_release(self):
+        """Return the appropriate release subtype for this scenario."""
+        from stilt.releases import ColumnReceptor, MultiPointReceptor, PointReceptor
 
-        if self.receptor_type == "point":
+        if self.release_type == "point":
             return PointReceptor(
                 time=self.time,
                 longitude=float(self.longitude),  # type: ignore[arg-type]
@@ -189,7 +189,7 @@ class ReferenceScenario:
                 altitude=float(self.altitude),  # type: ignore[arg-type]
                 altitude_ref=self.altitude_ref,  # type: ignore[arg-type]
             )
-        if self.receptor_type == "column":
+        if self.release_type == "column":
             bottom, top = self.altitude  # type: ignore[misc]
             return ColumnReceptor(
                 time=self.time,
@@ -290,37 +290,37 @@ class ReferenceScenario:
         return ProjectConfig.model_validate(config)
 
     def py_sim_id(self, variant: str = REFERENCE_MET) -> tuple[str, str]:
-        """Return the PYSTILT simulation, ``(receptor_id, variant)``."""
-        return (self.make_receptor().id, variant)
+        """Return the PYSTILT simulation, ``(release_id, variant)``."""
+        return (self.make_release().id, variant)
 
     def r_sim_id(self) -> str:
-        """Return the STILT-R simulation ID (the receptor id)."""
-        return str(self.make_receptor().id)
+        """Return the STILT-R simulation ID (the release id)."""
+        return str(self.make_release().id)
 
 
 # ---------------------------------------------------------------------------
 # Canonical scenarios
 # ---------------------------------------------------------------------------
 
-#: Baseline single-point WBB receptor with default footprint settings.
+#: Baseline single-point WBB release with default footprint settings.
 POINT = ReferenceScenario(
     name="point",
-    description="Single WBB point receptor, 6 h backward, default smooth_factor, hnf_plume=True",
+    description="Single WBB point release, 6 h backward, default smooth_factor, hnf_plume=True",
 )
 
-#: Column receptor spanning 0–1000 m AGL at the WBB location.
+#: Column release spanning 0–1000 m AGL at the WBB location.
 COLUMN = ReferenceScenario(
     name="column",
-    description="Column receptor (0–1000 m AGL), 6 h backward, hnf_plume=True",
-    receptor_type="column",
+    description="Column release (0–1000 m AGL), 6 h backward, hnf_plume=True",
+    release_type="column",
     altitude=(0.0, 1000.0),  # (bottom, top)
 )
 
-#: Three-location multipoint receptor spread across the SLV.
+#: Three-location multipoint release spread across the SLV.
 MULTIPOINT = ReferenceScenario(
     name="multipoint",
-    description="Three-location multipoint receptor, 6 h backward, hnf_plume=True",
-    receptor_type="multipoint",
+    description="Three-location multipoint release, 6 h backward, hnf_plume=True",
+    release_type="multipoint",
     longitude=(-112.0, -111.5, -111.0),
     latitude=(40.5, 41.0, 41.5),
     altitude=(0.0, 500.0, 1000.0),
@@ -328,31 +328,31 @@ MULTIPOINT = ReferenceScenario(
     ymax=42.0,
 )
 
-#: Point receptor with hyper-near-field plume dilution disabled.
+#: Point release with hyper-near-field plume dilution disabled.
 NO_HNF = ReferenceScenario(
     name="no_hnf",
-    description="Point receptor, hnf_plume=False — no near-field plume dilution correction",
+    description="Point release, hnf_plume=False — no near-field plume dilution correction",
     hnf_plume=False,
     compare_columns=_TRAJ_COLS_NO_HNF,
 )
 
-#: Point receptor with Gaussian footprint smoothing at half the default scale.
+#: Point release with Gaussian footprint smoothing at half the default scale.
 SMOOTH = ReferenceScenario(
     name="smooth",
-    description="Point receptor, smooth_factor=0.5 — reduced Gaussian kernel smoothing",
+    description="Point release, smooth_factor=0.5 — reduced Gaussian kernel smoothing",
     smooth_factor=0.5,
     shares_trajectory_with="point",
 )
 
-#: Point receptor with all time steps collapsed into a single 2-D footprint layer.
+#: Point release with all time steps collapsed into a single 2-D footprint layer.
 TIME_INTEGRATE = ReferenceScenario(
     name="time_integrate",
-    description="Point receptor, time_integrate=True — single 2-D footprint layer",
+    description="Point release, time_integrate=True — single 2-D footprint layer",
     time_integrate=True,
     shares_trajectory_with="point",
 )
 
-#: Point receptor, smooth_factor=0 — pure binning, no Gaussian spread.
+#: Point release, smooth_factor=0 — pure binning, no Gaussian spread.
 #
 # STILT-R calls permute.f90 with a 1×1 kernel; PYSTILT uses np.bincount with no
 # convolution step.  This path is not exercised by any other fidelity scenario
@@ -360,12 +360,12 @@ TIME_INTEGRATE = ReferenceScenario(
 # exactly one cell with full weight, not spread across neighbours).
 SMOOTH_ZERO = ReferenceScenario(
     name="smooth_zero",
-    description="Point receptor, smooth_factor=0.0 — 1×1 identity kernel, no Gaussian spread",
+    description="Point release, smooth_factor=0.0 — 1×1 identity kernel, no Gaussian spread",
     smooth_factor=0.0,
     shares_trajectory_with="point",
 )
 
-#: Point receptor, coarse grid (0.05° × 0.05°) — 5× larger cells than the default.
+#: Point release, coarse grid (0.05° × 0.05°) — 5× larger cells than the default.
 #
 # Coarser resolution produces different kernel sizes in grid-cell units (the same
 # physical sigma covers fewer cells) and changes the bin-assignment edge cases.
@@ -373,13 +373,13 @@ SMOOTH_ZERO = ReferenceScenario(
 # are consistent at resolutions coarser than the reference 0.01°.
 COARSE_GRID = ReferenceScenario(
     name="coarse_grid",
-    description="Point receptor, xres=yres=0.05° — 5× coarser than reference grid",
+    description="Point release, xres=yres=0.05° — 5× coarser than reference grid",
     xres=0.05,
     yres=0.05,
     shares_trajectory_with="point",
 )
 
-#: Full 24-hour backward run from the reference receptor.
+#: Full 24-hour backward run from the reference release.
 #
 # Uses four met files (20151209.00z through 20151209.18z) plus the boundary
 # 20151210.00z file — all present in the stilt-tutorials met directory.
@@ -388,7 +388,7 @@ COARSE_GRID = ReferenceScenario(
 # trajectory parser handles 24 hours of HYSPLIT particle output correctly.
 DAY_BACKWARD = ReferenceScenario(
     name="day_backward",
-    description="Point receptor, n_hours=-24 — full day backward, four met files",
+    description="Point release, n_hours=-24 — full day backward, four met files",
     n_hours=-24,
 )
 
@@ -396,26 +396,26 @@ DAY_BACKWARD = ReferenceScenario(
 #: from the winter reference scenarios.
 HRRR_SUMMER = ReferenceScenario(
     name="hrrr_summer",
-    description="Point receptor, 2021-07-15 06Z — summer convective PBL, hnf_plume=True",
+    description="Point release, 2021-07-15 06Z — summer convective PBL, hnf_plume=True",
     time=REFERENCE_SUMMER_TIME,
 )
 
-#: Receptor placed near the SW corner of the footprint domain so that a
+#: Release placed near the SW corner of the footprint domain so that a
 #: significant fraction of back-trajectories exit the grid.  Exercises
 #: particle-binning at grid boundaries and the out-of-domain mask.
-EDGE_RECEPTOR = ReferenceScenario(
-    name="edge_receptor",
-    description="Receptor at SW domain corner (-112.95°, 39.55°) — particle binning near grid boundary",
+EDGE_RELEASE = ReferenceScenario(
+    name="edge_release",
+    description="Release at SW domain corner (-112.95°, 39.55°) — particle binning near grid boundary",
     longitude=-112.95,
     latitude=39.55,
 )
 
-#: Three-location multipoint receptor in summer — highest-risk combination for
+#: Three-location multipoint release in summer — highest-risk combination for
 #: operational SLV inversions: HNF correction + convective PBL + multipoint.
 SUMMER_MULTIPOINT = ReferenceScenario(
     name="summer_multipoint",
-    description="Three-location multipoint receptor, 2021-07-15 06Z — summer HNF + multipoint",
-    receptor_type="multipoint",
+    description="Three-location multipoint release, 2021-07-15 06Z — summer HNF + multipoint",
+    release_type="multipoint",
     longitude=(-112.0, -111.5, -111.0),
     latitude=(40.5, 41.0, 41.5),
     altitude=(0.0, 500.0, 1000.0),
@@ -424,12 +424,12 @@ SUMMER_MULTIPOINT = ReferenceScenario(
     time=REFERENCE_SUMMER_TIME,
 )
 
-#: Receptor at 0.5 m AGL — maximises HNF plume dilution correction.
+#: Release at 0.5 m AGL — maximises HNF plume dilution correction.
 #: At near-surface height sigma is very small so the HNF conditional
 #: (plume < pbl_mixing) is almost always active, amplifying foot by 1/sigma.
 LOW_AGL = ReferenceScenario(
     name="low_agl",
-    description="Point receptor at zagl=0.5 m — near-surface HNF stress",
+    description="Point release at zagl=0.5 m — near-surface HNF stress",
     altitude=0.5,
 )
 
@@ -438,15 +438,13 @@ LOW_AGL = ReferenceScenario(
 #: exit the met boundary, exercising HYSPLIT's boundary termination and the
 #: footprint gridding with a highly sparse particle set.
 #:
-#: Domain is shifted SW to include the receptor (-113.8°, 39.1°), which lies
+#: Domain is shifted SW to include the release (-113.8°, 39.1°), which lies
 #: outside the standard WBB domain.  Using the standard domain would place all
 #: particles outside the grid and produce trivially-zero footprints that test
 #: nothing meaningful.
 MET_GRID_EDGE = ReferenceScenario(
     name="met_grid_edge",
-    description=(
-        "Receptor at (-113.8°, 39.1°) near SW edge of cropped HRRR met domain"
-    ),
+    description=("Release at (-113.8°, 39.1°) near SW edge of cropped HRRR met domain"),
     longitude=-113.8,
     latitude=39.1,
     xmin=-114.0,
@@ -460,7 +458,7 @@ MET_GRID_EDGE = ReferenceScenario(
 #: and that the larger convolution does not introduce spurious mass.
 HIGH_SMOOTH = ReferenceScenario(
     name="high_smooth",
-    description="Point receptor with smooth_factor=2.0 — large kernel buffer stress",
+    description="Point release with smooth_factor=2.0 — large kernel buffer stress",
     smooth_factor=2.0,
     shares_trajectory_with="point",
 )
@@ -471,20 +469,20 @@ HIGH_SMOOTH = ReferenceScenario(
 #: files 20210114_12 and 20210114_18 are present in the test cache.
 FORWARD = ReferenceScenario(
     name="forward",
-    description="Point receptor, n_hours=+6 — forward trajectory; time_sign=+1 in footprint",
+    description="Point release, n_hours=+6 — forward trajectory; time_sign=+1 in footprint",
     n_hours=6,
     time=dt.datetime(2021, 1, 14, 12, 0),
 )
 
 #: UTM Zone 12N projected footprint — trajectory is identical to POINT (same
-#: receptor/met), only the grid CRS changes.  Tests that particle projection and
+#: release/met), only the grid CRS changes.  Tests that particle projection and
 #: gridding work correctly in a projected coordinate system. Unsmoothed: on a
 #: projected grid PYSTILT's kernel width differs from STILT-R's on purpose, and
 #: test_projected_smoothing_intentionally_differs_from_r pins the gap.
 PROJECTED_CRS = ReferenceScenario(
     name="projected_crs",
     description=(
-        "Point receptor, UTM Zone 12N grid (xres=yres=2000 m), unsmoothed — "
+        "Point release, UTM Zone 12N grid (xres=yres=2000 m), unsmoothed — "
         "projected CRS footprint"
     ),
     smooth_factor=0.0,
@@ -494,14 +492,14 @@ PROJECTED_CRS = ReferenceScenario(
     shares_trajectory_with="point",
 )
 
-#: MSL-altitude receptor — WBB sits at ~1330 m MSL; 5 m AGL = 1335 m MSL.
+#: MSL-altitude release — WBB sits at ~1330 m MSL; 5 m AGL = 1335 m MSL.
 #: Setting altitude_ref="msl" sets kmsl=1 in SETUP.CFG so HYSPLIT interprets
 #: the release height as MSL.  Trajectory should be nearly identical to POINT
 #: (negligible height difference) but validates the kmsl pathway. PYSTILT also
-#: asks for zsfc, which its near-field correction of an MSL receptor needs.
+#: asks for zsfc, which its near-field correction of an MSL release needs.
 MSL_ALTITUDE = ReferenceScenario(
     name="msl_altitude",
-    description="Point receptor at 1335 m MSL (altitude_ref='msl', kmsl=1) — tests kmsl pathway",
+    description="Point release at 1335 m MSL (altitude_ref='msl', kmsl=1) — tests kmsl pathway",
     altitude=1335.0,
     altitude_ref="msl",
     extra_varsiwant=("zsfc",),
@@ -514,7 +512,7 @@ MSL_ALTITUDE = ReferenceScenario(
 WINDERR = ReferenceScenario(
     name="winderr",
     description=(
-        "Point receptor with XY wind-error params (siguverr=1 m/s) — "
+        "Point release with XY wind-error params (siguverr=1 m/s) — "
         "second HYSPLIT run with WINDERR"
     ),
     siguverr=1.0,
@@ -540,13 +538,13 @@ WINDERR = ReferenceScenario(
 #      small patch, so the kernel-padding logic gets tested on a near-empty
 #      grid.
 #
-# Receptor at -112, 40.5 sits at the western edge of the lon range, so
+# Release at -112, 40.5 sits at the western edge of the lon range, so
 # particles drifting west exit immediately on every step regardless of
-# synoptic wind direction; lat is centred on the receptor.
+# synoptic wind direction; lat is centred on the release.
 SPARSE_TIGHT_DOMAIN = ReferenceScenario(
     name="sparse_tight_domain",
     description=(
-        "Point receptor in tight 0.2° domain — most particles exit early; "
+        "Point release in tight 0.2° domain — most particles exit early; "
         "tests filter + n_particles denominator on dropped-particle branch"
     ),
     xmin=-112.0,
@@ -562,7 +560,7 @@ SPARSE_TIGHT_DOMAIN = ReferenceScenario(
 #: toward foot only below 100 m, so the trajectory differs from POINT's.
 VEGHT_METERS = ReferenceScenario(
     name="veght_meters",
-    description="Point receptor, veght=100 — near-field correction below 100 m above ground",
+    description="Point release, veght=100 — near-field correction below 100 m above ground",
     veght=100.0,
 )
 
@@ -578,7 +576,7 @@ ALL_SCENARIOS: list[ReferenceScenario] = [
     COARSE_GRID,
     DAY_BACKWARD,
     HRRR_SUMMER,
-    EDGE_RECEPTOR,
+    EDGE_RELEASE,
     SUMMER_MULTIPOINT,
     LOW_AGL,
     MET_GRID_EDGE,
@@ -601,8 +599,8 @@ def reference_python_met_file_tres() -> str:
     return f"{REFERENCE_MET_FILE_INTERVAL_HOURS}h"
 
 
-def reference_receptor():
-    return POINT.make_receptor()
+def reference_release():
+    return POINT.make_release()
 
 
 def reference_grid():

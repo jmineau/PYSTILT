@@ -21,7 +21,7 @@ DOUBLE = "tests.fixtures.stages.DoubleStage"
 
 ECHO = "tests.fixtures.stages.EchoStage"
 
-#: Each call of a toy stage's ``run``, as (stage, receptor id, variant), in order.
+#: Each call of a toy stage's ``run``, as (stage, release id, variant), in order.
 RUNS: list[tuple[str, str, str]] = []
 
 #: The name of the path each call of a toy stage's ``run`` was handed.
@@ -65,12 +65,12 @@ class CountStage:
         return config.model_dump(mode="json")
 
     def check(
-        self, config: CountConfig, receptors: pd.DataFrame, directory: Path | None
+        self, config: CountConfig, releases: pd.DataFrame, directory: Path | None
     ) -> list[tuple[str, str | None, str]]:
-        """List the receptors south of the equator, which this stage pretends it cannot count."""
-        south = receptors[receptors["latitude"] < 0].drop_duplicates("receptor")
+        """List the releases south of the equator, which this stage pretends it cannot count."""
+        south = releases[releases["latitude"] < 0].drop_duplicates("release")
         return [
-            ("count", str(rid), "is south of the equator") for rid in south["receptor"]
+            ("count", str(rid), "is south of the equator") for rid in south["release"]
         ]
 
     def run(self, config: CountConfig, sim: Any, path: Any) -> None:
@@ -81,7 +81,7 @@ class CountStage:
         returns without writing one; with ``stale`` it raises an error a
         retry may get past.
         """
-        RUNS.append((self.name, sim.receptor.id, sim.variant.name))
+        RUNS.append((self.name, sim.release.id, sim.variant.name))
         PATHS.append(path.name)
         if config.silent:
             return
@@ -124,14 +124,14 @@ class DoubleStage:
         return config.model_dump(mode="json")
 
     def check(
-        self, config: DoubleConfig, receptors: pd.DataFrame, directory: Path | None
+        self, config: DoubleConfig, releases: pd.DataFrame, directory: Path | None
     ) -> list[tuple[str, str | None, str]]:
         """Find nothing."""
         return []
 
     def run(self, config: DoubleConfig, sim: Any, path: Any) -> None:
         """Write twice what the ``count`` stage wrote for *sim*, plus ``add``, to *path*."""
-        RUNS.append((self.name, sim.receptor.id, sim.variant.name))
+        RUNS.append((self.name, sim.release.id, sim.variant.name))
         path.write_text(str(2 * int(sim.path("count").read_text()) + config.add))
 
 
@@ -144,7 +144,7 @@ class EchoConfig(BaseModel):
 
 
 class EchoStage:
-    """Writes the receptor id as text; it reads no other stage."""
+    """Writes the release id as text; it reads no other stage."""
 
     name = "echo"
     config_class = EchoConfig
@@ -165,17 +165,17 @@ class EchoStage:
         return config.model_dump(mode="json")
 
     def check(
-        self, config: EchoConfig, receptors: pd.DataFrame, directory: Path | None
+        self, config: EchoConfig, releases: pd.DataFrame, directory: Path | None
     ) -> list[tuple[str, str | None, str]]:
         """Find nothing."""
         return []
 
     def run(self, config: EchoConfig, sim: Any, path: Any) -> None:
-        """Write *sim*'s receptor id to *path*, or raise with ``fail``."""
-        RUNS.append((self.name, sim.receptor.id, sim.variant.name))
+        """Write *sim*'s release id to *path*, or raise with ``fail``."""
+        RUNS.append((self.name, sim.release.id, sim.variant.name))
         if config.fail:
             raise RuntimeError("the echo was told to fail")
-        path.write_text(sim.receptor.id)
+        path.write_text(sim.release.id)
 
 
 class Forgetful:

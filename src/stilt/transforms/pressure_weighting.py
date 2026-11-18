@@ -15,7 +15,7 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
-    from stilt.receptors import Receptor
+    from stilt.releases import Receptor
 
 from stilt.transforms._common import release_coordinate
 
@@ -42,7 +42,7 @@ def particle_pwf(
     neighboring release pressures, the ground closes the bottom slab, and the
     top slab extends above its release height as far as it does below.
 
-    A multipoint receptor releases several particles from each point. Those
+    A multipoint release releases several particles from each point. Those
     particles share one release height, so the point's slab is split evenly
     among them.
 
@@ -51,12 +51,12 @@ def particle_pwf(
     particles : pandas.DataFrame
         Particle table with ``particle``, ``pres`` (hPa), and ``zagl`` (m), and
         optionally ``release_height``, the release height (m). Without ``release_height`` the
-        first-step height is used. An MSL receptor also needs ``zsfc``, the
+        first-step height is used. An MSL release also needs ``zsfc``, the
         terrain height (m above sea level).
     surface_pressure : float, optional
         Surface pressure in hPa. Defaults to the fitted curve at the ground.
     altitude_ref : {"agl", "msl"}, default "agl"
-        Vertical reference of the release heights, ``receptor.altitude_ref``.
+        Vertical reference of the release heights, ``release.altitude_ref``.
         With ``"msl"`` the fit is made against ``zagl + zsfc`` so that it can
         be evaluated at the release heights, and the ground closing the
         bottom slab is the terrain under the lowest release height.
@@ -69,7 +69,7 @@ def particle_pwf(
         Pressure weight of each particle, indexed by ``particle``. The weights
         sum to the fraction of the atmosphere's mass inside the column,
         ``(p_sfc - p_top) / p_sfc``. The rest lies above the column top,
-        where surface fluxes do not reach the receptor.
+        where surface fluxes do not reach the release.
     """
     for col in ("pres", "zagl"):
         if col not in particles.columns:
@@ -80,12 +80,12 @@ def particle_pwf(
     pres = release_coordinate(particles, "pres")
     zagl = release_coordinate(particles, "zagl")
 
-    # Particle heights in the receptor's own vertical reference, so the fit
+    # Particle heights in the release's own vertical reference, so the fit
     # can be evaluated at the release heights.
     if altitude_ref == "msl":
         if "zsfc" not in particles.columns:
             raise ValueError(
-                "Pressure weighting for a receptor with altitude_ref='msl' "
+                "Pressure weighting for a release with altitude_ref='msl' "
                 "requires the 'zsfc' particle variable; include it in "
                 "varsiwant."
             )
@@ -150,15 +150,15 @@ class PressureWeighting(BaseModel):
     pressures (see :func:`particle_pwf`). :func:`stilt.calc_footprint`
     divides by the particle count, so the weights are multiplied by the
     number of particles and the weighted footprint does not change with
-    ``numpar``. The particles of a multipoint receptor share their point's
+    ``numpar``. The particles of a multipoint release share their point's
     weight evenly. Adds ``xpres`` (release pressure, hPa) and ``pwf``
     columns. Requires ``pres`` and ``zagl`` in ``varsiwant``, which are both
-    in the default, and ``zsfc`` for a receptor with ``altitude_ref="msl"``.
+    in the default, and ``zsfc`` for a release with ``altitude_ref="msl"``.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    #: It reads ``zsfc`` for a receptor above sea level, so ``stilt check``
+    #: It reads ``zsfc`` for a release above sea level, so ``stilt check``
     #: says when ``varsiwant`` lacks it.
     reads_zsfc: ClassVar[bool] = True
 
@@ -175,16 +175,16 @@ class PressureWeighting(BaseModel):
     def apply(
         self,
         particles: pd.DataFrame,
-        receptor: Receptor | None = None,
+        release: Receptor | None = None,
         directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """
         Return the particles with ``foot`` weighted by pressure.
 
-        The release heights are in the receptor's ``altitude_ref``, and
-        taken to be above ground without a receptor.
+        The release heights are in the release's ``altitude_ref``, and
+        taken to be above ground without a release.
         """
-        altitude_ref = receptor.altitude_ref if receptor is not None else "agl"
+        altitude_ref = release.altitude_ref if release is not None else "agl"
         xpres, pwf = particle_pwf(particles, self.surface_pressure, altitude_ref)
         out = particles.copy()
         ids = out["particle"].to_numpy()

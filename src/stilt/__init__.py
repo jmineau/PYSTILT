@@ -2,8 +2,8 @@
 PYSTILT, a Python implementation of the STILT transport model.
 
 :func:`run_trajectories` and :func:`calc_footprint` make the particles and
-the footprint of one receptor. :class:`Project` runs many receptors from a
-directory of receptors and settings, and loads their results.
+the footprint of one release. :class:`Project` runs many releases from a
+directory of releases and settings, and loads their results.
 """
 
 from importlib.metadata import PackageNotFoundError
@@ -15,12 +15,12 @@ from .exceptions import StiltError
 from .execution import ExecutionConfig, task_share
 from .footprint import FootprintConfig, Mesh, Zones, calc_footprint, read_footprint
 from .particles import read_particles
-from .receptors import (
+from .releases import (
     ColumnReceptor,
     MultiPointReceptor,
     PointReceptor,
     Receptor,
-    read_receptors,
+    read_releases,
 )
 from .spatial import Bounds, Grid
 from .stilt_project import Project
@@ -43,12 +43,12 @@ __all__ = [
     "ProjectConfig",
     "ExecutionConfig",
     "FootprintConfig",
-    # Receptors
+    # Releases
     "Receptor",
     "PointReceptor",
     "ColumnReceptor",
     "MultiPointReceptor",
-    "read_receptors",
+    "read_releases",
     # One simulation of a project
     "Simulation",
     # Grids, and the cells footprints are summed onto
@@ -56,7 +56,7 @@ __all__ = [
     "Bounds",
     "Mesh",
     "Zones",
-    # One receptor, without a project
+    # One release, without a project
     "run_trajectories",
     "task_share",
     "calc_footprint",

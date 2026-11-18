@@ -192,20 +192,20 @@ class FootprintConfig(BaseModel):
         "1h",
         description=(
             "Length of each time layer of the footprint, counted from the "
-            "receptor time, as a duration in whole minutes: ``1h`` for hourly "
+            "release time, as a duration in whole minutes: ``1h`` for hourly "
             "layers, ``15min`` for 15-minute data, ``1D`` for days."
         ),
     )
     hnf_plume: bool = Field(
         True,
         description=(
-            "Correct ``foot`` near the receptor with a vertical Gaussian plume "
+            "Correct ``foot`` near the release with a vertical Gaussian plume "
             "model before the footprint is computed "
             "(:func:`stilt.footprint.correct_near_field`). Close to the "
-            "receptor the plume is thinner than the layer surface fluxes are "
+            "release the plume is thinner than the layer surface fluxes are "
             "mixed through, so this raises the influence of nearby fluxes. "
             "Needs the particle columns ``dens``, ``tlgr``, ``sigw``, ``foot``, "
-            "``mlht``, and ``samt``, and ``zsfc`` for a receptor above sea "
+            "``mlht``, and ``samt``, and ``zsfc`` for a release above sea "
             "level; particles without them get no correction."
         ),
     )
@@ -269,11 +269,11 @@ class FootprintConfig(BaseModel):
     @property
     def zsfc_reasons(self) -> list[str]:
         """
-        What goes wrong for receptors above sea level whose particles lack ``zsfc``, a clause each.
+        What goes wrong for releases above sea level whose particles lack ``zsfc``, a clause each.
 
         ``stilt check`` lists them when the transport model is not asked for
         ``zsfc`` (HYSPLIT's ``varsiwant``): the near-field correction is
-        skipped for such a receptor, and a transform that reads the terrain
+        skipped for such a release, and a transform that reads the terrain
         height fails.
         """
         reasons = []

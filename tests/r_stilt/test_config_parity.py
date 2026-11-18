@@ -29,7 +29,7 @@ from ..fixtures.r_stilt_reference import STILT_R_NAMES
 
 _R_HELPERS = Path(__file__).parents[1] / "fixtures" / "r_helpers"
 
-#: Entries the driver writes for each run, from its receptor and error
+#: Entries the driver writes for each run, from its release and error
 #: settings, rather than from the config (``write_inputs``).
 _PER_RUN = {"ivmax", "kmsl", "maxpar", "winderrtf"}
 

@@ -1,4 +1,4 @@
-"""Settings for where and how a project's receptors are run."""
+"""Settings for where and how a project's releases are run."""
 
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ class FetchConfig(BaseModel):
 
 class LocalConfig(BaseModel):
     """
-    How a project's receptors run on this machine: the ``local`` block of ``execution``.
+    How a project's releases run on this machine: the ``local`` block of ``execution``.
 
     Examples
     --------
@@ -80,7 +80,7 @@ class LocalConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     cpus: int = Field(
-        1, ge=1, description="Receptors run at once, each in a process of its own."
+        1, ge=1, description="Releases run at once, each in a process of its own."
     )
     fetch: bool = Field(
         True,
@@ -95,9 +95,9 @@ class LocalConfig(BaseModel):
 
 class SlurmConfig(BaseModel):
     """
-    The Slurm job array a project's receptors run as: the ``slurm`` block of ``execution``.
+    The Slurm job array a project's releases run as: the ``slurm`` block of ``execution``.
 
-    The receptors are split among ``n_workers`` tasks, and each task runs
+    The releases are split among ``n_workers`` tasks, and each task runs
     ``cpus`` of them at once. Any key that is not a setting below is an
     ``sbatch`` option by its name, such as ``exclude: node1`` or
     ``constraint: skl``, written to the job script as given (``true``
@@ -118,12 +118,12 @@ class SlurmConfig(BaseModel):
     n_workers: int = Field(
         1,
         ge=1,
-        description="Number of array tasks, which the receptors are split evenly among.",
+        description="Number of array tasks, which the releases are split evenly among.",
     )
     cpus: int = Field(
         1,
         ge=1,
-        description="Receptors each task runs at once, and the CPUs each task asks for.",
+        description="Releases each task runs at once, and the CPUs each task asks for.",
     )
     time: str | int | None = Field(
         None,
@@ -207,10 +207,10 @@ class SlurmConfig(BaseModel):
 
 class ExecutionConfig(BaseModel):
     """
-    Where a project's receptors run, and with what resources.
+    Where a project's releases run, and with what resources.
 
     ``backend`` names the place, and every setting of that place is in the
-    block of its name. With ``backend: local`` the receptors run on this
+    block of its name. With ``backend: local`` the releases run on this
     machine as one task (:class:`LocalConfig`). With ``backend: slurm``
     they are split among the tasks of one Slurm job array
     (:class:`SlurmConfig`). Only the block ``backend`` names is read, so a
@@ -299,7 +299,7 @@ class ExecutionConfig(BaseModel):
 
     @property
     def cpus(self) -> int:
-        """Receptors a task runs at once: ``cpus`` of the block ``backend`` names."""
+        """Releases a task runs at once: ``cpus`` of the block ``backend`` names."""
         return self.local.cpus if self.backend == "local" else self.slurm.cpus
 
     @property

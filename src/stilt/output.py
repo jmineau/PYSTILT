@@ -10,27 +10,27 @@ set of settings, in hive form so every tree reads as one dataset::
       particles/
         settings=hrrr-a3f9c2/            variant name + short hash of the transport settings
           _settings.yaml
-          date=2024-07-01/<receptor>.parquet
+          date=2024-07-01/<release>.parquet
         settings=hrrr-err-7be104/        an ensemble: one folder, a partition per realization
-          realization=0/date=2024-07-01/<receptor>.parquet
+          realization=0/date=2024-07-01/<release>.parquet
       footprint/
         settings=hrrr-93278c/            variant name + short hash of transport + footprint settings
           _settings.yaml                 names the particles folder it was made from
-          date=2024-07-01/<receptor>.parquet
+          date=2024-07-01/<release>.parquet
         settings=hrrr-hexes-1b2c3d/      same particles, other footprint settings
       logs/
-        settings=hrrr-a3f9c2/date=2024-07-01/<receptor>.log
-        settings=hrrr-a3f9c2/date=2024-07-01/<receptor>.failure.yaml   a failed run
-        settings=hrrr-93278c/date=2024-07-01/<receptor>.failure.yaml   a failed footprint
+        settings=hrrr-a3f9c2/date=2024-07-01/<release>.log
+        settings=hrrr-a3f9c2/date=2024-07-01/<release>.failure.yaml   a failed run
+        settings=hrrr-93278c/date=2024-07-01/<release>.failure.yaml   a failed footprint
       scratch/
-        settings=hrrr-a3f9c2/date=2024-07-01/<receptor>/               a kept workdir
+        settings=hrrr-a3f9c2/date=2024-07-01/<release>/               a kept workdir
 
 A folder is found by the hash of its settings, so two projects that run the
 same settings share one folder, and a changed setting lands in a new folder
 beside the old one instead of overwriting it. ``pyarrow.dataset``, DuckDB,
 polars, and R's arrow read ``settings`` and ``date`` as columns of the whole
-tree. Particles are one Parquet file per receptor. A stage writes its own
-file per receptor, with the extension it declares
+tree. Particles are one Parquet file per release. A stage writes its own
+file per release, with the extension it declares
 (:attr:`stilt.stages.Stage.suffix`), at the path this module gives it, and
 this module never looks inside one. The footprint's are sparse tables of
 the non-zero cells; an empty footprint is a file with no rows, marked
@@ -47,10 +47,10 @@ Every function takes the kind of result, ``"particles"`` or a stage's name,
 and the variant::
 
     out = Output("output")
-    out.write_particles(variant, receptor, frame, met_files)
-    out.path("particles", variant, receptor.id)  # one receptor's file
-    out.present("footprint", variant, receptor_ids)  # which have a footprint
-    out.make_path("footprint", variant, receptor.id)  # where a stage writes
+    out.write_particles(variant, release, frame, met_files)
+    out.path("particles", variant, release.id)  # one release's file
+    out.present("footprint", variant, release_ids)  # which have a footprint
+    out.make_path("footprint", variant, release.id)  # where a stage writes
 """
 
 from __future__ import annotations
@@ -82,7 +82,7 @@ from stilt.identity import (
     stage_hash,
 )
 from stilt.particles import write_particles
-from stilt.receptors import Receptor, parse_receptor_id
+from stilt.releases import Receptor, parse_release_id
 from stilt.stages import get_stage, reads
 
 if TYPE_CHECKING:
@@ -95,7 +95,7 @@ logger = logging.getLogger(__name__)
 
 #: Underscore-prefixed, so dataset readers skip it.
 SETTINGS_FILE = "_settings.yaml"
-#: The suffix of a receptor's failure record, ``<receptor_id>.failure.yaml``, in its folder's logs.
+#: The suffix of a release's failure record, ``<release_id>.failure.yaml``, in its folder's logs.
 FAILURE_SUFFIX = ".failure.yaml"
 HASH_CHARS = 6
 
@@ -108,16 +108,16 @@ def _day_folder(day: str) -> str:
     return f"date={dt.datetime.strptime(day, '%Y%m%d'):%Y-%m-%d}"
 
 
-def _date_dir(receptor_id: str) -> str:
+def _date_dir(release_id: str) -> str:
     """
-    Return the ``date=YYYY-MM-DD`` folder of a receptor id, which starts with the receptor time.
+    Return the ``date=YYYY-MM-DD`` folder of a release id, which starts with the release time.
 
     The folder is the id's first eight characters, ``YYYYMMDD``, so a listing
     of hundreds of thousands of ids reads each day once and does not parse
-    each id's time. An id that :func:`stilt.receptors.parse_receptor_id`
+    each id's time. An id that :func:`stilt.releases.parse_release_id`
     rejects raises its error.
     """
-    rid = str(receptor_id)
+    rid = str(release_id)
     stamp = rid[:12]  # YYYYMMDDHHMM
     if (
         len(rid) > 13
@@ -130,8 +130,8 @@ def _date_dir(receptor_id: str) -> str:
         try:
             return _day_folder(stamp[:8])
         except ValueError:
-            pass  # not a real date; parse_receptor_id says so
-    time, _ = parse_receptor_id(rid)
+            pass  # not a real date; parse_release_id says so
+    time, _ = parse_release_id(rid)
     return f"date={time:%Y-%m-%d}"
 
 
@@ -153,13 +153,13 @@ def _names(folder: Location) -> list[str]:
     return [str(item).rstrip("/").rsplit("/", 1)[-1] for item in listed]
 
 
-def _list_receptor_files(
+def _list_release_files(
     root: Location, suffix: str, among: Iterable[str] | None = None
 ) -> dict[str, Location]:
     """
-    Return ``{receptor_id: path}`` for every ``date=*/<id><suffix>`` under *root*, in date order.
+    Return ``{release_id: path}`` for every ``date=*/<id><suffix>`` under *root*, in date order.
 
-    With *among*, only those receptors are returned, and only their date
+    With *among*, only those releases are returned, and only their date
     folders are listed. The date folders are listed in a few threads: on a
     network filesystem or an object store the listing waits on the server,
     and a project can have thousands of date folders.
@@ -273,9 +273,9 @@ Kind = str
 _OTHER_TREES = ("logs", "scratch")
 
 #: What :meth:`Output.table` returns when no file is read: for particles, and for a stage.
-_NO_PARTICLES = pa.table({"receptor": pa.array([], pa.string())})
+_NO_PARTICLES = pa.table({"release": pa.array([], pa.string())})
 _NO_STAGE_FILES = pa.table(
-    {"receptor": pa.array([], pa.string()), "date": pa.array([], pa.date32())}
+    {"release": pa.array([], pa.string()), "date": pa.array([], pa.date32())}
 )
 
 #: The ``date=YYYY-MM-DD`` folders, read as a ``date32`` column.
@@ -293,20 +293,20 @@ def _settings_folders(tree: Location) -> list[str]:
     ]
 
 
-def _receptor_file(
-    folder: Location, receptor_id: str, suffix: str = ".parquet"
+def _release_file(
+    folder: Location, release_id: str, suffix: str = ".parquet"
 ) -> Location:
-    """Return a receptor's file in *folder*: ``date=YYYY-MM-DD/<receptor_id><suffix>``."""
-    return folder / _date_dir(receptor_id) / f"{receptor_id}{suffix}"
+    """Return a release's file in *folder*: ``date=YYYY-MM-DD/<release_id><suffix>``."""
+    return folder / _date_dir(release_id) / f"{release_id}{suffix}"
 
 
 def completed(particles: frozenset[str], *stages: frozenset[str]) -> frozenset[str]:
     """
-    Return the receptors that are complete, from the ones with particles and the ones with each stage's file.
+    Return the releases that are complete, from the ones with particles and the ones with each stage's file.
 
     The one definition of done. A simulation is complete when the model's
     output file exists, and so does the file of every stage its variant
-    uses. *stages* is one set of receptors for each stage the variant uses,
+    uses. *stages* is one set of releases for each stage the variant uses,
     none for a variant that makes particles only. A stage's file is a file
     whatever it holds, so an empty footprint is complete.
     """
@@ -755,17 +755,17 @@ class Output:
         """Return the folder of *variant*'s results of *kind* in *tree*, making the settings folder on first use."""
         return self._part(tree, self._create(kind, variant), variant, realization)
 
-    # -- one receptor's files ------------------------------------------------
+    # -- one release's files ------------------------------------------------
 
     def path(
         self,
         kind: Kind,
         variant: Variant,
-        receptor_id: str,
+        release_id: str,
         realization: int | None = None,
     ) -> Location | None:
         """
-        Return the file of one receptor's result, whether or not it exists.
+        Return the file of one release's result, whether or not it exists.
 
         ``None`` before the variant's folder of *kind* exists, and for a
         stage the variant does not use. An ensemble's results are in a
@@ -774,17 +774,17 @@ class Output:
         folder = self._found(kind, kind, variant, realization)
         if folder is None:
             return None
-        return _receptor_file(folder, receptor_id, self._suffix(kind, variant))
+        return _release_file(folder, release_id, self._suffix(kind, variant))
 
     def make_path(
         self,
         kind: Kind,
         variant: Variant,
-        receptor_id: str,
+        release_id: str,
         realization: int | None = None,
     ) -> Location:
         """
-        Return where one receptor's result of *kind* is written, making the variant's settings folder on first use.
+        Return where one release's result of *kind* is written, making the variant's settings folder on first use.
 
         What :meth:`path` returns once the folder exists. The worker hands
         it to a stage, which writes its own file there.
@@ -795,7 +795,7 @@ class Output:
             If *kind* is a stage the variant does not use.
         """
         folder = self._made(kind, kind, variant, realization)
-        return _receptor_file(folder, receptor_id, self._suffix(kind, variant))
+        return _release_file(folder, release_id, self._suffix(kind, variant))
 
     @staticmethod
     def _suffix(kind: Kind, variant: Variant) -> str:
@@ -806,17 +806,17 @@ class Output:
         self,
         kind: Kind,
         variant: Variant,
-        receptor_id: str,
+        release_id: str,
         realization: int | None = None,
         columns: list[str] | None = None,
     ) -> pa.Table:
         """
-        Return one receptor's result file as a table of its stored columns.
+        Return one release's result file as a table of its stored columns.
 
         The file as written, with no ``date`` column: what :meth:`table`
-        reads for many receptors at once, for one. :meth:`table` builds a
+        reads for many releases at once, for one. :meth:`table` builds a
         dataset over its files, which costs more than this on a single
-        one, so a method that reads receptors one at a time uses this.
+        one, so a method that reads releases one at a time uses this.
 
         Parameters
         ----------
@@ -825,8 +825,8 @@ class Output:
             Parquet, as the footprint's are.
         variant : Variant
             Whose result.
-        receptor_id : str
-            The receptor, whose file must exist (:meth:`present`).
+        release_id : str
+            The release, whose file must exist (:meth:`present`).
         realization : int, optional
             Which realization of an ensemble.
         columns : list of str, optional
@@ -835,9 +835,9 @@ class Output:
         Raises
         ------
         FileNotFoundError
-            If the receptor has no file, or the variant no folder.
+            If the release has no file, or the variant no folder.
         """
-        path = self.path(kind, variant, receptor_id, realization)
+        path = self.path(kind, variant, release_id, realization)
         if path is None:
             raise FileNotFoundError(
                 f"No {kind} folder for variant {variant.name!r} in {self.directory}."
@@ -846,53 +846,53 @@ class Output:
             return pq.read_table(source, columns=columns, partitioning=None)
 
     def log_path(
-        self, variant: Variant, receptor_id: str, realization: int | None = None
+        self, variant: Variant, release_id: str, realization: int | None = None
     ) -> Location | None:
-        """Return where the log of a receptor's transport model run is kept, or ``None`` before its folder exists."""
+        """Return where the log of a release's transport model run is kept, or ``None`` before its folder exists."""
         logs = self._found("particles", "logs", variant, realization)
-        return None if logs is None else _receptor_file(logs, receptor_id, ".log")
+        return None if logs is None else _release_file(logs, release_id, ".log")
 
     def kept_workdir(
-        self, variant: Variant, receptor_id: str, realization: int | None = None
+        self, variant: Variant, release_id: str, realization: int | None = None
     ) -> Location | None:
-        """Return where a receptor's failed run's working directory is kept, or ``None`` before its folder exists."""
+        """Return where a release's failed run's working directory is kept, or ``None`` before its folder exists."""
         kept = self._found("particles", "scratch", variant, realization)
-        return None if kept is None else kept / _date_dir(receptor_id) / receptor_id
+        return None if kept is None else kept / _date_dir(release_id) / release_id
 
-    # -- many receptors' files ----------------------------------------------
+    # -- many releases' files ----------------------------------------------
 
     def present(
         self,
         kind: Kind,
         variant: Variant,
-        receptor_ids: Iterable[str] | None = None,
+        release_ids: Iterable[str] | None = None,
         realization: int | None = None,
     ) -> frozenset[str]:
         """
-        Return the receptors that have a file of *kind* for *variant*.
+        Return the releases that have a file of *kind* for *variant*.
 
-        Only the date folders of *receptor_ids* are listed; without them,
+        Only the date folders of *release_ids* are listed; without them,
         every date folder is. No file is opened.
         """
         folder = self._found(kind, kind, variant, realization)
         if folder is None:
             return frozenset()
         suffix = self._suffix(kind, variant)
-        return frozenset(_list_receptor_files(folder, suffix, receptor_ids))
+        return frozenset(_list_release_files(folder, suffix, release_ids))
 
     def complete(
         self,
         variant: Variant,
-        receptor_ids: Iterable[str] | None = None,
+        release_ids: Iterable[str] | None = None,
         realization: int | None = None,
     ) -> frozenset[str]:
         """
-        Return the receptors whose simulations under *variant* are complete (:func:`completed`).
+        Return the releases whose simulations under *variant* are complete (:func:`completed`).
 
-        Only the receptors with particles are looked for in each stage's
+        Only the releases with particles are looked for in each stage's
         folder.
         """
-        particles = self.present("particles", variant, receptor_ids, realization)
+        particles = self.present("particles", variant, release_ids, realization)
         stages = [
             self.present(name, variant, particles, realization)
             for name in variant.stage_order
@@ -903,15 +903,15 @@ class Output:
         self,
         kind: Kind,
         variant: Variant,
-        receptor_ids: Iterable[str] | None = None,
+        release_ids: Iterable[str] | None = None,
         realization: int | None = None,
         columns: list[str] | None = None,
     ) -> pa.Table:
         """
-        Return the files of many receptors as one table.
+        Return the files of many releases as one table.
 
-        Columns are ``receptor``, the stored columns, and ``date`` (the
-        receptor date, from the folder, as ``date32``).
+        Columns are ``release``, the stored columns, and ``date`` (the
+        release date, from the folder, as ``date32``).
 
         Parameters
         ----------
@@ -920,14 +920,14 @@ class Output:
             Parquet, as the footprint's are.
         variant : Variant
             Whose results.
-        receptor_ids : iterable of str, optional
-            The receptors to read, each of which must have a file
+        release_ids : iterable of str, optional
+            The releases to read, each of which must have a file
             (:meth:`present`), in the order the rows come. Without it, every
             file in the folder is read, in date order.
         realization : int, optional
             Which realization of an ensemble.
         columns : list of str, optional
-            Only these stored columns, after ``receptor``. Every column by
+            Only these stored columns, after ``release``. Every column by
             default.
 
         Raises
@@ -941,11 +941,11 @@ class Output:
         if folder is None:
             return nothing
         suffix = self._suffix(kind, variant)
-        if receptor_ids is None:
-            paths = list(_list_receptor_files(folder, suffix).values())
+        if release_ids is None:
+            paths = list(_list_release_files(folder, suffix).values())
         else:
             paths = [
-                _receptor_file(folder, r, suffix) for r in dict.fromkeys(receptor_ids)
+                _release_file(folder, r, suffix) for r in dict.fromkeys(release_ids)
             ]
         if not paths:
             return nothing
@@ -966,7 +966,7 @@ class Output:
             )
         if columns is None:
             return dataset.to_table()
-        wanted = ["receptor", *(c for c in columns if c != "receptor")]
+        wanted = ["release", *(c for c in columns if c != "release")]
         unknown = [c for c in wanted if c not in dataset.schema.names]
         if unknown:
             raise ValueError(
@@ -981,11 +981,11 @@ class Output:
         self,
         kind: Kind,
         variant: Variant,
-        receptor_id: str,
+        release_id: str,
         realization: int | None = None,
     ) -> dict[str, Any] | None:
         """
-        Return why a receptor's result of *kind* failed, as the worker recorded it, or ``None``.
+        Return why a release's result of *kind* failed, as the worker recorded it, or ``None``.
 
         A record holds ``stage`` (``particles``, or the stage that failed),
         ``reason``, ``message``, and ``time``, and a ``traceback`` for an
@@ -994,26 +994,26 @@ class Output:
         logs = self._found(kind, "logs", variant, realization)
         if logs is None:
             return None
-        path = _receptor_file(logs, receptor_id, FAILURE_SUFFIX)
+        path = _release_file(logs, release_id, FAILURE_SUFFIX)
         return _read_yaml(path) if path.exists() else None
 
     def failures(
         self,
         kind: Kind,
         variant: Variant,
-        receptor_ids: Iterable[str] | None = None,
+        release_ids: Iterable[str] | None = None,
         realization: int | None = None,
     ) -> dict[str, dict[str, Any]]:
         """
-        Return ``{receptor_id: record}`` for the receptors with a failure record of *kind*.
+        Return ``{release_id: record}`` for the releases with a failure record of *kind*.
 
-        With *receptor_ids*, only their date folders are listed. The records
+        With *release_ids*, only their date folders are listed. The records
         found are read in a few threads.
         """
         logs = self._found(kind, "logs", variant, realization)
         if logs is None:
             return {}
-        paths = _list_receptor_files(logs, FAILURE_SUFFIX, receptor_ids)
+        paths = _list_release_files(logs, FAILURE_SUFFIX, release_ids)
         with ThreadPoolExecutor(max_workers=16) as pool:
             records = list(pool.map(_read_yaml, paths.values()))
         return dict(zip(paths, records, strict=True))
@@ -1022,44 +1022,44 @@ class Output:
         self,
         kind: Kind,
         variant: Variant,
-        receptor_id: str,
+        release_id: str,
         record: dict[str, Any],
         realization: int | None = None,
     ) -> None:
         """
-        Write why a receptor's result of *kind* failed, replacing an earlier record.
+        Write why a release's result of *kind* failed, replacing an earlier record.
 
         It goes in the logs of the folder whose result failed: a particles
         failure covers every variant on those particles, a stage's failure
         every variant with that stage's settings on them.
         """
         logs = self._made(kind, "logs", variant, realization)
-        _write_yaml(_receptor_file(logs, receptor_id, FAILURE_SUFFIX), record)
+        _write_yaml(_release_file(logs, release_id, FAILURE_SUFFIX), record)
 
     def clear_failure(
         self,
         kind: Kind,
         variant: Variant,
-        receptor_id: str,
+        release_id: str,
         realization: int | None = None,
     ) -> None:
-        """Remove a receptor's failure record of *kind*, once its result is written."""
+        """Remove a release's failure record of *kind*, once its result is written."""
         logs = self._found(kind, "logs", variant, realization)
         if logs is not None:
-            _receptor_file(logs, receptor_id, FAILURE_SUFFIX).unlink(missing_ok=True)
+            _release_file(logs, release_id, FAILURE_SUFFIX).unlink(missing_ok=True)
 
     # -- writing -----------------------------------------------------------
 
     def write_particles(
         self,
         variant: Variant,
-        receptor: Receptor,
+        release: Receptor,
         particles: pd.DataFrame,
         met_files: list[Path],
         realization: int | None = None,
     ) -> Location:
         """
-        Write a receptor's particles (:func:`stilt.particles.write_particles`).
+        Write a release's particles (:func:`stilt.particles.write_particles`).
 
         The file records the run's settings, so it reads alone, and the
         folder's settings hash, the PYSTILT version, and the realization.
@@ -1073,14 +1073,14 @@ class Output:
         """
         if particles.empty:
             raise ValueError(
-                f"No particles to write for {receptor.id}: a particle file "
+                f"No particles to write for {release.id}: a particle file "
                 "would make the simulation complete."
             )
         folder = self._made("particles", "particles", variant, realization)
         return write_particles(
-            _receptor_file(folder, str(receptor.id)),
+            _release_file(folder, str(release.id)),
             particles,
-            receptor,
+            release,
             variant.run_settings,
             met_files,
             metadata=file_stamp(variant.particles_hash, realization),
@@ -1089,31 +1089,31 @@ class Output:
     def logged(
         self,
         variant: Variant,
-        receptor_ids: Iterable[str] | None = None,
+        release_ids: Iterable[str] | None = None,
         realization: int | None = None,
     ) -> frozenset[str]:
         """
-        Return the receptors that have a transport model log for *variant*.
+        Return the releases that have a transport model log for *variant*.
 
-        Only the date folders of *receptor_ids* are listed. A log with no
+        Only the date folders of *release_ids* are listed. A log with no
         particles and no failure record is a run that started and did not
         finish (``interrupted`` in :meth:`stilt.Project.status`).
         """
         logs = self._found("particles", "logs", variant, realization)
         if logs is None:
             return frozenset()
-        return frozenset(_list_receptor_files(logs, ".log", receptor_ids))
+        return frozenset(_list_release_files(logs, ".log", release_ids))
 
     def write_log(
         self,
         variant: Variant,
-        receptor_id: str,
+        release_id: str,
         text: str,
         realization: int | None = None,
     ) -> Location:
-        """Write the log of a receptor's transport model run."""
+        """Write the log of a release's transport model run."""
         logs = self._made("particles", "logs", variant, realization)
-        path = _receptor_file(logs, receptor_id, ".log")
+        path = _release_file(logs, release_id, ".log")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
         return path
@@ -1121,7 +1121,7 @@ class Output:
     def keep_workdir(
         self,
         variant: Variant,
-        receptor_id: str,
+        release_id: str,
         workdir: Path,
         realization: int | None = None,
     ) -> Location:
@@ -1132,7 +1132,7 @@ class Output:
         output can be read after the job ends.
         """
         scratch = self._made("particles", "scratch", variant, realization)
-        kept = scratch / _date_dir(receptor_id) / receptor_id
+        kept = scratch / _date_dir(release_id) / release_id
         if isinstance(kept, Path):
             shutil.rmtree(kept, ignore_errors=True)
             kept.parent.mkdir(parents=True, exist_ok=True)

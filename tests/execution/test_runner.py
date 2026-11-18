@@ -1,4 +1,4 @@
-"""Tests for stilt.execution.runner: shares of the receptors, the job array script, and submission."""
+"""Tests for stilt.execution.runner: shares of the releases, the job array script, and submission."""
 
 from __future__ import annotations
 
@@ -95,7 +95,7 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
     last = lines[-1]
     assert last.startswith("exec ")
     assert f"-m stilt run {project.directory} " in last
-    assert f"--receptors {folder / 'receptors.parquet'}" in last
+    assert f"--releases {folder / 'releases.parquet'}" in last
     assert '--task "$SLURM_ARRAY_TASK_ID/7"' in last
     assert f"--execution {folder / 'execution.yaml'}" in last
     # A task runs its share here, so the script tells it the array's cpus.
@@ -228,7 +228,7 @@ def test_job_script_is_valid_bash(tmp_path):
 
 @pytest.fixture
 def pending(monkeypatch):
-    """Set which receptors the runner finds incomplete."""
+    """Set which releases the runner finds incomplete."""
     ids: list[str] = []
     monkeypatch.setattr(runner, "pending", lambda project, **_: list(ids))
     return ids
@@ -263,7 +263,7 @@ def test_submit_writes_a_submission_and_hands_it_to_sbatch(pending, commands, tm
     import pandas as pd
 
     project = _hourly_project(tmp_path, 4)
-    ids = list(project.receptors["receptor"])
+    ids = list(project.releases["release"])
     pending.extend([ids[2], ids[0], ids[3]])  # the order a run gives
     execution = ExecutionConfig(
         backend="slurm",
@@ -279,10 +279,10 @@ def test_submit_writes_a_submission_and_hands_it_to_sbatch(pending, commands, tm
     assert (sbatch, parsable) == ("sbatch", "--parsable")
     folder = Path(script).parent
     assert folder.parent == project.directory / "_slurm"
-    assert (folder / "receptors.txt").read_text().split() == pending
+    assert (folder / "releases.txt").read_text().split() == pending
     # The tasks read the checked rows, in the order they split them (#191).
-    rows = pd.read_parquet(folder / "receptors.parquet")
-    assert rows["receptor"].tolist() == pending
+    rows = pd.read_parquet(folder / "releases.parquet")
+    assert rows["release"].tolist() == pending
     assert {"kind", "location", "altitude_ref"} <= set(rows.columns)
     stored = yaml.safe_load((folder / "execution.yaml").read_text())
     assert ExecutionConfig.model_validate(stored) == execution
@@ -291,9 +291,9 @@ def test_submit_writes_a_submission_and_hands_it_to_sbatch(pending, commands, tm
     assert "--no-skip" in text
 
 
-def test_submit_uses_no_more_tasks_than_receptors(pending, commands, tmp_path):
+def test_submit_uses_no_more_tasks_than_releases(pending, commands, tmp_path):
     project = _hourly_project(tmp_path, 1)
-    pending.extend(project.receptors["receptor"])
+    pending.extend(project.releases["release"])
     commands.answers["sbatch"] = [_out("5\n")]
     runner.submit(
         project,
@@ -317,7 +317,7 @@ def test_submit_with_nothing_to_do_submits_nothing(pending, commands, tmp_path):
 
 def test_submit_says_why_sbatch_refused(pending, commands, tmp_path):
     project = _hourly_project(tmp_path, 1)
-    pending.extend(project.receptors["receptor"])
+    pending.extend(project.releases["release"])
     commands.answers["sbatch"] = [_out(returncode=1, stderr="Invalid account")]
     with pytest.raises(RuntimeError, match="Invalid account"):
         runner.submit(
@@ -355,7 +355,7 @@ def test_a_job_on_another_cluster_is_followed_there(
     import pandas as pd
 
     project = _hourly_project(tmp_path, 2)
-    pending.extend(project.receptors["receptor"])
+    pending.extend(project.releases["release"])
     monkeypatch.setattr(
         runner, "_status", lambda project, ids: pd.DataFrame({"state": ["complete"]})
     )
@@ -383,7 +383,7 @@ def test_a_run_lists_once_more_when_the_files_look_late(
     import pandas as pd
 
     project = _hourly_project(tmp_path, 1)
-    pending.extend(project.receptors["receptor"])
+    pending.extend(project.releases["release"])
     listings = iter([["pending"], ["complete"]])
     monkeypatch.setattr(
         runner, "_status", lambda project, ids: pd.DataFrame({"state": next(listings)})
@@ -428,7 +428,7 @@ def test_a_task_told_to_stop_requeues_itself(tmp_path, monkeypatch, commands):
         finally:
             signal.raise_signal(signal.SIGUSR1)  # a second one only adds to the record
 
-    monkeypatch.setattr(worker, "run_receptors", told_twice)
+    monkeypatch.setattr(worker, "run_releases", told_twice)
     table = runner.run(project, task=(0, 1))
 
     assert commands.ran == [["scontrol", "requeue", "4321"]]
@@ -443,7 +443,7 @@ def test_a_task_requeues_itself_only_so_many_times(tmp_path, monkeypatch, comman
     monkeypatch.setenv("SLURM_JOB_ID", "4321")
     monkeypatch.setenv("SLURM_RESTART_COUNT", str(runner.MAX_REQUEUES))
     monkeypatch.setattr(
-        worker, "run_receptors", lambda *a, **k: signal.raise_signal(signal.SIGUSR1)
+        worker, "run_releases", lambda *a, **k: signal.raise_signal(signal.SIGUSR1)
     )
     runner.run(project, task=(0, 1))
     assert commands.ran == []
@@ -458,8 +458,8 @@ def test_a_preempted_task_requeues_itself_and_a_cancelled_one_does_not(
     project = _hourly_project(tmp_path, 1)
     monkeypatch.setenv("SLURM_JOB_ID", "4321")
     monkeypatch.delenv("SLURM_RESTART_COUNT", raising=False)
-    # run_receptors stops on SIGTERM and returns with the receptor unfinished.
-    monkeypatch.setattr(worker, "run_receptors", lambda *a, **k: None)
+    # run_releases stops on SIGTERM and returns with the release unfinished.
+    monkeypatch.setattr(worker, "run_releases", lambda *a, **k: None)
 
     commands.answers["scontrol"] = [
         _out("JobId=4321 PreemptTime=2026-10-06T12:00:00 Requeue=1")
@@ -485,7 +485,7 @@ def test_a_task_on_another_cluster_asks_and_requeues_there(
     monkeypatch.setenv("SLURM_JOB_ID", "4321")
     monkeypatch.setenv("SLURM_CLUSTER_NAME", "kingspeak")
     monkeypatch.delenv("SLURM_RESTART_COUNT", raising=False)
-    monkeypatch.setattr(worker, "run_receptors", lambda *a, **k: None)
+    monkeypatch.setattr(worker, "run_releases", lambda *a, **k: None)
     commands.answers["scontrol"] = [
         _out("JobId=4321 PreemptTime=2026-10-06T12:00:00 Requeue=1")
     ]
@@ -505,7 +505,7 @@ def test_a_task_that_finished_is_not_requeued(tmp_path, monkeypatch, commands):
 
     monkeypatch.setenv("SLURM_JOB_ID", "4321")
     monkeypatch.setattr(
-        worker, "run_receptors", lambda *a, **k: signal.raise_signal(signal.SIGUSR1)
+        worker, "run_releases", lambda *a, **k: signal.raise_signal(signal.SIGUSR1)
     )
     monkeypatch.setattr(
         runner, "_status", lambda project, ids: pd.DataFrame({"state": ["complete"]})
@@ -522,7 +522,7 @@ def test_an_interrupt_that_is_not_the_notice_is_not_swallowed(
     def interrupted(*args, **kwargs):
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(worker, "run_receptors", interrupted)
+    monkeypatch.setattr(worker, "run_releases", interrupted)
     with pytest.raises(KeyboardInterrupt):
         runner.run(_hourly_project(tmp_path, 1), task=(0, 1))
     assert commands.ran == []
@@ -579,17 +579,17 @@ def test_project_slug_names_the_slurm_job(directory, expected):
 
 
 # ---------------------------------------------------------------------------
-# A share of the receptors: --receptors and --task
+# A share of the releases: --releases and --task
 # ---------------------------------------------------------------------------
 
 
 def _hourly_project(tmp_path, n: int) -> Project:
     import datetime as dt
 
-    from stilt.receptors import PointReceptor
+    from stilt.releases import PointReceptor
 
     config = make_project_config(tmp_path)
-    receptors = [
+    releases = [
         PointReceptor(
             time=dt.datetime(2023, 1, 1, h),
             longitude=-111.85,
@@ -598,10 +598,10 @@ def _hourly_project(tmp_path, n: int) -> Project:
         )
         for h in range(n)
     ]
-    return Project.init(tmp_path / "hourly", config=config, receptors=receptors)
+    return Project.init(tmp_path / "hourly", config=config, releases=releases)
 
 
-def test_task_share_is_every_nth_receptor():
+def test_task_share_is_every_nth_release():
     ids = list("abcdefg")
     assert [task_share(ids, i, 3) for i in range(3)] == [
         ["a", "d", "g"],
@@ -614,20 +614,20 @@ def test_task_share_is_every_nth_receptor():
             task_share(ids, task, n)
 
 
-def test_tasks_split_the_receptors_the_same_way_whenever_each_starts(
+def test_tasks_split_the_releases_the_same_way_whenever_each_starts(
     tmp_path, monkeypatch
 ):
     """
-    A share is taken before the complete receptors are dropped.
+    A share is taken before the complete releases are dropped.
 
     Taken after, a task that starts late would shift onto another task's
-    receptors.
+    releases.
     """
     project = _hourly_project(tmp_path, 7)
-    every = list(dict.fromkeys(project.simulations["receptor"]))
+    every = list(dict.fromkeys(project.simulations["release"]))
     done: set[str] = set()
     monkeypatch.setattr(
-        Project, "incomplete", lambda self, sel=None: sel[~sel["receptor"].isin(done)]
+        Project, "incomplete", lambda self, sel=None: sel[~sel["release"].isin(done)]
     )
 
     first = runner.pending(project, task=(0, 3))
@@ -639,24 +639,24 @@ def test_tasks_split_the_receptors_the_same_way_whenever_each_starts(
     assert later == [[r for r in shares[i] if r not in done] for i in (1, 2)]
 
 
-def test_a_receptor_list_limits_the_run_and_keeps_its_order(tmp_path, monkeypatch):
+def test_a_release_list_limits_the_run_and_keeps_its_order(tmp_path, monkeypatch):
     project = _hourly_project(tmp_path, 4)
-    every = list(dict.fromkeys(project.simulations["receptor"]))
+    every = list(dict.fromkeys(project.simulations["release"]))
     monkeypatch.setattr(
-        Project, "incomplete", lambda self, sel=None: sel[sel["receptor"] != every[3]]
+        Project, "incomplete", lambda self, sel=None: sel[sel["release"] != every[3]]
     )
     listed = [every[3], every[1], every[1], every[0]]
-    assert runner.pending(project, receptors=listed) == [every[1], every[0]]
-    assert runner.pending(project, receptors=listed, skip_existing=False) == [
+    assert runner.pending(project, releases=listed) == [every[1], every[0]]
+    assert runner.pending(project, releases=listed, skip_existing=False) == [
         every[3],
         every[1],
         every[0],
     ]
     assert runner.pending(
-        project, receptors=listed, task=(1, 2), skip_existing=False
+        project, releases=listed, task=(1, 2), skip_existing=False
     ) == [every[1]]
     with pytest.raises(ValueError, match="not in this project"):
-        runner.pending(project, receptors=["nope", every[0]])
+        runner.pending(project, releases=["nope", every[0]])
 
 
 def test_a_task_runs_here_whatever_the_backend(tmp_path, monkeypatch, commands):
@@ -665,10 +665,10 @@ def test_a_task_runs_here_whatever_the_backend(tmp_path, monkeypatch, commands):
     monkeypatch.delenv("SLURM_JOB_ID", raising=False)
 
     project = _hourly_project(tmp_path, 4)
-    every = list(dict.fromkeys(project.simulations["receptor"]))
+    every = list(dict.fromkeys(project.simulations["release"]))
     ran: list[list[str]] = []
     monkeypatch.setattr(
-        worker, "run_receptors", lambda project, ids, **kw: ran.append(ids)
+        worker, "run_releases", lambda project, ids, **kw: ran.append(ids)
     )
 
     table = runner.run(
@@ -679,12 +679,12 @@ def test_a_task_runs_here_whatever_the_backend(tmp_path, monkeypatch, commands):
 
     assert commands.ran == []  # no sbatch
     assert ran == [[every[1], every[3]]]
-    assert list(table["receptor"]) == [every[1], every[3]]
+    assert list(table["release"]) == [every[1], every[3]]
     assert set(table["state"]) == {"pending"}  # nothing was written
 
 
 # ---------------------------------------------------------------------------
-# The fetch before the receptors run (#436)
+# The fetch before the releases run (#436)
 # ---------------------------------------------------------------------------
 
 
@@ -692,14 +692,14 @@ def _downloading_project(tmp_path, n: int) -> Project:
     """A project like :func:`_hourly_project` whose met downloads HRRR."""
     import datetime as dt
 
-    from stilt.receptors import PointReceptor
+    from stilt.releases import PointReceptor
     from stilt.transport.hysplit import MetConfig
 
     config = make_project_config(
         tmp_path,
         mets={"hrrr": MetConfig(directory=tmp_path / "met", download="hrrr")},
     )
-    receptors = [
+    releases = [
         PointReceptor(
             time=dt.datetime(2023, 1, 1, h),
             longitude=-111.85,
@@ -708,7 +708,7 @@ def _downloading_project(tmp_path, n: int) -> Project:
         )
         for h in range(n)
     ]
-    return Project.init(tmp_path / "hourly", config=config, receptors=receptors)
+    return Project.init(tmp_path / "hourly", config=config, releases=releases)
 
 
 @pytest.mark.parametrize("value", [True, None, {}])
@@ -738,7 +738,7 @@ def test_submit_sends_a_fetch_job_first_and_the_array_waits_for_it(
     pending, commands, tmp_path
 ):
     project = _downloading_project(tmp_path, 3)
-    pending.extend(project.receptors["receptor"])
+    pending.extend(project.releases["release"])
     execution = ExecutionConfig.model_validate(
         {
             "backend": "slurm",
@@ -782,7 +782,7 @@ def test_submit_sends_a_fetch_job_first_and_the_array_waits_for_it(
     exec_, _python, *command = text.splitlines()[-1].split()
     assert exec_ == "exec"
     assert command[:4] == ["-m", "stilt", "fetch", str(project.directory)]
-    assert command[4:6] == ["--receptors", str(folder / "receptors.parquet")]
+    assert command[4:6] == ["--releases", str(folder / "releases.parquet")]
     assert command[6:8] == ["--output", str(project.output.directory)]
     assert "--no-skip" not in command
     subprocess.run(["bash", "-n", str(folder / "fetch.sh")], check=True)
@@ -792,7 +792,7 @@ def test_the_array_goes_to_the_cluster_its_fetch_job_went_to(
     pending, commands, tmp_path
 ):
     project = _downloading_project(tmp_path, 1)
-    pending.extend(project.receptors["receptor"])
+    pending.extend(project.releases["release"])
     execution = ExecutionConfig(
         backend="slurm", slurm={"time": "01:00:00", "clusters": "kingspeak,notchpeak"}
     )
@@ -807,7 +807,7 @@ def test_the_array_goes_to_the_cluster_its_fetch_job_went_to(
 
 def test_a_met_without_download_gets_no_fetch_job(pending, commands, tmp_path):
     project = _hourly_project(tmp_path, 2)
-    pending.extend(project.receptors["receptor"])
+    pending.extend(project.releases["release"])
     commands.answers["sbatch"] = [_out("42\n")]
 
     runner.submit(
@@ -821,7 +821,7 @@ def test_a_met_without_download_gets_no_fetch_job(pending, commands, tmp_path):
 
 def test_fetch_false_sends_no_fetch_job(pending, commands, tmp_path):
     project = _downloading_project(tmp_path, 2)
-    pending.extend(project.receptors["receptor"])
+    pending.extend(project.releases["release"])
     commands.answers["sbatch"] = [_out("42\n")]
 
     runner.submit(
@@ -842,11 +842,11 @@ def test_no_fetch_job_when_the_particles_are_there(
     import pandas as pd
 
     project = _downloading_project(tmp_path, 2)
-    pending.extend(project.receptors["receptor"])
+    pending.extend(project.releases["release"])
     monkeypatch.setattr(
         Project,
         "_unrun",
-        lambda self, sel=None, **_: pd.DataFrame(columns=["receptor"]),
+        lambda self, sel=None, **_: pd.DataFrame(columns=["release"]),
     )
     commands.answers["sbatch"] = [_out("42\n")]
 
@@ -873,7 +873,7 @@ def test_a_local_run_on_several_cpus_fetches_before_the_workers_start(
 
     monkeypatch.setattr(runner, "fetch_project", fetch)
     monkeypatch.setattr(
-        worker, "run_receptors", lambda project, ids, **_: steps.append("run")
+        worker, "run_releases", lambda project, ids, **_: steps.append("run")
     )
     monkeypatch.setattr(
         runner, "_status", lambda project, ids: pd.DataFrame({"state": ["pending"]})
@@ -903,7 +903,7 @@ def test_a_local_fetch_that_cannot_reach_the_archive_lets_the_run_go(
 
     monkeypatch.setattr(runner, "fetch_project", fetch)
     monkeypatch.setattr(
-        worker, "run_receptors", lambda project, ids, **_: ran.append("run")
+        worker, "run_releases", lambda project, ids, **_: ran.append("run")
     )
     monkeypatch.setattr(
         runner, "_status", lambda project, ids: pd.DataFrame({"state": ["pending"]})
@@ -921,7 +921,7 @@ def test_the_fetch_job_takes_the_arrays_resources_and_none_of_its_other_options(
 ):
     """With no ``fetch`` settings, the fetch job runs with the array's resources."""
     project = _downloading_project(tmp_path, 1)
-    pending.extend(project.receptors["receptor"])
+    pending.extend(project.releases["release"])
     execution = ExecutionConfig(
         backend="slurm",
         slurm={
@@ -950,13 +950,13 @@ def test_a_no_skip_submission_fetches_for_every_run_it_makes_again(
     import pandas as pd
 
     project = _downloading_project(tmp_path, 2)
-    pending.extend(project.receptors["receptor"])
+    pending.extend(project.releases["release"])
     # Every particles file exists: only a rerun needs the met.
     real_unrun = Project._unrun
 
     def unrun(self, sel=None, *, skip_existing=True):
         if skip_existing:
-            return pd.DataFrame(columns=["receptor"])
+            return pd.DataFrame(columns=["release"])
         return real_unrun(self, sel, skip_existing=False)
 
     monkeypatch.setattr(Project, "_unrun", unrun)
@@ -975,7 +975,7 @@ def test_a_no_skip_submission_fetches_for_every_run_it_makes_again(
 
 def test_a_refused_array_cancels_its_fetch_job(pending, commands, tmp_path):
     project = _downloading_project(tmp_path, 1)
-    pending.extend(project.receptors["receptor"])
+    pending.extend(project.releases["release"])
     execution = ExecutionConfig(
         backend="slurm", slurm={"time": "01:00:00", "clusters": "kingspeak,notchpeak"}
     )
@@ -1001,7 +1001,7 @@ def test_a_local_fetch_raises_an_error_a_retry_would_repeat(tmp_path, monkeypatc
 
     monkeypatch.setattr(runner, "fetch_project", fetch)
     monkeypatch.setattr(
-        worker, "run_receptors", lambda project, ids, **_: ran.append("run")
+        worker, "run_releases", lambda project, ids, **_: ran.append("run")
     )
 
     with pytest.raises(PermissionError):
@@ -1029,7 +1029,7 @@ def test_a_local_fetch_lets_the_run_go_after_a_dropped_ftp_connection(
 
     monkeypatch.setattr(runner, "fetch_project", fetch)
     monkeypatch.setattr(
-        worker, "run_receptors", lambda project, ids, **_: ran.append("run")
+        worker, "run_releases", lambda project, ids, **_: ran.append("run")
     )
     monkeypatch.setattr(
         runner, "_status", lambda project, ids: pd.DataFrame({"state": ["pending"]})

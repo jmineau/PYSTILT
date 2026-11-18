@@ -23,7 +23,7 @@ from stilt.execution.runner import resolve_compute_root
 from stilt.footprint.targets import Mesh
 from stilt.identity import transport_from_settings
 from stilt.particles import particles_metadata
-from stilt.receptors import MultiPointReceptor
+from stilt.releases import MultiPointReceptor
 from stilt.stilt_project import STILT_R_HYSPLIT
 from stilt.transport.hysplit import FailureReason
 from stilt.transport.hysplit.driver import winderrtf
@@ -40,13 +40,13 @@ _XYERR = {"siguverr": 2.0, "tluverr": 60.0, "zcoruverr": 500.0, "horcoruverr": 4
 # ---------------------------------------------------------------------------
 
 
-def _sim_id(receptor, variant: str = "hrrr") -> tuple[str, str]:
-    return (receptor.id, variant)
+def _sim_id(release, variant: str = "hrrr") -> tuple[str, str]:
+    return (release.id, variant)
 
 
 def _incomplete(project: Project) -> list[tuple[str, str]]:
     rows = project.incomplete()
-    return list(zip(rows["receptor"], rows["variant"], strict=True))
+    return list(zip(rows["release"], rows["variant"], strict=True))
 
 
 def _with(
@@ -71,22 +71,22 @@ def _with(
 
 
 # ---------------------------------------------------------------------------
-# Point receptor - trajectory only
+# Point release - trajectory only
 # ---------------------------------------------------------------------------
 
 
 @integration
-def test_particles(tmp_path, wbb_receptor, traj_only_config):
+def test_particles(tmp_path, wbb_release, traj_only_config):
     """HYSPLIT runs and produces a non-empty trajectory parquet."""
     model = Project.init(
         tmp_path / "trajectory",
         config=traj_only_config,
-        receptors=[wbb_receptor],
+        releases=[wbb_release],
     )
     model.run()
 
-    sid = _sim_id(wbb_receptor)
-    assert list(model.simulations["receptor"]) == [sid[0]]
+    sid = _sim_id(wbb_release)
+    assert list(model.simulations["release"]) == [sid[0]]
     sim = model.simulation(*sid)
     assert sim.has_particles
     assert sim.particles_path is not None
@@ -104,18 +104,18 @@ def test_particles(tmp_path, wbb_receptor, traj_only_config):
 
 
 @integration
-def test_the_functions_make_what_a_project_stores(tmp_path, wbb_receptor, wbb_config):
+def test_the_functions_make_what_a_project_stores(tmp_path, wbb_release, wbb_config):
     """run_trajectories and calc_footprint give a seeded project run's particles and footprint."""
     import stilt
 
     config = _with(wbb_config, hysplit={"krand": 2, "seed": 7})
-    project = Project.init(tmp_path / "p", config=config, receptors=[wbb_receptor])
+    project = Project.init(tmp_path / "p", config=config, releases=[wbb_release])
     project.run()
-    sim = project.simulation(*_sim_id(wbb_receptor))
+    sim = project.simulation(*_sim_id(wbb_release))
 
     # Project.init wrote STILT-R's HYSPLIT values; run_trajectories takes HYSPLIT's own.
     settings = {**STILT_R_HYSPLIT, "n_hours": -6, "numpar": 100, "krand": 2, "seed": 7}
-    particles = stilt.run_trajectories(wbb_receptor, config.mets["hrrr"], **settings)
+    particles = stilt.run_trajectories(wbb_release, config.mets["hrrr"], **settings)
     stored = sim.particles
     columns = [c for c in particles.columns if c in stored.columns]
     pd.testing.assert_frame_equal(
@@ -124,27 +124,27 @@ def test_the_functions_make_what_a_project_stores(tmp_path, wbb_receptor, wbb_co
         check_dtype=False,
     )
     grid = project.variants["hrrr"].stages.get("footprint").grid
-    foot = stilt.calc_footprint(particles, wbb_receptor, grid)
+    foot = stilt.calc_footprint(particles, wbb_release, grid)
     assert sim.footprint is not None
     np.testing.assert_allclose(foot.values, sim.footprint.values, rtol=1e-6)
 
 
 # ---------------------------------------------------------------------------
-# Point receptor - trajectory + footprint
+# Point release - trajectory + footprint
 # ---------------------------------------------------------------------------
 
 
 @integration
-def test_footprint(tmp_path, wbb_receptor, wbb_config):
+def test_footprint(tmp_path, wbb_release, wbb_config):
     """Full run produces a readable footprint NetCDF with (time, lat, lon) dims."""
     model = Project.init(
         tmp_path / "footprint",
         config=wbb_config,
-        receptors=[wbb_receptor],
+        releases=[wbb_release],
     )
     model.run()
 
-    sim = model.simulation(*_sim_id(wbb_receptor))
+    sim = model.simulation(*_sim_id(wbb_release))
     assert sim.footprint_path is not None and sim.footprint_path.exists()
     assert sim.has_footprint
     assert sim.footprint is not None
@@ -153,7 +153,7 @@ def test_footprint(tmp_path, wbb_receptor, wbb_config):
 
 
 @integration
-def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
+def test_empty_footprint(tmp_path, wbb_release, wbb_config):
     """A grid the particles never reach leaves a marker with the reason, no NetCDF."""
     far_grid = {
         "xmin": -100.0,
@@ -166,18 +166,18 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
     model = Project.init(
         tmp_path / "empty",
         config=_with(wbb_config, footprint={"grid": far_grid}),
-        receptors=[wbb_receptor],
+        releases=[wbb_release],
     )
     model.run()
 
-    sim = model.simulation(*_sim_id(wbb_receptor))
+    sim = model.simulation(*_sim_id(wbb_release))
     assert sim.is_complete
     assert sim.has_particles
     assert sim.has_footprint
     assert sim.footprint is None
     ds = model.footprints()
-    assert ds.sizes["receptor"] == 0
-    assert ds.attrs["empty"] == [wbb_receptor.id]
+    assert ds.sizes["release"] == 0
+    assert ds.attrs["empty"] == [wbb_release.id]
     # An empty footprint is complete.
     assert model.status()["state"].tolist() == ["complete"]
 
@@ -193,9 +193,9 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
 
 
 @integration
-def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config, met_dir):
+def test_failure_missing_met(tmp_path, wbb_release, traj_only_config, met_dir):
     """A simulation whose met files are missing fails alone, naming the hours."""
-    # The met holds a summer file only, so the winter receptor's hours have none.
+    # The met holds a summer file only, so the winter release's hours have none.
     summer_only = tmp_path / "summer_only"
     summer_only.mkdir()
     summer = next(met_dir.glob("20210715_00-05*"))
@@ -212,12 +212,12 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config, met_dir):
     model = Project.init(
         tmp_path / "fail_missing_met",
         config=bad_config,
-        receptors=[wbb_receptor],
+        releases=[wbb_release],
     )
     # run() must not raise: a per-simulation failure is captured, not fatal.
     model.run()
 
-    sim = model.simulation(*_sim_id(wbb_receptor))
+    sim = model.simulation(*_sim_id(wbb_release))
     # The particles are absent (incomplete), and the worker recorded why.
     assert not sim.has_particles
     assert sim.failure is not None
@@ -233,34 +233,32 @@ def test_particles_that_leave_the_met_domain_complete_the_run(
     tmp_path, traj_only_config
 ):
     """A January night at WBB empties the test met's 4 by 3 degree crop in about 11 hours (#189)."""
-    from stilt.receptors import PointReceptor
+    from stilt.releases import PointReceptor
 
     # The last particle left after 10 to 12 hours in 24 runs. From the
-    # reference receptor, 30 km south-west, one of the 100 particles stayed
+    # reference release, 30 km south-west, one of the 100 particles stayed
     # all 24 hours in about a third of runs.
-    receptor = PointReceptor(
+    release = PointReceptor(
         time="2021-01-15 06:00", longitude=-111.848, latitude=40.766, altitude=10
     )
     config = _with(traj_only_config, hysplit={"n_hours": -24})
-    project = Project.init(
-        tmp_path / "domain_exit", config=config, receptors=[receptor]
-    )
+    project = Project.init(tmp_path / "domain_exit", config=config, releases=[release])
     project.run()
 
-    sim = project.simulation(*_sim_id(receptor))
+    sim = project.simulation(*_sim_id(release))
     assert sim.is_complete
     assert sim.failure is None
     hours = sim.particles["age"].abs().max() / 60
     assert hours < 24  # every particle left the met's domain first
 
 
-def _project_on_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir):
+def _project_on_met_cut_short(tmp_path, wbb_release, traj_only_config, met_dir):
     """A 12 h project whose 18-23 Z met file on the 14th holds only its first hour."""
     cut_met = tmp_path / "met"
     cut_met.mkdir()
     for path in met_dir.iterdir():
         (cut_met / path.name).symlink_to(path)
-    # 18-23 Z on the 14th is 12 to 7 h before the receptor. Its six hourly
+    # 18-23 Z on the 14th is 12 to 7 h before the release. Its six hourly
     # periods are the same size, so the first sixth is the 18 Z period alone.
     damaged = next(cut_met.glob("20210114_18-23*"))
     data = damaged.read_bytes()
@@ -278,7 +276,7 @@ def _project_on_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir)
         },
     )
     return Project.init(
-        tmp_path / "met_cut_short", config=config, receptors=[wbb_receptor]
+        tmp_path / "met_cut_short", config=config, releases=[wbb_release]
     )
 
 
@@ -293,14 +291,14 @@ def _skip_the_met_checks(monkeypatch, tmp_path) -> None:
 
 
 @integration
-def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir):
+def test_failure_met_cut_short(tmp_path, wbb_release, traj_only_config, met_dir):
     """A met file cut after its first hour fails the run before HYSPLIT starts, naming the gap (#169, #189)."""
     project = _project_on_met_cut_short(
-        tmp_path, wbb_receptor, traj_only_config, met_dir
+        tmp_path, wbb_release, traj_only_config, met_dir
     )
     project.run()
 
-    sim = project.simulation(*_sim_id(wbb_receptor))
+    sim = project.simulation(*_sim_id(wbb_release))
     assert not sim.has_particles
     assert sim.failure is not None and sim.failure["reason"] == "MET_COVERAGE"
     assert "for 2021-01-14 18:00 to 2021-01-15 00:00" in sim.failure["message"]
@@ -308,7 +306,7 @@ def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir
 
 @integration
 def test_hysplit_fails_a_run_whose_met_runs_out(
-    tmp_path, wbb_receptor, traj_only_config, met_dir, monkeypatch
+    tmp_path, wbb_release, traj_only_config, met_dir, monkeypatch
 ):
     """
     Without the checks before the run, HYSPLIT's own warning fails it (#189).
@@ -317,11 +315,11 @@ def test_hysplit_fails_a_run_whose_met_runs_out(
     fixed. Seeds 1 to 9 warn here; seed 10 does not (the test below).
     """
     config = _with(traj_only_config, hysplit={"krand": 2, "seed": 7})
-    project = _project_on_met_cut_short(tmp_path, wbb_receptor, config, met_dir)
+    project = _project_on_met_cut_short(tmp_path, wbb_release, config, met_dir)
     _skip_the_met_checks(monkeypatch, tmp_path)
     project.run()
 
-    sim = project.simulation(*_sim_id(wbb_receptor))
+    sim = project.simulation(*_sim_id(wbb_release))
     assert not sim.has_particles
     assert sim.failure is not None and sim.failure["reason"] == "MET_COVERAGE"
     assert "no more meteorology" in sim.failure["message"]
@@ -331,7 +329,7 @@ def test_hysplit_fails_a_run_whose_met_runs_out(
 
 @integration
 def test_a_run_the_met_stopped_without_a_warning_fails_by_where_its_particles_ended(
-    tmp_path, wbb_receptor, traj_only_config, met_dir, monkeypatch
+    tmp_path, wbb_release, traj_only_config, met_dir, monkeypatch
 ):
     """
     HYSPLIT may stop every particle where the met runs out and still say it completed (#213).
@@ -341,11 +339,11 @@ def test_a_run_the_met_stopped_without_a_warning_fails_by_where_its_particles_en
     edge as particles that leave it do.
     """
     config = _with(traj_only_config, hysplit={"krand": 2, "seed": 10})
-    project = _project_on_met_cut_short(tmp_path, wbb_receptor, config, met_dir)
+    project = _project_on_met_cut_short(tmp_path, wbb_release, config, met_dir)
     _skip_the_met_checks(monkeypatch, tmp_path)
     project.run()
 
-    sim = project.simulation(*_sim_id(wbb_receptor))
+    sim = project.simulation(*_sim_id(wbb_release))
     assert not sim.has_particles
     assert sim.failure is not None and sim.failure["reason"] == "MET_COVERAGE"
     # Where the cut file starts.
@@ -362,16 +360,16 @@ def test_a_run_the_met_stopped_without_a_warning_fails_by_where_its_particles_en
 
 
 @integration
-def test_idempotency(tmp_path, wbb_receptor, traj_only_config):
+def test_idempotency(tmp_path, wbb_release, traj_only_config):
     """Second run with skip_existing=True does not overwrite existing output."""
     model = Project.init(
         tmp_path / "idempotency",
         config=traj_only_config,
-        receptors=[wbb_receptor],
+        releases=[wbb_release],
     )
 
     model.run()
-    sim = model.simulation(*_sim_id(wbb_receptor))
+    sim = model.simulation(*_sim_id(wbb_release))
     assert sim.has_particles
     mtime_before = sim.particles_path.stat().st_mtime
 
@@ -382,24 +380,24 @@ def test_idempotency(tmp_path, wbb_receptor, traj_only_config):
 
 
 # ---------------------------------------------------------------------------
-# Column and multipoint receptors
+# Column and multipoint releases
 # ---------------------------------------------------------------------------
 
 
 @integration
-def test_column(tmp_path, wbb_column_receptor, wbb_config):
-    """Column receptor produces trajectory and footprint; its id spells out the column."""
+def test_column(tmp_path, wbb_column_release, wbb_config):
+    """Column release produces trajectory and footprint; its id spells out the column."""
     model = Project.init(
         tmp_path / "column",
         config=wbb_config,
-        receptors=[wbb_column_receptor],
+        releases=[wbb_column_release],
     )
     model.run()
 
-    sid = _sim_id(wbb_column_receptor)
-    r = wbb_column_receptor
+    sid = _sim_id(wbb_column_release)
+    r = wbb_column_release
     assert sid[0].endswith(f"_X{r.bottom:g}-{r.top:g}"), (
-        f"Expected a column receptor id, got {sid}"
+        f"Expected a column release id, got {sid}"
     )
 
     sim = model.simulation(*sid)
@@ -408,17 +406,17 @@ def test_column(tmp_path, wbb_column_receptor, wbb_config):
 
 
 @integration
-def test_multipoint(tmp_path, wbb_multipoint_receptor, multipoint_config):
-    """Multipoint receptor (3 locations) produces trajectory and footprint."""
+def test_multipoint(tmp_path, wbb_multipoint_release, multipoint_config):
+    """Multipoint release (3 locations) produces trajectory and footprint."""
     model = Project.init(
         tmp_path / "multipoint",
         config=multipoint_config,
-        receptors=[wbb_multipoint_receptor],
+        releases=[wbb_multipoint_release],
     )
     model.run()
 
-    sid = _sim_id(wbb_multipoint_receptor)
-    assert "multi_" in sid[0], f"Expected a multipoint receptor id, got {sid}"
+    sid = _sim_id(wbb_multipoint_release)
+    assert "multi_" in sid[0], f"Expected a multipoint release id, got {sid}"
 
     sim = model.simulation(*sid)
     assert sim.has_particles
@@ -439,16 +437,16 @@ def test_every_multipoint_location_gets_the_same_particles(tmp_path, met_dir):
     """With maxpar unset, 1000 particles over 40 locations give each 26; none is cut."""
     import stilt
 
-    receptor = _forty_points()
+    release = _forty_points()
     particles = stilt.run_trajectories(
-        receptor, reference_met(met_dir), workdir=tmp_path, n_hours=-1,
+        release, reference_met(met_dir), workdir=tmp_path, n_hours=-1,
         numpar=1000, krand=2, seed=42,
     )  # fmt: skip
 
     # A particle's first row is a minute after release, much nearer its own
     # location than the next one (2.5 km away).
     first = particles.loc[particles.groupby("particle")["age"].idxmax()]
-    lons, lats = np.array(receptor.longitudes), np.array(receptor.latitudes)
+    lons, lats = np.array(release.longitudes), np.array(release.latitudes)
     nearest = np.argmin(
         (first["lon"].to_numpy()[:, None] - lons) ** 2
         + (first["lat"].to_numpy()[:, None] - lats) ** 2,
@@ -479,18 +477,18 @@ def test_a_maxpar_that_cuts_a_multipoint_release_short_fails(tmp_path, met_dir):
 
 @integration
 def test_footprint_only_variant_rasterizes_the_same_particles(
-    tmp_path, wbb_receptor, multifoot_config
+    tmp_path, wbb_release, multifoot_config
 ):
     """A variant that changes only the grid shares hrrr's particles and runs no HYSPLIT."""
     model = Project.init(
         tmp_path / "multifoot",
         config=multifoot_config,
-        receptors=[wbb_receptor],
+        releases=[wbb_release],
     )
     model.run()
 
-    fine = model.simulation(*_sim_id(wbb_receptor))
-    coarse = model.simulation(*_sim_id(wbb_receptor, "coarse"))
+    fine = model.simulation(*_sim_id(wbb_release))
+    coarse = model.simulation(*_sim_id(wbb_release, "coarse"))
 
     assert fine.has_footprint and coarse.has_footprint
     assert coarse.particles_path == fine.particles_path  # one set of particles
@@ -505,13 +503,13 @@ def test_footprint_only_variant_rasterizes_the_same_particles(
 
 @integration
 def test_adding_a_footprint_only_variant_runs_no_hysplit(
-    tmp_path, wbb_receptor, wbb_config, wbb_grid
+    tmp_path, wbb_release, wbb_config, wbb_grid
 ):
     """A finished project grows a footprint-only variant; the particles are reused."""
     project = tmp_path / "grow"
-    first = Project.init(project, config=wbb_config, receptors=[wbb_receptor])
+    first = Project.init(project, config=wbb_config, releases=[wbb_release])
     first.run()
-    base = first.simulation(*_sim_id(wbb_receptor))
+    base = first.simulation(*_sim_id(wbb_release))
     traj_mtime = base.particles_path.stat().st_mtime
     log_before = base.log_path.read_text()
 
@@ -519,7 +517,7 @@ def test_adding_a_footprint_only_variant_runs_no_hysplit(
     s2 = {"stages": {"footprint": {"smooth_factor": 2}}}
     _with(wbb_config, variants={"hrrr": {}, "s2": s2}).to_yaml(project / "config.yaml")
     grown = Project(project)
-    assert _incomplete(grown) == [_sim_id(wbb_receptor, "s2")]
+    assert _incomplete(grown) == [_sim_id(wbb_release, "s2")]
     grown.run()
 
     assert base.particles_path.stat().st_mtime == traj_mtime
@@ -529,18 +527,18 @@ def test_adding_a_footprint_only_variant_runs_no_hysplit(
 
 @integration
 def test_pbl_height_is_the_footprints_and_shares_the_run(
-    tmp_path, wbb_receptor, wbb_config
+    tmp_path, wbb_release, wbb_config
 ):
     """Variants that differ only in how PYSTILT computes foot share one HYSPLIT run."""
     richardson = {
         "stages": {"footprint": {"pbl_height": "richardson", "pbl_height_min": 150}}
     }
     config = _with(wbb_config, variants={"hrrr": {}, "rich": richardson})
-    project = Project.init(tmp_path / "pbl", config=config, receptors=[wbb_receptor])
+    project = Project.init(tmp_path / "pbl", config=config, releases=[wbb_release])
     project.run()
 
-    own = project.simulation(*_sim_id(wbb_receptor))
-    computed = project.simulation(*_sim_id(wbb_receptor, "rich"))
+    own = project.simulation(*_sim_id(wbb_release))
+    computed = project.simulation(*_sim_id(wbb_release, "rich"))
     assert project.incomplete().empty
     assert computed.particles_path == own.particles_path
     assert len(project.output.hashes("footprint")) == 2
@@ -563,7 +561,7 @@ def test_pbl_height_is_the_footprints_and_shares_the_run(
 
 
 @integration
-def test_cli_run(tmp_path, wbb_config, wbb_receptor):
+def test_cli_run(tmp_path, wbb_config, wbb_release):
     """CLI `stilt run` produces trajectory and footprint artifacts."""
     from typer.testing import CliRunner
 
@@ -574,7 +572,7 @@ def test_cli_run(tmp_path, wbb_config, wbb_receptor):
 
     wbb_config.to_yaml(project_dir / "config.yaml")
 
-    (project_dir / "receptors.csv").write_text(
+    (project_dir / "releases.csv").write_text(
         "time,lati,long,zagl\n2021-01-15 06:00:00,40.5,-112.0,5.0\n"
     )
 
@@ -585,15 +583,15 @@ def test_cli_run(tmp_path, wbb_config, wbb_receptor):
     )
     assert "complete=1" in result.output
 
-    sim = Project(project_dir).simulation(*_sim_id(wbb_receptor))
+    sim = Project(project_dir).simulation(*_sim_id(wbb_release))
     assert sim.has_particles, "CLI run: no particles"
     assert sim.has_footprint, "CLI run: no footprint"
     assert (project_dir / "output" / "particles").is_dir()
 
 
 @integration
-def test_cli_tasks_split_the_receptors(tmp_path, traj_only_config):
-    """Two `stilt run --task` shares run every receptor once; a rerun has nothing to do."""
+def test_cli_tasks_split_the_releases(tmp_path, traj_only_config):
+    """Two `stilt run --task` shares run every release once; a rerun has nothing to do."""
     from typer.testing import CliRunner
 
     from stilt.cli import app
@@ -601,19 +599,19 @@ def test_cli_tasks_split_the_receptors(tmp_path, traj_only_config):
     project_dir = tmp_path / "tasks"
     project_dir.mkdir()
     traj_only_config.to_yaml(project_dir / "config.yaml")
-    (project_dir / "receptors.csv").write_text(
+    (project_dir / "releases.csv").write_text(
         "time,lati,long,zagl\n"
         "2021-01-15 06:00:00,40.5,-112.0,5.0\n"
         "2021-01-15 06:00:00,40.6,-111.9,5.0\n"
         "2021-01-15 06:00:00,40.7,-111.8,5.0\n"
     )
     project = Project(project_dir)
-    every = list(dict.fromkeys(project.simulations["receptor"]))
+    every = list(dict.fromkeys(project.simulations["release"]))
 
     first = CliRunner().invoke(app, ["run", str(project_dir), "--task", "0/2"])
     assert first.exit_code == 0, first.output
     status = project.status()
-    assert set(status.loc[status.state == "complete", "receptor"]) == {
+    assert set(status.loc[status.state == "complete", "release"]) == {
         every[0],
         every[2],
     }
@@ -633,18 +631,18 @@ def test_cli_tasks_split_the_receptors(tmp_path, traj_only_config):
 
 
 @integration
-def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
+def test_error_variant(tmp_path, wbb_release, traj_only_config):
     """A variant with WINDERR fields is its own HYSPLIT run with perturbed winds."""
     config = _with(
         traj_only_config,
         execution={"keep_workdir": True},
         variants={"hrrr": {}, "hrrr-err": _XYERR},
     )
-    model = Project.init(tmp_path / "error", config=config, receptors=[wbb_receptor])
+    model = Project.init(tmp_path / "error", config=config, releases=[wbb_release])
     model.run()
 
-    main = model.simulation(*_sim_id(wbb_receptor))
-    err = model.simulation(*_sim_id(wbb_receptor, "hrrr-err"))
+    main = model.simulation(*_sim_id(wbb_release))
+    err = model.simulation(*_sim_id(wbb_release, "hrrr-err"))
     err_scratch = err.kept_workdir
     main_scratch = main.kept_workdir
 
@@ -666,7 +664,7 @@ def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
 
 
 @integration
-def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
+def test_error_realizations(tmp_path, wbb_release, traj_only_config):
     """Two realizations run, differ from each other, and resume one at a time."""
     config = _with(
         traj_only_config,
@@ -674,7 +672,7 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
         variants={"hrrr": {}, "err": {**_XYERR, "realizations": 2}},
     )
     model = Project.init(
-        tmp_path / "realizations", config=config, receptors=[wbb_receptor]
+        tmp_path / "realizations", config=config, releases=[wbb_release]
     )
     model.run()
 
@@ -690,9 +688,9 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
 
     # Resume: drop one realization; only it reruns.
-    main = model.simulation(*_sim_id(wbb_receptor))
-    err0 = model.simulation(*_sim_id(wbb_receptor, "err"), 0)
-    err1 = model.simulation(*_sim_id(wbb_receptor, "err"), 1)
+    main = model.simulation(*_sim_id(wbb_release))
+    err0 = model.simulation(*_sim_id(wbb_release, "err"), 0)
+    err1 = model.simulation(*_sim_id(wbb_release, "err"), 1)
     main_bytes = main.particles_path.read_bytes()
     err0_bytes = err0.particles_path.read_bytes()
     err1.particles_path.unlink()
@@ -707,7 +705,7 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
 
 @integration
 def test_seeded_error_realizations_differ_and_reproduce(
-    tmp_path, wbb_receptor, traj_only_config
+    tmp_path, wbb_release, traj_only_config
 ):
     """krand=2 with a seed: realizations differ and a rerun is bit-identical."""
     config = _with(
@@ -717,7 +715,7 @@ def test_seeded_error_realizations_differ_and_reproduce(
     )
 
     def run(project):
-        model = Project.init(project, config=config, receptors=[wbb_receptor])
+        model = Project.init(project, config=config, releases=[wbb_release])
         model.run()
         assert model.incomplete().empty
         return model
@@ -729,15 +727,15 @@ def test_seeded_error_realizations_differ_and_reproduce(
     s0 = e0.groupby("particle")["foot"].sum()
     s1 = e1.groupby("particle")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
-    main = a.simulation(*_sim_id(wbb_receptor)).particles
+    main = a.simulation(*_sim_id(wbb_release)).particles
     s_main = main.groupby("particle")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s_main.to_numpy(), s0.to_numpy())
 
     b = run(tmp_path / "b")
     for variant, k in (("hrrr", None), ("err", 0), ("err", 1)):
         pd.testing.assert_frame_equal(
-            a.simulation(*_sim_id(wbb_receptor, variant), k).particles,
-            b.simulation(*_sim_id(wbb_receptor, variant), k).particles,
+            a.simulation(*_sim_id(wbb_release, variant), k).particles,
+            b.simulation(*_sim_id(wbb_release, variant), k).particles,
         )
 
 
@@ -747,7 +745,7 @@ def test_seeded_error_realizations_differ_and_reproduce(
 
 
 @integration
-def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
+def test_geometry_footprint(tmp_path, wbb_release, met_dir):
     """A footprint named by geometry derives its raster, runs, and aggregates."""
     from ..fixtures.r_stilt_reference import (
         REFERENCE_KRAND,
@@ -779,10 +777,10 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
     assert fc.grid.xres == fc.grid.yres == 0.05  # 0.5 / 10
     assert variant.stages["footprint"].geometry_hash
 
-    model = Project.init(tmp_path / "geom", config=config, receptors=[wbb_receptor])
+    model = Project.init(tmp_path / "geom", config=config, releases=[wbb_release])
     model.run()
 
-    sim = model.simulation(*_sim_id(wbb_receptor))
+    sim = model.simulation(*_sim_id(wbb_release))
     assert sim.has_footprint
     foot = sim.footprint
     assert foot is not None
@@ -792,7 +790,7 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
 
     assert fc.geometry is not None
     mesh = Mesh.from_spec(fc.geometry)
-    r_time = pd.Timestamp(wbb_receptor.time)
+    r_time = pd.Timestamp(wbb_release.time)
     bins = pd.interval_range(
         start=r_time - pd.Timedelta(hours=6), end=r_time, freq="1h", closed="left"
     )
@@ -802,7 +800,7 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
         warnings.simplefilter("error", UserWarning)
         agg = foot.stilt.aggregate(mesh, bins)
     assert agg.index.tolist() == ["wbb", "nw"]
-    assert agg.loc["wbb"].sum() > 0  # the receptor sits inside its own window
+    assert agg.loc["wbb"].sum() > 0  # the release sits inside its own window
     assert agg.to_numpy().sum() <= float(foot.sum()) + 1e-12
 
 
@@ -814,7 +812,7 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
 @integration
 def test_forward_run(tmp_path, met_dir, wbb_grid):
     """A forward simulation runs end to end and carries a forward time axis."""
-    from stilt.receptors import PointReceptor
+    from stilt.releases import PointReceptor
 
     from ..fixtures.r_stilt_reference import (
         REFERENCE_ALTITUDE,
@@ -826,7 +824,7 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     )
 
     # The 2021-07-15 06:00-11:59 block holds the whole +3 h window.
-    receptor = PointReceptor(
+    release = PointReceptor(
         time=REFERENCE_SUMMER_TIME,
         longitude=REFERENCE_LONGITUDE,
         latitude=REFERENCE_LATITUDE,
@@ -845,10 +843,10 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
         )
     )
 
-    model = Project.init(tmp_path / "forward", config=config, receptors=[receptor])
+    model = Project.init(tmp_path / "forward", config=config, releases=[release])
     model.run()
 
-    sim = model.simulation(*_sim_id(receptor))
+    sim = model.simulation(*_sim_id(release))
     assert sim.has_particles, f"no trajectory for {sim.id}"
     assert sim.particles is not None
 
@@ -860,7 +858,7 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     # Stored uncorrected: the footprint applies the near-field correction.
     assert "foot_no_hnf_dilution" not in particles.columns
 
-    start, stop = receptor.time, receptor.time + pd.Timedelta(hours=3)
+    start, stop = release.time, release.time + pd.Timedelta(hours=3)
 
     assert sim.has_footprint, f"no footprint for {sim.id}"
     foot = sim.footprint

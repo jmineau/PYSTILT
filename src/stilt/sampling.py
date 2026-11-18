@@ -290,7 +290,7 @@ def sample_met(
     particles : pandas.DataFrame
         A particle table with ``lon``, ``lat``, ``zagl``, and ``time``.
         ``sim.particles`` has ``time``. For a table a transport model
-        returned, add it: the receptor time plus ``age`` minutes.
+        returned, add it: the release time plus ``age`` minutes.
     files : iterable of path-like
         ARL met files that cover the particles' times, such as the files the
         run read (``met_files`` of :class:`stilt.transport.ModelRun` or of
@@ -347,7 +347,7 @@ def sample_met(
         )
     if "time" not in particles.columns:
         raise ValueError(
-            "sample_met needs a 'time' column: the receptor time plus 'age' minutes."
+            "sample_met needs a 'time' column: the release time plus 'age' minutes."
         )
     variables = list(dict.fromkeys(v for c in columns for v in _MET_VARIABLES[c]))
 
@@ -498,7 +498,7 @@ def calc_pbl_height(
 
     if "time" not in particles.columns:
         raise ValueError(
-            "calc_pbl_height needs a 'time' column: the receptor time plus 'age' minutes."
+            "calc_pbl_height needs a 'time' column: the release time plus 'age' minutes."
         )
     handles = [arlmet.File(path) for path in files]
     try:

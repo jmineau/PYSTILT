@@ -187,8 +187,8 @@ def _sorted_trajectory(df: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFra
 
 
 def _trajectory_compare_columns(scenario: ReferenceScenario) -> tuple[str, ...]:
-    if scenario.receptor_type == "multipoint" and scenario.hnf_plume:
-        # STILT-R has no direct PYSTILT-style multipoint receptor; when given
+    if scenario.release_type == "multipoint" and scenario.hnf_plume:
+        # STILT-R has no direct PYSTILT-style multipoint release; when given
         # multiple heights in one run, calc_trajectory treats them as a
         # column/line and assigns xhgt across the particle index range.  The
         # raw HYSPLIT trajectory and uncorrected foot still match exactly, but
@@ -196,7 +196,7 @@ def _trajectory_compare_columns(scenario: ReferenceScenario) -> tuple[str, ...]:
         # particles to their actual multipoint release altitudes.
         return tuple(c for c in scenario.compare_columns if c != "foot")
     if scenario.altitude_ref == "msl" and scenario.hnf_plume:
-        # STILT-R starts the near-field plume at the receptor's height as
+        # STILT-R starts the near-field plume at the release's height as
         # given, here above sea level, so over WBB's 1330 m of terrain its
         # correction never applies. PYSTILT starts it at the ground (#287),
         # so its corrected foot intentionally differs; the uncorrected
@@ -312,12 +312,12 @@ def test_msl_hnf_foot_intentionally_differs_from_r(
     r_stilt_dir: Path,
 ) -> None:
     """
-    For a receptor above sea level, PYSTILT's HNF-corrected foot must NOT match STILT-R's.
+    For a release above sea level, PYSTILT's HNF-corrected foot must NOT match STILT-R's.
 
-    STILT-R grows the plume from the receptor height as given, 1335 m above
+    STILT-R grows the plume from the release height as given, 1335 m above
     sea level, which is above the mixing height, so it corrects nothing.
     PYSTILT grows it from the height above ground (#287), so its foot near
-    the receptor is larger. Guarding the difference keeps someone from
+    the release is larger. Guarding the difference keeps someone from
     "restoring parity" by reintroducing the bug.
     """
     s: ReferenceScenario = scenario_outputs["scenario"]
@@ -338,7 +338,7 @@ def test_msl_hnf_foot_intentionally_differs_from_r(
     )
     first_hour = (py["age"].abs() <= 60).to_numpy()
     assert py["foot"][first_hour].sum() > r["foot"][first_hour].sum(), (
-        f"[{s.name}] PYSTILT's near-field correction of an MSL receptor no "
+        f"[{s.name}] PYSTILT's near-field correction of an MSL release no "
         "longer raises the first hour's foot above STILT-R's."
     )
 
@@ -373,7 +373,7 @@ def test_projected_smoothing_intentionally_differs_from_r(
     particles = stilt.read_particles(scenario_outputs["traj"])
     py_foot = stilt.calc_footprint(
         particles,
-        s.make_receptor(),
+        s.make_release(),
         s.make_grid(),
         smooth_factor=1.0,
         tres=s.make_footprint_config().tres,

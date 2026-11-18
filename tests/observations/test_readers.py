@@ -18,7 +18,7 @@ from stilt.observations import (
     read_proffast,
     read_tccon,
     read_tropomi_ch4,
-    receptors_from_soundings,
+    releases_from_soundings,
     slant_points,
 )
 from stilt.transforms import averaging_kernel_table
@@ -124,9 +124,9 @@ def test_tropomi_box_filter(tropomi):
     assert len(empty) == 0 and "value" in empty.columns
 
 
-def test_tropomi_recipe_to_receptors_and_kernels(tropomi):
+def test_tropomi_recipe_to_releases_and_kernels(tropomi):
     df = tropomi[tropomi.good].head(3)
-    receptors = [
+    releases = [
         stilt.Receptor.from_points(
             r.time,
             slant_points(
@@ -142,38 +142,38 @@ def test_tropomi_recipe_to_receptors_and_kernels(tropomi):
     ]
     assert all(
         rc.altitudes[0] == pytest.approx(a, abs=1.0)
-        for rc, a in zip(receptors, df.surface_altitude, strict=True)
+        for rc, a in zip(releases, df.surface_altitude, strict=True)
     )
-    table = averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak)
-    assert set(table.columns) >= {"receptor", "level", "value"}
+    table = averaging_kernel_table(releases, levels=df.ak_pressure, values=df.ak)
+    assert set(table.columns) >= {"release", "level", "value"}
     assert len(table) == 3 * 12
 
-    # receptors_from_soundings is that recipe.
-    made, kernels = receptors_from_soundings(df, "slant", top=3000)
-    assert [r.altitudes for r in made] == [r.altitudes for r in receptors]
+    # releases_from_soundings is that recipe.
+    made, kernels = releases_from_soundings(df, "slant", top=3000)
+    assert [r.altitudes for r in made] == [r.altitudes for r in releases]
     assert [r.attrs["sounding_id"] for r in made] == list(df.sounding_id)
     pd.testing.assert_frame_equal(
-        kernels.drop(columns="receptor"), table.drop(columns="receptor")
+        kernels.drop(columns="release"), table.drop(columns="release")
     )
-    assert list(dict.fromkeys(kernels.receptor)) == [str(r.id) for r in made]
+    assert list(dict.fromkeys(kernels.release)) == [str(r.id) for r in made]
 
 
-def test_column_receptors_from_soundings(tropomi):
+def test_column_releases_from_soundings(tropomi):
     df = tropomi[tropomi.good].head(2)
-    receptors, kernels = receptors_from_soundings(df, "column", top=2500)
-    assert [type(r).__name__ for r in receptors] == ["ColumnReceptor"] * 2
-    assert [(r.bottom, r.top) for r in receptors] == [(0.0, 2500.0)] * 2
-    assert kernels is not None and kernels.receptor.nunique() == 2
+    releases, kernels = releases_from_soundings(df, "column", top=2500)
+    assert [type(r).__name__ for r in releases] == ["ColumnReceptor"] * 2
+    assert [(r.bottom, r.top) for r in releases] == [(0.0, 2500.0)] * 2
+    assert kernels is not None and kernels.release.nunique() == 2
     with pytest.raises(ValueError, match="'column' or 'slant'"):
-        receptors_from_soundings(df, "nadir", top=2500)  # type: ignore[arg-type]
+        releases_from_soundings(df, "nadir", top=2500)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="zenith"):
-        receptors_from_soundings(df.drop(columns="zenith"), "slant", top=2500)
+        releases_from_soundings(df.drop(columns="zenith"), "slant", top=2500)
 
 
-def test_receptors_from_soundings_without_kernels():
+def test_releases_from_soundings_without_kernels():
     df = read_ggg_oof(OOF, "xch4").head(2)
-    receptors, kernels = receptors_from_soundings(df, "column", top=1000)
-    assert len(receptors) == 2 and kernels is None
+    releases, kernels = releases_from_soundings(df, "column", top=1000)
+    assert len(releases) == 2 and kernels is None
 
 
 # -- TROPOMI blended -----------------------------------------------------------
@@ -295,12 +295,12 @@ def test_oco2_recipe_with_pressure_altitudes():
         top=r.surface_altitude + 3000.0,
     )
     assert alts[0] == pytest.approx(r.surface_altitude)
-    receptor = stilt.Receptor.from_points(
+    release = stilt.Receptor.from_points(
         r.time,
         slant_points(r.longitude, r.latitude, alts, zenith=r.zenith, azimuth=r.azimuth),
         altitude_ref="msl",
     )
-    assert receptor.altitudes[0] == pytest.approx(r.surface_altitude)
+    assert release.altitudes[0] == pytest.approx(r.surface_altitude)
 
 
 # -- GGG2020: EM27/SUN .oof and private netCDF ---------------------------------
@@ -352,7 +352,7 @@ def test_ggg_oof_errors():
 
 
 def test_ggg_oof_slant_recipe_windows():
-    """The EM27 recipe: one receptor per averaging window from the solar angles."""
+    """The EM27 recipe: one release per averaging window from the solar angles."""
     df = read_ggg_oof(OOF, "xch4")
     windows = (
         df[df.good]
@@ -369,10 +369,10 @@ def test_ggg_oof_slant_recipe_windows():
     points = slant_points(
         w.longitude, w.latitude, alts, zenith=w.zenith, azimuth=w.azimuth
     )
-    receptor = stilt.Receptor.from_points(windows.index[0], points, altitude_ref="msl")
-    assert len(receptor.coords()) == 20
+    release = stilt.Receptor.from_points(windows.index[0], points, altitude_ref="msl")
+    assert len(release.coords()) == 20
     # morning at ~15 UT in Salt Lake City: the sun is east, so the path leans east
-    assert receptor.longitudes[-1] > receptor.longitudes[0]
+    assert release.longitudes[-1] > release.longitudes[0]
 
 
 def test_ggg_private_netcdf_expands_kernels_and_shares_priors():
@@ -471,15 +471,15 @@ def test_coccon_geoms_other_species_and_errors():
         read_coccon(COCCON, "xn2o")
 
 
-def test_coccon_geoms_to_slant_receptors():
+def test_coccon_geoms_to_slant_releases():
     df = read_coccon(COCCON, "xch4")
     df = df[np.isfinite(df.value)]
     # the synthetic levels are 3 km apart, so go high enough for a line
-    receptors, kernels = receptors_from_soundings(df, "slant", top=8000)
-    assert len(receptors) == 4 and kernels is not None
-    assert all(len(r.altitudes) > 1 for r in receptors)
-    assert all(r.altitudes[0] == pytest.approx(1450.0) for r in receptors)
-    assert kernels.receptor.nunique() == 4
+    releases, kernels = releases_from_soundings(df, "slant", top=8000)
+    assert len(releases) == 4 and kernels is not None
+    assert all(len(r.altitudes) > 1 for r in releases)
+    assert all(r.altitudes[0] == pytest.approx(1450.0) for r in releases)
+    assert kernels.release.nunique() == 4
 
 
 # -- PROFFASTpylot results (synthetic layout) ----------------------------------
@@ -532,9 +532,9 @@ def test_proffast_species_units_and_errors():
         read_proffast(PROFFAST, "xch4", raw_dir=PROFFAST_RUN)
 
 
-def test_proffast_to_slant_receptors():
+def test_proffast_to_slant_releases():
     df = read_proffast(PROFFAST, "xco2")
     df = df[df.good]
-    receptors, kernels = receptors_from_soundings(df, "slant", top=8000)
-    assert len(receptors) == 4 and kernels is not None
-    assert all(r.altitudes[0] == pytest.approx(1450.0) for r in receptors)
+    releases, kernels = releases_from_soundings(df, "slant", top=8000)
+    assert len(releases) == 4 and kernels is not None
+    assert all(r.altitudes[0] == pytest.approx(1450.0) for r in releases)

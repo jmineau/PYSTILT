@@ -32,10 +32,8 @@ def _footprint(tres: str) -> xr.DataArray:
         )
         for k in range(1, 11)
     )
-    receptor = stilt.PointReceptor(
-        time=T0, longitude=-112.0, latitude=40.5, altitude=10
-    )
-    return stilt.calc_footprint(particles, receptor, GRID, tres=tres)
+    release = stilt.PointReceptor(time=T0, longitude=-112.0, latitude=40.5, altitude=10)
+    return stilt.calc_footprint(particles, release, GRID, tres=tres)
 
 
 def _flux(starts: pd.DatetimeIndex) -> xr.DataArray:
@@ -122,7 +120,7 @@ def test_aggregate_takes_bins_as_long_as_the_layers():
 def test_jacobian_refuses_time_bins_shorter_than_the_layers():
     empty = pa.table(
         {
-            "receptor": pa.array([], pa.string()),
+            "release": pa.array([], pa.string()),
             "hour": pa.array([], pa.int32()),
             "y": pa.array([], pa.int32()),
             "x": pa.array([], pa.int32()),

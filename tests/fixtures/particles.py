@@ -6,21 +6,21 @@ import numpy as np
 import pandas as pd
 
 from stilt.particles import add_release_heights
-from stilt.receptors import PointReceptor, Receptor
+from stilt.releases import PointReceptor, Receptor
 
 
-def finished(particles: pd.DataFrame, receptor: Receptor) -> pd.DataFrame:
+def finished(particles: pd.DataFrame, release: Receptor) -> pd.DataFrame:
     """
     Return raw particles with the release heights PYSTILT adds after any model run.
 
     The near-field correction is not applied: the footprint applies it, as
     :func:`stilt.calc_footprint` does.
     """
-    return add_release_heights(particles, receptor)
+    return add_release_heights(particles, release)
 
 
 def point_at(altitude: float) -> PointReceptor:
-    """Return a point receptor at *altitude* m above ground, for the near-field correction."""
+    """Return a point release at *altitude* m above ground, for the near-field correction."""
     return PointReceptor(
         time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=altitude
     )
@@ -31,10 +31,10 @@ def random_walk(
     n_steps: int = 48 * 6,
     step_minutes: int = 10,
     seed: int = 0,
-    receptor_time: str = "2024-01-15 18:00",
+    release_time: str = "2024-01-15 18:00",
 ) -> pd.DataFrame:
     """
-    Return a backward particle table: a seeded random walk from a receptor at -111.85, 40.77.
+    Return a backward particle table: a seeded random walk from a release at -111.85, 40.77.
 
     Particle ``k`` stops after ``n_steps - k`` steps, so the trajectories
     have different lengths, as particles that leave the meteorology domain
@@ -63,7 +63,7 @@ def random_walk(
             )
         )
     table = pd.concat(rows, ignore_index=True)
-    table["time"] = pd.Timestamp(receptor_time) + pd.to_timedelta(
+    table["time"] = pd.Timestamp(release_time) + pd.to_timedelta(
         table["age"], unit="min"
     )
     return table

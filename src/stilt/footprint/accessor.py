@@ -15,7 +15,7 @@ import xarray as xr
 
 from stilt._paths import atomic_path
 from stilt.footprint.config import FootprintConfig, read_footprint_settings
-from stilt.receptors import Receptor
+from stilt.releases import Receptor
 from stilt.spatial import Grid, horizontal_dims
 
 from ._paris import to_paris
@@ -81,7 +81,7 @@ class FootprintAccessor:
     A footprint is an :class:`xarray.DataArray`, so sums, selections, and
     plots are plain xarray (``foot.sum("time")``,
     ``foot.sel(time=slice(a, b))``). The accessor adds what needs the
-    receptor or the footprint settings, which ride in the array's
+    release or the footprint settings, which ride in the array's
     attributes. Recent xarray keeps attributes through arithmetic. Older
     versions drop them (``foot * 2``), so with those, call these methods
     on the footprint as read, or use ``xr.set_options(keep_attrs=True)``.
@@ -89,7 +89,7 @@ class FootprintAccessor:
     Examples
     --------
     >>> foot = sim.footprint  # doctest: +SKIP
-    >>> foot.stilt.receptor  # doctest: +SKIP
+    >>> foot.stilt.release  # doctest: +SKIP
     >>> foot.stilt.enhancement(flux).sum()  # doctest: +SKIP
     >>> foot.stilt.aggregate(counties, time_bins=bins)  # doctest: +SKIP
     >>> foot.stilt.to_paris(sim.particles)  # doctest: +SKIP
@@ -112,9 +112,9 @@ class FootprintAccessor:
     # xarray keeps one accessor per array, so each attribute is parsed once.
 
     @cached_property
-    def receptor(self) -> Receptor:
-        """The receptor the footprint belongs to."""
-        return Receptor.from_json(self._attr("stilt_receptor"))
+    def release(self) -> Receptor:
+        """The release the footprint belongs to."""
+        return Receptor.from_json(self._attr("stilt_release"))
 
     @cached_property
     def config(self) -> FootprintConfig:
@@ -152,7 +152,7 @@ class FootprintAccessor:
         """
         Write the footprint to a CF-1.8 NetCDF file.
 
-        :func:`stilt.read_footprint` reads it back with its receptor and
+        :func:`stilt.read_footprint` reads it back with its release and
         settings.
 
         Parameters
@@ -183,11 +183,11 @@ class FootprintAccessor:
         Return the footprint as a PARIS-format dataset, which openghg reads.
 
         The footprint's hourly layers go to ``srr_time_resolved`` by hours
-        back from the receptor time, ``H_back``. The layer from one hour
-        before the receptor time to the receptor time is ``H_back = 1``,
+        back from the release time, ``H_back``. The layer from one hour
+        before the release time to the release time is ``H_back = 1``,
         because openghg pairs ``H_back = k`` with the flux hour that starts
         ``k`` hours before the footprint's time. ``H_back = 0``, the hour
-        after the receptor time, stays zero. Only ``H_back`` 0 to 23 are
+        after the release time, stays zero. Only ``H_back`` 0 to 23 are
         resolved, since openghg reads the axis as a time span and a 24th
         hour would wrap to 0. Layers 24 or more hours back are summed into
         ``srr_residual``, and ``srr`` is the sum of all layers. The values
@@ -202,7 +202,7 @@ class FootprintAccessor:
         refuses the file unless it is told not to expect them.
 
         The layers are found from each layer's ``time`` coordinate, not from
-        the name of the layer dimension, so one receptor of
+        the name of the layer dimension, so one release of
         ``project.footprints().foot`` works as well as ``sim.footprint``.
 
         Parameters
@@ -217,21 +217,21 @@ class FootprintAccessor:
         Returns
         -------
         xarray.Dataset
-            Dimensions ``time`` (one entry, the receptor time), ``latitude``,
+            Dimensions ``time`` (one entry, the release time), ``latitude``,
             ``longitude``, ``resolution`` (``H_back``, 0 to 23 hours) and,
             with exits, ``height``. A PARIS file holds one site with one
-            entry along ``time`` per receptor: concatenate the datasets of
-            many receptors along ``time`` with :func:`xarray.concat` before
+            entry along ``time`` per release: concatenate the datasets of
+            many releases along ``time`` with :func:`xarray.concat` before
             writing them with :meth:`xarray.Dataset.to_netcdf`.
 
         Raises
         ------
         ValueError
             If the footprint's layers are not one hour long (make it with
-            ``tres: 1h``), if a layer ends after the receptor time (a
+            ``tres: 1h``), if a layer ends after the release time (a
             forward run), if the grid is not in longitude and latitude (a
-            projected grid), if the footprint holds several receptors or has
-            no receptor id.
+            projected grid), if the footprint holds several releases or has
+            no release id.
 
         Examples
         --------
@@ -240,13 +240,13 @@ class FootprintAccessor:
         >>> import numpy as np
         >>> import pandas as pd
         >>> import xarray as xr
-        >>> receptor_time = pd.Timestamp("2024-01-15 18:00")
-        >>> layers = receptor_time - pd.to_timedelta([3, 2, 1], unit="h")
+        >>> release_time = pd.Timestamp("2024-01-15 18:00")
+        >>> layers = release_time - pd.to_timedelta([3, 2, 1], unit="h")
         >>> foot = xr.DataArray(
         ...     np.ones((3, 2, 2)),
         ...     dims=("time", "lat", "lon"),
         ...     coords={"time": layers, "lat": [40.5, 41.5], "lon": [-112.5, -111.5]},
-        ... ).assign_coords(receptor="202401151800_-111.85_40.77_5")
+        ... ).assign_coords(release="202401151800_-111.85_40.77_5")
         >>> ds = foot.stilt.to_paris()
         >>> ds.srr_time_resolved.sum(["latitude", "longitude"]).values.ravel()[:5]
         array([0., 4., 4., 4., 0.])
@@ -257,7 +257,7 @@ class FootprintAccessor:
 
     def enhancement(self, flux: xr.DataArray) -> xr.DataArray:
         """
-        Return the modeled enhancement at the receptor, footprint times flux summed over the grid.
+        Return the modeled enhancement at the release, footprint times flux summed over the grid.
 
         The flux is taken at each footprint cell center from the nearest
         flux cell (:func:`stilt.sampling.sample_field`). That is right for
@@ -303,7 +303,7 @@ class FootprintAccessor:
             takes the flux of the one step where it starts, so the steps
             must be as long as the footprint's layers (``tres``) or longer:
             a flux with a shorter step is an error. A flux with one time
-            (a static flux) is not checked. Layers start at the receptor's
+            (a static flux) is not checked. Layers start at the release's
             time, so a layer that crosses a step boundary still takes the
             step where it starts.
 
@@ -397,7 +397,7 @@ class FootprintAccessor:
             (``closed="left"``): each bin holds the footprint layers that
             start in it. A layer goes whole into the bin where it starts, so
             the bins must be as long as the footprint's layers (``tres``) or
-            longer. Layers start at the receptor's time, so one that crosses
+            longer. Layers start at the release's time, so one that crosses
             a bin edge still goes into the bin where it starts.
 
         Returns

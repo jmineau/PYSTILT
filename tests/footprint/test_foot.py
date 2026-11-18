@@ -6,11 +6,11 @@ import pytest
 
 from stilt.footprint import foot as foot_module
 from stilt.footprint.foot import add_foot, correct_near_field
-from stilt.receptors import ColumnReceptor, PointReceptor
+from stilt.releases import ColumnReceptor, PointReceptor
 
 from ..fixtures.particles import point_at
 
-#: A receptor that gives no release height of its own: a column.
+#: A release that gives no release height of its own: a column.
 _NO_POINT = ColumnReceptor(
     time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, bottom=0, top=1000
 )
@@ -78,8 +78,8 @@ def test_correct_near_field_grows_outward_from_release_when_forward():
     assert fwd_out["foot"].iloc[0] > fwd_out["foot"].iloc[1]
 
 
-def test_correct_near_field_starts_an_msl_receptor_at_the_ground():
-    """An MSL receptor's plume starts at its height above ground, not above sea level (#287)."""
+def test_correct_near_field_starts_an_msl_release_at_the_ground():
+    """An MSL release's plume starts at its height above ground, not above sea level (#287)."""
     p = _particles_basic().drop(columns=["zagl"]).assign(zsfc=1300.0)
     agl = PointReceptor(
         time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5.0
@@ -99,7 +99,7 @@ def test_correct_near_field_starts_an_msl_receptor_at_the_ground():
     assert from_msl["foot"].to_numpy() == pytest.approx(from_agl["foot"].to_numpy())
 
 
-def test_correct_near_field_puts_an_msl_receptor_below_the_terrain_at_the_ground():
+def test_correct_near_field_puts_an_msl_release_below_the_terrain_at_the_ground():
     p = _particles_basic().drop(columns=["zagl"]).assign(zsfc=1300.0)
     below = PointReceptor(
         time="2023-01-01 12:00",
@@ -112,7 +112,7 @@ def test_correct_near_field_puts_an_msl_receptor_below_the_terrain_at_the_ground
     assert np.isfinite(foot).all() and (foot > 0).all()
 
 
-def test_correct_near_field_needs_zsfc_for_an_msl_receptor():
+def test_correct_near_field_needs_zsfc_for_an_msl_release():
     p = _particles_basic().drop(columns=["zagl"]).assign(release_height=1305.0)
     msl = ColumnReceptor(
         time="2023-01-01 12:00",
@@ -127,7 +127,7 @@ def test_correct_near_field_needs_zsfc_for_an_msl_receptor():
 
 
 def test_correct_near_field_raises_without_a_release_height():
-    """A receptor other than a point, and no release_height column, raises ValueError."""
+    """A release other than a point, and no release_height column, raises ValueError."""
     p = _particles_basic()
 
     with pytest.raises(ValueError, match="release height"):

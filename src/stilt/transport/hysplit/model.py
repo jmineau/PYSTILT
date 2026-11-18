@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from arlmet import Grid
 
-    from stilt.receptors import Receptor
+    from stilt.releases import Receptor
 
 
 #: What ``hycs_std`` prints on its first lines: ``HYSPLIT version: hysplit.v5.1.0``.
@@ -117,7 +117,7 @@ class HysplitModel:
     """
     HYSPLIT as a transport model, the object ``get_model("hysplit")`` returns.
 
-    :meth:`run` picks the met files a receptor needs, writes HYSPLIT's input
+    :meth:`run` picks the met files a release needs, writes HYSPLIT's input
     files (:func:`~stilt.transport.hysplit.write_inputs`), runs ``hycs_std``,
     and reads the particles it writes
     (:func:`~stilt.transport.hysplit.read_particle_dat`). HYSPLIT reads the
@@ -131,7 +131,7 @@ class HysplitModel:
     met_config_class = MetConfig
     #: HYSPLIT writes its inputs and outputs as files in a directory.
     needs_workdir = True
-    #: One hycs_std process per receptor.
+    #: One hycs_std process per release.
     batched = False
 
     def sha256(self, config: HysplitConfig) -> str:
@@ -174,13 +174,13 @@ class HysplitModel:
         }
 
     def check_met(
-        self, met: MetConfig, receptors: pd.DataFrame, n_hours: int
+        self, met: MetConfig, releases: pd.DataFrame, n_hours: int
     ) -> pd.DataFrame:
         """
-        Return what would stop HYSPLIT from running *receptors* with *met*, found before any run.
+        Return what would stop HYSPLIT from running *releases* with *met*, found before any run.
 
-        The checks of :meth:`Met.check_receptors`: the met's directory
-        holds ARL files, every file a run needs is there, and the receptors
+        The checks of :meth:`Met.check_releases`: the met's directory
+        holds ARL files, every file a run needs is there, and the releases
         are inside the crop. Nothing is run or downloaded, and files are read
         no further than their headers.
 
@@ -188,8 +188,8 @@ class HysplitModel:
         ----------
         met : MetConfig
             The met, with an absolute directory in a project.
-        receptors : pandas.DataFrame
-            One row per release point, with ``receptor``, ``time``,
+        releases : pandas.DataFrame
+            One row per release point, with ``release``, ``time``,
             ``longitude``, and ``latitude`` columns.
         n_hours : int
             The length of the runs, which sets the files each needs.
@@ -197,10 +197,10 @@ class HysplitModel:
         Returns
         -------
         pandas.DataFrame
-            ``check``, ``receptor`` (``NA`` for a problem of the met
+            ``check``, ``release`` (``NA`` for a problem of the met
             itself), and ``message`` columns, one row for each problem.
         """
-        return Met("met", met).check_receptors(receptors, n_hours)
+        return Met("met", met).check_releases(releases, n_hours)
 
     def fetch_met(
         self, met: MetConfig, windows: Iterable[tuple[dt.datetime, dt.datetime]]
@@ -241,7 +241,7 @@ class HysplitModel:
 
     def run(
         self,
-        receptor: Receptor,
+        release: Receptor,
         config: HysplitConfig,
         met: MetConfig,
         window: tuple[dt.datetime, dt.datetime],
@@ -249,7 +249,7 @@ class HysplitModel:
         timeout: int | None = None,
     ) -> ModelRun:
         """
-        Run HYSPLIT for one receptor in *workdir* and return its particles.
+        Run HYSPLIT for one release in *workdir* and return its particles.
 
         It finds the met files that cover *window*, up to the met step at
         or after its end, which HYSPLIT interpolates, cropped when the met
@@ -283,15 +283,15 @@ class HysplitModel:
         """
         if workdir is None:
             with tempfile.TemporaryDirectory(prefix="stilt-") as tmp:
-                return self.run(receptor, config, met, window, Path(tmp), timeout)
+                return self.run(release, config, met, window, Path(tmp), timeout)
         files = Met("met", met)
         source = files.files_for(window)
         readable = files.readable(source)
         files.check(readable, window)
-        _write_inputs(workdir, receptor, config, readable)
+        _write_inputs(workdir, release, config, readable)
         try:
             run_hycs_std(workdir, timeout)
-            check_release(workdir, receptor.coords(), config)
+            check_release(workdir, release.coords(), config)
             path = workdir / PARTICLE_STILT_FILE
             if not path.exists():
                 raise SimulationError(
@@ -310,23 +310,23 @@ class HysplitModel:
 
 
 def _write_inputs(
-    workdir: Path, receptor: Receptor, config: HysplitConfig, met_files: list[Path]
+    workdir: Path, release: Receptor, config: HysplitConfig, met_files: list[Path]
 ) -> None:
     """
-    Write HYSPLIT's input files for *receptor* into *workdir*.
+    Write HYSPLIT's input files for *release* into *workdir*.
 
-    The one place a receptor becomes what HYSPLIT's ``CONTROL`` holds: its
+    The one place a release becomes what HYSPLIT's ``CONTROL`` holds: its
     time is the release time, its release points are the release
     locations, and its ``altitude_ref`` is ``KMSL`` (0 above ground, 1
     above sea level).
     """
     write_inputs(
         workdir,
-        release_time=receptor.time,
-        locations=receptor.coords(),
+        release_time=release.time,
+        locations=release.coords(),
         config=config,
         met_files=met_files,
-        kmsl=1 if receptor.altitude_ref == "msl" else 0,
+        kmsl=1 if release.altitude_ref == "msl" else 0,
     )
 
 

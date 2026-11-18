@@ -4,7 +4,7 @@ What STILT computes from a particle table before gridding it: ``foot`` and the n
 :func:`add_foot` gives each particle its sensitivity to surface fluxes
 (``foot``) for a transport model that writes only positions, or with
 another mixed-layer height (``pbl_height``). :func:`correct_near_field`
-corrects ``foot`` for the thin plume close to the receptor, as STILT-R's
+corrects ``foot`` for the thin plume close to the release, as STILT-R's
 ``calc_plume_dilution`` does. The footprint stage applies both
 (:func:`stilt.footprint.footprint_particles`); a particle file holds what
 the model wrote.
@@ -20,7 +20,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from stilt.receptors import PointReceptor, Receptor
+from stilt.releases import PointReceptor, Receptor
 from stilt.sampling import calc_pbl_height, sample_met
 
 logger = logging.getLogger(__name__)
@@ -106,7 +106,7 @@ def add_foot(
     Parameters
     ----------
     particles : pandas.DataFrame
-        Particle table with ``time``, the receptor time plus ``age``
+        Particle table with ``time``, the release time plus ``age``
         minutes. A ``mlht`` column (m above ground) is used as it is
         unless *pbl_height* is set.
     met_files : iterable of path-like
@@ -220,7 +220,7 @@ def _step_minutes(particles: pd.DataFrame) -> np.ndarray:
 
 
 def correct_near_field(
-    particles: pd.DataFrame, receptor: Receptor, footprint_depth: float
+    particles: pd.DataFrame, release: Receptor, footprint_depth: float
 ) -> pd.DataFrame:
     """
     Correct ``foot`` for plume dilution in the hyper-near field, as STILT-R's ``calc_plume_dilution`` does.
@@ -228,7 +228,7 @@ def correct_near_field(
     ``foot`` assumes surface fluxes are mixed through the air below
     *footprint_depth*: a fraction of the mixed-layer height when it is 1 or
     less, and a height in meters above ground when it is larger, as HYSPLIT
-    reads ``VEGHT``. Close to the receptor, the plume from the release point is
+    reads ``VEGHT``. Close to the release, the plume from the release point is
     thinner than that. Following STILT-R, the plume depth grows from the
     release height with the turbulence each particle meets. While it is
     below that height, ``foot`` is recalculated with the plume
@@ -239,7 +239,7 @@ def correct_near_field(
 
     Needs the columns :data:`HNF_PLUME_COLUMNS`, and the release height:
     ``release_height`` (:func:`stilt.particles.add_release_heights`) or the altitude of a point
-    receptor. The plume grows from the ground, so for a receptor whose
+    release. The plume grows from the ground, so for a release whose
     heights are above sea level (``altitude_ref="msl"``) it starts at the
     release height minus the terrain under it, the median ``zsfc`` of the
     first rows of the particles released there, which must be a column too.
@@ -248,8 +248,8 @@ def correct_near_field(
     ----------
     particles : pandas.DataFrame
         Particle table.
-    receptor : Receptor
-        Receptor the particles were released from.
+    release : Receptor
+        Release the particles were released from.
     footprint_depth : float
         Height that surface fluxes are mixed through (``VEGHT`` in HYSPLIT
         and STILT-R): a fraction of the mixed-layer height when 1 or less,
@@ -267,14 +267,14 @@ def correct_near_field(
         If a required column is missing, or the release height is unknown.
     """
     missing = set(HNF_PLUME_COLUMNS) - set(particles.columns)
-    if receptor.altitude_ref == "msl" and "zsfc" not in particles.columns:
+    if release.altitude_ref == "msl" and "zsfc" not in particles.columns:
         missing.add("zsfc")
     if missing:
         raise ValueError(
             "The near-field correction needs the particle columns "
             f"{', '.join(sorted(missing))}."
         )
-    r_zagl = receptor.altitude if isinstance(receptor, PointReceptor) else None
+    r_zagl = release.altitude if isinstance(release, PointReceptor) else None
 
     p = particles.copy()
     p["foot_no_hnf_dilution"] = p["foot"]
@@ -298,7 +298,7 @@ def correct_near_field(
             "The near-field correction needs each particle's release height: "
             "add release_height first (add_release_heights)."
         )
-    if receptor.altitude_ref == "msl":
+    if release.altitude_ref == "msl":
         # mlht and footprint_depth are heights above ground, so the plume is too.
         start_h = _above_ground(p, pd.Series(start_h, index=p.index, dtype=float))
     # The plume grows outward from the release point, so the cumsum must walk
@@ -320,27 +320,27 @@ def correct_near_field(
 
 
 def _near_field(
-    particles: pd.DataFrame, receptor: Receptor, footprint_depth: float
+    particles: pd.DataFrame, release: Receptor, footprint_depth: float
 ) -> pd.DataFrame:
     """
     Return *particles* with the near-field correction, or as they are when they lack its columns.
 
     A transport model that writes no ``dens``, ``samt``, ``sigw``,
-    ``tlgr``, or ``mlht`` (or no ``zsfc``, for a receptor above sea level)
+    ``tlgr``, or ``mlht`` (or no ``zsfc``, for a release above sea level)
     gets no correction, and a warning says so.
     """
     needed = set(HNF_PLUME_COLUMNS) | (
-        {"zsfc"} if receptor.altitude_ref == "msl" else set()
+        {"zsfc"} if release.altitude_ref == "msl" else set()
     )
     missing = sorted(needed - set(particles.columns))
     if missing:
         logger.warning(
             "%s: near-field correction skipped: no %s columns",
-            receptor.id,
+            release.id,
             ", ".join(missing),
         )
         return particles
-    return correct_near_field(particles, receptor, footprint_depth)
+    return correct_near_field(particles, release, footprint_depth)
 
 
 __all__ = ["HNF_PLUME_COLUMNS", "add_foot", "correct_near_field"]

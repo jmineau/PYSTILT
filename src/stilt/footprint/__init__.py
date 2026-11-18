@@ -1,5 +1,5 @@
 """
-Footprints of receptors, calculated from particles and applied to surface fluxes.
+Footprints of releases, calculated from particles and applied to surface fluxes.
 
 ``config``
     :class:`FootprintConfig`, the footprint settings.

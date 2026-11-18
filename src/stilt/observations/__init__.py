@@ -12,15 +12,15 @@ Before a run:
   :func:`read_proffast`.
 - Group soundings into overpasses (:func:`group_by_overpass`) and choose
   which to run (:func:`select_observations_spatial`).
-- Make a receptor for each sounding, and their averaging-kernel table, with
-  :func:`receptors_from_soundings`. For other layouts, spread several
-  receptors over a pixel (:func:`jitter_points`), or lay out a slant line
+- Make a release for each sounding, and their averaging-kernel table, with
+  :func:`releases_from_soundings`. For other layouts, spread several
+  releases over a pixel (:func:`jitter_points`), or lay out a slant line
   of sight (:func:`slant_points`) at the retrieval's pressure levels
   (:func:`pressure_altitudes`). Every reader's table has the columns in
   :data:`SOUNDING_SCHEMA` (:func:`check_soundings`).
 - Group the measurements of a vehicle, train, aircraft, or ship into
-  receptors along its track, and link each measurement to its receptor,
-  with :func:`receptors_from_track`. A track has the columns in
+  releases along its track, and link each measurement to its release,
+  with :func:`releases_from_track`. A track has the columns in
   :data:`TRACK_SCHEMA` (:func:`check_track`).
 
 After a run:
@@ -42,7 +42,7 @@ from .columns import modelled_column
 from .placement import (
     jitter_points,
     pressure_altitudes,
-    receptors_from_soundings,
+    releases_from_soundings,
     slant_points,
 )
 from .plumes import Plume, PlumeBackground, plume_background, plume_polygon
@@ -57,7 +57,7 @@ from .readers import (
 )
 from .readers.schema import SOUNDING_SCHEMA, check_soundings
 from .selection import group_by_overpass, select_observations_spatial
-from .tracks import TRACK_SCHEMA, check_track, receptors_from_track
+from .tracks import TRACK_SCHEMA, check_track, releases_from_track
 
 __all__ = [
     "SOUNDING_SCHEMA",
@@ -65,8 +65,8 @@ __all__ = [
     "check_soundings",
     "check_track",
     "modelled_column",
-    "receptors_from_soundings",
-    "receptors_from_track",
+    "releases_from_soundings",
+    "releases_from_track",
     "Plume",
     "PlumeBackground",
     "group_by_overpass",

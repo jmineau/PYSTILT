@@ -1,5 +1,5 @@
 """
-The receptor models, their times, and their ids.
+The release models, their times, and their ids.
 
 A :class:`PointReceptor` releases from one point, a :class:`ColumnReceptor`
 from a vertical line, and a :class:`MultiPointReceptor` from several points
@@ -50,7 +50,7 @@ VerticalReference: TypeAlias = Literal["agl", "msl"]
 # ---------------------------------------------------------------------------
 
 
-#: The forms a receptor time may take as text, for messages.
+#: The forms a release time may take as text, for messages.
 _TIME_FORMS = (
     "ISO 8601, such as '2023-07-15 18:00' or '2023-07-15T18:00:00Z', "
     "or YYYYMMDDHHMM, such as '202307151800'"
@@ -59,7 +59,7 @@ _TIME_FORMS = (
 
 def _parse_time_text(text: pd.Series) -> pd.Series:
     """
-    Read receptor times written as text, and return them as UTC times.
+    Read release times written as text, and return them as UTC times.
 
     Each value is ISO 8601 or ``YYYYMMDDHHMM``. A time with an offset is
     converted to UTC; one without is taken as UTC. A value in any other
@@ -92,24 +92,24 @@ def parse_time(time: TimeLike) -> dt.datetime:
     A time finer than a microsecond is cut to the microsecond.
     """
     if time is None:
-        raise ValueError("'time' must be provided for all receptor types.")
+        raise ValueError("'time' must be provided for all release types.")
     if isinstance(time, (int, float, np.integer, np.floating)):
         raise TypeError(
-            "Numeric receptor times are not accepted. Pass a datetime-like value "
+            "Numeric release times are not accepted. Pass a datetime-like value "
             "or a string such as '202301011200' or '2023-01-01T12:00:00Z'."
         )
     if isinstance(time, str):
         parsed = pd.Timestamp(_parse_time_text(pd.Series([time])).iloc[0])
         if str(parsed) == "NaT":
-            raise ValueError(f"Receptor time {time!r} is not {_TIME_FORMS}.")
+            raise ValueError(f"Release time {time!r} is not {_TIME_FORMS}.")
     elif isinstance(time, (dt.datetime, pd.Timestamp, np.datetime64)):
         parsed = pd.Timestamp(time)
     else:
         raise TypeError(
-            "Receptor time must be a datetime-like value or supported time string."
+            "Release time must be a datetime-like value or supported time string."
         )
     if str(parsed) == "NaT":
-        raise ValueError("Receptor time cannot be NaT.")
+        raise ValueError("Release time cannot be NaT.")
     if parsed.tzinfo is not None:
         parsed = parsed.tz_convert("UTC").tz_localize(None)
     # A datetime holds microseconds; satellite times (OCO-2 seconds since an
@@ -118,29 +118,29 @@ def parse_time(time: TimeLike) -> dt.datetime:
     return cast(dt.datetime, parsed.to_pydatetime()).replace(tzinfo=None)
 
 
-def parse_receptor_id(receptor_id: str) -> tuple[dt.datetime, str]:
+def parse_release_id(release_id: str) -> tuple[dt.datetime, str]:
     """
-    Split a receptor id into its release time and location id.
+    Split a release id into its release time and location id.
 
     An id is ``"<YYYYMMDDHHMM>_<location>"``, where the location is
     ``"<lon>_<lat>_<alt>"`` for a point, ``"<lon>_<lat>_X<bottom>-<top>"``
-    for a column, and ``"multi_<hash>"`` for a multipoint receptor. Heights
+    for a column, and ``"multi_<hash>"`` for a multipoint release. Heights
     above mean sea level end the location with ``msl``.
 
     Raises
     ------
     ValueError
-        If *receptor_id* does not start with a ``YYYYMMDDHHMM`` time and an
+        If *release_id* does not start with a ``YYYYMMDDHHMM`` time and an
         underscore.
     """
-    stamp, _, location = str(receptor_id).partition("_")
+    stamp, _, location = str(release_id).partition("_")
     try:
         if len(stamp) != 12 or not stamp.isdigit() or not location:
             raise ValueError
         time = dt.datetime.strptime(stamp, "%Y%m%d%H%M")
     except ValueError:
         raise ValueError(
-            f"Receptor id {receptor_id!r} is not of the form "
+            f"Release id {release_id!r} is not of the form "
             "'{YYYYMMDDHHMM}_{location_id}'."
         ) from None
     return time, location
@@ -157,7 +157,7 @@ def _ref_suffix(altitude_ref: str) -> str:
 
 
 def _point_location(lon: float, lat: float, alt: float, altitude_ref: str) -> str:
-    """Location id of a point receptor, ``"<lon>_<lat>_<alt>"`` (``msl`` appended above sea level)."""
+    """Location id of a point release, ``"<lon>_<lat>_<alt>"`` (``msl`` appended above sea level)."""
     return (
         f"{_format_coord(lon)}_{_format_coord(lat)}_{_format_coord(alt)}"
         f"{_ref_suffix(altitude_ref)}"
@@ -167,7 +167,7 @@ def _point_location(lon: float, lat: float, alt: float, altitude_ref: str) -> st
 def _column_location(
     lon: float, lat: float, bottom: float, top: float, altitude_ref: str
 ) -> str:
-    """Location id of a column receptor, ``"<lon>_<lat>_X<bottom>-<top>"`` (``msl`` appended above sea level)."""
+    """Location id of a column release, ``"<lon>_<lat>_X<bottom>-<top>"`` (``msl`` appended above sea level)."""
     return (
         f"{_format_coord(lon)}_{_format_coord(lat)}"
         f"_X{_format_coord(bottom)}-{_format_coord(top)}{_ref_suffix(altitude_ref)}"
@@ -181,7 +181,7 @@ def _multipoint_location(
     altitude_ref: str,
 ) -> str:
     """
-    Location id of a multipoint receptor, ``"multi_<hash>"`` (``msl`` appended above sea level).
+    Location id of a multipoint release, ``"multi_<hash>"`` (``msl`` appended above sea level).
 
     The hash covers the sorted points, with longitudes and latitudes rounded
     to 5 decimals and altitudes to 0.01 m. A whole-meter altitude hashes as
@@ -217,9 +217,9 @@ def _multipoint_locations(
     refs: Sequence[str],
 ) -> dict[int, str]:
     """
-    Return the location id of each multipoint receptor in a table of points, by group.
+    Return the location id of each multipoint release in a table of points, by group.
 
-    *groups* numbers the receptor each point belongs to, and ``refs[g]`` is
+    *groups* numbers the release each point belongs to, and ``refs[g]`` is
     group ``g``'s vertical reference. The ids are :func:`_multipoint_location`'s:
     the JSON text of the sorted, rounded points, hashed. It is written out
     directly, with the floats as ``repr`` gives them as ``json`` does, and
@@ -250,24 +250,24 @@ def _multipoint_locations(
 
 
 # ---------------------------------------------------------------------------
-# Receptors
+# Releases
 # ---------------------------------------------------------------------------
 
 
 class Receptor(BaseModel):
     """
-    Base class of the receptor types.
+    Base class of the release types.
 
-    A receptor is a frozen value: its release time, its release points, and
+    A release is a frozen value: its release time, its release points, and
     the vertical reference of their heights. Iterating one yields
-    ``(lat, lon, alt)`` for each release point. Two receptors are equal when
+    ``(lat, lon, alt)`` for each release point. Two releases are equal when
     their type, time, points, and ``altitude_ref`` match; ``attrs`` do not
     count.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    kind: str = Field(description="Receptor type: point, column, or multipoint.")
+    kind: str = Field(description="Release type: point, column, or multipoint.")
     time: dt.datetime = Field(
         description=(
             "Release time, UTC. A time-zone-aware value is converted to UTC and "
@@ -286,10 +286,10 @@ class Receptor(BaseModel):
         repr=False,
         description=(
             "Extra labels, such as a site or scene name: the columns of "
-            "``receptors.csv`` that PYSTILT does not use. They are kept when the "
-            "receptors are written back, and are columns of "
-            "``project.receptors`` and ``project.simulations`` to select on. "
-            "They are not part of the receptor's id or of equality."
+            "``releases.csv`` that PYSTILT does not use. They are kept when the "
+            "releases are written back, and are columns of "
+            "``project.releases`` and ``project.simulations`` to select on. "
+            "They are not part of the release's id or of equality."
         ),
     )
 
@@ -309,12 +309,12 @@ class Receptor(BaseModel):
 
     @property
     def location_id(self) -> str:
-        """Identifier of this receptor's location."""
+        """Identifier of this release's location."""
         raise NotImplementedError
 
     @property
     def id(self) -> str:
-        """Receptor id, the release time followed by the location id."""
+        """Release id, the release time followed by the location id."""
         return f"{self.time:%Y%m%d%H%M}_{self.location_id}"
 
     def coords(self) -> list[tuple[float, float, float]]:
@@ -357,7 +357,7 @@ class Receptor(BaseModel):
 
     @cached_property
     def plot(self) -> ReceptorPlotAccessor:
-        """Plotting methods, such as ``receptor.plot.map()``."""
+        """Plotting methods, such as ``release.plot.map()``."""
         from stilt.visualization import ReceptorPlotAccessor
 
         return ReceptorPlotAccessor(self)
@@ -365,22 +365,22 @@ class Receptor(BaseModel):
     # -- dicts -------------------------------------------------------------
 
     def to_dict(self) -> dict[str, Any]:
-        """Return this receptor as a plain dict that :meth:`from_dict` reads back."""
+        """Return this release as a plain dict that :meth:`from_dict` reads back."""
         return self.model_dump(mode="json")
 
     def to_json(self) -> str:
-        """Return this receptor as JSON, as result files record it; :meth:`from_json` reads it back."""
+        """Return this release as JSON, as result files record it; :meth:`from_json` reads it back."""
         return json.dumps(self.to_dict())
 
     @classmethod
     def from_json(cls, text: str | bytes) -> Receptor:
-        """Build a receptor from the JSON :meth:`to_json` wrote."""
+        """Build a release from the JSON :meth:`to_json` wrote."""
         return cls.from_dict(json.loads(text))
 
     @classmethod
     def from_dict(cls, d: Mapping[str, Any]) -> Receptor:
         """
-        Build a receptor of the right type from a dict made by :meth:`to_dict`.
+        Build a release of the right type from a dict made by :meth:`to_dict`.
 
         Raises
         ------
@@ -389,8 +389,8 @@ class Receptor(BaseModel):
         """
         data = dict(d)
         if "kind" not in data:
-            raise ValueError("Receptor dict must contain a 'kind' key.")
-        return _ANY_RECEPTOR.validate_python(data)
+            raise ValueError("Release dict must contain a 'kind' key.")
+        return _ANY_RELEASE.validate_python(data)
 
     @classmethod
     def from_points(
@@ -402,7 +402,7 @@ class Receptor(BaseModel):
         attrs: Mapping[str, Any] | None = None,
     ) -> Receptor:
         """
-        Build the right receptor type for a list of points.
+        Build the right release type for a list of points.
 
         Parameters
         ----------
@@ -461,7 +461,7 @@ class Receptor(BaseModel):
 
 class PointReceptor(Receptor):
     """
-    Receptor that releases particles from one point.
+    Release that releases particles from one point.
 
     Examples
     --------
@@ -472,7 +472,7 @@ class PointReceptor(Receptor):
     '202307151800_-111.848_40.766_10'
     """
 
-    kind: Literal["point"] = Field(default="point", description="Receptor type.")
+    kind: Literal["point"] = Field(default="point", description="Release type.")
     longitude: float = Field(description="Longitude in degrees, from -180 to 180.")
     latitude: float = Field(description="Latitude in degrees, from -90 to 90.")
     altitude: float = Field(
@@ -513,10 +513,10 @@ class PointReceptor(Receptor):
 
 class ColumnReceptor(Receptor):
     """
-    Receptor that releases particles evenly along a vertical line.
+    Release that releases particles evenly along a vertical line.
     """
 
-    kind: Literal["column"] = Field(default="column", description="Receptor type.")
+    kind: Literal["column"] = Field(default="column", description="Release type.")
     longitude: float = Field(description="Longitude in degrees, from -180 to 180.")
     latitude: float = Field(description="Latitude in degrees, from -90 to 90.")
     bottom: float = Field(
@@ -573,7 +573,7 @@ class ColumnReceptor(Receptor):
 
 class MultiPointReceptor(Receptor):
     """
-    Receptor that releases particles from several points at once.
+    Release that releases particles from several points at once.
 
     Use it for a slanted column, such as a satellite sounding sampled at
     several heights along the line of sight. Each point must have its own
@@ -588,7 +588,7 @@ class MultiPointReceptor(Receptor):
     """
 
     kind: Literal["multipoint"] = Field(
-        default="multipoint", description="Receptor type."
+        default="multipoint", description="Release type."
     )
     longitudes: tuple[float, ...] = Field(
         description="Longitude of each point in degrees, from -180 to 180."
@@ -653,8 +653,8 @@ class MultiPointReceptor(Receptor):
         )
 
 
-#: Any receptor, for validating a dict of unknown kind.
+#: Any release, for validating a dict of unknown kind.
 AnyReceptor = Annotated[
     PointReceptor | ColumnReceptor | MultiPointReceptor, Field(discriminator="kind")
 ]
-_ANY_RECEPTOR: TypeAdapter[Receptor] = TypeAdapter(AnyReceptor)
+_ANY_RELEASE: TypeAdapter[Receptor] = TypeAdapter(AnyReceptor)

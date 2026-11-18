@@ -7,7 +7,7 @@ name: STILT-R parity
 #   src/stilt/      everything but observations/ and visualization.py, which no
 #                   STILT-R test reaches. The fidelity scenarios run a project end
 #                   to end (config, project, execution, transport/hysplit,
-#                   particles, footprint, receptors, output);
+#                   particles, footprint, releases, output);
 #                   the r_only tests also read STILT-R output (migration.py).
 #   tests/          the STILT-R tests, the shared conftest.py (its _MET_BLOCKS name
 #                   the met cache), the fixtures and R helpers, and the

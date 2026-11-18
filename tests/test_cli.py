@@ -43,14 +43,14 @@ _EREMOTEIO = getattr(errno, "EREMOTEIO", 121)
 
 
 def _write_minimal_config(tmp_path):
-    """Write a minimal config.yaml + receptors.csv so _resolve_project succeeds."""
+    """Write a minimal config.yaml + releases.csv so _resolve_project succeeds."""
     cfg = make_project_config(
         tmp_path,
         # Local, with the time limit a Slurm run of it needs.
         execution={"slurm": {"time": "01:00:00"}},
     )
     cfg.to_yaml(tmp_path / "config.yaml")
-    (tmp_path / "receptors.csv").write_text(
+    (tmp_path / "releases.csv").write_text(
         "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,40.77,5.0\n"
     )
 
@@ -71,7 +71,7 @@ def calls(monkeypatch):
         n = len(recorded.states)
         return pd.DataFrame(
             {
-                "receptor": [f"r{i}" for i in range(n)],
+                "release": [f"r{i}" for i in range(n)],
                 "variant": ["hrrr"] * n,
                 "state": recorded.states,
                 "reason": [
@@ -159,15 +159,15 @@ def test_commands_report_invalid_config_yaml(tmp_path, command):
         ),
         (
             "time,longitude,latitude\n2024-07-01 12:00:00,-111.85,40.77\n",
-            "Error: Receptor table must contain columns",
+            "Error: Release table must contain columns",
         ),
     ],
     ids=["latitude", "time", "columns"],
 )
-def test_commands_report_a_bad_receptors_csv(tmp_path, command, table, message):
-    """A bad row in receptors.csv is a usage error for every command, as for check (#364)."""
+def test_commands_report_a_bad_releases_csv(tmp_path, command, table, message):
+    """A bad row in releases.csv is a usage error for every command, as for check (#364)."""
     _write_minimal_config(tmp_path)
-    (tmp_path / "receptors.csv").write_text(table)
+    (tmp_path / "releases.csv").write_text(table)
 
     result = runner.invoke(app, [command, str(tmp_path)])
 
@@ -191,7 +191,7 @@ def test_status_prints_project_info(tmp_path):
 def test_status_counts_full_simulation_completion(tmp_path):
     """A complete trajectory without required footprints is not done yet."""
     from stilt.project import Project
-    from stilt.receptors import PointReceptor
+    from stilt.releases import PointReceptor
 
     cfg = make_project_config(
         tmp_path,
@@ -206,16 +206,16 @@ def test_status_counts_full_simulation_completion(tmp_path):
         variants={"hrrr": {}},
     )
 
-    receptor = PointReceptor(
+    release = PointReceptor(
         time="2023-01-01 12:00:00",
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
     )
-    project = Project.init(tmp_path, config=cfg, receptors=[receptor])
+    project = Project.init(tmp_path, config=cfg, releases=[release])
 
     # Particles exist but the required footprint does not: not complete.
-    sim = project.simulation(receptor.id, "hrrr")
+    sim = project.simulation(release.id, "hrrr")
     particles = pd.DataFrame(
         {
             "age": [-60.0],
@@ -226,7 +226,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
             "foot": [1e-5],
         }
     )
-    sim.output.write_particles(sim.variant, receptor, particles, [])
+    sim.output.write_particles(sim.variant, release, particles, [])
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -236,7 +236,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
     # Once the footprint is present too, the simulation counts as complete.
     from .fixtures.footprints import run_footprint
 
-    sim = project.simulation(receptor.id, "hrrr")  # a fresh value
+    sim = project.simulation(release.id, "hrrr")  # a fresh value
     run_footprint(sim, sim.particles)
 
     result = runner.invoke(app, ["status", str(tmp_path)])
@@ -250,7 +250,7 @@ def test_status_counts_each_state_per_variant(tmp_path, monkeypatch):
     make_project_config(
         tmp_path, variants={"hrrr": {}, "fine": {"numpar": 50}}
     ).to_yaml(tmp_path / "config.yaml")
-    (tmp_path / "receptors.csv").write_text("time,longitude,latitude,altitude\n")
+    (tmp_path / "releases.csv").write_text("time,longitude,latitude,altitude\n")
     table = pd.DataFrame(
         {
             "variant": ["hrrr", "hrrr", "hrrr", "fine", "fine", "fine"],
@@ -314,17 +314,17 @@ def test_the_particle_commands_are_the_stilt_commands_but_init():
 # ---------------------------------------------------------------------------
 
 
-def _write_checkable_config(tmp_path, n_receptors=1, files=True):
-    """Write a project of hourly receptors from noon, and met files for them unless ``files`` is false."""
+def _write_checkable_config(tmp_path, n_releases=1, files=True):
+    """Write a project of hourly releases from noon, and met files for them unless ``files`` is false."""
     import datetime as dt
 
     from .fixtures.factories import make_met_files
 
     _write_minimal_config(tmp_path)
     times = [
-        dt.datetime(2023, 1, 1, 12) + dt.timedelta(hours=h) for h in range(n_receptors)
+        dt.datetime(2023, 1, 1, 12) + dt.timedelta(hours=h) for h in range(n_releases)
     ]
-    (tmp_path / "receptors.csv").write_text(
+    (tmp_path / "releases.csv").write_text(
         "time,longitude,latitude,altitude\n"
         + "".join(f"{t:%Y-%m-%d %H:%M:%S},-111.85,40.77,5.0\n" for t in times)
     )
@@ -350,7 +350,7 @@ def test_check_finding_nothing_exits_0(tmp_path):
     result = runner.invoke(app, ["check", str(tmp_path)])
 
     assert result.exit_code == 0, result.output
-    assert f"Project: {tmp_path.resolve()}  receptors=1" in result.output
+    assert f"Project: {tmp_path.resolve()}  releases=1" in result.output
     assert "Variants: hrrr (met hrrr, particles only)" in result.output
     assert "No problems found." in result.output
 
@@ -363,7 +363,7 @@ def test_check_lists_what_would_stop_a_run_and_exits_1(tmp_path, calls):
     assert result.exit_code == 1, result.output
     lines = result.output.splitlines()
     header = next(line for line in lines if line.startswith("check"))
-    assert header.split() == ["check", "variant", "receptor", "message"]
+    assert header.split() == ["check", "variant", "release", "message"]
     row = next(line for line in lines if line.startswith("met_files"))
     assert "202301011200_-111.85_40.77_5" in row
     assert "no met file for 2022-12-31 12:00" in row
@@ -371,9 +371,9 @@ def test_check_lists_what_would_stop_a_run_and_exits_1(tmp_path, calls):
     assert calls == []  # nothing ran
 
 
-def test_check_tells_a_receptor_above_sea_level_to_add_zsfc_and_exits_1(tmp_path):
+def test_check_tells_a_release_above_sea_level_to_add_zsfc_and_exits_1(tmp_path):
     _write_checkable_config(tmp_path)
-    # A footprint, whose near-field correction reads zsfc for this receptor,
+    # A footprint, whose near-field correction reads zsfc for this release,
     # and STILT-R's varsiwant, which has no zsfc (HYSPLIT's own list has it).
     config = tmp_path / "config.yaml"
     settings = yaml.safe_load(config.read_text())
@@ -392,7 +392,7 @@ def test_check_tells_a_receptor_above_sea_level_to_add_zsfc_and_exits_1(tmp_path
         }
     }
     config.write_text(yaml.safe_dump(settings))
-    (tmp_path / "receptors.csv").write_text(
+    (tmp_path / "releases.csv").write_text(
         "time,longitude,latitude,altitude,altitude_ref\n"
         "2023-01-01 12:00:00,-111.85,40.77,1500.0,msl\n"
     )
@@ -407,7 +407,7 @@ def test_check_tells_a_receptor_above_sea_level_to_add_zsfc_and_exits_1(tmp_path
 
 
 def test_check_shows_the_first_rows_of_each_check_and_counts_the_rest(tmp_path):
-    _write_checkable_config(tmp_path, n_receptors=12, files=False)
+    _write_checkable_config(tmp_path, n_releases=12, files=False)
 
     result = runner.invoke(app, ["check", str(tmp_path)])
 
@@ -768,8 +768,8 @@ def test_run_prints_a_startup_summary_and_the_status(tmp_path, calls):
     ) in result.output
     assert "Compute root:" in result.output
     assert f"Output: {tmp_path.resolve() / 'output'}" in result.output
-    assert "Receptors loaded: 1" in result.output
-    assert "Running here, one line per receptor" in result.output
+    assert "Releases loaded: 1" in result.output
+    assert "Running here, one line per release" in result.output
     assert f"Project: {tmp_path.resolve()}  total=" in result.output
 
 
@@ -1265,24 +1265,24 @@ def test_a_failed_simulation_is_still_1_and_a_wrong_command_line_2(tmp_path, cal
     assert runner.invoke(app, ["run", str(tmp_path)]).exit_code == 1
     assert runner.invoke(app, ["run", str(tmp_path), "--task", "3/3"]).exit_code == 2
     assert runner.invoke(app, ["run", str(tmp_path / "no_project")]).exit_code == 2
-    receptors = tmp_path / "missing.txt"
+    releases = tmp_path / "missing.txt"
     assert (
-        runner.invoke(app, ["run", str(tmp_path), "--receptors", str(receptors)])
+        runner.invoke(app, ["run", str(tmp_path), "--releases", str(releases)])
     ).exit_code == 2
 
 
 def test_a_value_error_of_the_run_is_still_2(tmp_path, monkeypatch):
-    """The run's own refusals (a receptor that is not in the project) are the command line's."""
+    """The run's own refusals (a release that is not in the project) are the command line's."""
     _write_minimal_config(tmp_path)
 
     def run(self, **kwargs):
-        raise ValueError("no such receptor")
+        raise ValueError("no such release")
 
     monkeypatch.setattr("stilt.cli.Project.run", run)
     result = runner.invoke(app, ["run", str(tmp_path)])
 
     assert result.exit_code == 2
-    assert "Error: no such receptor" in result.output
+    assert "Error: no such release" in result.output
 
 
 @pytest.mark.parametrize(
@@ -1390,8 +1390,8 @@ def test_a_wrong_command_line_exits_2_not_interrupted(tmp_path, calls, args):
     assert calls == []
 
 
-def test_a_task_takes_its_receptors_from_the_submissions_rows(tmp_path, monkeypatch):
-    """A task reads receptors.parquet, not all of receptors.csv (#191)."""
+def test_a_task_takes_its_releases_from_the_submissions_rows(tmp_path, monkeypatch):
+    """A task reads releases.parquet, not all of releases.csv (#191)."""
     import pyarrow as pa
     import pyarrow.parquet as pq
 
@@ -1401,12 +1401,12 @@ def test_a_task_takes_its_receptors_from_the_submissions_rows(tmp_path, monkeypa
     pq.write_table(
         pa.Table.from_pandas(rows, preserve_index=False), tmp_path / "r.parquet"
     )
-    (tmp_path / "receptors.csv").write_text("not a receptor table\n")
+    (tmp_path / "releases.csv").write_text("not a release table\n")
     seen = []
 
     def run(self, **kwargs):
-        seen.append((list(self.receptors["receptor"]), kwargs["receptors"]))
-        return pd.DataFrame({"receptor": [], "variant": [], "state": [], "reason": []})
+        seen.append((list(self.releases["release"]), kwargs["releases"]))
+        return pd.DataFrame({"release": [], "variant": [], "state": [], "reason": []})
 
     monkeypatch.setattr("stilt.cli.Project.run", run)
     result = runner.invoke(
@@ -1414,7 +1414,7 @@ def test_a_task_takes_its_receptors_from_the_submissions_rows(tmp_path, monkeypa
         [
             "run",
             str(tmp_path),
-            "--receptors",
+            "--releases",
             str(tmp_path / "r.parquet"),
             "--task",
             "0/1",
@@ -1422,7 +1422,7 @@ def test_a_task_takes_its_receptors_from_the_submissions_rows(tmp_path, monkeypa
     )
 
     assert result.exit_code == 0, result.output
-    ids = list(rows["receptor"])
+    ids = list(rows["release"])
     assert seen == [(ids, ids)]
 
 
@@ -1441,12 +1441,12 @@ def test_run_task_runs_its_share_here(tmp_path, calls):
     assert result.exit_code == 1, result.output
     [(verb, kwargs)] = calls
     assert kwargs["task"] == (1, 3)
-    assert kwargs["receptors"] is None
+    assert kwargs["releases"] is None
     assert kwargs["execution"].backend == "local"
     # The banner names the task, not the local backend the task runs on.
     assert "task 1 of 3  cpus=1" in result.output
     assert "backend=" not in result.output
-    assert "Receptors of this task: 1, 4, 7, ..." in result.output
+    assert "Releases of this task: 1, 4, 7, ..." in result.output
     # A task sums up what it ran, not the whole project.
     assert (
         "This run:  total=2  complete=1  failed=1  interrupted=0  pending=0"
@@ -1462,10 +1462,10 @@ def test_run_task_runs_its_share_here(tmp_path, calls):
         (["--task", "3/3"], "0 <= I < N"),
         (["--task", "two/3"], "takes I/N"),
         (["--task", "0/2", "--backend", "slurm"], "drop --backend slurm"),
-        (["--receptors", "missing.txt"], "cannot read"),
+        (["--releases", "missing.txt"], "cannot read"),
     ],
 )
-def test_run_task_and_receptors_refuse_bad_values(tmp_path, calls, args, message):
+def test_run_task_and_releases_refuse_bad_values(tmp_path, calls, args, message):
     _write_minimal_config(tmp_path)
 
     result = runner.invoke(app, ["run", str(tmp_path), *args])
@@ -1475,24 +1475,24 @@ def test_run_task_and_receptors_refuse_bad_values(tmp_path, calls, args, message
     assert calls == []
 
 
-def test_run_receptors_reads_ids_from_a_file(tmp_path, calls):
+def test_run_releases_reads_ids_from_a_file(tmp_path, calls):
     _write_minimal_config(tmp_path)
     listed = tmp_path / "ids.txt"
     listed.write_text("# failed last time\nr1\n\n  r2  \n")
 
-    result = runner.invoke(app, ["run", str(tmp_path), "--receptors", str(listed)])
+    result = runner.invoke(app, ["run", str(tmp_path), "--releases", str(listed)])
 
     assert result.exit_code == 0, result.output
-    assert calls[0][1]["receptors"] == ["r1", "r2"]
-    assert "Receptors listed: 2" in result.output
+    assert calls[0][1]["releases"] == ["r1", "r2"]
+    assert "Releases listed: 2" in result.output
 
 
-def test_run_reports_receptors_not_in_the_project(tmp_path, monkeypatch):
+def test_run_reports_releases_not_in_the_project(tmp_path, monkeypatch):
     _write_minimal_config(tmp_path)
     listed = tmp_path / "ids.txt"
     listed.write_text("nope\n")
 
-    result = runner.invoke(app, ["run", str(tmp_path), "--receptors", str(listed)])
+    result = runner.invoke(app, ["run", str(tmp_path), "--releases", str(listed)])
 
     assert result.exit_code == 2
     assert "not in this project" in result.output
@@ -1525,16 +1525,16 @@ def test_submit_without_a_time_limit_says_so(tmp_path, calls):
     assert calls == []
 
 
-def test_submit_receptors_reads_ids_from_a_file(tmp_path, calls):
+def test_submit_releases_reads_ids_from_a_file(tmp_path, calls):
     _write_minimal_config(tmp_path)
     listed = tmp_path / "ids.txt"
     listed.write_text("r1\nr2\n")
 
-    result = runner.invoke(app, ["submit", str(tmp_path), "--receptors", str(listed)])
+    result = runner.invoke(app, ["submit", str(tmp_path), "--releases", str(listed)])
 
     assert result.exit_code == 0, result.output
-    assert calls[0][1]["receptors"] == ["r1", "r2"]
-    assert "Receptors listed: 2" in result.output
+    assert calls[0][1]["releases"] == ["r1", "r2"]
+    assert "Releases listed: 2" in result.output
 
 
 # ---------------------------------------------------------------------------
@@ -1549,28 +1549,28 @@ def test_init_creates_config_yaml(tmp_path):
     assert (project / "config.yaml").exists()
 
 
-def test_init_creates_receptors_csv(tmp_path):
+def test_init_creates_releases_csv(tmp_path):
     project = tmp_path / "new_project"
     result = runner.invoke(app, ["init", str(project)])
     assert result.exit_code == 0
-    assert (project / "receptors.csv").exists()
+    assert (project / "releases.csv").exists()
 
 
-def test_init_receptors_csv_reads_after_appending_a_row(tmp_path):
-    """The starter receptors.csv has no line that parses as a bad receptor (#49)."""
-    from stilt.receptors import read_receptors
+def test_init_releases_csv_reads_after_appending_a_row(tmp_path):
+    """The starter releases.csv has no line that parses as a bad release (#49)."""
+    from stilt.releases import read_releases
 
     project = tmp_path / "new_project"
     result = runner.invoke(app, ["init", str(project)])
     assert result.exit_code == 0
 
-    csv = project / "receptors.csv"
-    assert read_receptors(csv) == []
+    csv = project / "releases.csv"
+    assert read_releases(csv) == []
     with csv.open("a") as f:
         f.write("2023-01-01 12:00:00,-111.85,40.77,5\n")
-    receptors = read_receptors(csv)
-    assert len(receptors) == 1
-    assert receptors[0].altitude == 5
+    releases = read_releases(csv)
+    assert len(releases) == 1
+    assert releases[0].altitude == 5
 
 
 def test_init_prints_confirmation(tmp_path):
@@ -1633,7 +1633,7 @@ def test_status_lists_output_folders_no_variant_uses(tmp_path):
         name="old",
         transport=variant.transport.model_copy(update={"numpar": 7}),
     )
-    project.output.write_log(stale, str(project.receptors["receptor"].iloc[0]), "")
+    project.output.write_log(stale, str(project.releases["release"].iloc[0]), "")
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -1648,9 +1648,9 @@ def test_status_lists_output_folders_no_variant_uses(tmp_path):
 
 def test_status_counts_failures_by_reason(tmp_path):
     from stilt.project import Project
-    from stilt.receptors import PointReceptor
+    from stilt.releases import PointReceptor
 
-    receptors = [
+    releases = [
         PointReceptor(
             time=f"2023-01-01 {h}:00", longitude=-111.85, latitude=40.77, altitude=5
         )
@@ -1659,17 +1659,17 @@ def test_status_counts_failures_by_reason(tmp_path):
     project = Project.init(
         tmp_path,
         mets={"hrrr": make_met_config(tmp_path / "met")},
-        receptors=receptors,
+        releases=releases,
         models={"hysplit": {"n_hours": -24}},
         variants={"hrrr": {}},
     )
     reasons = ["MET_COVERAGE", "MET_COVERAGE", None]
-    for receptor, reason in zip(receptors, reasons, strict=True):
-        sim = project.simulation(str(receptor.id), "hrrr")
+    for release, reason in zip(releases, reasons, strict=True):
+        sim = project.simulation(str(release.id), "hrrr")
         sim.output.record_failure(
             "particles",
             sim.variant,
-            sim.receptor.id,
+            sim.release.id,
             {"stage": "particles", "reason": reason or "ValueError", "message": "m"},
         )
 
@@ -1682,16 +1682,16 @@ def test_status_counts_failures_by_reason(tmp_path):
 def test_status_json_is_the_same_as_data(tmp_path):
 
     from stilt.project import Project
-    from stilt.receptors import PointReceptor
+    from stilt.releases import PointReceptor
 
     _write_minimal_config(tmp_path)
     project = Project(tmp_path)
-    receptor = PointReceptor(
+    release = PointReceptor(
         time="2023-01-01 12:00:00", longitude=-111.85, latitude=40.77, altitude=5.0
     )
     variant = project.variants["hrrr"]
     project.output.record_failure(
-        "particles", variant, receptor.id, {"reason": "MET_COVERAGE"}
+        "particles", variant, release.id, {"reason": "MET_COVERAGE"}
     )
 
     result = runner.invoke(app, ["status", str(tmp_path), "--json"])
@@ -1721,11 +1721,11 @@ def test_status_lists_folders_and_what_differs(tmp_path):
 
     from stilt.config import ProjectConfig
     from stilt.project import Project
-    from stilt.receptors import PointReceptor
+    from stilt.releases import PointReceptor
 
     from .fixtures.particles import finished
 
-    receptor = PointReceptor(
+    release = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
@@ -1742,9 +1742,9 @@ def test_status_lists_folders_and_what_differs(tmp_path):
                 output=str(tmp_path / "out"),
             )
         ),
-        receptors=[receptor],
+        releases=[release],
     )
-    sim = old.simulation(receptor.id, "hrrr")
+    sim = old.simulation(release.id, "hrrr")
     particles = pd.DataFrame(
         {
             "age": [-60.0],
@@ -1755,7 +1755,7 @@ def test_status_lists_folders_and_what_differs(tmp_path):
             "foot": [1e-5],
         }
     )
-    sim.output.write_particles(sim.variant, receptor, finished(particles, receptor), [])
+    sim.output.write_particles(sim.variant, release, finished(particles, release), [])
     new = Project.init(
         tmp_path / "new",
         config=ProjectConfig(
@@ -1766,7 +1766,7 @@ def test_status_lists_folders_and_what_differs(tmp_path):
                 output=str(tmp_path / "out"),
             )
         ),
-        receptors=[receptor],
+        releases=[release],
     )
 
     result = runner.invoke(app, ["status", str(new.directory)])

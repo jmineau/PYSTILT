@@ -1,4 +1,4 @@
-"""Tests for stilt.receptors."""
+"""Tests for stilt.releases."""
 
 import datetime as dt
 import hashlib
@@ -9,16 +9,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from stilt.receptors import (
+from stilt.releases import (
     ColumnReceptor,
     MultiPointReceptor,
     PointReceptor,
     Receptor,
-    read_receptors,
-    write_receptors,
+    read_releases,
+    write_releases,
 )
-from stilt.receptors.models import _format_coord
-from stilt.receptors.table import receptors_to_csv
+from stilt.releases.models import _format_coord
+from stilt.releases.table import releases_to_csv
 
 # ---------------------------------------------------------------------------
 # _format_coord
@@ -144,8 +144,8 @@ def test_columns_that_differ_only_in_top_get_different_ids():
     ],
     ids=["point", "column", "multipoint"],
 )
-def test_msl_and_agl_receptors_get_different_ids(make, agl_id):
-    """Receptors that differ only in altitude reference once shared an id (#105)."""
+def test_msl_and_agl_releases_get_different_ids(make, agl_id):
+    """Releases that differ only in altitude reference once shared an id (#105)."""
     agl, msl = make("agl"), make("msl")
     assert msl.id == agl.id + "msl"
     assert not agl.id.endswith("msl")
@@ -247,32 +247,32 @@ def test_location_id_multipoint_differs_for_different_points():
 # ---------------------------------------------------------------------------
 
 
-def test_receptor_id_format(point_receptor):
-    assert point_receptor.id == "202301011200_-111.85_40.77_5"
+def test_release_id_format(point_release):
+    assert point_release.id == "202301011200_-111.85_40.77_5"
 
 
-def test_receptor_points_point(point_receptor):
-    assert len(point_receptor.coords()) == 1
+def test_release_points_point(point_release):
+    assert len(point_release.coords()) == 1
 
 
-def test_receptor_points_column(column_receptor):
-    assert len(column_receptor.coords()) == 2
+def test_release_points_column(column_release):
+    assert len(column_release.coords()) == 2
 
 
-def test_receptor_points_multipoint(multipoint_receptor):
-    assert len(multipoint_receptor.coords()) == 3
+def test_release_points_multipoint(multipoint_release):
+    assert len(multipoint_release.coords()) == 3
 
 
-def test_receptor_coordinates(point_receptor):
-    assert point_receptor.longitude == -111.85
-    assert point_receptor.latitude == 40.77
-    assert point_receptor.altitude == 5.0
-    assert point_receptor.altitude_ref == "agl"
+def test_release_coordinates(point_release):
+    assert point_release.longitude == -111.85
+    assert point_release.latitude == 40.77
+    assert point_release.altitude == 5.0
+    assert point_release.altitude_ref == "agl"
 
 
-def test_receptor_column_top_bottom(column_receptor):
-    assert column_receptor.bottom == 5.0
-    assert column_receptor.top == 50.0
+def test_release_column_top_bottom(column_release):
+    assert column_release.bottom == 5.0
+    assert column_release.top == 50.0
 
 
 def test_point_has_no_bottom():
@@ -293,7 +293,7 @@ def test_column_has_no_altitude():
         _ = r.altitude
 
 
-def test_receptor_time_iso_string():
+def test_release_time_iso_string():
     r = PointReceptor(
         time="2023-01-01T12:00:00",
         longitude=-111.85,
@@ -303,7 +303,7 @@ def test_receptor_time_iso_string():
     assert r.time == dt.datetime(2023, 1, 1, 12, 0)
 
 
-def test_receptor_time_compact_string():
+def test_release_time_compact_string():
     r = PointReceptor(
         time="202301011200",
         longitude=-111.85,
@@ -313,7 +313,7 @@ def test_receptor_time_compact_string():
     assert r.time == dt.datetime(2023, 1, 1, 12, 0)
 
 
-def test_receptor_time_aware_input_normalizes_to_naive_utc():
+def test_release_time_aware_input_normalizes_to_naive_utc():
     r = PointReceptor(
         time="2023-01-01T05:00:00-07:00",
         longitude=-111.85,
@@ -325,19 +325,19 @@ def test_receptor_time_aware_input_normalizes_to_naive_utc():
 
 
 @pytest.mark.parametrize("text", ["05/07/2023 18:00", "07/15/2023 18:00", "now"])
-def test_receptor_time_text_that_is_not_iso_or_compact_is_refused(text):
+def test_release_time_text_that_is_not_iso_or_compact_is_refused(text):
     """05/07/2023 was read as 7 May, and refused only when the day was above 12 (#440)."""
     with pytest.raises(ValueError, match="is not ISO 8601"):
         PointReceptor(time=text, longitude=-111.85, latitude=40.77, altitude=5.0)
 
 
-def test_read_receptors_refuses_a_day_first_time_and_names_the_row():
+def test_read_releases_refuses_a_day_first_time_and_names_the_row():
     text = "time,lon,lat,z\n2023-07-15 18:00,-111.8,40.7,10\n05/07/2023 18:00,-111.8,40.7,10\n"
     with pytest.raises(ValueError, match="row 1: time is '05/07/2023 18:00'"):
-        read_receptors(io.StringIO(text))
+        read_releases(io.StringIO(text))
 
 
-def test_read_receptors_reads_iso_and_compact_times_with_or_without_an_offset():
+def test_read_releases_reads_iso_and_compact_times_with_or_without_an_offset():
     text = (
         "time,lon,lat,z\n"
         "2023-07-15 18:00,-111.8,40.7,10\n"
@@ -345,16 +345,16 @@ def test_read_receptors_reads_iso_and_compact_times_with_or_without_an_offset():
         "2023-07-15T14:00:00-06:00,-111.8,40.7,10\n"
         "2023-07-15T21:00Z,-111.8,40.7,10\n"
     )
-    times = [r.time for r in read_receptors(io.StringIO(text))]
+    times = [r.time for r in read_releases(io.StringIO(text))]
     assert times == [dt.datetime(2023, 7, 15, h) for h in (18, 19, 20, 21)]
 
 
-def test_read_receptors_refuses_an_empty_time():
+def test_read_releases_refuses_an_empty_time():
     with pytest.raises(ValueError, match="row 0: time is empty"):
-        read_receptors(io.StringIO("time,lon,lat,z\n,-111.8,40.7,10\n"))
+        read_releases(io.StringIO("time,lon,lat,z\n,-111.8,40.7,10\n"))
 
 
-def test_receptor_time_with_nanoseconds_is_cut_to_microseconds():
+def test_release_time_with_nanoseconds_is_cut_to_microseconds():
     # satellite readers give nanosecond times (OCO-2: float seconds since 1970)
     r = PointReceptor(
         time=pd.Timestamp("2026-02-08T19:37:37.282009602"),
@@ -365,7 +365,7 @@ def test_receptor_time_with_nanoseconds_is_cut_to_microseconds():
     assert r.time == dt.datetime(2026, 2, 8, 19, 37, 37, 282009)
 
 
-def test_receptor_equality():
+def test_release_equality():
     r1 = PointReceptor(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
@@ -375,7 +375,7 @@ def test_receptor_equality():
     assert r1 == r2
 
 
-def test_receptor_inequality_time():
+def test_release_inequality_time():
     r1 = PointReceptor(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
@@ -385,7 +385,7 @@ def test_receptor_inequality_time():
     assert r1 != r2
 
 
-def test_receptor_inequality_across_types():
+def test_release_inequality_across_types():
     r1 = PointReceptor(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
@@ -395,12 +395,12 @@ def test_receptor_inequality_across_types():
     assert r1 != r2
 
 
-def test_receptor_init_rejects_missing_time():
+def test_release_init_rejects_missing_time():
     with pytest.raises(ValueError, match="'time' must be provided"):
         PointReceptor(time=None, longitude=-111.85, latitude=40.77, altitude=5.0)
 
 
-def test_receptor_init_parses_iso_and_compact_strings():
+def test_release_init_parses_iso_and_compact_strings():
     r_iso = PointReceptor(
         time="2023-01-01T12:00:00", longitude=-111.85, latitude=40.77, altitude=5.0
     )
@@ -412,34 +412,34 @@ def test_receptor_init_parses_iso_and_compact_strings():
     assert r_compact.time == expected
 
 
-def test_receptor_eq_non_receptor_is_false(point_receptor):
-    assert (point_receptor == object()) is False
+def test_release_eq_non_release_is_false(point_release):
+    assert (point_release == object()) is False
 
 
-def test_receptor_points_property_yields_points(point_receptor):
-    items = list(point_receptor.points)
+def test_release_points_property_yields_points(point_release):
+    items = list(point_release.points)
     assert len(items) == 1
     assert hasattr(items[0], "x") and items[0].x == pytest.approx(-111.85)
     assert items[0].y == pytest.approx(40.77)
     assert items[0].z == pytest.approx(5.0)
 
 
-def test_receptor_lazy_geometry_point(point_receptor):
+def test_release_lazy_geometry_point(point_release):
     from shapely import Point
 
-    assert isinstance(point_receptor.geometry, Point)
+    assert isinstance(point_release.geometry, Point)
 
 
-def test_receptor_lazy_geometry_column(column_receptor):
+def test_release_lazy_geometry_column(column_release):
     from shapely import LineString
 
-    assert isinstance(column_receptor.geometry, LineString)
+    assert isinstance(column_release.geometry, LineString)
 
 
-def test_receptor_lazy_geometry_multipoint(multipoint_receptor):
+def test_release_lazy_geometry_multipoint(multipoint_release):
     from shapely import MultiPoint
 
-    assert isinstance(multipoint_receptor.geometry, MultiPoint)
+    assert isinstance(multipoint_release.geometry, MultiPoint)
 
 
 # ---------------------------------------------------------------------------
@@ -490,7 +490,7 @@ def test_a_column_with_a_nan_or_infinite_height_is_refused(bottom, top):
         )
 
 
-def test_a_multipoint_receptor_with_a_nan_point_is_refused():
+def test_a_multipoint_release_with_a_nan_point_is_refused():
     with pytest.raises(ValueError, match="longitude must be a number"):
         MultiPointReceptor(
             time="202301011200",
@@ -500,12 +500,12 @@ def test_a_multipoint_receptor_with_a_nan_point_is_refused():
         )
 
 
-def test_a_receptors_file_with_an_empty_longitude_names_the_row():
+def test_a_releases_file_with_an_empty_longitude_names_the_row():
     text = (
         "time,lon,lat,z\n2023-07-15 18:00,-111.8,40.7,10\n2023-07-15 18:00,,40.7,10\n"
     )
     with pytest.raises(ValueError, match="row 1: longitude must be a number"):
-        read_receptors(io.StringIO(text))
+        read_releases(io.StringIO(text))
 
 
 def test_negative_agl_altitude_raises():
@@ -556,16 +556,16 @@ def test_multipoint_length_mismatch_raises():
 # ---------------------------------------------------------------------------
 
 
-def test_isinstance_point(point_receptor):
-    assert isinstance(point_receptor, PointReceptor)
+def test_isinstance_point(point_release):
+    assert isinstance(point_release, PointReceptor)
 
 
-def test_isinstance_column(column_receptor):
-    assert isinstance(column_receptor, ColumnReceptor)
+def test_isinstance_column(column_release):
+    assert isinstance(column_release, ColumnReceptor)
 
 
-def test_isinstance_multipoint(multipoint_receptor):
-    assert isinstance(multipoint_receptor, MultiPointReceptor)
+def test_isinstance_multipoint(multipoint_release):
+    assert isinstance(multipoint_release, MultiPointReceptor)
 
 
 # ---------------------------------------------------------------------------
@@ -573,13 +573,13 @@ def test_isinstance_multipoint(multipoint_receptor):
 # ---------------------------------------------------------------------------
 
 
-def test_receptor_from_points_single_makes_point():
+def test_release_from_points_single_makes_point():
     r = Receptor.from_points("202301011200", [(-111.85, 40.77, 5)])
     assert isinstance(r, PointReceptor)
     assert r.location_id == "-111.85_40.77_5"
 
 
-def test_receptor_from_points_two_same_xy_makes_column():
+def test_release_from_points_two_same_xy_makes_column():
     r = Receptor.from_points(
         "202301011200", [(-111.85, 40.77, 5), (-111.85, 40.77, 50)]
     )
@@ -587,17 +587,17 @@ def test_receptor_from_points_two_same_xy_makes_column():
     assert r.location_id.endswith("_X5-50")
 
 
-def test_receptor_from_points_two_different_xy_makes_multipoint():
+def test_release_from_points_two_different_xy_makes_multipoint():
     r = Receptor.from_points("202301011200", [(-111.85, 40.77, 5), (-111.86, 40.78, 5)])
     assert isinstance(r, MultiPointReceptor)
 
 
-def test_receptor_from_points_empty_raises():
+def test_release_from_points_empty_raises():
     with pytest.raises(ValueError, match="least one"):
         Receptor.from_points("202301011200", [])
 
 
-def test_receptor_from_points_column_sorts_bottom_top():
+def test_release_from_points_column_sorts_bottom_top():
     r = Receptor.from_points(
         "202301011200", [(-111.85, 40.77, 50), (-111.85, 40.77, 5)]
     )
@@ -611,7 +611,7 @@ def test_receptor_from_points_column_sorts_bottom_top():
 # ---------------------------------------------------------------------------
 
 
-def test_receptor_from_dict_point_round_trip():
+def test_release_from_dict_point_round_trip():
     r = PointReceptor(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
@@ -620,7 +620,7 @@ def test_receptor_from_dict_point_round_trip():
     assert r2 == r
 
 
-def test_receptor_from_dict_column_round_trip():
+def test_release_from_dict_column_round_trip():
     r = ColumnReceptor(
         time="202301011200", longitude=-111.85, latitude=40.77, bottom=5.0, top=50.0
     )
@@ -629,7 +629,7 @@ def test_receptor_from_dict_column_round_trip():
     assert r2 == r
 
 
-def test_receptor_from_dict_multipoint_round_trip():
+def test_release_from_dict_multipoint_round_trip():
     r = MultiPointReceptor(
         time="202301011200",
         longitudes=[-111.85, -111.86],
@@ -642,81 +642,93 @@ def test_receptor_from_dict_multipoint_round_trip():
 
 
 # ---------------------------------------------------------------------------
-# read_receptors
+# read_releases
 # ---------------------------------------------------------------------------
 
 
-def test_read_receptors_missing_required_columns_raises(tmp_path):
-    csv = tmp_path / "receptors.csv"
+def test_read_releases_missing_required_columns_raises(tmp_path):
+    csv = tmp_path / "releases.csv"
     csv.write_text("time,lat,lon\n2023-01-01 12:00:00,40.77,-111.85\n")
     with pytest.raises(ValueError, match="must contain columns"):
-        read_receptors(csv)
+        read_releases(csv)
 
 
-def test_read_receptors_basic(tmp_path):
-    csv = tmp_path / "receptors.csv"
+def test_read_releases_basic(tmp_path):
+    csv = tmp_path / "releases.csv"
     csv.write_text("time,lati,long,zagl\n2023-01-01 12:00:00,40.77,-111.85,5.0\n")
-    receptors = read_receptors(csv)
-    assert len(receptors) == 1
-    assert isinstance(receptors[0], PointReceptor)
-    assert receptors[0].latitude == 40.77
-    assert receptors[0].longitude == -111.85
-    assert receptors[0].altitude == 5.0
-    assert receptors[0].altitude_ref == "agl"
+    releases = read_releases(csv)
+    assert len(releases) == 1
+    assert isinstance(releases[0], PointReceptor)
+    assert releases[0].latitude == 40.77
+    assert releases[0].longitude == -111.85
+    assert releases[0].altitude == 5.0
+    assert releases[0].altitude_ref == "agl"
 
 
-def test_read_receptors_multiple_rows(tmp_path):
-    csv = tmp_path / "receptors.csv"
+def test_read_releases_multiple_rows(tmp_path):
+    csv = tmp_path / "releases.csv"
     csv.write_text(
         "time,lati,long,zagl\n"
         "2023-01-01 12:00:00,40.77,-111.85,5.0\n"
         "2023-01-01 13:00:00,40.78,-111.86,5.0\n"
     )
-    receptors = read_receptors(csv)
-    assert len(receptors) == 2
+    releases = read_releases(csv)
+    assert len(releases) == 2
 
 
-def test_read_receptors_multipoint_via_r_idx(tmp_path):
-    csv = tmp_path / "receptors.csv"
+def test_read_releases_multipoint_via_group(tmp_path):
+    csv = tmp_path / "releases.csv"
     csv.write_text(
-        "time,lati,long,zagl,r_idx\n"
+        "time,lati,long,zagl,group\n"
         "2023-01-01 12:00:00,40.77,-111.85,5.0,0\n"
         "2023-01-01 12:00:00,40.78,-111.86,5.0,0\n"
         "2023-01-01 13:00:00,40.79,-111.87,5.0,1\n"
     )
-    receptors = read_receptors(csv)
-    assert len(receptors) == 2
-    assert isinstance(receptors[0], MultiPointReceptor)
-    assert len(receptors[0].coords()) == 2
+    releases = read_releases(csv)
+    assert len(releases) == 2
+    assert isinstance(releases[0], MultiPointReceptor)
+    assert len(releases[0].coords()) == 2
 
 
-def test_read_receptors_r_idx_group_mixed_times_raises(tmp_path):
-    csv = tmp_path / "receptors.csv"
+def test_read_releases_refuses_the_old_group_column_name(tmp_path):
+    """``r_idx`` is not read: a file that has it is told to say ``group``."""
+    csv = tmp_path / "releases.csv"
     csv.write_text(
         "time,lati,long,zagl,r_idx\n"
+        "2023-01-01 12:00:00,40.77,-111.85,5.0,0\n"
+        "2023-01-01 12:00:00,40.78,-111.86,5.0,0\n"
+    )
+    with pytest.raises(ValueError, match="r_idx.*Rename it to 'group'"):
+        read_releases(csv)
+
+
+def test_read_releases_group_with_mixed_times_raises(tmp_path):
+    csv = tmp_path / "releases.csv"
+    csv.write_text(
+        "time,lati,long,zagl,group\n"
         "2023-01-01 12:00:00,40.77,-111.85,5.0,0\n"
         "2023-01-01 13:00:00,40.78,-111.86,5.0,0\n"
     )
     with pytest.raises(ValueError, match="same release time"):
-        read_receptors(csv)
+        read_releases(csv)
 
 
-def test_read_receptors_alt_column_names(tmp_path):
-    csv = tmp_path / "receptors.csv"
+def test_read_releases_alt_column_names(tmp_path):
+    csv = tmp_path / "releases.csv"
     csv.write_text(
         "time,latitude,longitude,altitude\n2023-01-01 12:00:00,40.77,-111.85,5.0\n"
     )
-    receptors = read_receptors(csv)
-    assert len(receptors) == 1
-    assert receptors[0].latitude == 40.77
+    releases = read_releases(csv)
+    assert len(releases) == 1
+    assert releases[0].latitude == 40.77
 
 
-def test_read_receptors_zmsl_infers_msl(tmp_path):
-    csv = tmp_path / "receptors.csv"
+def test_read_releases_zmsl_infers_msl(tmp_path):
+    csv = tmp_path / "releases.csv"
     csv.write_text("time,lati,long,zmsl\n2023-01-01 12:00:00,40.77,-111.85,1500.0\n")
-    receptors = read_receptors(csv)
-    assert len(receptors) == 1
-    assert receptors[0].altitude_ref == "msl"
+    releases = read_releases(csv)
+    assert len(releases) == 1
+    assert releases[0].altitude_ref == "msl"
 
 
 # ---------------------------------------------------------------------------
@@ -746,64 +758,64 @@ def test_multipoint_rejects_nonconsecutive_duplicate_location():
         )
 
 
-def test_read_receptors_stacked_group_reports_r_idx(tmp_path):
-    csv = tmp_path / "receptors.csv"
+def test_read_releases_stacked_group_reports_its_group(tmp_path):
+    csv = tmp_path / "releases.csv"
     csv.write_text(
-        "r_idx,time,longitude,latitude,altitude,altitude_ref\n"
+        "group,time,longitude,latitude,altitude,altitude_ref\n"
         + "".join(
             f"0,2025-08-11 04:40:50,-76.688690186,37.763957977,{z},agl\n"
             for z in (100.0, 200.0, 300.0, 400.0, 500.0)
         )
     )
-    with pytest.raises(ValueError, match="r_idx=0.*distinct horizontal"):
-        read_receptors(csv)
+    with pytest.raises(ValueError, match="group=0.*distinct horizontal"):
+        read_releases(csv)
 
 
 # ---------------------------------------------------------------------------
-# receptors_to_csv / write_receptors round trips
+# releases_to_csv / write_releases round trips
 # ---------------------------------------------------------------------------
 
 
-def test_receptors_to_csv_header_and_rows(point_receptor, column_receptor):
-    text = receptors_to_csv([point_receptor, column_receptor])
+def test_releases_to_csv_header_and_rows(point_release, column_release):
+    text = releases_to_csv([point_release, column_release])
     lines = text.splitlines()
 
-    assert lines[0] == "r_idx,time,longitude,latitude,altitude,altitude_ref"
+    assert lines[0] == "group,time,longitude,latitude,altitude,altitude_ref"
     # One row per constituent point: 1 (point) + 2 (column).
     assert len(lines) == 1 + 1 + 2
     assert [line.split(",")[0] for line in lines[1:]] == ["0", "1", "1"]
     assert all(line.endswith(",agl") for line in lines[1:])
 
 
-def test_receptors_to_csv_empty_has_only_header():
-    assert receptors_to_csv([]).splitlines() == [
-        "r_idx,time,longitude,latitude,altitude,altitude_ref"
+def test_releases_to_csv_empty_has_only_header():
+    assert releases_to_csv([]).splitlines() == [
+        "group,time,longitude,latitude,altitude,altitude_ref"
     ]
 
 
-def test_write_receptors_round_trip_point(tmp_path, point_receptor):
-    path = write_receptors([point_receptor], tmp_path / "receptors.csv")
-    assert path == tmp_path / "receptors.csv"
-    assert read_receptors(path) == [point_receptor]
+def test_write_releases_round_trip_point(tmp_path, point_release):
+    path = write_releases([point_release], tmp_path / "releases.csv")
+    assert path == tmp_path / "releases.csv"
+    assert read_releases(path) == [point_release]
 
 
-def test_write_receptors_round_trip_column(tmp_path, column_receptor):
-    loaded = read_receptors(write_receptors([column_receptor], tmp_path / "r.csv"))
-    assert loaded == [column_receptor]
+def test_write_releases_round_trip_column(tmp_path, column_release):
+    loaded = read_releases(write_releases([column_release], tmp_path / "r.csv"))
+    assert loaded == [column_release]
     assert isinstance(loaded[0], ColumnReceptor)
 
 
-def test_write_receptors_round_trip_multipoint(tmp_path, multipoint_receptor):
-    loaded = read_receptors(write_receptors([multipoint_receptor], tmp_path / "r.csv"))
-    assert loaded == [multipoint_receptor]
+def test_write_releases_round_trip_multipoint(tmp_path, multipoint_release):
+    loaded = read_releases(write_releases([multipoint_release], tmp_path / "r.csv"))
+    assert loaded == [multipoint_release]
     assert isinstance(loaded[0], MultiPointReceptor)
 
 
-def test_write_receptors_round_trip_mixed_preserves_order_and_types(
-    tmp_path, point_receptor, column_receptor, multipoint_receptor
+def test_write_releases_round_trip_mixed_preserves_order_and_types(
+    tmp_path, point_release, column_release, multipoint_release
 ):
-    original = [multipoint_receptor, point_receptor, column_receptor]
-    loaded = read_receptors(write_receptors(original, tmp_path / "r.csv"))
+    original = [multipoint_release, point_release, column_release]
+    loaded = read_releases(write_releases(original, tmp_path / "r.csv"))
 
     assert loaded == original
     assert [type(r) for r in loaded] == [
@@ -813,7 +825,7 @@ def test_write_receptors_round_trip_mixed_preserves_order_and_types(
     ]
 
 
-def test_write_receptors_round_trip_preserves_msl_reference(tmp_path):
+def test_write_releases_round_trip_preserves_msl_reference(tmp_path):
     original = [
         PointReceptor(
             time="202301011200",
@@ -831,40 +843,38 @@ def test_write_receptors_round_trip_preserves_msl_reference(tmp_path):
             altitude_ref="msl",
         ),
     ]
-    loaded = read_receptors(write_receptors(original, tmp_path / "r.csv"))
+    loaded = read_releases(write_releases(original, tmp_path / "r.csv"))
     assert loaded == original
     assert all(r.altitude_ref == "msl" for r in loaded)
 
 
-def test_write_receptors_creates_parent_directories(tmp_path, point_receptor):
-    path = write_receptors([point_receptor], tmp_path / "nested" / "dir" / "r.csv")
+def test_write_releases_creates_parent_directories(tmp_path, point_release):
+    path = write_releases([point_release], tmp_path / "nested" / "dir" / "r.csv")
     assert path.is_file()
-    assert read_receptors(path) == [point_receptor]
+    assert read_releases(path) == [point_release]
 
 
-def test_read_receptors_keeps_extra_columns_as_attrs(tmp_path):
-    csv = tmp_path / "receptors.csv"
+def test_read_releases_keeps_extra_columns_as_attrs(tmp_path):
+    csv = tmp_path / "releases.csv"
     csv.write_text(
-        "time,lati,long,zagl,r_idx,Scene,note\n"
+        "time,lati,long,zagl,group,Scene,note\n"
         "2023-01-01 12:00:00,40.77,-111.85,5.0,0,A,\n"
         "2023-01-01 12:00:00,40.78,-111.86,5.0,0,A,\n"
         "2023-01-01 13:00:00,40.79,-111.87,5.0,1,B,hello\n"
     )
-    multi, point = read_receptors(csv)
+    multi, point = read_releases(csv)
     assert isinstance(multi, MultiPointReceptor)
     assert multi.attrs == {"Scene": "A", "note": None}
     assert point.attrs == {"Scene": "B", "note": "hello"}
 
 
-def test_receptor_attrs_round_trip_through_csv(
-    tmp_path, point_receptor, column_receptor
-):
-    from stilt.receptors.table import append_receptors_csv, receptors_to_csv
+def test_release_attrs_round_trip_through_csv(tmp_path, point_release, column_release):
+    from stilt.releases.table import append_releases_csv, releases_to_csv
 
-    labelled = point_receptor.model_copy(update={"attrs": {"scene": "A"}})
-    text = receptors_to_csv([labelled, column_receptor])
+    labelled = point_release.model_copy(update={"attrs": {"scene": "A"}})
+    text = releases_to_csv([labelled, column_release])
     assert text.splitlines()[0].endswith(",altitude_ref,scene")
-    back = read_receptors(io.StringIO(text))
+    back = read_releases(io.StringIO(text))
     assert back[0].attrs == {"scene": "A"}
     assert back[1].attrs == {"scene": None}
 
@@ -875,36 +885,36 @@ def test_receptor_attrs_round_trip_through_csv(
         altitude=1.0,
         attrs={"scene": "C", "ignored": 1},
     )
-    grown = read_receptors(io.StringIO(append_receptors_csv(text, [extra])))
+    grown = read_releases(io.StringIO(append_releases_csv(text, [extra])))
     assert grown[-1].attrs == {"scene": "C"}
 
 
 # ---------------------------------------------------------------------------
-# Receptors as frozen models
+# Releases as frozen models
 # ---------------------------------------------------------------------------
 
 
-def test_receptors_are_frozen_values(point_receptor):
+def test_releases_are_frozen_values(point_release):
     from pydantic import ValidationError
 
     with pytest.raises(ValidationError, match="frozen"):
-        point_receptor.altitude = 20.0
+        point_release.altitude = 20.0
     twin = PointReceptor(
-        time=point_receptor.time,
-        longitude=point_receptor.longitude,
-        latitude=point_receptor.latitude,
-        altitude=point_receptor.altitude,
+        time=point_release.time,
+        longitude=point_release.longitude,
+        latitude=point_release.latitude,
+        altitude=point_release.altitude,
     )
-    assert twin == point_receptor and hash(twin) == hash(point_receptor)
-    assert len({twin, point_receptor}) == 1
+    assert twin == point_release and hash(twin) == hash(point_release)
+    assert len({twin, point_release}) == 1
 
 
-def test_attrs_do_not_count_for_equality_or_the_dict(point_receptor):
-    labelled = point_receptor.model_copy(update={"attrs": {"site": "WBB"}})
-    assert labelled == point_receptor
-    assert hash(labelled) == hash(point_receptor)
+def test_attrs_do_not_count_for_equality_or_the_dict(point_release):
+    labelled = point_release.model_copy(update={"attrs": {"site": "WBB"}})
+    assert labelled == point_release
+    assert hash(labelled) == hash(point_release)
     assert "attrs" not in labelled.to_dict()
-    assert labelled.id == point_receptor.id
+    assert labelled.id == point_release.id
 
 
 def test_unknown_field_is_rejected():
@@ -943,16 +953,16 @@ def test_from_dict_needs_the_kind_key():
     assert Receptor.from_dict(r.to_dict()) == r
 
 
-def test_parse_receptor_id_splits_time_and_location(
-    point_receptor, column_receptor, multipoint_receptor
+def test_parse_release_id_splits_time_and_location(
+    point_release, column_release, multipoint_release
 ):
-    from stilt.receptors import parse_receptor_id
+    from stilt.releases import parse_release_id
 
-    for r in (point_receptor, column_receptor, multipoint_receptor):
-        assert parse_receptor_id(r.id) == (r.time, r.location_id)
+    for r in (point_release, column_release, multipoint_release):
+        assert parse_release_id(r.id) == (r.time, r.location_id)
     for bad in ("nope", "202301011200", "202301011200_", "202313011200_-111_40_5"):
         with pytest.raises(ValueError):
-            parse_receptor_id(bad)
+            parse_release_id(bad)
 
 
 # ---------------------------------------------------------------------------
@@ -990,39 +1000,39 @@ def test_multipoint_id_of_whole_metre_heights_is_unchanged():
     assert r.location_id == "multi_" + hashlib.sha256(legacy.encode()).hexdigest()[:10]
 
 
-def test_receptors_that_share_an_id_are_refused():
-    """Two receptors closer than the id resolves would overwrite each other."""
-    from stilt.receptors.table import check_distinct_ids
+def test_releases_that_share_an_id_are_refused():
+    """Two releases closer than the id resolves would overwrite each other."""
+    from stilt.releases.table import check_distinct_ids
 
     a, b = _multi([10.001, 500.0]), _multi([10.004, 500.0])
     assert a != b and a.id == b.id
     with pytest.raises(ValueError, match="share the id"):
         check_distinct_ids([a, b])
-    check_distinct_ids([a, _multi([10.001, 500.0])])  # the same receptor twice is fine
+    check_distinct_ids([a, _multi([10.001, 500.0])])  # the same release twice is fine
 
-    text = receptors_to_csv([a, b])
+    text = releases_to_csv([a, b])
     with pytest.raises(ValueError, match="share the id"):
-        read_receptors(io.StringIO(text))
+        read_releases(io.StringIO(text))
 
 
 # ---------------------------------------------------------------------------
-# The receptor table
+# The release table
 # ---------------------------------------------------------------------------
 
 
 def test_frame_has_a_row_per_release_point(
-    point_receptor, column_receptor, multipoint_receptor
+    point_release, column_release, multipoint_release
 ):
-    from stilt.receptors import receptors_from_frame, receptors_to_frame
+    from stilt.releases import releases_from_frame, releases_to_frame
 
-    receptors = [
-        point_receptor.model_copy(update={"attrs": {"site": "WBB"}}),
-        column_receptor,
-        multipoint_receptor,
+    releases = [
+        point_release.model_copy(update={"attrs": {"site": "WBB"}}),
+        column_release,
+        multipoint_release,
     ]
-    frame = receptors_to_frame(receptors)
+    frame = releases_to_frame(releases)
     assert list(frame.columns) == [
-        "r_idx",
+        "group",
         "time",
         "longitude",
         "latitude",
@@ -1030,18 +1040,18 @@ def test_frame_has_a_row_per_release_point(
         "altitude_ref",
         "site",
     ]
-    assert len(frame) == 1 + 2 + len(multipoint_receptor.coords())
-    assert frame["r_idx"].tolist()[:3] == [0, 1, 1]
+    assert len(frame) == 1 + 2 + len(multipoint_release.coords())
+    assert frame["group"].tolist()[:3] == [0, 1, 1]
     assert str(frame["time"].dtype).startswith("datetime64")
 
-    back = receptors_from_frame(frame)
-    assert back == receptors
+    back = releases_from_frame(frame)
+    assert back == releases
     assert back[0].attrs == {"site": "WBB"}
-    assert receptors_to_frame([]).empty
+    assert releases_to_frame([]).empty
 
 
 def test_frame_accepts_the_alternate_column_names():
-    from stilt.receptors import receptors_from_frame
+    from stilt.releases import releases_from_frame
 
     frame = pd.DataFrame(
         {
@@ -1052,7 +1062,7 @@ def test_frame_accepts_the_alternate_column_names():
             "Scene": ["A"],
         }
     )
-    [r] = receptors_from_frame(frame)
+    [r] = releases_from_frame(frame)
     assert isinstance(r, PointReceptor)
     assert (r.longitude, r.latitude, r.altitude) == (-111.85, 40.77, 1500.0)
     assert r.altitude_ref == "msl"
@@ -1064,9 +1074,9 @@ def test_frame_accepts_the_alternate_column_names():
 # ---------------------------------------------------------------------------
 
 
-def test_append_msl_receptor_to_plain_altitude_file_keeps_its_reference():
-    """An MSL receptor appended to a file with no reference column read back as AGL."""
-    from stilt.receptors.table import append_receptors_csv
+def test_append_msl_release_to_plain_altitude_file_keeps_its_reference():
+    """An MSL release appended to a file with no reference column read back as AGL."""
+    from stilt.releases.table import append_releases_csv
 
     text = "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,40.77,5\n"
     msl = PointReceptor(
@@ -1077,17 +1087,17 @@ def test_append_msl_receptor_to_plain_altitude_file_keeps_its_reference():
         altitude_ref="msl",
     )
 
-    grown = append_receptors_csv(text, [msl])
+    grown = append_releases_csv(text, [msl])
 
     assert grown.splitlines()[0] == "time,longitude,latitude,altitude,altitude_ref"
     assert grown.splitlines()[1] == "2023-01-01 12:00:00,-111.85,40.77,5,agl"
-    first, second = read_receptors(io.StringIO(grown))
+    first, second = read_releases(io.StringIO(grown))
     assert first.altitude_ref == "agl"
     assert second == msl and second.altitude_ref == "msl"
 
 
-def test_append_agl_receptor_leaves_a_plain_file_without_the_column():
-    from stilt.receptors.table import append_receptors_csv
+def test_append_agl_release_leaves_a_plain_file_without_the_column():
+    from stilt.releases.table import append_releases_csv
 
     text = "time,lon,lat,z,site\n2023-01-01 12:00:00,-111.85,40.77,5,WBB\n"
     agl = PointReceptor(
@@ -1098,15 +1108,15 @@ def test_append_agl_receptor_leaves_a_plain_file_without_the_column():
         attrs={"site": "UOU"},
     )
 
-    grown = append_receptors_csv(text, [agl])
+    grown = append_releases_csv(text, [agl])
 
     assert grown.splitlines()[0] == "time,lon,lat,z,site"
     assert grown.splitlines()[1] == "2023-01-01 12:00:00,-111.85,40.77,5,WBB"
     assert grown.splitlines()[2] == "2023-01-02 12:00:00,-111.9,40.7,10.0,UOU"
 
 
-def test_append_to_a_zagl_file_still_refuses_an_msl_receptor():
-    from stilt.receptors.table import append_receptors_csv
+def test_append_to_a_zagl_file_still_refuses_an_msl_release():
+    from stilt.releases.table import append_releases_csv
 
     text = "time,long,lati,zagl\n2023-01-01 12:00:00,-111.85,40.77,5\n"
     msl = PointReceptor(
@@ -1117,22 +1127,22 @@ def test_append_to_a_zagl_file_still_refuses_an_msl_receptor():
         altitude_ref="msl",
     )
     with pytest.raises(ValueError, match="altitudes are agl"):
-        append_receptors_csv(text, [msl])
+        append_releases_csv(text, [msl])
 
 
 # ---------------------------------------------------------------------------
-# Reading a table without building receptors
+# Reading a table without building releases
 # ---------------------------------------------------------------------------
 
 
-def test_receptor_rows_ids_match_the_receptors(
-    point_receptor, column_receptor, multipoint_receptor
+def test_release_rows_ids_match_the_releases(
+    point_release, column_release, multipoint_release
 ):
-    """The table's ids come from the same rules as receptor.id, for every kind."""
-    from stilt.receptors.table import (
-        receptor_rows,
-        receptors_from_rows,
-        receptors_to_frame,
+    """The table's ids come from the same rules as release.id, for every kind."""
+    from stilt.releases.table import (
+        release_rows,
+        releases_from_rows,
+        releases_to_frame,
     )
 
     sub_metre = MultiPointReceptor(
@@ -1142,21 +1152,21 @@ def test_receptor_rows_ids_match_the_receptors(
         altitudes=[10.25, 500.0],
         altitude_ref="msl",
     )
-    msl_point = point_receptor.model_copy(update={"altitude_ref": "msl"})
-    msl_column = column_receptor.model_copy(update={"altitude_ref": "msl"})
-    receptors = [
-        point_receptor,
-        column_receptor,
-        multipoint_receptor,
+    msl_point = point_release.model_copy(update={"altitude_ref": "msl"})
+    msl_column = column_release.model_copy(update={"altitude_ref": "msl"})
+    releases = [
+        point_release,
+        column_release,
+        multipoint_release,
         sub_metre,
         msl_point,
         msl_column,
     ]
 
-    rows = receptor_rows(receptors_to_frame(receptors))
+    rows = release_rows(releases_to_frame(releases))
 
-    first = rows.drop_duplicates("receptor")
-    assert first["receptor"].tolist() == [r.id for r in receptors]
+    first = rows.drop_duplicates("release")
+    assert first["release"].tolist() == [r.id for r in releases]
     assert first["kind"].tolist() == [
         "point",
         "column",
@@ -1165,29 +1175,29 @@ def test_receptor_rows_ids_match_the_receptors(
         "point",
         "column",
     ]
-    assert first["location"].tolist() == [r.location_id for r in receptors]
-    assert receptors_from_rows(rows) == receptors
+    assert first["location"].tolist() == [r.location_id for r in releases]
+    assert releases_from_rows(rows) == releases
 
 
-def test_receptor_rows_column_id_does_not_depend_on_row_order():
-    """A column listed top row first gets the id its receptor has."""
-    from stilt.receptors.table import receptor_rows
+def test_release_rows_column_id_does_not_depend_on_row_order():
+    """A column listed top row first gets the id its release has."""
+    from stilt.releases.table import release_rows
 
     frame = pd.DataFrame(
         {
-            "r_idx": [1, 1],
+            "group": [1, 1],
             "time": ["2021-01-15 06:00", "2021-01-15 06:00"],
             "longitude": [-112.0, -112.0],
             "latitude": [40.5, 40.5],
             "altitude": [3000.0, 0.0],
         }
     )
-    rows = receptor_rows(frame)
-    assert set(rows["receptor"]) == {"202101150600_-112_40.5_X0-3000"}
+    rows = release_rows(frame)
+    assert set(rows["release"]) == {"202101150600_-112_40.5_X0-3000"}
 
 
-def test_receptor_rows_checks_every_row_without_building(tmp_path):
-    from stilt.receptors.table import receptor_rows
+def test_release_rows_checks_every_row_without_building(tmp_path):
+    from stilt.releases.table import release_rows
 
     def table(**columns):
         base = {
@@ -1199,37 +1209,37 @@ def test_receptor_rows_checks_every_row_without_building(tmp_path):
         return pd.DataFrame({**base, **columns})
 
     with pytest.raises(ValueError, match="row 0: latitude must be a number within"):
-        receptor_rows(table(latitude=[95.0]))
+        release_rows(table(latitude=[95.0]))
     with pytest.raises(ValueError, match="AGL altitudes must be >= 0"):
-        receptor_rows(table(altitude=[-1.0]))
+        release_rows(table(altitude=[-1.0]))
     with pytest.raises(ValueError, match="column named \\['kind'\\]"):
-        receptor_rows(table(kind=["tower"]))
+        release_rows(table(kind=["tower"]))
     column = pd.DataFrame(
         {
-            "r_idx": [7, 7],
+            "group": [7, 7],
             "time": ["2023-01-01 12:00"] * 2,
             "longitude": [-111.85] * 2,
             "latitude": [40.77] * 2,
             "altitude": [5.0, 5.0],
         }
     )
-    with pytest.raises(ValueError, match="r_idx=7: 'bottom' must be less than 'top'"):
-        receptor_rows(column)
+    with pytest.raises(ValueError, match="group=7: 'bottom' must be less than 'top'"):
+        release_rows(column)
 
 
-def test_a_receptor_listed_twice_is_kept_once(point_receptor):
-    from stilt.receptors.table import receptor_rows, receptors_to_frame
+def test_a_release_listed_twice_is_kept_once(point_release):
+    from stilt.releases.table import release_rows, releases_to_frame
 
-    rows = receptor_rows(receptors_to_frame([point_receptor, point_receptor]))
+    rows = release_rows(releases_to_frame([point_release, point_release]))
 
-    assert rows["receptor"].tolist() == [point_receptor.id]
+    assert rows["release"].tolist() == [point_release.id]
 
 
-def test_many_receptors_listed_twice_are_checked_quickly():
+def test_many_releases_listed_twice_are_checked_quickly():
     """Each repeated id was built through a mask over the whole table: 31 s here (#191)."""
     import time
 
-    from stilt.receptors.table import receptor_rows
+    from stilt.releases.table import release_rows
 
     once = pd.DataFrame(
         {
@@ -1240,13 +1250,13 @@ def test_many_receptors_listed_twice_are_checked_quickly():
         }
     )
     start = time.perf_counter()
-    rows = receptor_rows(pd.concat([once, once], ignore_index=True))
+    rows = release_rows(pd.concat([once, once], ignore_index=True))
     assert time.perf_counter() - start < 10
-    assert rows["receptor"].is_unique and len(rows) == 10_000
+    assert rows["release"].is_unique and len(rows) == 10_000
 
 
-def test_a_repeated_id_among_many_still_names_two_different_receptors():
-    from stilt.receptors.table import receptor_rows, receptors_to_frame
+def test_a_repeated_id_among_many_still_names_two_different_releases():
+    from stilt.releases.table import release_rows, releases_to_frame
 
     a, b = _multi([10.001, 500.0]), _multi([10.004, 500.0])
     points = [
@@ -1258,34 +1268,34 @@ def test_a_repeated_id_among_many_still_names_two_different_receptors():
         )
         for h in range(3)
     ]
-    frame = receptors_to_frame([*points, a, *points, b])
+    frame = releases_to_frame([*points, a, *points, b])
 
     with pytest.raises(ValueError, match="share the id"):
-        receptor_rows(frame)
+        release_rows(frame)
 
 
-def test_receptors_from_checked_rows_are_not_checked_again(
-    monkeypatch, point_receptor, column_receptor, multipoint_receptor
+def test_releases_from_checked_rows_are_not_checked_again(
+    monkeypatch, point_release, column_release, multipoint_release
 ):
-    """The table runs a receptor's checks once; building from its rows skips them."""
-    import stilt.receptors.models as models
-    from stilt.receptors.table import (
-        receptor_rows,
-        receptors_from_rows,
-        receptors_to_frame,
+    """The table runs a release's checks once; building from its rows skips them."""
+    import stilt.releases.models as models
+    from stilt.releases.table import (
+        release_rows,
+        releases_from_rows,
+        releases_to_frame,
     )
 
-    receptors = [point_receptor, column_receptor, multipoint_receptor]
-    rows = receptor_rows(receptors_to_frame(receptors))
+    releases = [point_release, column_release, multipoint_release]
+    rows = release_rows(releases_to_frame(releases))
 
     def refuse(*args, **kwargs):
         raise AssertionError("a checked row was checked again")
 
     monkeypatch.setattr(models, "point_errors", refuse)
-    built = receptors_from_rows(rows)
+    built = releases_from_rows(rows)
 
-    assert built == receptors
-    assert [r.id for r in built] == [r.id for r in receptors]
+    assert built == releases
+    assert [r.id for r in built] == [r.id for r in releases]
     assert [r.geometry.geom_type for r in built] == [
         "Point",
         "LineString",
@@ -1314,7 +1324,7 @@ def _multipoint_location_as_first_written(lons, lats, alts, altitude_ref):
 
 def test_multipoint_ids_are_the_same_as_first_written():
     """Ids name result files, so the faster id must give the same bytes."""
-    from stilt.receptors.models import _multipoint_location, _multipoint_locations
+    from stilt.releases.models import _multipoint_location, _multipoint_locations
 
     rng = np.random.default_rng(148)
     groups, lons, lats, alts, refs = [], [], [], [], []
@@ -1353,18 +1363,18 @@ def test_a_misnamed_altitude_ref_column_is_refused(name):
     """Kept as a label, it left 1500 m above sea level as 1500 m above ground (#440)."""
     text = f"time,lon,lat,z,{name}\n2023-07-15 18:00,-111.8,40.7,1500,MSL\n"
     with pytest.raises(ValueError, match=f"'{name}'.*Did you mean 'altitude_ref'"):
-        read_receptors(io.StringIO(text))
+        read_releases(io.StringIO(text))
 
 
 def test_a_label_column_that_is_not_a_reference_is_kept():
     text = "time,lon,lat,z,site,altitude_ref,note\n2023-07-15 18:00,-111.8,40.7,1500,WBB,msl,agl\n"
-    (receptor,) = read_receptors(io.StringIO(text))
-    assert receptor.altitude_ref == "msl"
-    assert receptor.attrs == {"site": "WBB", "note": "agl"}
+    (release,) = read_releases(io.StringIO(text))
+    assert release.altitude_ref == "msl"
+    assert release.attrs == {"site": "WBB", "note": "agl"}
 
 
 def test_a_table_of_numeric_times_is_refused():
-    from stilt.receptors.table import receptor_rows
+    from stilt.releases.table import release_rows
 
     frame = pd.DataFrame(
         {
@@ -1375,11 +1385,11 @@ def test_a_table_of_numeric_times_is_refused():
         }
     )
     with pytest.raises(ValueError, match="row 0: time must be ISO 8601.*the number"):
-        receptor_rows(frame)
+        release_rows(frame)
 
 
 def test_a_table_of_datetimes_with_a_missing_one_names_the_row():
-    from stilt.receptors.table import receptor_rows
+    from stilt.releases.table import release_rows
 
     frame = pd.DataFrame(
         {
@@ -1390,4 +1400,4 @@ def test_a_table_of_datetimes_with_a_missing_one_names_the_row():
         }
     )
     with pytest.raises(ValueError, match="row 1: time is empty"):
-        receptor_rows(frame)
+        release_rows(frame)

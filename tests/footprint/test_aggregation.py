@@ -9,7 +9,7 @@ import xarray as xr
 
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.targets import Mesh, Zones
-from stilt.receptors import PointReceptor
+from stilt.releases import PointReceptor
 from stilt.spatial import Grid
 
 from ..fixtures.footprints import as_footprint, geometry_footprint, make_footprint
@@ -34,7 +34,7 @@ def _foot_on_grid(
     if t0 is None:
         t0 = pd.Timestamp("2023-01-01 12:00")
     times = [t0 + pd.Timedelta(hours=i) for i in range(n_times)]
-    receptor = PointReceptor(
+    release = PointReceptor(
         time=t0.to_pydatetime(),
         longitude=float(lons.mean()),
         latitude=float(lats.mean()),
@@ -54,7 +54,7 @@ def _foot_on_grid(
         coords={"time": times, "lat": lats, "lon": lons},
         attrs={"units": "ppm (umol-1 m2 s)"},
     )
-    return as_footprint(data, receptor, FootprintConfig(grid=grid), "")
+    return as_footprint(data, release, FootprintConfig(grid=grid), "")
 
 
 def _block_centers(n_blocks: int, res: float, origin: float = 0.0) -> np.ndarray:

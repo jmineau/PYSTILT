@@ -14,7 +14,7 @@ import pytest
 from stilt.cli import _stop_once
 
 from .fixtures.factories import write_arl_file
-from .test_fetch import _project, _receptor
+from .test_fetch import _project, _release
 
 #: Runs ``stilt fetch`` in a process of its own, against an HRRR archive that
 #: "downloads" a local file (arlmet's own download code runs, with its partial
@@ -92,7 +92,7 @@ def _wait_for_partial(met: Path, process: subprocess.Popen) -> None:
     ids=["term", "int", "term-twice", "int-twice", "term-then-int"],
 )
 def test_a_stopped_fetch_exits_with_3_and_leaves_no_partial_file(tmp_path, signals):
-    _project(tmp_path, [_receptor(2, 3)], subgrid_enable=False)
+    _project(tmp_path, [_release(2, 3)], subgrid_enable=False)
     met = tmp_path / "met"
     process = _fetch_process(tmp_path, "slow")
     _wait_for_partial(met, process)
@@ -108,7 +108,7 @@ def test_a_stopped_fetch_exits_with_3_and_leaves_no_partial_file(tmp_path, signa
 
 
 def test_fetching_again_after_a_stop_gets_the_files_and_exits_with_0(tmp_path):
-    _project(tmp_path, [_receptor(2, 3)], subgrid_enable=False)
+    _project(tmp_path, [_release(2, 3)], subgrid_enable=False)
     met = tmp_path / "met"
     process = _fetch_process(tmp_path, "slow")
     _wait_for_partial(met, process)

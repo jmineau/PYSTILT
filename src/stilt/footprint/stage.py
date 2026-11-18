@@ -28,7 +28,7 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint.foot import HNF_PLUME_COLUMNS, add_foot
 from stilt.identity import file_stamp
 from stilt.particles import particles_metadata
-from stilt.receptors import Receptor
+from stilt.releases import Receptor
 from stilt.spatial import Grid
 
 from .config import (
@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-#: One thing :meth:`FootprintStage.check` found: the check, the receptor it is about (or ``None``), and what is wrong.
+#: One thing :meth:`FootprintStage.check` found: the check, the release it is about (or ``None``), and what is wrong.
 _Finding = tuple[str, str | None, str]
 
 _GEOMETRY_SPEC: TypeAdapter[GeometrySpec] = TypeAdapter(GeometrySpec)
@@ -165,15 +165,15 @@ class FootprintStage:
         return footprint_settings(config)
 
     def check(
-        self, config: FootprintConfig, receptors: pd.DataFrame, directory: Path | None
+        self, config: FootprintConfig, releases: pd.DataFrame, directory: Path | None
     ) -> list[_Finding]:
         """
-        Return what would stop the footprints of *receptors*, found without a run.
+        Return what would stop the footprints of *releases*, found without a run.
 
         Variants whose footprints share a grid or a transform share that
-        part of the check: each is made once for a table of receptors.
+        part of the check: each is made once for a table of releases.
 
-        The receptors with a release point outside the footprint grid
+        The releases with a release point outside the footprint grid
         (``grid``), and what each transform finds wrong with its own inputs,
         such as an averaging kernel's table. A missing ``zsfc`` is the
         project check's to find (:attr:`FootprintConfig.zsfc_reasons` says
@@ -182,18 +182,18 @@ class FootprintStage:
         found: list[_Finding] = []
         if (grid := config.grid) is not None:
             found += _once(
-                receptors,
+                releases,
                 ("grid", grid.model_dump_json()),
-                lambda: _outside(receptors, grid),
+                lambda: _outside(releases, grid),
             )
         for transform in config.transforms:
             check = getattr(transform, "check", None)
             if check is None:
                 continue
             found += _once(
-                receptors,
+                releases,
                 ("transform", repr(transform), str(directory)),
-                lambda check=check: _transform_findings(check, receptors, directory),
+                lambda check=check: _transform_findings(check, releases, directory),
             )
         return found
 
@@ -227,7 +227,7 @@ class FootprintStage:
         try:
             foot = calc_footprint(
                 simulation_particles(sim, config),
-                sim.receptor,
+                sim.release,
                 config.grid,
                 smooth_factor=config.smooth_factor,
                 tres=config.tres,
@@ -240,9 +240,7 @@ class FootprintStage:
             )
         except EmptyFootprint:
             foot = None
-        _write(
-            path, config, sim.variant, sim.receptor, foot, sim.realization, self.name
-        )
+        _write(path, config, sim.variant, sim.release, foot, sim.realization, self.name)
 
 
 def footprint_particles(
@@ -362,7 +360,7 @@ def stored_particles(
 
     The met files are read from the particle file's metadata only when
     ``foot`` is computed. For that, particles without ``time`` (the run's
-    own, in memory) get it from *start*, the receptor time, and lose it
+    own, in memory) get it from *start*, the release time, and lose it
     again.
     """
     if not _computes_foot(particles, config):
@@ -384,7 +382,7 @@ def simulation_particles(sim: Simulation, config: FootprintConfig) -> pd.DataFra
         sim.particles,
         config,
         sim.particles_path,
-        start=sim.receptor.time,
+        start=sim.release.time,
         z_top=getattr(sim.transport, "z_top", None),
     )
 
@@ -443,32 +441,32 @@ def store_footprint(
     folder's hash, and the hash of the particles it was made from, so it
     reads alone.
     """
-    receptor = foot.stilt.receptor
+    release = foot.stilt.release
     name = FootprintStage.name
-    path = output.make_path(name, variant, str(receptor.id), realization)
-    return _write(path, variant.stages[name], variant, receptor, foot, realization)
+    path = output.make_path(name, variant, str(release.id), realization)
+    return _write(path, variant.stages[name], variant, release, foot, realization)
 
 
 def store_empty_footprint(
-    output: Output, variant: Variant, receptor: Receptor, realization: int | None = None
+    output: Output, variant: Variant, release: Receptor, realization: int | None = None
 ) -> Location:
-    """Record in *variant*'s footprint folder that a receptor's footprint is empty: no particle reached the grid."""
+    """Record in *variant*'s footprint folder that a release's footprint is empty: no particle reached the grid."""
     name = FootprintStage.name
-    path = output.make_path(name, variant, str(receptor.id), realization)
-    return _write(path, variant.stages[name], variant, receptor, None, realization)
+    path = output.make_path(name, variant, str(release.id), realization)
+    return _write(path, variant.stages[name], variant, release, None, realization)
 
 
 def _write(
     path: Location,
     config: FootprintConfig,
     variant: Variant,
-    receptor: Receptor,
+    release: Receptor,
     foot: xr.DataArray | None,
     realization: int | None,
     stage: str = FootprintStage.name,
 ) -> Location:
     """
-    Write a receptor's footprint, made with *config*, at *path*; the empty one when *foot* is ``None``.
+    Write a release's footprint, made with *config*, at *path*; the empty one when *foot* is ``None``.
 
     The file records what every result file does
     (:func:`stilt.identity.file_stamp`, with the hash of *variant*'s folder
@@ -477,36 +475,36 @@ def _write(
     stamp = file_stamp(variant.stage_hashes[stage], realization)
     stamp[b"stilt:particles_hash"] = variant.particles_hash.encode()
     if foot is None:
-        return write_empty_footprint(path, receptor, config, variant.name, stamp)
+        return write_empty_footprint(path, release, config, variant.name, stamp)
     return write_footprint(path, foot, config, stamp)
 
 
-#: The findings of each part of a check for one table of receptors, so that
+#: The findings of each part of a check for one table of releases, so that
 #: variants whose footprints share a grid or a transform share its check.
 _CHECKED: dict[int, tuple[weakref.ref, dict[Any, list[_Finding]]]] = {}
 
 
 def _once(
-    receptors: pd.DataFrame, key: Any, make: Callable[[], list[_Finding]]
+    releases: pd.DataFrame, key: Any, make: Callable[[], list[_Finding]]
 ) -> list[_Finding]:
-    """Return the findings *make* gives for *receptors* and *key*, made once while that table is in use."""
-    known = _CHECKED.get(id(receptors))
-    if known is None or known[0]() is not receptors:
-        _CHECKED.clear()  # one table at a time: a project's receptors
-        known = _CHECKED[id(receptors)] = (weakref.ref(receptors), {})
+    """Return the findings *make* gives for *releases* and *key*, made once while that table is in use."""
+    known = _CHECKED.get(id(releases))
+    if known is None or known[0]() is not releases:
+        _CHECKED.clear()  # one table at a time: a project's releases
+        known = _CHECKED[id(releases)] = (weakref.ref(releases), {})
     if key not in known[1]:
         known[1][key] = make()
     return known[1][key]
 
 
 def _transform_findings(
-    check: Callable[..., Any], receptors: pd.DataFrame, directory: Path | None
+    check: Callable[..., Any], releases: pd.DataFrame, directory: Path | None
 ) -> list[_Finding]:
-    """Return what a transform's own check finds for the receptors, as plain tuples."""
-    ids = list(dict.fromkeys(str(r) for r in receptors["receptor"]))
+    """Return what a transform's own check finds for the releases, as plain tuples."""
+    ids = list(dict.fromkeys(str(r) for r in releases["release"]))
     return [
-        (str(name), None if receptor is None else str(receptor), str(message))
-        for name, receptor, message in check(ids, directory)
+        (str(name), None if release is None else str(release), str(message))
+        for name, release, message in check(ids, directory)
     ]
 
 
@@ -536,7 +534,7 @@ def _read_mesh(spec: str, modified: int | None) -> Mesh:
 
 
 def _outside(rows: pd.DataFrame, grid: Grid) -> list[_Finding]:
-    """List the receptors with a release point outside *grid*, which is bounded in longitude and latitude."""
+    """List the releases with a release point outside *grid*, which is bounded in longitude and latitude."""
     outside = rows[~grid.contains(rows["longitude"], rows["latitude"])]
     box = (
         f"{grid.xmin:g} to {grid.xmax:g} longitude, "
@@ -545,11 +543,11 @@ def _outside(rows: pd.DataFrame, grid: Grid) -> list[_Finding]:
     return [
         (
             "grid",
-            str(row.receptor),
+            str(row.release),
             f"longitude {row.longitude:g} and latitude {row.latitude:g} are "
             f"outside the footprint grid ({box})",
         )
-        for row in outside.drop_duplicates("receptor").itertuples()
+        for row in outside.drop_duplicates("release").itertuples()
     ]
 
 

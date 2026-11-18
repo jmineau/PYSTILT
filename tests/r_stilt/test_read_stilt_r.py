@@ -4,7 +4,7 @@
 ``fixtures/r_helpers/write_by_id.r`` writes a project with STILT-R's own
 ``write_control``, ``saveRDS`` and ``calc_footprint``, as it wrote the
 committed sample, and R reads it back with ``readRDS``. The reader must give
-the same receptor time and the same particles as R, the release points of
+the same release time and the same particles as R, the release points of
 ``CONTROL``, and the same footprint as the file, made with the
 ``smooth_factor`` of ``params.RDS``, and with ``error=True`` the
 transport-error particles R reads.
@@ -27,7 +27,7 @@ pytest.importorskip("rdata")
 
 _R_HELPERS = Path(__file__).parents[1] / "fixtures" / "r_helpers"
 
-# R writes each simulation's receptor time (seconds since 1970) and its
+# R writes each simulation's release time (seconds since 1970) and its
 # particles, all digits kept, with STILT-R's column names.
 _DUMP = r"""
 args <- commandArgs(trailingOnly = TRUE)
@@ -87,19 +87,19 @@ def written(rscript, r_stilt_dir, tmp_path_factory) -> tuple[Path, Path]:
     return by_id, dumped
 
 
-def test_receptor_time_and_particles_are_what_r_reads(written):
+def test_release_time_and_particles_are_what_r_reads(written):
     by_id, dumped = written
     sims = list(read_stilt_r(by_id))
     names = sorted(p.name for p in by_id.iterdir())
     assert len(sims) == len(names) == 2
-    for name, (receptor, particles, _) in zip(names, sims, strict=True):
+    for name, (release, particles, _) in zip(names, sims, strict=True):
         seconds = float((dumped / f"{name}_time.txt").read_text())
-        assert pd.Timestamp(receptor.time) == pd.Timestamp(seconds, unit="s")
+        assert pd.Timestamp(release.time) == pd.Timestamp(seconds, unit="s")
         lines = (by_id / name / "CONTROL").read_text().splitlines()
         points = [
             tuple(map(float, line.split())) for line in lines[2 : 2 + int(lines[1])]
         ]
-        assert receptor.coords() == points
+        assert release.coords() == points
         from_r = _read_dump(dumped / f"{name}_particles.csv").rename(
             columns=_PYSTILT_NAMES
         )
@@ -117,7 +117,7 @@ def test_footprint_is_the_file_written(written):
             raw = ds["foot"].load().transpose("time", "lat", "lon")
         stamps = pd.to_datetime(raw["time"].to_numpy(), unit="s")
         if foot.stilt.config.tres != "1h":
-            # STILT-R summed it over time and stamped it at the receptor
+            # STILT-R summed it over time and stamped it at the release
             # time; it is one layer as long as the run, stamped at its start.
             assert raw.sizes["time"] == 1
             stamps = stamps - pd.Timedelta(foot.stilt.config.tres)
@@ -128,10 +128,10 @@ def test_footprint_is_the_file_written(written):
 
 def test_error_particles_are_what_r_reads(written):
     by_id, dumped = written
-    # Only the point receptor, the first folder, has a transport-error run.
+    # Only the point release, the first folder, has a transport-error run.
     (path,) = dumped.glob("*_error.csv")
-    receptor, particles, foot = next(read_stilt_r(by_id, error=True))
-    assert f"{receptor.id}_error.csv" == path.name
+    release, particles, foot = next(read_stilt_r(by_id, error=True))
+    assert f"{release.id}_error.csv" == path.name
     from_r = _read_dump(path).rename(columns=_PYSTILT_NAMES)
     mine = particles.drop(columns="time")
     assert list(mine.columns) == list(from_r.columns)

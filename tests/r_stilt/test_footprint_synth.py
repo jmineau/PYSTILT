@@ -46,7 +46,7 @@ from stilt.footprint.gridding import (
     _padded_axes,
     _project_particles_to_crs,
 )
-from stilt.receptors import MultiPointReceptor, PointReceptor
+from stilt.releases import MultiPointReceptor, PointReceptor
 from stilt.spatial import Grid, _east_edge, _grid_cell_starts
 
 from ..fixtures.particles import point_at
@@ -61,7 +61,7 @@ pytestmark = [pytest.mark.r_only]
 
 _R_HELPERS = Path(__file__).parents[1] / "fixtures" / "r_helpers"
 
-_RECEPTOR_TIME = dt.datetime(2015, 12, 10, 0, 0)
+_RELEASE_TIME = dt.datetime(2015, 12, 10, 0, 0)
 
 _GRID = Grid(
     xmin=-113.0,
@@ -218,9 +218,9 @@ def _r_footprint_stages(
 
 def _released_from(particles: pd.DataFrame) -> PointReceptor | MultiPointReceptor:
     """
-    Return a receptor released from *particles*' first positions.
+    Return a release released from *particles*' first positions.
 
-    STILT-R's ``calc_footprint`` takes no receptor; PYSTILT's checks that the
+    STILT-R's ``calc_footprint`` takes no release; PYSTILT's checks that the
     particles start near one of its release points. The hand-built tables
     here start particles anywhere on the grid, so each first position is a
     release point.
@@ -243,10 +243,10 @@ def _released_from(particles: pd.DataFrame) -> PointReceptor | MultiPointRecepto
     if len(points) == 1:
         lon, lat = points[0]
         return PointReceptor(
-            time=_RECEPTOR_TIME, longitude=lon, latitude=lat, altitude=5.0
+            time=_RELEASE_TIME, longitude=lon, latitude=lat, altitude=5.0
         )
     return MultiPointReceptor(
-        time=_RECEPTOR_TIME,
+        time=_RELEASE_TIME,
         longitudes=points[:, 0].tolist(),
         latitudes=points[:, 1].tolist(),
         altitudes=[5.0] * len(points),
@@ -256,7 +256,7 @@ def _released_from(particles: pd.DataFrame) -> PointReceptor | MultiPointRecepto
 def _py_footprint(
     tmp_path: Path,
     particles: pd.DataFrame,
-    receptor: PointReceptor | MultiPointReceptor | None = None,
+    release: PointReceptor | MultiPointReceptor | None = None,
     grid: Grid = _GRID,
     smooth_factor: float = 1.0,
     time_integrate: bool = False,
@@ -264,20 +264,20 @@ def _py_footprint(
     """
     Call PYSTILT's calc_footprint on *particles*, return xr.Dataset.
 
-    The receptor, unless given, is released from the particles' first
+    The release, unless given, is released from the particles' first
     positions (``_released_from``). For STILT-R's *time_integrate*, PYSTILT makes one
     layer as long as the run: ``tres`` the whole hours that hold the oldest
     particle row.
     """
     tmp_path.mkdir(parents=True, exist_ok=True)
-    if receptor is None:
-        receptor = _released_from(particles)
+    if release is None:
+        release = _released_from(particles)
     tres = "1h"
     if time_integrate:
         tres = f"{max(1, int(np.ceil(np.abs(particles['time']).max() / 60)))}h"
     foot = calc_footprint(
         _as_py(particles),
-        receptor,
+        release,
         grid,
         smooth_factor=smooth_factor,
         tres=tres,
@@ -884,7 +884,7 @@ def test_smooth_factor_scaling(rscript, r_stilt_dir, tmp_path):
     Uses the same 100-particle cluster as test_single_particle_gaussian so
     the kernel bandwidth is well-defined (non-zero variance).
     """
-    # Two-step tracks (t=0 receptor + t=-360 min = 6 h back) so that
+    # Two-step tracks (t=0 release + t=-360 min = 6 h back) so that
     # min(|time|)=0 per particle, giving rtime=-360 for the 6 h step.
     # Without t=0, rtime collapses to 0 for all steps → zero-width kernel
     # for every smooth_factor → both peaks identical.
@@ -1070,7 +1070,7 @@ def test_early_time_multi_timestep(rscript, r_stilt_dir, tmp_path):
     Multiple timesteps within the 100-minute early-time window, slow movement.
 
     All existing synthetic tests use a single non-zero timestep per particle
-    (anchor rows copy the receptor position, so only t=-1 has foot>0).  This
+    (anchor rows copy the release position, so only t=-1 has foot>0).  This
     means every particle has the same rtime, and the kernel is only computed
     once.  Here particles have genuine foot values at five timesteps spanning
     0–50 minutes, so the kernel bandwidth is computed at five distinct rtimes

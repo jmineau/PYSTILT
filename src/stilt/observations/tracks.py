@@ -1,11 +1,11 @@
 """
-Receptors along the track of a moving platform.
+Releases along the track of a moving platform.
 
 A vehicle, a train, an aircraft, or a ship measures every second or so as it
-moves. :func:`receptors_from_track` groups those measurements by time or by
+moves. :func:`releases_from_track` groups those measurements by time or by
 distance along the track and makes a :class:`~stilt.PointReceptor` at the
 mean time and position of each group. The table it returns gives each
-measurement its receptor id, so the modeled values join back to the
+measurement its release id, so the modeled values join back to the
 measurements after a run. :data:`TRACK_SCHEMA` lists the columns a track
 needs, and :func:`check_track` checks a table against it.
 """
@@ -17,19 +17,19 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from stilt.receptors import PointReceptor, VerticalReference
+from stilt.releases import PointReceptor, VerticalReference
 from stilt.spatial import haversine_km
 
 #: The columns a track needs, as ``{name: meaning}``. A track may have any
 #: other columns, such as the measured mole fractions, and
-#: :func:`receptors_from_track` keeps them in its table.
+#: :func:`releases_from_track` keeps them in its table.
 TRACK_SCHEMA: dict[str, str] = {
     "time": "Time of the measurement. A time without a time zone is taken as UTC.",
     "longitude": "Longitude where the air was sampled, degrees.",
     "latitude": "Latitude where the air was sampled, degrees.",
     "altitude": (
         "Height where the air was sampled, in meters above ground or above sea "
-        "level (the altitude_ref of receptors_from_track)."
+        "level (the altitude_ref of releases_from_track)."
     ),
 }
 
@@ -62,7 +62,7 @@ def check_track(track: pd.DataFrame) -> None:
         raise ValueError(f"The track lacks the columns {missing} (see TRACK_SCHEMA).")
 
 
-def receptors_from_track(
+def releases_from_track(
     track: pd.DataFrame,
     *,
     every: str | dt.timedelta | None = None,
@@ -71,7 +71,7 @@ def receptors_from_track(
     gap: str | dt.timedelta = "10min",
 ) -> tuple[list[PointReceptor], pd.DataFrame]:
     """
-    Return a receptor for each group of measurements along a track, and their table.
+    Return a release for each group of measurements along a track, and their table.
 
     The measurements are grouped by time (``every``) or by distance along
     the track (``spacing``), and each group becomes one
@@ -99,13 +99,13 @@ def receptors_from_track(
 
     Returns
     -------
-    receptors : list of PointReceptor
+    releases : list of PointReceptor
         One per group, in time order. Two groups whose rounded time and
-        position agree share one receptor.
+        position agree share one release.
     table : pandas.DataFrame
-        The track, in its own row order and index, with a ``receptor``
-        column holding each measurement's receptor id. An existing
-        ``receptor`` column is replaced. Keep it in the project with
+        The track, in its own row order and index, with a ``release``
+        column holding each measurement's release id. An existing
+        ``release`` column is replaced. Keep it in the project with
         ``project.add_table("track", table)``.
 
     Raises
@@ -117,13 +117,13 @@ def receptors_from_track(
 
     Notes
     -----
-    A receptor's time is its group's mean time, rounded to the nearest
+    A release's time is its group's mean time, rounded to the nearest
     minute, because a run starts on a whole minute. Its longitude and
     latitude are the mean position, rounded to 5 decimals (about 1 m), and
     its altitude the mean height, rounded to 0.1 m. The mean longitude of a
     group that crosses 180 degrees is taken across it.
 
-    A receptor stands for a stretch of track, so the receptor of a group
+    A release stands for a stretch of track, so the release of a group
     that turns is inside the turn. Groups by ``every`` are as long
     as the distance the platform covers in that time; give an aircraft
     ``spacing`` to keep them short. With ``spacing``, a platform that stands
@@ -143,15 +143,15 @@ def receptors_from_track(
     ...         "altitude": 3.0,
     ...     }
     ... )
-    >>> receptors, table = receptors_from_track(track, every="5min")
-    >>> [r.id for r in receptors]
+    >>> releases, table = releases_from_track(track, every="5min")
+    >>> [r.id for r in releases]
     ['202407011802_-111.88253_40.76_3', '202407011807_-111.84747_40.76_3']
-    >>> table["receptor"].value_counts().tolist()
+    >>> table["release"].value_counts().tolist()
     [300, 300]
 
     In a project:
 
-    >>> project.add_receptors(receptors)  # doctest: +SKIP
+    >>> project.add_releases(releases)  # doctest: +SKIP
     >>> project.add_table("track", table)  # doctest: +SKIP
     """
     check_track(track)
@@ -209,10 +209,10 @@ def receptors_from_track(
         .groupby("group", sort=True)
         .mean()
     )
-    receptor_times = means["time"].dt.round("min")
-    receptor_lons = np.round((lon0 + means["offset"].to_numpy() + 180) % 360 - 180, 5)
-    receptor_lats = np.round(means["lat"].to_numpy(), 5)
-    receptor_alts = np.round(means["alt"].to_numpy(), 1)
+    release_times = means["time"].dt.round("min")
+    release_lons = np.round((lon0 + means["offset"].to_numpy() + 180) % 360 - 180, 5)
+    release_lats = np.round(means["lat"].to_numpy(), 5)
+    release_alts = np.round(means["alt"].to_numpy(), 1)
 
     made = [
         PointReceptor(
@@ -223,19 +223,19 @@ def receptors_from_track(
             altitude_ref=altitude_ref,
         )
         for t, x, y, z in zip(
-            receptor_times, receptor_lons, receptor_lats, receptor_alts, strict=True
+            release_times, release_lons, release_lats, release_alts, strict=True
         )
     ]
     ids = np.array([r.id for r in made], dtype=object)
-    # Two receptors with one id have the same minute and position, so are
+    # Two releases with one id have the same minute and position, so are
     # equal: keep the first.
     unique: dict[str, PointReceptor] = {}
     for r in made:
         unique.setdefault(r.id, r)
 
-    receptor = np.empty(len(track), dtype=object)
-    receptor[order] = ids[group]
-    return list(unique.values()), track.assign(receptor=receptor)
+    release = np.empty(len(track), dtype=object)
+    release[order] = ids[group]
+    return list(unique.values()), track.assign(release=release)
 
 
-__all__ = ["TRACK_SCHEMA", "check_track", "receptors_from_track"]
+__all__ = ["TRACK_SCHEMA", "check_track", "releases_from_track"]

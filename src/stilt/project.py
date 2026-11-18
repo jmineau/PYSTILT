@@ -1,14 +1,14 @@
 """
-The :class:`Project`: a directory of receptors and settings, and a view of their results.
+The :class:`Project`: a directory of releases and settings, and a view of their results.
 
 A project is a directory holding what the user wrote::
 
     config.yaml       the settings (written once, by Project.init or stilt init)
-    receptors.csv     the receptors (only appended to)
+    releases.csv     the releases (only appended to)
 
 Results go to the output directory ``config.yaml`` names
 (:class:`stilt.output.Output`), ``./output`` by default. The simulations a
-project defines are its receptors crossed with the variants in
+project defines are its releases crossed with the variants in
 ``config.yaml``. A project reads; the workers in :mod:`stilt.execution` are
 the only code that writes results.
 
@@ -36,16 +36,16 @@ from stilt.execution.config import ExecutionConfig
 from stilt.fetch import fetch_project
 from stilt.output import Output, completed
 from stilt.particles import particles_from_table
-from stilt.receptors import Receptor, read_receptors
-from stilt.receptors.table import (
+from stilt.releases import Receptor, read_releases
+from stilt.releases.table import (
     COLUMNS,
     ROW_COLUMNS,
-    append_receptors_csv,
+    append_releases_csv,
     check_distinct_ids,
-    read_receptor_frame,
-    receptor_rows,
-    receptors_from_rows,
-    receptors_to_csv,
+    read_release_frame,
+    release_rows,
+    releases_from_rows,
+    releases_to_csv,
 )
 from stilt.simulation import Simulation
 from stilt.stages import reads
@@ -54,33 +54,33 @@ if TYPE_CHECKING:
     from stilt.visualization import ProjectPlotAccessor
 
 
-#: The columns of :attr:`Project.receptors` before the label columns.
-RECEPTOR_COLUMNS = ("receptor", "time", "kind", "location")
+#: The columns of :attr:`Project.releases` before the label columns.
+RELEASE_COLUMNS = ("release", "time", "kind", "location")
 
 #: Where a simulation stands, the ``state`` column of :meth:`Project.status`.
 STATES = ("complete", "failed", "interrupted", "pending")
 
 
-def _as_receptors(
-    receptors: Receptor | Iterable[Receptor] | str | Path,
+def _as_releases(
+    releases: Receptor | Iterable[Receptor] | str | Path,
 ) -> list[Receptor]:
-    """Return receptors given as one, several, or the path of a receptors CSV."""
-    if isinstance(receptors, (str, Path)):
-        return read_receptors(absolute(receptors))
-    if isinstance(receptors, Receptor):
-        return [receptors]
-    items = list(receptors)
+    """Return releases given as one, several, or the path of a releases CSV."""
+    if isinstance(releases, (str, Path)):
+        return read_releases(absolute(releases))
+    if isinstance(releases, Receptor):
+        return [releases]
+    items = list(releases)
     if not all(isinstance(item, Receptor) for item in items):
         raise TypeError(
-            "Receptors must be a Receptor, an iterable of Receptors, or the path "
-            "of a receptors CSV."
+            "Releases must be a Receptor, an iterable of Receptors, or the path "
+            "of a releases CSV."
         )
     return items
 
 
 #: A variant and a realization, how the bulk methods group a selection.
 _Key = tuple[str, int | None]
-#: The receptors with each kind of result a variant makes: ``particles`` first, then each stage in the order they run.
+#: The releases with each kind of result a variant makes: ``particles`` first, then each stage in the order they run.
 _Present = dict[str, frozenset[str]]
 
 
@@ -90,11 +90,11 @@ def _realization(value: Any) -> int | None:
 
 
 def _rows(frame: pd.DataFrame) -> list[tuple[str, str, int | None]]:
-    """Return each row's ``(receptor, variant, realization)``."""
+    """Return each row's ``(release, variant, realization)``."""
     return [
         (str(r), str(v), _realization(k))
         for r, v, k in zip(
-            frame["receptor"], frame["variant"], frame["realization"], strict=True
+            frame["release"], frame["variant"], frame["realization"], strict=True
         )
     ]
 
@@ -148,10 +148,10 @@ def _column(table: Any, name: str) -> list[str]:
 
 class Project:
     """
-    A project's particle runs: receptors, settings, and the simulations they define.
+    A project's particle runs: releases, settings, and the simulations they define.
 
     ``Project(path)`` opens a project directory and reads it. It is every
-    receptor under every variant, and a view of their results: list the
+    release under every variant, and a view of their results: list the
     simulations, see which have finished, load their particles. The results
     are in the output directory ``config.yaml`` names (``./output`` by
     default), which several projects can share.
@@ -176,7 +176,10 @@ class Project:
     ------
     FileNotFoundError
         If the directory has no ``config.yaml``, so it is not a project: a
-        mistyped path is not read as a project with no receptors.
+        mistyped path is not read as a project with no releases.
+    ValueError
+        If the directory has ``receptors.csv`` and no ``releases.csv``: the
+        file was renamed, and its ``r_idx`` column is now ``group``.
 
     Attributes
     ----------
@@ -187,19 +190,26 @@ class Project:
     def __init__(self, path: str | Path, *, output: str | Path | None = None) -> None:
         self.directory = absolute(path)
         self._output = output
-        #: Checked receptor rows used in place of receptors.csv (:meth:`_take_rows`).
+        #: Checked release rows used in place of releases.csv (:meth:`_take_rows`).
         self._taken_rows: pd.DataFrame | None = None
         if not self.config_path.exists():
             raise FileNotFoundError(
                 f"No config.yaml in {self.directory}. Make a project with "
                 "stilt.Project.init(...) or `stilt init`."
             )
+        if (
+            self.directory / "receptors.csv"
+        ).exists() and not self.releases_path.exists():
+            raise ValueError(
+                f"{self.directory} has receptors.csv, which is now named "
+                "releases.csv: rename the file, and rename its r_idx column to group."
+            )
 
     @classmethod
     def init(
         cls,
         path: str | Path,
-        receptors: Receptor | Iterable[Receptor] | str | Path | None = None,
+        releases: Receptor | Iterable[Receptor] | str | Path | None = None,
         *,
         config: ProjectConfig | None = None,
         **settings: Any,
@@ -208,7 +218,7 @@ class Project:
         Make a new project and return it.
 
         Writes ``config.yaml``, with the settings given, and
-        ``receptors.csv`` when receptors are given. The settings are written
+        ``releases.csv`` when releases are given. The settings are written
         as given: a transport model runs with its own defaults for the
         settings they leave out. :meth:`stilt.Project.init` also writes the
         values STILT-R runs HYSPLIT with.
@@ -217,8 +227,8 @@ class Project:
         ----------
         path : str or Path
             Project directory. It is created if needed.
-        receptors : Receptor, iterable of Receptor, str or Path, optional
-            Receptors, or the path of a receptors CSV to copy them from.
+        releases : Receptor, iterable of Receptor, str or Path, optional
+            Releases, or the path of a releases CSV to copy them from.
         config : ProjectConfig, optional
             The settings. Or give them as keywords instead.
         **settings
@@ -233,18 +243,18 @@ class Project:
         TypeError
             If both *config* and keyword settings are given.
         ValueError
-            If a variant's settings are invalid, or *receptors* is given but
+            If a variant's settings are invalid, or *releases* is given but
             holds none (an empty list, or a CSV file with only its header).
             Nothing is written.
         """
         if config is not None and settings:
             raise TypeError("Give a ProjectConfig or keyword settings, not both.")
-        batch = None if receptors is None else _as_receptors(receptors)
+        batch = None if releases is None else _as_releases(releases)
         if batch == []:
             raise ValueError(
-                "No receptors were given: the list or file is empty. Leave "
-                "receptors out to make a project without them, and add them "
-                "later with project.add_receptors."
+                "No releases were given: the list or file is empty. Leave "
+                "releases out to make a project without them, and add them "
+                "later with project.add_releases."
             )
         if config is None:
             config = ProjectConfig(**settings)
@@ -262,7 +272,7 @@ class Project:
         config.to_yaml(config_path)
         project = cls(directory)
         if batch is not None:
-            project.add_receptors(batch)
+            project.add_releases(batch)
         return project
 
     def __repr__(self) -> str:
@@ -281,9 +291,9 @@ class Project:
         return self.directory / "config.yaml"
 
     @property
-    def receptors_path(self) -> Path:
-        """The project's ``receptors.csv``."""
-        return self.directory / "receptors.csv"
+    def releases_path(self) -> Path:
+        """The project's ``releases.csv``."""
+        return self.directory / "releases.csv"
 
     @cached_property
     def config(self) -> ProjectConfig:
@@ -324,138 +334,138 @@ class Project:
     @cached_property
     def _rows(self) -> pd.DataFrame:
         """
-        The rows of ``receptors.csv``, checked, with each row's receptor id.
+        The rows of ``releases.csv``, checked, with each row's release id.
 
-        No receptor is built here; :meth:`receptor` builds one when asked.
+        No release is built here; :meth:`release` builds one when asked.
         """
         if self._taken_rows is not None:
             return self._taken_rows
-        if not self.receptors_path.exists():
+        if not self.releases_path.exists():
             empty = pd.DataFrame(columns=["time", "longitude", "latitude", "altitude"])
-            return receptor_rows(empty)
-        return receptor_rows(read_receptor_frame(self.receptors_path))
+            return release_rows(empty)
+        return release_rows(read_release_frame(self.releases_path))
 
     @cached_property
     def _positions(self) -> dict[str, np.ndarray]:
-        """Where each receptor's rows are in :attr:`_rows`, by id, so :meth:`receptor` need not search."""
-        groups = self._rows.groupby("receptor", sort=False).indices
+        """Where each release's rows are in :attr:`_rows`, by id, so :meth:`release` need not search."""
+        groups = self._rows.groupby("release", sort=False).indices
         return {str(rid): np.asarray(positions) for rid, positions in groups.items()}
 
     @cached_property
-    def receptors(self) -> pd.DataFrame:
+    def releases(self) -> pd.DataFrame:
         """
-        The receptors, one row per receptor, in file order.
+        The releases, one row per release, in file order.
 
-        The columns are ``receptor`` (the id), ``time``, ``kind``
+        The columns are ``release`` (the id), ``time``, ``kind``
         (``point``, ``column``, or ``multipoint``), ``location`` (the
-        location id), and one column per label from ``receptors.csv``.
-        :meth:`receptor` gives the receptor itself.
+        location id), and one column per label from ``releases.csv``.
+        :meth:`release` gives the release itself.
 
         Raises
         ------
         ValueError
-            If a row of ``receptors.csv`` is wrong, naming the row.
+            If a row of ``releases.csv`` is wrong, naming the row.
         """
         rows = self._rows
         labels = [c for c in rows.columns if c not in COLUMNS and c not in ROW_COLUMNS]
-        first = rows.drop_duplicates("receptor")
-        frame = first.loc[:, [*RECEPTOR_COLUMNS, *labels]].reset_index(drop=True)
+        first = rows.drop_duplicates("release")
+        frame = first.loc[:, [*RELEASE_COLUMNS, *labels]].reset_index(drop=True)
         return frame.astype({"time": "datetime64[ns]"})
 
-    def receptor(self, receptor_id: str) -> Receptor:
+    def release(self, release_id: str) -> Receptor:
         """
-        Return one receptor by id, built from its rows.
+        Return one release by id, built from its rows.
 
         Raises
         ------
         KeyError
-            If the project has no receptor with that id.
+            If the project has no release with that id.
         """
-        return self._receptors([receptor_id])[receptor_id]
+        return self._releases([release_id])[release_id]
 
-    def _receptors(self, receptor_ids: Iterable[str]) -> dict[str, Receptor]:
+    def _releases(self, release_ids: Iterable[str]) -> dict[str, Receptor]:
         """
-        Return receptors by id, built together from their rows.
+        Return releases by id, built together from their rows.
 
-        Selecting a receptor's rows from a large table is most of the cost
-        of building it, so a selection builds all of its receptors in one
+        Selecting a release's rows from a large table is most of the cost
+        of building it, so a selection builds all of its releases in one
         pass: on a project of millions of rows that is about 0.05 ms a
-        receptor, against several ms one at a time.
+        release, against several ms one at a time.
 
         Raises
         ------
         KeyError
-            If the project has no receptor with one of the ids.
+            If the project has no release with one of the ids.
         """
-        ids = list(dict.fromkeys(receptor_ids))
+        ids = list(dict.fromkeys(release_ids))
         if not ids:
             return {}
-        # receptors_from_rows builds them in the order the ids first appear.
-        return dict(zip(ids, receptors_from_rows(self._rows_of(ids)), strict=True))
+        # releases_from_rows builds them in the order the ids first appear.
+        return dict(zip(ids, releases_from_rows(self._rows_of(ids)), strict=True))
 
-    def _rows_of(self, receptor_ids: list[str]) -> pd.DataFrame:
+    def _rows_of(self, release_ids: list[str]) -> pd.DataFrame:
         """
-        Return the checked rows of *receptor_ids*, in that order.
+        Return the checked rows of *release_ids*, in that order.
 
         Raises
         ------
         KeyError
-            If the project has no receptor with one of the ids.
+            If the project has no release with one of the ids.
         """
-        for rid in receptor_ids:
+        for rid in release_ids:
             if rid not in self._positions:
-                raise KeyError(f"No receptor {rid!r} in {self.directory}.")
+                raise KeyError(f"No release {rid!r} in {self.directory}.")
         return self._rows.iloc[
-            np.concatenate([self._positions[r] for r in receptor_ids])
+            np.concatenate([self._positions[r] for r in release_ids])
         ]
 
     def _take_rows(self, rows: pd.DataFrame) -> None:
         """
-        Use *rows*, checked receptor rows (:func:`~stilt.receptors.table.receptor_rows`), in place of ``receptors.csv``.
+        Use *rows*, checked release rows (:func:`~stilt.releases.table.release_rows`), in place of ``releases.csv``.
 
-        A Slurm task reads the rows of its submission's receptors
-        (``receptors.parquet``, written by :func:`stilt.execution.submit`)
+        A Slurm task reads the rows of its submission's releases
+        (``releases.parquet``, written by :func:`stilt.execution.submit`)
         rather than reading and checking the whole file again. The project
-        then knows only those receptors.
+        then knows only those releases.
         """
         self._taken_rows = rows.reset_index(drop=True)
-        for name in ("_rows", "_positions", "receptors", "_simulations"):
+        for name in ("_rows", "_positions", "releases", "_simulations"):
             vars(self).pop(name, None)
 
-    def add_receptors(
-        self, receptors: Receptor | Iterable[Receptor] | str | Path
+    def add_releases(
+        self, releases: Receptor | Iterable[Receptor] | str | Path
     ) -> list[str]:
         """
-        Add receptors to ``receptors.csv`` and return the ids of the new ones.
+        Add releases to ``releases.csv`` and return the ids of the new ones.
 
         The file is created if needed, and otherwise only appended to, in its
-        own columns (:func:`stilt.receptors.table.append_receptors_csv`). Receptors
+        own columns (:func:`stilt.releases.table.append_releases_csv`). Releases
         it already holds are skipped.
 
         Parameters
         ----------
-        receptors : Receptor, iterable of Receptor, str or Path
-            Receptors, or the path of a receptors CSV to add them from.
+        releases : Receptor, iterable of Receptor, str or Path
+            Releases, or the path of a releases CSV to add them from.
 
         Raises
         ------
         ValueError
-            If a new receptor has the id of a different receptor, since an
-            id names a receptor's result files.
+            If a new release has the id of a different release, since an
+            id names a release's result files.
         """
-        batch = _as_receptors(receptors)
-        known = [self.receptor(r.id) for r in batch if r.id in self._positions]
+        batch = _as_releases(releases)
+        known = [self.release(r.id) for r in batch if r.id in self._positions]
         check_distinct_ids([*known, *batch])
         new = list({r.id: r for r in batch if r.id not in self._positions}.values())
         if new:
             self.directory.mkdir(parents=True, exist_ok=True)
-            if self.receptors_path.exists():
-                text = self.receptors_path.read_text()
-                self.receptors_path.write_text(append_receptors_csv(text, new))
+            if self.releases_path.exists():
+                text = self.releases_path.read_text()
+                self.releases_path.write_text(append_releases_csv(text, new))
             else:
-                self.receptors_path.write_text(receptors_to_csv(new))
+                self.releases_path.write_text(releases_to_csv(new))
             # These were read from the file that just changed.
-            for name in ("_rows", "_positions", "receptors", "_simulations"):
+            for name in ("_rows", "_positions", "releases", "_simulations"):
                 vars(self).pop(name, None)
         return [r.id for r in new]
 
@@ -471,11 +481,11 @@ class Project:
         """
         Add rows to one of the project's input tables, and return its path.
 
-        A table is an input, like ``receptors.csv``: the averaging kernels of
+        A table is an input, like ``releases.csv``: the averaging kernels of
         satellite soundings, for one, which a transform names as ``table:
         kernels``. It is kept as ``tables/<name>.parquet``, created if
-        needed and otherwise added to. When the table has a ``receptor``
-        column, rows of a receptor it already holds are left out, so adding
+        needed and otherwise added to. When the table has a ``release``
+        column, rows of a release it already holds are left out, so adding
         the same kernels again changes nothing.
 
         Parameters
@@ -492,10 +502,10 @@ class Project:
 
         Examples
         --------
-        >>> receptors, kernels = receptors_from_soundings(
+        >>> releases, kernels = releases_from_soundings(
         ...     df, "slant", top=3000
         ... )  # doctest: +SKIP
-        >>> project.add_receptors(receptors)  # doctest: +SKIP
+        >>> project.add_releases(releases)  # doctest: +SKIP
         >>> project.add_table("kernels", kernels)  # doctest: +SKIP
         """
         path = self.table_path(name)
@@ -507,8 +517,8 @@ class Project:
                     f"Table {name!r} has the columns {list(held.columns)}, "
                     f"not {list(rows.columns)}."
                 )
-            if "receptor" in rows.columns:
-                rows = rows[~rows["receptor"].isin(held["receptor"])]
+            if "release" in rows.columns:
+                rows = rows[~rows["release"].isin(held["release"])]
             rows = pd.concat([held, rows], ignore_index=True)
         write_parquet(pa.Table.from_pandas(rows, preserve_index=False), path)
         return path
@@ -526,20 +536,20 @@ class Project:
             ],
             columns=["variant", "realization", "model"],
         ).astype({"realization": "Int64"})
-        frame = self.receptors.merge(variants, how="cross")
-        first = ["receptor", "variant", "realization", "model"]
+        frame = self.releases.merge(variants, how="cross")
+        first = ["release", "variant", "realization", "model"]
         return frame.loc[:, first + [c for c in frame.columns if c not in first]]
 
     @property
     def simulations(self) -> pd.DataFrame:
         """
-        Every receptor under every variant, one row per simulation.
+        Every release under every variant, one row per simulation.
 
-        A pandas DataFrame with the columns ``receptor``, ``variant``,
+        A pandas DataFrame with the columns ``release``, ``variant``,
         ``realization`` (``0`` to ``N - 1`` for a variant with
         ``realizations: N``, empty for one that runs once), ``model`` (its
-        transport model), then the other columns of :attr:`receptors`. Rows
-        run receptor by receptor, with variants in config order. Select rows as in pandas
+        transport model), then the other columns of :attr:`releases`. Rows
+        run release by release, with variants in config order. Select rows as in pandas
         and pass the selection to :meth:`status`, :meth:`incomplete`,
         or :meth:`particles`; :class:`stilt.Project` adds
         :meth:`~stilt.Project.footprints`, :meth:`~stilt.Project.jacobian`,
@@ -557,19 +567,19 @@ class Project:
         return self._simulations.copy()
 
     def simulation(
-        self, receptor_id: str, variant: str, realization: int | None = None
+        self, release_id: str, variant: str, realization: int | None = None
     ) -> Simulation:
         """
-        Return one simulation: a receptor under a variant, and a realization of an ensemble.
+        Return one simulation: a release under a variant, and a realization of an ensemble.
 
-        A simulation is a value built from its receptor, its variant, and the
+        A simulation is a value built from its release, its variant, and the
         output directory, so it is cheap. It knows where its results are and
         loads them.
 
         Raises
         ------
         KeyError
-            If the project has no such receptor or variant.
+            If the project has no such release or variant.
         ValueError
             If *realization* is not one the variant runs as: ``0`` to
             ``N - 1`` for ``realizations: N``, ``None`` otherwise.
@@ -579,7 +589,7 @@ class Project:
                 f"No variant {variant!r}; the variants are {list(self.variants)}."
             )
         return Simulation(
-            self.receptor(receptor_id),
+            self.release(release_id),
             self.variants[variant],
             self.output,
             self.directory,
@@ -630,7 +640,7 @@ class Project:
         Return the rows of :attr:`simulations` that *sel* selects.
 
         *sel* is ``None`` (every simulation), a pandas table with
-        ``receptor`` and ``variant`` columns (returned as it is, extra
+        ``release`` and ``variant`` columns (returned as it is, extra
         columns and all), a boolean mask over :attr:`simulations`, or a
         polars or pyarrow table with those two columns. A table without a
         ``realization`` column selects every realization of an ensemble.
@@ -638,7 +648,7 @@ class Project:
         Raises
         ------
         ValueError
-            If the table lacks the ``receptor`` or ``variant`` column.
+            If the table lacks the ``release`` or ``variant`` column.
         KeyError
             If it names a variant the project does not have.
         """
@@ -651,14 +661,14 @@ class Project:
         else:
             try:
                 frame = pd.DataFrame(
-                    {name: _column(sel, name) for name in ("receptor", "variant")}
+                    {name: _column(sel, name) for name in ("release", "variant")}
                 )
             except (KeyError, TypeError, ValueError, IndexError):
                 frame = pd.DataFrame()
-        missing = [c for c in ("receptor", "variant") if c not in frame.columns]
+        missing = [c for c in ("release", "variant") if c not in frame.columns]
         if missing:
             raise ValueError(
-                "A selection of simulations is a table with 'receptor' and "
+                "A selection of simulations is a table with 'release' and "
                 f"'variant' columns, or a mask over project.simulations; this "
                 f"one has no {missing}."
             )
@@ -672,15 +682,15 @@ class Project:
             sims = self.simulations
             keep = [c for c in sims.columns if c not in frame.columns]
             frame = frame.merge(
-                sims[["receptor", "variant", *keep]],
-                on=["receptor", "variant"],
+                sims[["release", "variant", *keep]],
+                on=["release", "variant"],
                 how="left",
             )
         return frame
 
     def _present(self, frame: pd.DataFrame) -> dict[_Key, _Present]:
         """
-        Return, per variant and realization, the selected receptors with particles and with each stage's file.
+        Return, per variant and realization, the selected releases with particles and with each stage's file.
 
         Read from a listing of the date folders the selection falls in
         (:meth:`stilt.output.Output.present`), in place of a file check per
@@ -690,7 +700,7 @@ class Project:
         present: dict[_Key, _Present] = {}
         for name, k, rows in _groups(frame):
             variant = self.variants[name]
-            among = set(rows["receptor"])
+            among = set(rows["release"])
             present[(name, k)] = {
                 kind: self.output.present(kind, variant, among, k)
                 for kind in ("particles", *variant.stage_order)
@@ -715,7 +725,7 @@ class Project:
         ----------
         sel : DataFrame or mask, optional
             The simulations: rows of :attr:`simulations`, any table with
-            ``receptor`` and ``variant`` columns (pandas, polars, pyarrow),
+            ``release`` and ``variant`` columns (pandas, polars, pyarrow),
             or a boolean mask over :attr:`simulations`. All of them by
             default.
 
@@ -746,9 +756,7 @@ class Project:
         --------
         >>> st = project.status()  # doctest: +SKIP
         >>> st.state.value_counts()  # doctest: +SKIP
-        >>> st[st.state == "failed"][
-        ...     ["receptor", "variant", "reason"]
-        ... ]  # doctest: +SKIP
+        >>> st[st.state == "failed"][["release", "variant", "reason"]]  # doctest: +SKIP
         """
         frame = self._selected(sel)
         present = self._present(frame)
@@ -794,20 +802,20 @@ class Project:
         self, frame: pd.DataFrame, present: dict[_Key, _Present]
     ) -> dict[tuple[str, str, int | None], dict[str, Any]]:
         """
-        Return the failure record of each selected simulation missing a result, by ``(receptor, variant, realization)``.
+        Return the failure record of each selected simulation missing a result, by ``(release, variant, realization)``.
 
         A simulation without particles is explained by its particles'
         record. One with particles is explained by the record of the first
         stage, in the order they run, that has no file where what it reads
         exists and that has a record (:attr:`stilt.simulation.Simulation.failure`).
-        Only those receptors' date folders are listed, and only the records
+        Only those releases' date folders are listed, and only the records
         found are read.
         """
         found: dict[tuple[str, str, int | None], dict[str, Any]] = {}
         for name, k, rows in _groups(frame):
             variant = self.variants[name]
             have = present[(name, k)]
-            receptors = set(rows["receptor"])
+            releases = set(rows["release"])
             for kind in have:
                 # Where a stage could have run: its inputs are there.
                 inputs = (
@@ -815,7 +823,7 @@ class Project:
                     if kind == "particles"
                     else ("particles", *reads(variant.stage(kind)))
                 )
-                ready = receptors.intersection(*(have[i] for i in inputs))
+                ready = releases.intersection(*(have[i] for i in inputs))
                 missing = ready - have[kind]
                 if missing:
                     failures = self.output.failures(kind, variant, missing, k)
@@ -833,11 +841,11 @@ class Project:
         Return the selected simulations whose particles run started and did not finish.
 
         That is a log with no particles and no failure record. Only the
-        date folders of receptors without particles are listed.
+        date folders of releases without particles are listed.
         """
         started: set[tuple[str, str, int | None]] = set()
         for name, k, rows in _groups(frame):
-            missing = set(rows["receptor"]) - present[(name, k)]["particles"]
+            missing = set(rows["release"]) - present[(name, k)]["particles"]
             if not missing:
                 continue
             logged = self.output.logged(self.variants[name], missing, k)
@@ -869,7 +877,7 @@ class Project:
             The simulations, as for :meth:`status`. All of them by default.
         columns : list of str, optional
             Only these particle columns, such as ``["particle", "age",
-            "lon", "lat", "foot"]``, after ``receptor``, ``variant``, and
+            "lon", "lat", "foot"]``, after ``release``, ``variant``, and
             ``realization``. ``time`` (UTC) is built from ``age``. Every
             column by default. Fewer columns read faster and take less
             memory.
@@ -878,7 +886,7 @@ class Project:
         -------
         pandas.DataFrame
             One row per particle per output step per simulation, with
-            ``receptor``, ``variant``, and ``realization`` columns first. Simulations without
+            ``release``, ``variant``, and ``realization`` columns first. Simulations without
             particles are left out. Variants that share a run each get their
             own copy of its rows. The simulations come in the order of *sel*, one
             variant (and realization) after another in the order they first appear
@@ -891,7 +899,7 @@ class Project:
         whole large project, read the ``particles/`` tree of the output
         directory with pyarrow, DuckDB, or polars instead.
         """
-        first = ["receptor", "variant", "realization"]
+        first = ["release", "variant", "realization"]
         with_time = columns is None or "time" in columns
         stored = None
         if columns is not None:
@@ -902,10 +910,10 @@ class Project:
         parts = []
         for name, k, rows in _groups(frame):
             variant = self.variants[name]
-            present = self.output.present("particles", variant, rows["receptor"], k)
+            present = self.output.present("particles", variant, rows["release"], k)
             # In selection order: a set would follow each process's string hashing.
-            receptors = [r for r in dict.fromkeys(rows["receptor"]) if r in present]
-            table = self.output.table("particles", variant, receptors, k, stored)
+            releases = [r for r in dict.fromkeys(rows["release"]) if r in present]
+            table = self.output.table("particles", variant, releases, k, stored)
             if table.num_rows:
                 part = particles_from_table(table, with_time).assign(variant=name)
                 parts.append(
@@ -926,23 +934,23 @@ class Project:
         Looks only at the inputs, and runs and downloads nothing. For each
         variant it checks that:
 
-        - the project has receptors (``receptors``);
+        - the project has releases (``releases``);
         - the met's ``directory`` exists and holds an ARL file (``met_directory``);
-        - every met file each receptor's run needs is there, naming the
+        - every met file each release's run needs is there, naming the
           hours (``met_files``);
         - each met file they need holds at least two time periods, which
           HYSPLIT needs (``met_periods``), and ends on a whole time step
           (``met_cut``);
-        - each receptor is inside the grid of the met files its run starts
+        - each release is inside the grid of the met files its run starts
           in, when the crop is off (``met_domain``), or inside the met's
           crop box, ``subgrid_bounds``, when it is on (``met_crop``);
-        - each receptor is inside the footprint grid (``grid``);
+        - each release is inside the footprint grid (``grid``);
         - each ``averaging_kernel`` table exists (``kernel_table``), has a
-          kernel for every receptor (``kernel_missing``), and holds none for
-          a receptor the project lacks (``kernel_unused``);
-        - ``varsiwant`` holds ``zsfc`` when a receptor is above sea level
+          kernel for every release (``kernel_missing``), and holds none for
+          a release the project lacks (``kernel_unused``);
+        - ``varsiwant`` holds ``zsfc`` when a release is above sea level
           (``altitude_ref="msl"``) and a run reads it: the near-field
-          correction of a footprint, the release heights of a multipoint receptor whose
+          correction of a footprint, the release heights of a multipoint release whose
           points are less than 1 km apart and at different altitudes, or the
           ``pressure_weighting`` transform (``zsfc``).
 
@@ -955,14 +963,14 @@ class Project:
             One row for each thing found, with ``check`` (the name in
             parentheses above), ``variant`` (the variants it is found for,
             separated by commas, when they share a met, a run length, a
-            grid, or a table), ``receptor`` (``NA`` when it is not about
-            one receptor), and ``message`` columns. Empty when nothing is
+            grid, or a table), ``release`` (``NA`` when it is not about
+            one release), and ``message`` columns. Empty when nothing is
             found. ``stilt check`` prints it.
 
         Raises
         ------
         ValueError
-            If ``config.yaml`` or ``receptors.csv`` is invalid.
+            If ``config.yaml`` or ``releases.csv`` is invalid.
 
         Notes
         -----
@@ -978,7 +986,7 @@ class Project:
         >>> problems = project.check()  # doctest: +SKIP
         >>> problems.empty  # True when nothing would stop a run  # doctest: +SKIP
         >>> problems[problems.check == "met_files"][
-        ...     ["receptor", "message"]
+        ...     ["release", "message"]
         ... ]  # doctest: +SKIP
         """
         return check_project(self)
@@ -1019,7 +1027,7 @@ class Project:
         Raises
         ------
         ValueError
-            If ``config.yaml`` or ``receptors.csv`` is invalid.
+            If ``config.yaml`` or ``releases.csv`` is invalid.
         FileNotFoundError
             If the directory of a met without ``download`` holds no ARL
             file, which names the output folder of its runs.
@@ -1055,7 +1063,7 @@ class Project:
         compute_root: str | Path | None = None,
         execution: ExecutionConfig | None = None,
         *,
-        receptors: Iterable[str] | None = None,
+        releases: Iterable[str] | None = None,
         task: tuple[int, int] | None = None,
     ) -> pd.DataFrame:
         """
@@ -1068,7 +1076,7 @@ class Project:
 
         return run(
             self,
-            receptors=receptors,
+            releases=releases,
             task=task,
             execution=execution,
             skip_existing=skip_existing,
@@ -1081,7 +1089,7 @@ class Project:
         compute_root: str | Path | None = None,
         execution: ExecutionConfig | None = None,
         *,
-        receptors: Iterable[str] | None = None,
+        releases: Iterable[str] | None = None,
     ) -> str | None:
         """
         Submit every simulation that has not finished to Slurm, and return at once.
@@ -1094,7 +1102,7 @@ class Project:
 
         return submit(
             self,
-            receptors=receptors,
+            releases=releases,
             execution=execution,
             skip_existing=skip_existing,
             compute_root=compute_root,

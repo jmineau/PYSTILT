@@ -7,7 +7,7 @@ the simulation id. X-STILT runs STILT-R's code and writes the same layout::
     my_project/
       out/by-id/
         201507050000_-111.85_40.77_5/
-          201507050000_-111.85_40.77_5_traj.rds   receptor time, particles
+          201507050000_-111.85_40.77_5_traj.rds   release time, particles
           201507050000_-111.85_40.77_5_foot.nc    footprint
           CONTROL                                 the release points, run length, met files
           SETUP.CFG                               HYSPLIT's other settings
@@ -15,7 +15,7 @@ the simulation id. X-STILT runs STILT-R's code and writes the same layout::
       _rslurm_my_project/
         params.RDS                                every run's settings (Slurm runs only)
 
-:func:`read_stilt_r` reads these folders as PYSTILT's receptors, particle
+:func:`read_stilt_r` reads these folders as PYSTILT's releases, particle
 tables, and footprints. :func:`import_stilt_r` writes them into an output
 directory, in folders named by the settings the files record, so a project
 reads them as its own (:class:`stilt.stilt_r.StiltRModel`). The
@@ -42,7 +42,7 @@ from stilt.footprint.io import _footprint_array
 from stilt.footprint.stage import store_empty_footprint, store_footprint
 from stilt.output import Output
 from stilt.particles import check_particles
-from stilt.receptors import Receptor
+from stilt.releases import Receptor
 from stilt.spatial import Grid
 from stilt.stilt_r import STILT_R_MODEL, StiltRConfig, StiltRMetConfig, StiltRModel
 from stilt.transport.hysplit.config import (
@@ -57,7 +57,7 @@ if TYPE_CHECKING:
 
 #: PYSTILT's names for STILT-R's particle columns. HYSPLIT's driver renames
 #: the first four the same way; ``xhgt`` is the release height STILT-R adds
-#: for a column receptor.
+#: for a column release.
 _COLUMNS = {
     "indx": "particle",
     "time": "age",
@@ -99,17 +99,17 @@ def read_stilt_r(
     Read STILT-R or X-STILT ``by-id`` output, one simulation at a time.
 
     Each folder of *by_id_dir* that holds ``<id>_traj.rds`` is a
-    simulation. Its receptor, particles, and footprint come back as
+    simulation. Its release, particles, and footprint come back as
     PYSTILT's: a :class:`~stilt.Receptor`, a particle table
     (:doc:`/reference/particles`), and a footprint array, as
     :func:`stilt.read_particles` and :func:`stilt.read_footprint` return
     them. The folders are read in name order, which is time order, and each
     one only when the loop reaches it.
 
-    The receptor's release points are the ones in the folder's ``CONTROL``
-    file, the numbers HYSPLIT read, so a point receptor's id is the folder's
+    The release's release points are the ones in the folder's ``CONTROL``
+    file, the numbers HYSPLIT read, so a point release's id is the folder's
     name. Its time is the ``.rds`` file's, which keeps the seconds that
-    ``CONTROL`` drops. A receptor with one release point is a
+    ``CONTROL`` drops. A release with one release point is a
     :class:`~stilt.PointReceptor`, two heights at one place are a
     :class:`~stilt.ColumnReceptor`, and release points at different places,
     such as X-STILT's slant columns, are a :class:`~stilt.MultiPointReceptor`.
@@ -117,15 +117,15 @@ def read_stilt_r(
     The particle columns get PYSTILT's names: ``indx``, ``time``, ``long``,
     ``lati``, and ``xhgt`` become ``particle``, ``age`` (minutes since
     release), ``lon``, ``lat``, and ``release_height``. ``time`` is then the
-    UTC time of each row, the receptor time plus ``age``. Every other column
+    UTC time of each row, the release time plus ``age``. Every other column
     keeps its STILT-R name, ``foot_no_hnf_dilution`` included: the
     near-field correction STILT-R applied stays as it is.
 
     The footprint is ``<id>_foot.nc``, on the grid its file gives, with
-    layers stamped at the receptor time plus whole hours, as STILT-R stamps
+    layers stamped at the release time plus whole hours, as STILT-R stamps
     them. Its settings hold that grid, ``tres``, and ``smooth_factor``.
     ``tres`` is ``1h``, except for a backward run whose footprint STILT-R
-    summed over time (``time_integrate = T``, one layer at the receptor
+    summed over time (``time_integrate = T``, one layer at the release
     time): that is one layer as long as the run, ``tres`` the run's
     ``n_hours``, stamped at the start of the run. The footprint file does not record ``smooth_factor``.
     It comes from ``params.RDS``, which STILT-R's Slurm runs (rslurm) leave
@@ -151,7 +151,7 @@ def read_stilt_r(
 
     Yields
     ------
-    receptor : Receptor
+    release : Receptor
         Where and when the particles were released.
     particles : pandas.DataFrame
         One row per particle per output step, as STILT-R saved them.
@@ -168,10 +168,10 @@ def read_stilt_r(
         file, or a folder that does has no ``CONTROL`` file.
     ValueError
         When a simulation is read, if its files are not as STILT-R writes
-        them: a ``_traj.rds`` without the particle columns or the receptor
+        them: a ``_traj.rds`` without the particle columns or the release
         time, a ``CONTROL`` file that cannot be read, or a footprint on a
         projected grid (only longitude/latitude grids are read) or with
-        layers that are not whole hours from the receptor time. When a
+        layers that are not whole hours from the release time. When a
         footprint is read, if its ``smooth_factor`` is not known (no
         ``params.RDS`` and no *smooth_factor*), if ``params.RDS`` disagrees
         with the run's ``n_hours`` or ``numpar``, or if it records a
@@ -196,10 +196,10 @@ def read_stilt_r(
 
     Examples
     --------
-    >>> for receptor, particles, foot in stilt.migration.read_stilt_r(
+    >>> for release, particles, foot in stilt.migration.read_stilt_r(
     ...     "out/by-id"
     ... ):  # doctest: +SKIP
-    ...     print(receptor.id, len(particles), foot is not None)
+    ...     print(release.id, len(particles), foot is not None)
 
     A project run on one machine has no ``params.RDS``; give the
     ``smooth_factor`` from its ``run_stilt.r``:
@@ -210,10 +210,10 @@ def read_stilt_r(
 
     The particles of the transport-error run:
 
-    >>> for receptor, perturbed, _ in stilt.migration.read_stilt_r(  # doctest: +SKIP
+    >>> for release, perturbed, _ in stilt.migration.read_stilt_r(  # doctest: +SKIP
     ...     "out/by-id", error=True
     ... ):
-    ...     print(receptor.id, len(perturbed))
+    ...     print(release.id, len(perturbed))
     """
     root, runs = _runs(by_id_dir)
     rdata = _rdata()
@@ -255,7 +255,7 @@ def _runs(by_id_dir: str | Path) -> tuple[Path, list[Path]]:
     if no_control:
         raise FileNotFoundError(
             f"{len(no_control)} folders of {root} have no {_CONTROL} file, the "
-            f"first {no_control[0]}. The receptor is read from the {_CONTROL} "
+            f"first {no_control[0]}. The release is read from the {_CONTROL} "
             "file STILT-R writes in every by-id folder."
         )
     return root, runs
@@ -399,9 +399,9 @@ def _control(path: Path) -> ControlFile:
         raise ValueError(f"{path} cannot be read as a CONTROL file: {error}") from None
 
 
-def _receptor(stored: Any, control: ControlFile, path: Path) -> Receptor:
+def _release(stored: Any, control: ControlFile, path: Path) -> Receptor:
     """
-    Return the receptor of a run: its release points from ``CONTROL``, its time from the ``.rds``.
+    Return the release of a run: its release points from ``CONTROL``, its time from the ``.rds``.
 
     STILT-R writes ``CONTROL``'s time to the minute; the ``.rds`` keeps the
     seconds. Every point is released at the first ``run_time``
@@ -409,13 +409,13 @@ def _receptor(stored: Any, control: ControlFile, path: Path) -> Receptor:
     """
     stored = {str(k): v for k, v in (stored or {}).items()}
     if "run_time" not in stored:
-        raise ValueError(f"{path}: the receptor has no run_time.")
+        raise ValueError(f"{path}: the release has no run_time.")
     time = pd.DatetimeIndex(stored["run_time"])[0]
     points = [(lon, lat, alt) for lat, lon, alt in control.locations]
     return Receptor.from_points(time, points)
 
 
-def _particles(stored: pd.DataFrame, receptor: Receptor, path: Path) -> pd.DataFrame:
+def _particles(stored: pd.DataFrame, release: Receptor, path: Path) -> pd.DataFrame:
     """Return STILT-R's particle table with PYSTILT's column names and a UTC ``time`` column."""
     particles = stored.rename(columns=_COLUMNS).reset_index(drop=True)
     try:
@@ -424,7 +424,7 @@ def _particles(stored: pd.DataFrame, receptor: Receptor, path: Path) -> pd.DataF
         raise ValueError(f"{path}: {error}") from None
     for name in ("particle", "age"):
         particles[name] = particles[name].astype("float64")
-    particles["time"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
+    particles["time"] = pd.Timestamp(release.time) + pd.to_timedelta(
         particles["age"].to_numpy(), unit="min"
     )
     return particles
@@ -444,7 +444,7 @@ def _axis(centers: np.ndarray, name: str, path: Path) -> tuple[float, float, flo
 
 def _footprint(
     path: Path,
-    receptor: Receptor,
+    release: Receptor,
     backward: bool,
     smooth_factor: float,
     n_hours: int,
@@ -456,7 +456,7 @@ def _footprint(
     (seconds since 1970-01-01 UTC), at cell centers. The grid is rebuilt from
     the centers and checked against them, so the footprint has the
     coordinates of a PYSTILT footprint on the same grid. A backward
-    footprint STILT-R summed over time has one layer, at the receptor time;
+    footprint STILT-R summed over time has one layer, at the release time;
     it becomes one layer of *n_hours*, layer -1, which starts where the run
     ends.
     """
@@ -484,19 +484,19 @@ def _footprint(
 
     # Seconds since 1970 in UTC; the units say so with a trailing "Z".
     times = _posixct(foot["time"].to_numpy(), {})
-    offsets = (times - pd.Timestamp(receptor.time)) / pd.Timedelta(hours=1)
+    offsets = (times - pd.Timestamp(release.time)) / pd.Timedelta(hours=1)
     hours = np.round(offsets.to_numpy(dtype=float))
     if not np.allclose(offsets, hours, rtol=0, atol=1e-6):
         raise ValueError(
             f"{path}: the footprint's layers are not whole hours from the "
-            f"receptor time {receptor.time}."
+            f"release time {release.time}."
         )
     tres = "1h"
     if backward and hours.size == 1 and hours[0] == 0:
         tres, hours = f"{abs(n_hours)}h", np.array([-1.0])
     config = FootprintConfig(grid=grid, smooth_factor=smooth_factor, tres=tres)
     values = foot.to_numpy().astype("float64")
-    return _footprint_array(values, hours.astype(int), receptor, config, "", x, y)
+    return _footprint_array(values, hours.astype(int), release, config, "", x, y)
 
 
 def _read_simulation(
@@ -506,22 +506,22 @@ def _read_simulation(
     smooth_factor: float | None,
     error: bool = False,
 ) -> tuple[Receptor, pd.DataFrame, xr.DataArray | None]:
-    """Return the receptor, particles, and footprint of one ``by-id`` folder, or the receptor and its error particles."""
+    """Return the release, particles, and footprint of one ``by-id`` folder, or the release and its error particles."""
     traj = folder / f"{folder.name}{_TRAJ}"
     output = _read_rds(traj, rdata)
     control = _control(folder / _CONTROL)
-    receptor = _receptor(output.get("receptor"), control, traj)
+    release = _release(output.get("receptor"), control, traj)
     if error:
-        return receptor, _error_particles(output, receptor, traj), None
-    particles = _particles(output["particle"], receptor, traj)
+        return release, _error_particles(output, release, traj), None
+    particles = _particles(output["particle"], release, traj)
     foot = _folder_footprint(
-        folder, receptor, particles, control, output, rslurm, smooth_factor
+        folder, release, particles, control, output, rslurm, smooth_factor
     )
-    return receptor, particles, foot
+    return release, particles, foot
 
 
 def _error_particles(
-    output: Mapping[str, Any], receptor: Receptor, path: Path
+    output: Mapping[str, Any], release: Receptor, path: Path
 ) -> pd.DataFrame:
     """Return the particles of a run's transport-error set, with PYSTILT's column names."""
     stored = output.get("particle_error")
@@ -530,12 +530,12 @@ def _error_particles(
             f"{path} holds no transport-error particles (particle_error): "
             "STILT-R ran it without wind or mixed-layer errors."
         )
-    return _particles(stored, receptor, path)
+    return _particles(stored, release, path)
 
 
 def _folder_footprint(
     folder: Path,
-    receptor: Receptor,
+    release: Receptor,
     particles: pd.DataFrame,
     control: ControlFile,
     output: Mapping[str, Any],
@@ -551,7 +551,7 @@ def _folder_footprint(
     )
     # STILT-R reads the run's direction the same way (calc_footprint).
     backward = bool(np.median(particles["age"]) < 0)
-    return _footprint(foot_path, receptor, backward, smooth, control.n_hours)
+    return _footprint(foot_path, release, backward, smooth, control.n_hours)
 
 
 def import_stilt_r(
@@ -573,7 +573,7 @@ def import_stilt_r(
     ``config.yaml`` has that variant reads them as its own results:
     ``project.status``, ``project.particles``, ``project.footprints``, and
     ``project.jacobian``. The import prints the variant and its met, to paste
-    into ``config.yaml``, and returns the receptors, for ``receptors.csv``.
+    into ``config.yaml``, and returns the releases, for ``releases.csv``.
 
     Every folder of an output directory is named by the hash of its
     settings, and an imported run's settings are only what STILT-R's files
@@ -628,8 +628,8 @@ def import_stilt_r(
     Returns
     -------
     list of Receptor
-        The receptors of the runs, in folder order, for
-        :meth:`stilt.Project.add_receptors`.
+        The releases of the runs, in folder order, for
+        :meth:`stilt.Project.add_releases`.
 
     Raises
     ------
@@ -650,7 +650,7 @@ def import_stilt_r(
 
     Examples
     --------
-    >>> receptors = stilt.migration.import_stilt_r(  # doctest: +SKIP
+    >>> releases = stilt.migration.import_stilt_r(  # doctest: +SKIP
     ...     "my_project/out/by-id", "output", version="1d936c1"
     ... )
     mets:
@@ -666,7 +666,7 @@ def import_stilt_r(
         version: 1d936c1
         capemin: -1
         ...
-    >>> project = stilt.Project.init("my_project_py", receptors, output="output", ...)  # doctest: +SKIP
+    >>> project = stilt.Project.init("my_project_py", releases, output="output", ...)  # doctest: +SKIP
     """
     if not VARIANT_NAME_RE.fullmatch(name):
         raise ValueError(
@@ -691,25 +691,25 @@ def import_stilt_r(
     # The first footprint's settings, and its folder.
     first_foot: tuple[FootprintConfig, Path] | None = None
     empty: list[Receptor] = []
-    receptors = []
+    releases = []
     for folder in runs:
         hysplit, winderrtf = recorded[folder]
         control = controls[folder]
         traj = folder / f"{folder.name}{_TRAJ}"
         stored = _read_rds(traj, rdata)
-        receptor = _receptor(stored.get("receptor"), control, traj)
-        receptors.append(receptor)
+        release = _release(stored.get("receptor"), control, traj)
+        releases.append(release)
         log = folder / _LOG
 
-        particles = _particles(stored["particle"], receptor, traj)
+        particles = _particles(stored["particle"], release, traj)
         hnf_plume = "foot_no_hnf_dilution" in particles.columns
         particles = _uncorrected(particles)
         settings = {**hysplit, **dict.fromkeys(_ERROR_SETTINGS)}
         base = _variant(made, name, name, met, settings, version, folder)
-        _write_particles(output, base, receptor, particles, control, log)
+        _write_particles(output, base, release, particles, control, log)
 
         foot = _folder_footprint(
-            folder, receptor, particles, control, stored, rslurm, smooth_factor
+            folder, release, particles, control, stored, rslurm, smooth_factor
         )
         if foot is not None:
             # STILT-R's footprints are made from HYSPLIT's foot, so the
@@ -726,10 +726,10 @@ def import_stilt_r(
                 folder,
             )
             with_foot = _with_footprint(base, first_foot[0])
-            if _missing(output, "footprint", with_foot, receptor.id):
+            if _missing(output, "footprint", with_foot, release.id):
                 store_footprint(output, with_foot, foot)
         elif log.is_file() and _EMPTY_FOOTPRINT in log.read_text(errors="replace"):
-            empty.append(receptor)
+            empty.append(release)
 
         if stored.get("particle_error") is None:
             if winderrtf:
@@ -745,19 +745,19 @@ def import_stilt_r(
                 f"{folder / _SETUP} gives WINDERRTF={winderrtf}, and the "
                 f"particle_error_params of {traj.name} {recorded_tf}."
             )
-        perturbed = _uncorrected(_error_particles(stored, receptor, traj))
+        perturbed = _uncorrected(_error_particles(stored, release, traj))
         error_settings = {**hysplit, **errors}
         error = _variant(
             made, f"{name}-err", name, met, error_settings, version, folder
         )
-        _write_particles(output, error, receptor, perturbed, control, log)
+        _write_particles(output, error, release, perturbed, control, log)
 
     printed = [made[name][0]]
     if first_foot is not None:
         printed[0] = _with_footprint(printed[0], first_foot[0])
-        for receptor in empty:
-            if _missing(output, "footprint", printed[0], receptor.id):
-                store_empty_footprint(output, printed[0], receptor)
+        for release in empty:
+            if _missing(output, "footprint", printed[0], release.id):
+                store_empty_footprint(output, printed[0], release)
     if f"{name}-err" in made:
         printed.append(made[f"{name}-err"][0])
     config: dict[str, Any] = {
@@ -769,7 +769,7 @@ def import_stilt_r(
         config["stages"] = {"footprint": {"class": FOOTPRINT_STAGE}}
     config["variants"] = {v.name: _variant_entry(v, footprints) for v in printed}
     print(yaml.safe_dump(config, sort_keys=False, default_flow_style=None), end="")
-    return receptors
+    return releases
 
 
 def _uncorrected(particles: pd.DataFrame) -> pd.DataFrame:
@@ -950,26 +950,26 @@ def _agree(
         )
 
 
-def _missing(output: Output, kind: str, variant: Variant, receptor_id: str) -> bool:
-    """Whether a receptor's result of *kind* is not in the output directory yet."""
-    path = output.path(kind, variant, receptor_id)
+def _missing(output: Output, kind: str, variant: Variant, release_id: str) -> bool:
+    """Whether a release's result of *kind* is not in the output directory yet."""
+    path = output.path(kind, variant, release_id)
     return path is None or not path.exists()
 
 
 def _write_particles(
     output: Output,
     variant: Variant,
-    receptor: Receptor,
+    release: Receptor,
     particles: pd.DataFrame,
     control: ControlFile,
     log: Path,
 ) -> None:
     """Write a run's particles, with the met files its ``CONTROL`` names and its ``stilt.log``, unless they are there."""
-    if not _missing(output, "particles", variant, receptor.id):
+    if not _missing(output, "particles", variant, release.id):
         return
-    output.write_particles(variant, receptor, particles, control.met_files)
+    output.write_particles(variant, release, particles, control.met_files)
     if log.is_file():
-        output.write_log(variant, receptor.id, log.read_text(errors="replace"))
+        output.write_log(variant, release.id, log.read_text(errors="replace"))
 
 
 def _variant_entry(variant: Variant, footprints: bool) -> dict[str, Any]:

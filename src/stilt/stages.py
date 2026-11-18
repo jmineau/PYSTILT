@@ -1,7 +1,7 @@
 """
 The stage interface: what is made from each simulation's results after the transport model runs.
 
-A stage makes one file per receptor from the particles, from the files of
+A stage makes one file per release from the particles, from the files of
 other stages, or both, and writes that file itself. The footprint is one
 (:class:`stilt.footprint.FootprintStage`). A project lists its stages under
 ``stages:`` in ``config.yaml``, each block naming the stage's class by its
@@ -50,7 +50,7 @@ RESERVED_NAMES = frozenset(
         "particles",
         "logs",
         "scratch",
-        "receptor",
+        "release",
         "variant",
         "realization",
         "model",
@@ -64,7 +64,7 @@ RESERVED_NAMES = frozenset(
 
 class Stage(Protocol):
     """
-    What is made from each simulation's results: one file per receptor.
+    What is made from each simulation's results: one file per release.
 
     A class with these members is a stage; it subclasses nothing. It is made
     with no arguments, and holds no state: everything a stage needs is in
@@ -88,12 +88,12 @@ class Stage(Protocol):
         settings from the block's, as the class dumps them, and the
         variant's own, as written; without it the variant's keys replace the
         block's. A property ``zsfc_reasons`` lists what goes wrong for
-        receptors above sea level whose particles lack the terrain height
+        releases above sea level whose particles lack the terrain height
         ``zsfc``, a clause each, for ``stilt check`` to report when the
         transport model is not asked for it.
     suffix : str
         The extension of the stage's files, such as ``.parquet``, with its
-        dot. The file of a receptor is ``<receptor id><suffix>``, and
+        dot. The file of a release is ``<release id><suffix>``, and
         completion looks for it in a listing.
     reads : tuple of str, optional
         The names of the stages whose files this one reads, none when the
@@ -150,16 +150,16 @@ class Stage(Protocol):
         ...
 
     def check(
-        self, config: Any, receptors: pd.DataFrame, directory: Path | None
+        self, config: Any, releases: pd.DataFrame, directory: Path | None
     ) -> list[tuple[str, str | None, str]]:
         """
-        Return what would stop this stage for the project's receptors, found without running anything.
+        Return what would stop this stage for the project's releases, found without running anything.
 
-        ``project.check()`` and ``stilt check`` call it. *receptors* has one
-        row per release point (``receptor``, ``time``, ``longitude``,
+        ``project.check()`` and ``stilt check`` call it. *releases* has one
+        row per release point (``release``, ``time``, ``longitude``,
         ``latitude``, ``altitude``, ``altitude_ref``, ``kind``). Each thing
-        found is a tuple of a short name for the check, the receptor id (or
-        ``None`` when it is not about one receptor), and a message.
+        found is a tuple of a short name for the check, the release id (or
+        ``None`` when it is not about one release), and a message.
         """
         ...
 
@@ -188,7 +188,7 @@ class Stage(Protocol):
             The variant's settings of this stage, as :meth:`resolve`
             returned them.
         sim : Simulation
-            The simulation: its receptor, its variant, its particles, and
+            The simulation: its release, its variant, its particles, and
             the project directory (``sim.directory``), where a relative file
             name in the settings starts.
         path : Path or UPath

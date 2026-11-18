@@ -38,7 +38,7 @@ _NEW_PROJECT_ARG = typer.Argument(
 @app.command()
 def init(project: Path = _NEW_PROJECT_ARG) -> None:
     """
-    Create a new project with a starter config.yaml and receptors.csv.
+    Create a new project with a starter config.yaml and releases.csv.
 
     Edit both files before running stilt run. Stops if the directory
     already has a config.yaml.
@@ -55,7 +55,7 @@ def init(project: Path = _NEW_PROJECT_ARG) -> None:
 
     typer.echo(f"Initialized STILT project at '{project}'")
     typer.echo("  config.yaml    edit the met directory and footprint settings")
-    typer.echo("  receptors.csv  add receptor times and locations, one per line:")
+    typer.echo("  releases.csv  add release times and locations, one per line:")
     typer.echo("                  2023-01-01 12:00:00,-111.85,40.77,5")
 
 

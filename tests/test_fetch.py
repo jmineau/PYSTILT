@@ -18,7 +18,7 @@ from tests.fixtures.factories import blocks
 from .fixtures.factories import (
     make_met_config,
     make_met_files,
-    make_receptor,
+    make_release,
 )
 
 runner = CliRunner()
@@ -68,11 +68,11 @@ def archive(monkeypatch) -> FakeHRRR:
     return fake
 
 
-def _receptor(day: int, hour: int):
-    return make_receptor(dt.datetime(2024, 7, day, hour), -111.85, 40.77)
+def _release(day: int, hour: int):
+    return make_release(dt.datetime(2024, 7, day, hour), -111.85, 40.77)
 
 
-def _project(tmp_path: Path, receptors, *, n_hours: int = -3, **met) -> Project:
+def _project(tmp_path: Path, releases, *, n_hours: int = -3, **met) -> Project:
     """A project that downloads HRRR into ``tmp_path / "met"``, cropped, and makes particles only."""
     fields = {
         "directory": tmp_path / "met",
@@ -84,7 +84,7 @@ def _project(tmp_path: Path, receptors, *, n_hours: int = -3, **met) -> Project:
     }
     return Project.init(
         tmp_path / "proj",
-        receptors=receptors,
+        releases=releases,
         **blocks(mets={"hrrr": fields}, n_hours=n_hours, variants={"hrrr": {}}),
     )
 
@@ -93,9 +93,9 @@ class _Stop(Exception):
     """Raised where HYSPLIT would start."""
 
 
-def _files_a_run_gets(project: Project, receptor_ids, monkeypatch, tmp_path):
+def _files_a_run_gets(project: Project, release_ids, monkeypatch, tmp_path):
     """
-    Return the met files that runs of *receptor_ids* ask for.
+    Return the met files that runs of *release_ids* ask for.
 
     Each is run through the transport model (:func:`stilt.transport.run_model`) up to
     the point where HYSPLIT would start, and the files :meth:`Met.files_for`
@@ -115,12 +115,12 @@ def _files_a_run_gets(project: Project, receptor_ids, monkeypatch, tmp_path):
     monkeypatch.setattr(Met, "files_for", note)
     monkeypatch.setattr(Met, "check", lambda self, files, window: None)
     monkeypatch.setattr("stilt.transport.hysplit.model.write_inputs", stop)
-    for rid in receptor_ids:
+    for rid in release_ids:
         sim = project.simulation(rid, "hrrr")
         with pytest.raises(_Stop):
             transport.run_model(
                 sim.variant.model,
-                sim.receptor,
+                sim.release,
                 sim.transport,
                 sim.variant.met_config,
                 tmp_path / "workdir",
@@ -134,21 +134,21 @@ def _files_a_run_gets(project: Project, receptor_ids, monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 #: Hours that reach across a block, fill one block, and are a week apart.
-RECEPTORS = [
-    _receptor(2, 3),
-    _receptor(2, 7),
-    _receptor(2, 8),
-    _receptor(2, 20),
-    _receptor(9, 1),
+RELEASES = [
+    _release(2, 3),
+    _release(2, 7),
+    _release(2, 8),
+    _release(2, 20),
+    _release(9, 1),
 ]
 
 
 def test_fetch_gets_exactly_the_files_the_runs_ask_for(tmp_path, archive, monkeypatch):
-    fetched = _project(tmp_path / "fetch", RECEPTORS, n_hours=-6)
+    fetched = _project(tmp_path / "fetch", RELEASES, n_hours=-6)
     files = fetched.fetch()
-    other = _project(tmp_path / "run", RECEPTORS, n_hours=-6)
+    other = _project(tmp_path / "run", RELEASES, n_hours=-6)
     ran = _files_a_run_gets(
-        other, other.receptors["receptor"], monkeypatch, tmp_path / "wd"
+        other, other.releases["release"], monkeypatch, tmp_path / "wd"
     )
 
     assert files["message"].isna().all()
@@ -160,12 +160,12 @@ def test_fetch_gets_exactly_the_files_the_runs_ask_for(tmp_path, archive, monkey
 
 
 def test_runs_after_a_fetch_download_nothing(tmp_path, archive, monkeypatch):
-    project = _project(tmp_path, RECEPTORS, n_hours=-6)
+    project = _project(tmp_path, RELEASES, n_hours=-6)
     project.fetch()
     downloaded = list(archive.downloaded)
 
     ran = _files_a_run_gets(
-        project, project.receptors["receptor"], monkeypatch, tmp_path / "wd"
+        project, project.releases["release"], monkeypatch, tmp_path / "wd"
     )
 
     assert len(downloaded) == 7
@@ -174,7 +174,7 @@ def test_runs_after_a_fetch_download_nothing(tmp_path, archive, monkeypatch):
 
 
 def test_a_fetch_asks_the_archive_once_for_windows_that_overlap(tmp_path, archive):
-    project = _project(tmp_path, RECEPTORS, n_hours=-6)
+    project = _project(tmp_path, RELEASES, n_hours=-6)
 
     project.fetch()
 
@@ -187,9 +187,9 @@ def test_a_fetch_asks_the_archive_once_for_windows_that_overlap(tmp_path, archiv
 # ---------------------------------------------------------------------------
 
 
-def _finish(project: Project, receptor) -> None:
-    """Write particles for *receptor*, which completes a variant that makes no footprint."""
-    sim = project.simulation(receptor.id, "hrrr")
+def _finish(project: Project, release) -> None:
+    """Write particles for *release*, which completes a variant that makes no footprint."""
+    sim = project.simulation(release.id, "hrrr")
     particles = pd.DataFrame(
         {
             "age": [-60.0],
@@ -199,12 +199,12 @@ def _finish(project: Project, receptor) -> None:
             "zagl": [10.0],
         }
     )
-    sim.output.write_particles(sim.variant, receptor, particles, [])
+    sim.output.write_particles(sim.variant, release, particles, [])
 
 
 def test_a_finished_simulation_needs_no_met(tmp_path, archive):
-    project = _project(tmp_path, RECEPTORS, n_hours=-6)
-    _finish(project, RECEPTORS[-1])  # the only receptor of 9 July
+    project = _project(tmp_path, RELEASES, n_hours=-6)
+    _finish(project, RELEASES[-1])  # the only release of 9 July
 
     files = project.fetch()
 
@@ -213,8 +213,8 @@ def test_a_finished_simulation_needs_no_met(tmp_path, archive):
 
 
 def test_a_project_with_nothing_left_to_run_fetches_nothing(tmp_path, archive):
-    project = _project(tmp_path, RECEPTORS[:1])
-    _finish(project, RECEPTORS[0])
+    project = _project(tmp_path, RELEASES[:1])
+    _finish(project, RELEASES[0])
 
     files = project.fetch()
 
@@ -224,10 +224,10 @@ def test_a_project_with_nothing_left_to_run_fetches_nothing(tmp_path, archive):
 
 
 def test_a_selection_limits_the_fetch(tmp_path, archive):
-    project = _project(tmp_path, RECEPTORS, n_hours=-6)
+    project = _project(tmp_path, RELEASES, n_hours=-6)
     sims = project.simulations
 
-    files = project.fetch(sims[sims["receptor"] == RECEPTORS[-1].id])
+    files = project.fetch(sims[sims["release"] == RELEASES[-1].id])
 
     assert len(files) == 2  # 8 July 18-23 and 9 July 00-05
     assert all("202407" in f for f in files["file"])
@@ -242,8 +242,8 @@ def test_a_selection_limits_the_fetch(tmp_path, archive):
 def test_a_file_the_archive_lacks_is_reported_for_its_times_alone(tmp_path, archive):
     # 2 July 06:00 and 12:00 (-12 h) overlap, so they are asked for together;
     # only the second needs the 12-17 block.
-    receptors = [_receptor(2, 6), _receptor(2, 12)]
-    project = _project(tmp_path, receptors, n_hours=-12)
+    releases = [_release(2, 6), _release(2, 12)]
+    project = _project(tmp_path, releases, n_hours=-12)
     archive.missing = {"20240702_12-17"}
 
     files = project.fetch()
@@ -260,7 +260,7 @@ def test_a_file_the_archive_lacks_is_reported_for_its_times_alone(tmp_path, arch
 
 def test_a_date_before_the_archive_begins_is_reported(tmp_path, archive):
     project = _project(
-        tmp_path, [make_receptor(dt.datetime(2015, 1, 1, 12), -111.8, 40.7)]
+        tmp_path, [make_release(dt.datetime(2015, 1, 1, 12), -111.8, 40.7)]
     )
 
     files = project.fetch()
@@ -271,11 +271,11 @@ def test_a_date_before_the_archive_begins_is_reported(tmp_path, archive):
 
 def test_a_met_without_download_is_only_checked(tmp_path):
     met_dir = tmp_path / "met"
-    receptor = make_receptor(dt.datetime(2023, 1, 1, 12), -111.85, 40.77)
-    make_met_files(met_dir, receptor.time, -1)  # a run of -3 h needs more
+    release = make_release(dt.datetime(2023, 1, 1, 12), -111.85, 40.77)
+    make_met_files(met_dir, release.time, -1)  # a run of -3 h needs more
     project = Project.init(
         tmp_path / "proj",
-        receptors=[receptor],
+        releases=[release],
         **blocks(
             mets={"hrrr": make_met_config(met_dir)}, n_hours=-3, variants={"hrrr": {}}
         ),
@@ -296,11 +296,11 @@ def test_a_met_without_download_is_only_checked(tmp_path):
 
 def test_a_met_without_download_that_is_complete_is_ready(tmp_path):
     met_dir = tmp_path / "met"
-    receptor = make_receptor(dt.datetime(2023, 1, 1, 12), -111.85, 40.77)
-    make_met_files(met_dir, receptor.time, -3)
+    release = make_release(dt.datetime(2023, 1, 1, 12), -111.85, 40.77)
+    make_met_files(met_dir, release.time, -3)
     project = Project.init(
         tmp_path / "proj",
-        receptors=[receptor],
+        releases=[release],
         **blocks(
             mets={"hrrr": make_met_config(met_dir)}, n_hours=-3, variants={"hrrr": {}}
         ),
@@ -359,7 +359,7 @@ def test_a_model_with_no_fetch_adds_no_row(tmp_path, monkeypatch):
     monkeypatch.setitem(transport.MODELS, "toy", _NoFilesModel)
     project = Project.init(
         tmp_path / "proj",
-        receptors=[_receptor(2, 3)],
+        releases=[_release(2, 3)],
         **blocks(
             mets={"hrrr": {"directory": tmp_path / "met", "download": "hrrr"}},
             models={"toy": {"n_hours": -3}},
@@ -376,7 +376,7 @@ def test_a_model_with_no_fetch_adds_no_row(tmp_path, monkeypatch):
 
 
 def test_stilt_fetch_prints_the_files_and_exits_with_0(tmp_path, archive):
-    project = _project(tmp_path, RECEPTORS, n_hours=-6)
+    project = _project(tmp_path, RELEASES, n_hours=-6)
 
     result = runner.invoke(app, ["fetch", str(project.directory)])
 
@@ -386,7 +386,7 @@ def test_stilt_fetch_prints_the_files_and_exits_with_0(tmp_path, archive):
 
 
 def test_stilt_fetch_exits_with_1_when_a_file_could_not_be_had(tmp_path, archive):
-    project = _project(tmp_path, RECEPTORS, n_hours=-6)
+    project = _project(tmp_path, RELEASES, n_hours=-6)
     archive.missing = {"20240709"}
 
     result = runner.invoke(app, ["fetch", str(project.directory)])
@@ -445,7 +445,7 @@ def _http_failed(status):
 def test_stilt_fetch_exits_with_1_only_for_a_file_the_archive_lacks(
     tmp_path, archive, make_error, code
 ):
-    project = _project(tmp_path, RECEPTORS[:1])
+    project = _project(tmp_path, RELEASES[:1])
     archive.error = make_error()
 
     result = runner.invoke(app, ["fetch", str(project.directory)])
@@ -457,7 +457,7 @@ def test_stilt_fetch_exits_with_1_only_for_a_file_the_archive_lacks(
 
 def test_a_busy_archive_stops_a_fetch_at_the_first_window(tmp_path, archive):
     """A throttled archive is asked once, not once for each window."""
-    project = _project(tmp_path, RECEPTORS, n_hours=-6)
+    project = _project(tmp_path, RELEASES, n_hours=-6)
     archive.error = _s3_answer(503, "SlowDown")
 
     result = runner.invoke(app, ["fetch", str(project.directory)])
@@ -467,8 +467,8 @@ def test_a_busy_archive_stops_a_fetch_at_the_first_window(tmp_path, archive):
 
 
 def test_stilt_fetch_of_a_finished_project_says_so(tmp_path, archive):
-    project = _project(tmp_path, RECEPTORS[:1])
-    _finish(project, RECEPTORS[0])
+    project = _project(tmp_path, RELEASES[:1])
+    _finish(project, RELEASES[0])
 
     result = runner.invoke(app, ["fetch", str(project.directory)])
 
@@ -477,10 +477,10 @@ def test_stilt_fetch_of_a_finished_project_says_so(tmp_path, archive):
 
 
 def test_stilt_fetch_exits_with_2_for_a_met_it_cannot_read(tmp_path):
-    receptor = _receptor(2, 3)
+    release = _release(2, 3)
     project = Project.init(
         tmp_path / "proj",
-        receptors=[receptor],
+        releases=[release],
         **blocks(
             mets={"hrrr": make_met_config(tmp_path / "met")},
             n_hours=-3,
@@ -499,7 +499,7 @@ def test_stilt_fetch_exits_with_2_for_a_directory_that_is_not_a_project(tmp_path
 
 
 def test_stilt_fetch_exits_with_3_when_interrupted(tmp_path, monkeypatch):
-    project = _project(tmp_path, RECEPTORS[:1])
+    project = _project(tmp_path, RELEASES[:1])
 
     def interrupt(self, sel=None, **_):
         raise KeyboardInterrupt
@@ -513,9 +513,9 @@ def test_stilt_fetch_exits_with_3_when_interrupted(tmp_path, monkeypatch):
 
 
 def test_stilt_fetch_uses_the_output_directory_it_is_given(tmp_path, archive):
-    project = _project(tmp_path, RECEPTORS[:1])
+    project = _project(tmp_path, RELEASES[:1])
     other = tmp_path / "other_output"
-    _finish(project, RECEPTORS[0])  # finished in the project's own output
+    _finish(project, RELEASES[0])  # finished in the project's own output
 
     result = runner.invoke(
         app, ["fetch", str(project.directory), "--output", str(other)]
@@ -525,47 +525,47 @@ def test_stilt_fetch_uses_the_output_directory_it_is_given(tmp_path, archive):
     assert "ready" in result.output  # nothing is finished in the other one
 
 
-def test_stilt_fetch_gets_only_the_receptors_it_is_given(tmp_path, archive):
-    project = _project(tmp_path, RECEPTORS, n_hours=-6)
+def test_stilt_fetch_gets_only_the_releases_it_is_given(tmp_path, archive):
+    project = _project(tmp_path, RELEASES, n_hours=-6)
     ids = tmp_path / "ids.txt"
-    ids.write_text(RECEPTORS[-1].id + "\n")
+    ids.write_text(RELEASES[-1].id + "\n")
 
     result = runner.invoke(
-        app, ["fetch", str(project.directory), "--receptors", str(ids)]
+        app, ["fetch", str(project.directory), "--releases", str(ids)]
     )
 
     assert result.exit_code == 0, result.output
-    assert "receptors=1" in result.output
+    assert "releases=1" in result.output
     assert len(archive.downloaded) == 2  # 8 July 18-23 and 9 July 00-05
     assert not any("20240702" in name for name in archive.downloaded)
 
 
-def test_stilt_fetch_reads_a_submissions_receptors_parquet(tmp_path, archive):
+def test_stilt_fetch_reads_a_submissions_releases_parquet(tmp_path, archive):
     """The fetch job of ``stilt submit`` reads the rows the array reads (#436)."""
     import pyarrow as pa
 
     from stilt._paths import write_parquet
 
-    project = _project(tmp_path, RECEPTORS, n_hours=-6)
-    rows = project._rows_of([RECEPTORS[-1].id])
-    parquet = tmp_path / "receptors.parquet"
+    project = _project(tmp_path, RELEASES, n_hours=-6)
+    rows = project._rows_of([RELEASES[-1].id])
+    parquet = tmp_path / "releases.parquet"
     write_parquet(pa.Table.from_pandas(rows, preserve_index=False), parquet)
 
     result = runner.invoke(
-        app, ["fetch", str(project.directory), "--receptors", str(parquet)]
+        app, ["fetch", str(project.directory), "--releases", str(parquet)]
     )
 
     assert result.exit_code == 0, result.output
     assert len(archive.downloaded) == 2
 
 
-def test_stilt_fetch_refuses_a_receptor_not_in_the_project(tmp_path, archive):
-    project = _project(tmp_path, RECEPTORS[:1])
+def test_stilt_fetch_refuses_a_release_not_in_the_project(tmp_path, archive):
+    project = _project(tmp_path, RELEASES[:1])
     ids = tmp_path / "ids.txt"
-    ids.write_text("not-a-receptor\n")
+    ids.write_text("not-a-release\n")
 
     result = runner.invoke(
-        app, ["fetch", str(project.directory), "--receptors", str(ids)]
+        app, ["fetch", str(project.directory), "--releases", str(ids)]
     )
 
     assert result.exit_code == 2
@@ -576,7 +576,7 @@ def test_stilt_fetch_refuses_a_receptor_not_in_the_project(tmp_path, archive):
 def test_stilt_fetch_no_skip_fetches_for_runs_whose_particles_exist(
     tmp_path, archive, monkeypatch
 ):
-    project = _project(tmp_path, RECEPTORS, n_hours=-6)
+    project = _project(tmp_path, RELEASES, n_hours=-6)
     real_unrun = Project._unrun
 
     def unrun(self, sel=None, *, skip_existing=True):

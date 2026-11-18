@@ -1,5 +1,5 @@
 """
-The dry deposition transform: weigh each particle's ``foot`` by the tracer that survives to the receptor.
+The dry deposition transform: weigh each particle's ``foot`` by the tracer that survives to the release.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from stilt.transforms._common import step_minutes
 from stilt.transforms.lifetime import survival
 
 if TYPE_CHECKING:
-    from stilt.receptors import Receptor
+    from stilt.releases import Receptor
 
 #: The longest time step, in minutes, the surviving fraction is computed over.
 #: A particle can cross the surface layer within a few minutes, so rows
@@ -30,7 +30,7 @@ def dry_deposition_survival(
     surface_layer_depth: float = 50.0,
 ) -> pd.Series:
     r"""
-    Return the fraction of a depositing tracer that survives from each row to the receptor.
+    Return the fraction of a depositing tracer that survives from each row to the release.
 
     A particle below ``surface_layer_depth`` loses tracer at the rate
     ``velocity / surface_layer_depth``, HYSPLIT's dry deposition rule.
@@ -107,7 +107,7 @@ class DryDeposition(BaseModel):
     Use it for a species that deposits to the ground, such as a soluble gas
     or a fine aerosol. Each row's ``foot`` is multiplied by
     :func:`dry_deposition_survival`, the fraction of tracer emitted there
-    that reaches the receptor.
+    that reaches the release.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -127,7 +127,7 @@ class DryDeposition(BaseModel):
     def apply(
         self,
         particles: pd.DataFrame,
-        receptor: Receptor | None = None,
+        release: Receptor | None = None,
         directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """Return the particles with ``foot`` scaled by the surviving fraction."""

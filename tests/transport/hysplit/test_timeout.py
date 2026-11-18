@@ -23,7 +23,7 @@ def _stop(workdir, timeout=None):
 
 
 @pytest.fixture
-def sim(monkeypatch, tmp_path, point_receptor):
+def sim(monkeypatch, tmp_path, point_release):
     """A Simulation with HYSPLIT stubbed out, and a runner for it."""
     from stilt.output import Output
     from stilt.simulation import Simulation
@@ -32,12 +32,12 @@ def sim(monkeypatch, tmp_path, point_receptor):
     monkeypatch.setattr(model, "write_inputs", lambda *args, **kwargs: None)
     monkeypatch.setattr(model, "run_hycs_std", _stop)
     SEEN.clear()
-    make_met_files(tmp_path / "met", point_receptor.time, -24)
+    make_met_files(tmp_path / "met", point_release.time, -24)
     met_config = make_met_config(tmp_path / "met")
 
     def _make():
         config = make_variant(met_config=met_config, numpar=10)
-        return Simulation(point_receptor, config, Output(tmp_path / "output"))
+        return Simulation(point_release, config, Output(tmp_path / "output"))
 
     return _make
 

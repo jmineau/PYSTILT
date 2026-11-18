@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from stilt.receptors import ColumnReceptor
+from stilt.releases import ColumnReceptor
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
 from stilt.transport import run_model
 from stilt.transport.hysplit import HysplitConfig
@@ -44,15 +44,15 @@ def _column_trajectory(
     top: float = 3000.0,
     time: dt.datetime = REFERENCE_TIME,
 ):
-    """Run a short WBB column simulation and return (receptor, particles)."""
-    receptor = ColumnReceptor(
+    """Run a short WBB column simulation and return (release, particles)."""
+    release = ColumnReceptor(
         time=time, longitude=WBB_LON, latitude=WBB_LAT, bottom=0.0, top=top
     )
     params = HysplitConfig(n_hours=-2, numpar=numpar)
     met = reference_met(met_dir)
     # run_model adds the release heights that the pressure weighting reads.
-    run = run_model("hysplit", receptor, params, met, Path(tmp_path) / label, 900)
-    return receptor, run.particles
+    run = run_model("hysplit", release, params, met, Path(tmp_path) / label, 900)
+    return release, run.particles
 
 
 @integration
@@ -82,7 +82,7 @@ def test_hypsometric_fit_holds_on_a_real_winter_profile(met_dir, tmp_path):
 @integration
 def test_pwf_weights_are_physical_on_real_trajectories(met_dir, tmp_path):
     """Every particle carries positive weight spanning the hydrostatic ratio."""
-    receptor, particles = _column_trajectory(met_dir, tmp_path, "pwf_physical")
+    release, particles = _column_trajectory(met_dir, tmp_path, "pwf_physical")
     _, pwf = particle_pwf(particles, None)
 
     assert (pwf > 0).all()

@@ -34,7 +34,7 @@ from stilt.migration import (
     _axis,
     _error_settings,
     _particles,
-    _receptor,
+    _release,
     _rslurm_params,
     _smooth_factor,
     import_stilt_r,
@@ -94,40 +94,40 @@ def bare(tmp_path: Path) -> Path:
     return Path(shutil.copytree(SAMPLE, tmp_path / "project" / "out" / "by-id"))
 
 
-def test_point_receptor_is_the_one_stilt_r_ran():
-    receptor, _, _ = _read()[POINT]
-    assert receptor == PointReceptor(
+def test_point_release_is_the_one_stilt_r_ran():
+    release, _, _ = _read()[POINT]
+    assert release == PointReceptor(
         time=dt.datetime(2015, 7, 5), longitude=-111.85, latitude=40.77, altitude=5
     )
-    assert receptor.id == POINT
+    assert release.id == POINT
 
 
-def test_receptor_coordinates_are_the_numbers_in_control(copy):
-    # The landfill receptor: HYSPLIT read these digits from CONTROL.
+def test_release_coordinates_are_the_numbers_in_control(copy):
+    # The landfill release: HYSPLIT read these digits from CONTROL.
     _write_points(copy / POINT / "CONTROL", ["40.7454482983855 -112.043938842752 5"])
-    receptor, _, _ = _read(copy)[POINT]
-    assert (receptor.latitude, receptor.longitude) == (
+    release, _, _ = _read(copy)[POINT]
+    assert (release.latitude, release.longitude) == (
         40.7454482983855,
         -112.043938842752,
     )
-    assert receptor.location_id == "-112.043938842752_40.7454482983855_5"
+    assert release.location_id == "-112.043938842752_40.7454482983855_5"
 
 
-def test_receptor_coordinates_do_not_come_from_the_rds(copy):
-    # The .rds keeps the receptor as run_stilt.r gave it; CONTROL is what ran.
+def test_release_coordinates_do_not_come_from_the_rds(copy):
+    # The .rds keeps the release as run_stilt.r gave it; CONTROL is what ran.
     _write_points(copy / POINT / "CONTROL", ["40.78 -111.86 10"])
-    receptor, _, _ = _read(copy)[POINT]
-    assert receptor.coords() == [(40.78, -111.86, 10.0)]
+    release, _, _ = _read(copy)[POINT]
+    assert release.coords() == [(40.78, -111.86, 10.0)]
 
 
-def test_slant_points_in_control_are_a_multipoint_receptor(copy):
+def test_slant_points_in_control_are_a_multipoint_release(copy):
     # X-STILT's slant columns release from a point per height, each its own place.
     points = ["40.5 -112.0 100", "40.51 -112.01 1000", "40.52 -112.02 2000"]
     _write_points(copy / POINT / "CONTROL", points)
-    receptor, _, _ = _read(copy)[POINT]
-    assert isinstance(receptor, MultiPointReceptor)
-    assert receptor.longitudes == (-112.0, -112.01, -112.02)
-    assert receptor.altitudes == (100.0, 1000.0, 2000.0)
+    release, _, _ = _read(copy)[POINT]
+    assert isinstance(release, MultiPointReceptor)
+    assert release.longitudes == (-112.0, -112.01, -112.02)
+    assert release.altitudes == (100.0, 1000.0, 2000.0)
 
 
 def test_a_folder_without_control_raises_naming_it(copy):
@@ -142,18 +142,18 @@ def test_a_control_that_cannot_be_read_raises(copy):
         _read(copy)
 
 
-def test_a_receptor_without_its_time_raises():
+def test_a_release_without_its_time_raises():
     with pytest.raises(ValueError, match="has no run_time"):
-        _receptor({"lati": 40.5}, None, Path("x_traj.rds"))
+        _release({"lati": 40.5}, None, Path("x_traj.rds"))
 
 
 def test_particles_without_a_schema_column_raise():
-    receptor, particles, _ = _read()[POINT]
+    release, particles, _ = _read()[POINT]
     stilt_r = particles.drop(columns=["time", "zagl"]).rename(
         columns={"particle": "indx", "age": "time", "lon": "long", "lat": "lati"}
     )
     with pytest.raises(ValueError, match="x_traj.rds: .*'zagl'"):
-        _particles(stilt_r, receptor, Path("x_traj.rds"))
+        _particles(stilt_r, release, Path("x_traj.rds"))
 
 
 def test_an_rds_without_particles_raises(copy):
@@ -162,9 +162,9 @@ def test_an_rds_without_particles_raises(copy):
         _read(copy)
 
 
-def test_column_receptor_spans_the_heights_and_keeps_seconds():
-    receptor, _, _ = _read()[COLUMN]
-    assert receptor == ColumnReceptor(
+def test_column_release_spans_the_heights_and_keeps_seconds():
+    release, _, _ = _read()[COLUMN]
+    assert release == ColumnReceptor(
         time=dt.datetime(2015, 7, 5, 18, 0, 30),
         longitude=-111.9,
         latitude=40.7,
@@ -186,9 +186,9 @@ def test_particle_columns_get_pystilt_names():
     assert particles["age"].dtype == "float64"
 
 
-def test_time_is_the_receptor_time_plus_age():
-    receptor, particles, _ = _read()[COLUMN]
-    expected = pd.Timestamp(receptor.time) + pd.to_timedelta(particles["age"], "min")
+def test_time_is_the_release_time_plus_age():
+    release, particles, _ = _read()[COLUMN]
+    expected = pd.Timestamp(release.time) + pd.to_timedelta(particles["age"], "min")
     pd.testing.assert_series_equal(particles["time"], expected, check_names=False)
     assert particles["time"].max() == pd.Timestamp("2015-07-05 17:59:30")
 
@@ -225,33 +225,33 @@ def test_footprint_values_are_the_file_values_on_its_grid():
 
 
 def test_time_integrated_footprint_is_one_layer_as_long_as_the_run():
-    """STILT-R stamps its summed map at the receptor time; it is read as one layer of the run's length."""
-    receptor, particles, foot = _read()[COLUMN]
+    """STILT-R stamps its summed map at the release time; it is read as one layer of the run's length."""
+    release, particles, foot = _read()[COLUMN]
     raw = _raw_foot(COLUMN)
     assert raw.sizes["time"] == 1
     assert foot.sizes["time"] == 1
     run = pd.Timedelta(foot.stilt.config.tres)
     assert run > pd.Timedelta(hours=1)
     assert particles["age"].min() >= -run / pd.Timedelta(minutes=1)
-    assert foot["time"].to_numpy()[0] == np.datetime64(receptor.time - run)
+    assert foot["time"].to_numpy()[0] == np.datetime64(release.time - run)
     np.testing.assert_array_equal(
         foot.to_numpy(),
         raw.transpose("time", "lat", "lon").to_numpy().astype("float64"),
     )
-    assert foot.stilt.receptor == receptor
+    assert foot.stilt.release == release
 
 
 @pytest.mark.parametrize("name", [POINT, COLUMN])
 def test_footprint_matches_pystilt_footprint_of_the_particles(name):
     # STILT-R made its footprint from these particles; PYSTILT's matches
     # STILT-R's at rtol=1e-7. This holds only when the columns, ages,
-    # receptor time, grid, and layer stamps are all read right.
-    receptor, particles, foot = _read()[name]
+    # release time, grid, and layer stamps are all read right.
+    release, particles, foot = _read()[name]
     config = foot.stilt.config
     assert config.smooth_factor == 0.5
     mine = calc_footprint(
         particles,
-        receptor,
+        release,
         config.grid,
         smooth_factor=config.smooth_factor,
         tres=config.tres,
@@ -347,9 +347,9 @@ def test_smooth_factor_comes_from_params_rds():
 
 
 def test_smooth_factor_given_without_params_rds(bare):
-    receptor, particles, foot = _read(bare, smooth_factor=0.5)[POINT]
+    release, particles, foot = _read(bare, smooth_factor=0.5)[POINT]
     assert foot.stilt.config.smooth_factor == 0.5
-    mine = calc_footprint(particles, receptor, foot.stilt.grid, smooth_factor=0.5)
+    mine = calc_footprint(particles, release, foot.stilt.grid, smooth_factor=0.5)
     xr.testing.assert_allclose(mine, foot, rtol=1e-7, atol=1e-12)
 
 
@@ -406,9 +406,9 @@ def test_params_rds_that_is_not_a_table_raises(copy):
 
 def test_error_reads_the_perturbed_particles_and_no_footprint(copy):
     shutil.rmtree(copy / COLUMN)
-    ((receptor, particles, _),) = list(read_stilt_r(copy))
+    ((release, particles, _),) = list(read_stilt_r(copy))
     ((same, perturbed, foot),) = list(read_stilt_r(copy, error=True))
-    assert same == receptor
+    assert same == release
     assert foot is None
     assert list(perturbed.columns) == list(particles.columns)
     assert not np.array_equal(perturbed["lon"], particles["lon"])
@@ -437,16 +437,16 @@ def _by_id(tmp_path: Path, *names: str, rslurm: bool = True) -> Path:
 
 
 def _import(by_id: Path, output: Path, capsys, **kwargs) -> tuple[list, dict]:
-    """Import *by_id* into *output*; return the receptors and the config it printed."""
-    receptors = import_stilt_r(by_id, output, VERSION, **kwargs)
-    return receptors, yaml.safe_load(capsys.readouterr().out)
+    """Import *by_id* into *output*; return the releases and the config it printed."""
+    releases = import_stilt_r(by_id, output, VERSION, **kwargs)
+    return releases, yaml.safe_load(capsys.readouterr().out)
 
 
 def _project(tmp_path: Path, by_id: Path, capsys, **kwargs) -> Project:
     """Import *by_id* and return a project whose config.yaml is what the import printed."""
     output = tmp_path / "output"
-    receptors, config = _import(by_id, output, capsys, **kwargs)
-    return Project.init(tmp_path / "py", receptors, output=str(output), **config)
+    releases, config = _import(by_id, output, capsys, **kwargs)
+    return Project.init(tmp_path / "py", releases, output=str(output), **config)
 
 
 def _settings(output: Path, kind: str, folder: str) -> dict:
@@ -465,9 +465,9 @@ def test_imported_runs_are_the_results_of_the_printed_variants(tmp_path, capsys)
     status = project.status()
     assert list(status.state) == ["complete", "complete"]
 
-    ((receptor, particles, foot),) = list(read_stilt_r(by_id))
+    ((release, particles, foot),) = list(read_stilt_r(by_id))
     sim = project.simulation(POINT, "stilt-r")
-    assert sim.receptor == receptor
+    assert sim.release == release
     for column in ("particle", "age", "lon", "lat", "zagl"):
         np.testing.assert_array_equal(
             sim.particles[column].to_numpy(), particles[column].to_numpy()
@@ -516,7 +516,7 @@ def test_jacobian_sums_the_imported_footprints(tmp_path, capsys):
     )
     sims = project.simulations
     H = project.jacobian(sims[sims.variant == "stilt-r"], target, bins)
-    assert list(H.receptors) == [POINT]
+    assert list(H.releases) == [POINT]
     expected = foot.stilt.aggregate(target, bins)
     np.testing.assert_allclose(
         H.to_frame().iloc[0].to_numpy().reshape(len(bins), -1).T,
@@ -707,7 +707,7 @@ def test_a_run_without_a_footprint_or_a_log_saying_why_is_not_complete(
     (by_id / other / f"{other}_foot.nc").unlink()
     _write_points(by_id / other / "CONTROL", ["40.78 -111.85 5"])
     project = _project(tmp_path, by_id, capsys)
-    status = project.status().set_index(["receptor", "variant"])
+    status = project.status().set_index(["release", "variant"])
     assert status.loc[(other, "stilt-r"), "particles"]
     assert status.loc[(other, "stilt-r"), "state"] == "pending"
 
@@ -725,10 +725,10 @@ def test_importing_again_keeps_what_is_there(tmp_path, capsys):
 
 
 def test_a_printed_variant_missing_a_setting_does_not_load(tmp_path, capsys):
-    receptors, config = _import(_by_id(tmp_path, POINT), tmp_path / "output", capsys)
+    releases, config = _import(_by_id(tmp_path, POINT), tmp_path / "output", capsys)
     del config["variants"]["stilt-r"]["kmix0"]
     with pytest.raises(ValueError, match="missing: kmix0"):
-        Project.init(tmp_path / "py", receptors, **config)
+        Project.init(tmp_path / "py", releases, **config)
 
 
 def test_the_name_must_be_a_variant_name(tmp_path):

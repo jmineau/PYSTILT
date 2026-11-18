@@ -9,7 +9,7 @@ import xarray as xr
 
 from stilt.footprint import read_footprint
 from stilt.footprint.config import FootprintConfig
-from stilt.receptors import PointReceptor
+from stilt.releases import PointReceptor
 from stilt.spatial import Grid
 from stilt.transforms import AveragingKernel
 
@@ -64,13 +64,13 @@ def test_netcdf_writes_cf_grid_mapping_and_coordinates(tmp_path):
         assert ds["lat"].attrs["standard_name"] == "latitude"
         assert ds["lat"].attrs["units"] == "degrees_north"
         assert ds["time"].attrs["standard_name"] == "time"
-        assert "stilt_receptor" in ds["foot"].attrs
+        assert "stilt_release" in ds["foot"].attrs
         assert "stilt_footprint" in ds["foot"].attrs
-        assert ds["receptor"].item() == "202301011200_-111.85_40.77_5"
-        assert "receptor_time" not in ds.coords
-        assert "receptor_longitude" not in ds.coords
-        assert "receptor_latitude" not in ds.coords
-        assert "receptor_altitude" not in ds.coords
+        assert ds["release"].item() == "202301011200_-111.85_40.77_5"
+        assert "release_time" not in ds.coords
+        assert "release_longitude" not in ds.coords
+        assert "release_latitude" not in ds.coords
+        assert "release_altitude" not in ds.coords
     finally:
         ds.close()
 
@@ -99,7 +99,7 @@ def test_netcdf_roundtrip_preserves_transforms(tmp_path):
         levels=[0.0, 1000.0], values=[0.1, 0.9], coordinate="release_height"
     )
     config = FootprintConfig(grid=foot.stilt.grid, transforms=[kernel])
-    foot = as_footprint(foot, foot.stilt.receptor, config, "slv")
+    foot = as_footprint(foot, foot.stilt.release, config, "slv")
     sim_dir = tmp_path / "202301011200_-111.85_40.77_5"
     sim_dir.mkdir()
     path = sim_dir / "202301011200_-111.85_40.77_5_slv_foot.nc"
@@ -122,7 +122,7 @@ def test_netcdf_with_unimportable_transform_still_loads(tmp_path):
         grid=foot.stilt.grid,
         transforms=[AveragingKernel(levels=[0.0, 1000.0], values=[0.1, 0.9])],
     )
-    foot = as_footprint(foot, foot.stilt.receptor, config, "slv")
+    foot = as_footprint(foot, foot.stilt.release, config, "slv")
     sim_dir = tmp_path / "202301011200_-111.85_40.77_5"
     sim_dir.mkdir()
     original = sim_dir / "202301011200_-111.85_40.77_5_slv_foot.nc"
@@ -167,9 +167,9 @@ def test_netcdf_roundtrip_no_name(tmp_path):
 
 
 def test_netcdf_roundtrip_with_timezone_aware_time(tmp_path):
-    receptor_time = pd.Timestamp("2023-01-01 12:00:00+00:00")
-    receptor = PointReceptor(
-        time=receptor_time,
+    release_time = pd.Timestamp("2023-01-01 12:00:00+00:00")
+    release = PointReceptor(
+        time=release_time,
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
@@ -181,13 +181,13 @@ def test_netcdf_roundtrip_with_timezone_aware_time(tmp_path):
         np.ones((1, 2, 2)),
         dims=["time", "lat", "lon"],
         coords={
-            "time": [receptor_time],
+            "time": [release_time],
             "lat": np.array([39.05, 39.15]),
             "lon": np.array([-113.95, -113.85]),
         },
         attrs={"units": "ppm (umol-1 m2 s)"},
     )
-    foot = as_footprint(data, receptor, config, "slv")
+    foot = as_footprint(data, release, config, "slv")
 
     path = tmp_path / "timezone_aware_foot.nc"
     foot.stilt.to_netcdf(path)
@@ -196,8 +196,8 @@ def test_netcdf_roundtrip_with_timezone_aware_time(tmp_path):
     assert tuple(loaded.dims) == ("time", "lat", "lon")
     assert loaded.shape == (1, 2, 2)
     assert float(loaded.sum()) == pytest.approx(4.0)
-    # Time coord and receptor.time must come back as naive UTC.
-    assert loaded.stilt.receptor.time.tzinfo is None
+    # Time coord and release.time must come back as naive UTC.
+    assert loaded.stilt.release.time.tzinfo is None
     loaded_time = pd.Timestamp(loaded.time.values[0])
     assert loaded_time.tzinfo is None
     assert loaded_time == pd.Timestamp("2023-01-01 12:00:00")
@@ -267,7 +267,7 @@ def test_write_footprint_refuses_a_grid_wider_than_int16(tmp_path):
     """A stored footprint keeps x and y as int16, so a wider grid is refused (#295)."""
     from stilt.footprint import calc_footprint, write_footprint
 
-    receptor = PointReceptor(
+    release = PointReceptor(
         time="2023-07-01 12:00", longitude=-110.25, latitude=40.0005, altitude=5
     )
     particles = pd.DataFrame(
@@ -281,7 +281,7 @@ def test_write_footprint_refuses_a_grid_wider_than_int16(tmp_path):
         }
     )
     grid = Grid(xmin=-114, xmax=-110, ymin=40.0, ymax=40.002, xres=0.0001, yres=0.001)
-    foot = calc_footprint(particles, receptor, grid, smooth_factor=0)
+    foot = calc_footprint(particles, release, grid, smooth_factor=0)
 
     with pytest.raises(ValueError, match="at most 32767"):
         write_footprint(tmp_path / "f.parquet", foot)
@@ -289,7 +289,7 @@ def test_write_footprint_refuses_a_grid_wider_than_int16(tmp_path):
 
 
 def _two_particle_rows(age: float) -> pd.DataFrame:
-    """One particle on the grid at the receptor's first minute and at *age*."""
+    """One particle on the grid at the release's first minute and at *age*."""
     return pd.DataFrame(
         {
             "particle": [1.0, 1.0],
@@ -305,12 +305,12 @@ def _two_particle_rows(age: float) -> pd.DataFrame:
 def test_a_stored_footprint_reads_back_with_its_layer_times(tmp_path):
     from stilt.footprint import calc_footprint, write_footprint
 
-    receptor = PointReceptor(
+    release = PointReceptor(
         time="2023-07-01 12:30", longitude=-111.85, latitude=40.77, altitude=5
     )
     grid = Grid(xmin=-112, xmax=-111.5, ymin=40.5, ymax=41, xres=0.1, yres=0.1)
     foot = calc_footprint(
-        _two_particle_rows(-50.0), receptor, grid, smooth_factor=0, tres="15min"
+        _two_particle_rows(-50.0), release, grid, smooth_factor=0, tres="15min"
     )
     # Layers -1 (12:15) and -4 (11:30): the ages -1 and -50.
     assert list(foot.time.values) == list(
@@ -327,12 +327,12 @@ def test_write_footprint_refuses_more_layers_than_int16(tmp_path):
     """The stored layer is an int16, so one more than 32767 layers back is refused."""
     from stilt.footprint import calc_footprint, write_footprint
 
-    receptor = PointReceptor(
+    release = PointReceptor(
         time="2023-07-01 12:00", longitude=-111.85, latitude=40.77, altitude=5
     )
     grid = Grid(xmin=-112, xmax=-111.5, ymin=40.5, ymax=41, xres=0.1, yres=0.1)
     foot = calc_footprint(
-        _two_particle_rows(-40000.0), receptor, grid, smooth_factor=0, tres="1min"
+        _two_particle_rows(-40000.0), release, grid, smooth_factor=0, tres="1min"
     )
 
     with pytest.raises(ValueError, match="Use longer layers"):
@@ -340,16 +340,16 @@ def test_write_footprint_refuses_more_layers_than_int16(tmp_path):
     assert not (tmp_path / "f.parquet").exists()
 
 
-def test_write_footprint_refuses_layers_not_whole_layers_from_the_receptor(tmp_path):
+def test_write_footprint_refuses_layers_not_whole_layers_from_the_release(tmp_path):
     """A 15-minute footprint stamped 5 minutes off its layers is refused, not rounded."""
     from stilt.footprint import calc_footprint, write_footprint
 
-    receptor = PointReceptor(
+    release = PointReceptor(
         time="2023-07-01 12:00", longitude=-111.85, latitude=40.77, altitude=5
     )
     grid = Grid(xmin=-112, xmax=-111.5, ymin=40.5, ymax=41, xres=0.1, yres=0.1)
     foot = calc_footprint(
-        _two_particle_rows(-50.0), receptor, grid, smooth_factor=0, tres="15min"
+        _two_particle_rows(-50.0), release, grid, smooth_factor=0, tres="15min"
     )
     shifted = foot.assign_coords(time=foot.time + np.timedelta64(5, "m"))
 

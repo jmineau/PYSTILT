@@ -36,7 +36,7 @@ class ScaleFoot(BaseModel):
 
     factor: float = 1.0
 
-    def apply(self, particles, receptor=None, directory=None):
+    def apply(self, particles, release=None, directory=None):
         out = particles.copy()
         out["foot"] = out["foot"] * self.factor
         return out
@@ -48,7 +48,7 @@ class PlainScale:
     def __init__(self, factor=1.0):
         self.factor = factor
 
-    def apply(self, particles, receptor=None, directory=None):
+    def apply(self, particles, release=None, directory=None):
         out = particles.copy()
         out["foot"] = out["foot"] * self.factor
         return out
@@ -355,7 +355,7 @@ def test_pwf_rejects_single_release_height_with_release_height():
         PressureWeighting().apply(p)
 
 
-# -- shared release heights (multipoint receptors), GH-46 ---------------------
+# -- shared release heights (multipoint releases), GH-46 ---------------------
 
 
 def _multipoint_particles(
@@ -478,11 +478,11 @@ def test_pwf_msl_slant_across_terrain_closes_at_ground_under_lowest_point():
     )
 
 
-def test_pwf_reads_altitude_ref_from_the_receptor():
-    from stilt.receptors import ColumnReceptor
+def test_pwf_reads_altitude_ref_from_the_release():
+    from stilt.releases import ColumnReceptor
 
     _, msl = _msl_column_particles(10, station=1300.0)
-    receptor = ColumnReceptor(
+    release = ColumnReceptor(
         time="2023-07-15 18:00",
         longitude=-111.85,
         latitude=40.77,
@@ -491,7 +491,7 @@ def test_pwf_reads_altitude_ref_from_the_receptor():
         altitude_ref="msl",
     )
     _, expected = particle_pwf(msl, altitude_ref="msl")
-    result = PressureWeighting().apply(msl, receptor)
+    result = PressureWeighting().apply(msl, release)
     assert result["pwf"].to_numpy() == pytest.approx(expected.to_numpy(), rel=1e-9)
 
 
@@ -867,16 +867,16 @@ def test_oxidation_rejects_bad_fields(fields):
 # ---------------------------------------------------------------------------
 
 
-def test_apply_transforms_with_no_transforms_returns_same_object(point_receptor):
+def test_apply_transforms_with_no_transforms_returns_same_object(point_release):
     p = _make_particles()
-    assert apply_transforms(p, [], point_receptor) is p
+    assert apply_transforms(p, [], point_release) is p
 
 
-def test_apply_transforms_runs_in_order(point_receptor):
+def test_apply_transforms_runs_in_order(point_release):
     p = _column_particles(20)
     kernel = AveragingKernel(levels=[0.0, 3000.0], values=[1.0, 0.0])
     result = apply_transforms(
-        p, [kernel, PressureWeighting(), ScaleFoot(factor=2.0)], point_receptor
+        p, [kernel, PressureWeighting(), ScaleFoot(factor=2.0)], point_release
     )
     expected = PressureWeighting().apply(kernel.apply(p))["foot"].to_numpy() * 2.0
     assert result["foot"].to_numpy() == pytest.approx(expected)
@@ -884,16 +884,16 @@ def test_apply_transforms_runs_in_order(point_receptor):
     assert "pwf" in result.columns
 
 
-def test_apply_transforms_passes_the_receptor_and_directory(point_receptor, tmp_path):
+def test_apply_transforms_passes_the_release_and_directory(point_release, tmp_path):
     seen = []
 
     class Recorder:
-        def apply(self, particles, receptor=None, directory=None):
-            seen.append((receptor, directory))
+        def apply(self, particles, release=None, directory=None):
+            seen.append((release, directory))
             return particles
 
-    apply_transforms(_make_particles(), [Recorder()], point_receptor, tmp_path)
-    assert seen == [(point_receptor, tmp_path)]
+    apply_transforms(_make_particles(), [Recorder()], point_release, tmp_path)
+    assert seen == [(point_release, tmp_path)]
 
 
 # ---------------------------------------------------------------------------
@@ -1073,12 +1073,12 @@ def test_transform_kind():
 
 
 # ---------------------------------------------------------------------------
-# Per-receptor averaging-kernel tables
+# Per-release averaging-kernel tables
 # ---------------------------------------------------------------------------
 
 
-def _two_receptors():
-    from stilt.receptors import ColumnReceptor
+def _two_releases():
+    from stilt.releases import ColumnReceptor
 
     a = ColumnReceptor(
         time="2023-01-01 12:00",
@@ -1097,8 +1097,8 @@ def _two_receptors():
     return a, b
 
 
-def test_averaging_kernel_table_one_kernel_per_receptor():
-    a, b = _two_receptors()
+def test_averaging_kernel_table_one_kernel_per_release():
+    a, b = _two_releases()
 
     table = averaging_kernel_table(
         [a, b],
@@ -1106,28 +1106,28 @@ def test_averaging_kernel_table_one_kernel_per_receptor():
         values=[[1.0, 0.8, 0.6], [1.0, 0.5]],
     )
 
-    assert list(table.columns) == ["receptor", "level", "value"]
-    assert table["receptor"].tolist() == [str(a.id)] * 3 + [str(b.id)] * 2
+    assert list(table.columns) == ["release", "level", "value"]
+    assert table["release"].tolist() == [str(a.id)] * 3 + [str(b.id)] * 2
     assert table["level"].tolist() == [0.0, 1000.0, 2000.0, 0.0, 1500.0]
     assert table["value"].tolist() == [1.0, 0.8, 0.6, 1.0, 0.5]
 
 
 def test_averaging_kernel_table_shared_levels_and_ids():
-    a, b = _two_receptors()
+    a, b = _two_releases()
 
     table = averaging_kernel_table(
         [str(a.id), b], levels=np.array([0.0, 3000.0]), values=[[1.0, 0.0], [0.5, 0.5]]
     )
 
     assert table["level"].tolist() == [0.0, 3000.0, 0.0, 3000.0]
-    assert table["receptor"].tolist() == [str(a.id), str(a.id), str(b.id), str(b.id)]
+    assert table["release"].tolist() == [str(a.id), str(a.id), str(b.id), str(b.id)]
 
 
 def test_averaging_kernel_table_rejects_mismatches():
-    a, b = _two_receptors()
-    with pytest.raises(ValueError, match="2 receptors but 1 kernels"):
+    a, b = _two_releases()
+    with pytest.raises(ValueError, match="2 releases but 1 kernels"):
         averaging_kernel_table([a, b], levels=[0.0, 1.0], values=[[1.0, 1.0]])
-    with pytest.raises(ValueError, match="2 receptors but 1 level arrays"):
+    with pytest.raises(ValueError, match="2 releases but 1 level arrays"):
         averaging_kernel_table(
             [a, b], levels=[[0.0, 1.0]], values=[[1.0, 1.0], [1.0, 1.0]]
         )
@@ -1149,10 +1149,10 @@ def _write_table(path, a, b):
 
 
 @pytest.mark.parametrize("filename", ["kernels.parquet", "kernels.csv"])
-def test_ak_table_picks_the_receptor_kernel_relative_to_the_directory(
+def test_ak_table_picks_the_release_kernel_relative_to_the_directory(
     tmp_path, filename
 ):
-    a, b = _two_receptors()
+    a, b = _two_releases()
     _write_table(tmp_path / filename, a, b)
     kernel = AveragingKernel(table=filename)
     p = _make_particles(4)
@@ -1170,7 +1170,7 @@ def test_ak_table_picks_the_receptor_kernel_relative_to_the_directory(
 
 
 def test_ak_table_absolute_path_needs_no_directory(tmp_path):
-    a, b = _two_receptors()
+    a, b = _two_releases()
     path = tmp_path / "kernels.parquet"
     _write_table(path, a, b)
 
@@ -1180,7 +1180,7 @@ def test_ak_table_absolute_path_needs_no_directory(tmp_path):
 
 
 def test_ak_table_relative_path_without_store_is_relative_to_cwd(tmp_path, monkeypatch):
-    a, b = _two_receptors()
+    a, b = _two_releases()
     _write_table(tmp_path / "kernels.csv", a, b)
     monkeypatch.chdir(tmp_path)
 
@@ -1189,27 +1189,27 @@ def test_ak_table_relative_path_without_store_is_relative_to_cwd(tmp_path, monke
     assert out["foot"].tolist() == [0.5, 0.5]
 
 
-def test_ak_table_missing_receptor_raises(tmp_path):
-    from stilt.receptors import PointReceptor
+def test_ak_table_missing_release_raises(tmp_path):
+    from stilt.releases import PointReceptor
 
-    a, b = _two_receptors()
+    a, b = _two_releases()
     path = tmp_path / "kernels.parquet"
     _write_table(path, a, b)
     other = PointReceptor(
         time="2023-01-01 12:00", longitude=-111.0, latitude=40.0, altitude=10.0
     )
 
-    with pytest.raises(KeyError, match="no kernel for receptor"):
+    with pytest.raises(KeyError, match="no kernel for release"):
         AveragingKernel(table=str(path)).apply(_make_particles(2), other)
 
 
-def test_ak_table_requires_the_receptor_and_known_columns(tmp_path):
-    with pytest.raises(ValueError, match="needs the receptor"):
+def test_ak_table_requires_the_release_and_known_columns(tmp_path):
+    with pytest.raises(ValueError, match="needs the release"):
         AveragingKernel(table="kernels.parquet").apply(_make_particles(2))
 
     bad = tmp_path / "bad.csv"
-    pd.DataFrame({"receptor": ["x"], "z": [0.0], "ak": [1.0]}).to_csv(bad, index=False)
-    a, _ = _two_receptors()
+    pd.DataFrame({"release": ["x"], "z": [0.0], "ak": [1.0]}).to_csv(bad, index=False)
+    a, _ = _two_releases()
     with pytest.raises(ValueError, match="lacks columns"):
         AveragingKernel(table=str(bad)).apply(_make_particles(2), a)
 
@@ -1223,7 +1223,7 @@ def test_ak_table_requires_the_receptor_and_known_columns(tmp_path):
 def test_ak_table_rereads_when_the_file_changes(tmp_path):
     import os
 
-    a, b = _two_receptors()
+    a, b = _two_releases()
     path = tmp_path / "kernels.csv"
     _write_table(path, a, b)
     kernel = AveragingKernel(table=str(path))
@@ -1237,23 +1237,23 @@ def test_ak_table_rereads_when_the_file_changes(tmp_path):
     assert kernel.apply(_make_particles(1), b)["foot"].tolist() == [0.25]
 
 
-def test_ak_table_names_the_receptors_it_has_kernels_for(tmp_path):
-    a, b = _two_receptors()
+def test_ak_table_names_the_releases_it_has_kernels_for(tmp_path):
+    a, b = _two_releases()
     _write_table(tmp_path / "kernels.parquet", a, b)
 
-    held = AveragingKernel(table="kernels.parquet").table_receptors(tmp_path)
+    held = AveragingKernel(table="kernels.parquet").table_releases(tmp_path)
 
     assert held == {str(a.id), str(b.id)}
 
 
-def test_ak_table_receptors_needs_a_table_that_exists_with_its_columns(tmp_path):
+def test_ak_table_releases_needs_a_table_that_exists_with_its_columns(tmp_path):
     with pytest.raises(ValueError, match="not a table"):
-        AveragingKernel(levels=[0.0, 1.0], values=[1.0, 1.0]).table_receptors()
+        AveragingKernel(levels=[0.0, 1.0], values=[1.0, 1.0]).table_releases()
     with pytest.raises(FileNotFoundError):
-        AveragingKernel(table="kernels.parquet").table_receptors(tmp_path)
-    pd.DataFrame({"receptor": ["x"]}).to_csv(tmp_path / "bad.csv", index=False)
+        AveragingKernel(table="kernels.parquet").table_releases(tmp_path)
+    pd.DataFrame({"release": ["x"]}).to_csv(tmp_path / "bad.csv", index=False)
     with pytest.raises(ValueError, match="lacks columns"):
-        AveragingKernel(table="bad.csv").table_receptors(tmp_path)
+        AveragingKernel(table="bad.csv").table_releases(tmp_path)
 
 
 def test_ak_table_round_trips_through_config():
@@ -1268,7 +1268,7 @@ def test_ak_table_round_trips_through_config():
 
 
 def test_ak_table_by_name_is_the_projects_table(tmp_path):
-    a, b = _two_receptors()
+    a, b = _two_releases()
     (tmp_path / "tables").mkdir()
     _write_table(tmp_path / "tables" / "kernels.parquet", a, b)
     kernel = AveragingKernel(table="kernels")

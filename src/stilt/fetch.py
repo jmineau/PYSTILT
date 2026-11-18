@@ -28,7 +28,7 @@ def fetch_project(project: Project, unrun: pd.DataFrame) -> pd.DataFrame:
     Return the met files the simulations in *unrun* need, after getting them.
 
     *unrun* is the simulations whose transport model has yet to run (rows of
-    ``project.simulations`` with ``receptor`` and ``variant`` columns). For
+    ``project.simulations`` with ``release`` and ``variant`` columns). For
     each met they use, the model gets the files for the time each run
     covers, as a run would (``fetch_met`` of the transport model, see
     :class:`stilt.transport.TransportModel`). A model without ``fetch_met``
@@ -41,11 +41,11 @@ def fetch_project(project: Project, unrun: pd.DataFrame) -> pd.DataFrame:
         a row for each file, with ``message`` empty, then a row for each
         window whose files could not be had, with ``file`` empty.
     """
-    start = project._rows.drop_duplicates("receptor").set_index("receptor")["time"]
+    start = project._rows.drop_duplicates("release").set_index("release")["time"]
     needed: dict[tuple[str, str], tuple[Any, set[tuple[Any, Any]]]] = {}
     for name, group in unrun.groupby("variant", sort=False):
         variant = project.variants[str(name)]
-        times = start.loc[group["receptor"].astype(str).unique()].drop_duplicates()
+        times = start.loc[group["release"].astype(str).unique()].drop_duplicates()
         windows = {run_window(t, variant.transport.n_hours) for t in times}
         key = (variant.met, variant.model)
         needed.setdefault(key, (variant.met_config, set()))[1].update(windows)

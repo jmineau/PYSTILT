@@ -461,14 +461,14 @@ class Met:
         earlier, later = (_time(t) for t in window)
         return self._cover(earlier, later).gaps
 
-    def check_receptors(self, receptors: pd.DataFrame, n_hours: int) -> pd.DataFrame:
+    def check_releases(self, releases: pd.DataFrame, n_hours: int) -> pd.DataFrame:
         """
-        Return what would stop runs of *receptors* before HYSPLIT starts, found without running.
+        Return what would stop runs of *releases* before HYSPLIT starts, found without running.
 
         The file check that :meth:`files_for` makes for each run, made for
-        every receptor at once: the met's ``directory`` exists and holds an
+        every release at once: the met's ``directory`` exists and holds an
         ARL file, and every file a run needs is there, holds at least two
-        time periods, and ends on a whole time step. A receptor outside the
+        time periods, and ends on a whole time step. A release outside the
         files is listed too, since HYSPLIT cannot start a particle there:
         outside ``subgrid_bounds`` with the crop on, else outside the grid of
         the first file its run reads. A met with ``download``
@@ -483,8 +483,8 @@ class Met:
 
         Parameters
         ----------
-        receptors : pandas.DataFrame
-            One row per release point, with ``receptor`` (the id), ``time``,
+        releases : pandas.DataFrame
+            One row per release point, with ``release`` (the id), ``time``,
             ``longitude``, and ``latitude`` columns.
         n_hours : int
             The length of the runs, negative for backward.
@@ -493,7 +493,7 @@ class Met:
         -------
         pandas.DataFrame
             One row for each thing found, with ``check`` (``met_directory``,
-            ``met_files``, ``met_periods``, ``met_cut``, ``met_domain``, or ``met_crop``), ``receptor`` (``NA`` when the
+            ``met_files``, ``met_periods``, ``met_cut``, ``met_domain``, or ``met_crop``), ``release`` (``NA`` when the
             finding is about the met), and ``message`` columns. Empty when
             nothing would stop a run.
         """
@@ -506,9 +506,9 @@ class Met:
                 self.catalog.refresh()
                 if self.crops is not None:
                     self.crops.refresh()
-                found += self._file_problems(receptors, n_hours)
-        found += self._outside_crop(receptors)
-        return pd.DataFrame(found, columns=["check", "receptor", "message"])
+                found += self._file_problems(releases, n_hours)
+        found += self._outside_crop(releases)
+        return pd.DataFrame(found, columns=["check", "release", "message"])
 
     def _directory_problem(self) -> str | None:
         """Return why ``directory`` cannot be a local met's, or ``None`` when it holds an ARL file."""
@@ -521,10 +521,10 @@ class Met:
         return None
 
     def _file_problems(
-        self, receptors: pd.DataFrame, n_hours: int
+        self, releases: pd.DataFrame, n_hours: int
     ) -> list[tuple[str, str | None, str]]:
-        """List the receptors that lack a file their run needs, and the files they need that cannot be read to the end."""
-        first = receptors.drop_duplicates("receptor")
+        """List the releases that lack a file their run needs, and the files they need that cannot be read to the end."""
+        first = releases.drop_duplicates("release")
         messages: dict[Any, str | None] = {}
         single: dict[Path, None] = {}
         cut: dict[Path, None] = {}
@@ -541,7 +541,7 @@ class Met:
                 starts[time] = cover.files[0]
         found: list[tuple[str, str | None, str]] = [
             ("met_files", str(rid), message)
-            for rid, time in zip(first["receptor"], first["time"], strict=True)
+            for rid, time in zip(first["release"], first["time"], strict=True)
             if (message := messages[time]) is not None
         ]
         if single:
@@ -558,13 +558,13 @@ class Met:
             )
             for path in cut
         ]
-        return found + self._outside_domain(receptors, starts)
+        return found + self._outside_domain(releases, starts)
 
     def _outside_domain(
-        self, receptors: pd.DataFrame, starts: dict[Any, Path]
+        self, releases: pd.DataFrame, starts: dict[Any, Path]
     ) -> list[tuple[str, str | None, str]]:
         """
-        List the receptors with a release point outside the grid of the met files their run starts in.
+        List the releases with a release point outside the grid of the met files their run starts in.
 
         *starts* is the first file of each release time's run. The grid is
         read from one file's header for each grid the catalog lists among
@@ -583,42 +583,42 @@ class Met:
             time: file_of_grid[grid_of.get(str(path), str(path))]
             for time, path in starts.items()
         }
-        rows = receptors[receptors["time"].isin(list(file_of_time))]
+        rows = releases[releases["time"].isin(list(file_of_time))]
         found: list[tuple[str, str | None, str]] = []
         for path, group in rows.groupby(rows["time"].map(file_of_time), sort=False):
             outside = group[~_on_grid(Path(str(path)), group)]
             found += [
                 (
                     "met_domain",
-                    str(row.receptor),
+                    str(row.release),
                     f"longitude {row.longitude:g} and latitude {row.latitude:g} are "
                     f"outside the met's domain, the grid of {path}: HYSPLIT "
                     "cannot start particles there.",
                 )
-                for row in outside.drop_duplicates("receptor").itertuples()
+                for row in outside.drop_duplicates("release").itertuples()
             ]
         return found
 
     def _outside_crop(
-        self, receptors: pd.DataFrame
+        self, releases: pd.DataFrame
     ) -> list[tuple[str, str | None, str]]:
-        """List the receptors with a release point outside the crop box, when the met is cropped."""
+        """List the releases with a release point outside the crop box, when the met is cropped."""
         bounds = self.config.subgrid_bounds
         if not self.config.subgrid_enable or bounds is None:
             return []
         west, south, east, north = bounds.xmin, bounds.ymin, bounds.xmax, bounds.ymax
-        outside = receptors[
-            ~bounds.contains(receptors["longitude"], receptors["latitude"])
+        outside = releases[
+            ~bounds.contains(releases["longitude"], releases["latitude"])
         ]
         box = f"{west:g} to {east:g} longitude, {south:g} to {north:g} latitude"
         return [
             (
                 "met_crop",
-                str(row.receptor),
+                str(row.release),
                 f"longitude {row.longitude:g} and latitude {row.latitude:g} are "
                 f"outside subgrid_bounds ({box})",
             )
-            for row in outside.drop_duplicates("receptor").itertuples()
+            for row in outside.drop_duplicates("release").itertuples()
         ]
 
     def check(self, files: list[Path], window: tuple[Any, Any]) -> None:

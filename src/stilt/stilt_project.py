@@ -30,7 +30,7 @@ from stilt.footprint.io import _threads, open_footprints
 from stilt.footprint.stage import stored_particles, variant_footprint
 from stilt.particles import read_particles
 from stilt.project import _one_group
-from stilt.receptors import Receptor
+from stilt.releases import Receptor
 from stilt.stilt_simulation import Simulation
 from stilt.transport_error import _transport_errors
 
@@ -106,12 +106,12 @@ stages:
       ymax: 42.0
       xres: 0.01
       yres: 0.01
-    hnf_plume: true  # correct foot for the thin plume near the receptor before gridding
+    hnf_plume: true  # correct foot for the thin plume near the release before gridding
 
 
-# Variants. Every receptor runs once per variant, with the blocks above as
+# Variants. Every release runs once per variant, with the blocks above as
 # the defaults. An entry with no overrides runs the defaults as they are; add
-# others to run the same receptors under other settings, e.g. a mixed-layer
+# others to run the same releases under other settings, e.g. a mixed-layer
 # bracket or a wind-error ensemble (see the docs). A variant changes a
 # footprint setting under its own stages: key. Only the variants listed here
 # run.
@@ -131,10 +131,10 @@ output: ./output
 # execution:
 #   backend: local    # or "slurm"
 #   local:
-#     cpus: 1         # receptors at once
+#     cpus: 1         # releases at once
 #   slurm:
 #     n_workers: 1    # array tasks
-#     cpus: 1         # receptors at once in each task
+#     cpus: 1         # releases at once in each task
 #     time: "02:00:00"
 """
 
@@ -159,10 +159,10 @@ def _with_stilt_r_values(config: ProjectConfig) -> ProjectConfig:
 
 class Project(project.Project):
     """
-    A STILT project: receptors, settings, the simulations they define, and their footprints.
+    A STILT project: releases, settings, the simulations they define, and their footprints.
 
     ``Project(path)`` opens a project directory and reads it. It is every
-    receptor under every variant, and a view of their results: list the
+    release under every variant, and a view of their results: list the
     simulations, see which have finished, load particles and footprints.
     The results are in the output directory ``config.yaml`` names
     (``./output`` by default), which several projects can share.
@@ -192,7 +192,7 @@ class Project(project.Project):
     ------
     FileNotFoundError
         If the directory has no ``config.yaml``, so it is not a project: a
-        mistyped path is not read as a project with no receptors.
+        mistyped path is not read as a project with no releases.
 
     Attributes
     ----------
@@ -204,12 +204,12 @@ class Project(project.Project):
     Make a project, run it, and load a footprint:
 
     >>> import stilt  # doctest: +SKIP
-    >>> receptor = stilt.PointReceptor(  # doctest: +SKIP
+    >>> release = stilt.PointReceptor(  # doctest: +SKIP
     ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
     ... )
     >>> project = stilt.Project.init(  # doctest: +SKIP
     ...     "./my_project",
-    ...     receptors=[receptor],
+    ...     releases=[release],
     ...     mets={"hrrr": "/data/hrrr"},
     ...     models={"hysplit": {"n_hours": -24}},
     ...     stages={
@@ -228,7 +228,7 @@ class Project(project.Project):
     ...     variants={"hrrr": {}},
     ... )
     >>> project.run()  # doctest: +SKIP
-    >>> foot = project.simulation(receptor.id, "hrrr").footprint  # doctest: +SKIP
+    >>> foot = project.simulation(release.id, "hrrr").footprint  # doctest: +SKIP
 
     Open it again later and check a selection of simulations:
 
@@ -238,38 +238,38 @@ class Project(project.Project):
     """
 
     def simulation(
-        self, receptor_id: str, variant: str, realization: int | None = None
+        self, release_id: str, variant: str, realization: int | None = None
     ) -> Simulation:
         """
         Return one simulation, with STILT's reads: a :class:`stilt.Simulation`.
 
         It is :meth:`stilt.project.Project.simulation`, which finds the
-        receptor and the variant, as the subclass that reads the footprint,
+        release and the variant, as the subclass that reads the footprint,
         the background, and the transport error. The two compare equal.
 
         Raises
         ------
         KeyError
-            If the project has no such receptor or variant.
+            If the project has no such release or variant.
         ValueError
             If *realization* is not one the variant runs as: ``0`` to
             ``N - 1`` for ``realizations: N``, ``None`` otherwise.
 
         Examples
         --------
-        >>> sim = project.simulation(receptor_id, "hrrr")  # doctest: +SKIP
+        >>> sim = project.simulation(release_id, "hrrr")  # doctest: +SKIP
         >>> sim.footprint  # doctest: +SKIP
         """
-        sim = super().simulation(receptor_id, variant, realization)
+        sim = super().simulation(release_id, variant, realization)
         return Simulation(
-            sim.receptor, sim.variant, sim.output, sim.directory, sim.realization
+            sim.release, sim.variant, sim.output, sim.directory, sim.realization
         )
 
     @classmethod
     def init(
         cls,
         path: str | Path,
-        receptors: Receptor | Iterable[Receptor] | str | Path | None = None,
+        releases: Receptor | Iterable[Receptor] | str | Path | None = None,
         *,
         config: ProjectConfig | None = None,
         starter: bool = False,
@@ -279,7 +279,7 @@ class Project(project.Project):
         Make a new project and return it.
 
         Writes ``config.yaml``, with the settings given, and
-        ``receptors.csv`` when receptors are given. With ``starter=True`` it
+        ``releases.csv`` when releases are given. With ``starter=True`` it
         writes the commented starter config instead, to edit by hand, as
         ``stilt init`` does.
 
@@ -293,14 +293,14 @@ class Project(project.Project):
         ----------
         path : str or Path
             Project directory. It is created if needed.
-        receptors : Receptor, iterable of Receptor, str or Path, optional
-            Receptors, or the path of a receptors CSV to copy them from.
+        releases : Receptor, iterable of Receptor, str or Path, optional
+            Releases, or the path of a releases CSV to copy them from.
         config : ProjectConfig, optional
             The settings. Or give them as keywords instead.
         starter : bool, default False
             Write the commented starter ``config.yaml``
             (:data:`STARTER_CONFIG`) in place of a config. Without
-            receptors, ``receptors.csv`` gets only its header.
+            releases, ``releases.csv`` gets only its header.
         **settings
             The blocks of :class:`~stilt.ProjectConfig`: ``mets``, ``models``,
             ``stages`` and ``variants``, and ``execution`` and ``output``.
@@ -314,7 +314,7 @@ class Project(project.Project):
             If both *config* and keyword settings are given, or either is
             given with ``starter=True``.
         ValueError
-            If a variant's settings are invalid, or *receptors* is given but
+            If a variant's settings are invalid, or *releases* is given but
             holds none (an empty list, or a CSV file with only its header).
             Nothing is written.
         """
@@ -322,31 +322,31 @@ class Project(project.Project):
             raise TypeError("Give a ProjectConfig or keyword settings, not both.")
         if not starter:
             config = _with_stilt_r_values(config or ProjectConfig(**settings))
-            return super().init(path, receptors, config=config)
+            return super().init(path, releases, config=config)
         if config is not None or settings:
             raise TypeError(
                 "A starter config takes no settings; edit its config.yaml instead."
             )
         starting = ProjectConfig.model_validate(yaml.safe_load(STARTER_CONFIG))
-        new = super().init(path, receptors, config=starting)
+        new = super().init(path, releases, config=starting)
         # The same settings, with the comments that explain them.
         new.config_path.write_text(STARTER_CONFIG)
-        if receptors is None:
-            # Header only: every other line of a receptors file is a receptor.
-            new.receptors_path.write_text("time,longitude,latitude,altitude\n")
+        if releases is None:
+            # Header only: every other line of a releases file is a release.
+            new.releases_path.write_text("time,longitude,latitude,altitude\n")
         return new
 
     def footprints(self, sel: Any = None) -> xr.Dataset:
         """
         Open the footprints of the selected simulations as one dataset.
 
-        Footprints are stacked by their layer from the receptor time, so
-        receptors at any time share one layer axis, named for the unit
+        Footprints are stacked by their layer from the release time, so
+        releases at any time share one layer axis, named for the unit
         ``tres`` is written in and counted in it: ``hour`` with the default
         ``tres`` of ``1h``, ``day`` for ``1D``, ``minute`` for ``15min``. The
         ``time`` coordinate says when each layer starts. Only the files' metadata is
         read here. The values load with dask when they are used, in blocks
-        of receptors from one date folder. The selection must hold one
+        of releases from one date folder. The selection must hold one
         variant, as for :meth:`jacobian`.
 
         Parameters
@@ -358,10 +358,10 @@ class Project(project.Project):
         Returns
         -------
         xarray.Dataset
-            ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and
+            ``foot`` with dims ``(release, hour, lat, lon)`` (``y`` and
             ``x`` on a projected grid, and ``day`` or ``minute`` in place
             of ``hour`` when ``tres`` is written in them), in selection
-            order. A receptor with
+            order. A release with
             an empty footprint has no row and is listed in
             ``attrs["empty"]``; one not run yet is listed in
             ``attrs["missing"]``.
@@ -376,21 +376,21 @@ class Project(project.Project):
         Notes
         -----
         A footprint is about 35 MB of values on a 350,000-cell grid over 24
-        hours, so a computation that loads every receptor at once suits a
+        hours, so a computation that loads every release at once suits a
         selection of hundreds. Sums over ``hour`` or the grid run block by
         block. :meth:`jacobian` sums any number of footprints onto a target.
 
         Examples
         --------
         >>> ds = project.footprints(sims[sims.variant == "hrrr"])  # doctest: +SKIP
-        >>> ds.foot.sum("hour").mean("receptor").plot()  # doctest: +SKIP
+        >>> ds.foot.sum("hour").mean("release").plot()  # doctest: +SKIP
         """
         frame = self._selected(sel)
         name, k = _one_group(frame, "A footprint dataset")
         variant = self.variants[name]
         if "footprint" not in variant.stages:
             raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
-        requested = list(dict.fromkeys(frame["receptor"]))
+        requested = list(dict.fromkeys(frame["release"]))
         found = self.output.present("footprint", variant, requested, k)
         paths = [
             path
@@ -425,7 +425,7 @@ class Project(project.Project):
         or the bins are dropped. The selection must hold one variant, and
         one realization of an ensemble: ``ens[ens.realization == k]``.
 
-        Footprints are read and summed one receptor at a time, in *workers*
+        Footprints are read and summed one release at a time, in *workers*
         threads. Each thread holds one footprint, so memory stays at a few
         footprints whatever the selection's size; the result itself is
         sparse.
@@ -461,9 +461,9 @@ class Project(project.Project):
         Returns
         -------
         Jacobian
-            Rows are the selected receptors with a non-empty footprint, in
+            Rows are the selected releases with a non-empty footprint, in
             selection order; columns are ``(time bin, target cell)``.
-            Receptors with an empty footprint are listed in ``empty``, and
+            Releases with an empty footprint are listed in ``empty``, and
             those not run yet in ``missing``.
 
         Raises
@@ -484,7 +484,7 @@ class Project(project.Project):
             raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
         if self.output.folder("footprint", variant) is None:
             raise ValueError(f"Variant {name!r} has no footprints yet.")
-        requested = list(dict.fromkeys(frame["receptor"]))
+        requested = list(dict.fromkeys(frame["release"]))
         found = self.output.present("footprint", variant, requested, k)
         return _jacobian(
             lambda r: self.output.read(
@@ -511,14 +511,14 @@ class Project(project.Project):
         Return the transport error of each selected simulation's modeled enhancement.
 
         The same estimate as ``sim.transport_error``, for every selected
-        receptor at once (Lin and Gerbig, 2005; the *Transport Error* guide).
+        release at once (Lin and Gerbig, 2005; the *Transport Error* guide).
         *sel* is the unperturbed run, and *error* names the wind-error
-        variant of the same receptors. Every realization of *error* that has
-        run is averaged, so a receptor whose ensemble is still running gets
+        variant of the same releases. Every realization of *error* that has
+        run is averaged, so a release whose ensemble is still running gets
         an estimate from the realizations it has.
 
-        Receptors are read and estimated one at a time, in *workers*
-        threads. Each thread holds one receptor's particle tables: the
+        Releases are read and estimated one at a time, in *workers*
+        threads. Each thread holds one release's particle tables: the
         unperturbed one and one per realization.
 
         Parameters
@@ -529,9 +529,9 @@ class Project(project.Project):
         error : str
             The wind-error variant, such as ``"hrrr-err"``.
         flux : xarray.DataArray
-            Surface flux field, in µmol m⁻² s⁻¹, the same for every receptor.
+            Surface flux field, in µmol m⁻² s⁻¹, the same for every release.
         workers : int, optional
-            Threads that read and estimate receptors. Defaults to the CPUs
+            Threads that read and estimate releases. Defaults to the CPUs
             this process may use (in a Slurm job, the job's), at most 8.
         **options
             Passed to :func:`stilt.transport_error`: ``levels``,
@@ -544,7 +544,7 @@ class Project(project.Project):
             :class:`~stilt.particles.TransportError`: ``enhancement``,
             ``enhancement_perturbed``, ``background``, ``variance``,
             ``noise``, and ``realizations`` (how many realizations of
-            *error* were averaged). A receptor without particles in the
+            *error* were averaged). A release without particles in the
             selected variant or in any realization of *error* gets NaN and
             ``realizations`` 0.
 
@@ -558,11 +558,11 @@ class Project(project.Project):
 
         Notes
         -----
-        Each receptor's particles are read whole. A table of 1.4 million
+        Each release's particles are read whole. A table of 1.4 million
         rows takes about a second to read, so a selection of hundreds of
-        receptors takes minutes. The per-level tables of
+        releases takes minutes. The per-level tables of
         :class:`~stilt.particles.TransportError` are not kept; get them for
-        one receptor with ``sim.transport_error``.
+        one release with ``sim.transport_error``.
 
         Examples
         --------
@@ -591,13 +591,13 @@ class Project(project.Project):
                 f"The selection is of {error!r} itself; select the unperturbed variant."
             )
         perturbed = self.variants[error]
-        requested = list(dict.fromkeys(frame["receptor"]))
+        requested = list(dict.fromkeys(frame["release"]))
         have = self.output.present("particles", variant, requested)
         ran = {
             k: self.output.present("particles", perturbed, requested, k)
             for k in perturbed.realization_numbers
         }
-        # Each receptor with both sides, and the realizations of *error* it has.
+        # Each release with both sides, and the realizations of *error* it has.
         runs = {
             r: ks
             for r in requested
@@ -624,7 +624,7 @@ class Project(project.Project):
 
         found = _transport_errors(
             read,
-            list(self._receptors(runs).values()),
+            list(self._releases(runs).values()),
             flux,
             transforms=footprint.transforms,
             directory=self.directory,
@@ -635,7 +635,7 @@ class Project(project.Project):
                 **options,
             },
         )
-        result = found.reindex(frame["receptor"].to_numpy())
+        result = found.reindex(frame["release"].to_numpy())
         result["realizations"] = result["realizations"].fillna(0).astype("int64")
         return frame.assign(**{c: result[c].to_numpy() for c in result.columns})
 

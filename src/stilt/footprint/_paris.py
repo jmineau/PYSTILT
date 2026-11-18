@@ -18,7 +18,7 @@ import pandas as pd
 import xarray as xr
 
 from stilt.footprint.config import FootprintConfig
-from stilt.receptors import parse_receptor_id
+from stilt.releases import parse_release_id
 
 # Units of the footprint in a PARIS file. PYSTILT's ppm per (µmol m⁻² s⁻¹)
 # is the same quantity with the same numbers.
@@ -50,13 +50,13 @@ def to_paris(
                 "The PARIS format needs a longitude/latitude grid; this footprint "
                 f"has dims {tuple(foot.dims)}."
             )
-    receptor_time = _receptor_time(foot)
+    release_time = _release_time(foot)
     _check_hourly(foot, layer_start)
 
-    hours_back = -(layer_start - receptor_time) / pd.Timedelta(hours=1)
+    hours_back = -(layer_start - release_time) / pd.Timedelta(hours=1)
     if (hours_back < 1).any():
         raise ValueError(
-            "A layer of this footprint ends after the receptor time; the PARIS "
+            "A layer of this footprint ends after the release time; the PARIS "
             "export takes backward footprints only."
         )
     hours_back = np.rint(hours_back.to_numpy()).astype(int)
@@ -100,11 +100,11 @@ def to_paris(
         coords={
             "time": (
                 "time",
-                [np.datetime64(receptor_time, "ns")],
+                [np.datetime64(release_time, "ns")],
                 {
                     "standard_name": "time",
                     "long_name": "time",
-                    "comment": "release time of the particles (the receptor time), UTC",
+                    "comment": "release time of the particles (the release time), UTC",
                 },
             ),
             "latitude": (
@@ -134,7 +134,7 @@ def to_paris(
         "Conventions": "CF-1.8",
         "model": "STILT",
         "source": "PYSTILT footprint",
-        "receptor": str(foot["receptor"].item()),
+        "release": str(foot["release"].item()),
         "history": "Converted from a PYSTILT footprint",
     }
     return ds
@@ -146,28 +146,28 @@ def _layer_starts(foot: xr.DataArray) -> tuple[str, pd.DatetimeIndex]:
 
     The layer dimension is the one ``time`` runs along, whatever its name.
     """
-    if "receptor" in foot.dims:
+    if "release" in foot.dims:
         raise ValueError(
-            "The footprint holds several receptors. Select one receptor first: "
-            "foot.sel(receptor=...)."
+            "The footprint holds several releases. Select one release first: "
+            "foot.sel(release=...)."
         )
     if "time" not in foot.coords or foot["time"].ndim != 1:
         raise ValueError(
             "The footprint needs a time coordinate with one entry per layer (the "
-            "layer's start). Select one receptor first: foot.sel(receptor=...)."
+            "layer's start). Select one release first: foot.sel(release=...)."
         )
     dim = str(foot["time"].dims[0])
     return dim, pd.DatetimeIndex(foot["time"].to_numpy())
 
 
-def _receptor_time(foot: xr.DataArray) -> pd.Timestamp:
-    """Return the receptor time, from the footprint's ``receptor`` coordinate (its id)."""
-    if "receptor" not in foot.coords or foot["receptor"].ndim != 0:
+def _release_time(foot: xr.DataArray) -> pd.Timestamp:
+    """Return the release time, from the footprint's ``release`` coordinate (its id)."""
+    if "release" not in foot.coords or foot["release"].ndim != 0:
         raise ValueError(
-            "The footprint needs its receptor id as a scalar receptor coordinate, "
-            "as sim.footprint and one receptor of project.footprints() have."
+            "The footprint needs its release id as a scalar release coordinate, "
+            "as sim.footprint and one release of project.footprints() have."
         )
-    time, _ = parse_receptor_id(str(foot["receptor"].item()))
+    time, _ = parse_release_id(str(foot["release"].item()))
     return pd.Timestamp(time)
 
 
