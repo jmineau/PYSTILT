@@ -6,12 +6,12 @@ import pytest
 
 from stilt.footprint import foot as foot_module
 from stilt.footprint.foot import add_foot, correct_near_field
-from stilt.releases import ColumnReceptor, PointReceptor
+from stilt.releases import ColumnRelease, PointRelease
 
 from ..fixtures.particles import point_at
 
 #: A release that gives no release height of its own: a column.
-_NO_POINT = ColumnReceptor(
+_NO_POINT = ColumnRelease(
     time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, bottom=0, top=1000
 )
 
@@ -81,10 +81,10 @@ def test_correct_near_field_grows_outward_from_release_when_forward():
 def test_correct_near_field_starts_an_msl_release_at_the_ground():
     """An MSL release's plume starts at its height above ground, not above sea level (#287)."""
     p = _particles_basic().drop(columns=["zagl"]).assign(zsfc=1300.0)
-    agl = PointReceptor(
+    agl = PointRelease(
         time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5.0
     )
-    msl = PointReceptor(
+    msl = PointRelease(
         time="2023-01-01 12:00",
         longitude=-111.85,
         latitude=40.77,
@@ -101,7 +101,7 @@ def test_correct_near_field_starts_an_msl_release_at_the_ground():
 
 def test_correct_near_field_puts_an_msl_release_below_the_terrain_at_the_ground():
     p = _particles_basic().drop(columns=["zagl"]).assign(zsfc=1300.0)
-    below = PointReceptor(
+    below = PointRelease(
         time="2023-01-01 12:00",
         longitude=-111.85,
         latitude=40.77,
@@ -114,7 +114,7 @@ def test_correct_near_field_puts_an_msl_release_below_the_terrain_at_the_ground(
 
 def test_correct_near_field_needs_zsfc_for_an_msl_release():
     p = _particles_basic().drop(columns=["zagl"]).assign(release_height=1305.0)
-    msl = ColumnReceptor(
+    msl = ColumnRelease(
         time="2023-01-01 12:00",
         longitude=-111.85,
         latitude=40.77,

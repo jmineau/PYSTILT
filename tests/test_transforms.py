@@ -479,10 +479,10 @@ def test_pwf_msl_slant_across_terrain_closes_at_ground_under_lowest_point():
 
 
 def test_pwf_reads_altitude_ref_from_the_release():
-    from stilt.releases import ColumnReceptor
+    from stilt.releases import ColumnRelease
 
     _, msl = _msl_column_particles(10, station=1300.0)
-    release = ColumnReceptor(
+    release = ColumnRelease(
         time="2023-07-15 18:00",
         longitude=-111.85,
         latitude=40.77,
@@ -1078,16 +1078,16 @@ def test_transform_kind():
 
 
 def _two_releases():
-    from stilt.releases import ColumnReceptor
+    from stilt.releases import ColumnRelease
 
-    a = ColumnReceptor(
+    a = ColumnRelease(
         time="2023-01-01 12:00",
         longitude=-111.85,
         latitude=40.77,
         bottom=0.0,
         top=3000.0,
     )
-    b = ColumnReceptor(
+    b = ColumnRelease(
         time="2023-01-01 12:00",
         longitude=-111.80,
         latitude=40.70,
@@ -1206,12 +1206,12 @@ def test_ak_table_relative_path_without_store_is_relative_to_cwd(tmp_path, monke
 
 
 def test_ak_table_missing_release_raises(tmp_path):
-    from stilt.releases import PointReceptor
+    from stilt.releases import PointRelease
 
     a, b = _two_releases()
     path = tmp_path / "kernels.parquet"
     _write_table(path, a, b)
-    other = PointReceptor(
+    other = PointRelease(
         time="2023-01-01 12:00", longitude=-111.0, latitude=40.0, altitude=10.0
     )
 

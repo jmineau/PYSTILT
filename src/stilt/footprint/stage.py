@@ -28,7 +28,7 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint.foot import HNF_PLUME_COLUMNS, add_foot
 from stilt.identity import file_stamp
 from stilt.particles import particles_metadata
-from stilt.releases import Receptor
+from stilt.releases import Release
 from stilt.spatial import Grid
 
 from .config import (
@@ -448,7 +448,7 @@ def store_footprint(
 
 
 def store_empty_footprint(
-    output: Output, variant: Variant, release: Receptor, realization: int | None = None
+    output: Output, variant: Variant, release: Release, realization: int | None = None
 ) -> Location:
     """Record in *variant*'s footprint folder that a release's footprint is empty: no particle reached the grid."""
     name = FootprintStage.name
@@ -460,7 +460,7 @@ def _write(
     path: Location,
     config: FootprintConfig,
     variant: Variant,
-    release: Receptor,
+    release: Release,
     foot: xr.DataArray | None,
     realization: int | None,
     stage: str = FootprintStage.name,

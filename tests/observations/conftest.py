@@ -9,13 +9,13 @@ import datetime as dt
 
 import pytest
 
-from stilt.releases import PointReceptor
+from stilt.releases import PointRelease
 
 
 @pytest.fixture
 def point_release():
     """A simple single-point release."""
-    return PointReceptor(
+    return PointRelease(
         time=dt.datetime(2023, 1, 1, 12, 0),
         longitude=-111.85,
         latitude=40.77,

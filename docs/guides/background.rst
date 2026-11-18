@@ -193,7 +193,7 @@ the hours before the overpass, so that air of every age is included.
 X-STILT's defaults are a 0.3° box, 10 m above ground, and releases from ten
 hours before the overpass up to the overpass, each followed twelve hours
 forward with 1000 particles. In PYSTILT each release is a
-:class:`~stilt.releases.MultiPointReceptor`, and
+:class:`~stilt.releases.MultiPointRelease`, and
 :func:`~stilt.observations.jitter_points` spreads its points over the box:
 
 .. code-block:: python
@@ -201,7 +201,7 @@ forward with 1000 particles. In PYSTILT each release is a
    import pandas as pd
    import stilt
    from stilt.observations import jitter_points
-   from stilt.releases import MultiPointReceptor
+   from stilt.releases import MultiPointRelease
 
    site = (-111.9, 40.75)                       # Salt Lake City
    overpass = pd.Timestamp("2023-10-19 19:42")  # from the sounding times
@@ -211,7 +211,7 @@ forward with 1000 particles. In PYSTILT each release is a
    points = jitter_points(box, 100)
 
    releases = [
-       MultiPointReceptor(
+       MultiPointRelease(
            time=t,
            longitudes=[p[0] for p in points],
            latitudes=[p[1] for p in points],

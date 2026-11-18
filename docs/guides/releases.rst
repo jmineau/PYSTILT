@@ -7,9 +7,8 @@ receptor, the place you measured, and are followed back in time toward the
 sources that influenced it. In a forward run they start at the source and
 are followed forward toward where the air goes. A release placed at a
 measurement and followed backward is what STILT calls a *receptor*, so in
-these docs *release (receptor)* is the same thing, and the classes keep the
-name :class:`PointReceptor`. Pick the release type that matches how your
-instrument samples the air.
+these docs *release (receptor)* is the same thing. Pick the release type
+that matches how your instrument samples the air.
 
 .. _release-source-receptor:
 
@@ -35,15 +34,15 @@ instrument samples the air.
    * - Release type
      - Use it for
      - You give it
-   * - :class:`PointReceptor`
+   * - :class:`PointRelease`
      - An instrument sampling at one point, such as a tower inlet, a flask,
        or an aircraft or vehicle measurement (:doc:`tracks`)
      - ``longitude``, ``latitude``, ``altitude``
-   * - :class:`ColumnReceptor`
+   * - :class:`ColumnRelease`
      - An instrument measuring the vertical column above one spot, such as a
        ground-based spectrometer (TCCON, EM27/SUN)
      - ``longitude``, ``latitude``, ``bottom``, ``top``
-   * - :class:`MultiPointReceptor`
+   * - :class:`MultiPointRelease`
      - A slanted line of sight, such as a solar-tracking spectrometer or an
        off-nadir satellite sounding (see :doc:`slant_columns`), or any set of
        release points at one time
@@ -53,7 +52,7 @@ Every release also needs a ``time`` in UTC. A timezone-aware time is
 converted to UTC. Altitudes are in meters above ground level. Pass
 ``altitude_ref="msl"`` to give them above mean sea level instead.
 
-PointReceptor
+PointRelease
 -------------
 
 This is the most common type. Use it for a fixed surface site or an airborne
@@ -64,7 +63,7 @@ sample at one height. For an analyzer that measures as it moves,
 
    import stilt
 
-   release = stilt.PointReceptor(
+   release = stilt.PointRelease(
        time="2023-07-15 18:00:00",
        longitude=-111.848,
        latitude=40.766,
@@ -75,7 +74,7 @@ sample at one height. For an analyzer that measures as it moves,
    release.plot.map();
 
 
-ColumnReceptor
+ColumnRelease
 --------------
 
 Use it when the measurement covers a range of heights above one spot.
@@ -84,7 +83,7 @@ HYSPLIT releases the particles evenly in height between ``bottom`` and
 
 .. ipython:: python
 
-   release = stilt.ColumnReceptor(
+   release = stilt.ColumnRelease(
        time="2023-07-15 18:00:00",
        longitude=-111.848,
        latitude=40.766,
@@ -103,7 +102,7 @@ instrument's averaging kernel. Add the ``pressure_weighting`` and
 ``averaging_kernel`` transforms for that (see :doc:`/guides/transforms`).
 
 
-MultiPointReceptor
+MultiPointRelease
 ------------------
 
 Use it when the instrument looks along a slanted path, so the air it
@@ -114,7 +113,7 @@ other satellite views with a full line-of-sight geometry are examples.
 
    import numpy as np
 
-   release = stilt.MultiPointReceptor(
+   release = stilt.MultiPointRelease(
        time="2023-07-15 18:00:00",
        longitudes=np.linspace(-111.85, -111.80, 10),
        latitudes=np.linspace(40.76,  40.80,  10),
@@ -136,11 +135,11 @@ same ID. To build the points from viewing angles instead of by hand, see
    consecutive release points at the same latitude and longitude as one
    vertical line source, and releases particles only between the last two
    heights. Stacking several heights at one location would silently drop all
-   but the top segment, so :class:`MultiPointReceptor` raises
+   but the top segment, so :class:`MultiPointRelease` raises
    ``ValueError`` instead.
 
-   For a vertical column, use :class:`ColumnReceptor`. For several separate
-   heights at one location, run one :class:`PointReceptor` per height (a
+   For a vertical column, use :class:`ColumnRelease`. For several separate
+   heights at one location, run one :class:`PointRelease` per height (a
    distinct ``group`` in the CSV) and combine the footprints afterward.
 
 
@@ -180,8 +179,8 @@ share the same ``time``:
    2023-07-15 18:00:00,-111.848,40.766,0,1
    2023-07-15 18:00:00,-111.848,40.766,3000,1
 
-Two rows at the same location make a :class:`ColumnReceptor`. Rows at
-different locations make a :class:`MultiPointReceptor`.
+Two rows at the same location make a :class:`ColumnRelease`. Rows at
+different locations make a :class:`MultiPointRelease`.
 
 Any other column is kept on the release in ``attrs``. A ``scene`` or
 ``site`` label you add to the file is also a column of
@@ -224,9 +223,9 @@ How particles are released
 
 ``numpar`` is the number of particles released in each simulation.
 
-- A :class:`PointReceptor` releases all of them from its one location.
-- A :class:`ColumnReceptor` spreads them evenly from ``bottom`` to ``top``.
-- A :class:`MultiPointReceptor` divides them among its locations, and every
+- A :class:`PointRelease` releases all of them from its one location.
+- A :class:`ColumnRelease` spreads them evenly from ``bottom`` to ``top``.
+- A :class:`MultiPointRelease` divides them among its locations, and every
   location gets the same number: ``numpar // n`` for ``n`` locations, which
   HYSPLIT's rounding often raises by one. So a run can hold up to ``n``
   more particles than ``numpar``. With 1000 particles over 40 locations,
@@ -307,8 +306,8 @@ All three classes have these members:
 
 ``release.coords()``
    The release's points as a list of ``(latitude, longitude, altitude)``.
-   A :class:`PointReceptor` has one point, a :class:`ColumnReceptor` two
-   (bottom and top), and a :class:`MultiPointReceptor` one per location.
+   A :class:`PointRelease` has one point, a :class:`ColumnRelease` two
+   (bottom and top), and a :class:`MultiPointRelease` one per location.
    This lets code read coordinates without checking the type.
 
 ``release.geometry``
@@ -317,10 +316,10 @@ All three classes have these members:
 ``release.plot.map()``
    A quick map of the release.
 
-``release.to_dict()`` and ``Receptor.from_dict(d)``
+``release.to_dict()`` and ``Release.from_dict(d)``
    Convert to and from a JSON-friendly dictionary. The dictionary has a
    ``"kind"`` key (``"point"``, ``"column"``, or ``"multipoint"``), which
-   ``Receptor.from_dict`` uses to rebuild the right class.
+   ``Release.from_dict`` uses to rebuild the right class.
 
 Releases are frozen. To change one, make a copy with
 ``release.model_copy(update={"altitude": 20})``. Every argument is given by
@@ -334,33 +333,33 @@ Use :func:`isinstance` to branch on the release type:
 
 .. code-block:: python
 
-   from stilt import ColumnReceptor, MultiPointReceptor, PointReceptor
+   from stilt import ColumnRelease, MultiPointRelease, PointRelease
 
-   if isinstance(release, PointReceptor):
+   if isinstance(release, PointRelease):
        print(f"Single point at {release.altitude} m")
-   elif isinstance(release, ColumnReceptor):
+   elif isinstance(release, ColumnRelease):
        print(f"Column from {release.bottom} to {release.top} m")
-   elif isinstance(release, MultiPointReceptor):
+   elif isinstance(release, MultiPointRelease):
        print(f"Multi-point with {len(release.coords())} locations")
 
-All three are subclasses of :class:`Receptor`.
+All three are subclasses of :class:`Release`.
 
 
 Building a release from a list of points
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-:meth:`Receptor.from_points` takes a list of ``(longitude, latitude,
+:meth:`Release.from_points` takes a list of ``(longitude, latitude,
 altitude)`` tuples and returns the matching type:
 
-- one tuple gives a :class:`PointReceptor`;
-- two tuples at the same location give a :class:`ColumnReceptor`, with
+- one tuple gives a :class:`PointRelease`;
+- two tuples at the same location give a :class:`ColumnRelease`, with
   ``bottom`` and ``top`` in the right order;
-- anything else gives a :class:`MultiPointReceptor`.
+- anything else gives a :class:`MultiPointRelease`.
 
 .. code-block:: python
 
-   r = stilt.Receptor.from_points(
+   r = stilt.Release.from_points(
        time="2023-07-15 18:00:00",
        points=[(-111.848, 40.766, 10.0)],
    )
-   # PointReceptor
+   # PointRelease

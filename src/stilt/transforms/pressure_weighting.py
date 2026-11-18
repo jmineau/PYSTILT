@@ -15,7 +15,7 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
-    from stilt.releases import Receptor
+    from stilt.releases import Release
 
 from stilt.transforms._common import release_coordinate
 
@@ -104,7 +104,7 @@ def particle_pwf(
     if len(heights) < 2 or z_fit.nunique() < 2:
         raise ValueError(
             "Pressure weighting needs particles released over a range of heights "
-            "(a ColumnReceptor); all particles share one release height."
+            "(a ColumnRelease); all particles share one release height."
         )
     a, b = np.polyfit(z_fit.to_numpy(), np.log(pres.to_numpy()), 1)
     if a >= 0:
@@ -175,7 +175,7 @@ class PressureWeighting(BaseModel):
     def apply(
         self,
         particles: pd.DataFrame,
-        release: Receptor | None = None,
+        release: Release | None = None,
         directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """

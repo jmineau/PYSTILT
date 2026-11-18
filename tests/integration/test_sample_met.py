@@ -37,7 +37,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from stilt.releases import PointReceptor
+from stilt.releases import PointRelease
 from stilt.sampling import sample_met
 from stilt.transport import run_model
 from stilt.transport.hysplit import HysplitConfig
@@ -54,7 +54,7 @@ def _run(
     met_dir: Path, workdir: Path, time: dt.datetime, z_top: float = 25000.0
 ) -> tuple[pd.DataFrame, list]:
     """Run HYSPLIT from the WBB tower for 6 hours and return its particles and met files."""
-    release = PointReceptor(
+    release = PointRelease(
         time=time, longitude=-111.8479, latitude=40.7660, altitude=5.0
     )
     config = HysplitConfig(

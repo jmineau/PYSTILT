@@ -586,11 +586,11 @@ def test_project_slug_names_the_slurm_job(directory, expected):
 def _hourly_project(tmp_path, n: int) -> Project:
     import datetime as dt
 
-    from stilt.releases import PointReceptor
+    from stilt.releases import PointRelease
 
     config = make_project_config(tmp_path)
     releases = [
-        PointReceptor(
+        PointRelease(
             time=dt.datetime(2023, 1, 1, h),
             longitude=-111.85,
             latitude=40.77,
@@ -692,7 +692,7 @@ def _downloading_project(tmp_path, n: int) -> Project:
     """A project like :func:`_hourly_project` whose met downloads HRRR."""
     import datetime as dt
 
-    from stilt.releases import PointReceptor
+    from stilt.releases import PointRelease
     from stilt.transport.hysplit import MetConfig
 
     config = make_project_config(
@@ -700,7 +700,7 @@ def _downloading_project(tmp_path, n: int) -> Project:
         mets={"hrrr": MetConfig(directory=tmp_path / "met", download="hrrr")},
     )
     releases = [
-        PointReceptor(
+        PointRelease(
             time=dt.datetime(2023, 1, 1, h),
             longitude=-111.85,
             latitude=40.77,

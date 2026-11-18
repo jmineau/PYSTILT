@@ -1,8 +1,8 @@
 """
 Releases, the places and times particles are released from.
 
-A :class:`PointReceptor` releases from one point, a :class:`ColumnReceptor`
-from a vertical line, and a :class:`MultiPointReceptor` from several points
+A :class:`PointRelease` releases from one point, a :class:`ColumnRelease`
+from a vertical line, and a :class:`MultiPointRelease` from several points
 at once (for example a slanted satellite sounding). :func:`read_releases`
 reads them from a CSV file, and :func:`releases_to_frame` gives them as one
 table with a row per release point.
@@ -16,10 +16,10 @@ table with a row per release point.
 """
 
 from .models import (
-    ColumnReceptor,
-    MultiPointReceptor,
-    PointReceptor,
-    Receptor,
+    ColumnRelease,
+    MultiPointRelease,
+    PointRelease,
+    Release,
     VerticalReference,
     parse_release_id,
 )
@@ -31,10 +31,10 @@ from .table import (
 )
 
 __all__ = [
-    "ColumnReceptor",
-    "MultiPointReceptor",
-    "PointReceptor",
-    "Receptor",
+    "ColumnRelease",
+    "MultiPointRelease",
+    "PointRelease",
+    "Release",
     "VerticalReference",
     "parse_release_id",
     "read_releases",

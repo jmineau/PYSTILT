@@ -19,7 +19,7 @@ from stilt.execution.worker import run_release, run_releases
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.stage import store_empty_footprint
 from stilt.output import Output
-from stilt.releases import PointReceptor, Receptor
+from stilt.releases import PointRelease, Release
 from stilt.simulation import Simulation
 from stilt.spatial import Grid
 from stilt.transport import ModelRun, TransportConfig
@@ -36,8 +36,8 @@ GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
 
 
 @pytest.fixture
-def release() -> Receptor:
-    return PointReceptor(
+def release() -> Release:
+    return PointRelease(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
@@ -46,8 +46,8 @@ def release() -> Receptor:
 
 
 @pytest.fixture
-def other_release() -> Receptor:
-    return PointReceptor(
+def other_release() -> Release:
+    return PointRelease(
         time=dt.datetime(2023, 1, 1, 13),
         longitude=-111.86,
         latitude=40.78,
@@ -1517,7 +1517,7 @@ def batched_toy():
 def test_a_batched_model_runs_every_release_of_a_variant_in_one_call(
     tmp_path, release, other_release, batched_toy
 ):
-    third = PointReceptor(
+    third = PointRelease(
         time=dt.datetime(2023, 1, 1, 14),
         longitude=-111.85,
         latitude=40.77,

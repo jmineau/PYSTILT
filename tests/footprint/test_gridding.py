@@ -24,7 +24,7 @@ from stilt.footprint.gridding import (
     _unwrap_around_cloud,
 )
 from stilt.footprint.io import read_footprint, write_footprint
-from stilt.releases import MultiPointReceptor, PointReceptor
+from stilt.releases import MultiPointRelease, PointRelease
 from stilt.spatial import Grid
 
 
@@ -49,7 +49,7 @@ def _grid(xres=0.1, yres=0.1):
     return Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=xres, yres=yres)
 
 
-def _moved(release: PointReceptor, longitude: float, latitude: float) -> PointReceptor:
+def _moved(release: PointRelease, longitude: float, latitude: float) -> PointRelease:
     """*release* at another place: the one test particles were released from."""
     return release.model_copy(update={"longitude": longitude, "latitude": latitude})
 
@@ -367,7 +367,7 @@ def test_calc_footprint_interpolates_a_full_particle_table():
             "foot": 1e-3,
         }
     )
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-07-01 12:00", longitude=-112.5, latitude=40.505, altitude=5.0
     )
     grid = Grid(xmin=-113.0, xmax=-106.0, ymin=40.0, ymax=41.0, xres=0.01, yres=0.01)
@@ -1158,7 +1158,7 @@ def test_projected_footprint_is_made_when_a_far_step_is_where_the_projection_has
     """
     pytest.importorskip("pyproj")
     p = _tropical_run()
-    release = PointReceptor(
+    release = PointRelease(
         time=dt.datetime(2023, 1, 1, 12), longitude=103.85, latitude=1.35, altitude=5.0
     )
     grid = Grid(
@@ -1392,7 +1392,7 @@ def test_projected_footprint_does_not_depend_on_where_the_release_was(
 _GLOBAL = {"xmin": -180.0, "xmax": 180.0, "ymin": 48.0, "ymax": 52.0}
 
 
-def _global_footprint(lon0: float, release: PointReceptor, **grid_kw) -> np.ndarray:
+def _global_footprint(lon0: float, release: PointRelease, **grid_kw) -> np.ndarray:
     """The time-integrated footprint of ``_cloud_at(lon0)`` on a global 0.05 degree grid."""
     grid = Grid(**{**_GLOBAL, "xres": 0.05, "yres": 0.05, **grid_kw})
     release = release.model_copy(
@@ -1510,7 +1510,7 @@ def _edge_cloud(lon0: float, sd_lon: float = 0.03) -> pd.DataFrame:
 
 
 def _edge_footprint(
-    release: PointReceptor, lon0: float, xmin: float, xmax: float, sd_lon: float
+    release: PointRelease, lon0: float, xmin: float, xmax: float, sd_lon: float
 ) -> np.ndarray:
     """The time-integrated footprint of ``_edge_cloud`` on 0.1 degree cells."""
     grid = Grid(xmin=xmin, xmax=xmax, ymin=45.0, ymax=55.0, xres=0.1, yres=0.1)
@@ -1697,7 +1697,7 @@ def _crossing_cloud(lon0: float, n: int = 40) -> pd.DataFrame:
 
 
 def _crossing_footprint(
-    point_release: PointReceptor, lon0: float, bounds: tuple[float, float], crs: str
+    point_release: PointRelease, lon0: float, bounds: tuple[float, float], crs: str
 ) -> xr.DataArray:
     """The unsmoothed, time-integrated footprint of ``_crossing_cloud(lon0)``."""
     res = 0.01 if crs == "+proj=longlat" else 500.0
@@ -1904,7 +1904,7 @@ def test_calc_footprint_returns_a_named_dataarray_with_its_release(point_release
 
 def test_one_layer_footprint_is_stamped_at_its_hour():
     """A backward footprint with only layer -1 is stamped an hour before the release, as in STILT-R."""
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-01-01 12:00", longitude=-111.95, latitude=40.75, altitude=5.0
     )
     grid = Grid(xmin=-112.3, xmax=-111.6, ymin=40.5, ymax=41.0, xres=0.01, yres=0.01)
@@ -1923,7 +1923,7 @@ def test_one_layer_footprint_is_stamped_at_its_hour():
 
 def test_calculated_coordinates_match_the_grid_axes():
     """A calculated footprint has the coordinates a stored one is read back with."""
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-01-01 12:00", longitude=-111.95, latitude=40.75, altitude=5.0
     )
     grid = Grid(xmin=-112.3, xmax=-111.6, ymin=40.5, ymax=41.0, xres=0.01, yres=0.01)
@@ -1958,7 +1958,7 @@ _NEAR_GRID = Grid(xmin=-112.0, xmax=-111.7, ymin=40.7, ymax=40.9, xres=0.01, yre
 
 
 def test_calc_footprint_applies_the_near_field_correction_with_hnf_plume():
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5.0
     )
     particles = _near_field_particles()
@@ -1983,7 +1983,7 @@ def test_calc_footprint_applies_the_near_field_correction_with_hnf_plume():
 
 
 def test_calc_footprint_reads_footprint_depth_for_the_near_field_correction():
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5.0
     )
     particles = _near_field_particles()
@@ -2005,7 +2005,7 @@ def test_calc_footprint_reads_footprint_depth_for_the_near_field_correction():
 
 def test_calc_footprint_skips_the_near_field_correction_without_its_columns(caplog):
     """An MSL release's plume starts at the ground, which needs zsfc (#287)."""
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-01-01 12:00",
         longitude=-111.85,
         latitude=40.77,
@@ -2097,7 +2097,7 @@ def test_calc_footprint_refuses_another_releases_place(point_release):
 def test_calc_footprint_takes_particles_from_any_release_point(point_release):
     """A multipoint release's particles are measured from the nearest of its points."""
     second = point_release.model_copy(update={"longitude": -110.9, "latitude": 41.3})
-    release = MultiPointReceptor(
+    release = MultiPointRelease(
         time=point_release.time,
         longitudes=[-111.85, -110.9],
         latitudes=[40.77, 41.3],

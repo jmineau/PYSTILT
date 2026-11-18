@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from stilt.transforms._common import step_minutes
 
 if TYPE_CHECKING:
-    from stilt.releases import Receptor
+    from stilt.releases import Release
 
 
 def survival(particles: pd.DataFrame, rate: ArrayLike) -> pd.Series:
@@ -101,7 +101,7 @@ class FirstOrderLifetime(BaseModel):
     def apply(
         self,
         particles: pd.DataFrame,
-        release: Receptor | None = None,
+        release: Release | None = None,
         directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """Return the particles with ``foot`` decayed by age."""

@@ -154,7 +154,7 @@ autodoc_mock_imports = ["cartopy"]
 
 autodoc_type_aliases = {
     "ProjectConfig": "stilt.config.ProjectConfig",
-    "Receptor": "stilt.releases.Receptor",
+    "Release": "stilt.releases.Release",
     # Two documented classes of each name: the particle part's, which the
     # workers and stages take, and STILT's subclass (stilt.Project). A hint
     # names the class its module imports, and modules of the core import the

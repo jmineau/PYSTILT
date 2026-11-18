@@ -23,7 +23,7 @@ from stilt.execution.runner import resolve_compute_root
 from stilt.footprint.targets import Mesh
 from stilt.identity import transport_from_settings
 from stilt.particles import particles_metadata
-from stilt.releases import MultiPointReceptor
+from stilt.releases import MultiPointRelease
 from stilt.stilt_project import STILT_R_HYSPLIT
 from stilt.transport.hysplit import FailureReason
 from stilt.transport.hysplit.driver import winderrtf
@@ -233,12 +233,12 @@ def test_particles_that_leave_the_met_domain_complete_the_run(
     tmp_path, traj_only_config
 ):
     """A January night at WBB empties the test met's 4 by 3 degree crop in about 11 hours (#189)."""
-    from stilt.releases import PointReceptor
+    from stilt.releases import PointRelease
 
     # The last particle left after 10 to 12 hours in 24 runs. From the
     # reference release, 30 km south-west, one of the 100 particles stayed
     # all 24 hours in about a third of runs.
-    release = PointReceptor(
+    release = PointRelease(
         time="2021-01-15 06:00", longitude=-111.848, latitude=40.766, altitude=10
     )
     config = _with(traj_only_config, hysplit={"n_hours": -24})
@@ -423,11 +423,11 @@ def test_multipoint(tmp_path, wbb_multipoint_release, multipoint_config):
     assert sim.has_footprint
 
 
-def _forty_points() -> MultiPointReceptor:
+def _forty_points() -> MultiPointRelease:
     """Forty locations 0.03 degrees apart, 4 m up: HYSPLIT's maxpar cut left the last one empty (#237)."""
     lons = -112.4 + 0.03 * np.arange(40)
     lats = 40.76 + 0.0001 * np.arange(40)
-    return MultiPointReceptor(
+    return MultiPointRelease(
         time=REFERENCE_TIME, longitudes=lons, latitudes=lats, altitudes=[4.0] * 40
     )
 
@@ -812,7 +812,7 @@ def test_geometry_footprint(tmp_path, wbb_release, met_dir):
 @integration
 def test_forward_run(tmp_path, met_dir, wbb_grid):
     """A forward simulation runs end to end and carries a forward time axis."""
-    from stilt.releases import PointReceptor
+    from stilt.releases import PointRelease
 
     from ..fixtures.r_stilt_reference import (
         REFERENCE_ALTITUDE,
@@ -824,7 +824,7 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     )
 
     # The 2021-07-15 06:00-11:59 block holds the whole +3 h window.
-    release = PointReceptor(
+    release = PointRelease(
         time=REFERENCE_SUMMER_TIME,
         longitude=REFERENCE_LONGITUDE,
         latitude=REFERENCE_LATITUDE,

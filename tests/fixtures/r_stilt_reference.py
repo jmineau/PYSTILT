@@ -179,10 +179,10 @@ class ReferenceScenario:
 
     def make_release(self):
         """Return the appropriate release subtype for this scenario."""
-        from stilt.releases import ColumnReceptor, MultiPointReceptor, PointReceptor
+        from stilt.releases import ColumnRelease, MultiPointRelease, PointRelease
 
         if self.release_type == "point":
-            return PointReceptor(
+            return PointRelease(
                 time=self.time,
                 longitude=float(self.longitude),  # type: ignore[arg-type]
                 latitude=float(self.latitude),  # type: ignore[arg-type]
@@ -191,7 +191,7 @@ class ReferenceScenario:
             )
         if self.release_type == "column":
             bottom, top = self.altitude  # type: ignore[misc]
-            return ColumnReceptor(
+            return ColumnRelease(
                 time=self.time,
                 longitude=float(self.longitude),  # type: ignore[arg-type]
                 latitude=float(self.latitude),  # type: ignore[arg-type]
@@ -199,7 +199,7 @@ class ReferenceScenario:
                 top=float(top),
                 altitude_ref=self.altitude_ref,  # type: ignore[arg-type]
             )
-        return MultiPointReceptor(
+        return MultiPointRelease(
             time=self.time,
             longitudes=list(self.longitude),  # type: ignore[arg-type]
             latitudes=list(self.latitude),  # type: ignore[arg-type]
@@ -433,7 +433,7 @@ LOW_AGL = ReferenceScenario(
     altitude=0.5,
 )
 
-#: Receptor 0.2° from western and 0.1° from southern edge of the bbox-cropped
+#: Release 0.2° from western and 0.1° from southern edge of the bbox-cropped
 #: HRRR met domain (bbox = -114, 39, -110, 42).  Back-trajectories rapidly
 #: exit the met boundary, exercising HYSPLIT's boundary termination and the
 #: footprint gridding with a highly sparse particle set.

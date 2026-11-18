@@ -4,7 +4,7 @@ Slant Columns
 A column instrument that does not look straight up measures the air along
 a tilted path. A ground-based solar tracker (EM27/SUN, TCCON) looks at the
 sun. An off-nadir satellite sounding looks toward the satellite. PYSTILT
-models the path as a :class:`~stilt.MultiPointReceptor` whose points step up
+models the path as a :class:`~stilt.MultiPointRelease` whose points step up
 the line of sight. All the points run in one simulation, and the particles
 are weighted afterwards.
 
@@ -74,7 +74,7 @@ hour, so build one release per averaging window, not one per day:
    )
 
    releases = [
-       stilt.Receptor.from_points(
+       stilt.Release.from_points(
            t,
            slant_points(
                w.longitude, w.latitude,
@@ -176,7 +176,7 @@ altitude:
    from stilt.observations import slant_points
 
    releases = [
-       stilt.Receptor.from_points(
+       stilt.Release.from_points(
            row.time,
            slant_points(
                row.longitude, row.latitude,
@@ -190,7 +190,7 @@ altitude:
    project.add_releases(releases)
 
 Many satellite workflows ignore the slant and use a
-:class:`~stilt.ColumnReceptor` instead. At a 20° viewing angle the top of a
+:class:`~stilt.ColumnRelease` instead. At a 20° viewing angle the top of a
 3 km column is only about 1 km from the nadir point, which is within one
 cell of a coarse footprint grid.
 

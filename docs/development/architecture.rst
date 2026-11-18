@@ -700,8 +700,8 @@ Line sources
 
 In HYSPLIT's ``emspnt.f``, consecutive ``CONTROL`` starting locations at the
 same latitude and longitude become one vertical line source, and only the
-last pair is released. That is how ``ColumnReceptor`` works (two lines:
-bottom and top), and why a ``MultiPointReceptor`` may not repeat a horizontal
+last pair is released. That is how ``ColumnRelease`` works (two lines:
+bottom and top), and why a ``MultiPointRelease`` may not repeat a horizontal
 location (the constructor raises). HYSPLIT 5.1.0 releases column
 particles bottom to top in ``indx`` order (the table's ``particle``), which
 ``add_release_heights`` falls back to when a model writes no ``age = 0``

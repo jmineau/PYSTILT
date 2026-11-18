@@ -542,11 +542,11 @@ def test_a_stored_runs_met_files_are_read_only_to_compute_foot(
 ):
     from stilt.footprint import stage
     from stilt.particles import write_particles
-    from stilt.releases import PointReceptor
+    from stilt.releases import PointRelease
 
     met = tmp_path / "met"
     met.touch()
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-01-01 12:00", longitude=-111.9, latitude=40.7, altitude=5.0
     )
     path = write_particles(

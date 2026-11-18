@@ -23,10 +23,10 @@ import xarray as xr
 import yaml
 
 from stilt import (
-    ColumnReceptor,
+    ColumnRelease,
     Grid,
-    MultiPointReceptor,
-    PointReceptor,
+    MultiPointRelease,
+    PointRelease,
     Project,
     calc_footprint,
 )
@@ -96,7 +96,7 @@ def bare(tmp_path: Path) -> Path:
 
 def test_point_release_is_the_one_stilt_r_ran():
     release, _, _ = _read()[POINT]
-    assert release == PointReceptor(
+    assert release == PointRelease(
         time=dt.datetime(2015, 7, 5), longitude=-111.85, latitude=40.77, altitude=5
     )
     assert release.id == POINT
@@ -125,7 +125,7 @@ def test_slant_points_in_control_are_a_multipoint_release(copy):
     points = ["40.5 -112.0 100", "40.51 -112.01 1000", "40.52 -112.02 2000"]
     _write_points(copy / POINT / "CONTROL", points)
     release, _, _ = _read(copy)[POINT]
-    assert isinstance(release, MultiPointReceptor)
+    assert isinstance(release, MultiPointRelease)
     assert release.longitudes == (-112.0, -112.01, -112.02)
     assert release.altitudes == (100.0, 1000.0, 2000.0)
 
@@ -164,7 +164,7 @@ def test_an_rds_without_particles_raises(copy):
 
 def test_column_release_spans_the_heights_and_keeps_seconds():
     release, _, _ = _read()[COLUMN]
-    assert release == ColumnReceptor(
+    assert release == ColumnRelease(
         time=dt.datetime(2015, 7, 5, 18, 0, 30),
         longitude=-111.9,
         latitude=40.7,

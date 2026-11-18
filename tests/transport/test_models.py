@@ -374,7 +374,7 @@ def test_a_model_in_its_own_package_runs_from_a_fresh_interpreter(tmp_path):
     script = textwrap.dedent(
         """
         import stilt
-        release = stilt.PointReceptor(
+        release = stilt.PointRelease(
             time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5
         )
         met = {"weather": "hrrr"}  # no directory: the toy reads no met files

@@ -14,10 +14,10 @@ from stilt.exceptions import MeteorologyError
 from stilt.meteorology import run_window
 from stilt.observations.placement import slant_points
 from stilt.releases import (
-    ColumnReceptor,
-    MultiPointReceptor,
-    PointReceptor,
-    Receptor,
+    ColumnRelease,
+    MultiPointRelease,
+    PointRelease,
+    Release,
 )
 from stilt.spatial import Grid
 from stilt.transforms import averaging_kernel_table
@@ -42,7 +42,7 @@ GRID = Grid(xmin=-112.0, xmax=-111.0, ymin=40.0, ymax=41.0, xres=0.1, yres=0.1)
 
 def _release(
     hour: float = 12, longitude: float = -111.85, latitude: float = 40.77
-) -> PointReceptor:
+) -> PointRelease:
     time = dt.datetime(2023, 1, 1) + dt.timedelta(hours=hour)
     return make_release(time, longitude, latitude)
 
@@ -545,10 +545,10 @@ def test_a_release_outside_a_grid_across_the_dateline_in_latitude_is_listed(tmp_
 
 
 def test_a_column_or_multipoint_release_with_a_point_outside_is_listed_once(tmp_path):
-    column = ColumnReceptor(
+    column = ColumnRelease(
         time=NOON, longitude=-110.0, latitude=40.5, bottom=0.0, top=3000.0
     )
-    multi = MultiPointReceptor(
+    multi = MultiPointRelease(
         time=NOON,
         longitudes=(-111.5, -110.0, -109.0),
         latitudes=(40.5, 40.6, 40.7),
@@ -690,8 +690,8 @@ _WEIGHTING = {"transforms": [{"kind": "pressure_weighting"}]}
 _WITH_ZSFC = [*HysplitConfig(n_hours=-24).varsiwant, "zsfc"]
 
 
-def _above_sea_level_point() -> PointReceptor:
-    return PointReceptor(
+def _above_sea_level_point() -> PointRelease:
+    return PointRelease(
         time=NOON,
         longitude=-111.85,
         latitude=40.77,
@@ -704,9 +704,9 @@ def _multipoint(
     altitude_ref: str,
     altitudes: tuple[float, ...] = (1500.0, 2200.0, 3000.0),
     step: float = 0.005,
-) -> MultiPointReceptor:
+) -> MultiPointRelease:
     """Return a multipoint release whose points are *step* degrees (about 425 m for 0.005) apart."""
-    return MultiPointReceptor(
+    return MultiPointRelease(
         time=NOON,
         longitudes=tuple(-111.50 - i * step for i in range(len(altitudes))),
         latitudes=(40.5,) * len(altitudes),
@@ -715,8 +715,8 @@ def _multipoint(
     )
 
 
-def _column(altitude_ref: str) -> ColumnReceptor:
-    return ColumnReceptor(
+def _column(altitude_ref: str) -> ColumnRelease:
+    return ColumnRelease(
         time=NOON,
         longitude=-111.5,
         latitude=40.5,
@@ -789,7 +789,7 @@ def test_a_slant_release_from_soundings_is_one_the_check_finds(tmp_path):
     points = slant_points(
         -111.5, 40.5, [1500.0, 2200.0, 3000.0], zenith=40.0, azimuth=120.0
     )
-    slant = Receptor.from_points(NOON, points, altitude_ref="msl")
+    slant = Release.from_points(NOON, points, altitude_ref="msl")
     project = _project(tmp_path, [slant], variants={"hrrr": _WEIGHTING})
 
     message = _found(project.check(), "zsfc")["message"].iloc[0]
@@ -804,7 +804,7 @@ def test_a_slant_release_alone_is_found_by_its_release_heights(tmp_path):
     points = slant_points(
         -111.5, 40.5, [1500.0, 2200.0, 3000.0], zenith=40.0, azimuth=120.0
     )
-    slant = Receptor.from_points(NOON, points, altitude_ref="msl")
+    slant = Release.from_points(NOON, points, altitude_ref="msl")
     project = _project(tmp_path, [slant], hnf_plume=False)
 
     message = _found(project.check(), "zsfc")["message"].iloc[0]

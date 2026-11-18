@@ -6,7 +6,7 @@ import pytest
 
 import stilt
 from stilt.observations import TRACK_SCHEMA, check_track, releases_from_track
-from stilt.releases import PointReceptor
+from stilt.releases import PointRelease
 
 
 def _drive(minutes=10, start="2024-07-01 18:00", lon0=-111.90, lon1=-111.83):
@@ -38,7 +38,7 @@ def test_groups_of_five_minutes_by_default():
     track = _drive()
     releases, table = releases_from_track(track)
 
-    assert all(isinstance(r, PointReceptor) for r in releases)
+    assert all(isinstance(r, PointRelease) for r in releases)
     assert len(releases) == 2
     first = releases[0]
     # Mean of 18:00:00 to 18:04:59 is 18:02:29.5, rounded to the minute.

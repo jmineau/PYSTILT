@@ -27,7 +27,7 @@ from stilt.meteorology import run_window
 from stilt.particles import add_release_heights, check_particles
 
 if TYPE_CHECKING:
-    from stilt.releases import Receptor
+    from stilt.releases import Release
 
 
 @dataclass(frozen=True)
@@ -254,7 +254,7 @@ class TransportModel(Protocol):
 
     def run(
         self,
-        release: Receptor,
+        release: Release,
         config: Any,
         met: Any,
         window: tuple[dt.datetime, dt.datetime],
@@ -270,7 +270,7 @@ class TransportModel(Protocol):
 
         Parameters
         ----------
-        release : Receptor
+        release : Release
             Where and when particles are released.
         config : TransportConfig
             The model's config, of its ``config_class``.
@@ -307,7 +307,7 @@ class BatchedTransportModel(TransportModel, Protocol):
 
     def run_many(
         self,
-        releases: list[Receptor],
+        releases: list[Release],
         config: Any,
         met: Any,
         windows: list[tuple[dt.datetime, dt.datetime]],
@@ -401,7 +401,7 @@ def get_model(name: str) -> TransportModel:
 
 def run_model(
     name: str,
-    release: Receptor,
+    release: Release,
     config: TransportConfig,
     met: Any,
     workdir: Path | None = None,
@@ -424,7 +424,7 @@ def run_model(
     ----------
     name : str
         The transport model (:data:`MODELS`).
-    release : Receptor
+    release : Release
         Where and when particles are released.
     config : TransportConfig
         The model's config.
@@ -449,7 +449,7 @@ def run_model(
 
 def run_model_many(
     name: str,
-    releases: list[Receptor],
+    releases: list[Release],
     config: TransportConfig,
     met: Any,
     workdir: Path | None = None,
@@ -506,7 +506,7 @@ def run_model_many(
     return results
 
 
-def _finish(run: ModelRun, release: Receptor, config: TransportConfig) -> ModelRun:
+def _finish(run: ModelRun, release: Release, config: TransportConfig) -> ModelRun:
     """
     Return *run* with its particles checked and their release heights.
 
@@ -531,7 +531,7 @@ def _finish(run: ModelRun, release: Receptor, config: TransportConfig) -> ModelR
 
 
 def run_trajectories(
-    release: Receptor,
+    release: Release,
     met: BaseModel | Mapping[str, Any],
     *,
     model: str = "hysplit",
@@ -548,7 +548,7 @@ def run_trajectories(
 
     Parameters
     ----------
-    release : Receptor
+    release : Release
         Where and when particles are released.
     met : str, dict or BaseModel
         The meteorology, as one entry under ``mets:`` in ``config.yaml``,
@@ -595,7 +595,7 @@ def run_trajectories(
 
     Examples
     --------
-    >>> release = stilt.PointReceptor(  # doctest: +SKIP
+    >>> release = stilt.PointRelease(  # doctest: +SKIP
     ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
     ... )
     >>> particles = stilt.run_trajectories(

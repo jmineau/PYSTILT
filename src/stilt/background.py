@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from stilt.releases import Receptor
+from stilt.releases import Release
 from stilt.sampling import sample_field, vertical_dim
 from stilt.transforms import apply_transforms
 
@@ -89,7 +89,7 @@ def _particle_background(particles: pd.DataFrame, field: xr.DataArray) -> pd.Ser
 def _endpoint_weights(
     particles: pd.DataFrame,
     transforms: Sequence[Any] = (),
-    release: Receptor | None = None,
+    release: Release | None = None,
     directory: str | Path | None = None,
 ) -> pd.Series:
     """
@@ -142,7 +142,7 @@ def _background(
     field: xr.DataArray | pd.Series,
     *,
     transforms: Sequence[Any] = (),
-    release: Receptor | None = None,
+    release: Release | None = None,
     directory: str | Path | None = None,
 ) -> Background:
     """Return the background at a release (:func:`background`, which documents it)."""
@@ -164,7 +164,7 @@ def background(
     field: xr.DataArray | pd.Series,
     *,
     transforms: Sequence[Any] = (),
-    release: Receptor | None = None,
+    release: Release | None = None,
     directory: str | Path | None = None,
 ) -> Background:
     """
@@ -194,7 +194,7 @@ def background(
         The footprint's particle transforms (``sim.variant.stages["footprint"].transforms``), so
         the background is weighted like the footprint and adds to its
         enhancement. A tower release has none.
-    release : Receptor, optional
+    release : Release, optional
         The release (``sim.release``), for the transforms. An averaging
         kernel read from a table needs it, and pressure weighting reads its
         ``altitude_ref``.

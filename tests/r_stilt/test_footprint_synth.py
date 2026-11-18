@@ -46,7 +46,7 @@ from stilt.footprint.gridding import (
     _padded_axes,
     _project_particles_to_crs,
 )
-from stilt.releases import MultiPointReceptor, PointReceptor
+from stilt.releases import MultiPointRelease, PointRelease
 from stilt.spatial import Grid, _east_edge, _grid_cell_starts
 
 from ..fixtures.particles import point_at
@@ -216,7 +216,7 @@ def _r_footprint_stages(
     }
 
 
-def _released_from(particles: pd.DataFrame) -> PointReceptor | MultiPointReceptor:
+def _released_from(particles: pd.DataFrame) -> PointRelease | MultiPointRelease:
     """
     Return a release released from *particles*' first positions.
 
@@ -242,10 +242,10 @@ def _released_from(particles: pd.DataFrame) -> PointReceptor | MultiPointRecepto
     )
     if len(points) == 1:
         lon, lat = points[0]
-        return PointReceptor(
+        return PointRelease(
             time=_RELEASE_TIME, longitude=lon, latitude=lat, altitude=5.0
         )
-    return MultiPointReceptor(
+    return MultiPointRelease(
         time=_RELEASE_TIME,
         longitudes=points[:, 0].tolist(),
         latitudes=points[:, 1].tolist(),
@@ -256,7 +256,7 @@ def _released_from(particles: pd.DataFrame) -> PointReceptor | MultiPointRecepto
 def _py_footprint(
     tmp_path: Path,
     particles: pd.DataFrame,
-    release: PointReceptor | MultiPointReceptor | None = None,
+    release: PointRelease | MultiPointRelease | None = None,
     grid: Grid = _GRID,
     smooth_factor: float = 1.0,
     time_integrate: bool = False,

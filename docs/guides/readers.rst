@@ -238,7 +238,7 @@ table's name:
 
 A few products need a change to this recipe:
 
-- For a nadir column, pass ``"column"``: a :class:`~stilt.ColumnReceptor`
+- For a nadir column, pass ``"column"``: a :class:`~stilt.ColumnRelease`
   from the ground up to ``top``.
 - OCO-2 files give pressures but no heights. Add ``altitude_levels`` from
   :func:`~stilt.observations.pressure_altitudes` before a slant release.

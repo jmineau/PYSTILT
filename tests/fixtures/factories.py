@@ -16,7 +16,7 @@ from typing import Any
 
 from stilt.config import FOOTPRINT_STAGE, ProjectConfig, Variant
 from stilt.footprint.config import FootprintConfig
-from stilt.releases import PointReceptor
+from stilt.releases import PointRelease
 from stilt.transport import TransportConfig
 from stilt.transport.hysplit import HysplitConfig, MetConfig
 
@@ -247,9 +247,9 @@ def make_release(
     latitude: float = 40.77,
     altitude: float = 5.0,
     **attrs: Any,
-) -> PointReceptor:
+) -> PointRelease:
     """Return a point release at the University of Utah's WBB site; *attrs* become its extra columns."""
-    return PointReceptor(
+    return PointRelease(
         time=time,
         longitude=longitude,
         latitude=latitude,

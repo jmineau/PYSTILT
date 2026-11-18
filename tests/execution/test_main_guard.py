@@ -24,7 +24,7 @@ import stilt
 
 _RUN = """\
 releases = [
-    stilt.PointReceptor(time=f"2023-01-01 0{h}:00", longitude=-111.85, latitude=40.77, altitude=5)
+    stilt.PointRelease(time=f"2023-01-01 0{h}:00", longitude=-111.85, latitude=40.77, altitude=5)
     for h in range(3)
 ]
 project = stilt.Project.init(

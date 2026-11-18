@@ -6,7 +6,7 @@ Functions for column and satellite workflows, and for mobile measurements
 run, spread releases across a pixel, lay out slant lines of sight, and
 turn a retrieval's pressure levels into altitudes (:doc:`/tutorials/satellite_column`,
 :doc:`/guides/slant_columns`). They take plain arrays and tables and return
-the inputs for :class:`~stilt.Receptor` objects. Particle weighting,
+the inputs for :class:`~stilt.Release` objects. Particle weighting,
 including per-release averaging-kernel tables, is in :doc:`transforms`.
 
 .. autosummary::

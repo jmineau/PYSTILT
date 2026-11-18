@@ -17,11 +17,11 @@ import pandas as pd
 
 #: Why a multipoint release's points may not share a horizontal location.
 REPEATED_LOCATION = (
-    "MultiPointReceptor points must have distinct horizontal locations "
+    "MultiPointRelease points must have distinct horizontal locations "
     "(HYSPLIT collapses release locations that share a lat/lon into a "
     "single vertical line source and releases only between the last two "
-    "heights). Use ColumnReceptor for a vertical column, or one "
-    "PointReceptor per height (distinct group) for discrete release "
+    "heights). Use ColumnRelease for a vertical column, or one "
+    "PointRelease per height (distinct group) for discrete release "
     "heights at one location."
 )
 

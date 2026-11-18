@@ -3,7 +3,7 @@ Releases along the track of a moving platform.
 
 A vehicle, a train, an aircraft, or a ship measures every second or so as it
 moves. :func:`releases_from_track` groups those measurements by time or by
-distance along the track and makes a :class:`~stilt.PointReceptor` at the
+distance along the track and makes a :class:`~stilt.PointRelease` at the
 mean time and position of each group. The table it returns gives each
 measurement its release id, so the modeled values join back to the
 measurements after a run. :data:`TRACK_SCHEMA` lists the columns a track
@@ -17,7 +17,7 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from stilt.releases import PointReceptor, VerticalReference
+from stilt.releases import PointRelease, VerticalReference
 from stilt.spatial import haversine_km
 
 #: The columns a track needs, as ``{name: meaning}``. A track may have any
@@ -69,13 +69,13 @@ def releases_from_track(
     spacing: float | None = None,
     altitude_ref: VerticalReference = "agl",
     gap: str | dt.timedelta = "10min",
-) -> tuple[list[PointReceptor], pd.DataFrame]:
+) -> tuple[list[PointRelease], pd.DataFrame]:
     """
     Return a release for each group of measurements along a track, and their table.
 
     The measurements are grouped by time (``every``) or by distance along
     the track (``spacing``), and each group becomes one
-    :class:`~stilt.PointReceptor` at the mean time and position of its
+    :class:`~stilt.PointRelease` at the mean time and position of its
     measurements.
 
     Parameters
@@ -99,7 +99,7 @@ def releases_from_track(
 
     Returns
     -------
-    releases : list of PointReceptor
+    releases : list of PointRelease
         One per group, in time order. Two groups whose rounded time and
         position agree share one release.
     table : pandas.DataFrame
@@ -215,7 +215,7 @@ def releases_from_track(
     release_alts = np.round(means["alt"].to_numpy(), 1)
 
     made = [
-        PointReceptor(
+        PointRelease(
             time=t,
             longitude=float(x),
             latitude=float(y),
@@ -229,7 +229,7 @@ def releases_from_track(
     ids = np.array([r.id for r in made], dtype=object)
     # Two releases with one id have the same minute and position, so are
     # equal: keep the first.
-    unique: dict[str, PointReceptor] = {}
+    unique: dict[str, PointRelease] = {}
     for r in made:
         unique.setdefault(r.id, r)
 

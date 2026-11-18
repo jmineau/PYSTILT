@@ -42,7 +42,7 @@ How STILT works, in three steps
    import stilt
 
    docs_cwd = docs_examples.temp_workdir()
-   release = stilt.PointReceptor(
+   release = stilt.PointRelease(
        time="2021-01-14 19:00", longitude=-111.848, latitude=40.766, altitude=10
    )
    particles = stilt.run_trajectories(

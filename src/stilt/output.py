@@ -83,7 +83,7 @@ from stilt.identity import (
 )
 from stilt.particles import write_particles
 from stilt.particles.table import OLD_FILE
-from stilt.releases import Receptor, parse_release_id
+from stilt.releases import Release, parse_release_id
 from stilt.stages import get_stage, reads
 
 if TYPE_CHECKING:
@@ -1076,7 +1076,7 @@ class Output:
     def write_particles(
         self,
         variant: Variant,
-        release: Receptor,
+        release: Release,
         particles: pd.DataFrame,
         met_files: list[Path],
         realization: int | None = None,

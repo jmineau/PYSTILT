@@ -51,10 +51,10 @@ Release objects
    :toctree: _api
    :nosignatures:
 
-   Receptor
-   PointReceptor
-   ColumnReceptor
-   MultiPointReceptor
+   Release
+   PointRelease
+   ColumnRelease
+   MultiPointRelease
    read_releases
    releases.write_releases
    releases.releases_to_frame

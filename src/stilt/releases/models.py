@@ -1,8 +1,8 @@
 """
 The release models, their times, and their ids.
 
-A :class:`PointReceptor` releases from one point, a :class:`ColumnReceptor`
-from a vertical line, and a :class:`MultiPointReceptor` from several points
+A :class:`PointRelease` releases from one point, a :class:`ColumnRelease`
+from a vertical line, and a :class:`MultiPointRelease` from several points
 at once (for example a slanted satellite sounding).
 """
 
@@ -35,7 +35,7 @@ from pydantic import (
 from shapely import Geometry, LineString, MultiPoint, Point
 
 if TYPE_CHECKING:
-    from stilt.visualization import ReceptorPlotAccessor
+    from stilt.visualization import ReleasePlotAccessor
 
 from .validation import _raise_first, column_errors, multipoint_errors, point_errors
 
@@ -254,7 +254,7 @@ def _multipoint_locations(
 # ---------------------------------------------------------------------------
 
 
-class Receptor(BaseModel):
+class Release(BaseModel):
     """
     Base class of the release types.
 
@@ -324,7 +324,7 @@ class Receptor(BaseModel):
     def __eq__(self, other: object) -> bool:
         if type(self) is not type(other):
             return False
-        other = cast(Receptor, other)
+        other = cast(Release, other)
         return (
             self.time == other.time
             and self.altitude_ref == other.altitude_ref
@@ -356,11 +356,11 @@ class Receptor(BaseModel):
         return [Point(lon, lat, alt) for lat, lon, alt in self.coords()]
 
     @cached_property
-    def plot(self) -> ReceptorPlotAccessor:
+    def plot(self) -> ReleasePlotAccessor:
         """Plotting methods, such as ``release.plot.map()``."""
-        from stilt.visualization import ReceptorPlotAccessor
+        from stilt.visualization import ReleasePlotAccessor
 
-        return ReceptorPlotAccessor(self)
+        return ReleasePlotAccessor(self)
 
     # -- dicts -------------------------------------------------------------
 
@@ -373,12 +373,12 @@ class Receptor(BaseModel):
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, text: str | bytes) -> Receptor:
+    def from_json(cls, text: str | bytes) -> Release:
         """Build a release from the JSON :meth:`to_json` wrote."""
         return cls.from_dict(json.loads(text))
 
     @classmethod
-    def from_dict(cls, d: Mapping[str, Any]) -> Receptor:
+    def from_dict(cls, d: Mapping[str, Any]) -> Release:
         """
         Build a release of the right type from a dict made by :meth:`to_dict`.
 
@@ -400,7 +400,7 @@ class Receptor(BaseModel):
         *,
         altitude_ref: VerticalReference = "agl",
         attrs: Mapping[str, Any] | None = None,
-    ) -> Receptor:
+    ) -> Release:
         """
         Build the right release type for a list of points.
 
@@ -417,10 +417,10 @@ class Receptor(BaseModel):
 
         Returns
         -------
-        Receptor
-            A :class:`PointReceptor` for one point, a :class:`ColumnReceptor`
+        Release
+            A :class:`PointRelease` for one point, a :class:`ColumnRelease`
             for two points at the same longitude and latitude, and a
-            :class:`MultiPointReceptor` otherwise.
+            :class:`MultiPointRelease` otherwise.
         """
         pts = [(float(lon), float(lat), float(alt)) for lon, lat, alt in points]
         if not pts:
@@ -429,7 +429,7 @@ class Receptor(BaseModel):
         time = parse_time(time)
         if len(pts) == 1:
             lon, lat, alt = pts[0]
-            return PointReceptor(
+            return PointRelease(
                 time=time,
                 longitude=lon,
                 latitude=lat,
@@ -439,7 +439,7 @@ class Receptor(BaseModel):
             )
         if len(pts) == 2 and pts[0][:2] == pts[1][:2]:
             bottom, top = sorted((pts[0][2], pts[1][2]))
-            return ColumnReceptor(
+            return ColumnRelease(
                 time=time,
                 longitude=pts[0][0],
                 latitude=pts[0][1],
@@ -449,7 +449,7 @@ class Receptor(BaseModel):
                 attrs=labels,
             )
         lons, lats, alts = zip(*pts, strict=True)
-        return MultiPointReceptor(
+        return MultiPointRelease(
             time=time,
             longitudes=lons,
             latitudes=lats,
@@ -459,13 +459,13 @@ class Receptor(BaseModel):
         )
 
 
-class PointReceptor(Receptor):
+class PointRelease(Release):
     """
     Release that releases particles from one point.
 
     Examples
     --------
-    >>> r = PointReceptor(
+    >>> r = PointRelease(
     ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
     ... )
     >>> r.id
@@ -480,7 +480,7 @@ class PointReceptor(Receptor):
     )
 
     @model_validator(mode="after")
-    def _check(self) -> PointReceptor:
+    def _check(self) -> PointRelease:
         """Check the coordinates and the height."""
         _raise_first(
             point_errors(
@@ -502,7 +502,7 @@ class PointReceptor(Receptor):
 
     def __repr__(self) -> str:
         return (
-            f"PointReceptor(id={self.id!r}, lon={self.longitude:.5f}, "
+            f"PointRelease(id={self.id!r}, lon={self.longitude:.5f}, "
             f"lat={self.latitude:.5f}, alt={self.altitude:g} {self.altitude_ref})"
         )
 
@@ -511,7 +511,7 @@ class PointReceptor(Receptor):
         return Point(self.longitude, self.latitude, self.altitude)
 
 
-class ColumnReceptor(Receptor):
+class ColumnRelease(Release):
     """
     Release that releases particles evenly along a vertical line.
     """
@@ -525,7 +525,7 @@ class ColumnReceptor(Receptor):
     top: float = Field(description="Top of the column in meters.")
 
     @model_validator(mode="after")
-    def _check(self) -> ColumnReceptor:
+    def _check(self) -> ColumnRelease:
         """Check the coordinates and that the bottom is below the top."""
         _raise_first(
             [
@@ -556,7 +556,7 @@ class ColumnReceptor(Receptor):
 
     def __repr__(self) -> str:
         return (
-            f"ColumnReceptor(id={self.id!r}, lon={self.longitude:.5f}, "
+            f"ColumnRelease(id={self.id!r}, lon={self.longitude:.5f}, "
             f"lat={self.latitude:.5f}, bottom={self.bottom:g} {self.altitude_ref}, "
             f"top={self.top:g} {self.altitude_ref})"
         )
@@ -571,14 +571,14 @@ class ColumnReceptor(Receptor):
         )
 
 
-class MultiPointReceptor(Receptor):
+class MultiPointRelease(Release):
     """
     Release that releases particles from several points at once.
 
     Use it for a slanted column, such as a satellite sounding sampled at
     several heights along the line of sight. Each point must have its own
     longitude and latitude. For several heights at one location, use a
-    :class:`ColumnReceptor` or one :class:`PointReceptor` per height.
+    :class:`ColumnRelease` or one :class:`PointRelease` per height.
 
     Raises
     ------
@@ -605,7 +605,7 @@ class MultiPointReceptor(Receptor):
         return tuple(float(v) for v in np.asarray(value, dtype=float).ravel())
 
     @model_validator(mode="after")
-    def _check(self) -> MultiPointReceptor:
+    def _check(self) -> MultiPointRelease:
         """Check the points, and that no two share a horizontal location."""
         if not (len(self.longitudes) == len(self.latitudes) == len(self.altitudes)):
             raise ValueError(
@@ -642,7 +642,7 @@ class MultiPointReceptor(Receptor):
 
     def __repr__(self) -> str:
         return (
-            f"MultiPointReceptor(id={self.id!r}, n_points={len(self.coords())}, "
+            f"MultiPointRelease(id={self.id!r}, n_points={len(self.coords())}, "
             f"altitude_ref={self.altitude_ref})"
         )
 
@@ -654,7 +654,7 @@ class MultiPointReceptor(Receptor):
 
 
 #: Any release, for validating a dict of unknown kind.
-AnyReceptor = Annotated[
-    PointReceptor | ColumnReceptor | MultiPointReceptor, Field(discriminator="kind")
+AnyRelease = Annotated[
+    PointRelease | ColumnRelease | MultiPointRelease, Field(discriminator="kind")
 ]
-_ANY_RELEASE: TypeAdapter[Receptor] = TypeAdapter(AnyReceptor)
+_ANY_RELEASE: TypeAdapter[Release] = TypeAdapter(AnyRelease)

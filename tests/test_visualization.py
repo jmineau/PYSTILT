@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt  # must come after use("Agg")
 from matplotlib.layout_engine import ConstrainedLayoutEngine
 
 from stilt.footprint.config import FootprintConfig
-from stilt.releases import ColumnReceptor, MultiPointReceptor, PointReceptor
+from stilt.releases import ColumnRelease, MultiPointRelease, PointRelease
 from stilt.spatial import Grid
 from stilt.stilt_visualization import SimulationPlotAccessor, _log10_safe
 from stilt.visualization import ProjectPlotAccessor, _draw_bounds_box, _make_ax
@@ -38,7 +38,7 @@ def close_figures():
 
 @pytest.fixture
 def release():
-    return PointReceptor(
+    return PointRelease(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
@@ -48,7 +48,7 @@ def release():
 
 @pytest.fixture
 def col_release():
-    return ColumnReceptor(
+    return ColumnRelease(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
@@ -59,7 +59,7 @@ def col_release():
 
 @pytest.fixture
 def multi_release():
-    return MultiPointReceptor(
+    return MultiPointRelease(
         time=dt.datetime(2023, 1, 1, 12),
         longitudes=[-111.85, -111.86, -111.84],
         latitudes=[40.77, 40.78, 40.76],
@@ -187,7 +187,7 @@ def test_draw_bounds_box_adds_patch(grid):
 
 
 # ---------------------------------------------------------------------------
-# ReceptorPlotAccessor
+# ReleasePlotAccessor
 # ---------------------------------------------------------------------------
 
 
@@ -760,7 +760,7 @@ def test_project_availability_rotates_the_dates_of_its_own_figure(release):
 @pytest.fixture
 def dateline_footprint():
     """A footprint on a grid from 170 to 190 degrees east, written with the grid's own longitudes."""
-    release = PointReceptor(
+    release = PointRelease(
         time=dt.datetime(2023, 1, 1, 12), longitude=-179.5, latitude=45.0, altitude=5.0
     )
     grid = Grid(xmin=170.0, xmax=190.0, ymin=40.0, ymax=50.0, xres=1.0, yres=1.0)

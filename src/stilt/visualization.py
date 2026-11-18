@@ -19,10 +19,10 @@ if TYPE_CHECKING:
     from cartopy.io.img_tiles import GoogleTiles
 
     from stilt.project import Project
-    from stilt.releases import Receptor
+    from stilt.releases import Release
     from stilt.spatial import Bounds
 
-from stilt.releases import ColumnReceptor, MultiPointReceptor, Receptor
+from stilt.releases import ColumnRelease, MultiPointRelease, Release
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -116,7 +116,7 @@ def _bounds_extent(bounds: Bounds, pad: float) -> tuple[float, float, float, flo
     return _extent([bounds.xmin, bounds.xmax], [bounds.ymin, bounds.ymax], pad)
 
 
-def _release_points(release: Receptor) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _release_points(release: Release) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return the longitudes, latitudes, and heights of a release's release points."""
     lats, lons, alts = (
         np.array(v, dtype=float) for v in zip(*release.coords(), strict=True)
@@ -180,7 +180,7 @@ class ParticlesPlotAccessor:
     def map(
         self,
         color_by: str = "age",
-        release: Receptor | None = None,
+        release: Release | None = None,
         ax: Axes | None = None,
         cmap: str = "viridis_r",
         s: float = 1.0,
@@ -196,7 +196,7 @@ class ParticlesPlotAccessor:
         ----------
         color_by : {"age", "zagl", "foot"}, default "age"
             Particle variable to color by.
-        release : Receptor, optional
+        release : Release, optional
             Mark this release on the map.
         ax : Axes, optional
             Axes to plot on. By default a new map is made, with cartopy when
@@ -265,10 +265,10 @@ class ParticlesPlotAccessor:
 # ---------------------------------------------------------------------------
 
 
-class ReceptorPlotAccessor:
-    """Plotting methods of :class:`stilt.Receptor`, as ``release.plot``."""
+class ReleasePlotAccessor:
+    """Plotting methods of :class:`stilt.Release`, as ``release.plot``."""
 
-    def __init__(self, release: Receptor) -> None:
+    def __init__(self, release: Release) -> None:
         self._release = release
 
     def map(
@@ -326,7 +326,7 @@ class ReceptorPlotAccessor:
 
         fig, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
 
-        if isinstance(r, MultiPointReceptor):
+        if isinstance(r, MultiPointRelease):
             sc = ax.scatter(
                 lons,
                 lats,
@@ -355,7 +355,7 @@ class ReceptorPlotAccessor:
                 label="Release",
                 **{**_data_crs(ax), **kwargs},
             )
-            if isinstance(r, ColumnReceptor):
+            if isinstance(r, ColumnRelease):
                 ax.annotate(
                     f"{r.bottom:.0f}–{r.top:.0f} m {r.altitude_ref.upper()}",
                     xy=(lons[0], lats[0]),

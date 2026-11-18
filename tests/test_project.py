@@ -17,7 +17,7 @@ from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
 from stilt.footprint.stage import store_empty_footprint, store_footprint
 from stilt.output import Output
-from stilt.releases import ColumnReceptor, PointReceptor
+from stilt.releases import ColumnRelease, PointRelease
 from stilt.spatial import Grid
 from stilt.stilt_project import STILT_R_HYSPLIT
 from stilt.transport.hysplit import MetConfig
@@ -73,7 +73,7 @@ def _project(tmp_path, releases=None, name="proj", **overrides) -> Project:
     )
 
 
-def _release(hour: int, longitude: float = -111.85, **attrs) -> PointReceptor:
+def _release(hour: int, longitude: float = -111.85, **attrs) -> PointRelease:
     return make_release(dt.datetime(2023, 1, 1, hour), longitude, **attrs)
 
 
@@ -497,10 +497,10 @@ def test_a_project_with_the_old_receptors_csv_is_refused(tmp_path):
 
 def test_releases_that_would_share_result_files_are_refused(tmp_path):
     """Two releases with one id would overwrite each other's results."""
-    from stilt.releases import MultiPointReceptor
+    from stilt.releases import MultiPointRelease
 
     def slant(alt):
-        return MultiPointReceptor(
+        return MultiPointRelease(
             time="2023-01-01 12:00",
             longitudes=[-111.85, -111.86],
             latitudes=[40.77, 40.78],
@@ -520,7 +520,7 @@ def test_releases_that_would_share_result_files_are_refused(tmp_path):
 
 def test_add_releases_takes_releases_or_a_csv(tmp_path):
     project = _project(tmp_path)
-    with pytest.raises(TypeError, match="Receptor"):
+    with pytest.raises(TypeError, match="Release"):
         project.add_releases([1, 2])
 
 
@@ -1204,7 +1204,7 @@ def test_transport_error_of_a_selection_is_sim_transport_error_per_release(
         time = dt.datetime(2023, 1, 1, hour)
         if kind == "point":
             return make_release(time)
-        return ColumnReceptor(
+        return ColumnRelease(
             time=time, longitude=-111.85, latitude=40.77, bottom=5.0, top=500.0
         )
 
@@ -1795,7 +1795,7 @@ def test_init_refuses_a_variant_with_bad_settings_and_writes_nothing(tmp_path):
 
 
 def test_status_says_why_the_failed_simulations_failed(tmp_path, point_release):
-    other = PointReceptor(
+    other = PointRelease(
         time="2023-07-15 19:00", longitude=-111.848, latitude=40.766, altitude=10
     )
     project = _project(

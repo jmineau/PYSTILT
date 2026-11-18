@@ -44,7 +44,7 @@ def grid():
 
 @pytest.fixture(scope="module")
 def foot(particles, grid):
-    release = stilt.PointReceptor(time=T0, longitude=-112.0, latitude=40.5, altitude=10)
+    release = stilt.PointRelease(time=T0, longitude=-112.0, latitude=40.5, altitude=10)
     return stilt.calc_footprint(particles, release, grid)
 
 

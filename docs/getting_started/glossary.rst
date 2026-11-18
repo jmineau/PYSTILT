@@ -10,9 +10,9 @@ Glossary
       in a backward run, at the source in a forward run (see the
       :ref:`diagram <release-source-receptor>`). A release placed at a
       measurement and followed backward in time is what STILT calls a
-      receptor, so PYSTILT writes *release (receptor)*. A :class:`~stilt.PointReceptor` is one
-      point (a tower inlet), a :class:`~stilt.ColumnReceptor` is a vertical
-      column, and a :class:`~stilt.MultiPointReceptor` is a set of points,
+      receptor, so PYSTILT writes *release (receptor)*. A
+      :class:`~stilt.PointRelease` is one point (a tower inlet), a :class:`~stilt.ColumnRelease` is a vertical
+      column, and a :class:`~stilt.MultiPointRelease` is a set of points,
       such as a slanted line of sight. See :doc:`../guides/releases` and
       :doc:`../guides/slant_columns`.
 

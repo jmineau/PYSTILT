@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from stilt.releases import ColumnReceptor
+from stilt.releases import ColumnRelease
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
 from stilt.transport import run_model
 from stilt.transport.hysplit import HysplitConfig
@@ -45,7 +45,7 @@ def _column_trajectory(
     time: dt.datetime = REFERENCE_TIME,
 ):
     """Run a short WBB column simulation and return (release, particles)."""
-    release = ColumnReceptor(
+    release = ColumnRelease(
         time=time, longitude=WBB_LON, latitude=WBB_LAT, bottom=0.0, top=top
     )
     params = HysplitConfig(n_hours=-2, numpar=numpar)

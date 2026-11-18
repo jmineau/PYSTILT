@@ -18,7 +18,7 @@
 {% else %}
 .. class-signature:: {{ fullname }}
 
-{% if objname.endswith('Config') or objname.endswith('GeometrySpec') or objname in ('Bounds', 'Grid', 'Mesh') or objname.endswith('Receptor') %}
+{% if objname.endswith('Config') or objname.endswith('GeometrySpec') or objname in ('Bounds', 'Grid', 'Mesh') or objname.endswith('Release') %}
 Parameters
 ----------
 

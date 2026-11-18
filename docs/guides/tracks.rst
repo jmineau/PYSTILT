@@ -5,7 +5,7 @@ An analyzer on a car, a train, an aircraft, or a ship measures every second
 or so as it moves. Measurements a few seconds apart see nearly the same air,
 so a simulation for each one would cost thousands of transport model runs
 for little gain. :func:`~stilt.observations.releases_from_track` groups the
-measurements along the track and makes one :class:`~stilt.PointReceptor` for
+measurements along the track and makes one :class:`~stilt.PointRelease` for
 each group. It also returns the track with each measurement's release id,
 so after the run you can put the modeled value next to every measurement.
 
