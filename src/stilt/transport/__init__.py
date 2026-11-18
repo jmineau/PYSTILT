@@ -346,6 +346,28 @@ MODELS: dict[str, Callable[[], TransportModel]] = {
     "hysplit": _hysplit,
 }
 
+#: Names that were built-in models and are now a class named by its import
+#: path, so the message for a block or a stored run of that name says which.
+_NAMED_BY_PATH = {"stilt-r": "stilt.stilt_r.StiltRModel"}
+
+
+def _named_by_path(name: str) -> str:
+    """
+    Return what to write for a model *name* that is named by its import path now, or ``""``.
+
+    ``stilt-r`` was built in. Its block takes ``class:
+    stilt.stilt_r.StiltRModel``, and runs imported under the old name have to
+    be imported again, since their folders are named by the model.
+    """
+    path = _NAMED_BY_PATH.get(name)
+    if path is None:
+        return ""
+    return (
+        f" {name!r} is the class {path} now: write class: {path} in its "
+        "models: block. Runs imported under the old name are not found by "
+        "it; import them again with stilt.migration.import_stilt_r."
+    )
+
 
 def get_model(name: str) -> TransportModel:
     """
@@ -372,7 +394,7 @@ def get_model(name: str) -> TransportModel:
         raise ValueError(
             f"Unknown transport model {name!r}. The built-in models are "
             f"{sorted(MODELS)}; another is named by its import path, such as "
-            "mypkg.models.MyModel."
+            f"mypkg.models.MyModel.{_named_by_path(name)}"
         )
     return factory()
 

@@ -44,7 +44,10 @@ def test_get_model_names_the_models_it_knows():
 def test_stilt_r_is_no_built_in_model():
     # PYSTILT's model of imported runs is named by its import path.
     assert list(MODELS) == ["hysplit"]
-    with pytest.raises(ValueError, match="Unknown transport model 'stilt-r'"):
+    with pytest.raises(
+        ValueError,
+        match=r"Unknown transport model 'stilt-r'.*class: stilt\.stilt_r\.StiltRModel",
+    ):
         get_model("stilt-r")
 
 
