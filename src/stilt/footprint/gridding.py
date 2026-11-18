@@ -875,7 +875,12 @@ def calc_footprint(
         and a warning is logged.
     footprint_depth : float, default 0.5
         The depth surface fluxes are mixed through, which the near-field
-        correction reads: the run's own ``footprint_depth``.
+        correction reads: the depth ``foot`` was made with. For HYSPLIT's
+        own ``foot`` that is the run's ``veght``
+        (``sim.variant.transport.veght``); for a ``foot`` the footprint
+        stage computes (``pbl_height``), the footprint's ``footprint_depth``.
+        ``sim.variant.stages["footprint"].footprint_depth`` is the right one
+        either way.
     transforms : sequence, optional
         Particle transforms applied before the footprint is calculated, as
         objects or as the mappings ``config.yaml`` takes
