@@ -18,6 +18,7 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint import gridding
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import read_footprint
+from stilt.footprint.stage import simulation_particles, variant_footprint
 from stilt.output import Output, completed
 from stilt.particles import read_particles
 from stilt.receptors import Receptor
@@ -326,9 +327,10 @@ class Simulation:
         Calculate a footprint from the stored particles, without writing it.
 
         This is :func:`stilt.calc_footprint` with this simulation's
-        particles, receptor, and settings filled in, the run's
-        ``footprint_depth`` among them. Each setting given replaces the
-        variant's own. Use it to try other settings; the
+        particles, receptor, and footprint settings filled in, as the
+        footprint stage makes it: the particles get the ``foot`` those
+        settings ask for (:func:`stilt.footprint.footprint_particles`).
+        Each setting given replaces the variant's own. Use it to try other settings; the
         workers write the variant's own footprint. A relative file name in
         a transform's settings starts from the project directory.
 
@@ -352,15 +354,13 @@ class Simulation:
         ...     grid=hexes.to_grid(cells_per_target=4)
         ... )  # doctest: +SKIP
         """
-        own = self.variant.stages.get("footprint")
-        if own is None:
-            own = FootprintConfig.model_validate({})
+        own = self._footprint_config
         # The variant's geometry names its own grid, not another one.
         geometry_hash = own.geometry_hash if grid is None else None
         grid = grid if grid is not None else own.grid
         if grid is None:
             raise TypeError(f"{self} has no footprint settings; give a grid.")
-        particles = self.particles
+        particles = simulation_particles(self, own)
         try:
             return gridding.calc_footprint(
                 particles,
@@ -371,7 +371,7 @@ class Simulation:
                 else smooth_factor,
                 tres=own.tres if tres is None else tres,
                 hnf_plume=own.hnf_plume if hnf_plume is None else hnf_plume,
-                footprint_depth=self.variant.transport.footprint_depth,
+                footprint_depth=own.footprint_depth,
                 transforms=own.transforms if transforms is None else transforms,
                 name=self.variant.name,
                 directory=self.directory,
@@ -381,6 +381,11 @@ class Simulation:
             return None
 
     @property
+    def _footprint_config(self) -> FootprintConfig:
+        """The footprint settings of this simulation: the variant's, or the defaults with the model's depth (:func:`stilt.footprint.stage.variant_footprint`)."""
+        return variant_footprint(self.variant)
+
+    @property
     def _transforms(self) -> Sequence[Any]:
         """The footprint's particle transforms, which weight the particles; none without a footprint."""
         footprint = self.variant.stages.get("footprint")
@@ -388,13 +393,11 @@ class Simulation:
 
     @property
     def _near_field_settings(self) -> dict[str, Any]:
-        """The near-field correction a footprint of this simulation gets: ``hnf_plume`` and the run's ``footprint_depth``."""
-        footprint = self.variant.stages.get(
-            "footprint"
-        ) or FootprintConfig.model_validate({})
+        """The near-field correction a footprint of this simulation gets: ``hnf_plume`` and ``footprint_depth``."""
+        footprint = self._footprint_config
         return {
             "hnf_plume": footprint.hnf_plume,
-            "footprint_depth": self.variant.transport.footprint_depth,
+            "footprint_depth": footprint.footprint_depth,
         }
 
     def background(self, field: xr.DataArray | pd.Series) -> Background:
@@ -458,9 +461,10 @@ class Simulation:
         >>> sim.transport_error(ensemble, flux)  # doctest: +SKIP
         """
         sims = [error] if isinstance(error, Simulation) else list(error)
+        config = self._footprint_config
         return transport_error(
-            self.particles,
-            [e.particles for e in sims],
+            simulation_particles(self, config),
+            [simulation_particles(e, config) for e in sims],
             flux,
             transforms=self._transforms,
             receptor=self.receptor,

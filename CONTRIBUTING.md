@@ -265,13 +265,10 @@ driver; a test fails if it would land in `SETUP.CFG` unknown to HYSPLIT.
 A transport model owns its config: a subclass of
 `stilt.transport.TransportConfig` with the model's own parameters. The base
 gives the parameters PYSTILT's own code reads whatever the model
-(`n_hours`, `seed`, `footprint_depth`, `pbl_height`, `pbl_height_min`);
-a parameter goes there only when the core reads it, so another model is
-never handed a setting it would ignore. It also gives an `UNRECORDED` set
-of the fields that change no particle (empty unless the subclass names
-some), a `RECORDED_WHEN_SET` set of the fields a run records only when they
-are not at their defaults (so adding them moved no stored run to a new
-settings folder), `settings()` (what a run
+(`n_hours`, `seed`); a parameter goes there only when the core reads it,
+so another model is never handed a setting it would ignore. It also gives
+an `UNRECORDED` set of the fields that change no particle (empty unless the
+subclass names some), `settings()` (what a run
 records), and `realizations(n)` (realization `k` with `seed + k`); override
 those two only where the model differs. The model itself names that class as
 `config_class`, names its met config as `met_config_class`, and gives
@@ -290,12 +287,15 @@ the ARL headers and the crop. A model that reads no files can take any
 keys, with no directory. `met` is that config, its `directory` and
 `subgrid_dir` absolute when it has them, and `window` the `(start, end)`
 the run covers; the model finds its own met from them. `run` returns a `ModelRun`: the particle table (the
-columns of `stilt.particles.PARTICLE_SCHEMA`, `foot`, and what the
-transforms read, with a release row at `age = 0` when the model can write
-one; see `docs/reference/particles.rst`), its log as text, and the met
-files it read. A failed run raises `SimulationError` with its log. PYSTILT
-adds the release heights itself (`stilt.transport.run_model`), and the
-footprint applies the near-field correction (`stilt.calc_footprint`). A model that writes no files sets
+columns of `stilt.particles.PARTICLE_SCHEMA`, `foot` if the model computes
+one, and what the transforms read, with a release row at `age = 0` when the
+model can write one; see `docs/reference/particles.rst`), its log as text,
+and the met files it read. A failed run raises `SimulationError` with its
+log. PYSTILT adds the release heights itself (`stilt.transport.run_model`);
+the footprint stage computes `foot` from the met files when the particles
+have none, and applies the near-field correction (`stilt.calc_footprint`).
+A model whose `foot` is made with a depth records it as `veght`, as
+HYSPLIT does, so the footprint corrects the near field with it. A model that writes no files sets
 `needs_workdir = False` and is handed `workdir=None`. A model that runs
 many receptors in one call, such as an emulator on a GPU, sets
 `batched = True` and gives `run_many(receptors, config, met, windows,

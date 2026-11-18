@@ -543,8 +543,9 @@ def add_foot(
     HYSPLIT computes ``foot`` itself in STILT mode, the same way in its
     turbulence steps. :doc:`/development/validation` says how far a
     footprint made from this ``foot`` is from one made from HYSPLIT's. The
-    worker adds it after a run whose particles have none
-    (:func:`stilt.transport.run_model`).
+    footprint stage calls it when it needs a ``foot`` the particles do not
+    have (:func:`stilt.footprint.footprint_particles`), and stores it
+    nowhere.
 
     Parameters
     ----------

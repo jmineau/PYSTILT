@@ -910,7 +910,7 @@ def test_variants_that_need_zsfc_for_the_same_reason_share_the_row(tmp_path):
     project = _project(
         tmp_path,
         [_above_sea_level_point()],
-        variants={"hrrr": {}, "hrrr-b": {"footprint_depth": 0.3}},
+        variants={"hrrr": {}, "hrrr-b": {"veght": 0.3}},
     )
 
     table = _found(project.check(), "zsfc")

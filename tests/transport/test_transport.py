@@ -306,7 +306,7 @@ def test_run_trajectories_checks_the_models_parameters(tmp_path, point_receptor,
 
 def test_finish_leaves_foot_for_the_footprint_to_correct():
     """The near-field correction is the footprint's: a run's particles keep the model's foot."""
-    from stilt.transport import TransportConfig, _finish
+    from stilt.transport import _finish
 
     particles = _positions_only().assign(
         foot=[1e-5, 2e-5], dens=1.2, samt=1.0, sigw=0.1, tlgr=10.0, mlht=500.0
@@ -332,201 +332,26 @@ def _positions_only() -> pd.DataFrame:
     )
 
 
-def test_finish_computes_foot_from_the_met_files_the_run_read(
-    monkeypatch, tmp_path, caplog
-):
-    from stilt import transport
-    from stilt.transport import TransportConfig, _finish
-
-    seen = {}
-
-    def add_foot(particles, met_files, footprint_depth, **mixed_layer):
-        seen.update(
-            met_files=met_files,
-            footprint_depth=footprint_depth,
-            time=particles["time"],
-            **mixed_layer,
-        )
-        return particles.assign(foot=1.0)
-
-    monkeypatch.setattr(transport, "add_foot", add_foot)
-    met_files = [tmp_path / "met"]
-    with caplog.at_level("INFO", logger="stilt.transport"):
-        run = _finish(
-            ModelRun(_positions_only(), log="model log\n", met_files=met_files),
-            _receptor(),
-            TransportConfig(n_hours=-24, footprint_depth=0.3),
-        )
-
-    assert seen["met_files"] == met_files
-    assert seen["footprint_depth"] == 0.3
-    assert seen["pbl_height"] is None
-    assert seen["pbl_height_min"] == 0.0
-    # The base config has no domain top: the default internal levels.
-    assert seen["z_top"] is None
-    assert seen["time"].tolist() == [
-        pd.Timestamp("2023-01-01 11:59"),
-        pd.Timestamp("2023-01-01 11:58"),
-    ]
-    assert "time" not in run.particles.columns
-    assert run.particles["foot"].tolist() == [1.0, 1.0]
-    assert run.log.startswith("model log\nfoot computed by PYSTILT from the met's PBLH")
-    assert "near-field" not in run.log  # the footprint's step, not the run's
-    assert "foot computed" in caplog.text
-
-
-def test_finish_keeps_the_time_and_mlht_a_model_wrote(monkeypatch, tmp_path):
-    from stilt import transport
-    from stilt.transport import TransportConfig, _finish
-
-    monkeypatch.setattr(
-        transport, "add_foot", lambda p, files, footprint_depth, **k: p.assign(foot=1.0)
-    )
-    time = pd.Timestamp("2023-01-01 11:00")
-    particles = _positions_only().assign(time=time, mlht=800.0)
-    run = _finish(
-        ModelRun(particles, met_files=[tmp_path / "met"]),
-        _receptor(),
-        TransportConfig(n_hours=-24),
-    )
-
-    assert run.particles["time"].tolist() == [time, time]
-    assert "foot computed by PYSTILT from the model's mlht" in run.log
-
-
-def test_finish_says_why_there_is_no_foot_without_met_files():
-    from stilt.transport import TransportConfig, _finish
+def test_finish_adds_no_foot_to_a_model_that_writes_none(tmp_path):
+    """A particle file holds what the model wrote: the footprint computes foot when it needs one."""
+    from stilt.transport import _finish
 
     run = _finish(
-        ModelRun(_positions_only(), met_files=[]),
+        ModelRun(_positions_only(), log="model log\n", met_files=[tmp_path / "met"]),
         _receptor(),
         TransportConfig(n_hours=-24),
     )
 
     assert "foot" not in run.particles.columns
-    assert "no foot: the transport model wrote none, and named no met files" in run.log
+    assert run.log == "model log\n"
 
 
-def test_finish_keeps_the_foot_a_model_wrote(monkeypatch):
-    from stilt import transport
-    from stilt.transport import TransportConfig, _finish
-
-    monkeypatch.setattr(
-        transport, "add_foot", lambda *a, **k: pytest.fail("computed foot")
-    )
-    particles = _positions_only().assign(foot=[1e-3, 2e-3])
-    run = _finish(
-        ModelRun(particles, met_files=[]), _receptor(), TransportConfig(n_hours=-24)
-    )
-
-    assert run.particles["foot"].tolist() == [1e-3, 2e-3]
-    assert run.log == ""
-
-
-def test_finish_with_pbl_height_set_replaces_the_foot_and_mlht_a_model_wrote(
-    monkeypatch, tmp_path
-):
-    from stilt import transport
-    from stilt.transport import TransportConfig, _finish
-
-    seen = {}
-
-    def add_foot(particles, met_files, footprint_depth, **mixed_layer):
-        seen.update(columns=list(particles.columns), **mixed_layer)
-        return particles.assign(foot=5.0, mlht=300.0)
-
-    monkeypatch.setattr(transport, "add_foot", add_foot)
-    particles = _positions_only().assign(foot=[1e-3, 2e-3], mlht=800.0)
-    run = _finish(
-        ModelRun(particles, met_files=[tmp_path / "met"]),
-        _receptor(),
-        TransportConfig(n_hours=-24, pbl_height="richardson", pbl_height_min=150),
-    )
-
-    assert "foot" not in seen["columns"]
-    assert seen["pbl_height"] == "richardson"
-    assert seen["pbl_height_min"] == 150
-    assert run.particles["foot"].tolist() == [5.0, 5.0]
-    assert (
-        "foot computed by PYSTILT from the mixed layer found from the met's "
-        "profile (HYSPLIT's kmixd 3), at least 150 m, and the air below it"
-    ) in run.log
-    assert run.log.rstrip().endswith("in place of the model's foot and mlht")
-
-
-def test_finish_gives_add_foot_the_top_of_a_hysplit_runs_domain(monkeypatch, tmp_path):
-    from stilt import transport
-    from stilt.transport import _finish
-    from stilt.transport.hysplit import HysplitConfig
-
-    seen = {}
-
-    def add_foot(particles, met_files, footprint_depth, **mixed_layer):
-        seen.update(mixed_layer)
-        return particles.assign(foot=5.0, mlht=300.0)
-
-    monkeypatch.setattr(transport, "add_foot", add_foot)
-    _finish(
-        ModelRun(_positions_only().assign(foot=1e-3), met_files=[tmp_path / "met"]),
-        _receptor(),
-        HysplitConfig(n_hours=-24, pbl_height="richardson", z_top=10000.0),
-    )
-
-    assert seen["z_top"] == 10000.0
-
-
-def test_finish_with_pbl_height_set_keeps_the_models_foot_without_met_files(
-    monkeypatch,
-):
-    from stilt import transport
-    from stilt.transport import TransportConfig, _finish
-
-    monkeypatch.setattr(
-        transport, "add_foot", lambda *a, **k: pytest.fail("computed foot")
-    )
-    particles = _positions_only().assign(foot=[1e-3, 2e-3])
-    run = _finish(
-        ModelRun(particles, met_files=[]),
-        _receptor(),
-        TransportConfig(n_hours=-24, pbl_height=500),
-    )
-
-    assert run.particles["foot"].tolist() == [1e-3, 2e-3]
-    assert "pbl_height not applied" in run.log
-
-
-@pytest.mark.parametrize("value", [0, -10.0, "pblh"])
-def test_pbl_height_refuses_a_height_that_is_not_above_the_ground(value):
+@pytest.mark.parametrize("setting", ["footprint_depth", "pbl_height", "pbl_height_min"])
+def test_a_transport_config_has_none_of_the_footprints_foot_settings(setting):
     from pydantic import ValidationError
 
-    from stilt.transport import TransportConfig
-
-    with pytest.raises(ValidationError, match="pbl_height"):
-        TransportConfig(n_hours=-24, pbl_height=value)
-
-
-def test_pbl_height_min_refuses_a_negative_height():
-    from pydantic import ValidationError
-
-    from stilt.transport import TransportConfig
-
-    with pytest.raises(ValidationError, match="pbl_height_min"):
-        TransportConfig(n_hours=-24, pbl_height_min=-1)
-
-
-def test_pbl_height_is_recorded_only_when_set():
-    from stilt.transport import TransportConfig
-
-    unset = TransportConfig(n_hours=-24).settings()
-    assert "pbl_height" not in unset
-    assert "pbl_height_min" not in unset
-    assert (
-        TransportConfig(n_hours=-24, pbl_height="met").settings()["pbl_height"] == "met"
-    )
-    assert (
-        TransportConfig(n_hours=-24, pbl_height_min=150).settings()["pbl_height_min"]
-        == 150
-    )
+    with pytest.raises(ValidationError, match=setting):
+        TransportConfig(n_hours=-24, **{setting: 100.0})
 
 
 def _receptor():
@@ -535,8 +360,3 @@ def _receptor():
     return PointReceptor(
         time="2023-01-01 12:00", longitude=-111.9, latitude=40.7, altitude=5.0
     )
-
-
-def test_a_transport_config_refuses_veght_naming_footprint_depth():
-    with pytest.raises(ValueError, match="veght was renamed footprint_depth"):
-        TransportConfig(n_hours=-24, veght=0.5)

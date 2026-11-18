@@ -13,30 +13,21 @@ another model needs no change to the worker.
 from __future__ import annotations
 
 import datetime as dt
-import logging
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from stilt._plugins import import_class
 from stilt.exceptions import SimulationError
 from stilt.meteorology import run_window
-from stilt.particles import add_foot, add_release_heights, check_particles
+from stilt.particles import add_release_heights, check_particles
 
 if TYPE_CHECKING:
     from stilt.receptors import Receptor
-
-logger = logging.getLogger(__name__)
-
-#: What to say to a config that sets ``veght``, which was renamed.
-VEGHT_RENAMED = (
-    "veght was renamed footprint_depth: the same value, the depth surface "
-    "fluxes are mixed through for the footprint. HYSPLIT still gets it as VEGHT."
-)
 
 
 @dataclass(frozen=True)
@@ -114,8 +105,7 @@ class TransportConfig(BaseModel):
 
     It holds the parameters PYSTILT's own code reads, whatever the model:
     the run length and the seed, which set the run window and the
-    realizations, and the settings PYSTILT uses when it computes ``foot``
-    for any model's particles. Everything else, the particle count included, is the
+    realizations. Everything else, the particle count included, is the
     model's own. A model's config subclasses it with its own
     parameters and is the model's ``config_class``. In ``config.yaml`` the
     parameters are the keys of the model's block under ``models:``, and a
@@ -147,25 +137,6 @@ class TransportConfig(BaseModel):
             )
         return n_hours
 
-    footprint_depth: float = Field(
-        0.5,
-        gt=0,
-        description=(
-            "Height below which a particle's time counts toward the footprint: "
-            "the depth surface fluxes are mixed through. A value of 1 or less "
-            "is a fraction of the mixed-layer height; a larger value is meters "
-            "above ground. HYSPLIT and STILT-R call it ``veght``."
-        ),
-    )
-
-    @model_validator(mode="before")
-    @classmethod
-    def _no_veght(cls, data: Any) -> Any:
-        """Refuse ``veght``, which was renamed ``footprint_depth``."""
-        if isinstance(data, dict) and "veght" in data:
-            raise ValueError(VEGHT_RENAMED)
-        return data
-
     seed: int | None = Field(
         None,
         description=(
@@ -173,62 +144,10 @@ class TransportConfig(BaseModel):
             "Realization ``k`` of a variant runs with ``seed + k``."
         ),
     )
-    pbl_height: Literal["met", "richardson"] | float | None = Field(
-        None,
-        description=(
-            "How PYSTILT finds the mixed-layer height (``mlht``) when it "
-            "computes ``foot``: ``met`` reads the met's ``PBLH``, ``richardson`` "
-            "finds it from the met's profile as HYSPLIT's default ``kmixd: 3`` "
-            "does, and a number is a fixed height in meters above ground. Set, "
-            "PYSTILT computes ``foot`` for any model's particles, HYSPLIT's "
-            "included. Unset, it keeps the model's ``foot``; for a model that "
-            "writes none it uses the model's ``mlht``, or else the met's "
-            "``PBLH``."
-        ),
-    )
-    pbl_height_min: float = Field(
-        0.0,
-        description=(
-            "Lowest mixed-layer height, in meters, for a height PYSTILT finds "
-            "itself (``pbl_height``, or the met's ``PBLH`` when unset), as "
-            "``kmix0`` is for HYSPLIT. 0 sets no minimum."
-        ),
-    )
-
-    #: PYSTILT's own settings that a run records only when they are not at
-    #: their defaults, so that adding them moved no stored run to a new
-    #: settings folder.
-    RECORDED_WHEN_SET: ClassVar[frozenset[str]] = frozenset(
-        {"pbl_height", "pbl_height_min"}
-    )
-
-    @field_validator("pbl_height")
-    @classmethod
-    def _pbl_height_is_positive(
-        cls, pbl_height: str | float | None
-    ) -> str | float | None:
-        """Refuse a fixed mixed-layer height that is not above the ground."""
-        if isinstance(pbl_height, float) and not pbl_height > 0:
-            raise ValueError(
-                "pbl_height must be met, richardson, or a height above 0 m."
-            )
-        return pbl_height
-
-    @field_validator("pbl_height_min")
-    @classmethod
-    def _pbl_height_min_is_not_negative(cls, pbl_height_min: float) -> float:
-        """Refuse a negative minimum mixed-layer height."""
-        if pbl_height_min < 0:
-            raise ValueError("pbl_height_min must be 0 m or more.")
-        return pbl_height_min
 
     def settings(self) -> dict[str, Any]:
-        """Return what a run records of this config: every field but the :attr:`UNRECORDED` ones, and those of :attr:`RECORDED_WHEN_SET` only when set."""
-        data = self.model_dump(mode="json", exclude=set(self.UNRECORDED))
-        for name in self.RECORDED_WHEN_SET:
-            if getattr(self, name) == type(self).model_fields[name].default:
-                data.pop(name, None)
-        return data
+        """Return what a run records of this config: every field but the :attr:`UNRECORDED` ones."""
+        return self.model_dump(mode="json", exclude=set(self.UNRECORDED))
 
     def realizations(self, n: int) -> list[Self]:
         """
@@ -478,13 +397,14 @@ def run_model(
     Run the transport model called *name* for one receptor, and finish its particles.
 
     The particles are checked against the particle table
-    (:func:`stilt.particles.check_particles`), get their release heights
-    (:func:`stilt.particles.add_release_heights`), and ``foot`` when the
-    model wrote none (:func:`stilt.particles.add_foot`). These steps are
-    PYSTILT's, the same for any model. ``foot`` is computed from the met
-    files the run read, and the run's log says so. The near-field
-    correction is not applied here: :func:`stilt.calc_footprint` applies it
-    when it makes a footprint (``hnf_plume``).
+    (:func:`stilt.particles.check_particles`) and get their release heights
+    (:func:`stilt.particles.add_release_heights`). These steps are
+    PYSTILT's, the same for any model. Nothing else is added: ``foot`` is
+    the model's own, or missing for a model that writes none, and the
+    footprint stage computes one when it needs it
+    (:func:`stilt.footprint.footprint_particles`). The near-field
+    correction is not applied here either: :func:`stilt.calc_footprint`
+    applies it when it makes a footprint (``hnf_plume``).
 
     Parameters
     ----------
@@ -574,11 +494,12 @@ def run_model_many(
 
 def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> ModelRun:
     """
-    Return *run* with its particles checked, their release heights, and ``foot``.
+    Return *run* with its particles checked and their release heights.
 
     Particles that stop before the end of the run are kept: the transport
     model fails a run cut short by its meteorology itself, and particles
-    that all left the met's domain are a complete run.
+    that all left the met's domain are a complete run. The particles keep
+    the columns the model wrote: ``foot`` is the model's own, or missing.
 
     Raises
     ------
@@ -592,78 +513,7 @@ def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> Model
             log=run.log,
         )
     check_particles(run.particles)
-    particles = add_release_heights(run.particles, receptor)
-    log = run.log
-    if "foot" not in particles.columns or config.pbl_height is not None:
-        particles, note = _computed_foot(particles, receptor, config, run.met_files)
-        logger.info("%s: %s", receptor.id, note)
-        log = f"{log}{note}\n"
-    return replace(run, particles=particles, log=log)
-
-
-def _computed_foot(
-    particles: pd.DataFrame,
-    receptor: Receptor,
-    config: TransportConfig,
-    met_files: list[Path],
-) -> tuple[pd.DataFrame, str]:
-    """
-    Return *particles* with ``foot`` (:func:`stilt.particles.add_foot`), and a log line saying how it was made.
-
-    ``foot`` needs the met files the run read, for the air below the mixing
-    depth, and for ``mlht`` when PYSTILT finds it. Without them, the
-    particles are returned as they are and the line says so: a footprint
-    from them then fails for want of ``foot``, or, with ``pbl_height`` set,
-    uses the model's own. With ``pbl_height`` set, the model's ``foot`` and
-    ``mlht`` are replaced. ``pbl_height: richardson`` works on HYSPLIT's
-    internal levels, for the run's own ``z_top`` when the model has one
-    (HYSPLIT's), else for HYSPLIT's default top.
-    """
-    replaced = "foot" in particles.columns
-    if not met_files:
-        if replaced:
-            return particles, (
-                "pbl_height not applied: the transport model named no met files "
-                "to compute foot from, so its own foot is kept"
-            )
-        return particles, (
-            "no foot: the transport model wrote none, and named no met files "
-            "to compute it from"
-        )
-    if replaced:
-        particles = particles.drop(columns="foot")
-    pbl_height = config.pbl_height
-    if pbl_height is None and "mlht" in particles.columns:
-        mlht = "the model's mlht"
-    elif pbl_height is None or pbl_height == "met":
-        mlht = "the met's PBLH"
-    elif pbl_height == "richardson":
-        mlht = "the mixed layer found from the met's profile (HYSPLIT's kmixd 3)"
-    else:
-        mlht = f"a mixed layer of {pbl_height:g} m"
-    if config.pbl_height_min > 0 and mlht != "the model's mlht":
-        mlht += f", at least {config.pbl_height_min:g} m,"
-    added_time = "time" not in particles.columns
-    if added_time:
-        particles = particles.assign(
-            time=pd.Timestamp(receptor.time)
-            + pd.to_timedelta(particles["age"].to_numpy(), unit="min")
-        )
-    particles = add_foot(
-        particles,
-        met_files,
-        config.footprint_depth,
-        pbl_height=pbl_height,
-        pbl_height_min=config.pbl_height_min,
-        z_top=getattr(config, "z_top", None),
-    )
-    if added_time:
-        particles = particles.drop(columns="time")
-    instead = " in place of the model's foot and mlht" if replaced else ""
-    return particles, (
-        f"foot computed by PYSTILT from {mlht} and the air below it in the met "
-        f"files (stilt.particles.add_foot){instead}"
-    )
+    return replace(run, particles=add_release_heights(run.particles, receptor))
 
 
 def run_trajectories(
@@ -712,10 +562,12 @@ def run_trajectories(
     pandas.DataFrame
         The particle table, one row per particle per output step, with
         ``time`` (UTC), the receptor time plus ``age``, as a table read from
-        a particle file has. Its ``foot`` has no near-field correction:
+        a particle file has. ``foot`` is the model's own (HYSPLIT's, made
+        with ``veght``), with no near-field correction:
         :func:`stilt.calc_footprint` applies it (``hnf_plume``), given the
-        same ``footprint_depth``. STILT-R's ``calc_trajectory`` applies it
-        here.
+        same depth as ``footprint_depth``. STILT-R's ``calc_trajectory``
+        applies it here. A model that writes no ``foot`` returns none:
+        :func:`stilt.particles.add_foot` computes one.
 
     Raises
     ------

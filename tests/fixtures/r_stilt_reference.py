@@ -256,14 +256,16 @@ class ReferenceScenario:
                     "numpar": self.numpar,
                     "krand": self.krand,
                     "seed": self.seed,
-                    "footprint_depth": self.veght,
+                    "veght": self.veght,
                     "varsiwant": [*REFERENCE_VARSIWANT, *self.extra_varsiwant],
                 }
             },
             "stages": {
                 "footprint": {
                     "class": FOOTPRINT_STAGE,
-                    **self.make_footprint_config().model_dump(),
+                    # The settings written, not every default: a footprint
+                    # on HYSPLIT's foot takes veght as its footprint_depth.
+                    **self.make_footprint_config().model_dump(exclude_unset=True),
                 }
             },
             # The fidelity tests read SETUP.CFG afterwards.

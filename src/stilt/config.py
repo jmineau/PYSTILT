@@ -50,7 +50,6 @@ from stilt.identity import canonical, run_settings, settings_hash, stage_hash
 from stilt.stages import Stage, get_stage, ordered, reads
 from stilt.transport import (
     MODELS,
-    VEGHT_RENAMED,
     ModelInfo,
     TransportConfig,
     get_model,
@@ -1108,7 +1107,7 @@ def _overridden(block: _StageBlock, own: dict[str, Any], where: str) -> dict[str
     ValueError
         If the config class refuses the variant's changes.
     """
-    base = block.config.model_dump()
+    base = block.config.model_dump(exclude_unset=True)
     override = getattr(block.stage.config_class, "override", None)
     if override is None:
         return {**base, **own}
@@ -1255,8 +1254,6 @@ def _check_keys(
     for key in keys:
         if key in allowed or key == "from":  # "from:" has its own message
             continue
-        if key == "veght":
-            raise ValueError(f"{where}: {VEGHT_RENAMED}")
         if key in elsewhere:
             raise ValueError(f"{where}: {key!r} is {elsewhere[key]}")
         close = difflib.get_close_matches(str(key), [*allowed, *elsewhere], n=1)

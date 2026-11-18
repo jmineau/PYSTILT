@@ -526,6 +526,36 @@ def test_adding_a_footprint_only_variant_runs_no_hysplit(
     assert grown.incomplete().empty
 
 
+@integration
+def test_pbl_height_is_the_footprints_and_shares_the_run(
+    tmp_path, wbb_receptor, wbb_config
+):
+    """Variants that differ only in how PYSTILT computes foot share one HYSPLIT run."""
+    richardson = {
+        "stages": {"footprint": {"pbl_height": "richardson", "pbl_height_min": 150}}
+    }
+    config = _with(wbb_config, variants={"hrrr": {}, "rich": richardson})
+    project = Project.init(tmp_path / "pbl", config=config, receptors=[wbb_receptor])
+    project.run()
+
+    own = project.simulation(*_sim_id(wbb_receptor))
+    computed = project.simulation(*_sim_id(wbb_receptor, "rich"))
+    assert project.incomplete().empty
+    assert computed.particles_path == own.particles_path
+    assert len(project.output.hashes("footprint")) == 2
+    # The particle file holds HYSPLIT's foot; the computed one is stored nowhere.
+    stored = pd.read_parquet(own.particles_path, columns=["foot"])["foot"]
+    assert stored.equals(own.particles["foot"])
+    assert own.footprint is not None and computed.footprint is not None
+    assert float(abs(own.footprint - computed.footprint).sum()) > 0
+    # The stored footprint is the one the simulation makes again.
+    again = computed.calc_footprint()
+    assert again is not None
+    assert float(again.sum()) == pytest.approx(
+        float(computed.footprint.sum()), rel=1e-6
+    )
+
+
 # ---------------------------------------------------------------------------
 # CLI - stilt run via CliRunner
 # ---------------------------------------------------------------------------

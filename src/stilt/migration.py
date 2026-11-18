@@ -46,7 +46,6 @@ from stilt.receptors import Receptor
 from stilt.spatial import Grid
 from stilt.transport.hysplit.config import (
     FIXED_SETUP,
-    SETUP_NAMES,
     WIND_ERROR_SETTINGS,
     ZI_ERROR_SETTINGS,
 )
@@ -711,7 +710,11 @@ def import_stilt_r(
             folder, receptor, particles, control, stored, rslurm, smooth_factor
         )
         if foot is not None:
-            foot_config = foot.stilt.config.model_copy(update={"hnf_plume": hnf_plume})
+            # STILT-R's footprints are made from HYSPLIT's foot, so the
+            # depth is the run's veght, as the footprint stage resolves it.
+            foot_config = foot.stilt.config.model_copy(
+                update={"hnf_plume": hnf_plume, "footprint_depth": hysplit["veght"]}
+            )
             first_foot = first_foot or (foot_config, folder)
             _agree(
                 footprint_settings(first_foot[0]),
@@ -794,8 +797,6 @@ def _hysplit_settings(folder: Path, control: ControlFile) -> tuple[dict[str, Any
         )
     setup = read_namelist(path)
     setup = {k: v for k, v in setup.items() if k not in FIXED_SETUP}
-    pystilt_names = {hysplit: ours for ours, hysplit in SETUP_NAMES.items()}
-    setup = {pystilt_names.get(k, k): v for k, v in setup.items()}
     unknown = sorted(set(setup) - set(StiltRConfig.model_fields) - set(_SETUP_ONLY))
     if unknown:
         raise ValueError(

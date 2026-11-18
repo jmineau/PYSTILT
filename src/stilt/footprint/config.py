@@ -145,7 +145,7 @@ def _minutes(tres: str | timedelta) -> int:
 
 class FootprintConfig(BaseModel):
     """
-    Footprint settings: the grid, smoothing, the near-field correction, and particle transforms.
+    Footprint settings: the grid, smoothing, the near-field correction, ``foot``, and particle transforms.
 
     The config and each variant hold these as their defaults and overrides,
     and every footprint keeps the settings it was calculated with.
@@ -207,6 +207,43 @@ class FootprintConfig(BaseModel):
             "Needs the particle columns ``dens``, ``tlgr``, ``sigw``, ``foot``, "
             "``mlht``, and ``samt``, and ``zsfc`` for a receptor above sea "
             "level; particles without them get no correction."
+        ),
+    )
+    footprint_depth: float = Field(
+        0.5,
+        gt=0,
+        description=(
+            "Height below which a particle's time counts toward the ``foot`` "
+            "PYSTILT computes: the depth surface fluxes are mixed through. A "
+            "value of 1 or less is a fraction of the mixed-layer height; a "
+            "larger value is meters above ground. It is used when PYSTILT "
+            "computes ``foot`` (``pbl_height`` set, or particles without "
+            "``foot``). A footprint from HYSPLIT's own ``foot`` takes HYSPLIT's "
+            "``veght`` instead, and records it here; a different value written "
+            "for such a footprint is refused."
+        ),
+    )
+    pbl_height: Literal["met", "richardson"] | float | None = Field(
+        None,
+        description=(
+            "How PYSTILT finds the mixed-layer height (``mlht``) when it "
+            "computes ``foot``: ``met`` reads the met's ``PBLH``, ``richardson`` "
+            "finds it from the met's profile as HYSPLIT's ``kmixd: 3`` does, "
+            "and a number is a fixed height in meters above ground. Set, the "
+            "footprint is made from a ``foot`` PYSTILT computes from the met "
+            "files the run read, in place of the transport model's own. Unset, "
+            "it uses the model's ``foot``; for particles without one it "
+            "computes ``foot`` from the model's ``mlht``, or else the met's "
+            "``PBLH``."
+        ),
+    )
+    pbl_height_min: float = Field(
+        0.0,
+        ge=0,
+        description=(
+            "Lowest mixed-layer height, in meters, for a height PYSTILT finds "
+            "itself (``pbl_height``, or the met's ``PBLH`` when unset), as "
+            "``kmix0`` is for HYSPLIT. 0 sets no minimum."
         ),
     )
     transforms: list[Any] = Field(
@@ -334,6 +371,18 @@ class FootprintConfig(BaseModel):
         if isinstance(data, dict) and data.get("time_integrate"):
             raise ValueError(TIME_INTEGRATE_REMOVED)
         return data
+
+    @field_validator("pbl_height")
+    @classmethod
+    def _pbl_height_is_positive(
+        cls, pbl_height: str | float | None
+    ) -> str | float | None:
+        """Refuse a fixed mixed-layer height that is not above the ground."""
+        if isinstance(pbl_height, float) and not pbl_height > 0:
+            raise ValueError(
+                "pbl_height must be met, richardson, or a height above 0 m."
+            )
+        return pbl_height
 
     @field_validator("transforms", mode="before")
     @classmethod

@@ -112,9 +112,9 @@ def test_n_hours_must_not_be_zero():
         ("z_top", 0.0),
         ("outdt", -1),
         ("emisshrs", -0.01),
-        ("footprint_depth", -1.0),
-        ("footprint_depth", 0.0),
-        ("footprint_depth", float("nan")),
+        ("veght", -1.0),
+        ("veght", 0.0),
+        ("veght", float("nan")),
     ],
 )
 def test_a_physical_setting_out_of_its_range_is_refused(field, value):

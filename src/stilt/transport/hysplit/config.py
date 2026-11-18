@@ -34,10 +34,6 @@ ZI_ERROR_SETTINGS = ("sigzierr", "tlzierr", "horcorzierr")
 #: mode overrides them (``DELT`` to ``IDSP``). Some break a run when changed:
 #: ``ICHEM=0`` and ``IDSP=1`` write no particle file, and ``INITD`` 1 or 4
 #: releases puffs.
-#: Settings whose ``SETUP.CFG`` entry has another name: PYSTILT's name to
-#: HYSPLIT's. ``footprint_depth`` is read by PYSTILT's own code too, so it
-#: has a name that says what it does.
-SETUP_NAMES: dict[str, str] = {"footprint_depth": "veght"}
 
 #: The particle variables ``hycs_std`` writes when ``SETUP.CFG`` names none,
 #: its own default ``VARSIWANT``, in its order.
@@ -349,6 +345,19 @@ class HysplitConfig(TransportConfig):
         1.0,
         description="Vertical mixing scale factor, used by the ``kzmix`` scaling modes.",
     )
+    veght: float = Field(
+        0.5,
+        gt=0,
+        description=(
+            "Height below which HYSPLIT counts a particle's time toward its "
+            "``foot``: the depth surface fluxes are mixed through. A value of 1 "
+            "or less is a fraction of the mixed-layer height; a larger value is "
+            "meters above ground. A footprint from HYSPLIT's ``foot`` reads it "
+            "for the near-field correction too. The footprint stage's "
+            "``footprint_depth`` is the same depth for a ``foot`` PYSTILT "
+            "computes (``pbl_height``)."
+        ),
+    )
     vscale: float = Field(
         200.0,
         description="Vertical Lagrangian timescale, in seconds.",
@@ -582,7 +591,6 @@ class HysplitConfig(TransportConfig):
 __all__ = [
     "FIXED_SETUP",
     "HYSPLIT_VARSIWANT",
-    "SETUP_NAMES",
     "MAX_ZISCALE_HOURS",
     "WIND_ERROR_SETTINGS",
     "ZI_ERROR_SETTINGS",

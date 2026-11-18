@@ -257,12 +257,13 @@ ignore_imports = [
     "stilt.simulation -> stilt.footprint.config",
     "stilt.simulation -> stilt.footprint.gridding",
     "stilt.simulation -> stilt.footprint.io",
+    "stilt.simulation -> stilt.footprint.stage",
     "stilt.simulation -> stilt.background",
     "stilt.simulation -> stilt.transport_error",
     # Project.footprints(), Project.jacobian() and Project.transport_error().
     "stilt.project -> stilt.footprint",
     "stilt.project -> stilt.footprint.aggregation",
-    "stilt.project -> stilt.footprint.config",
+    "stilt.project -> stilt.footprint.stage",
     "stilt.project -> stilt.footprint.io",
     "stilt.project -> stilt.transport_error",
 ]

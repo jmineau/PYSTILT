@@ -55,28 +55,30 @@ def test_the_config_reads_back_what_the_stage_records(config):
     check_stage(FootprintStage(), config)
 
 
-#: The footprint hashes of three variants before footprints were a stage, on
-#: particles with the hash below. A footprint made then must be found now.
+#: The footprint hashes of three variants on particles with the hash below,
+#: pinned so that a change that moves every stored footprint folder does so
+#: on purpose. The footprint's foot settings (footprint_depth, pbl_height,
+#: pbl_height_min) moved them last.
 PARTICLES = "90841c632620fa42b5797789b8e3b2f071ca6077ad48fe8a7a77d99f72758bb9"
-BEFORE_STAGES = {
+PINNED = {
     "plain": (
         FootprintConfig(grid=GRID),
-        "4389b89ed19c2b791a491280a0639e980e4865186d51d04c1143b7c4a1de03fe",
+        "4ed38a01979b47520a600e3e7b1f0e08ebd928201df0c70fda8df14ac05e340c",
     ),
     "smooth": (
         FootprintConfig(grid=GRID, smooth_factor=0.5, tres="15min", hnf_plume=False),
-        "063eca80fece2765cfd04fb2e813e6f2ab071d162a28bade0057e8fdc8f75aed",
+        "3bbe31b35cbf35a0fcb2d4ca18b133dc4786abdea103ea0630a96dbf1693e481",
     ),
     "geometry": (
         FootprintConfig(grid=GRID, geometry=H3, geometry_hash="abc123"),
-        "36adbc0225a639ee1541079e3c1cb88d3aec41bc4246054d0ac33dd48d65b99f",
+        "34c811e2966074cc0d5dbcc19319fed2008a0bfe6912330ce054b8d04b37f4c5",
     ),
 }
 
 
-@pytest.mark.parametrize("name", list(BEFORE_STAGES))
-def test_the_footprint_hash_is_what_it_was_before_stages(name):
-    config, expected = BEFORE_STAGES[name]
+@pytest.mark.parametrize("name", list(PINNED))
+def test_the_footprint_hash_is_pinned(name):
+    config, expected = PINNED[name]
     variant = make_variant(footprint=config)
     assert variant.stage_hashes_on(PARTICLES) == {"footprint": expected}
     # On the variant's own particles, the same rule.
@@ -355,3 +357,236 @@ def test_a_footprint_stage_under_another_name_writes_its_own_files(tmp_path):
     assert meta[b"stilt:particles_hash"].decode() == variant.particles_hash
     foot = read_footprint(path)
     assert foot is not None and foot.stilt.config.smooth_factor == 0.5
+
+
+# -- the depth and foot -------------------------------------------------------
+
+
+def test_the_foot_settings_are_the_footprints_and_read_back():
+    config = FootprintConfig(
+        grid=GRID, footprint_depth=0.3, pbl_height="richardson", pbl_height_min=150
+    )
+    check_stage(FootprintStage(), config)
+    settings = FootprintStage().settings(config)
+    assert (
+        settings["footprint_depth"],
+        settings["pbl_height"],
+        settings["pbl_height_min"],
+    ) == (0.3, "richardson", 150.0)
+
+
+@pytest.mark.parametrize("value", [0, -10.0, "pblh"])
+def test_pbl_height_refuses_a_height_that_is_not_above_the_ground(value):
+    with pytest.raises(ValueError, match="pbl_height"):
+        FootprintConfig(pbl_height=value)
+
+
+@pytest.mark.parametrize(
+    ("setting", "value"),
+    [("pbl_height_min", -1.0), ("footprint_depth", 0.0), ("footprint_depth", -1.0)],
+)
+def test_a_negative_depth_is_refused(setting, value):
+    with pytest.raises(ValueError, match=setting):
+        FootprintConfig(**{setting: value})
+
+
+def test_on_hysplits_foot_the_footprint_takes_the_runs_veght():
+    """The near-field correction reads the depth HYSPLIT made its foot with, and the record says it."""
+    resolved = _resolve(FootprintConfig(grid=GRID), veght=0.3, varsiwant=ALL_COLUMNS)
+    assert resolved.footprint_depth == 0.3
+
+
+def test_a_footprint_depth_written_equal_to_veght_is_kept():
+    resolved = _resolve(
+        FootprintConfig(grid=GRID, footprint_depth=0.3),
+        veght=0.3,
+        varsiwant=ALL_COLUMNS,
+    )
+    assert resolved.footprint_depth == 0.3
+
+
+def test_a_footprint_depth_unlike_veght_on_hysplits_foot_is_refused():
+    with pytest.raises(
+        ValueError,
+        match=r"footprint_depth is 0.3, and the footprint is made from the hysplit "
+        r"model's own foot, which it made with veght 0.5. Set veght: 0.3 in the "
+        r"model's settings for that depth, or set pbl_height so that PYSTILT "
+        r"computes foot with footprint_depth.",
+    ):
+        _resolve(FootprintConfig(grid=GRID, footprint_depth=0.3), veght=0.5)
+
+
+@pytest.mark.parametrize(
+    ("config", "model_settings"),
+    [
+        # PYSTILT computes foot: with pbl_height set ...
+        ({"pbl_height": "met"}, {"veght": 0.5}),
+        # ... for particles HYSPLIT is not asked to give a foot ...
+        ({}, {"veght": 0.5, "varsiwant": ["time", "indx", "long", "lati", "zagl"]}),
+        # ... and for a model that records no depth.
+        ({}, {}),
+    ],
+    ids=["pbl_height", "no foot in varsiwant", "no veght"],
+)
+def test_a_foot_pystilt_computes_keeps_the_footprints_depth(config, model_settings):
+    resolved = _resolve(
+        FootprintConfig(grid=GRID, footprint_depth=0.3, hnf_plume=False, **config),
+        **model_settings,
+    )
+    assert resolved.footprint_depth == 0.3
+
+
+def _particles(**columns) -> pd.DataFrame:
+    """Two rows of one particle, with *columns* added."""
+    return pd.DataFrame(
+        {
+            "particle": [1.0, 1.0],
+            "age": [-1.0, -2.0],
+            "lon": [-111.9, -112.0],
+            "lat": [40.7, 40.6],
+            "zagl": [5.0, 900.0],
+            **columns,
+        }
+    )
+
+
+@pytest.fixture
+def add_foot(monkeypatch):
+    """Stand in for add_foot, recording what it was given."""
+    from stilt.footprint import stage
+
+    seen: dict = {}
+
+    def fake(particles, met_files, footprint_depth, **mixed_layer):
+        seen.update(
+            columns=list(particles.columns),
+            met_files=met_files,
+            footprint_depth=footprint_depth,
+            **mixed_layer,
+        )
+        return particles.assign(foot=5.0, mlht=300.0)
+
+    monkeypatch.setattr(stage, "add_foot", fake)
+    return seen
+
+
+def test_the_models_own_foot_is_used_as_it_is(add_foot):
+    from stilt.footprint import footprint_particles
+
+    particles = _particles(foot=[1e-3, 2e-3])
+    out = footprint_particles(particles, FootprintConfig(), [])
+    assert out is particles
+    assert add_foot == {}
+
+
+def test_a_positions_only_run_gets_a_foot_from_its_met_files(
+    add_foot, tmp_path, caplog
+):
+    from stilt.footprint import footprint_particles
+
+    met = tmp_path / "met"
+    met.touch()
+    particles = _particles(time=pd.Timestamp("2023-01-01 11:59"))
+    config = FootprintConfig(footprint_depth=0.3)
+    with caplog.at_level("INFO", logger="stilt.footprint.stage"):
+        out = footprint_particles(particles, config, [met], z_top=10000.0)
+
+    assert out["foot"].tolist() == [5.0, 5.0]
+    assert "foot" not in particles.columns  # stored nowhere, the input untouched
+    assert add_foot["met_files"] == [met]
+    assert add_foot["footprint_depth"] == 0.3
+    assert (add_foot["pbl_height"], add_foot["pbl_height_min"]) == (None, 0.0)
+    assert add_foot["z_top"] == 10000.0
+    assert "foot computed by PYSTILT from the met's PBLH" in caplog.text
+
+
+def test_pbl_height_replaces_the_models_foot(add_foot, tmp_path, caplog):
+    from stilt.footprint import footprint_particles
+
+    met = tmp_path / "met"
+    met.touch()
+    particles = _particles(time=pd.Timestamp("2023-01-01"), foot=1e-3, mlht=800.0)
+    config = FootprintConfig(pbl_height="richardson", pbl_height_min=150)
+    with caplog.at_level("INFO", logger="stilt.footprint.stage"):
+        out = footprint_particles(particles, config, [met])
+
+    assert "foot" not in add_foot["columns"]
+    assert (add_foot["pbl_height"], add_foot["pbl_height_min"]) == ("richardson", 150)
+    assert out["foot"].tolist() == [5.0, 5.0]
+    assert particles["foot"].tolist() == [1e-3, 1e-3]
+    assert (
+        "the mixed layer found from the met's profile (HYSPLIT's kmixd 3), at "
+        "least 150 m,"
+    ) in caplog.text
+    assert "in place of the model's foot" in caplog.text
+
+
+def test_a_foot_to_compute_needs_the_met_files_where_the_run_read_them(
+    add_foot, tmp_path
+):
+    from stilt.footprint import footprint_particles
+
+    with pytest.raises(FileNotFoundError, match="the run named none"):
+        footprint_particles(_particles(), FootprintConfig(), [])
+    gone = tmp_path / "hrrr_20230101"
+    with pytest.raises(
+        FileNotFoundError,
+        match=rf"{gone} is not there any more \(nor 1 more\). Put the met files back",
+    ):
+        footprint_particles(_particles(), FootprintConfig(), [gone, tmp_path / "b"])
+    assert add_foot == {}
+
+
+def test_a_stored_runs_met_files_are_read_only_to_compute_foot(
+    add_foot, tmp_path, monkeypatch
+):
+    from stilt.footprint import stage
+    from stilt.particles import write_particles
+    from stilt.receptors import PointReceptor
+
+    met = tmp_path / "met"
+    met.touch()
+    receptor = PointReceptor(
+        time="2023-01-01 12:00", longitude=-111.9, latitude=40.7, altitude=5.0
+    )
+    path = write_particles(
+        tmp_path / "p.parquet", _particles(foot=1e-3), receptor, {}, [met]
+    )
+    particles = _particles(foot=1e-3)  # in memory, without time
+
+    # HYSPLIT's foot: the file's metadata is not read.
+    monkeypatch.setattr(
+        stage, "particles_metadata", lambda p: pytest.fail("read the metadata")
+    )
+    assert stage.stored_particles(particles, FootprintConfig(), path) is particles
+    monkeypatch.undo()
+    monkeypatch.setattr(stage, "add_foot", _record_time(add_foot))
+
+    out = stage.stored_particles(
+        particles, FootprintConfig(pbl_height=500.0), path, start=receptor.time
+    )
+    assert add_foot["met_files"] == [met]
+    assert add_foot["time"] == [
+        pd.Timestamp("2023-01-01 11:59"),
+        pd.Timestamp("2023-01-01 11:58"),
+    ]
+    assert "time" not in out.columns  # given for add_foot, then taken off
+
+
+def _record_time(seen: dict):
+    """An add_foot that records the time and met files it was given."""
+
+    def fake(particles, met_files, footprint_depth, **mixed_layer):
+        seen.update(met_files=met_files, time=particles["time"].tolist())
+        return particles.drop(columns="foot", errors="ignore").assign(foot=5.0)
+
+    return fake
+
+
+def test_a_variant_without_a_footprint_corrects_with_its_runs_veght():
+    from stilt.footprint.stage import variant_footprint
+
+    plain = make_variant(veght=0.3)
+    assert variant_footprint(plain).footprint_depth == 0.3
+    own = make_variant(footprint=FootprintConfig(grid=GRID, footprint_depth=0.7))
+    assert variant_footprint(own).footprint_depth == 0.7

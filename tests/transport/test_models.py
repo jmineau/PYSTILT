@@ -255,7 +255,6 @@ def test_a_model_config_inherits_the_recorded_settings_and_realizations():
 
     assert config.settings() == {
         "n_hours": -6,
-        "footprint_depth": 0.5,
         "seed": 5,
         "nparticles": 10,
     }
