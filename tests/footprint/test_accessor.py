@@ -3,7 +3,7 @@
 import pytest
 import xarray as xr
 
-from stilt.releases import PointReceptor
+from stilt.releases import PointRelease
 
 from ..fixtures.footprints import as_footprint, make_footprint
 
@@ -35,7 +35,7 @@ def test_accessor_says_what_is_missing_without_attributes():
 def test_footprints_stack_along_the_release_coordinate():
     """xr.concat labels a stack of footprints by release with no extra work."""
     a = make_footprint()
-    other = PointReceptor(
+    other = PointRelease(
         time=a.stilt.release.time, longitude=-112.0, latitude=40.0, altitude=5.0
     )
     b = as_footprint(a * 2, other, a.stilt.config, "slv")

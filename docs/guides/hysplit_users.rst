@@ -34,11 +34,11 @@ starting locations of ``CONTROL``:
    * - In HYSPLIT
      - In PYSTILT
    * - A starting time and one starting location
-     - A :class:`~stilt.PointReceptor`
+     - A :class:`~stilt.PointRelease`
    * - Several starting locations at one time
-     - A :class:`~stilt.MultiPointReceptor`
+     - A :class:`~stilt.MultiPointRelease`
    * - Two heights at one location, a line source
-     - A :class:`~stilt.ColumnReceptor`
+     - A :class:`~stilt.ColumnRelease`
    * - ``KMSL``, heights above ground or above sea level
      - The release's ``altitude_ref``, ``"agl"`` or ``"msl"``
    * - The settings of one ``CONTROL`` and ``SETUP.CFG``
@@ -57,7 +57,7 @@ hour and are followed 6 hours forward:
 
    import stilt
 
-   start = stilt.PointReceptor(
+   start = stilt.PointRelease(
        time="2021-07-15 01:00", longitude=-111.85, latitude=40.77, altitude=500
    )
    cloud = stilt.run_trajectories(
@@ -122,7 +122,7 @@ So the mean of many particles is the center of a cloud that spreads as it
 goes, which is a different thing from a trajectory. For a trajectory, run one
 particle.
 For several trajectories from one time, use a
-:class:`~stilt.MultiPointReceptor` with ``numpar`` equal to its number of
+:class:`~stilt.MultiPointRelease` with ``numpar`` equal to its number of
 locations: HYSPLIT gives each location one particle.
 
 Many runs: a project

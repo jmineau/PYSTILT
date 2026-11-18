@@ -10,7 +10,7 @@ from stilt import Project
 from stilt.config import ProjectConfig
 from stilt.exceptions import SimulationError
 from stilt.meteorology import run_window
-from stilt.releases import PointReceptor
+from stilt.releases import PointRelease
 from stilt.transport.hysplit import FailureReason, HysplitConfig, HysplitModel
 from tests.fixtures.factories import blocks
 
@@ -18,7 +18,7 @@ from ...fixtures.factories import make_hysplit_dir, make_met_config, make_met_fi
 
 VARS = ["time", "indx", "long", "lati", "zagl", "foot"]
 N_HOURS = -24
-RELEASE = PointReceptor(
+RELEASE = PointRelease(
     time=dt.datetime(2023, 1, 1, 12, 0), longitude=-111.85, latitude=40.77, altitude=5.0
 )
 

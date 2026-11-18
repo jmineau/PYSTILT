@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from stilt.config import ProjectConfig
-from stilt.releases import ColumnReceptor, MultiPointReceptor, PointReceptor
+from stilt.releases import ColumnRelease, MultiPointRelease, PointRelease
 from stilt.spatial import Grid
 from tests.fixtures.factories import blocks
 
@@ -181,7 +181,7 @@ def met_dir() -> Path:
 @pytest.fixture
 def point_release():
     """A simple single-point release."""
-    return PointReceptor(
+    return PointRelease(
         time=dt.datetime(2023, 1, 1, 12, 0),
         longitude=-111.85,
         latitude=40.77,
@@ -192,7 +192,7 @@ def point_release():
 @pytest.fixture
 def column_release():
     """A vertical-column release (two heights, same lon/lat)."""
-    return ColumnReceptor(
+    return ColumnRelease(
         time=dt.datetime(2023, 1, 1, 12, 0),
         longitude=-111.85,
         latitude=40.77,
@@ -204,7 +204,7 @@ def column_release():
 @pytest.fixture
 def multipoint_release():
     """A multi-point release (three different locations)."""
-    return MultiPointReceptor(
+    return MultiPointRelease(
         time=dt.datetime(2023, 1, 1, 12, 0),
         longitudes=[-111.85, -111.86, -111.84],
         latitudes=[40.77, 40.78, 40.76],

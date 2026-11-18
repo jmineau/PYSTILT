@@ -43,7 +43,7 @@ Each measurement is a release. We make one for every hour from 18:00 UTC on
 
    times = pd.date_range("2021-01-14 18:00", "2021-01-15 11:00", freq="1h")
    releases = [
-       stilt.PointReceptor(
+       stilt.PointRelease(
            time=t,
            latitude=40.7665,
            longitude=-111.8472,

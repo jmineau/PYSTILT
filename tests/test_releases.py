@@ -10,10 +10,10 @@ import pandas as pd
 import pytest
 
 from stilt.releases import (
-    ColumnReceptor,
-    MultiPointReceptor,
-    PointReceptor,
-    Receptor,
+    ColumnRelease,
+    MultiPointRelease,
+    PointRelease,
+    Release,
     read_releases,
     write_releases,
 )
@@ -46,45 +46,45 @@ def test_format_coord_small_positive():
 
 
 # ---------------------------------------------------------------------------
-# location_id - PointReceptor
+# location_id - PointRelease
 # ---------------------------------------------------------------------------
 
 
 def test_location_id_point_basic():
-    r = PointReceptor(
+    r = PointRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
     assert r.location_id == "-111.85_40.77_5"
 
 
 def test_location_id_point_integer_coords():
-    r = PointReceptor(
+    r = PointRelease(
         time="202301011200", longitude=-112.0, latitude=40.0, altitude=10.0
     )
     assert r.location_id == "-112_40_10"
 
 
 def test_location_id_point_fractional_height():
-    r = PointReceptor(
+    r = PointRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=2.5
     )
     assert r.location_id == "-111.85_40.77_2.5"
 
 
 # ---------------------------------------------------------------------------
-# location_id - ColumnReceptor
+# location_id - ColumnRelease
 # ---------------------------------------------------------------------------
 
 
 def test_location_id_column_spells_out_bottom_and_top():
-    r = ColumnReceptor(
+    r = ColumnRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, bottom=5.0, top=50.0
     )
     assert r.location_id == "-111.85_40.77_X5-50"
 
 
 def test_location_id_column_integer_coords():
-    r = ColumnReceptor(
+    r = ColumnRelease(
         time="202301011200", longitude=-112.0, latitude=40.0, bottom=0.0, top=3000.0
     )
     assert r.location_id == "-112_40_X0-3000"
@@ -93,7 +93,7 @@ def test_location_id_column_integer_coords():
 def test_columns_that_differ_only_in_top_get_different_ids():
     """Two columns at one place and time once shared an id and result files (#105)."""
     low, high = (
-        ColumnReceptor(
+        ColumnRelease(
             time="202101150600", longitude=-112, latitude=40.5, bottom=0, top=top
         )
         for top in (3000, 5000)
@@ -111,7 +111,7 @@ def test_columns_that_differ_only_in_top_get_different_ids():
     ("make", "agl_id"),
     [
         (
-            lambda ref: PointReceptor(
+            lambda ref: PointRelease(
                 time="202101150600",
                 longitude=-112,
                 latitude=40.5,
@@ -121,7 +121,7 @@ def test_columns_that_differ_only_in_top_get_different_ids():
             "202101150600_-112_40.5_100",
         ),
         (
-            lambda ref: ColumnReceptor(
+            lambda ref: ColumnRelease(
                 time="202101150600",
                 longitude=-112,
                 latitude=40.5,
@@ -132,7 +132,7 @@ def test_columns_that_differ_only_in_top_get_different_ids():
             "202101150600_-112_40.5_X0-3000",
         ),
         (
-            lambda ref: MultiPointReceptor(
+            lambda ref: MultiPointRelease(
                 time="202101150600",
                 longitudes=[-112, -112.1],
                 latitudes=[40.5, 40.6],
@@ -154,7 +154,7 @@ def test_msl_and_agl_releases_get_different_ids(make, agl_id):
 
 
 # ---------------------------------------------------------------------------
-# location_id - MultiPointReceptor (SHA-256 hash, order-independent)
+# location_id - MultiPointRelease (SHA-256 hash, order-independent)
 # ---------------------------------------------------------------------------
 
 
@@ -162,23 +162,23 @@ def test_location_id_multipoint_stable():
     lons = [-111.85, -111.86, -111.84]
     lats = [40.77, 40.78, 40.76]
     alts = [5, 5, 5]
-    r1 = MultiPointReceptor(
+    r1 = MultiPointRelease(
         time="202301011200", longitudes=lons, latitudes=lats, altitudes=alts
     )
-    r2 = MultiPointReceptor(
+    r2 = MultiPointRelease(
         time="202301011200", longitudes=lons, latitudes=lats, altitudes=alts
     )
     assert r1.location_id == r2.location_id
 
 
 def test_location_id_multipoint_order_independent():
-    r_a = MultiPointReceptor(
+    r_a = MultiPointRelease(
         time="202301011200",
         longitudes=[-111.85, -111.86],
         latitudes=[40.77, 40.78],
         altitudes=[5, 5],
     )
-    r_b = MultiPointReceptor(
+    r_b = MultiPointRelease(
         time="202301011200",
         longitudes=[-111.86, -111.85],
         latitudes=[40.78, 40.77],
@@ -188,7 +188,7 @@ def test_location_id_multipoint_order_independent():
 
 
 def test_location_id_multipoint_starts_with_multi():
-    r = MultiPointReceptor(
+    r = MultiPointRelease(
         time="202301011200",
         longitudes=[-111.85, -111.86],
         latitudes=[40.77, 40.78],
@@ -198,7 +198,7 @@ def test_location_id_multipoint_starts_with_multi():
 
 
 def test_location_id_multipoint_hash_length():
-    r = MultiPointReceptor(
+    r = MultiPointRelease(
         time="202301011200",
         longitudes=[-111.85, -111.86],
         latitudes=[40.77, 40.78],
@@ -217,7 +217,7 @@ def test_location_id_multipoint_matches_spec():
         separators=(",", ":"),
     )
     expected_hash = hashlib.sha256(canonical.encode()).hexdigest()[:10]
-    r = MultiPointReceptor(
+    r = MultiPointRelease(
         time="202301011200",
         longitudes=[-111.85, -111.86],
         latitudes=[40.77, 40.78],
@@ -227,13 +227,13 @@ def test_location_id_multipoint_matches_spec():
 
 
 def test_location_id_multipoint_differs_for_different_points():
-    r_a = MultiPointReceptor(
+    r_a = MultiPointRelease(
         time="202301011200",
         longitudes=[-111.85, -111.86],
         latitudes=[40.77, 40.78],
         altitudes=[5, 5],
     )
-    r_b = MultiPointReceptor(
+    r_b = MultiPointRelease(
         time="202301011200",
         longitudes=[-111.85, -111.87],
         latitudes=[40.77, 40.79],
@@ -243,7 +243,7 @@ def test_location_id_multipoint_differs_for_different_points():
 
 
 # ---------------------------------------------------------------------------
-# PointReceptor
+# PointRelease
 # ---------------------------------------------------------------------------
 
 
@@ -276,7 +276,7 @@ def test_release_column_top_bottom(column_release):
 
 
 def test_point_has_no_bottom():
-    r = PointReceptor(
+    r = PointRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
     with pytest.raises(AttributeError):
@@ -286,7 +286,7 @@ def test_point_has_no_bottom():
 
 
 def test_column_has_no_altitude():
-    r = ColumnReceptor(
+    r = ColumnRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, bottom=5.0, top=50.0
     )
     with pytest.raises(AttributeError):
@@ -294,7 +294,7 @@ def test_column_has_no_altitude():
 
 
 def test_release_time_iso_string():
-    r = PointReceptor(
+    r = PointRelease(
         time="2023-01-01T12:00:00",
         longitude=-111.85,
         latitude=40.77,
@@ -304,7 +304,7 @@ def test_release_time_iso_string():
 
 
 def test_release_time_compact_string():
-    r = PointReceptor(
+    r = PointRelease(
         time="202301011200",
         longitude=-111.85,
         latitude=40.77,
@@ -314,7 +314,7 @@ def test_release_time_compact_string():
 
 
 def test_release_time_aware_input_normalizes_to_naive_utc():
-    r = PointReceptor(
+    r = PointRelease(
         time="2023-01-01T05:00:00-07:00",
         longitude=-111.85,
         latitude=40.77,
@@ -328,7 +328,7 @@ def test_release_time_aware_input_normalizes_to_naive_utc():
 def test_release_time_text_that_is_not_iso_or_compact_is_refused(text):
     """05/07/2023 was read as 7 May, and refused only when the day was above 12 (#440)."""
     with pytest.raises(ValueError, match="is not ISO 8601"):
-        PointReceptor(time=text, longitude=-111.85, latitude=40.77, altitude=5.0)
+        PointRelease(time=text, longitude=-111.85, latitude=40.77, altitude=5.0)
 
 
 def test_read_releases_refuses_a_day_first_time_and_names_the_row():
@@ -356,7 +356,7 @@ def test_read_releases_refuses_an_empty_time():
 
 def test_release_time_with_nanoseconds_is_cut_to_microseconds():
     # satellite readers give nanosecond times (OCO-2: float seconds since 1970)
-    r = PointReceptor(
+    r = PointRelease(
         time=pd.Timestamp("2026-02-08T19:37:37.282009602"),
         longitude=-94.91,
         latitude=29.22,
@@ -366,30 +366,30 @@ def test_release_time_with_nanoseconds_is_cut_to_microseconds():
 
 
 def test_release_equality():
-    r1 = PointReceptor(
+    r1 = PointRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
-    r2 = PointReceptor(
+    r2 = PointRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
     assert r1 == r2
 
 
 def test_release_inequality_time():
-    r1 = PointReceptor(
+    r1 = PointRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
-    r2 = PointReceptor(
+    r2 = PointRelease(
         time="202301011300", longitude=-111.85, latitude=40.77, altitude=5.0
     )
     assert r1 != r2
 
 
 def test_release_inequality_across_types():
-    r1 = PointReceptor(
+    r1 = PointRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
-    r2 = ColumnReceptor(
+    r2 = ColumnRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, bottom=5.0, top=50.0
     )
     assert r1 != r2
@@ -397,14 +397,14 @@ def test_release_inequality_across_types():
 
 def test_release_init_rejects_missing_time():
     with pytest.raises(ValueError, match="'time' must be provided"):
-        PointReceptor(time=None, longitude=-111.85, latitude=40.77, altitude=5.0)
+        PointRelease(time=None, longitude=-111.85, latitude=40.77, altitude=5.0)
 
 
 def test_release_init_parses_iso_and_compact_strings():
-    r_iso = PointReceptor(
+    r_iso = PointRelease(
         time="2023-01-01T12:00:00", longitude=-111.85, latitude=40.77, altitude=5.0
     )
-    r_compact = PointReceptor(
+    r_compact = PointRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
     expected = dt.datetime(2023, 1, 1, 12, 0)
@@ -449,14 +449,12 @@ def test_release_lazy_geometry_multipoint(multipoint_release):
 
 def test_longitude_out_of_range_raises():
     with pytest.raises(ValueError, match="longitude"):
-        PointReceptor(
-            time="202301011200", longitude=200.0, latitude=40.77, altitude=5.0
-        )
+        PointRelease(time="202301011200", longitude=200.0, latitude=40.77, altitude=5.0)
 
 
 def test_latitude_out_of_range_raises():
     with pytest.raises(ValueError, match="latitude"):
-        PointReceptor(
+        PointRelease(
             time="202301011200", longitude=-111.85, latitude=-95.0, altitude=5.0
         )
 
@@ -475,13 +473,13 @@ def test_a_point_with_a_nan_or_infinite_coordinate_is_refused(field, value, mess
     """A NaN passed the range checks and failed later at ``.id``, naming no field (#440)."""
     point = {"longitude": -111.85, "latitude": 40.77, "altitude": 5.0}
     with pytest.raises(ValueError, match=message):
-        PointReceptor(time="202301011200", **{**point, field: value})
+        PointRelease(time="202301011200", **{**point, field: value})
 
 
 @pytest.mark.parametrize(("bottom", "top"), [(np.nan, 100.0), (0.0, np.inf)])
 def test_a_column_with_a_nan_or_infinite_height_is_refused(bottom, top):
     with pytest.raises(ValueError, match="altitude must be a finite number"):
-        ColumnReceptor(
+        ColumnRelease(
             time="202301011200",
             longitude=-111.85,
             latitude=40.77,
@@ -492,7 +490,7 @@ def test_a_column_with_a_nan_or_infinite_height_is_refused(bottom, top):
 
 def test_a_multipoint_release_with_a_nan_point_is_refused():
     with pytest.raises(ValueError, match="longitude must be a number"):
-        MultiPointReceptor(
+        MultiPointRelease(
             time="202301011200",
             longitudes=[-111.0, np.nan],
             latitudes=[40.0, 40.5],
@@ -510,13 +508,13 @@ def test_a_releases_file_with_an_empty_longitude_names_the_row():
 
 def test_negative_agl_altitude_raises():
     with pytest.raises(ValueError, match="AGL altitudes"):
-        PointReceptor(
+        PointRelease(
             time="202301011200", longitude=-111.85, latitude=40.77, altitude=-1.0
         )
 
 
 def test_negative_msl_altitude_is_allowed():
-    r = PointReceptor(
+    r = PointRelease(
         time="202301011200",
         longitude=-111.85,
         latitude=40.77,
@@ -529,21 +527,21 @@ def test_negative_msl_altitude_is_allowed():
 
 def test_column_bottom_ge_top_raises():
     with pytest.raises(ValueError, match="bottom"):
-        ColumnReceptor(
+        ColumnRelease(
             time="202301011200", longitude=-111.85, latitude=40.77, bottom=50.0, top=5.0
         )
 
 
 def test_column_bottom_eq_top_raises():
     with pytest.raises(ValueError, match="bottom"):
-        ColumnReceptor(
+        ColumnRelease(
             time="202301011200", longitude=-111.85, latitude=40.77, bottom=5.0, top=5.0
         )
 
 
 def test_multipoint_length_mismatch_raises():
     with pytest.raises(ValueError, match="same length"):
-        MultiPointReceptor(
+        MultiPointRelease(
             time="202301011200",
             longitudes=[-111.85, -111.86],
             latitudes=[40.77],
@@ -557,87 +555,83 @@ def test_multipoint_length_mismatch_raises():
 
 
 def test_isinstance_point(point_release):
-    assert isinstance(point_release, PointReceptor)
+    assert isinstance(point_release, PointRelease)
 
 
 def test_isinstance_column(column_release):
-    assert isinstance(column_release, ColumnReceptor)
+    assert isinstance(column_release, ColumnRelease)
 
 
 def test_isinstance_multipoint(multipoint_release):
-    assert isinstance(multipoint_release, MultiPointReceptor)
+    assert isinstance(multipoint_release, MultiPointRelease)
 
 
 # ---------------------------------------------------------------------------
-# Receptor.from_points
+# Release.from_points
 # ---------------------------------------------------------------------------
 
 
 def test_release_from_points_single_makes_point():
-    r = Receptor.from_points("202301011200", [(-111.85, 40.77, 5)])
-    assert isinstance(r, PointReceptor)
+    r = Release.from_points("202301011200", [(-111.85, 40.77, 5)])
+    assert isinstance(r, PointRelease)
     assert r.location_id == "-111.85_40.77_5"
 
 
 def test_release_from_points_two_same_xy_makes_column():
-    r = Receptor.from_points(
-        "202301011200", [(-111.85, 40.77, 5), (-111.85, 40.77, 50)]
-    )
-    assert isinstance(r, ColumnReceptor)
+    r = Release.from_points("202301011200", [(-111.85, 40.77, 5), (-111.85, 40.77, 50)])
+    assert isinstance(r, ColumnRelease)
     assert r.location_id.endswith("_X5-50")
 
 
 def test_release_from_points_two_different_xy_makes_multipoint():
-    r = Receptor.from_points("202301011200", [(-111.85, 40.77, 5), (-111.86, 40.78, 5)])
-    assert isinstance(r, MultiPointReceptor)
+    r = Release.from_points("202301011200", [(-111.85, 40.77, 5), (-111.86, 40.78, 5)])
+    assert isinstance(r, MultiPointRelease)
 
 
 def test_release_from_points_empty_raises():
     with pytest.raises(ValueError, match="least one"):
-        Receptor.from_points("202301011200", [])
+        Release.from_points("202301011200", [])
 
 
 def test_release_from_points_column_sorts_bottom_top():
-    r = Receptor.from_points(
-        "202301011200", [(-111.85, 40.77, 50), (-111.85, 40.77, 5)]
-    )
-    assert isinstance(r, ColumnReceptor)
+    r = Release.from_points("202301011200", [(-111.85, 40.77, 50), (-111.85, 40.77, 5)])
+    assert isinstance(r, ColumnRelease)
     assert r.bottom == 5.0
     assert r.top == 50.0
 
 
 # ---------------------------------------------------------------------------
-# Receptor.from_dict round-trips
+# Release.from_dict round-trips
 # ---------------------------------------------------------------------------
 
 
 def test_release_from_dict_point_round_trip():
-    r = PointReceptor(
+    r = PointRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
-    r2 = Receptor.from_dict(r.to_dict())
-    assert isinstance(r2, PointReceptor)
+    r2 = Release.from_dict(r.to_dict())
+    assert isinstance(r2, PointRelease)
     assert r2 == r
 
 
 def test_release_from_dict_column_round_trip():
-    r = ColumnReceptor(
+    r = ColumnRelease(
         time="202301011200", longitude=-111.85, latitude=40.77, bottom=5.0, top=50.0
     )
-    r2 = Receptor.from_dict(r.to_dict())
-    assert isinstance(r2, ColumnReceptor)
+    r2 = Release.from_dict(r.to_dict())
+    assert isinstance(r2, ColumnRelease)
     assert r2 == r
 
 
 def test_release_from_dict_multipoint_round_trip():
-    r = MultiPointReceptor(
+    r = MultiPointRelease(
         time="202301011200",
         longitudes=[-111.85, -111.86],
         latitudes=[40.77, 40.78],
         altitudes=[5.0, 5.0],
     )
-    r2 = Receptor.from_dict(r.to_dict())
-    assert isinstance(r2, MultiPointReceptor)
+    r2 = Release.from_dict(r.to_dict())
+    assert isinstance(r2, MultiPointRelease)
     assert r2 == r
 
 
@@ -658,7 +652,7 @@ def test_read_releases_basic(tmp_path):
     csv.write_text("time,lati,long,zagl\n2023-01-01 12:00:00,40.77,-111.85,5.0\n")
     releases = read_releases(csv)
     assert len(releases) == 1
-    assert isinstance(releases[0], PointReceptor)
+    assert isinstance(releases[0], PointRelease)
     assert releases[0].latitude == 40.77
     assert releases[0].longitude == -111.85
     assert releases[0].altitude == 5.0
@@ -686,7 +680,7 @@ def test_read_releases_multipoint_via_group(tmp_path):
     )
     releases = read_releases(csv)
     assert len(releases) == 2
-    assert isinstance(releases[0], MultiPointReceptor)
+    assert isinstance(releases[0], MultiPointRelease)
     assert len(releases[0].coords()) == 2
 
 
@@ -732,7 +726,7 @@ def test_read_releases_zmsl_infers_msl(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# MultiPointReceptor - duplicate horizontal locations are rejected
+# MultiPointRelease - duplicate horizontal locations are rejected
 # ---------------------------------------------------------------------------
 
 
@@ -740,7 +734,7 @@ def test_multipoint_rejects_stacked_heights_at_one_location():
     # HYSPLIT chains same-lat/lon release locations into one vertical line
     # source and releases only between the last two heights.
     with pytest.raises(ValueError, match="distinct horizontal"):
-        MultiPointReceptor(
+        MultiPointRelease(
             time="202508110440",
             longitudes=[-76.68869] * 5,
             latitudes=[37.76396] * 5,
@@ -750,7 +744,7 @@ def test_multipoint_rejects_stacked_heights_at_one_location():
 
 def test_multipoint_rejects_nonconsecutive_duplicate_location():
     with pytest.raises(ValueError, match="distinct horizontal"):
-        MultiPointReceptor(
+        MultiPointRelease(
             time="202301011200",
             longitudes=[-111.85, -111.86, -111.85],
             latitudes=[40.77, 40.78, 40.77],
@@ -802,13 +796,13 @@ def test_write_releases_round_trip_point(tmp_path, point_release):
 def test_write_releases_round_trip_column(tmp_path, column_release):
     loaded = read_releases(write_releases([column_release], tmp_path / "r.csv"))
     assert loaded == [column_release]
-    assert isinstance(loaded[0], ColumnReceptor)
+    assert isinstance(loaded[0], ColumnRelease)
 
 
 def test_write_releases_round_trip_multipoint(tmp_path, multipoint_release):
     loaded = read_releases(write_releases([multipoint_release], tmp_path / "r.csv"))
     assert loaded == [multipoint_release]
-    assert isinstance(loaded[0], MultiPointReceptor)
+    assert isinstance(loaded[0], MultiPointRelease)
 
 
 def test_write_releases_round_trip_mixed_preserves_order_and_types(
@@ -819,22 +813,22 @@ def test_write_releases_round_trip_mixed_preserves_order_and_types(
 
     assert loaded == original
     assert [type(r) for r in loaded] == [
-        MultiPointReceptor,
-        PointReceptor,
-        ColumnReceptor,
+        MultiPointRelease,
+        PointRelease,
+        ColumnRelease,
     ]
 
 
 def test_write_releases_round_trip_preserves_msl_reference(tmp_path):
     original = [
-        PointReceptor(
+        PointRelease(
             time="202301011200",
             longitude=-111.85,
             latitude=40.77,
             altitude=1500.0,
             altitude_ref="msl",
         ),
-        ColumnReceptor(
+        ColumnRelease(
             time="202301011200",
             longitude=-111.85,
             latitude=40.77,
@@ -863,7 +857,7 @@ def test_read_releases_keeps_extra_columns_as_attrs(tmp_path):
         "2023-01-01 13:00:00,40.79,-111.87,5.0,1,B,hello\n"
     )
     multi, point = read_releases(csv)
-    assert isinstance(multi, MultiPointReceptor)
+    assert isinstance(multi, MultiPointRelease)
     assert multi.attrs == {"Scene": "A", "note": None}
     assert point.attrs == {"Scene": "B", "note": "hello"}
 
@@ -878,7 +872,7 @@ def test_release_attrs_round_trip_through_csv(tmp_path, point_release, column_re
     assert back[0].attrs == {"scene": "A"}
     assert back[1].attrs == {"scene": None}
 
-    extra = PointReceptor(
+    extra = PointRelease(
         time="2023-02-01 00:00",
         longitude=-111.0,
         latitude=40.0,
@@ -899,7 +893,7 @@ def test_releases_are_frozen_values(point_release):
 
     with pytest.raises(ValidationError, match="frozen"):
         point_release.altitude = 20.0
-    twin = PointReceptor(
+    twin = PointRelease(
         time=point_release.time,
         longitude=point_release.longitude,
         latitude=point_release.latitude,
@@ -921,7 +915,7 @@ def test_unknown_field_is_rejected():
     from pydantic import ValidationError
 
     with pytest.raises(ValidationError, match="height"):
-        Receptor.from_dict(
+        Release.from_dict(
             {
                 "kind": "point",
                 "time": "2023-01-01T12:00:00",
@@ -936,7 +930,7 @@ def test_unknown_field_is_rejected():
 def test_from_dict_needs_the_kind_key():
     """A dict without ``kind``, such as the ``type`` form older versions wrote, is refused."""
     old = {
-        "type": "ColumnReceptor",
+        "type": "ColumnRelease",
         "time": "2023-01-01T12:00:00",
         "longitude": -111.85,
         "latitude": 40.77,
@@ -945,12 +939,12 @@ def test_from_dict_needs_the_kind_key():
         "altitude_ref": "agl",
     }
     with pytest.raises(ValueError, match="'kind'"):
-        Receptor.from_dict(old)
-    r = Receptor.from_dict(
+        Release.from_dict(old)
+    r = Release.from_dict(
         {**{k: v for k, v in old.items() if k != "type"}, "kind": "column"}
     )
-    assert isinstance(r, ColumnReceptor) and r.top == 3000.0
-    assert Receptor.from_dict(r.to_dict()) == r
+    assert isinstance(r, ColumnRelease) and r.top == 3000.0
+    assert Release.from_dict(r.to_dict()) == r
 
 
 def test_parse_release_id_splits_time_and_location(
@@ -971,7 +965,7 @@ def test_parse_release_id_splits_time_and_location(
 
 
 def _multi(alts, **kwargs):
-    return MultiPointReceptor(
+    return MultiPointRelease(
         time="2023-01-01 12:00",
         longitudes=[-111.85, -111.86],
         latitudes=[40.77, 40.78],
@@ -1063,7 +1057,7 @@ def test_frame_accepts_the_alternate_column_names():
         }
     )
     [r] = releases_from_frame(frame)
-    assert isinstance(r, PointReceptor)
+    assert isinstance(r, PointRelease)
     assert (r.longitude, r.latitude, r.altitude) == (-111.85, 40.77, 1500.0)
     assert r.altitude_ref == "msl"
     assert r.attrs == {"Scene": "A"}
@@ -1079,7 +1073,7 @@ def test_append_msl_release_to_plain_altitude_file_keeps_its_reference():
     from stilt.releases.table import append_releases_csv
 
     text = "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,40.77,5\n"
-    msl = PointReceptor(
+    msl = PointRelease(
         time="2023-01-02 12:00",
         longitude=-111.9,
         latitude=40.7,
@@ -1100,7 +1094,7 @@ def test_append_agl_release_leaves_a_plain_file_without_the_column():
     from stilt.releases.table import append_releases_csv
 
     text = "time,lon,lat,z,site\n2023-01-01 12:00:00,-111.85,40.77,5,WBB\n"
-    agl = PointReceptor(
+    agl = PointRelease(
         time="2023-01-02 12:00",
         longitude=-111.9,
         latitude=40.7,
@@ -1119,7 +1113,7 @@ def test_append_to_a_zagl_file_still_refuses_an_msl_release():
     from stilt.releases.table import append_releases_csv
 
     text = "time,long,lati,zagl\n2023-01-01 12:00:00,-111.85,40.77,5\n"
-    msl = PointReceptor(
+    msl = PointRelease(
         time="2023-01-02 12:00",
         longitude=-111.9,
         latitude=40.7,
@@ -1145,7 +1139,7 @@ def test_release_rows_ids_match_the_releases(
         releases_to_frame,
     )
 
-    sub_metre = MultiPointReceptor(
+    sub_metre = MultiPointRelease(
         time="2023-01-01 13:00",
         longitudes=[-111.85, -111.86],
         latitudes=[40.77, 40.78],
@@ -1260,7 +1254,7 @@ def test_a_repeated_id_among_many_still_names_two_different_releases():
 
     a, b = _multi([10.001, 500.0]), _multi([10.004, 500.0])
     points = [
-        PointReceptor(
+        PointRelease(
             time=dt.datetime(2024, 1, 1, h),
             longitude=-111.85,
             latitude=40.77,

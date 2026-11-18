@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from arlmet import Grid
 
-    from stilt.releases import Receptor
+    from stilt.releases import Release
 
 
 #: What ``hycs_std`` prints on its first lines: ``HYSPLIT version: hysplit.v5.1.0``.
@@ -241,7 +241,7 @@ class HysplitModel:
 
     def run(
         self,
-        release: Receptor,
+        release: Release,
         config: HysplitConfig,
         met: MetConfig,
         window: tuple[dt.datetime, dt.datetime],
@@ -310,7 +310,7 @@ class HysplitModel:
 
 
 def _write_inputs(
-    workdir: Path, release: Receptor, config: HysplitConfig, met_files: list[Path]
+    workdir: Path, release: Release, config: HysplitConfig, met_files: list[Path]
 ) -> None:
     """
     Write HYSPLIT's input files for *release* into *workdir*.

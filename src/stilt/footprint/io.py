@@ -30,7 +30,7 @@ from stilt.footprint.config import (
     read_footprint_settings,
 )
 from stilt.particles.table import stored_release
-from stilt.releases import Receptor
+from stilt.releases import Release
 from stilt.spatial import Grid, _with_cf_grid, horizontal_dims
 
 if TYPE_CHECKING:
@@ -52,7 +52,7 @@ def _naive_utc_ns(values: Any) -> np.ndarray:
 def _footprint_array(
     values: np.ndarray,
     hours: Any,
-    release: Receptor,
+    release: Release,
     config: FootprintConfig,
     name: str,
     x: np.ndarray,
@@ -100,7 +100,7 @@ def _settings_json(config: FootprintConfig) -> str:
 
 def _describe(
     data: xr.DataArray,
-    release: Receptor,
+    release: Release,
     config: FootprintConfig,
     name: str,
 ) -> xr.DataArray:
@@ -443,7 +443,7 @@ def _cell_indices(coords: np.ndarray, axis: np.ndarray, name: str) -> np.ndarray
 
 
 def _file_metadata(
-    release: Receptor,
+    release: Release,
     config: FootprintConfig,
     name: str,
     hours: list[int],
@@ -560,7 +560,7 @@ def write_footprint(
 
 def write_empty_footprint(
     path: str | Path | UPath,
-    release: Receptor,
+    release: Release,
     config: FootprintConfig,
     name: str = "",
     metadata: dict[bytes, bytes] | None = None,

@@ -16,10 +16,10 @@ from .execution import ExecutionConfig, task_share
 from .footprint import FootprintConfig, Mesh, Zones, calc_footprint, read_footprint
 from .particles import read_particles
 from .releases import (
-    ColumnReceptor,
-    MultiPointReceptor,
-    PointReceptor,
-    Receptor,
+    ColumnRelease,
+    MultiPointRelease,
+    PointRelease,
+    Release,
     read_releases,
 )
 from .spatial import Bounds, Grid
@@ -44,10 +44,10 @@ __all__ = [
     "ExecutionConfig",
     "FootprintConfig",
     # Releases
-    "Receptor",
-    "PointReceptor",
-    "ColumnReceptor",
-    "MultiPointReceptor",
+    "Release",
+    "PointRelease",
+    "ColumnRelease",
+    "MultiPointRelease",
     "read_releases",
     # One simulation of a project
     "Simulation",

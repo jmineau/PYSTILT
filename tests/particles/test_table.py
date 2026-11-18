@@ -18,14 +18,14 @@ from stilt.particles import (
     write_particles,
 )
 from stilt.particles.table import add_release_heights, needs_height_to_match
-from stilt.releases import ColumnReceptor, MultiPointReceptor, PointReceptor
+from stilt.releases import ColumnRelease, MultiPointRelease, PointRelease
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
 
 from ..fixtures.particles import finished
 
 #: A release that gives no release height of its own: a column.
-_NO_POINT = ColumnReceptor(
+_NO_POINT = ColumnRelease(
     time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, bottom=0, top=1000
 )
 
@@ -89,7 +89,7 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_release(tmp_path):
     Then the release, trajectory and footprint time axes align without
     pandas raising on mixed tz comparisons.
     """
-    aware_release = PointReceptor(
+    aware_release = PointRelease(
         time=pd.Timestamp("2023-01-01 12:00:00+00:00"),
         longitude=-111.85,
         latitude=40.77,
@@ -268,7 +268,7 @@ def test_finished_particles_column_release_assigns_release_height(
 
 
 def test_finished_particles_column_release_spans_column_monotonically(tmp_path):
-    release = ColumnReceptor(
+    release = ColumnRelease(
         time="2023-01-01 12:00:00",
         longitude=-111.85,
         latitude=40.77,
@@ -293,7 +293,7 @@ def test_finished_particles_column_release_spans_column_monotonically(tmp_path):
 def test_finished_particles_multipoint_release_assigns_release_height_from_release_locations(
     tmp_path,
 ):
-    release = MultiPointReceptor(
+    release = MultiPointRelease(
         time="2023-01-01 12:00:00",
         longitudes=[-112.0, -111.8, -111.6],
         latitudes=[40.5, 40.5, 40.5],
@@ -368,7 +368,7 @@ def test_finished_particles_multipoint_release_assigns_release_height_from_relea
 def test_finished_particles_multipoint_nondivisible_particle_blocks_follow_release_locations(
     tmp_path,
 ):
-    release = MultiPointReceptor(
+    release = MultiPointRelease(
         time="2023-01-01 12:00:00",
         longitudes=[-112.0, -111.8, -111.6],
         latitudes=[40.5, 40.5, 40.5],
@@ -420,9 +420,9 @@ def test_finished_particles_multipoint_nondivisible_particle_blocks_follow_relea
 # ---------------------------------------------------------------------------
 
 
-def _slant(spacing_deg: float = 0.002, n: int = 4, **kwargs) -> MultiPointReceptor:
+def _slant(spacing_deg: float = 0.002, n: int = 4, **kwargs) -> MultiPointRelease:
     """A slant-like release: points ~170 m apart, climbing 300 m per level."""
-    return MultiPointReceptor(
+    return MultiPointRelease(
         time="2023-01-01 12:00:00",
         longitudes=[-111.85 + i * spacing_deg for i in range(n)],
         latitudes=[40.77] * n,
@@ -518,7 +518,7 @@ def test_multipoint_release_height_is_constant_along_each_trajectory():
 
 
 def test_multipoint_msl_release_matches_on_height_above_sea_level():
-    release = MultiPointReceptor(
+    release = MultiPointRelease(
         time="2023-01-01 12:00:00",
         longitudes=[-111.85, -111.848],
         latitudes=[40.77, 40.77],
@@ -534,7 +534,7 @@ def test_multipoint_msl_release_matches_on_height_above_sea_level():
 
 
 def test_multipoint_same_altitude_close_points_warn():
-    release = MultiPointReceptor(
+    release = MultiPointRelease(
         time="2023-01-01 12:00:00",
         longitudes=[-111.85, -111.848],  # ~170 m apart
         latitudes=[40.77, 40.77],
@@ -548,7 +548,7 @@ def test_multipoint_same_altitude_close_points_warn():
 
 
 def test_multipoint_same_altitude_wide_points_do_not_warn(recwarn):
-    release = MultiPointReceptor(
+    release = MultiPointRelease(
         time="2023-01-01 12:00:00",
         longitudes=[-112.0, -111.8],  # ~17 km apart
         latitudes=[40.5, 40.5],
@@ -563,7 +563,7 @@ def test_multipoint_same_altitude_wide_points_do_not_warn(recwarn):
 
 
 def test_multipoint_release_time_rows_silence_the_warning(recwarn):
-    release = MultiPointReceptor(
+    release = MultiPointRelease(
         time="2023-01-01 12:00:00",
         longitudes=[-111.85, -111.848],
         latitudes=[40.77, 40.77],
@@ -657,7 +657,7 @@ def test_calc_footprint_regenerates_a_footprint_on_a_new_grid(tmp_path):
             "foot": rng.uniform(0.0, 1e-3, n * 2),
         }
     )
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-01-01 12:00:00", longitude=-113.5, latitude=39.5, altitude=5.0
     )
     traj = finished(particles, release)
@@ -723,7 +723,7 @@ def test_a_column_release_row_says_which_slab_a_particle_stands_for():
     """With t = 0 rows, release_height is the centre of the slab the release falls in, not the indx order."""
     from stilt.particles import add_release_heights
 
-    column = ColumnReceptor(
+    column = ColumnRelease(
         time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, bottom=0, top=1000
     )
     released = [900.0, 10.0, 600.0, 300.0]  # four slabs of 250 m, out of indx order
@@ -763,7 +763,7 @@ def test_needs_height_to_match_is_true_for_close_points_at_different_altitudes(
     assert needs_height_to_match(longitudes, latitudes, altitudes) is expected
 
 
-@pytest.mark.filterwarnings("ignore:MultiPointReceptor release points")
+@pytest.mark.filterwarnings("ignore:MultiPointRelease release points")
 @pytest.mark.parametrize(
     ("longitudes", "altitudes"),
     [
@@ -774,7 +774,7 @@ def test_needs_height_to_match_is_true_for_close_points_at_different_altitudes(
 def test_msl_multipoint_release_heights_do_not_read_zsfc_when_it_is_not_needed(
     longitudes, altitudes
 ):
-    release = MultiPointReceptor(
+    release = MultiPointRelease(
         time="2023-01-01 12:00:00",
         longitudes=longitudes,
         latitudes=[40.77, 40.77],

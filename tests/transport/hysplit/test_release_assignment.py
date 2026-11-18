@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from stilt.meteorology import run_window
-from stilt.releases import ColumnReceptor, MultiPointReceptor
+from stilt.releases import ColumnRelease, MultiPointRelease
 from stilt.transport.hysplit import (
     HysplitConfig,
     Met,
@@ -58,7 +58,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
     so each explicit release point should receive the same-size contiguous
     ``particle`` block.
     """
-    release = MultiPointReceptor(
+    release = MultiPointRelease(
         time=dt.datetime(2021, 1, 15, 6, 0),
         longitudes=[-112.0, -111.8, -111.6],
         latitudes=[40.5, 40.5, 40.5],
@@ -108,7 +108,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
     tmp_path, met_dir
 ):
     """Nondivisible particle counts use equal contiguous blocks in point order."""
-    release = MultiPointReceptor(
+    release = MultiPointRelease(
         time=dt.datetime(2021, 1, 15, 6, 0),
         longitudes=[-112.0, -111.8, -111.6],
         latitudes=[40.5, 40.5, 40.5],
@@ -143,7 +143,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
     tmp_path, met_dir
 ):
     """Column releases span the requested vertical range rather than endpoint chunks."""
-    release = ColumnReceptor(
+    release = ColumnRelease(
         time=dt.datetime(2021, 1, 15, 6, 0),
         longitude=-112.0,
         latitude=40.5,
@@ -202,7 +202,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
     n_levels = 10
     altitudes = np.linspace(300.0, 3000.0, n_levels)
     metres_per_deg_lon = 111_320.0 * np.cos(np.radians(40.766))
-    release = MultiPointReceptor(
+    release = MultiPointRelease(
         time=dt.datetime(2021, 1, 15, 6, 0),
         longitudes=-111.8479 + np.arange(n_levels) * 173.0 / metres_per_deg_lon,
         latitudes=np.full(n_levels, 40.766),

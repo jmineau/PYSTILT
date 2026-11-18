@@ -9,7 +9,7 @@ import xarray as xr
 
 from stilt.footprint import read_footprint
 from stilt.footprint.config import FootprintConfig
-from stilt.releases import PointReceptor
+from stilt.releases import PointRelease
 from stilt.spatial import Grid
 from stilt.transforms import AveragingKernel
 
@@ -168,7 +168,7 @@ def test_netcdf_roundtrip_no_name(tmp_path):
 
 def test_netcdf_roundtrip_with_timezone_aware_time(tmp_path):
     release_time = pd.Timestamp("2023-01-01 12:00:00+00:00")
-    release = PointReceptor(
+    release = PointRelease(
         time=release_time,
         longitude=-111.85,
         latitude=40.77,
@@ -267,7 +267,7 @@ def test_write_footprint_refuses_a_grid_wider_than_int16(tmp_path):
     """A stored footprint keeps x and y as int16, so a wider grid is refused (#295)."""
     from stilt.footprint import calc_footprint, write_footprint
 
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-07-01 12:00", longitude=-110.25, latitude=40.0005, altitude=5
     )
     particles = pd.DataFrame(
@@ -305,7 +305,7 @@ def _two_particle_rows(age: float) -> pd.DataFrame:
 def test_a_stored_footprint_reads_back_with_its_layer_times(tmp_path):
     from stilt.footprint import calc_footprint, write_footprint
 
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-07-01 12:30", longitude=-111.85, latitude=40.77, altitude=5
     )
     grid = Grid(xmin=-112, xmax=-111.5, ymin=40.5, ymax=41, xres=0.1, yres=0.1)
@@ -327,7 +327,7 @@ def test_write_footprint_refuses_more_layers_than_int16(tmp_path):
     """The stored layer is an int16, so one more than 32767 layers back is refused."""
     from stilt.footprint import calc_footprint, write_footprint
 
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-07-01 12:00", longitude=-111.85, latitude=40.77, altitude=5
     )
     grid = Grid(xmin=-112, xmax=-111.5, ymin=40.5, ymax=41, xres=0.1, yres=0.1)
@@ -344,7 +344,7 @@ def test_write_footprint_refuses_layers_not_whole_layers_from_the_release(tmp_pa
     """A 15-minute footprint stamped 5 minutes off its layers is refused, not rounded."""
     from stilt.footprint import calc_footprint, write_footprint
 
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-07-01 12:00", longitude=-111.85, latitude=40.77, altitude=5
     )
     grid = Grid(xmin=-112, xmax=-111.5, ymin=40.5, ymax=41, xres=0.1, yres=0.1)

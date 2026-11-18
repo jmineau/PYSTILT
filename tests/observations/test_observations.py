@@ -15,7 +15,7 @@ from stilt.observations import (
     select_observations_spatial,
     slant_points,
 )
-from stilt.releases import ColumnReceptor, MultiPointReceptor, Receptor
+from stilt.releases import ColumnRelease, MultiPointRelease, Release
 
 METRES_PER_DEG_LAT = math.radians(1.0) * 6_371_000.0
 
@@ -87,20 +87,20 @@ def test_slant_points_rejects_empty_and_bad_zenith():
 
 
 def test_slant_points_make_a_multipoint_release():
-    """The documented two-liner: slant_points + Receptor.from_points."""
+    """The documented two-liner: slant_points + Release.from_points."""
     points = slant_points(
         -111.9, 40.7, np.linspace(1300.0, 4300.0, 5), zenith=30.0, azimuth=90.0
     )
-    release = Receptor.from_points("2023-07-15 18:00", points, altitude_ref="msl")
+    release = Release.from_points("2023-07-15 18:00", points, altitude_ref="msl")
 
-    assert isinstance(release, MultiPointReceptor)
+    assert isinstance(release, MultiPointRelease)
     assert len(release.coords()) == 5
     assert release.altitude_ref == "msl"
     assert release.longitudes[-1] > release.longitudes[0]  # azimuth 90: leans east
 
     vertical = slant_points(-111.9, 40.7, [1300.0, 4300.0], zenith=0.0, azimuth=0.0)
-    column = Receptor.from_points("2023-07-15 18:00", vertical, altitude_ref="msl")
-    assert isinstance(column, ColumnReceptor)
+    column = Release.from_points("2023-07-15 18:00", vertical, altitude_ref="msl")
+    assert isinstance(column, ColumnRelease)
     assert (column.bottom, column.top) == (1300.0, 4300.0)
 
 

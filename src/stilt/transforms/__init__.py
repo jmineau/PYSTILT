@@ -71,7 +71,7 @@ from stilt.transforms.oxidation import Oxidation
 from stilt.transforms.pressure_weighting import PressureWeighting, particle_pwf
 
 if TYPE_CHECKING:
-    from stilt.releases import Receptor
+    from stilt.releases import Release
 
 BuiltinTransform = Annotated[
     AveragingKernel
@@ -174,7 +174,7 @@ def dump_transform(transform: Any) -> dict[str, Any]:
 def apply_transforms(
     particles: pd.DataFrame,
     transforms: Sequence[Any],
-    release: Receptor | None = None,
+    release: Release | None = None,
     directory: str | Path | None = None,
 ) -> pd.DataFrame:
     """

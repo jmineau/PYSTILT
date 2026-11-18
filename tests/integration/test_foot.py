@@ -34,7 +34,7 @@ from stilt.footprint import (
     footprint_particles,
 )
 from stilt.particles import PARTICLE_SCHEMA
-from stilt.releases import PointReceptor
+from stilt.releases import PointRelease
 from stilt.sampling import calc_pbl_height, sample_met
 from stilt.transport import ModelRun, run_model
 from stilt.transport.hysplit import HysplitConfig
@@ -55,9 +55,9 @@ KMIX0 = 150  # HYSPLIT's default floor on the mixed layer, in m
 
 def _run(
     met_dir: Path, workdir: Path, time: dt.datetime, kmixd: int = 3
-) -> tuple[ModelRun, PointReceptor]:
+) -> tuple[ModelRun, PointRelease]:
     """Run HYSPLIT from the WBB tower for 6 hours, writing the columns foot is made from."""
-    release = PointReceptor(time=time, longitude=-112.0, latitude=40.5, altitude=5.0)
+    release = PointRelease(time=time, longitude=-112.0, latitude=40.5, altitude=5.0)
     config = HysplitConfig(
         n_hours=-6,
         numpar=200,
@@ -82,14 +82,14 @@ def _run(
     return run, release
 
 
-def _timed(particles: pd.DataFrame, release: PointReceptor) -> pd.DataFrame:
+def _timed(particles: pd.DataFrame, release: PointRelease) -> pd.DataFrame:
     """Return *particles* with ``time``, the release time plus ``age``."""
     return particles.assign(
         time=pd.Timestamp(release.time) + pd.to_timedelta(particles["age"], unit="min")
     )
 
 
-def _total(particles: pd.DataFrame, release: PointReceptor) -> xr.DataArray:
+def _total(particles: pd.DataFrame, release: PointRelease) -> xr.DataArray:
     """Return the footprint of *particles*, summed over time."""
     return calc_footprint(particles, release, reference_grid(), hnf_plume=False).sum(
         "time"

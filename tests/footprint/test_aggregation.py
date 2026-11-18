@@ -9,7 +9,7 @@ import xarray as xr
 
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.targets import Mesh, Zones
-from stilt.releases import PointReceptor
+from stilt.releases import PointRelease
 from stilt.spatial import Grid
 
 from ..fixtures.footprints import as_footprint, geometry_footprint, make_footprint
@@ -34,7 +34,7 @@ def _foot_on_grid(
     if t0 is None:
         t0 = pd.Timestamp("2023-01-01 12:00")
     times = [t0 + pd.Timedelta(hours=i) for i in range(n_times)]
-    release = PointReceptor(
+    release = PointRelease(
         time=t0.to_pydatetime(),
         longitude=float(lons.mean()),
         latitude=float(lats.mean()),

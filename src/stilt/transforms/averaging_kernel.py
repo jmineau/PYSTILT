@@ -22,7 +22,7 @@ from numpy.typing import ArrayLike
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 if TYPE_CHECKING:
-    from stilt.releases import Receptor
+    from stilt.releases import Release
 
 from stilt.transforms._common import release_coordinate
 
@@ -93,7 +93,7 @@ def averaging_kernel_table(
     Parameters
     ----------
     releases : iterable
-        :class:`~stilt.Receptor` objects or their ids.
+        :class:`~stilt.Release` objects or their ids.
     levels : sequence of array-like
         One array of levels per release, as for satellite soundings whose
         pressure grids differ, or a single array shared by all releases.
@@ -315,7 +315,7 @@ class AveragingKernel(BaseModel):
         ]
 
     def kernel(
-        self, release: Receptor | None = None, directory: str | Path | None = None
+        self, release: Release | None = None, directory: str | Path | None = None
     ) -> tuple[list[float], list[float]]:
         """
         Return ``(levels, values)`` of the kernel for *release*.
@@ -345,7 +345,7 @@ class AveragingKernel(BaseModel):
     def apply(
         self,
         particles: pd.DataFrame,
-        release: Receptor | None = None,
+        release: Release | None = None,
         directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """Return the particles with ``foot`` weighted by the averaging kernel."""

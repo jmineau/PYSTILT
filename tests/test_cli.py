@@ -191,7 +191,7 @@ def test_status_prints_project_info(tmp_path):
 def test_status_counts_full_simulation_completion(tmp_path):
     """A complete trajectory without required footprints is not done yet."""
     from stilt.project import Project
-    from stilt.releases import PointReceptor
+    from stilt.releases import PointRelease
 
     cfg = make_project_config(
         tmp_path,
@@ -206,7 +206,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
         variants={"hrrr": {}},
     )
 
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-01-01 12:00:00",
         longitude=-111.85,
         latitude=40.77,
@@ -1648,10 +1648,10 @@ def test_status_lists_output_folders_no_variant_uses(tmp_path):
 
 def test_status_counts_failures_by_reason(tmp_path):
     from stilt.project import Project
-    from stilt.releases import PointReceptor
+    from stilt.releases import PointRelease
 
     releases = [
-        PointReceptor(
+        PointRelease(
             time=f"2023-01-01 {h}:00", longitude=-111.85, latitude=40.77, altitude=5
         )
         for h in (12, 13, 14)
@@ -1682,11 +1682,11 @@ def test_status_counts_failures_by_reason(tmp_path):
 def test_status_json_is_the_same_as_data(tmp_path):
 
     from stilt.project import Project
-    from stilt.releases import PointReceptor
+    from stilt.releases import PointRelease
 
     _write_minimal_config(tmp_path)
     project = Project(tmp_path)
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-01-01 12:00:00", longitude=-111.85, latitude=40.77, altitude=5.0
     )
     variant = project.variants["hrrr"]
@@ -1721,11 +1721,11 @@ def test_status_lists_folders_and_what_differs(tmp_path):
 
     from stilt.config import ProjectConfig
     from stilt.project import Project
-    from stilt.releases import PointReceptor
+    from stilt.releases import PointRelease
 
     from .fixtures.particles import finished
 
-    release = PointReceptor(
+    release = PointRelease(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,

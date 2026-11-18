@@ -33,8 +33,8 @@ v1.0**, so prefer the clean design over a compatibility shim.
   **STILT-R**, never "R-STILT"; identifiers such as the `r_stilt` fixtures and
   `STILT_R_DIR` keep their names.
 - **Release** is what STILT-R calls a receptor: `releases.csv`, the `release`
-  column, `--releases`, `group` for `r_idx`. The classes keep their names
-  (`PointReceptor`, `Receptor`), and docs write "release (receptor)".
+  column, `--releases`, `group` for `r_idx`, and the classes `PointRelease`,
+  `ColumnRelease`, `MultiPointRelease`. Docs write "release (receptor)".
 - **Particle columns** get plain names for HYSPLIT's and STILT-R's `indx`,
   `time`, `long`, `lati`, `xhgt` (`docs/reference/particles.rst`).
 - **Config** is what the user writes, always a class next to the code that
@@ -297,7 +297,7 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
   HYSPLIT gets `SEED = -(|seed| + 1)` (`setup_seed`, mirrored by the R
   fidelity fixture), and `seed` needs `krand: 2`.
 - **HYSPLIT chains same-location starts into a line source**: that is how
-  `ColumnReceptor` works, and why a `MultiPointReceptor` may not repeat a
+  `ColumnRelease` works, and why a `MultiPointRelease` may not repeat a
   horizontal location.
 - **HYSPLIT stops releasing at `MAXPAR`** and fills a multipoint release's
   locations in order. An unset `maxpar` is chosen per release

@@ -127,7 +127,7 @@ def test_tropomi_box_filter(tropomi):
 def test_tropomi_recipe_to_releases_and_kernels(tropomi):
     df = tropomi[tropomi.good].head(3)
     releases = [
-        stilt.Receptor.from_points(
+        stilt.Release.from_points(
             r.time,
             slant_points(
                 r.longitude,
@@ -161,7 +161,7 @@ def test_tropomi_recipe_to_releases_and_kernels(tropomi):
 def test_column_releases_from_soundings(tropomi):
     df = tropomi[tropomi.good].head(2)
     releases, kernels = releases_from_soundings(df, "column", top=2500)
-    assert [type(r).__name__ for r in releases] == ["ColumnReceptor"] * 2
+    assert [type(r).__name__ for r in releases] == ["ColumnRelease"] * 2
     assert [(r.bottom, r.top) for r in releases] == [(0.0, 2500.0)] * 2
     assert kernels is not None and kernels.release.nunique() == 2
     with pytest.raises(ValueError, match="'column' or 'slant'"):
@@ -295,7 +295,7 @@ def test_oco2_recipe_with_pressure_altitudes():
         top=r.surface_altitude + 3000.0,
     )
     assert alts[0] == pytest.approx(r.surface_altitude)
-    release = stilt.Receptor.from_points(
+    release = stilt.Release.from_points(
         r.time,
         slant_points(r.longitude, r.latitude, alts, zenith=r.zenith, azimuth=r.azimuth),
         altitude_ref="msl",
@@ -369,7 +369,7 @@ def test_ggg_oof_slant_recipe_windows():
     points = slant_points(
         w.longitude, w.latitude, alts, zenith=w.zenith, azimuth=w.azimuth
     )
-    release = stilt.Receptor.from_points(windows.index[0], points, altitude_ref="msl")
+    release = stilt.Release.from_points(windows.index[0], points, altitude_ref="msl")
     assert len(release.coords()) == 20
     # morning at ~15 UT in Salt Lake City: the sun is east, so the path leans east
     assert release.longitudes[-1] > release.longitudes[0]

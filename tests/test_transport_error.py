@@ -8,7 +8,7 @@ import xarray as xr
 from stilt import TransportError
 from stilt import transport_error as _transport_error
 from stilt.footprint import correct_near_field
-from stilt.releases import PointReceptor
+from stilt.releases import PointRelease
 from stilt.transforms import AveragingKernel
 
 
@@ -447,7 +447,7 @@ def test_the_near_field_correction_needs_the_release():
 
 def test_the_near_field_correction_is_applied_to_both_tables():
     """With hnf_plume, the error is of the enhancement the footprint gives."""
-    release = PointReceptor(
+    release = PointRelease(
         time="2023-01-01", longitude=-111.0, latitude=41.0, altitude=5.0
     )
     rng = np.random.default_rng(0)

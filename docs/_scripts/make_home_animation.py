@@ -78,7 +78,7 @@ def init(project: Path, met_dir: Path | None) -> None:
             "subgrid_bounds": crop,
             "subgrid_dir": "met_crop",
         }
-    release = stilt.PointReceptor(
+    release = stilt.PointRelease(
         time=pd.Timestamp(TIME),
         longitude=TOWER_LON,
         latitude=TOWER_LAT,

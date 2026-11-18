@@ -14,13 +14,13 @@ from stilt.execution.worker import (
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _describe, read_footprint
 from stilt.footprint.targets import Mesh
-from stilt.releases import PointReceptor, Receptor
+from stilt.releases import PointRelease, Release
 from stilt.spatial import Grid
 
 
 def as_footprint(
     data: xr.DataArray,
-    release: Receptor,
+    release: Release,
     config: FootprintConfig,
     name: str = "",
 ) -> xr.DataArray:
@@ -52,7 +52,7 @@ def make_footprint(
 ) -> xr.DataArray:
     """Return a footprint of zeros at two cells of a small grid, from 2023-01-01 12 UTC, *n_times* hours long."""
     release_time = dt.datetime(2023, 1, 1, 12)
-    release = PointReceptor(
+    release = PointRelease(
         time=release_time,
         longitude=-111.85,
         latitude=40.77,

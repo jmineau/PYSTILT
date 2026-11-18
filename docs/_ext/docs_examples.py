@@ -87,7 +87,7 @@ def sample_project() -> Path:
     if not marker.exists():
         shutil.rmtree(SAMPLE, ignore_errors=True)
         releases = [
-            stilt.PointReceptor(
+            stilt.PointRelease(
                 time=f"2021-01-15 {hour:02d}:00",
                 longitude=-111.848,
                 latitude=40.766,

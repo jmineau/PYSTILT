@@ -18,10 +18,10 @@ import pandas as pd
 
 from .models import (
     _TIME_FORMS,
-    ColumnReceptor,
-    MultiPointReceptor,
-    PointReceptor,
-    Receptor,
+    ColumnRelease,
+    MultiPointRelease,
+    PointRelease,
+    Release,
     _column_location,
     _multipoint_locations,
     _parse_time_text,
@@ -48,7 +48,7 @@ ALIASES: dict[str, tuple[str, ...]] = {
 # ---------------------------------------------------------------------------
 
 
-def releases_to_frame(releases: Iterable[Receptor]) -> pd.DataFrame:
+def releases_to_frame(releases: Iterable[Release]) -> pd.DataFrame:
     """
     Return releases as one table with a row per release point.
 
@@ -319,7 +319,7 @@ def _build(
     lon: np.ndarray,
     lat: np.ndarray,
     alt: np.ndarray,
-) -> Receptor:
+) -> Release:
     """
     Return the release of one group of checked rows, given as plain values.
 
@@ -328,21 +328,21 @@ def _build(
     """
     common = {"time": time, "altitude_ref": altitude_ref, "attrs": attrs}
     if kind == "point":
-        return PointReceptor.model_construct(
+        return PointRelease.model_construct(
             longitude=float(lon[0]),
             latitude=float(lat[0]),
             altitude=float(alt[0]),
             **common,
         )
     if kind == "column":
-        return ColumnReceptor.model_construct(
+        return ColumnRelease.model_construct(
             longitude=float(lon[0]),
             latitude=float(lat[0]),
             bottom=float(alt.min()),
             top=float(alt.max()),
             **common,
         )
-    return MultiPointReceptor.model_construct(
+    return MultiPointRelease.model_construct(
         longitudes=tuple(lon.tolist()),
         latitudes=tuple(lat.tolist()),
         altitudes=tuple(alt.tolist()),
@@ -350,7 +350,7 @@ def _build(
     )
 
 
-def releases_from_rows(rows: pd.DataFrame) -> list[Receptor]:
+def releases_from_rows(rows: pd.DataFrame) -> list[Release]:
     """
     Build the releases of a table that :func:`release_rows` checked.
 
@@ -359,7 +359,7 @@ def releases_from_rows(rows: pd.DataFrame) -> list[Receptor]:
 
     Returns
     -------
-    list of Receptor
+    list of Release
         In table order, one per release id.
     """
     names = [str(c) for c in rows.columns if c not in COLUMNS and c not in ROW_COLUMNS]
@@ -391,15 +391,15 @@ def releases_from_rows(rows: pd.DataFrame) -> list[Receptor]:
     return releases
 
 
-def releases_from_frame(frame: pd.DataFrame) -> list[Receptor]:
+def releases_from_frame(frame: pd.DataFrame) -> list[Release]:
     """
     Check a table with a row per release point and build its releases.
 
     The table needs ``time``, ``longitude``, ``latitude``, and ``altitude``
-    columns. Each row is one :class:`PointReceptor`, unless a ``group``
+    columns. Each row is one :class:`PointRelease`, unless a ``group``
     column groups rows into one release: a group of two rows at one
-    location is a :class:`ColumnReceptor`, any other group a
-    :class:`MultiPointReceptor`.
+    location is a :class:`ColumnRelease`, any other group a
+    :class:`MultiPointRelease`.
 
     ======================  =============================================
     Field                   Accepted column names (any case)
@@ -421,7 +421,7 @@ def releases_from_frame(frame: pd.DataFrame) -> list[Receptor]:
 
     Returns
     -------
-    list of Receptor
+    list of Release
         In table order. A release listed twice appears once.
 
     Raises
@@ -432,14 +432,14 @@ def releases_from_frame(frame: pd.DataFrame) -> list[Receptor]:
     return releases_from_rows(release_rows(frame))
 
 
-def check_distinct_ids(releases: Iterable[Receptor]) -> None:
+def check_distinct_ids(releases: Iterable[Release]) -> None:
     """
     Raise if two different releases share an id.
 
     An id names a release's result files, so two releases with one id
     would overwrite each other. Equal releases listed twice are fine.
     """
-    seen: dict[str, Receptor] = {}
+    seen: dict[str, Release] = {}
     for r in releases:
         other = seen.setdefault(r.id, r)
         if other is not r and other != r:
@@ -469,7 +469,7 @@ def read_release_frame(path: str | Path | IO[str]) -> pd.DataFrame:
     return pd.read_csv(path, dtype=dtype)
 
 
-def read_releases(path: str | Path | IO[str]) -> list[Receptor]:
+def read_releases(path: str | Path | IO[str]) -> list[Release]:
     """
     Read releases from a CSV file.
 
@@ -485,13 +485,13 @@ def read_releases(path: str | Path | IO[str]) -> list[Receptor]:
 
     Returns
     -------
-    list of Receptor
+    list of Release
         In file order.
     """
     return releases_from_frame(read_release_frame(path))
 
 
-def _csv_frame(releases: Iterable[Receptor]) -> pd.DataFrame:
+def _csv_frame(releases: Iterable[Release]) -> pd.DataFrame:
     """Return the release table with times as the text written to CSV."""
     frame = releases_to_frame(releases)
     return frame.assign(
@@ -499,12 +499,12 @@ def _csv_frame(releases: Iterable[Receptor]) -> pd.DataFrame:
     )
 
 
-def releases_to_csv(releases: Iterable[Receptor]) -> str:
+def releases_to_csv(releases: Iterable[Release]) -> str:
     """Return releases as CSV text that :func:`read_releases` reads back."""
     return _csv_frame(releases).to_csv(index=False, lineterminator="\n")
 
 
-def write_releases(releases: Iterable[Receptor], path: str | Path) -> Path:
+def write_releases(releases: Iterable[Release], path: str | Path) -> Path:
     """Write releases to a CSV file that :func:`read_releases` reads, and return its path."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -512,7 +512,7 @@ def write_releases(releases: Iterable[Receptor], path: str | Path) -> Path:
     return path
 
 
-def append_releases_csv(text: str, releases: Iterable[Receptor]) -> str:
+def append_releases_csv(text: str, releases: Iterable[Release]) -> str:
     """
     Return the text of a releases CSV with rows for more releases appended.
 

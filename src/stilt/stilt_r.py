@@ -25,7 +25,7 @@ from stilt.transport import ModelRun
 from stilt.transport.hysplit.config import HysplitConfig
 
 if TYPE_CHECKING:
-    from stilt.releases import Receptor
+    from stilt.releases import Release
 
 #: The import path of :class:`StiltRModel`, the ``class`` of the ``models:``
 #: block of imported STILT-R runs, as their run settings record it.
@@ -127,7 +127,7 @@ class StiltRModel:
 
     def run(
         self,
-        release: Receptor,
+        release: Release,
         config: StiltRConfig,
         met: StiltRMetConfig,
         window: tuple[dt.datetime, dt.datetime],

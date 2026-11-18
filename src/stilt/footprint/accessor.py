@@ -15,7 +15,7 @@ import xarray as xr
 
 from stilt._paths import atomic_path
 from stilt.footprint.config import FootprintConfig, read_footprint_settings
-from stilt.releases import Receptor
+from stilt.releases import Release
 from stilt.spatial import Grid, horizontal_dims
 
 from ._paris import to_paris
@@ -112,9 +112,9 @@ class FootprintAccessor:
     # xarray keeps one accessor per array, so each attribute is parsed once.
 
     @cached_property
-    def release(self) -> Receptor:
+    def release(self) -> Release:
         """The release the footprint belongs to."""
-        return Receptor.from_json(self._attr("stilt_release"))
+        return Release.from_json(self._attr("stilt_release"))
 
     @cached_property
     def config(self) -> FootprintConfig:

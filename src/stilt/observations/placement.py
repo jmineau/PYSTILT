@@ -20,7 +20,7 @@ import pandas as pd
 from numpy.typing import ArrayLike
 from shapely.geometry import Point, Polygon
 
-from stilt.releases import ColumnReceptor, Receptor
+from stilt.releases import ColumnRelease, Release
 from stilt.transforms import averaging_kernel_table
 
 JitterMethod = Literal["regular", "random"]
@@ -47,7 +47,7 @@ def slant_points(
 
     Each point is ``(altitude - anchor) * tan(zenith)`` meters from
     ``(longitude, latitude)`` along the ``azimuth`` bearing, on a flat local
-    tangent plane. Pass the result to :meth:`stilt.Receptor.from_points`.
+    tangent plane. Pass the result to :meth:`stilt.Release.from_points`.
 
     Parameters
     ----------
@@ -264,7 +264,7 @@ def jitter_points(
 
 def releases_from_soundings(
     soundings: pd.DataFrame, kind: Literal["column", "slant"], *, top: float
-) -> tuple[list[Receptor], pd.DataFrame | None]:
+) -> tuple[list[Release], pd.DataFrame | None]:
     """
     Return a release for each sounding, and their averaging-kernel table.
 
@@ -276,7 +276,7 @@ def releases_from_soundings(
     kind : {"column", "slant"}
         ``column`` releases particles along the vertical from the ground to
         ``top`` meters above it, at the sounding's location
-        (:class:`~stilt.ColumnReceptor`). ``slant`` releases them at the
+        (:class:`~stilt.ColumnRelease`). ``slant`` releases them at the
         retrieval's ``altitude_levels`` below ``surface_altitude + top``,
         along the line of sight given by ``zenith`` and ``azimuth``
         (:func:`slant_points`), above sea level.
@@ -285,7 +285,7 @@ def releases_from_soundings(
 
     Returns
     -------
-    releases : list of Receptor
+    releases : list of Release
         One per sounding, in table order, each with the ``sounding_id`` as
         an attribute (a column of ``releases.csv``).
     kernels : pandas.DataFrame or None
@@ -323,12 +323,12 @@ def releases_from_soundings(
                 "with pressures only (OCO-2), add altitude_levels from "
                 "pressure_altitudes."
             )
-    releases: list[Receptor] = []
+    releases: list[Release] = []
     for row in soundings.to_dict("records"):
         attrs = {"sounding_id": str(row["sounding_id"])}
         if kind == "column":
             releases.append(
-                ColumnReceptor(
+                ColumnRelease(
                     time=row["time"],
                     longitude=float(row["longitude"]),
                     latitude=float(row["latitude"]),
@@ -348,7 +348,7 @@ def releases_from_soundings(
             azimuth=float(row["azimuth"]),
         )
         releases.append(
-            Receptor.from_points(row["time"], points, altitude_ref="msl", attrs=attrs)
+            Release.from_points(row["time"], points, altitude_ref="msl", attrs=attrs)
         )
     kernels = None
     if "ak" in soundings.columns and "ak_pressure" in soundings.columns:

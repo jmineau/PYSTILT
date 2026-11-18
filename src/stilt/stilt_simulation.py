@@ -48,7 +48,7 @@ class Simulation(simulation.Simulation):
 
     Parameters
     ----------
-    release : Receptor
+    release : Release
         Where and when particles are released.
     variant : Variant
         The variant, resolved: its configs, and the hashes that find its

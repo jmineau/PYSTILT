@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from stilt.config import ProjectConfig
-from stilt.releases import ColumnReceptor, MultiPointReceptor
+from stilt.releases import ColumnRelease, MultiPointRelease
 from stilt.spatial import Grid
 from stilt.stilt_project import STILT_R_HYSPLIT
 from stilt.transport.hysplit import MetConfig
@@ -43,7 +43,7 @@ def wbb_release():
 @pytest.fixture(scope="session")
 def wbb_column_release():
     """Column release at WBB - same lat/lon, two heights."""
-    return ColumnReceptor(
+    return ColumnRelease(
         time=REFERENCE_TIME,
         longitude=-112.0,
         latitude=40.5,
@@ -55,7 +55,7 @@ def wbb_column_release():
 @pytest.fixture(scope="session")
 def wbb_multipoint_release():
     """Three-location multipoint release at WBB area."""
-    return MultiPointReceptor(
+    return MultiPointRelease(
         time=REFERENCE_TIME,
         longitudes=[-112.0, -111.5, -111.0],
         latitudes=[40.5, 41.0, 41.5],

@@ -84,7 +84,7 @@ guides, and Herbie's tutorials.
   reference. Measured accuracy goes on a Development page, with its test or
   study. A bug fix changes a guide only when it changes what the user does.
 - **Say it once.** A caveat lives on one page, and the others link to it.
-- **Use the reader's words.** Receptor, particles, footprint, meteorology.
+- **Use the reader's words.** Release, particles, footprint, meteorology.
   Internal names (store key, publish, resolve) belong only on pages about
   internals. Describe a config's fields (its parameters) in plain English,
   naming no class or module. `AGENTS.md` has the table of words to use.

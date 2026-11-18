@@ -17,10 +17,10 @@ the ones that have an equivalent.
      - PYSTILT equivalent
    * - Column receptor (``minagl`` / ``maxagl``, ``agl`` levels)
      - ``get.recp.sensorv2.r``
-     - :class:`stilt.ColumnReceptor` from the sounding's coordinates
+     - :class:`stilt.ColumnRelease` from the sounding's coordinates
    * - Slant column (``run_slant``)
      - ``get.recp.sensorv2.r``
-     - :func:`stilt.observations.slant_points` + :meth:`stilt.Receptor.from_points`
+     - :func:`stilt.observations.slant_points` + :meth:`stilt.Release.from_points`
    * - Sounding selection (near-field + background)
      - ``sel.obs4recpv2``
      - :func:`stilt.observations.select_observations_spatial`

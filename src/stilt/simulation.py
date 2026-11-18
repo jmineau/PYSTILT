@@ -18,7 +18,7 @@ import pandas as pd
 
 from stilt.output import Output, completed
 from stilt.particles import read_particles
-from stilt.releases import Receptor
+from stilt.releases import Release
 from stilt.stages import reads
 
 if TYPE_CHECKING:
@@ -47,7 +47,7 @@ class Simulation:
 
     Parameters
     ----------
-    release : Receptor
+    release : Release
         Where and when particles are released.
     variant : Variant
         The variant, resolved: its configs, and the hashes that find its
@@ -68,7 +68,7 @@ class Simulation:
         If *realization* is not one the variant runs as.
     """
 
-    release: Receptor
+    release: Release
     variant: Variant
     output: Output
     directory: Path | None = None

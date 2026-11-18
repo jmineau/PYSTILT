@@ -53,7 +53,7 @@ the ground on the University of Utah campus, at noon local time (19:00 UTC) on
 
    import stilt
 
-   release = stilt.PointReceptor(
+   release = stilt.PointRelease(
        time="2021-01-14 19:00",   # UTC
        longitude=-111.848,
        latitude=40.766,

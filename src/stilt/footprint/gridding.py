@@ -31,7 +31,7 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.foot import _near_field
 from stilt.particles import FOOTPRINT_COLUMNS, check_particles
-from stilt.releases import Receptor
+from stilt.releases import Release
 from stilt.spatial import Grid, _east_edge, _grid_cell_starts, haversine_km, is_longlat
 from stilt.transforms import apply_transforms
 
@@ -66,7 +66,7 @@ _RELEASE_MARGIN_KM = 10.0
 _MAX_KM_PER_MINUTE = 6.0
 
 
-def _check_particles_for_footprint(particles: pd.DataFrame, release: Receptor) -> None:
+def _check_particles_for_footprint(particles: pd.DataFrame, release: Release) -> None:
     """
     Refuse a particle table that would give a wrong footprint, and warn about rows left out.
 
@@ -111,7 +111,7 @@ def _check_particles_for_footprint(particles: pd.DataFrame, release: Receptor) -
     _check_release_point(p, release)
 
 
-def _check_release_time(particles: pd.DataFrame, release: Receptor) -> None:
+def _check_release_time(particles: pd.DataFrame, release: Release) -> None:
     """Refuse particles whose ``time`` minus ``age`` is not the release time; a table without ``time`` passes."""
     if "time" not in particles.columns or not pd.api.types.is_datetime64_any_dtype(
         particles["time"]
@@ -141,7 +141,7 @@ def _check_release_time(particles: pd.DataFrame, release: Receptor) -> None:
     )
 
 
-def _check_release_point(p: pd.DataFrame, release: Receptor) -> None:
+def _check_release_point(p: pd.DataFrame, release: Release) -> None:
     """Refuse particles whose first positions are farther from every release point than they could have gone."""
     first = (
         p.assign(_age=p["age"].abs())
@@ -782,7 +782,7 @@ def _accumulate_smoothed_footprint(
 
 def calc_footprint(
     particles: pd.DataFrame,
-    release: Receptor,
+    release: Release,
     grid: Grid,
     *,
     smooth_factor: float = 1.0,
@@ -854,7 +854,7 @@ def calc_footprint(
         Particle table, such as :func:`stilt.run_trajectories` returns or
         ``sim.particles``, with columns ``particle``, ``age`` (minutes since
         release), ``lon``, ``lat``, and ``foot``.
-    release : Receptor
+    release : Release
         Release the particles were released from.
     grid : Grid
         Domain and resolution of the footprint. Its longitudes count modulo

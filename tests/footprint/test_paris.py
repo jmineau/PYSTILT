@@ -16,7 +16,7 @@ RELEASE_ID = "202401151800_-111.85_40.77_5"
 @pytest.fixture
 def release():
     """A point release 5 m above ground in Salt Lake City."""
-    return stilt.PointReceptor(
+    return stilt.PointRelease(
         time=RELEASE_TIME.to_pydatetime(),
         longitude=-111.85,
         latitude=40.77,

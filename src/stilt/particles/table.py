@@ -22,9 +22,9 @@ import pyarrow.parquet as pq
 
 from stilt._paths import location, readable, write_parquet
 from stilt.releases import (
-    ColumnReceptor,
-    MultiPointReceptor,
-    Receptor,
+    ColumnRelease,
+    MultiPointRelease,
+    Release,
     parse_release_id,
 )
 
@@ -66,7 +66,7 @@ class ParticleMetadata(NamedTuple):
 
     Attributes
     ----------
-    release : Receptor
+    release : Release
         Release the particles were released from.
     settings : dict
         The run's settings, as its folder's ``_settings.yaml`` records them:
@@ -80,7 +80,7 @@ class ParticleMetadata(NamedTuple):
         ``seed + realization``; ``None`` for a single run.
     """
 
-    release: Receptor
+    release: Release
     settings: dict[str, Any]
     met_files: list[Path]
     realization: int | None = None
@@ -172,7 +172,7 @@ def particles_metadata(path: str | Path | UPath) -> ParticleMetadata:
     )
 
 
-def stored_release(meta: Mapping[bytes, bytes], path: str | Path | UPath) -> Receptor:
+def stored_release(meta: Mapping[bytes, bytes], path: str | Path | UPath) -> Release:
     """
     Return the release a stored particle or footprint file records in its metadata.
 
@@ -191,7 +191,7 @@ def stored_release(meta: Mapping[bytes, bytes], path: str | Path | UPath) -> Rec
         records neither.
     """
     if b"stilt:release" in meta:
-        return Receptor.from_json(meta[b"stilt:release"])
+        return Release.from_json(meta[b"stilt:release"])
     if b"stilt:receptor" in meta:
         raise ValueError(OLD_FILE.format(what=f"The file {path}"))
     raise ValueError(f"{path} does not record its release.")
@@ -294,7 +294,7 @@ def particles_from_table(table: pa.Table, time: bool = True) -> pd.DataFrame:
 def write_particles(
     path: str | Path | UPath,
     particles: pd.DataFrame,
-    release: Receptor,
+    release: Release,
     settings: Mapping[str, Any],
     met_files: list[Path],
     metadata: dict[bytes, bytes] | None = None,
@@ -314,7 +314,7 @@ def write_particles(
         File to write.
     particles : pandas.DataFrame
         The particle table.
-    release : Receptor
+    release : Release
         Release the particles were released from.
     settings : mapping
         The run's settings, as its folder records them
@@ -405,7 +405,7 @@ def needs_height_to_match(
     )
 
 
-def add_release_heights(particles: pd.DataFrame, release: Receptor) -> pd.DataFrame:
+def add_release_heights(particles: pd.DataFrame, release: Release) -> pd.DataFrame:
     """
     Return *particles* with each particle's ``release_height``, for a column or multipoint release.
 
@@ -421,11 +421,11 @@ def add_release_heights(particles: pd.DataFrame, release: Receptor) -> pd.DataFr
 
     A point release's particles are returned as they are.
     """
-    if isinstance(release, ColumnReceptor):
+    if isinstance(release, ColumnRelease):
         return particles.assign(
             release_height=_column_release_heights(particles, release)
         )
-    if isinstance(release, MultiPointReceptor):
+    if isinstance(release, MultiPointRelease):
         return particles.assign(
             release_height=_multipoint_release_heights(particles, release)
         )
@@ -440,7 +440,7 @@ def _release_rows(p: pd.DataFrame) -> pd.DataFrame | None:
     return released
 
 
-def _height(rows: pd.DataFrame, release: Receptor) -> np.ndarray | None:
+def _height(rows: pd.DataFrame, release: Release) -> np.ndarray | None:
     """Return the rows' heights in the release's vertical reference, or ``None`` when they cannot be known."""
     if "zagl" not in rows.columns:
         return None
@@ -451,7 +451,7 @@ def _height(rows: pd.DataFrame, release: Receptor) -> np.ndarray | None:
     return None
 
 
-def _column_release_heights(p: pd.DataFrame, release: ColumnReceptor) -> pd.Series:
+def _column_release_heights(p: pd.DataFrame, release: ColumnRelease) -> pd.Series:
     """
     Return each row's release height for a column release: the center of its particle's slab.
 
@@ -474,7 +474,7 @@ def _column_release_heights(p: pd.DataFrame, release: ColumnReceptor) -> pd.Seri
 
 
 def _multipoint_release_heights(
-    p: pd.DataFrame, release: MultiPointReceptor
+    p: pd.DataFrame, release: MultiPointRelease
 ) -> pd.Series:
     """
     Return each row's release altitude for a multipoint release.
@@ -516,7 +516,7 @@ def _multipoint_release_heights(
             spacing = _closest_points_m(lons, lats)
             if spacing < _MIN_RELIABLE_SPACING_M:
                 warnings.warn(
-                    f"MultiPointReceptor release points are as close as "
+                    f"MultiPointRelease release points are as close as "
                     f"{spacing:.0f} m and cannot be separated by altitude, and this "
                     "model writes no t=0 row, so particles cannot be "
                     "reliably matched to their release points; 'release_height' may be wrong. "

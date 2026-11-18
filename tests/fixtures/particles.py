@@ -6,10 +6,10 @@ import numpy as np
 import pandas as pd
 
 from stilt.particles import add_release_heights
-from stilt.releases import PointReceptor, Receptor
+from stilt.releases import PointRelease, Release
 
 
-def finished(particles: pd.DataFrame, release: Receptor) -> pd.DataFrame:
+def finished(particles: pd.DataFrame, release: Release) -> pd.DataFrame:
     """
     Return raw particles with the release heights PYSTILT adds after any model run.
 
@@ -19,9 +19,9 @@ def finished(particles: pd.DataFrame, release: Receptor) -> pd.DataFrame:
     return add_release_heights(particles, release)
 
 
-def point_at(altitude: float) -> PointReceptor:
+def point_at(altitude: float) -> PointRelease:
     """Return a point release at *altitude* m above ground, for the near-field correction."""
-    return PointReceptor(
+    return PointRelease(
         time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=altitude
     )
 

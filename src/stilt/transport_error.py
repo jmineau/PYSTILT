@@ -34,7 +34,7 @@ import xarray as xr
 
 from stilt.background import _background, _fill_missing
 from stilt.footprint.foot import _near_field
-from stilt.releases import Receptor
+from stilt.releases import Release
 from stilt.transforms import apply_transforms, release_coordinate
 
 #: X-STILT's empirical mean vertical correlation length of transport errors, m.
@@ -291,7 +291,7 @@ def transport_error(
     flux: xr.DataArray,
     *,
     transforms: Sequence[Any] = (),
-    release: Receptor | None = None,
+    release: Release | None = None,
     directory: str | Path | None = None,
     hnf_plume: bool = True,
     footprint_depth: float = 0.5,
@@ -317,7 +317,7 @@ def transport_error(
     transforms : sequence, optional
         The footprint's particle transforms (``sim.variant.stages["footprint"].transforms``),
         applied to both tables so the error is weighted like the footprint.
-    release : Receptor, optional
+    release : Release, optional
         The release (``sim.release``), for the near-field correction and
         the transforms. Needed when *hnf_plume* is set.
     directory : str or Path, optional
@@ -515,7 +515,7 @@ def transport_error(
 
 def _transport_errors(
     read: Callable[[str], tuple[pd.DataFrame, list[pd.DataFrame]]],
-    releases: Sequence[Receptor],
+    releases: Sequence[Release],
     flux: xr.DataArray,
     *,
     transforms: Sequence[Any] = (),
@@ -538,7 +538,7 @@ def _transport_errors(
     order, with the columns in :data:`_RESULT_COLUMNS`.
     """
 
-    def one(release: Receptor) -> tuple[float, float, float, float, float, int]:
+    def one(release: Release) -> tuple[float, float, float, float, float, int]:
         particles, error_particles = read(release.id)
         result = transport_error(
             particles,

@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from stilt.releases import MultiPointReceptor, read_releases
+from stilt.releases import MultiPointRelease, read_releases
 
 
 def test_mixed_int_and_str_group_does_not_split_a_release(tmp_path):
@@ -52,7 +52,7 @@ def test_mixed_int_and_str_group_does_not_split_a_release(tmp_path):
     assert naive.group.nunique() > df.group.astype(str).nunique()
 
     recs = read_releases(f)
-    multis = [r for r in recs if isinstance(r, MultiPointReceptor)]
+    multis = [r for r in recs if isinstance(r, MultiPointRelease)]
     assert len(multis) == 1
     assert len(multis[0].coords()) == 38
     assert len(recs) == df.group.astype(str).nunique()

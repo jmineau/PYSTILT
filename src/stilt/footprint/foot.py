@@ -20,7 +20,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from stilt.releases import PointReceptor, Receptor
+from stilt.releases import PointRelease, Release
 from stilt.sampling import calc_pbl_height, sample_met
 
 logger = logging.getLogger(__name__)
@@ -220,7 +220,7 @@ def _step_minutes(particles: pd.DataFrame) -> np.ndarray:
 
 
 def correct_near_field(
-    particles: pd.DataFrame, release: Receptor, footprint_depth: float
+    particles: pd.DataFrame, release: Release, footprint_depth: float
 ) -> pd.DataFrame:
     """
     Correct ``foot`` for plume dilution in the hyper-near field, as STILT-R's ``calc_plume_dilution`` does.
@@ -248,7 +248,7 @@ def correct_near_field(
     ----------
     particles : pandas.DataFrame
         Particle table.
-    release : Receptor
+    release : Release
         Release the particles were released from.
     footprint_depth : float
         Height that surface fluxes are mixed through (``VEGHT`` in HYSPLIT
@@ -274,7 +274,7 @@ def correct_near_field(
             "The near-field correction needs the particle columns "
             f"{', '.join(sorted(missing))}."
         )
-    r_zagl = release.altitude if isinstance(release, PointReceptor) else None
+    r_zagl = release.altitude if isinstance(release, PointRelease) else None
 
     p = particles.copy()
     p["foot_no_hnf_dilution"] = p["foot"]
@@ -320,7 +320,7 @@ def correct_near_field(
 
 
 def _near_field(
-    particles: pd.DataFrame, release: Receptor, footprint_depth: float
+    particles: pd.DataFrame, release: Release, footprint_depth: float
 ) -> pd.DataFrame:
     """
     Return *particles* with the near-field correction, or as they are when they lack its columns.

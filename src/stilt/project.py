@@ -36,7 +36,7 @@ from stilt.execution.config import ExecutionConfig
 from stilt.fetch import fetch_project
 from stilt.output import Output, completed
 from stilt.particles import particles_from_table
-from stilt.releases import Receptor, read_releases
+from stilt.releases import Release, read_releases
 from stilt.releases.table import (
     COLUMNS,
     ROW_COLUMNS,
@@ -62,17 +62,17 @@ STATES = ("complete", "failed", "interrupted", "pending")
 
 
 def _as_releases(
-    releases: Receptor | Iterable[Receptor] | str | Path,
-) -> list[Receptor]:
+    releases: Release | Iterable[Release] | str | Path,
+) -> list[Release]:
     """Return releases given as one, several, or the path of a releases CSV."""
     if isinstance(releases, (str, Path)):
         return read_releases(absolute(releases))
-    if isinstance(releases, Receptor):
+    if isinstance(releases, Release):
         return [releases]
     items = list(releases)
-    if not all(isinstance(item, Receptor) for item in items):
+    if not all(isinstance(item, Release) for item in items):
         raise TypeError(
-            "Releases must be a Receptor, an iterable of Receptors, or the path "
+            "Releases must be a Release, an iterable of Releases, or the path "
             "of a releases CSV."
         )
     return items
@@ -209,7 +209,7 @@ class Project:
     def init(
         cls,
         path: str | Path,
-        releases: Receptor | Iterable[Receptor] | str | Path | None = None,
+        releases: Release | Iterable[Release] | str | Path | None = None,
         *,
         config: ProjectConfig | None = None,
         **settings: Any,
@@ -227,7 +227,7 @@ class Project:
         ----------
         path : str or Path
             Project directory. It is created if needed.
-        releases : Receptor, iterable of Receptor, str or Path, optional
+        releases : Release, iterable of Release, str or Path, optional
             Releases, or the path of a releases CSV to copy them from.
         config : ProjectConfig, optional
             The settings. Or give them as keywords instead.
@@ -372,7 +372,7 @@ class Project:
         frame = first.loc[:, [*RELEASE_COLUMNS, *labels]].reset_index(drop=True)
         return frame.astype({"time": "datetime64[ns]"})
 
-    def release(self, release_id: str) -> Receptor:
+    def release(self, release_id: str) -> Release:
         """
         Return one release by id, built from its rows.
 
@@ -383,7 +383,7 @@ class Project:
         """
         return self._releases([release_id])[release_id]
 
-    def _releases(self, release_ids: Iterable[str]) -> dict[str, Receptor]:
+    def _releases(self, release_ids: Iterable[str]) -> dict[str, Release]:
         """
         Return releases by id, built together from their rows.
 
@@ -433,7 +433,7 @@ class Project:
             vars(self).pop(name, None)
 
     def add_releases(
-        self, releases: Receptor | Iterable[Receptor] | str | Path
+        self, releases: Release | Iterable[Release] | str | Path
     ) -> list[str]:
         """
         Add releases to ``releases.csv`` and return the ids of the new ones.
@@ -444,7 +444,7 @@ class Project:
 
         Parameters
         ----------
-        releases : Receptor, iterable of Receptor, str or Path
+        releases : Release, iterable of Release, str or Path
             Releases, or the path of a releases CSV to add them from.
 
         Raises

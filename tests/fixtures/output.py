@@ -17,7 +17,7 @@ import xarray as xr
 from stilt.config import Variant
 from stilt.footprint.config import FootprintConfig
 from stilt.output import Output
-from stilt.releases import PointReceptor
+from stilt.releases import PointRelease
 from stilt.spatial import Grid
 
 from .factories import MET, make_release, make_variant
@@ -38,12 +38,12 @@ VARIANT = output_variant()
 FEET = output_variant(footprint=FootprintConfig(grid=GRID))
 
 
-def release_at(hour: int = 12, day: int = 15) -> PointReceptor:
+def release_at(hour: int = 12, day: int = 15) -> PointRelease:
     """Return the WBB release at *hour* on 2024-07-*day*."""
     return make_release(dt.datetime(2024, 7, day, hour))
 
 
-def fake_particles(release: PointReceptor, n: int = 50) -> pd.DataFrame:
+def fake_particles(release: PointRelease, n: int = 50) -> pd.DataFrame:
     """Return *n* particles of ten one-minute steps, random but fixed by the release's time."""
     rng = np.random.default_rng(int(release.time.timestamp()) % 1000)
     steps = np.arange(-1, -11, -1, dtype=float)
@@ -64,7 +64,7 @@ def fake_particles(release: PointReceptor, n: int = 50) -> pd.DataFrame:
 
 
 def fake_footprint(
-    release: PointReceptor,
+    release: PointRelease,
     hours=(-2, -1, 0),
     seed: int = 0,
     name: str = "hrrr",

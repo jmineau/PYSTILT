@@ -32,7 +32,7 @@ def _footprint(tres: str) -> xr.DataArray:
         )
         for k in range(1, 11)
     )
-    release = stilt.PointReceptor(time=T0, longitude=-112.0, latitude=40.5, altitude=10)
+    release = stilt.PointRelease(time=T0, longitude=-112.0, latitude=40.5, altitude=10)
     return stilt.calc_footprint(particles, release, GRID, tres=tres)
 
 

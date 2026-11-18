@@ -365,8 +365,8 @@ def test_a_transport_config_has_none_of_the_footprints_foot_settings(setting):
 
 
 def _release():
-    from stilt.releases import PointReceptor
+    from stilt.releases import PointRelease
 
-    return PointReceptor(
+    return PointRelease(
         time="2023-01-01 12:00", longitude=-111.9, latitude=40.7, altitude=5.0
     )

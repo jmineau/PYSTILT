@@ -30,7 +30,7 @@ from stilt.footprint.io import _threads, open_footprints
 from stilt.footprint.stage import stored_particles, variant_footprint
 from stilt.particles import read_particles
 from stilt.project import _one_group
-from stilt.releases import Receptor
+from stilt.releases import Release
 from stilt.stilt_simulation import Simulation
 from stilt.transport_error import _transport_errors
 
@@ -204,7 +204,7 @@ class Project(project.Project):
     Make a project, run it, and load a footprint:
 
     >>> import stilt  # doctest: +SKIP
-    >>> release = stilt.PointReceptor(  # doctest: +SKIP
+    >>> release = stilt.PointRelease(  # doctest: +SKIP
     ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
     ... )
     >>> project = stilt.Project.init(  # doctest: +SKIP
@@ -269,7 +269,7 @@ class Project(project.Project):
     def init(
         cls,
         path: str | Path,
-        releases: Receptor | Iterable[Receptor] | str | Path | None = None,
+        releases: Release | Iterable[Release] | str | Path | None = None,
         *,
         config: ProjectConfig | None = None,
         starter: bool = False,
@@ -293,7 +293,7 @@ class Project(project.Project):
         ----------
         path : str or Path
             Project directory. It is created if needed.
-        releases : Receptor, iterable of Receptor, str or Path, optional
+        releases : Release, iterable of Release, str or Path, optional
             Releases, or the path of a releases CSV to copy them from.
         config : ProjectConfig, optional
             The settings. Or give them as keywords instead.

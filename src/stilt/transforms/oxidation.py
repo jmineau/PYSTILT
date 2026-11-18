@@ -19,7 +19,7 @@ from stilt.sampling import sample_field, vertical_dim
 from stilt.transforms.lifetime import survival
 
 if TYPE_CHECKING:
-    from stilt.releases import Receptor
+    from stilt.releases import Release
 
 # The specific gas constant of dry air, in J kg⁻¹ K⁻¹.
 _R_DRY_AIR = 287.05
@@ -267,7 +267,7 @@ class Oxidation(BaseModel):
     def apply(
         self,
         particles: pd.DataFrame,
-        release: Receptor | None = None,
+        release: Release | None = None,
         directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """Return the particles with ``foot`` scaled by the surviving fraction."""

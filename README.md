@@ -64,7 +64,7 @@ through the meteorology, and calculate its footprint:
 ```python
 import stilt
 
-release = stilt.PointReceptor(
+release = stilt.PointRelease(
     time="2023-07-15 18:00",   # UTC
     longitude=-111.848,
     latitude=40.766,
