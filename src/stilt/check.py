@@ -86,7 +86,7 @@ _NO_RECEPTORS: _Finding = (
 
 def _build_checks(variant: Variant) -> Iterator[_Check]:
     """Yield the variant's transport model build when it cannot be found here, such as no ``hycs_std``."""
-    # Variants that differ only in what changes no particle (exe_dir) share it.
+    # Variants that differ only in what changes no particle (directory) share it.
     where = variant.transport.model_dump_json(include=set(variant.transport.UNRECORDED))
 
     def make() -> list[_Finding]:

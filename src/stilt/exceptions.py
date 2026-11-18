@@ -61,13 +61,13 @@ class MeteorologyError(SimulationError):
 
 class HYSPLITNotFoundError(StiltError, FileNotFoundError):
     """
-    The HYSPLIT executable (``hycs_std``) is missing.
+    The HYSPLIT executable (``hycs_std``) is missing, or cannot run.
 
-    Raised when ``exe_dir`` holds no ``hycs_std``, and, without ``exe_dir``,
-    when no ``hycs_std`` is on ``PATH``. PYSTILT does not include HYSPLIT:
-    get ``hycs_std`` and set ``exe_dir`` (under ``models: hysplit:`` in
-    ``config.yaml``) to the directory that holds it, or put that directory
-    on ``PATH``.
+    Raised when ``directory`` has no ``exec/hycs_std`` or it is not
+    executable, and, without ``directory``, when no ``hycs_std`` is on
+    ``PATH``. PYSTILT does not include HYSPLIT: get it and set ``directory``
+    (under ``models: hysplit:`` in ``config.yaml``) to the HYSPLIT folder,
+    or put the folder that holds ``hycs_std`` on ``PATH``.
     """
 
 

@@ -243,3 +243,23 @@ def make_receptor(
         altitude=altitude,
         attrs=attrs,
     )
+
+
+def make_hysplit_dir(
+    directory: Path,
+    version: str | None = "hysplit.v5.1.0",
+    body: str = "exit 2\n",
+    executable: bool = True,
+) -> Path:
+    """
+    Make a HYSPLIT folder as its download unpacks, with a stand-in ``exec/hycs_std``, and return it.
+
+    The stand-in prints ``HYSPLIT version: <version>`` as ``hycs_std`` does
+    when it starts (nothing for ``None``), then runs the shell lines *body*.
+    """
+    exe = directory / "exec" / "hycs_std"
+    exe.parent.mkdir(parents=True, exist_ok=True)
+    said = "" if version is None else f"echo ' HYSPLIT version: {version}'\n"
+    exe.write_text(f"#!/bin/sh\n{said}{body}")
+    exe.chmod(0o755 if executable else 0o644)
+    return directory

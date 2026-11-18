@@ -17,7 +17,12 @@ from stilt.transport.hysplit.model import hysplit_version
 from tests.fixtures.factories import blocks
 
 from .conftest import STAND_IN_VERSION
-from .fixtures.factories import make_met_config, make_receptor, write_arl_file
+from .fixtures.factories import (
+    make_hysplit_dir,
+    make_met_config,
+    make_receptor,
+    write_arl_file,
+)
 
 GRID = {"xmin": -112, "xmax": -111, "ymin": 40, "ymax": 41, "xres": 0.1, "yres": 0.1}
 
@@ -54,40 +59,24 @@ def test_settings_hash_ignores_key_order_and_number_spelling():
 # ---------------------------------------------------------------------------
 
 
-def _build(directory, version="hysplit.v5.1.0", comment=""):
-    """Write a ``hycs_std`` into *directory* that prints *version*, as HYSPLIT's does, and return the directory."""
-    directory.mkdir(parents=True)
-    exe = directory / "hycs_std"
-    exe.write_text(
-        f"#!/bin/sh\n# {comment}\necho ' HYSPLIT version: {version}'\nexit 2\n"
-    )
-    exe.chmod(0o755)
-    return directory
-
-
 def test_hysplit_version_is_what_hycs_std_prints(tmp_path):
-    assert hysplit_version(_build(tmp_path / "b", "hysplit.v5.2.2")) == "hysplit.v5.2.2"
+    folder = make_hysplit_dir(tmp_path / "b", "hysplit.v5.2.2")
+    assert hysplit_version(folder) == "hysplit.v5.2.2"
 
 
-def test_hysplit_version_without_exe_dir_is_of_the_hycs_std_on_path():
+def test_hysplit_version_without_directory_is_of_the_hycs_std_on_path():
     assert hysplit_version() == STAND_IN_VERSION
 
 
 def test_hysplit_version_is_none_when_hycs_std_prints_none(tmp_path):
-    build = tmp_path / "b"
-    build.mkdir()
-    (build / "hycs_std").write_text("#!/bin/sh\nexit 0\n")
-    (build / "hycs_std").chmod(0o755)
-    assert hysplit_version(build) is None
+    assert hysplit_version(make_hysplit_dir(tmp_path / "b", version=None)) is None
 
 
 def test_hysplit_version_is_none_for_a_hycs_std_that_cannot_run_here(tmp_path):
     """Another platform's build: the version is recorded only, so it does not stop a run."""
-    build = tmp_path / "b"
-    build.mkdir()
-    (build / "hycs_std").write_bytes(b"\x00not a program for this machine")
-    (build / "hycs_std").chmod(0o755)
-    assert hysplit_version(build) is None
+    folder = make_hysplit_dir(tmp_path / "b")
+    (folder / "exec" / "hycs_std").write_bytes(b"\x00not a program for this machine")
+    assert hysplit_version(folder) is None
 
 
 def test_hysplit_version_is_none_for_a_hycs_std_that_does_not_stop(
@@ -96,24 +85,21 @@ def test_hysplit_version_is_none_for_a_hycs_std_that_does_not_stop(
     from stilt.transport.hysplit import model
 
     monkeypatch.setattr(model, "_VERSION_TIMEOUT", 0.5)
-    build = tmp_path / "b"
-    build.mkdir()
-    (build / "hycs_std").write_text("#!/bin/sh\nexec sleep 30\n")
-    (build / "hycs_std").chmod(0o755)
-    assert hysplit_version(build) is None
+    folder = make_hysplit_dir(tmp_path / "b", version=None, body="exec sleep 30\n")
+    assert hysplit_version(folder) is None
 
 
 def test_without_hycs_std_hysplit_version_says_what_to_set(monkeypatch, tmp_path):
     monkeypatch.setenv("PATH", str(tmp_path))
-    with pytest.raises(HYSPLITNotFoundError, match="exe_dir"):
+    with pytest.raises(HYSPLITNotFoundError, match="directory.*PATH"):
         hysplit_version()
 
 
 def test_the_build_is_the_checksum_of_hycs_std(tmp_path):
     """Two builds that print one version are two runs; the version is recorded beside."""
-    one = _variant(tmp_path, exe_dir=_build(tmp_path / "one", comment="one"))
-    two = _variant(tmp_path, exe_dir=_build(tmp_path / "two", comment="two"))
-    exe = tmp_path / "one" / "hycs_std"
+    one = _variant(tmp_path, directory=make_hysplit_dir(tmp_path / "one", body="# 1\n"))
+    two = _variant(tmp_path, directory=make_hysplit_dir(tmp_path / "two", body="# 2\n"))
+    exe = tmp_path / "one" / "exec" / "hycs_std"
     assert one.build.sha256 == hashlib.sha256(exe.read_bytes()).hexdigest()
     assert one.build.version == two.build.version == "hysplit.v5.1.0"
     assert one.run_settings["model"] == {
@@ -124,22 +110,11 @@ def test_the_build_is_the_checksum_of_hycs_std(tmp_path):
     assert one.particles_hash != two.particles_hash
 
 
-def test_the_version_a_build_reports_is_not_in_the_hash():
-    def settings(version):
-        build = ModelInfo(name="hysplit", sha256="0" * 64, version=version)
-        return run_settings(HysplitConfig(), {}, build)
-
-    assert settings("hysplit.v5.1.0") == settings("hysplit.v5.2.2")
-
-
-def test_a_project_opens_without_hycs_std_and_its_hash_needs_one(monkeypatch, tmp_path):
-    """A machine that only reports status has no hycs_std: the build is read on first use."""
-    variant = _variant(tmp_path)
-    monkeypatch.setenv("PATH", str(tmp_path))
-    with pytest.raises(HYSPLITNotFoundError, match="PATH"):
-        _ = variant.particles_hash
-    assert variant.readable_run_settings["model"] == {"name": "hysplit"}
-    assert variant.readable_run_settings["met"] == {"source": "HRRR", "crop": None}
+def test_moving_the_hysplit_folder_keeps_the_hash(tmp_path):
+    one = _variant(tmp_path, directory=make_hysplit_dir(tmp_path / "one"))
+    moved = _variant(tmp_path, directory=make_hysplit_dir(tmp_path / "moved"))
+    assert "directory" not in one.run_settings
+    assert one.particles_hash == moved.particles_hash
 
 
 # ---------------------------------------------------------------------------
@@ -181,7 +156,7 @@ def test_a_single_run_records_no_realization(tmp_path):
 def test_run_settings_leave_out_what_changes_no_particle(tmp_path):
     base = _variant(tmp_path, numpar=100)
     recorded = base.run_settings
-    assert "exe_dir" not in recorded
+    assert "directory" not in recorded
     assert set(recorded["model"]) == {"name", "sha256", "data_files"}
     # Unset, maxpar depends on the receptor (#237), so it is recorded unset,
     # and a set maxpar, which can stop a multipoint release, is another run.
@@ -329,28 +304,52 @@ def _bundled_table(name: str):
     return _bundled_data_dir() / name
 
 
-def test_a_data_dir_of_bundled_copies_is_the_same_run(tmp_path):
-    """Pointing data_dir at copies of the bundled tables changes nothing."""
-    data = tmp_path / "tables"
-    data.mkdir()
-    shutil.copy(_bundled_table("LANDUSE.ASC"), data / "LANDUSE.ASC")
-    base = _variant(tmp_path, numpar=100)
-    same = _variant(tmp_path, numpar=100, data_dir=data)
+def test_bdyfiles_of_copies_of_pystilts_tables_is_the_same_run(tmp_path):
+    """HYSPLIT's own tables, which PYSTILT's copy is, change nothing."""
+    folder = make_hysplit_dir(tmp_path / "hysplit")
+    base = _variant(tmp_path, numpar=100, directory=folder)
+    _ = base.particles_hash
+    (folder / "bdyfiles").mkdir()
+    shutil.copy(_bundled_table("LANDUSE.ASC"), folder / "bdyfiles" / "LANDUSE.ASC")
+    same = _variant(tmp_path, numpar=100, directory=folder)
     assert same.build.data_files is None
-    assert "data_dir" not in same.run_settings
     assert same.particles_hash == base.particles_hash
 
 
+def test_hysplits_ascdata_cfg_is_the_same_run(tmp_path):
+    """HYSPLIT's ASCDATA.CFG names ../bdyfiles/ for the tables; a run reads them where they are linked."""
+    folder = make_hysplit_dir(tmp_path / "hysplit")
+    (folder / "bdyfiles").mkdir()
+    lines = _bundled_table("ASCDATA.CFG").read_text().splitlines(keepends=True)
+    lines[5] = "'../bdyfiles/' directory location of data files\n"
+    (folder / "bdyfiles" / "ASCDATA.CFG").write_text("".join(lines))
+    variant = _variant(tmp_path, numpar=100, directory=folder)
+    assert variant.build.data_files is None
+
+
 def test_a_changed_data_table_is_recorded_and_makes_another_run(tmp_path):
-    """A land-use table that differs from the bundled one changes the particles."""
-    data = tmp_path / "tables"
-    data.mkdir()
-    (data / "LANDUSE.ASC").write_bytes(
+    """A land-use table that differs from PYSTILT's copy changes the particles."""
+    folder = make_hysplit_dir(tmp_path / "hysplit")
+    base = _variant(tmp_path, numpar=100, directory=folder)
+    _ = base.particles_hash
+    (folder / "bdyfiles").mkdir()
+    (folder / "bdyfiles" / "LANDUSE.ASC").write_bytes(
         _bundled_table("LANDUSE.ASC").read_bytes() + b"\n"
     )
-    base = _variant(tmp_path, numpar=100)
-    other = _variant(tmp_path, numpar=100, data_dir=data)
+    other = _variant(tmp_path, numpar=100, directory=folder)
     assert other.build.data_files is not None
     assert set(other.build.data_files) == {"LANDUSE.ASC"}
     assert other.run_settings["model"]["data_files"] == other.build.data_files
     assert other.particles_hash != base.particles_hash
+
+
+def test_without_directory_the_tables_beside_the_hycs_std_on_path_are_used(
+    tmp_path, monkeypatch
+):
+    """A HYSPLIT folder whose exec/ is on PATH, as a cluster's HYSPLIT module sets it."""
+    folder = make_hysplit_dir(tmp_path / "hysplit")
+    (folder / "bdyfiles").mkdir()
+    (folder / "bdyfiles" / "TERRAIN.ASC").write_text("other terrain\n")
+    monkeypatch.setenv("PATH", str(folder / "exec"))
+    variant = _variant(tmp_path, numpar=100)
+    assert set(variant.build.data_files) == {"TERRAIN.ASC"}

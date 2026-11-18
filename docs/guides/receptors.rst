@@ -249,7 +249,7 @@ release time (:doc:`hysplit_build`):
    # config.yaml
    models:
      hysplit:
-       exe_dir: /path/to/hysplit/exec    # directory containing hycs_std
+       directory: /path/to/hysplit    # holds exec/hycs_std
 
 The checksum of the build's ``hycs_std`` is part of the particles'
 settings, and the version it prints is recorded beside them, so you can

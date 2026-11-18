@@ -104,10 +104,10 @@ class HysplitConfig(TransportConfig):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    #: Fields left out of a run's recorded settings. What they point at is
-    #: recorded instead: the checksum of ``hycs_std`` and of each data file
-    #: that differs from the bundled one.
-    UNRECORDED: ClassVar[frozenset[str]] = frozenset({"exe_dir", "data_dir"})
+    #: Fields left out of a run's recorded settings. What ``directory`` holds
+    #: is recorded instead: the checksum of ``hycs_std`` and of each data
+    #: table that differs from PYSTILT's copy.
+    UNRECORDED: ClassVar[frozenset[str]] = frozenset({"directory"})
 
     numpar: int = Field(
         200,
@@ -117,25 +117,18 @@ class HysplitConfig(TransportConfig):
             "less noisy footprint and take longer to run."
         ),
     )
-    exe_dir: Path | None = Field(
+    directory: Path | None = Field(
         None,
         description=(
-            "Directory holding the HYSPLIT ``hycs_std`` to run. Unset, the "
-            "first ``hycs_std`` on ``PATH`` runs; PYSTILT does not include "
-            "one. The SHA-256 of ``hycs_std`` is part of each run's settings, "
-            "so runs of different builds are kept apart. A build that writes "
-            "release-time (t = 0) rows to ``PARTICLE_STILT.DAT`` gives exact "
-            "release heights for multipoint and slant receptors."
-        ),
-    )
-    data_dir: Path | None = Field(
-        None,
-        description=(
-            "Directory of HYSPLIT data tables (``ASCDATA.CFG``, ``LANDUSE.ASC``, "
-            "``ROUGLEN.ASC``, ``TERRAIN.ASC``) to use in place of the bundled "
-            "ones. A table it does not hold comes from the bundled set. The "
-            "tables change the particles, so each table that differs from the "
-            "bundled one is recorded with the run by its checksum."
+            "The HYSPLIT folder as unpacked: PYSTILT runs ``exec/hycs_std`` "
+            "under it and reads the data tables (``ASCDATA.CFG``, "
+            "``LANDUSE.ASC``, ``ROUGLEN.ASC``, ``TERRAIN.ASC``) from its "
+            "``bdyfiles/``. Unset, the first ``hycs_std`` on ``PATH`` runs, with "
+            "the tables of a ``bdyfiles/`` folder beside its folder; PYSTILT "
+            "does not include HYSPLIT. A table neither has comes from PYSTILT's "
+            "copy. The SHA-256 of ``hycs_std``, and of each table that differs "
+            "from PYSTILT's copy, is part of each run's settings, so runs of "
+            "different builds are kept apart."
         ),
     )
     varsiwant: list[

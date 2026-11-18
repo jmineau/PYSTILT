@@ -158,7 +158,7 @@ Module map
                         CONTROL file (control.py) and SETUP.CFG namelist
                         (namelist.py) writers and readers; failure reasons read from its
                         log (failures.py); HYSPLIT's data tables (data/).
-                        No hycs_std: find_hycs_std takes exe_dir, else PATH
+                        No hycs_std: find_hycs_std takes directory, else PATH
 
    tests/               pytest; folders follow src/stilt (execution/,
                         footprint/, observations/, particles/,
@@ -419,7 +419,7 @@ there is refused with a message naming its block.
   ``Output`` compares stored folders on what can be read
   (``Variant.readable_run_settings``).
 - A transport config's fields that change no result are listed in its
-  ``UNRECORDED`` class variable (HYSPLIT's: ``exe_dir`` and ``data_dir``) and
+  ``UNRECORDED`` class variable (HYSPLIT's: ``directory``) and
   left out of the settings records. A met's record is built, not dumped: its
   config's ``settings()``, which for HYSPLIT is the source id in the ARL
   headers (from the first file under ``directory``, or the archive's
@@ -659,6 +659,6 @@ For a multipoint or slant receptor, ``_multipoint_release_heights`` uses, in
 order: ``age = 0`` rows when present (exact); a match on height when every
 release altitude differs; then horizontal position, with a warning when
 points are closer than 1 km. HYSPLIT 5.1.0, STILT-R's build, writes no ``age = 0``
-row. A build that does can be used through ``exe_dir``, and nothing in
+row. A build that does can be used through ``directory``, and nothing in
 PYSTILT changes. ``tests/transport/hysplit/test_release_assignment.py``
 covers closely spaced slant points.

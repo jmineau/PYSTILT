@@ -40,7 +40,7 @@ class StiltRConfig(HysplitConfig):
 
     #: Fields left out of a run's recorded settings. ``version`` is recorded:
     #: it is what tells imported runs of two STILT-R versions apart.
-    UNRECORDED: ClassVar[frozenset[str]] = frozenset({"exe_dir", "data_dir"})
+    UNRECORDED: ClassVar[frozenset[str]] = frozenset({"directory"})
 
     version: str | None = Field(
         None,

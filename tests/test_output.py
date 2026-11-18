@@ -75,7 +75,7 @@ def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
     assert record["model_version"] == STAND_IN_VERSION
     assert "version" not in record["settings"]["model"]
     assert (
-        "exe_dir" not in record["settings"]
+        "directory" not in record["settings"]
         and "directory" not in record["settings"]["met"]
     )
     assert out.hashes("particles") == {f"hrrr-{digest[:6]}": digest}
