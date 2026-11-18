@@ -1,0 +1,16 @@
+{% extends "!layout.html" %}
+
+{# Link preview (Open Graph) for Slack, Discord, X and the like. The image comes
+   from html_context in conf.py and is left out when there is no
+   docs/_static/social-preview.png. #}
+{% block extrahead %}
+  {{ super() }}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ project }}">
+  <meta property="og:title" content="{{ title|striptags|e }}">
+  <meta property="og:description" content="{{ og_description|e }}">
+  {%- if og_image %}
+  <meta property="og:image" content="{{ og_image }}">
+  <meta name="twitter:card" content="summary_large_image">
+  {%- endif %}
+{% endblock %}

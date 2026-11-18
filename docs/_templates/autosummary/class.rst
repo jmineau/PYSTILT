@@ -5,8 +5,10 @@
 {#- Which members get a row and a page of their own, and what is inherited:
     _ext/api_pages.py. Pydantic's own members are left out there, so no list
     of them is kept here. #}
-{% set attrs = class_page.members(fullname, attributes) | sort(case_sensitive=False) %}
-{% set meths = class_page.members(fullname, all_methods) | sort(case_sensitive=False) %}
+{% set listed = class_page.members(fullname, all_methods) %}
+{% set fields = class_page.fields(fullname, listed) %}
+{% set attrs = (class_page.members(fullname, attributes) + fields) | sort(case_sensitive=False) %}
+{% set meths = listed | reject("in", fields) | sort(case_sensitive=False) %}
 
 {% if class_page.is_enum(fullname) %}
 .. autoclass:: {{ fullname }}
@@ -31,6 +33,7 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 {% for item in attrs %}
    ~{{ objname }}.{{ item }}
 {%- endfor %}

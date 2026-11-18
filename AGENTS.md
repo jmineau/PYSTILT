@@ -143,12 +143,11 @@ Driven by [`just`](https://github.com/casey/just) and
 | Command | What it does |
 |---|---|
 | `just sync` | `uv sync`: the package and the dev tools into `.venv` |
-| `just test` | the unit tests and the `>>>` examples under `src/`, in parallel (extra args go to pytest; `-n 0` for serial) |
+| `just test` | the unit tests and the `>>>` examples under `src/`, in parallel (extra args go to pytest; `-n 0` for serial); `just sync-floors` first runs them with every dependency at its minimum |
 | `just lint` / `just format` | ruff check and format check / fix and format |
 | `just type-check` | pyrefly, against Python 3.11 (set in `pyproject.toml`) |
 | `just imports` / `just docstr` | the import contracts / docstring coverage of the public API (95%) |
 | `just quality-check` | lint, type check, import contracts, docstrings, unit tests |
-| `just changelog` | draft the CHANGELOG entries from the commits since the last release (at release) |
 | `just pre-commit` | every pre-commit hook on every file |
 | `just build-docs` | a clean Sphinx build that runs every example; warnings are errors |
 | `just dist` | the sdist and the wheel, checked with twine |
@@ -206,7 +205,7 @@ A user-facing change updates the docs in the same change: the guide when
 what the user does changes, the reference (docstring Notes) otherwise. A bug
 fix's edge case goes to the reference. `just build-docs` must pass. Examples run when the docs build, so
 they use synthetic data, a small repository file, a public download, or the
-test met cache, and seed their random numbers (`CONTRIBUTING.md`). Give
+test met cache, and seed their random numbers; an `.. ipython::` block has no multi-line statement as its 10th or 100th (`CONTRIBUTING.md`). Give
 every public property and attribute a docstring, with no colon in the middle
 of its first line (napoleon reads `text: more` as `type: description`).
 
@@ -288,9 +287,6 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
 - **Never name a workdir from the simulation alone**: each run gets a new path
   in the compute root (`_new_workdir`), so projects can share one. Real runs
   are heavy: on a shared HPC system use Slurm or an allocation.
-- **Docs `.. ipython::` blocks**: no multi-line statement may be a block's 10th
-  (or 100th) statement, because the directive runs only that statement's first
-  line. Split the block.
 - **The pool is a `ProcessPoolExecutor`** holding at most `cpus` receptors, so
   the ones it holds are in progress. A worker killed outright breaks it:
   `run_receptors` raises `WorkerDied` naming them, and `stilt run` exits with 3.

@@ -3892,15 +3892,15 @@ dev = [
 requires-dist = [
     { name = "arlmet", specifier = ">=0.1.0b10" },
     { name = "arlmet", extras = ["archives"], marker = "extra == 'download'", specifier = ">=0.1.0b10" },
-    { name = "cartopy", marker = "extra == 'visualization'", specifier = ">=0.23" },
+    { name = "cartopy", marker = "extra == 'visualization'", specifier = ">=0.26" },
     { name = "dask", extras = ["array"], specifier = ">=2023.6" },
     { name = "exactextract", marker = "extra == 'geometry'", specifier = ">=0.2" },
     { name = "geopandas", marker = "extra == 'geometry'", specifier = ">=1.0" },
     { name = "h3", marker = "extra == 'geometry'", specifier = ">=4.0" },
     { name = "matplotlib", marker = "extra == 'visualization'", specifier = ">=3.7" },
     { name = "netcdf4", specifier = ">=1.6.5" },
-    { name = "numpy", specifier = ">=1.24" },
-    { name = "pandas", specifier = ">=2.0" },
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "pandas", specifier = ">=2.1" },
     { name = "pyarrow", specifier = ">=14.0" },
     { name = "pydantic", specifier = ">=2.1.0" },
     { name = "pyproj", specifier = ">=3.5" },
@@ -3916,7 +3916,7 @@ requires-dist = [
     { name = "sparse", marker = "extra == 'sparse'", specifier = ">=0.15" },
     { name = "typer", specifier = ">=0.15.4" },
     { name = "universal-pathlib", specifier = ">=0.3.0" },
-    { name = "xarray", specifier = ">=2023.9.0" },
+    { name = "xarray", specifier = ">=2024.10.0" },
 ]
 provides-extras = ["geometry", "visualization", "download", "sparse", "stilt-r", "complete"]
 
@@ -3930,7 +3930,7 @@ dev = [
     { name = "import-linter", specifier = ">=2.0" },
     { name = "ipython", specifier = ">=9.0" },
     { name = "matplotlib", specifier = ">=3.8" },
-    { name = "moto", extras = ["s3"], specifier = ">=5.0" },
+    { name = "moto", extras = ["s3"], specifier = ">=5.1" },
     { name = "pre-commit", specifier = ">=4.0" },
     { name = "pydata-sphinx-theme", specifier = ">=0.22" },
     { name = "pyrefly", specifier = ">=1.3" },

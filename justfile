@@ -43,6 +43,17 @@ docstr:
 test *args:
     uv run pytest -n auto --maxprocesses=8 -m "{{ unit }}" "$@"
 
+# Install every dependency, the dev tools too, at the minimum pyproject.toml declares (the CI floors job; run `just test` next). EXTRAS: the extras to include; `just sync-floors ""` for none
+sync-floors extras="--all-extras":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    uv venv --clear
+    floors="$(mktemp)"
+    uv pip compile pyproject.toml --group dev $1 --resolution lowest-direct --quiet -o "$floors"
+    uv pip install --requirement "$floors"
+    uv pip install --no-deps --editable .
+    rm -f "$floors"
+
 # Run the unit tests with coverage (coverage.xml, junit.xml for Codecov)
 cov *args:
     uv run pytest -n auto --maxprocesses=8 -m "{{ unit }}" --cov --cov-report=term --cov-report=xml --junitxml=junit.xml -o junit_family=legacy "$@"
