@@ -24,6 +24,7 @@ from .fixtures.output import (
     FEET,
     GRID,
     VARIANT,
+    as_written_before_the_rename,
     fake_footprint,
     fake_particles,
     output_variant,
@@ -211,6 +212,74 @@ def test_particles_table_is_every_file_in_date_order(tmp_path):
     table = out.table("particles", VARIANT)
     ids = list(dict.fromkeys(table.column("release").to_pylist()))
     assert [i[:10] for i in ids] == ["2024071506", "2024071518", "2024071600"]
+
+
+# ---------------------------------------------------------------------------
+# Files written before a receptor was renamed a release
+# ---------------------------------------------------------------------------
+
+OLD = "written before receptors were renamed releases"
+
+
+def test_a_particle_file_from_before_the_rename_is_refused_with_its_name(tmp_path):
+    from stilt.particles import read_particles
+
+    out = Output(tmp_path / "output")
+    path = as_written_before_the_rename(write_one(out))
+    for read in (particles_metadata, read_particles):
+        with pytest.raises(ValueError, match=OLD) as error:
+            read(path)
+        assert str(path) in str(error.value)
+
+
+def test_a_footprint_file_from_before_the_rename_is_refused_with_its_name(tmp_path):
+    from stilt.footprint import read_footprint
+
+    out = Output(tmp_path / "output")
+    path = as_written_before_the_rename(
+        store_footprint(out, FEET, fake_footprint(release_at(), hours=(-1, 0)))
+    )
+    with pytest.raises(ValueError, match=OLD) as error:
+        read_footprint(path)
+    assert str(path) in str(error.value)
+    with pytest.raises(ValueError, match=OLD):
+        open_footprints([path])
+
+
+def test_a_scan_of_particles_from_before_the_rename_is_refused(tmp_path):
+    out = Output(tmp_path / "output")
+    old = as_written_before_the_rename(write_one(out, release=release_at(hour=6)))
+    with pytest.raises(ValueError, match=OLD) as error:
+        out.table("particles", VARIANT)
+    assert str(old) in str(error.value)
+    with pytest.raises(ValueError, match=OLD):
+        out.table("particles", VARIANT, columns=["lat"])
+
+
+@pytest.mark.parametrize("old_first", [True, False])
+def test_a_scan_of_old_and_new_files_names_an_old_one(tmp_path, old_first):
+    """A dataset takes its columns from the first file, so either order must be caught."""
+    out = Output(tmp_path / "output")
+    first = write_one(out, release=release_at(hour=6))
+    second = write_one(out, release=release_at(hour=18))
+    old = as_written_before_the_rename(first if old_first else second)
+    with pytest.raises(ValueError, match=OLD) as error:
+        out.table("particles", VARIANT)
+    assert str(old) in str(error.value)
+
+
+def test_a_scan_of_footprints_from_before_the_rename_is_refused(tmp_path):
+    out = Output(tmp_path / "output")
+    for hour in (6, 18):
+        store_footprint(
+            out, FEET, fake_footprint(release_at(hour=hour), hours=(-1, 0), seed=hour)
+        )
+    old = as_written_before_the_rename(
+        out.path("footprint", FEET, release_at(hour=6).id)
+    )
+    with pytest.raises(ValueError, match=OLD) as error:
+        out.table("footprint", FEET)
+    assert str(old) in str(error.value)
 
 
 # ---------------------------------------------------------------------------

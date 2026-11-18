@@ -1852,3 +1852,23 @@ def test_add_table_keeps_a_release_table_and_adds_only_new_releases(tmp_path):
         project.add_table("kernels", pd.DataFrame({"release": [b.id]}))
     with pytest.raises(ValueError, match="table name"):
         project.add_table("../kernels", first)
+
+
+def test_a_table_with_the_old_receptor_column_says_it_is_now_release(tmp_path):
+    a = _release(12)
+    project = _project(tmp_path, [a])
+    kernels = pd.DataFrame(
+        {"receptor": [a.id, a.id], "level": [0.0, 3000.0], "value": [1.0, 1.0]}
+    )
+    project.add_table("kernels", kernels)  # a table of the old form, as it was kept
+    new = kernels.rename(columns={"receptor": "release"})
+    with pytest.raises(ValueError, match="now named 'release'"):
+        project.add_table("kernels", new)
+
+
+def test_a_selection_with_the_old_receptor_column_says_it_is_now_release(tmp_path):
+    a = _release(12)
+    project = _project(tmp_path, [a])
+    old = project.simulations.rename(columns={"release": "receptor"})
+    with pytest.raises(ValueError, match="now named 'release'"):
+        project.status(old)

@@ -165,11 +165,45 @@ def particles_metadata(path: str | Path | UPath) -> ParticleMetadata:
         )
     realization = meta.get(b"stilt:realization")
     return ParticleMetadata(
-        release=Receptor.from_json(meta[b"stilt:release"]),
+        release=stored_release(meta, path),
         settings=json.loads(meta[b"stilt:settings"]),
         met_files=[Path(p) for p in json.loads(meta[b"stilt:met_files"])],
         realization=None if realization is None else int(realization),
     )
+
+
+def stored_release(meta: Mapping[bytes, bytes], path: str | Path | UPath) -> Receptor:
+    """
+    Return the release a stored particle or footprint file records in its metadata.
+
+    Parameters
+    ----------
+    meta : mapping
+        The file's Parquet schema metadata.
+    path : str or Path
+        The file, named in the message when it cannot be read.
+
+    Raises
+    ------
+    ValueError
+        If the file was written before the receptor was renamed the release,
+        so it records ``stilt:receptor`` and not ``stilt:release``, or
+        records neither.
+    """
+    if b"stilt:release" in meta:
+        return Receptor.from_json(meta[b"stilt:release"])
+    if b"stilt:receptor" in meta:
+        raise ValueError(OLD_FILE.format(what=f"The file {path}"))
+    raise ValueError(f"{path} does not record its release.")
+
+
+#: The message for a stored file that holds ``receptor`` where it now holds ``release``.
+OLD_FILE = (
+    "{what} was written before receptors were renamed releases, and is not "
+    "read. Delete it and run again to make it with the current names: its "
+    "settings folder is the same, so the simulation counts as unfinished "
+    "once the file is gone."
+)
 
 
 def read_particles(
@@ -216,7 +250,7 @@ def read_particles(
             data[name] = data[name].astype("float64")
     if want_time and "age" in data.columns:
         meta = pf.schema_arrow.metadata or {}
-        release = Receptor.from_json(meta[b"stilt:release"])
+        release = stored_release(meta, path)
         data["time"] = pd.Timestamp(release.time) + pd.to_timedelta(
             data["age"].to_numpy(), unit="min"
         )
