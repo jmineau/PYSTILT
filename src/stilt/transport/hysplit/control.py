@@ -74,7 +74,7 @@ class ControlFile(BaseModel):
         # "1 N": one grid with N files in time, at most 128 (mtim in
         # HYSPLIT's DEFGRID.INC). A bare "N", as STILT-R writes, makes each
         # file its own grid: at most 12 in NOAA's builds and 99 in the
-        # bundled one (mgrd). Both give the same particles.
+        # STILT-R's 5.1.0 build (mgrd). Both give the same particles.
         lines.append(f"1 {len(self.met_files)}")
         for met_file in self.met_files:
             lines.append(

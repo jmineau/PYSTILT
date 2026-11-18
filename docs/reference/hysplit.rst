@@ -31,7 +31,8 @@ is its checksum, part of each run's settings, and
 :meth:`HysplitModel.version <stilt.transport.hysplit.HysplitModel.version>`
 the version it prints when it starts, recorded beside them.
 :func:`~stilt.transport.hysplit.data_tables` gives HYSPLIT's data tables a
-run uses, from ``directory``'s ``bdyfiles/`` or PYSTILT's copy.
+run uses, from the ``bdyfiles/`` folder of ``directory`` or beside the
+``hycs_std`` on ``PATH``.
 
 .. autosummary::
    :toctree: _api

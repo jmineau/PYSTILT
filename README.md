@@ -39,15 +39,20 @@ NOAA, and reading STILT-R output, install everything:
 pip install "pystilt[complete]"
 ```
 
-PYSTILT runs NOAA's HYSPLIT program, `hycs_std`, but does not include it. Get the build
-STILT-R uses, HYSPLIT 5.1.0, from STILT-R's repository (`bin/macos_x64/hycs_std` on a Mac),
-and put its folder on `PATH`, or set `directory` under `models: hysplit:` in `config.yaml` to a HYSPLIT folder:
+PYSTILT runs NOAA's HYSPLIT program, `hycs_std`, but does not include it or its data tables.
+Get the build STILT-R uses, HYSPLIT 5.1.0, from STILT-R's repository (`bin/macos_x64/hycs_std`
+on a Mac), laid out as HYSPLIT's own folder, and put its `exec/` on `PATH`, or set `directory`
+under `models: hysplit:` in `config.yaml` to the folder:
 
 ```bash
-mkdir -p hysplit
-curl -L -o hysplit/hycs_std https://raw.githubusercontent.com/uataq/stilt/main/bin/linux_x64/hycs_std
-chmod +x hysplit/hycs_std
-export PATH="$PWD/hysplit:$PATH"
+stilt_r=https://raw.githubusercontent.com/uataq/stilt/main
+mkdir -p hysplit/exec hysplit/bdyfiles
+curl -L -o hysplit/exec/hycs_std "$stilt_r/bin/linux_x64/hycs_std"
+for table in ASCDATA.CFG LANDUSE.ASC ROUGLEN.ASC TERRAIN.ASC; do
+    curl -L -o "hysplit/bdyfiles/$table" "$stilt_r/exe/$table"
+done
+chmod +x hysplit/exec/hycs_std
+export PATH="$PWD/hysplit/exec:$PATH"
 ```
 
 [Installation](https://jmineau.github.io/PYSTILT/stable/getting_started/installation.html)

@@ -79,8 +79,8 @@ jobs:
       - name: Install
         run: uv sync --locked
 
-      - name: Install hycs_std
-        run: .github/scripts/install_hycs_std.sh
+      - name: Install HYSPLIT
+        run: .github/scripts/install_hysplit.sh
 
       - name: Restore HRRR met cache
         id: met-cache
@@ -147,20 +147,20 @@ jobs:
           .pkgtest/bin/python -c "import stilt; print(stilt.__version__)"
           .pkgtest/bin/python -m stilt --help
           .pkgtest/bin/stilt --help
-          .pkgtest/bin/python -c "from stilt.transport.hysplit.driver import _bundled_data_dir; assert (_bundled_data_dir() / 'ASCDATA.CFG').is_file()"
 
-      - name: Check the wheel and sdist hold no hycs_std
+      - name: Check the wheel and sdist hold no HYSPLIT file
         run: |
           .pkgtest/bin/python - <<'PY'
           import tarfile
           import zipfile
           from pathlib import Path
 
+          hysplit = ("hycs_std", "ASCDATA.CFG", "LANDUSE.ASC", "ROUGLEN.ASC", "TERRAIN.ASC")
           for wheel in Path("dist").glob("*.whl"):
-              found = [n for n in zipfile.ZipFile(wheel).namelist() if n.endswith("hycs_std")]
+              found = [n for n in zipfile.ZipFile(wheel).namelist() if n.endswith(hysplit)]
               assert not found, f"{wheel.name} holds {found}"
           for sdist in Path("dist").glob("*.tar.gz"):
-              found = [n for n in tarfile.open(sdist).getnames() if n.endswith("hycs_std")]
+              found = [n for n in tarfile.open(sdist).getnames() if n.endswith(hysplit)]
               assert not found, f"{sdist.name} holds {found}"
           PY
 

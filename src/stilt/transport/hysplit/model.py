@@ -19,7 +19,6 @@ from .config import HysplitConfig
 from .driver import (
     LOG_FILE,
     PARTICLE_STILT_FILE,
-    _bundled_data_dir,
     check_met_stop,
     check_release,
     data_tables,
@@ -153,22 +152,26 @@ class HysplitModel:
         """Return the version the ``hycs_std`` *config* runs prints when it starts (:func:`hysplit_version`)."""
         return hysplit_version(config.directory)
 
-    def data_files(self, config: HysplitConfig) -> dict[str, str] | None:
+    def data_files(self, config: HysplitConfig) -> dict[str, str]:
         """
-        Return the SHA-256 of each data table a run uses that differs from PYSTILT's copy, by name.
+        Return the SHA-256 of each data table a run uses, by name.
 
-        The tables of :func:`~stilt.transport.hysplit.data_tables`, as
-        the run gets them. ``None`` when every one matches PYSTILT's copy.
+        The tables of :func:`~stilt.transport.hysplit.data_tables`, as the
+        run gets them: ``ASCDATA.CFG`` with its line of where the tables are
+        set to the workdir, so where a HYSPLIT folder keeps them changes
+        nothing.
+
+        Raises
+        ------
+        HYSPLITNotFoundError
+            If the tables cannot be found.
         """
-        bundled = _bundled_data_dir()
-        changed = {}
-        for name, table in sorted(data_tables(config.directory).items()):
-            content = table if isinstance(table, bytes) else table.read_bytes()
-            own = bundled / name
-            if own.is_file() and own.read_bytes() == content:
-                continue
-            changed[name] = hashlib.sha256(content).hexdigest()
-        return changed or None
+        return {
+            name: hashlib.sha256(
+                table if isinstance(table, bytes) else table.read_bytes()
+            ).hexdigest()
+            for name, table in sorted(data_tables(config.directory).items())
+        }
 
     def check_met(
         self, met: MetConfig, receptors: pd.DataFrame, n_hours: int

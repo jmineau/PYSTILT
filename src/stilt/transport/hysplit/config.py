@@ -106,7 +106,7 @@ class HysplitConfig(TransportConfig):
 
     #: Fields left out of a run's recorded settings. What ``directory`` holds
     #: is recorded instead: the checksum of ``hycs_std`` and of each data
-    #: table that differs from PYSTILT's copy.
+    #: table.
     UNRECORDED: ClassVar[frozenset[str]] = frozenset({"directory"})
 
     numpar: int = Field(
@@ -125,10 +125,9 @@ class HysplitConfig(TransportConfig):
             "``LANDUSE.ASC``, ``ROUGLEN.ASC``, ``TERRAIN.ASC``) from its "
             "``bdyfiles/``. Unset, the first ``hycs_std`` on ``PATH`` runs, with "
             "the tables of a ``bdyfiles/`` folder beside its folder; PYSTILT "
-            "does not include HYSPLIT. A table neither has comes from PYSTILT's "
-            "copy. The SHA-256 of ``hycs_std``, and of each table that differs "
-            "from PYSTILT's copy, is part of each run's settings, so runs of "
-            "different builds are kept apart."
+            "includes neither. The SHA-256 of ``hycs_std`` and of each table is "
+            "part of each run's settings, so runs of different builds are kept "
+            "apart."
         ),
     )
     varsiwant: list[

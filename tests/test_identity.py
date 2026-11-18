@@ -1,7 +1,6 @@
 """Tests for stilt.identity: what identifies a run and a footprint, and reading it back."""
 
 import hashlib
-import shutil
 from dataclasses import replace
 
 import pytest
@@ -105,8 +104,9 @@ def test_the_build_is_the_checksum_of_hycs_std(tmp_path):
     assert one.run_settings["model"] == {
         "name": "hysplit",
         "sha256": one.build.sha256,
-        "data_files": None,
+        "data_files": one.build.data_files,
     }
+    assert one.build.data_files == two.build.data_files
     assert one.particles_hash != two.particles_hash
 
 
@@ -298,49 +298,46 @@ def test_footprints_written_before_tres_are_hourly_and_still_found(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def _bundled_table(name: str):
-    from stilt.transport.hysplit.driver import _bundled_data_dir
-
-    return _bundled_data_dir() / name
-
-
-def test_bdyfiles_of_copies_of_pystilts_tables_is_the_same_run(tmp_path):
-    """HYSPLIT's own tables, which PYSTILT's copy is, change nothing."""
-    folder = make_hysplit_dir(tmp_path / "hysplit")
-    base = _variant(tmp_path, numpar=100, directory=folder)
-    _ = base.particles_hash
-    (folder / "bdyfiles").mkdir()
-    shutil.copy(_bundled_table("LANDUSE.ASC"), folder / "bdyfiles" / "LANDUSE.ASC")
-    same = _variant(tmp_path, numpar=100, directory=folder)
-    assert same.build.data_files is None
-    assert same.particles_hash == base.particles_hash
+def test_every_data_table_is_recorded_by_its_checksum(tmp_path):
+    """PYSTILT includes no tables, so a run records the four it read."""
+    variant = _variant(tmp_path, numpar=100)
+    assert set(variant.build.data_files) == {
+        "ASCDATA.CFG",
+        "LANDUSE.ASC",
+        "ROUGLEN.ASC",
+        "TERRAIN.ASC",
+    }
+    assert variant.run_settings["model"]["data_files"] == variant.build.data_files
 
 
-def test_hysplits_ascdata_cfg_is_the_same_run(tmp_path):
-    """HYSPLIT's ASCDATA.CFG names ../bdyfiles/ for the tables; a run reads them where they are linked."""
-    folder = make_hysplit_dir(tmp_path / "hysplit")
-    (folder / "bdyfiles").mkdir()
-    lines = _bundled_table("ASCDATA.CFG").read_text().splitlines(keepends=True)
-    lines[5] = "'../bdyfiles/' directory location of data files\n"
-    (folder / "bdyfiles" / "ASCDATA.CFG").write_text("".join(lines))
-    variant = _variant(tmp_path, numpar=100, directory=folder)
-    assert variant.build.data_files is None
+def test_where_ascdata_cfg_says_the_tables_are_is_the_same_run(tmp_path):
+    """HYSPLIT's ASCDATA.CFG says ../bdyfiles/; a run reads them where it links them, so the line changes nothing."""
+    one = make_hysplit_dir(tmp_path / "one")
+    two = make_hysplit_dir(tmp_path / "two")
+    ascdata = two / "bdyfiles" / "ASCDATA.CFG"
+    lines = ascdata.read_text().splitlines(keepends=True)
+    lines[5] = "'./'  directory location of data files\n"
+    ascdata.write_text("".join(lines))
+    first = _variant(tmp_path, numpar=100, directory=one)
+    second = _variant(tmp_path, numpar=100, directory=two)
+    assert first.particles_hash == second.particles_hash
 
 
-def test_a_changed_data_table_is_recorded_and_makes_another_run(tmp_path):
-    """A land-use table that differs from PYSTILT's copy changes the particles."""
-    folder = make_hysplit_dir(tmp_path / "hysplit")
-    base = _variant(tmp_path, numpar=100, directory=folder)
-    _ = base.particles_hash
-    (folder / "bdyfiles").mkdir()
-    (folder / "bdyfiles" / "LANDUSE.ASC").write_bytes(
-        _bundled_table("LANDUSE.ASC").read_bytes() + b"\n"
-    )
-    other = _variant(tmp_path, numpar=100, directory=folder)
-    assert other.build.data_files is not None
-    assert set(other.build.data_files) == {"LANDUSE.ASC"}
-    assert other.run_settings["model"]["data_files"] == other.build.data_files
-    assert other.particles_hash != base.particles_hash
+def test_a_changed_data_table_makes_another_run(tmp_path):
+    """Another land use changes the particles."""
+    one = make_hysplit_dir(tmp_path / "one")
+    two = make_hysplit_dir(tmp_path / "two")
+    (two / "bdyfiles" / "LANDUSE.ASC").write_text("other land use\n")
+    first = _variant(tmp_path, numpar=100, directory=one)
+    second = _variant(tmp_path, numpar=100, directory=two)
+    assert first.build.sha256 == second.build.sha256
+    differs = {
+        name
+        for name, digest in second.build.data_files.items()
+        if first.build.data_files[name] != digest
+    }
+    assert differs == {"LANDUSE.ASC"}
+    assert first.particles_hash != second.particles_hash
 
 
 def test_without_directory_the_tables_beside_the_hycs_std_on_path_are_used(
@@ -348,8 +345,16 @@ def test_without_directory_the_tables_beside_the_hycs_std_on_path_are_used(
 ):
     """A HYSPLIT folder whose exec/ is on PATH, as a cluster's HYSPLIT module sets it."""
     folder = make_hysplit_dir(tmp_path / "hysplit")
-    (folder / "bdyfiles").mkdir()
-    (folder / "bdyfiles" / "TERRAIN.ASC").write_text("other terrain\n")
+    terrain = folder / "bdyfiles" / "TERRAIN.ASC"
+    terrain.write_text("other terrain\n")
     monkeypatch.setenv("PATH", str(folder / "exec"))
     variant = _variant(tmp_path, numpar=100)
-    assert set(variant.build.data_files) == {"TERRAIN.ASC"}
+    expected = hashlib.sha256(terrain.read_bytes()).hexdigest()
+    assert variant.build.data_files["TERRAIN.ASC"] == expected
+
+
+def test_a_hysplit_folder_without_its_tables_says_where_they_go(tmp_path):
+    folder = make_hysplit_dir(tmp_path / "hysplit", tables=False)
+    variant = _variant(tmp_path, numpar=100, directory=folder)
+    with pytest.raises(HYSPLITNotFoundError, match="bdyfiles/ folder"):
+        _ = variant.build

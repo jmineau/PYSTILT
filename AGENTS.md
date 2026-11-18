@@ -79,7 +79,7 @@ src/stilt/
   transforms/     pre-footprint particle transforms, one module each
   transport/      TransportModel/TransportConfig protocols, MODELS, get_model, run_model;
                   stilt_r.py, the stilt-r model of imported runs (runs nothing)
-    hysplit/      config, met, catalog, driver, CONTROL and SETUP.CFG writers, failures, data/
+    hysplit/      config, met, catalog, driver, CONTROL and SETUP.CFG writers, failures
   execution/      ExecutionConfig (a block per backend), runner (plan, local run, Slurm submit), worker
   observations/   the X-STILT port (readers, sounding selection, slant receptors, columns);
                   receptors along a moving platform's track (tracks.py)
@@ -125,7 +125,7 @@ only when the core reads it. Config classes do no I/O when they validate;
 - **Identity is content.** PYSTILT never deletes or overwrites a results folder.
 - **The CLI stays thin.** Orchestration does not belong in `cli.py`.
 - **Meteorology I/O goes through [arlmet](https://github.com/jmineau/arl-met).**
-- **PYSTILT ships no HYSPLIT** (`find_hycs_std`: `directory`, else `PATH`). The SHA-256
+- **PYSTILT ships no HYSPLIT file**: `directory/exec/hycs_std` and `bdyfiles/`, else `PATH`. The SHA-256
   of `hycs_std` is in the particles hash, read on first use (`Variant.build`); its
   printed version is recorded as `model_version`, never hashed. Without `hycs_std` a
   project opens and `Output` compares on `Variant.readable_run_settings`.

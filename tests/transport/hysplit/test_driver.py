@@ -29,7 +29,7 @@ from stilt.transport.hysplit.driver import (
     ziscale_factors,
 )
 
-from ...fixtures.factories import make_met_config, make_met_files
+from ...fixtures.factories import make_hysplit_dir, make_met_config, make_met_files
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -204,11 +204,9 @@ def _config(**overrides) -> HysplitConfig:
 
 
 def _fake_build(path: Path, marker: str = "fake binary") -> Path:
-    """Return a HYSPLIT folder holding a stand-in, executable ``exec/hycs_std``."""
-    exe = path / "exec" / "hycs_std"
-    exe.parent.mkdir(parents=True, exist_ok=True)
-    exe.write_text(marker)
-    exe.chmod(0o755)
+    """Return a HYSPLIT folder holding a stand-in, executable ``exec/hycs_std``, and stand-in tables."""
+    make_hysplit_dir(path)
+    (path / "exec" / "hycs_std").write_text(marker)
     return path
 
 
@@ -1045,7 +1043,7 @@ def test_directory_without_exec_hycs_std_raises(tmp_path, point_receptor):
 
 
 def test_a_hycs_std_that_is_not_executable_says_so(tmp_path, point_receptor):
-    """HYSPLIT's download unpacks exec/ without the executable bit."""
+    """A HYSPLIT folder unpacked on Windows loses the executable bit."""
     build = _fake_build(tmp_path / "hysplit")
     (build / "exec" / "hycs_std").chmod(0o644)
     with pytest.raises(HYSPLITNotFoundError, match="not executable.*chmod \\+x"):
@@ -1064,19 +1062,15 @@ def test_only_hycs_std_is_linked_from_exec(tmp_path, point_receptor):
     assert "directory" not in (workdir / "SETUP.CFG").read_text().lower()
 
 
-def test_bdyfiles_tables_replace_pystilts(tmp_path, point_receptor):
-    """A table in bdyfiles/ is linked in place of PYSTILT's copy; the rest are PYSTILT's."""
+def test_the_tables_are_linked_from_bdyfiles(tmp_path, point_receptor):
+    """The four tables of bdyfiles/ are linked; nothing else in it is."""
     build = _fake_build(tmp_path / "hysplit")
-    (build / "bdyfiles").mkdir()
-    (build / "bdyfiles" / "ROUGLEN.ASC").write_text("custom roughness\n")
-    (build / "bdyfiles" / "Makefile").write_text("")  # not a table: not linked
+    (build / "bdyfiles" / "Makefile").write_text("")
 
     workdir = _inputs(tmp_path, point_receptor, _config(directory=build))
 
-    rouglen = (build / "bdyfiles" / "ROUGLEN.ASC").resolve()
-    assert (workdir / "ROUGLEN.ASC").resolve() == rouglen
-    bundled = driver._bundled_data_dir()
-    assert (workdir / "LANDUSE.ASC").resolve() == (bundled / "LANDUSE.ASC").resolve()
+    for name in ("LANDUSE.ASC", "ROUGLEN.ASC", "TERRAIN.ASC"):
+        assert (workdir / name).resolve() == (build / "bdyfiles" / name).resolve()
     assert not (workdir / "Makefile").exists()
 
 
@@ -1085,19 +1079,22 @@ def test_hysplits_ascdata_cfg_is_written_to_read_the_tables_in_the_workdir(
 ):
     """HYSPLIT's own ASCDATA.CFG says ../bdyfiles/; the workdir's says ./ and keeps the rest."""
     build = _fake_build(tmp_path / "hysplit")
-    (build / "bdyfiles").mkdir()
-    own = (driver._bundled_data_dir() / "ASCDATA.CFG").read_text()
-    lines = own.splitlines(keepends=True)
-    lines[0] = "-90.0  -180.0  lat/lon of lower left corner (changed)\n"
-    lines[5] = "'../bdyfiles/' directory location of data files\n"
-    (build / "bdyfiles" / "ASCDATA.CFG").write_text("".join(lines))
+    theirs = (build / "bdyfiles" / "ASCDATA.CFG").read_text().splitlines(True)
+    assert "../bdyfiles/" in theirs[5]
 
     workdir = _inputs(tmp_path, point_receptor, _config(directory=build))
 
     written = (workdir / "ASCDATA.CFG").read_text().splitlines(keepends=True)
     assert not (workdir / "ASCDATA.CFG").is_symlink()
-    assert written[0] == lines[0]
-    assert written[5] == own.splitlines(keepends=True)[5]
+    assert written[:5] == theirs[:5]
+    assert written[5].startswith("'./'")
+
+
+def test_a_missing_table_says_where_the_tables_go(tmp_path, point_receptor):
+    build = _fake_build(tmp_path / "hysplit")
+    (build / "bdyfiles" / "TERRAIN.ASC").unlink()
+    with pytest.raises(HYSPLITNotFoundError, match="No TERRAIN.ASC in"):
+        _inputs(tmp_path, point_receptor, _config(directory=build))
 
 
 def test_winderrtf_all_none():
@@ -1215,7 +1212,7 @@ def test_setup_entries_route_transport_params_to_setup_cfg():
 
 
 # Fortran type of every SETUP.CFG entry PYSTILT writes, from the SETUP
-# namelist declarations in HYSPLIT's hysetup.f. The bundled v5.1.0 build
+# namelist declarations in HYSPLIT's hysetup.f. STILT-R's v5.1.0 build
 # reads the same types.
 
 HYSPLIT_SETUP_TYPES = {

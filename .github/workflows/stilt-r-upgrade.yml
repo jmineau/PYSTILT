@@ -32,7 +32,7 @@ env:
   # Path prefixes in uataq/stilt that the comparison runs: the R helpers in
   # tests/fixtures/r_helpers/ source every file in r/src/, and STILT-R's HYSPLIT
   # run uses bin/linux_x64/hycs_std with the files in exe/ (PYSTILT's tests and
-  # docs run that hycs_std too: .github/scripts/install_hycs_std.sh).
+  # docs run that hycs_std too: .github/scripts/install_hysplit.sh).
   WATCH: "r/src/ bin/linux_x64/hycs_std exe/"
 
 jobs:

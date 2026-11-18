@@ -12,7 +12,7 @@ from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.spatial import Grid
 from tests.fixtures.factories import blocks
 
-from .fixtures.factories import make_met_config
+from .fixtures.factories import make_hysplit_dir, make_met_config
 
 # ---------------------------------------------------------------------------
 # Marker - apply to every test that needs real met + HYSPLIT
@@ -56,21 +56,19 @@ STAND_IN_VERSION = "hysplit.v5.1.0-test"
 @pytest.fixture(scope="session")
 def stand_in_hycs_std(tmp_path_factory) -> Path:
     """
-    A directory whose ``hycs_std`` prints a version and stops, as ``hycs_std`` does without ``CONTROL``.
+    The ``exec/`` folder of a stand-in HYSPLIT, whose ``hycs_std`` prints a version and stops.
 
-    PYSTILT does not include HYSPLIT, and a run's settings hold the SHA-256
-    of the ``hycs_std`` it runs, so the unit tests hash this one instead.
+    It stops as ``hycs_std`` does without ``CONTROL``. PYSTILT does not
+    include HYSPLIT, and a run's settings hold the SHA-256 of the
+    ``hycs_std`` it runs and of its data tables, so the unit tests use these
+    instead. The tables are in ``bdyfiles/`` beside ``exec/``.
     """
-    directory = tmp_path_factory.mktemp("hysplit")
-    exe = directory / "hycs_std"
-    exe.write_text(
-        "#!/bin/sh\n"
-        f"echo ' HYSPLIT version: {STAND_IN_VERSION}'\n"
-        "echo ' Last Changed Date: 2021-05-13'\n"
-        "exit 2\n"
+    folder = make_hysplit_dir(
+        tmp_path_factory.mktemp("hysplit"),
+        STAND_IN_VERSION,
+        body="echo ' Last Changed Date: 2021-05-13'\nexit 2\n",
     )
-    exe.chmod(0o755)
-    return directory
+    return folder / "exec"
 
 
 @pytest.fixture(autouse=True)

@@ -67,8 +67,8 @@ class ModelInfo(BaseModel):
     """
     The transport model build a run was made with.
 
-    Its name, the SHA-256 of its executable, and the SHA-256 of any data
-    file in place of its own are part of the run's settings, so two builds
+    Its name, the SHA-256 of its executable, and the SHA-256 of each data
+    file it reads are part of the run's settings, so two builds
     never share a settings folder. The version the build reports is
     recorded beside the settings (``model_version`` in ``_settings.yaml``),
     not in them: two builds of one release report the same version.
@@ -94,8 +94,8 @@ class ModelInfo(BaseModel):
     data_files: dict[str, str] | None = Field(
         None,
         description=(
-            "SHA-256 of each data file the run used in place of the model's "
-            "own, by file name. ``None`` when it used the model's own."
+            "SHA-256 of each data file the run read, by file name, such as "
+            "HYSPLIT's tables. ``None`` for a model whose build fixes them."
         ),
     )
     version: str | None = Field(
@@ -324,10 +324,10 @@ class TransportModel(Protocol):
 
     def data_files(self, config: Any) -> dict[str, str] | None:
         """
-        Return the checksum of each data file *config* replaces, by file name.
+        Return the checksum of each data file a run with *config* reads, by file name.
 
-        ``None`` when the run uses the model's own data files. These are part
-        of the run's identity, since the data change the particles.
+        ``None`` for a model whose build fixes its data. These are part of
+        the run's identity, since the data change the particles.
         """
         ...
 

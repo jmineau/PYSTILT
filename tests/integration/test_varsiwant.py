@@ -1,5 +1,5 @@
 """
-Every name ``varsiwant`` accepts is one the bundled hycs_std reads (#324).
+Every name ``varsiwant`` accepts is one STILT-R's hycs_std (5.1.0) reads (#324).
 
 ``hycs_std`` stops at the first ``varsiwant`` name it does not know, before it
 writes a particle, so a name the config allowed but HYSPLIT did not read gave a
