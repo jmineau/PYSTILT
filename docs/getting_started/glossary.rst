@@ -159,7 +159,8 @@ Glossary
    backend
       Where the simulations run. The choices are ``local`` (your computer)
       and ``slurm`` (an HPC cluster). Set it in the ``execution`` section
-      of ``config.yaml``. See
+      of ``config.yaml``, with that backend's settings in the block of its
+      name. See
       :doc:`../guides/running`.
 
    empty footprint

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 from typing import Any, Literal, Self
 
 from pydantic import (
@@ -18,16 +19,14 @@ class FetchConfig(BaseModel):
     The Slurm resources of the job that gets the met files before a job array.
 
     Each setting left unset is the array's (``partition``, ``account``,
-    ``qos``, ``time``, ``mem`` of :class:`ExecutionConfig`, or the ``slurm``
-    option of that name, which replaces it for the array too). Set them to send
+    ``qos``, ``time``, ``mem`` of :class:`SlurmConfig`). Set them to send
     the fetch to a data-transfer partition, where a cluster has one, and
     give ``time`` room for the downloads: a fetch job that runs out of time
     keeps the files it got, and the array then downloads the rest.
 
     Examples
     --------
-    >>> config = ExecutionConfig(
-    ...     backend="slurm",
+    >>> config = SlurmConfig(
     ...     time="02:00:00",
     ...     fetch={"partition": "notchpeak-dtn", "account": "dtn", "time": "12:00:00"},
     ... )
@@ -68,110 +67,117 @@ class FetchConfig(BaseModel):
         return value
 
 
-class ExecutionConfig(BaseModel):
+class LocalConfig(BaseModel):
     """
-    Where a project's receptors run, and with what resources.
-
-    With ``backend: local`` the receptors run on this machine as one task.
-    With ``backend: slurm`` they are split among ``n_workers`` tasks of one
-    Slurm job array. Either way a task runs ``cpus`` receptors at once. The
-    Slurm settings are ignored by a local run, so a config can hold them and
-    be run either way. ``timeout`` and ``keep_workdir`` apply to both. None
-    of these settings change a result.
+    How a project's receptors run on this machine: the ``local`` block of ``execution``.
 
     Examples
     --------
-    >>> config = ExecutionConfig(backend="slurm", n_workers=100, time="02:00:00")
-    >>> config.n_workers
-    100
+    >>> LocalConfig(cpus=4).cpus
+    4
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    backend: Literal["local", "slurm"] = Field(
-        "local",
-        description="Where to run: on this machine (``local``) or as a Slurm job array (``slurm``).",
+    cpus: int = Field(
+        1, ge=1, description="Receptors run at once, each in a process of its own."
     )
+    fetch: bool = Field(
+        True,
+        description=(
+            "Get the met files a met with ``download`` lacks once, before the "
+            "workers start, when ``cpus`` is above 1, so they do not download "
+            "the same file at once. ``false`` leaves each run to download what "
+            "it needs, as when something else fills the met directory."
+        ),
+    )
+
+
+class SlurmConfig(BaseModel):
+    """
+    The Slurm job array a project's receptors run as: the ``slurm`` block of ``execution``.
+
+    The receptors are split among ``n_workers`` tasks, and each task runs
+    ``cpus`` of them at once. Any key that is not a setting below is an
+    ``sbatch`` option by its name, such as ``exclude: node1`` or
+    ``constraint: skl``, written to the job script as given (``true``
+    writes the bare flag) and able to replace a line the script would
+    write. The fetch job takes ``clusters`` of these, and no other.
+
+    Examples
+    --------
+    >>> config = SlurmConfig(n_workers=100, time="02:00:00", exclude="node1")
+    >>> config.n_workers
+    100
+    >>> config.options
+    {'exclude': 'node1'}
+    """
+
+    model_config = ConfigDict(extra="allow", frozen=True)
+
     n_workers: int = Field(
         1,
         ge=1,
-        description=(
-            "Number of Slurm array tasks, which the receptors are split evenly "
-            "among. A local run is one task."
-        ),
+        description="Number of array tasks, which the receptors are split evenly among.",
     )
     cpus: int = Field(
         1,
         ge=1,
-        description=(
-            "Receptors each task runs at once: processes on this machine for a "
-            "local run, CPUs per array task on Slurm."
-        ),
+        description="Receptors each task runs at once, and the CPUs each task asks for.",
     )
     time: str | int | None = Field(
         None,
         description=(
-            "Slurm time limit per task, as ``HH:MM:SS``, ``D-HH:MM:SS``, or "
+            "Time limit per task, as ``HH:MM:SS``, ``D-HH:MM:SS``, or "
             "minutes. Required with ``backend: slurm``: without it a task gets "
             "the partition's default, which can be days."
         ),
     )
-    mem: str | None = Field(None, description="Memory per Slurm task, such as ``8G``.")
+    mem: str | None = Field(None, description="Memory per task, such as ``8G``.")
     partition: str | None = Field(None, description="Slurm partition.")
     account: str | None = Field(None, description="Slurm account.")
     qos: str | None = Field(None, description="Slurm quality of service.")
-    timeout: int | None = Field(
-        None,
-        ge=1,
-        description=(
-            "Time limit for one transport model run, in seconds. A run that "
-            "exceeds it is stopped and recorded as a failed simulation, and the "
-            "worker moves on. Unset waits indefinitely, so a hung run can hold "
-            "a worker until its job ends."
-        ),
-    )
-    keep_workdir: bool = Field(
-        False,
-        description=(
-            "Keep every run's workdir, as the transport model left it, under "
-            "``scratch/`` in the output directory. A failed run's is always "
-            "kept."
-        ),
-    )
     array_parallelism: int | None = Field(
         None,
         ge=1,
-        description="Most Slurm tasks running at once. Unset leaves it to Slurm.",
+        description="Most tasks running at once. Unset leaves it to Slurm.",
     )
     setup: list[str] = Field(
         default_factory=list,
         description=(
-            "Shell commands run in each Slurm task before the worker, such as "
+            "Shell commands run in each task before the worker, such as "
             "``module load`` lines. They run after the script exports "
             "``OMP_NUM_THREADS``, one thread per worker, so a line here can "
             "change it. The worker itself runs with the Python that submitted it."
         ),
     )
-    slurm: dict[str, Any] = Field(
-        default_factory=dict,
-        description=(
-            "Any other ``sbatch`` options by name, such as ``exclude: node1`` "
-            "or ``constraint: skl``. ``true`` writes the bare flag. The fetch job "
-            "takes ``clusters``, ``partition``, ``account``, ``qos``, ``time`` "
-            "and ``mem`` from these, and no other option."
-        ),
-    )
     fetch: FetchConfig | Literal[False] = Field(
         default_factory=FetchConfig,
         description=(
-            "Get the met files a met with ``download`` lacks once, before the "
-            "receptors run: on Slurm in a job of its own that the array waits "
-            "for, with these resources (:class:`FetchConfig`); locally before "
-            "the workers start, when ``cpus`` is above 1. ``false`` leaves "
-            "each run to download what it needs, as when something else fills "
-            "the met directory."
+            "Get the met files a met with ``download`` lacks once, in a job of "
+            "its own that the array waits for, with these resources "
+            "(:class:`FetchConfig`). ``false`` leaves each run to download "
+            "what it needs, as when something else fills the met directory."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_misspelled_setting(cls, data: Any) -> Any:
+        """Refuse a key that reads as a misspelled setting, which would otherwise go to ``sbatch`` as an option."""
+        if isinstance(data, dict):
+            for key in data:
+                if key in cls.model_fields:
+                    continue
+                close = difflib.get_close_matches(
+                    str(key), list(cls.model_fields), n=1, cutoff=0.8
+                )
+                if close:
+                    raise ValueError(
+                        f"{key!r} is not a setting of execution.slurm. Did you "
+                        f"mean {close[0]!r}?"
+                    )
+        return data
 
     @field_validator("fetch", mode="before")
     @classmethod
@@ -193,16 +199,113 @@ class ExecutionConfig(BaseModel):
             slurm_minutes(value)  # raises on a form sbatch would not take
         return value
 
+    @property
+    def options(self) -> dict[str, Any]:
+        """The other ``sbatch`` options, by name: every key of the block that is not one of its settings."""
+        return dict(self.model_extra or {})
+
+
+class ExecutionConfig(BaseModel):
+    """
+    Where a project's receptors run, and with what resources.
+
+    ``backend`` names the place, and every setting of that place is in the
+    block of its name. With ``backend: local`` the receptors run on this
+    machine as one task (:class:`LocalConfig`). With ``backend: slurm``
+    they are split among the tasks of one Slurm job array
+    (:class:`SlurmConfig`). Only the block ``backend`` names is read, so a
+    config can hold both and be run either way. ``timeout`` and
+    ``keep_workdir`` apply wherever a run happens. None of these settings
+    change a result.
+
+    Examples
+    --------
+    >>> config = ExecutionConfig(
+    ...     backend="slurm", slurm={"n_workers": 100, "cpus": 4, "time": "02:00:00"}
+    ... )
+    >>> config.slurm.n_workers
+    100
+    >>> config.cpus
+    4
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    backend: Literal["local", "slurm"] = Field(
+        "local",
+        description="Where to run: on this machine (``local``) or as a Slurm job array (``slurm``).",
+    )
+    local: LocalConfig = Field(
+        default_factory=LocalConfig,
+        description="How a local run goes (:class:`LocalConfig`). Read with ``backend: local``.",
+    )
+    slurm: SlurmConfig = Field(
+        default_factory=SlurmConfig,
+        description=(
+            "The job array of a Slurm run (:class:`SlurmConfig`), and any "
+            "other ``sbatch`` option by name. Read with ``backend: slurm``."
+        ),
+    )
+    timeout: int | None = Field(
+        None,
+        ge=1,
+        description=(
+            "Time limit for one transport model run, in seconds. A run that "
+            "exceeds it is stopped and recorded as a failed simulation, and the "
+            "worker moves on. Unset waits indefinitely, so a hung run can hold "
+            "a worker until its job ends."
+        ),
+    )
+    keep_workdir: bool = Field(
+        False,
+        description=(
+            "Keep every run's workdir, as the transport model left it, under "
+            "``scratch/`` in the output directory. A failed run's is always "
+            "kept."
+        ),
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_setting_outside_its_block(cls, data: Any) -> Any:
+        """Refuse a backend's setting written beside ``backend``, naming the block it belongs in."""
+        if isinstance(data, dict):
+            for key in data:
+                if key in cls.model_fields:
+                    continue
+                blocks = [
+                    name
+                    for name, block in (("local", LocalConfig), ("slurm", SlurmConfig))
+                    if key in block.model_fields
+                ]
+                if blocks:
+                    where = " or ".join(f"execution: {name}:" for name in blocks)
+                    raise ValueError(
+                        f"{key!r} is a setting of a backend. Write it under {where}"
+                        + (", for the backend it is for." if len(blocks) > 1 else ".")
+                    )
+        return data
+
     @model_validator(mode="after")
     def _slurm_needs_time(self) -> Self:
         """Raise when a Slurm run has no time limit."""
-        if self.backend == "slurm" and self.time is None and "time" not in self.slurm:
+        if self.backend == "slurm" and self.slurm.time is None:
             raise ValueError(
-                "execution.time is required with backend: slurm, such as "
+                "execution.slurm.time is required with backend: slurm, such as "
                 "time: '02:00:00'. Without it each task gets the partition's "
                 "default time limit, which can be days."
             )
         return self
+
+    @property
+    def cpus(self) -> int:
+        """Receptors a task runs at once: ``cpus`` of the block ``backend`` names."""
+        return self.local.cpus if self.backend == "local" else self.slurm.cpus
+
+    @property
+    def fetch(self) -> bool | FetchConfig:
+        """Whether the met files are got first: ``fetch`` of the block ``backend`` names."""
+        return self.local.fetch if self.backend == "local" else self.slurm.fetch
 
 
 def slurm_minutes(time: str | int) -> int:
@@ -248,4 +351,10 @@ def slurm_minutes(time: str | int) -> int:
     return -(-total // 60)
 
 
-__all__ = ["ExecutionConfig", "FetchConfig", "slurm_minutes"]
+__all__ = [
+    "ExecutionConfig",
+    "FetchConfig",
+    "LocalConfig",
+    "SlurmConfig",
+    "slurm_minutes",
+]

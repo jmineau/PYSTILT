@@ -111,13 +111,12 @@ The workflow side by side
        (:doc:`../transport_error`)
    * - ``n_nodes`` and ``n_cores`` with Slurm
      - ``execution: backend: slurm``, with ``n_workers`` array tasks of
-       ``cpus`` CPUs each (:doc:`../slurm`)
+       ``cpus`` CPUs each under ``execution: slurm:`` (:doc:`../slurm`)
    * - ``slurm_options``
-     - ``time``, ``mem``, ``partition``, ``account``, and ``qos`` under
-       ``execution``, and any other ``sbatch`` option under
-       ``execution: slurm:``
+     - ``time``, ``mem``, ``partition``, ``account``, ``qos``, and any
+       other ``sbatch`` option by its name, under ``execution: slurm:``
    * - ``n_cores`` without Slurm
-     - ``execution: cpus``
+     - ``execution: local: cpus``
    * - ``before_footprint``
      - ``transforms``, in the footprint's block (:doc:`../transforms`)
    * - ``before_trajec``

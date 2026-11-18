@@ -161,12 +161,23 @@ The keys of one entry under ``mets:``, for HYSPLIT
 Execution
 ~~~~~~~~~
 
-The keys under ``execution:`` (:doc:`../guides/running`).
+The keys under ``execution:`` (:doc:`../guides/running`). ``backend`` names
+where the project runs, and every setting of that place is in the block of
+its name. Only that block is read, so a config can hold both.
 
 .. config-model:: stilt.execution.config.ExecutionConfig
 
-The keys under ``execution: fetch:``, the Slurm resources of the job that
-gets the met files before a job array (:ref:`slurm-fetch`).
+The keys under ``execution: local:``, a run on this machine.
+
+.. config-model:: stilt.execution.config.LocalConfig
+
+The keys under ``execution: slurm:``, a Slurm job array
+(:doc:`../guides/slurm`). Any other key is an ``sbatch`` option by its name.
+
+.. config-model:: stilt.execution.config.SlurmConfig
+
+The keys under ``execution: slurm: fetch:``, the Slurm resources of the job
+that gets the met files before a job array (:ref:`slurm-fetch`).
 
 .. config-model:: stilt.execution.config.FetchConfig
 
@@ -191,6 +202,9 @@ can share one.
    FootprintConfig
    footprint.FootprintStage
    ExecutionConfig
+   execution.LocalConfig
+   execution.SlurmConfig
+   execution.FetchConfig
    Bounds
    Grid
 

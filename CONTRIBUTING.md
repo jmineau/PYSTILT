@@ -332,9 +332,12 @@ The unit of work is a command line: `stilt run <project> --receptors FILE
 project; the task requeues itself on `SIGUSR1` inside a Slurm job. Another
 scheduler means another script writer, not another worker.
 
-New `execution:` settings go on `ExecutionConfig` (`execution/config.py`)
-with a description. Settings that only `sbatch` understands do not need a
-field: users put them under `slurm:`.
+A new `execution:` setting goes on its backend's block (`LocalConfig` or
+`SlurmConfig` in `execution/config.py`) with a description; only a setting
+that applies wherever a run happens goes on `ExecutionConfig` itself. A new
+backend gets a block of its own, named as `backend:` names it. Settings that
+only `sbatch` understands do not need a field: users write them in the
+`slurm:` block by `sbatch`'s own names.
 
 ## Adding particle transforms
 

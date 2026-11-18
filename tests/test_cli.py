@@ -44,7 +44,7 @@ def _write_minimal_config(tmp_path):
     cfg = make_project_config(
         tmp_path,
         # Local, with the time limit a Slurm run of it needs.
-        execution={"time": "01:00:00"},
+        execution={"slurm": {"time": "01:00:00"}},
     )
     cfg.to_yaml(tmp_path / "config.yaml")
     (tmp_path / "receptors.csv").write_text(
@@ -602,7 +602,8 @@ def test_run_runs_the_project_with_its_execution_settings(tmp_path, calls):
     assert result.exit_code == 0, result.output
     [(verb, kwargs)] = calls
     assert verb == "run"
-    assert kwargs["execution"] == ExecutionConfig(time="01:00:00")  # config.yaml's
+    # config.yaml's
+    assert kwargs["execution"] == ExecutionConfig(slurm={"time": "01:00:00"})
     assert kwargs["skip_existing"] is True
     # Resolved once, so the run uses the directory the banner shows.
     from stilt.execution.runner import resolve_compute_root
@@ -666,6 +667,20 @@ def test_run_options_override_the_execution_settings(tmp_path, calls):
     assert "tasks=1  cpus=4" in result.output
 
 
+def test_cpus_goes_to_the_block_of_the_backend_that_runs(tmp_path, calls):
+    """--cpus sets the Slurm block's cpus on a Slurm run, and leaves the local block's."""
+    _write_minimal_config(tmp_path)
+
+    result = runner.invoke(
+        app, ["run", str(tmp_path), "--backend", "slurm", "--cpus", "4"]
+    )
+
+    assert result.exit_code == 0, result.output
+    execution = calls[0][1]["execution"]
+    assert (execution.slurm.cpus, execution.local.cpus) == (4, 1)
+    assert execution.cpus == 4
+
+
 def test_run_on_slurm_waits_for_the_job(tmp_path, calls):
     _write_minimal_config(tmp_path)
 
@@ -675,7 +690,7 @@ def test_run_on_slurm_waits_for_the_job(tmp_path, calls):
 
     assert result.exit_code == 0, result.output
     assert [verb for verb, _ in calls] == ["run"]
-    assert calls[0][1]["execution"].n_workers == 2
+    assert calls[0][1]["execution"].slurm.n_workers == 2
     assert "Submitting to Slurm and waiting for the job to finish" in result.output
 
 
@@ -701,7 +716,9 @@ def test_run_writes_to_the_output_given(tmp_path, calls, monkeypatch):
 def test_run_reads_execution_settings_from_a_file(tmp_path, calls):
     _write_minimal_config(tmp_path)
     settings = tmp_path / "execution.yaml"
-    settings.write_text("backend: slurm\ncpus: 3\ntimeout: 900\nkeep_workdir: true\n")
+    settings.write_text(
+        "backend: slurm\nslurm:\n  cpus: 3\ntimeout: 900\nkeep_workdir: true\n"
+    )
 
     result = runner.invoke(
         app,
@@ -719,8 +736,10 @@ def test_run_reads_execution_settings_from_a_file(tmp_path, calls):
 
     assert result.exit_code == 0, result.output
     execution = calls[0][1]["execution"]
-    # The file's settings, then the options, and a task runs here.
+    # The file's settings, then the options, and a task runs here: --cpus is
+    # the local run's, as the job script passes the array's.
     assert (execution.backend, execution.cpus, execution.timeout) == ("local", 2, 900)
+    assert execution.slurm.cpus == 3
     assert execution.keep_workdir is True
 
 
@@ -1268,7 +1287,10 @@ def test_a_task_takes_its_receptors_from_the_submissions_rows(tmp_path, monkeypa
 def test_run_task_runs_its_share_here(tmp_path, calls):
     _write_minimal_config(tmp_path)
     config = yaml.safe_load((tmp_path / "config.yaml").read_text())
-    config["execution"] = {"backend": "slurm", "n_workers": 8, "time": "01:00:00"}
+    config["execution"] = {
+        "backend": "slurm",
+        "slurm": {"n_workers": 8, "time": "01:00:00"},
+    }
     (tmp_path / "config.yaml").write_text(yaml.safe_dump(config))
     calls.states = ["complete", "failed"]
 
@@ -1342,7 +1364,7 @@ def test_submit_submits_to_slurm_and_returns(tmp_path, calls):
     assert result.exit_code == 0, result.output
     assert [verb for verb, _ in calls] == ["submit"]
     execution = calls[0][1]["execution"]
-    assert (execution.backend, execution.n_workers) == ("slurm", 2)
+    assert (execution.backend, execution.slurm.n_workers) == ("slurm", 2)
     assert "Submitting to Slurm and returning" in result.output
     assert "Submitted job: 12345" in result.output
 
@@ -1356,7 +1378,7 @@ def test_submit_without_a_time_limit_says_so(tmp_path, calls):
     result = runner.invoke(app, ["submit", str(tmp_path)])
 
     assert result.exit_code == 2
-    assert "execution.time is required with backend: slurm" in result.output
+    assert "execution.slurm.time is required with backend: slurm" in result.output
     assert "Traceback" not in result.output
     assert calls == []
 

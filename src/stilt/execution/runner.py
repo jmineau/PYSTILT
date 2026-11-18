@@ -191,7 +191,7 @@ def _to_fetch(
     """
     Return the simulations of *receptor_ids* whose met files are got once before they run, or ``None``.
 
-    ``None`` when ``execution.fetch`` is off, when no met of theirs
+    ``None`` when the backend's ``fetch`` is off, when no met of theirs
     downloads (:func:`stilt.fetch.downloads`), or when none of them runs
     its transport model: those whose particles are missing, or every one
     when not *skip_existing*, since such a run makes the particles again.
@@ -216,7 +216,7 @@ def _fetch_here(project: Project, unrun: pd.DataFrame) -> None:
     logged: each run then tries again, and fails as it would have without
     the fetch. Any other error is raised.
     """
-    logger.info("Getting the met files first (execution.fetch).")
+    logger.info("Getting the met files first (execution.local.fetch).")
     try:
         files = fetch_project(project, unrun)
     except Exception as error:
@@ -261,7 +261,7 @@ def run(
     footprint of every variant that has one. With ``backend: local`` the
     receptors run in this process (``cpus`` at a time); with ``cpus`` above
     1 and a met that downloads, the met files are got first
-    (:meth:`stilt.Project.fetch`, unless ``execution.fetch`` is ``false``),
+    (:meth:`stilt.Project.fetch`, unless ``execution.local.fetch`` is ``false``),
     so the workers do not download the same file at once. With
     ``backend: slurm`` they are submitted as one job array (:func:`submit`)
     and this waits for it. When some simulations look unfinished after the
@@ -388,12 +388,12 @@ def submit(
     fetch job goes first: one task that runs ``stilt fetch <project>
     --receptors receptors.parquet`` (:func:`fetch_script`), written to
     ``fetch.sh`` with its log in ``fetch.log``, with the resources of
-    ``execution.fetch``. The array waits for it to end
+    ``execution.slurm.fetch``. The array waits for it to end
     (``--dependency=afterany``), however it ended, so the runs whose met it
     got go ahead, and each task downloads what is still missing. With
     ``skip_existing=False`` it gets the met of every run the array makes
     again. If ``sbatch`` refuses the array, the fetch job is cancelled.
-    Set ``execution.fetch`` to ``false`` for no fetch job.
+    Set ``execution.slurm.fetch`` to ``false`` for no fetch job.
 
     Parameters
     ----------
@@ -442,14 +442,15 @@ def _threads_per_worker(options: dict[str, Any], execution: ExecutionConfig) -> 
     """
     Return the threads each worker process gets: the task's CPUs shared among its workers.
 
-    The task's CPUs are ``--cpus-per-task`` as written, so a ``slurm`` option
-    that replaces it counts. With ``cpus`` workers on ``cpus`` CPUs this is 1.
+    The task's CPUs are ``--cpus-per-task`` as written, so an ``sbatch``
+    option that replaces it counts. With ``cpus`` workers on ``cpus`` CPUs
+    this is 1.
     """
     try:
         task_cpus = int(options["cpus-per-task"])
     except (TypeError, ValueError):
         return 1  # sbatch will refuse the value; do not fail here
-    return max(1, task_cpus // execution.cpus)
+    return max(1, task_cpus // execution.slurm.cpus)
 
 
 def job_script(
@@ -465,32 +466,35 @@ def job_script(
     Return the ``sbatch`` script of a job array whose tasks each run a share of the receptors.
 
     Task ``i`` runs ``stilt run <project> --receptors <folder>/receptors.parquet
-    --task i/n_tasks --execution <folder>/execution.yaml`` with the Python
-    that called this. The ``#SBATCH`` lines come from *execution*: its
-    resources, ``--requeue``, ``--signal=B:USR1@120`` (see :func:`run`),
-    and its ``slurm`` options, which can replace any of them. Its ``setup``
-    commands run before the task, after the script exports ``OMP_NUM_THREADS``
-    as the task's CPUs divided by the workers it runs at once (``cpus``),
-    which a ``setup`` line can export again. NumPy's BLAS follows it, so a
-    worker does not start a thread pool the size of the node.
+    --task i/n_tasks --execution <folder>/execution.yaml --cpus <cpus>`` with
+    the Python that called this: a task runs its share here, ``cpus``
+    receptors at once. The ``#SBATCH`` lines come from *execution*'s
+    ``slurm`` block: its resources, ``--requeue``, ``--signal=B:USR1@120``
+    (see :func:`run`), and its other ``sbatch`` options, which can replace
+    any of them. Its ``setup`` commands run before the task, after the
+    script exports ``OMP_NUM_THREADS`` as the task's CPUs divided by the
+    workers it runs at once (``cpus``), which a ``setup`` line can export
+    again. NumPy's BLAS follows it, so a worker does not start a thread pool
+    the size of the node.
     """
+    slurm = execution.slurm
     options: dict[str, Any] = {
         "job-name": f"pystilt-{_project_slug(project.directory)}",
         "array": f"0-{n_tasks - 1}"
-        + (f"%{execution.array_parallelism}" if execution.array_parallelism else ""),
-        "cpus-per-task": execution.cpus,
-        "time": execution.time,
-        "mem": execution.mem,
-        "partition": execution.partition,
-        "account": execution.account,
-        "qos": execution.qos,
+        + (f"%{slurm.array_parallelism}" if slurm.array_parallelism else ""),
+        "cpus-per-task": slurm.cpus,
+        "time": slurm.time,
+        "mem": slurm.mem,
+        "partition": slurm.partition,
+        "account": slurm.account,
+        "qos": slurm.qos,
         "output": folder / "%a.log",
         # A requeued task writes on at the end of its log.
         "open-mode": "append",
         "requeue": True,
         "signal": f"B:USR1@{NOTICE_SECONDS}",
     }
-    for key, value in execution.slurm.items():
+    for key, value in slurm.options.items():
         options[str(key).replace("_", "-")] = value
 
     command = [
@@ -505,6 +509,9 @@ def job_script(
         f"$SLURM_ARRAY_TASK_ID/{n_tasks}",
         "--execution",
         str(folder / "execution.yaml"),
+        # A task runs its share here, so it is told the array's cpus.
+        "--cpus",
+        str(slurm.cpus),
         # The output the submitting process uses, which may not be config.yaml's.
         "--output",
         str(project.output.directory),
@@ -529,7 +536,7 @@ def job_script(
         "",
         header,
         threads,
-        *execution.setup,
+        *slurm.setup,
     ]
     if not skip_existing:
         # A requeued task keeps what it finished before.
@@ -556,33 +563,22 @@ def fetch_script(
     It runs ``stilt fetch <project> --receptors <folder>/receptors.parquet``
     (with ``--no-skip`` when not *skip_existing*) with the Python that
     called this, as one task, after the ``setup`` commands. Its
-    ``partition``, ``account``, ``qos``, ``time`` and ``mem`` are
-    ``execution.fetch``'s, each unset one the array's as :func:`job_script`
-    writes it (a ``slurm`` option of that name replaces the setting). Of the
-    other ``slurm`` options it takes only ``clusters``, so it runs on the
-    cluster of the array that waits for it. Its log is ``<folder>/fetch.log``.
+    ``partition``, ``account``, ``qos``, ``time`` and ``mem`` are those of
+    ``fetch`` in *execution*'s ``slurm`` block, each unset one the array's.
+    Of the other ``sbatch`` options it takes only ``clusters``, so it runs
+    on the cluster of the array that waits for it. Its log is
+    ``<folder>/fetch.log``.
     """
-    fetch = execution.fetch or FetchConfig()
-    slurm = {
-        str(key).replace("_", "-"): value for key, value in execution.slurm.items()
-    }
-    # The array's resources, as job_script writes them.
-    array = {
-        "time": execution.time,
-        "mem": execution.mem,
-        "partition": execution.partition,
-        "account": execution.account,
-        "qos": execution.qos,
-    }
-    array = {key: slurm.get(key, value) for key, value in array.items()}
+    slurm = execution.slurm
+    fetch = slurm.fetch or FetchConfig()
     options: dict[str, Any] = {
         "job-name": f"pystilt-fetch-{_project_slug(project.directory)}",
-        "time": fetch.time or array["time"],
-        "mem": fetch.mem or array["mem"],
-        "partition": fetch.partition or array["partition"],
-        "account": fetch.account or array["account"],
-        "qos": fetch.qos or array["qos"],
-        "clusters": slurm.get("clusters"),
+        "time": fetch.time or slurm.time,
+        "mem": fetch.mem or slurm.mem,
+        "partition": fetch.partition or slurm.partition,
+        "account": fetch.account or slurm.account,
+        "qos": fetch.qos or slurm.qos,
+        "clusters": slurm.options.get("clusters"),
         "output": folder / "fetch.log",
     }
     command = [
@@ -604,7 +600,7 @@ def fetch_script(
         *_sbatch_lines(options),
         "",
         header,
-        *execution.setup,
+        *slurm.setup,
         "exec " + " ".join(shlex.quote(w) for w in command),
     ]
     return "\n".join(lines) + "\n"
@@ -656,7 +652,7 @@ def _submit(
     (folder / "execution.yaml").write_text(
         yaml.safe_dump(execution.model_dump(exclude_unset=True), sort_keys=False)
     )
-    n_tasks = max(1, min(execution.n_workers, len(pending)))
+    n_tasks = max(1, min(execution.slurm.n_workers, len(pending)))
     script = folder / "job.sh"
     script.write_text(
         job_script(
@@ -888,7 +884,7 @@ def _requeue() -> bool:
     if restarts >= MAX_REQUEUES:
         logger.warning(
             "Slurm task %s has been requeued %d times; not again. Run the "
-            "project again, or raise execution.time.",
+            "project again, or raise execution.slurm.time.",
             job_id,
             restarts,
         )

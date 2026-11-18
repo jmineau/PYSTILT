@@ -815,11 +815,16 @@ variants:
 output: ./output
 
 
-# Execution is optional. Local execution is the default.
+# Execution is optional. Local execution is the default. Each backend's
+# settings are in the block of its name, and only the backend's block is read.
 # execution:
-#   backend: local  # or "slurm"
-#   cpus: 1         # receptors at once (per array task on Slurm)
-#   n_workers: 1    # Slurm array tasks
+#   backend: local    # or "slurm"
+#   local:
+#     cpus: 1         # receptors at once
+#   slurm:
+#     n_workers: 1    # array tasks
+#     cpus: 1         # receptors at once in each task
+#     time: "02:00:00"
 """
 
 

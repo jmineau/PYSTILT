@@ -284,14 +284,15 @@ _BACKEND = typer.Option(
 _N_WORKERS = typer.Option(
     None,
     "--n-workers",
-    help="Number of Slurm array tasks. Overrides execution.n_workers in config.yaml.",
+    help="Number of Slurm array tasks. Overrides execution.slurm.n_workers in config.yaml.",
 )
 _CPUS = typer.Option(
     None,
     "--cpus",
     help=(
         "Receptors each task runs at once (local processes, or CPUs per "
-        "Slurm task). Overrides execution.cpus in config.yaml."
+        "Slurm task). Overrides cpus in the backend's block of execution "
+        "in config.yaml."
     ),
 )
 _RECEPTORS = typer.Option(
@@ -402,15 +403,16 @@ def _start(
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
     logging.getLogger("stilt.execution").setLevel(logging.INFO)
 
-    overrides: dict[str, Any] = {}
+    # Each option replaces its setting in the block of the backend it is for.
     if backend is not None:
-        overrides["backend"] = backend
+        settings["backend"] = backend
     if n_workers is not None:
-        overrides["n_workers"] = n_workers
+        settings["slurm"] = {**(settings.get("slurm") or {}), "n_workers": n_workers}
     if cpus is not None:
-        overrides["cpus"] = cpus
+        block = settings.get("backend", "local")
+        settings[block] = {**(settings.get(block) or {}), "cpus": cpus}
     try:
-        execution = ExecutionConfig.model_validate({**settings, **overrides})
+        execution = ExecutionConfig.model_validate(settings)
     except ValidationError as error:
         _fail(_settings_problems(error))
     if execution.backend == "local":
@@ -887,7 +889,7 @@ def _print_run_start(
         # the array had not been used.
         where = f"task {task[0]} of {task[1]}"
     else:
-        tasks = 1 if backend == "local" else execution.n_workers
+        tasks = 1 if backend == "local" else execution.slurm.n_workers
         where = f"backend={backend}  tasks={tasks}"
     typer.echo(
         f"Starting run: project={project.directory}  {where}  "

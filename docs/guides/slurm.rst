@@ -12,17 +12,24 @@ or scratch space.
 Set it up
 ---------
 
-Add an ``execution`` section to ``config.yaml``:
+Add an ``execution`` section to ``config.yaml``. ``backend`` says where the
+project runs, and every setting of that place goes in the block of its
+name, here ``slurm``:
 
 .. code-block:: yaml
 
    execution:
      backend: slurm
-     n_workers: 200              # number of array tasks
-     account: my-account
-     partition: my-partition
-     time: "02:00:00"            # time limit per array task
-     mem: 4G
+     slurm:
+       n_workers: 200              # number of array tasks
+       account: my-account
+       partition: my-partition
+       time: "02:00:00"            # time limit per array task
+       mem: 4G
+
+Only the block ``backend`` names is read. A config can also hold a
+``local`` block (:doc:`running`), and ``stilt run --backend local`` then
+runs the project on this machine with it.
 
 Then check the project and submit it from the environment PYSTILT is
 installed in. ``stilt check`` finds a met folder that is not where you said,
@@ -42,6 +49,8 @@ to activate inside the job.
 Options
 -------
 
+The keys of the ``slurm`` block:
+
 ``n_workers``
    How many array tasks to split the receptors into. With 10,000 receptors
    and ``n_workers: 200``, each task runs 50 receptors one after another.
@@ -53,12 +62,13 @@ Options
 
 ``cpus``
    CPUs per array task (default 1). With more than one, each task runs that
-   many receptors at the same time. A local run uses ``cpus`` the same way.
+   many receptors at the same time. A local run has its own ``cpus``, in
+   the ``local`` block.
    Each worker is one process that uses one CPU, so the job script sets
    ``OMP_NUM_THREADS=1`` for it. Without that, NumPy's BLAS starts a thread
    pool the size of the node in every worker (64 threads on a 104-core node)
    and the threads sit idle. A task with more CPUs than workers
-   (``slurm: {cpus_per_task: 8}`` with ``cpus: 2``) gives each worker its
+   (``cpus_per_task: 8`` with ``cpus: 2``) gives each worker its
    share, 4 here. To choose another value, export ``OMP_NUM_THREADS`` in
    ``setup``.
 
@@ -83,16 +93,16 @@ Options
    to load modules or set environment variables. They run after the script
    exports ``OMP_NUM_THREADS`` (see ``cpus``), so they can change it.
 
-``slurm``
-   Any other ``sbatch`` option, by name:
+Any other key
+   Any other ``sbatch`` option, by its name:
 
    .. code-block:: yaml
 
       execution:
         backend: slurm
-        n_workers: 200
-        time: "02:00:00"
         slurm:
+          n_workers: 200
+          time: "02:00:00"
           exclude: node17,node42
           constraint: skl
           exclusive: true      # a bare flag, --exclusive
@@ -105,8 +115,10 @@ Options
    The Slurm resources of the job that gets the met files before the
    array, or ``false`` for no such job (below).
 
-A setting PYSTILT does not know is an error, so a misspelled ``partition``
-is caught before anything is submitted.
+A key that reads as a misspelled setting is an error, so ``partion`` is
+caught before anything is submitted and is not sent to ``sbatch`` as an
+option. A Slurm setting written beside ``backend``, outside the ``slurm``
+block, is an error that names the block.
 
 .. _slurm-fetch:
 
@@ -127,9 +139,8 @@ each file is downloaded once. ``stilt submit`` prints both job IDs:
    Submitted job: 7713
 
 The fetch job uses the array's ``partition``, ``account``, ``qos``, ``time``
-and ``mem`` unless ``fetch`` gives its own, whether you set them at the top
-of ``execution`` or under ``slurm``. Of the other ``slurm`` options it takes
-only ``clusters``, since a data-transfer partition may not have the nodes or
+and ``mem`` unless ``fetch`` gives its own. Of the other ``sbatch`` options
+it takes only ``clusters``, since a data-transfer partition may not have the nodes or
 features (``exclude``, ``constraint``) the array asks for. If your cluster has a data-transfer partition, we
 recommend sending the fetch job there, because compute nodes often
 download slowly. Give it a ``time`` long enough for every download.
@@ -138,14 +149,15 @@ download slowly. Give it a ``time`` long enough for every download.
 
    execution:
      backend: slurm
-     n_workers: 200
-     account: my-account
-     partition: my-partition
-     time: "02:00:00"
-     fetch:
-       partition: my-dtn-partition
-       account: my-dtn-account
-       time: "12:00:00"
+     slurm:
+       n_workers: 200
+       account: my-account
+       partition: my-partition
+       time: "02:00:00"
+       fetch:
+         partition: my-dtn-partition
+         account: my-dtn-account
+         time: "12:00:00"
 
 The array starts when the fetch job ends, however it ended
 (``--dependency=afterany``). If the archive lacked some files, the runs
